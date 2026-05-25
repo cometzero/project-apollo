@@ -1,0 +1,17 @@
+#
+# SPDX-License-Identifier: MIT
+#
+
+---
+header:
+  version: 16
+
+repos:
+  hsoc-apollo:
+    path: hsoc-apollo
+    layers:
+      yocto/meta-hsoc-apollo-bsp:
+
+local_conf_header:
+  apollo-fvp: |
+    MACHINE = "apollo-fvp"

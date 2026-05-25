@@ -1,0 +1,4 @@
+interface:
+  display_name: "Yocto Dev"
+  short_description: "Yocto/OE BitBake workflow"
+  default_prompt: "Use $yocto-dev to inspect and fix this Yocto metadata task safely."

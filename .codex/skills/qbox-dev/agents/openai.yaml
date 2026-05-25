@@ -1,0 +1,4 @@
+interface:
+  display_name: "QBox Dev"
+  short_description: "QBox virtual platform workflow"
+  default_prompt: "Use $qbox-dev to inspect and update this QBox virtual platform safely."

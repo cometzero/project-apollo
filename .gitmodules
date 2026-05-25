@@ -1,0 +1,72 @@
+[submodule "arm-zena-css"]
+	path = arm-zena-css
+	url = git@github.com:cometzero/arm-zena-css.git
+	branch = feature/qbox-dev
+[submodule "hsoc-apollo/components/primary_compute/linux"]
+	path = hsoc-apollo/components/primary_compute/linux
+	url = git@github.com:cometzero/linux.git
+	branch = apollo-fvp-linux-6.18-rt
+[submodule "layers/meta-arm"]
+	path = layers/meta-arm
+	url = https://git.yoctoproject.org/meta-arm
+	branch = patched-21894cc2ea3197e6bfc1a56d889f757a09dc8b31
+[submodule "layers/meta-bluechi"]
+	path = layers/meta-bluechi
+	url = https://github.com/eclipse-bluechi/bluechi-on-yocto.git
+	branch = walnascar
+[submodule "layers/meta-cassini"]
+	path = layers/meta-cassini
+	url = https://gitlab.arm.com/cassini/meta-cassini.git
+	branch = patched-4dad481980fb8a700cce8402bece7cf1bebbdee3
+[submodule "layers/meta-clang"]
+	path = layers/meta-clang
+	url = https://github.com/kraj/meta-clang
+	branch = walnascar
+[submodule "layers/meta-ewaol"]
+	path = layers/meta-ewaol
+	url = https://gitlab.com/soafee/ewaol/meta-ewaol
+	branch = patched-4ba5f48c4e10ad2a0271bb2287a66688e6c2fa15
+[submodule "layers/meta-mender"]
+	path = layers/meta-mender
+	url = https://gitlab.com/Linaro/cassini/meta-mender
+	branch = styhead
+[submodule "layers/meta-openembedded"]
+	path = layers/meta-openembedded
+	url = https://git.openembedded.org/meta-openembedded
+	branch = patched-80ab58cc404959ae2f0e8b2e68935b3bfd8e8cfe
+[submodule "layers/meta-ptx"]
+	path = layers/meta-ptx
+	url = https://github.com/pengutronix/meta-ptx
+	branch = walnascar
+[submodule "layers/meta-secure-core"]
+	path = layers/meta-secure-core
+	url = https://github.com/Wind-River/meta-secure-core
+	branch = patched-243281acbb4d3839b80b795030a7f4900e254735
+[submodule "layers/meta-security"]
+	path = layers/meta-security
+	url = https://git.yoctoproject.org/git/meta-security
+	branch = walnascar
+[submodule "layers/meta-virtualization"]
+	path = layers/meta-virtualization
+	url = https://git.yoctoproject.org/git/meta-virtualization
+	branch = walnascar
+[submodule "layers/meta-zephyr"]
+	path = layers/meta-zephyr
+	url = https://git.yoctoproject.org/meta-zephyr
+	branch = walnascar
+[submodule "layers/poky"]
+	path = layers/poky
+	url = https://git.yoctoproject.org/poky
+	branch = patched-a704e5171ce4f87e27408934b593e5a186ac1960
+[submodule "sw-ref-stack"]
+	path = sw-ref-stack
+	url = https://gitlab.arm.com/automotive-and-industrial/arm-auto-solutions/sw-ref-stack.git
+	branch = main
+[submodule "tools/qbox"]
+	path = tools/qbox
+	url = git@github.com:cometzero/qbox.git
+	branch = feature/qbox-dev
+[submodule "tools/qemu"]
+	path = tools/qemu
+	url = git@github.com:cometzero/qemu.git
+	branch = feature/qbox-dev

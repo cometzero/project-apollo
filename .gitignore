@@ -1,0 +1,11 @@
+/build/
+
+__pycache__/
+*.py[cod]
+
+/.omx/logs/
+/.omx/state/
+/.omx/reports/
+/.omx/ultragoal/
+/.omx/metrics.json
+/.omx/tmux-hook.json

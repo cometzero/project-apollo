@@ -1,0 +1,4 @@
+interface:
+  display_name: "SystemC Dev"
+  short_description: "SystemC/TLM modeling workflow"
+  default_prompt: "Use $systemc-dev to inspect and update this SystemC model safely."
