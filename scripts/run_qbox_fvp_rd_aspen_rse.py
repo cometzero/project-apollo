@@ -278,6 +278,9 @@ RSE_FWU_COMPONENT_NUMBER = 5
 RSE_FWU_BOOT_INDEX_SLOT0 = 0
 RSE_FWU_VALID_BOOT_INDICES = {0, 1}
 RSE_FWU_VALID_STATES = set(range(9))
+RSE_BOOT_FLASH_SIZE = 0x04000000
+AP_BOOT_FLASH_IMAGE_SIZE = 0x08000000
+FLASH_ERASED_VALUE = 0xFF
 HOST_SI_CL0_SRAM_WINDOW_SIZE = 0x01000000
 HOST_SI_CL0_IMG_HDR_LOGICAL_BASE = 0x70083C00
 HOST_SI_CL0_IMG_CODE_LOGICAL_BASE = 0x70084000
@@ -464,7 +467,30 @@ def prepare_rootfs_for_qbox(
     return dst, info
 
 
-def prepare_flash_for_qbox(src: Path, dst_dir: Path) -> tuple[Path, dict[str, object]]:
+def pad_flash_image(
+    path: Path, target_size: int, *, chunk_size: int = 1024 * 1024
+) -> int:
+    current_size = path.stat().st_size
+    if current_size >= target_size:
+        return 0
+
+    remaining = target_size - current_size
+    fill = bytes([FLASH_ERASED_VALUE]) * min(chunk_size, remaining)
+    with path.open("ab") as flash:
+        while remaining:
+            write_size = min(len(fill), remaining)
+            flash.write(fill[:write_size])
+            remaining -= write_size
+    return target_size - current_size
+
+
+def prepare_flash_for_qbox(
+    src: Path,
+    dst_dir: Path,
+    *,
+    min_size: int | None = None,
+    allow_pad: bool = False,
+) -> tuple[Path, dict[str, object]]:
     info: dict[str, object] = {
         "input": str(src),
         "output": str(src),
@@ -473,24 +499,52 @@ def prepare_flash_for_qbox(src: Path, dst_dir: Path) -> tuple[Path, dict[str, ob
     }
     with src.open("rb") as flash:
         magic = flash.read(2)
-    if magic != b"\x1f\x8b":
-        return src, info
+    path = src
+    can_modify = allow_pad
+    if magic == b"\x1f\x8b":
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        path = dst_dir / f"{src.stem}.raw{src.suffix}"
+        with gzip.open(src, "rb") as compressed, path.open("wb") as raw:
+            shutil.copyfileobj(compressed, raw)
+        can_modify = True
+        info.update(
+            {
+                "output": str(path),
+                "state": "gzip_decompressed_for_qbox_raw_memory",
+                "changed": True,
+                "compressed_size": src.stat().st_size,
+                "raw_size": path.stat().st_size,
+            }
+        )
 
-    dst_dir.mkdir(parents=True, exist_ok=True)
-    dst = dst_dir / f"{src.stem}.raw{src.suffix}"
-    with gzip.open(src, "rb") as compressed, dst.open("wb") as raw:
-        shutil.copyfileobj(compressed, raw)
+    if min_size is None:
+        return path, info
 
+    size_before_pad = path.stat().st_size
+    info["minimum_size"] = min_size
+    info["size_before_pad"] = size_before_pad
+    if size_before_pad >= min_size:
+        info["pad_state"] = "not_required"
+        return path, info
+
+    if not can_modify:
+        info["pad_state"] = "skipped_source_not_copied"
+        info["pad_required_bytes"] = min_size - size_before_pad
+        return path, info
+
+    padded_bytes = pad_flash_image(path, min_size)
     info.update(
         {
-            "output": str(dst),
-            "state": "gzip_decompressed_for_qbox_raw_memory",
+            "output": str(path),
             "changed": True,
-            "compressed_size": src.stat().st_size,
-            "raw_size": dst.stat().st_size,
+            "pad_state": "padded_with_erased_value",
+            "pad_erased_value": hex(FLASH_ERASED_VALUE),
+            "padded_bytes": padded_bytes,
+            "padded_size": path.stat().st_size,
+            "state": info["state"] + "_padded_to_qbox_flash_size",
         }
     )
-    return dst, info
+    return path, info
 
 
 def prepare_sparse_file(path: Path, size: int) -> Path:
@@ -2286,12 +2340,18 @@ def main() -> int:
     copy = not args.no_copy_writable_flash
     copied["rse_flash"] = copy_if_requested(artifacts["rse_flash"], image_dir, copy=copy)
     copied["rse_flash"], flash_image_preparation = prepare_flash_for_qbox(
-        copied["rse_flash"], image_dir
+        copied["rse_flash"],
+        image_dir,
+        min_size=RSE_BOOT_FLASH_SIZE,
+        allow_pad=copy,
     )
     copied["rse_otp"] = copy_if_requested(artifacts["rse_otp"], image_dir, copy=copy)
     copied["ap_flash"] = copy_if_requested(artifacts["ap_flash"], image_dir, copy=copy)
     copied["ap_flash"], ap_flash_image_preparation = prepare_flash_for_qbox(
-        copied["ap_flash"], image_dir
+        copied["ap_flash"],
+        image_dir,
+        min_size=AP_BOOT_FLASH_IMAGE_SIZE,
+        allow_pad=copy,
     )
     run_artifacts = dict(artifacts)
     run_artifacts.update(copied)

@@ -966,6 +966,11 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-60s-20260527-v1/`
       still times out in PS test 403 after tests 401/402 pass. This confirms
       the remaining PS gap is not caused by the preceding IAT/ITS commands.
+      V038U fixes a separate per-run writable-flash backing-size bug: the RSE
+      and AP raw flash copies are now padded with erased `0xff` bytes to the
+      QBox Strata device size before writeback is enabled. The padded
+      PS-only runtime records no `backing_file` range errors and writes
+      Strata stats, but `psa-ps-api-test` still returns 124 in PS test 403.
       The current GDB split narrows one QBox path to SE-Proxy
       `secure_storage_ipc_set()` waiting for an RSE PS SET response while
       RSE/TF-M executes `tfm_its_remove()` through flash filesystem
@@ -1069,7 +1074,11 @@ richer fault status.
       file; `platforms/fvp-rd-aspen-rse/conf.lua` binds RSE/AP flash
       `backing_file` only when `QBOX_RDASPEN_FLASH_WRITEBACK=true`, and
       `scripts/run_qbox_fvp_rd_aspen_rse.py` enables that flag only for
-      per-run copied writable flash images. This closes the model plumbing
+      per-run copied writable flash images. V038U additionally pads those
+      per-run RSE/AP writable flash copies to the full QBox Strata model sizes
+      with erased `0xff` bytes, preventing PS/FWU writeback beyond the short
+      deploy-image length from falling outside the backing file. This closes
+      the model and runner plumbing
       prerequisite but does not close T076 until a full FWU reboot proves the
       bank-1 markers and persisted state together.
 - [ ] T076 Verify writable flash state persists across reboot.
@@ -1926,3 +1935,24 @@ richer fault status.
       confirms PS still times out in test 403 even without IAT/ITS running
       first. V038/T061/T063/T064/T076 remain open for PS completion, UEFI/FWU
       storage coverage, and persistence.
+- [x] V038U Pad per-run writable flash images before Strata writeback and
+      recheck PS-only stats. The pre-fix stats attempt
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-stats-20260527-v1/`
+      reproduced PS test 403 timeout and logged
+      `remote_platform.rse_boot_flash unable to range backing_file=...`
+      because the copied RSE flash backing file was only 5,033,984 bytes while
+      the modeled RSE flash device is 64 MiB. The runner now pads copied RSE
+      flash to 67,108,864 bytes and copied AP flash to 134,217,728 bytes with
+      erased `0xff` bytes before enabling writeback. Static validation passed
+      with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, a
+      helper-level import/padding smoke test, and `git diff --check --` for
+      the runner. Runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/`
+      reports `passed=true`, `timed_out=false`, completed post-login driver
+      checks, no backing-file range errors, and RSE Strata stats including
+      `write_accesses=16750000`, `program_ops=2791667`,
+      `compat_ff_sector_erase_ops=2034`, and
+      `backing_write_ops=2263712`. PS still returns
+      `secure_psa_ps_api_test_rc=124` in test 403, so V038/T061/T063/T064/T076
+      remain open for Protected Storage completion and FWU/UEFI persistence
+      semantics, not for backing-file coverage of the modeled flash aperture.

@@ -5605,3 +5605,31 @@ PS-only reference that reaches test 409 within the bounded host window.
 Continue with the TF-M ITS/PS flash filesystem and Strata flash writeback path
 rather than basic FF-A discovery, AP-RSE MHU routing, or AP/SI mailbox IRQ
 delivery.
+
+### 2026-05-27 Writable Flash Padding And PS Stats Recheck
+
+The first PS-only stats run uncovered a separate writeback correctness bug:
+the per-run raw flash images copied from deploy artifacts were shorter than
+the QBox Strata flash apertures. The RSE raw image was 5,033,984 bytes while
+the modeled RSE boot flash is 64 MiB, so PS/FWU writes above the image payload
+could update in-memory flash state but fell outside the backing file used for
+persistence evidence.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-stats-20260527-v1/qbox-platform.log` | Reproduced `remote_platform.rse_boot_flash unable to range backing_file=...`; this explains why a stats/no-copy-style run could reach PS test 403 while still lacking valid writeback coverage over the full modeled flash aperture. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Pads copied RSE/AP writable flash images to the QBox model sizes before enabling writeback: RSE to `0x04000000` and AP flash to `0x08000000`, using erased byte value `0xff`. The helper avoids modifying source deploy images when `--no-copy-writable-flash` is used. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| Helper-level import/padding smoke test | Passed; a short raw file was extended with `0xff` bytes and preserved its original prefix. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/summary.txt` | Records RSE flash padding from 5,033,984 bytes to 67,108,864 bytes and AP flash padding from 4,771,840 bytes to 134,217,728 bytes, both with `pad_erased_value="0xff"`. |
+| `rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-platform.log` and console logs | Contain no `unable to ... backing_file`, no `Spurious IRQ on PBX channel`, no `Try increasing MBOX_TX_QUEUE_LEN`, and no RCU-stall reports in the checked logs. |
+| `rse-secure-service-ps-only-padded-stats-20260527-v1/result.json` | Runtime returned `passed=true`, `timed_out=false`, `blocker=null`, completed the post-login probe, and kept driver patterns true for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio`. |
+| `rse-secure-service-ps-only-padded-stats-20260527-v1/rse-strata-stats.json` | Captures the PS-only Strata workload after padding: `write_accesses=16750000`, `word_program_cmds=2791667`, `program_ops=2791667`, `program_changed_bytes=2261678`, `compat_ff_sector_erase_ops=2034`, `sector_erase_bytes=8331264`, `backing_write_ops=2263712`, and `backing_write_bytes=10592942`. |
+| `rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | PS still passes tests 401 and 402, enters PS test 403 (`Insufficient space check`), and returns `secure_psa_ps_api_test_rc=124` at the 60-second command cap. |
+
+Current conclusion: per-run writable flash now covers the full RSE/AP Strata
+apertures used by the QBox platform, so future PS/FWU persistence evidence is
+not limited by the short deploy image length. This does not close Protected
+Storage completion: the padded PS-only run still times out in PS test 403, but
+it proves the remaining gap is flash-workload/service completion rather than a
+backing-file range miss.
