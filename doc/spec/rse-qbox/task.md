@@ -2232,3 +2232,14 @@ richer fault status.
       `checks_seen=[1]` without UID exhaustion before the run-level timeout.
       This does not close T063; it makes short-timeout PS artifacts precise
       enough to compare without manual console-log inspection.
+- [x] V038AN Classify PS 403 secure-service timeouts by progress stage.
+      Runtime blocker selection now uses `secure_service_probe.progress` when
+      the requested secure-service probe times out inside PS test 403. Existing
+      artifact replay maps
+      `rse-ps403-after-stats-opt-deployroot-20260527-v1` to
+      `qbox_secure_service_ps403_timeout:check_1`, while the older padded
+      PS-only log maps to
+      `qbox_secure_service_ps403_cleanup_timeout:uid_20` and still reports
+      `secure_psa_ps_api_test_rc=124` as a selected-test failure when the done
+      marker is reached. This keeps future short-timeout blocker strings tied
+      to the actual PSA PS phase.

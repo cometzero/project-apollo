@@ -5979,8 +5979,13 @@ even when the PSA test command does not reach its return-code marker.
 | `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding the parser. |
 | Existing artifact replay: `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | The parser reports `requested_tests=ps`, PS test 403 started, `checks_seen=[1]`, `insufficient_space_uid=20`, `remove_all_registered_uids=true`, and the last observed line `Remove all registered UIDs`. |
 | Existing artifact replay: `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-deployroot-20260527-v1/qbox-primary-console.log` | The parser reports `requested_tests=ps`, `ps_test_list=test_403`, PS test 403 started, `checks_seen=[1]`, and no UID exhaustion before the run-level timeout. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds PS 403 stage-aware blocker classification for secure-service timeout runs, using the structured progress payload before falling back to the generic secure-service incomplete blocker. |
+| Existing artifact replay: `rse-ps403-after-stats-opt-deployroot-20260527-v1/qbox-primary-console.log` | The stage classifier returns `qbox_secure_service_ps403_timeout:check_1`, matching the console state where the focused test reached `[Check 1] Overload storage space` but did not print UID exhaustion. |
+| Existing artifact replay: `rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | The stage classifier returns `qbox_secure_service_ps403_cleanup_timeout:uid_20`; selected-test return-code extraction still reports `secure_psa_ps_api_test_rc=124` because that older run reached the secure-service done marker. |
 
 Current conclusion: T063 is still open; this change does not alter QBox or
 TF-M behavior. It improves evidence quality so future bounded runs can show
 whether PS test 403 stalls before UID exhaustion, after insufficient-space
-detection, or during cleanup without manual log inspection.
+detection, or during cleanup without manual log inspection. Future
+secure-service timeout blocker strings now carry the same stage information
+when the PS 403 marker is present.

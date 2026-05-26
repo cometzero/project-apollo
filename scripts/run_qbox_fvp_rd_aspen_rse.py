@@ -1377,6 +1377,32 @@ def format_rc_failures(failures: dict[str, object]) -> str:
     return ",".join(f"{name}={failures[name]}" for name in sorted(failures))
 
 
+def classify_ps403_progress_blocker(
+    secure_service_eval: dict[str, object],
+) -> str | None:
+    progress = secure_service_eval.get("progress", {})
+    if not isinstance(progress, dict):
+        return None
+    ps_test_403 = progress.get("ps_test_403", {})
+    if not isinstance(ps_test_403, dict) or not ps_test_403.get("started"):
+        return None
+
+    insufficient_uid = ps_test_403.get("insufficient_space_uid")
+    if ps_test_403.get("remove_all_registered_uids"):
+        if isinstance(insufficient_uid, int):
+            return f"qbox_secure_service_ps403_cleanup_timeout:uid_{insufficient_uid}"
+        return "qbox_secure_service_ps403_cleanup_timeout"
+
+    if isinstance(insufficient_uid, int):
+        return f"qbox_secure_service_ps403_insufficient_space_timeout:uid_{insufficient_uid}"
+
+    last_check = ps_test_403.get("last_check")
+    if isinstance(last_check, int):
+        return f"qbox_secure_service_ps403_timeout:check_{last_check}"
+
+    return "qbox_secure_service_ps403_timeout:started"
+
+
 def classify_known_runtime_blocker(logs: dict[str, str]) -> str | None:
     combined = clean_text("\n".join(logs.values()))
     for marker, blocker in KNOWN_RUNTIME_BLOCKERS:
@@ -2901,6 +2927,11 @@ def main() -> int:
     )
     if secure_service_failures and isinstance(secure_service_eval, dict):
         secure_service_eval["failed_return_codes"] = secure_service_failures
+    secure_service_ps403_blocker = (
+        classify_ps403_progress_blocker(secure_service_eval)
+        if args.secure_service_probe and isinstance(secure_service_eval, dict)
+        else None
+    )
     post_login_probe_incomplete = bool(
         args.post_login_probe
         and post_login_probe
@@ -2919,6 +2950,8 @@ def main() -> int:
         runtime_blocker = "qbox_fwu_probe_incomplete_timeout"
     elif fwu_probe_incomplete:
         runtime_blocker = "qbox_fwu_probe_incomplete"
+    elif secure_service_incomplete and timed_out and secure_service_ps403_blocker:
+        runtime_blocker = secure_service_ps403_blocker
     elif secure_service_incomplete and timed_out:
         runtime_blocker = "qbox_secure_service_probe_incomplete_timeout"
     elif secure_service_incomplete:
