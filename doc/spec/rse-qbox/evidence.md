@@ -263,6 +263,27 @@ T034A aligns QBox ATU translation with the TF-M native ATU driver behavior:
 | `git -C tools/qbox diff --check` | Passed. |
 | `cmake --build build --target platforms-vp --parallel 4` from `tools/qbox` | Passed. |
 
+## 2026-05-26 TF-M Strata Write-Buffer Rejection
+
+The TF-M-side Strata write-buffer experiment is rejected for now. It compiles,
+but it is not FVP runtime-safe for RD-Aspen TF-M secure-storage initialization.
+
+| Evidence | Result |
+| --- | --- |
+| `trusted-firmware-m:do_patch`, `do_compile`, `do_deploy` with 32-byte write-buffer polling fix | Passed, but runtime failed. |
+| `build/fvp-boot-logs/write-buffer-poll-fix-fvp-critical-20260526-v1/` | FVP reaches `RSE to SCP SCMI power on AP succeeded` and TF-M runtime start, then fails after `Creating an empty ITS flash layout.` with `Partition initialization FAILED in 0x31047cc5`. |
+| `trusted-firmware-m:do_patch`, `do_compile`, `do_deploy` with verify-and-byte-program fallback | Passed, but runtime failed at the same TF-M ITS point. |
+| `build/fvp-boot-logs/write-buffer-verify-fallback-fvp-critical-20260526-v1/` | Same FVP failure: TF-M runtime reaches ITS layout creation, then `Partition initialization FAILED in 0x31047cc5`. |
+| `arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/trusted-firmware-m-fvp-rd-aspen-src.inc` | The experimental `0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch` entry was removed. |
+| `arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m/fvp-rd-aspen/0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch` | Deleted so the active TF-M build returns to the byte-program baseline. |
+| `build/tmp_baremetal/work/fvp_rd_aspen-poky-linux/trusted-firmware-m/2.2.2+git/git/tfm/platform/ext/target/arm/drivers/flash/strata/spi_strataflashj3_flash_lib.c` | After forced `do_patch`, source shows `MAX_PROGRAM_SIZE = 128` and no `nor_buffered_program()` path. |
+| `trusted-firmware-m:do_patch`, `do_compile`, `do_deploy`, then `firmware-fvp-rd-aspen:do_deploy` after patch removal | Passed. Deploy images were refreshed at `2026-05-26 20:22:07` for `rse-rom-image.img`, `rse-flash-image.img`, `ap-flash-image.img`, and `rse-otp-image.img`. |
+| `build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v2/` | The previous TF-M ITS failure is gone. FVP reaches `Creating an empty ITS flash layout.`, `Creating an empty PS flash layout.`, measured boot through `BL_33`, `Booting Linux on physical CPU`, root filesystem mount, systemd startup, and secure console `tee_ta_close_session`. The run still reports `passed=false` because the script's `critical` mode requires a Linux login prompt that did not appear before the 150-second timeout. |
+
+Conclusion: keep the TF-M byte-program baseline. Any Strata performance fix
+must be done in QBox's SystemC/TLM flash model or in another semantics-preserving
+host-side path, then checked against FVP logs.
+
 ## 2026-05-25 T034B/T037 RSE ATU Overflow, DMI, And SI Evidence
 
 T034B closes two ATU correctness gaps found while validating translated DMI:

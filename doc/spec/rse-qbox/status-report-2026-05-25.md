@@ -233,15 +233,15 @@ Current conclusion:
   another semantics-preserving way to reduce firmware-visible CFI transaction
   cost.
 
-### 2. TF-M Strata Write-Buffer Experiment Is Not Runtime-Proven
+### 2. TF-M Strata Write-Buffer Experiment Was Rejected
 
-An experimental TF-M patch is present under `arm-zena-css`:
+The experimental TF-M write-buffer patch has been removed from the active
+RD-Aspen TF-M source list because it is not FVP-safe.
 
 - `yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/trusted-firmware-m-fvp-rd-aspen-src.inc`
-  includes `0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch`.
-- The untracked patch file adds `nor_buffered_program()` and changes the
-  Strata path to use buffered programming.
-- Current patch content uses `MAX_PROGRAM_SIZE = 32`.
+  no longer includes `0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch`.
+- `0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch` has been deleted
+  from the layer.
 
 Known negative evidence from the earlier write-buffer attempt:
 
@@ -256,13 +256,26 @@ Known negative evidence from the earlier write-buffer attempt:
   `Partition initialization FAILED in 0x31047cc5` after
   `Creating an empty ITS flash layout.`
 
-Important current-state caveat:
+Fresh 2026-05-26 validation:
 
-- The patch has since been reduced to 32-byte chunks and TF-M
-  `do_patch`, `do_compile`, and `do_deploy` logs show successful task
-  completion.
-- Full composed `firmware-fvp-rd-aspen` deploy and fresh FVP/QBox runtime
-  validation for the 32-byte variant are still pending.
+- `trusted-firmware-m:do_patch`, `do_compile`, and `do_deploy` passed for a
+  32-byte write-buffer variant, but the composed FVP run still failed at
+  `Partition initialization FAILED in 0x31047cc5`:
+  `build/fvp-boot-logs/write-buffer-poll-fix-fvp-critical-20260526-v1/`.
+- A verify-and-byte-program-fallback variant also passed TF-M build/deploy but
+  failed at the same TF-M ITS initialization point:
+  `build/fvp-boot-logs/write-buffer-verify-fallback-fvp-critical-20260526-v1/`.
+- After removing the write-buffer patch, TF-M source returned to
+  `MAX_PROGRAM_SIZE = 128` and no `nor_buffered_program()` path. The rebuilt
+  firmware no longer fails ITS/PS initialization, reaches
+  `Booting Linux on physical CPU`, mounts the root filesystem, starts systemd,
+  and initializes secure-world enough for `tee_ta_close_session`.
+  Evidence:
+  `build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v2/`.
+- The 150-second `--require critical` run still reports `passed=false` because
+  this script's critical mode also requires the Linux login prompt, which did
+  not appear before timeout. This is a timeout/criteria issue, not the previous
+  TF-M ITS failure.
 
 ### 3. Secure-Service Post-Login Tests Still Fail
 
@@ -326,7 +339,7 @@ Still missing:
 
 - modified TF-M RD-Aspen source include:
   `yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/trusted-firmware-m-fvp-rd-aspen-src.inc`
-- untracked TF-M patch:
+- deleted TF-M write-buffer patch:
   `yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m/fvp-rd-aspen/0086-rse-css-aspen-Use-CFI-write-buffer-for-Strata.patch`
 
 `sw-ref-stack` is currently clean.
@@ -350,16 +363,23 @@ sed -n '1,110p' build/qbox-fvp-rd-aspen/gdb-linux-marker-write-buffer-20260525-v
 rg -n "Booting Linux|Linux version|RSE to SCP SCMI power on AP succeeded|Jumping to the first image slot|Partition initialization FAILED|Creating an empty ITS flash layout" build/fvp-boot-logs/rd-aspen-verbose-short-20260525-v1 build/fvp-boot-logs/write-buffer-tfm-20260525-v1
 ```
 
-No new QBox/FVP runtime validation was launched while writing this report.
+2026-05-26 follow-up commands:
+
+```bash
+bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake-layers show-recipes trusted-firmware-m | sed -n "1,120p"'
+bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake trusted-firmware-m -c patch -f'
+bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake trusted-firmware-m -c compile -f'
+bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake trusted-firmware-m -c deploy -f'
+bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake firmware-fvp-rd-aspen -c deploy -f'
+timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-poll-fix-fvp-critical-20260526-v1
+timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-verify-fallback-fvp-critical-20260526-v1
+timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v1
+timeout 240s python3 scripts/runfvp_log_boot.py --timeout 150 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v2
+```
 
 ## Recommended Next Step
 
-Do not treat the TF-M write-buffer patch as accepted yet. The next safe step is:
-
-1. Regenerate the composed firmware image with the current 32-byte
-   write-buffer patch.
-2. Run a short FVP verbose check first.
-3. Only if FVP passes the TF-M ITS initialization and reaches Linux markers,
-   rerun the bounded QBox GDB/Linux-marker path.
-4. If FVP still fails, revert or rework the TF-M patch before spending more
-   time on QBox-side validation.
+Do not pursue the TF-M write-buffer patch as the next optimization path. The
+next safe step is to keep the FVP-safe TF-M byte-program baseline and reduce
+QBox runtime cost inside the QBox Strata/SystemC model, with FVP comparison
+used only as a semantic reference.
