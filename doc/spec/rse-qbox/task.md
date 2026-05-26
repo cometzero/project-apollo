@@ -419,8 +419,10 @@ Created: 2026-05-20
       CPU/Zephyr peer with packet data-plane behavior. Later AP/SI MHU work
       now clears synthetic PBX doorbells and drives PBX transfer-ack IRQs for
       service-modeled auto-ack/RPMsg-NS traffic; see V038S. Runtime proof that
-      this removes the Linux `Try increasing MBOX_TX_QUEUE_LEN` warning is
-      still pending because the post-fix run timed out before Linux/IAT.
+      this removes the Linux `Try increasing MBOX_TX_QUEUE_LEN` warning is in
+      `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-ap-si-only-copyflash-20260527-v1/`.
+      That copy-flash run reaches Linux and the post-login probe with no
+      `400b0000.mhu` spurious-PBX or mailbox queue warnings.
 - [x] T019AW Establish reusable GDB inspection for QBox host, TF-M/RSE,
       SCP-Firmware symbols, and Linux/AP state. Script
       `scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py` creates per-run GDB
@@ -929,9 +931,12 @@ richer fault status.
       `tfm_its_remove()`. This keeps the immediate short-timeout blocker in
       secure-storage transaction progress before Linux, not in GDB setup.
       V038S fixes a separate AP/SI CL1 synthetic-MHU txdone/IRQ issue for
-      `400b0000.mhu`, but the post-fix runtime did not reach Linux/IAT.
-      T061 remains open because AP-RSE secure-service userspace tests still
-      time out and runtime proof of the AP/SI mailbox-warning fix is pending.
+      `400b0000.mhu`. The copy-flash runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-ap-si-only-copyflash-20260527-v1/`
+      reaches Linux, completes the post-login probe, and removes the AP/SI
+      spurious-PBX and `MBOX_TX_QUEUE_LEN` warnings. T061 remains open because
+      AP-RSE secure-service userspace tests still return 124 under the bounded
+      probe timeout.
 - [ ] T062 Validate Initial Attestation request path.
       Current QBox post-login secure-service probe infrastructure runs
       `psa-iat-api-test`, but the test times out with rc 124 while secure
@@ -1858,10 +1863,15 @@ richer fault status.
       IRQ output for PBX frames, not just MBX frames. This matters because the
       Linux `arm_mhuv3` driver uses interrupt-driven `txdone_irq` when the PBX
       combined IRQ is present; status-only synthetic completion is not enough
-      to drain the Linux mailbox queue. The focused `mhuv3_stub-tests`
-      regression now checks that PBX `DBCW_ST` is clear, `DBCW_INT_ST` is
-      raised, and the PBX IRQ asserts for both the `0x8` resource-table seed
-      kick and the later `0x1` RPMsg host kick. Static/build checks passed:
+      to drain the Linux mailbox queue. The fix now defers the synthetic PBX
+      completion through a SystemC event and suppresses empty transfer-ack IRQs
+      only for the AP/SI CL1 doorbell pair, so MBX startup clears no longer
+      create PBX IRQs without a Linux `pending_db`. The focused
+      `mhuv3_stub-tests` regression checks that empty MBX clears do not raise
+      PBX transfer-ack status, that PBX `DBCW_ST` remains set until the
+      deferred completion fires, and that `DBCW_INT_ST` plus the PBX IRQ assert
+      for both the `0x8` resource-table seed kick and the later `0x1` RPMsg
+      host kick. Static/build checks passed:
       `git -C tools/qbox diff --check -- systemc-components/mhuv3_stub/include/mhuv3_stub.h tests/components/mhuv3_stub/mhuv3_stub-tests.cc`,
       `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 8`,
       `ctest --test-dir tools/qbox/build -R '^mhuv3_stub-tests$' --output-on-failure`,
@@ -1876,6 +1886,11 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-irq-20s-20260526-v1/`,
       reached U-Boot EFI handoff (`EFI: MM partition ID 0x8006` and
       `Booting /\EFI\BOOT\BOOTAA64.EFI`) but timed out before Linux login, so
-      it does not yet prove the warning is gone. V038, T061-T064, and T076
-      remain open for secure-service completion, AP/SI warning proof under a
-      Linux/IAT-reaching run, and FWU persistence.
+      it did not prove warning removal. The 2026-05-27 copy-flash runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-ap-si-only-copyflash-20260527-v1/`
+      is the acceptance evidence: it reaches Linux and the post-login probe,
+      keeps SI CL1/RPMsg driver checks green, and contains zero
+      `Spurious IRQ on PBX channel`, zero `Try increasing MBOX_TX_QUEUE_LEN`,
+      and zero RCU-stall reports. V038, T061-T064, and T076 remain open for
+      secure-service completion and FWU persistence, not for the AP/SI
+      mailbox-warning path.
