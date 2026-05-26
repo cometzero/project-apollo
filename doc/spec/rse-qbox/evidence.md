@@ -5965,3 +5965,22 @@ blocker is simply that Linux login and the requested post-login PS probe were
 not reached before the 115-second cap. T063 remains open, and future
 short-timeout debugging should use `--pc-trace` so AP execution state is
 captured in `result.json` instead of inferred from console size alone.
+
+### 2026-05-27 Secure-Service PS Progress Parser
+
+The runner now extracts structured progress from the primary console for the
+focused Protected Storage test-403 path. This keeps short timeout runs useful
+even when the PSA test command does not reach its return-code marker.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `parse_secure_service_progress()` and `parse_ps_test_403_progress()`, then records the result under `post_login_probe.secure_service_probe.progress` in `result.json`. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding the parser. |
+| `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding the parser. |
+| Existing artifact replay: `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | The parser reports `requested_tests=ps`, PS test 403 started, `checks_seen=[1]`, `insufficient_space_uid=20`, `remove_all_registered_uids=true`, and the last observed line `Remove all registered UIDs`. |
+| Existing artifact replay: `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-deployroot-20260527-v1/qbox-primary-console.log` | The parser reports `requested_tests=ps`, `ps_test_list=test_403`, PS test 403 started, `checks_seen=[1]`, and no UID exhaustion before the run-level timeout. |
+
+Current conclusion: T063 is still open; this change does not alter QBox or
+TF-M behavior. It improves evidence quality so future bounded runs can show
+whether PS test 403 stalls before UID exhaustion, after insufficient-space
+detection, or during cleanup without manual log inspection.

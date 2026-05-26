@@ -1214,6 +1214,72 @@ def evaluate_fwu_probe(
     }
 
 
+def parse_ps_test_403_progress(clean_primary: str) -> dict[str, object]:
+    matches = list(re.finditer(r"TEST:\s*403\b[^\n]*", clean_primary))
+    if not matches:
+        return {"started": False}
+
+    match = matches[-1]
+    tail = clean_primary[match.end() :]
+    end_offsets = [
+        stop.start()
+        for stop in re.finditer(
+            r"\n(?:TEST:\s*\d+\b|secure_psa_ps_api_test_rc:|"
+            r"__QBOX_SECURE_SERVICE_PROBE_DONE__)",
+            tail,
+        )
+    ]
+    end = match.end() + min(end_offsets) if end_offsets else len(clean_primary)
+    section = clean_primary[match.start() : end]
+    checks = [
+        int(check.group(1))
+        for check in re.finditer(r"\[Check\s+(\d+)\]", section)
+    ]
+    insufficient_space_uids = [
+        int(uid.group(1))
+        for uid in re.finditer(
+            r"UID\s+(\d+)\s+set failed due to insufficient space",
+            section,
+        )
+    ]
+    removing_uids = [
+        int(uid.group(1))
+        for uid in re.finditer(r"Removing UID\s+(\d+)", section)
+    ]
+    last_observed_line = ""
+    for line in section.splitlines():
+        line = line.strip()
+        if line and not line.startswith("root@"):
+            last_observed_line = line
+
+    return {
+        "started": True,
+        "checks_seen": checks,
+        "last_check": checks[-1] if checks else None,
+        "insufficient_space_uid": (
+            insufficient_space_uids[-1] if insufficient_space_uids else None
+        ),
+        "remove_all_registered_uids": "Remove all registered UIDs" in section,
+        "removing_uid_count": len(removing_uids),
+        "last_removing_uid": removing_uids[-1] if removing_uids else None,
+        "test_result_passed": "TEST RESULT: PASSED" in section,
+        "test_result_failed": "TEST RESULT: FAILED" in section,
+        "last_observed_line": last_observed_line,
+    }
+
+
+def parse_secure_service_progress(clean_primary: str) -> dict[str, object]:
+    tests = re.findall(r"\bsecure_service_tests:([^\n]+)", clean_primary)
+    ps_test_lists = re.findall(
+        r"\bsecure_service_ps_test_list:([^\n]+)", clean_primary
+    )
+    return {
+        "requested_tests": tests[-1].strip() if tests else None,
+        "ps_test_list": ps_test_lists[-1].strip() if ps_test_lists else None,
+        "ps_test_403": parse_ps_test_403_progress(clean_primary),
+    }
+
+
 def evaluate_post_login_probe(
     primary_console: str, secure_console: str = "", rse_console: str = ""
 ) -> dict[str, object]:
@@ -1255,6 +1321,7 @@ def evaluate_post_login_probe(
             "binary_presence_rc": secure_presence,
             "return_codes": secure_return_codes,
             "observed_failures": secure_failures,
+            "progress": parse_secure_service_progress(clean_primary),
         },
         "fwu_probe": evaluate_fwu_probe(
             clean_primary, clean_rse, clean_secure, rc_hits

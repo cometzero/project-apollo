@@ -969,7 +969,10 @@ richer fault status.
       The runner now also classifies requested secure-service non-zero return
       codes as `qbox_secure_service_probe_failed:*`, so a completed boot with
       `secure_psa_ps_api_test_rc=124` no longer appears as a passing
-      secure-service validation artifact.
+      secure-service validation artifact. V038AM adds structured
+      secure-service progress extraction so future `result.json` files record
+      whether focused PS test 403 reached `[Check 1]`, a specific
+      insufficient-space UID, and the cleanup phase before timeout.
       V038U fixes a separate per-run writable-flash backing-size bug: the RSE
       and AP raw flash copies are now padded with erased `0xff` bytes to the
       QBox Strata device size before writeback is enabled. The padded
@@ -2213,3 +2216,19 @@ richer fault status.
       `pc=0x82000`. Treat the latest bounded blocker as Linux-login-not-yet
       reached in the U-Boot/bootflow path, not as a reproduced AP
       reset-release or UART-backend failure. T063 remains open.
+- [x] V038AM Add structured secure-service PS 403 progress parsing. The
+      runner now records `secure_service_probe.progress` in `result.json`,
+      including requested secure-service tests, the PS test-list filter, and
+      PS test 403 state such as `checks_seen`, `insufficient_space_uid`,
+      `remove_all_registered_uids`, and the last observed PS test line.
+      Static validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`. Existing
+      artifact replay against
+      `rse-secure-service-ps-only-padded-stats-20260527-v1` reports
+      `checks_seen=[1]`, `insufficient_space_uid=20`, and cleanup started,
+      while replay against
+      `rse-ps403-after-stats-opt-deployroot-20260527-v1` reports
+      `checks_seen=[1]` without UID exhaustion before the run-level timeout.
+      This does not close T063; it makes short-timeout PS artifacts precise
+      enough to compare without manual console-log inspection.
