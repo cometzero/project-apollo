@@ -2022,3 +2022,13 @@ richer fault status.
       result records `timed_out=true`, `blocker=qbox_platform_timeout`,
       `runtime_elapsed_s=3.0408413260011002`, and a `runner_argv` containing
       `--timeout`.
+- [x] V038Z Re-run focused PS 403 with elapsed metadata and a short 180-second
+      cap. Runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-filter-elapsed-20260527-v1/`
+      records `runtime_elapsed_s=180.15632524300236`, `timed_out=true`, and
+      `blocker=qbox_platform_timeout`. RSE markers through measured boot
+      `BL_33` are present, AP U-Boot reaches PK/KEK/db/dbx enrollment and
+      `** Booting bootflow 'virtio-blk#1.bootdev.part_1' with script`, but
+      Linux login markers are false and no post-login probe commands were
+      sent. Treat this as pre-Linux U-Boot/SMM Gateway secure-storage timing
+      evidence, not as a PSA PS test 403 result.

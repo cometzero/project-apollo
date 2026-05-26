@@ -5708,3 +5708,25 @@ Current conclusion: future PS/SMM Gateway rechecks can be judged with exact
 runner-level timeout and elapsed-time metadata. This is diagnostic evidence;
 it does not change QBox platform behavior or close the remaining Protected
 Storage completion gap.
+
+### 2026-05-27 Focused PS 403 Elapsed Recheck
+
+A short filtered PS 403 run was repeated after adding elapsed-time metadata.
+The run used per-run writable flash copies, AP CPUs enabled automatically by
+the probe mode, ATU/host-memory/RSE-memory DMI, boot-flash DMI disabled, and
+`--secure-service-ps-test-list 'test_403;'` under a 180-second platform cap.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-ps403-filter-elapsed-20260527-v1/result.json` | Records `timed_out=true`, `blocker=qbox_platform_timeout`, `runtime_elapsed_s=180.15632524300236`, no login/probe actions, and no secure-service return codes. |
+| `rse-ps403-filter-elapsed-20260527-v1/result.json` | `runner_argv` records the runner-level options including `--timeout 180`, `--secure-service-probe-tests ps`, and `--secure-service-ps-test-list test_403;`. |
+| `rse-ps403-filter-elapsed-20260527-v1/qbox-rse.log` | RSE/TF-M reaches runtime and measured-boot markers through `BL_33`, so the run is past RSE boot, AP release, and measured boot. |
+| `rse-ps403-filter-elapsed-20260527-v1/qbox-primary-console.log` | AP U-Boot reaches `EFI: MM partition ID 0x8006`, PK/KEK/db/dbx enrollment, and `** Booting bootflow 'virtio-blk#1.bootdev.part_1' with script`; no `Linux version` marker appears before the cap. |
+| `rse-ps403-filter-elapsed-20260527-v1/qbox-secure-console.log` | Records the same early SMM Gateway service discovery fallback and first-boot SE-Proxy remove-missing-object messages as the earlier filtered attempts. |
+
+Current conclusion: with exact elapsed metadata, the focused filtered PS 403
+run is confirmed as a 180-second pre-Linux U-Boot/SMM Gateway timeout. It does
+not exercise PSA PS test 403. The split remains: fresh per-run/padded flash
+still needs U-Boot/SMM Gateway secure-storage timing work before Linux, while
+older Linux-reaching PS-only artifacts still point to Protected Storage test
+403 completion throughput.
