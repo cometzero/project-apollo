@@ -5664,3 +5664,27 @@ reach the post-login probe. Use the new filter with stats disabled or a longer
 host cap when collecting PS 403-specific pass/fail evidence. The open fidelity
 gap remains Protected Storage completion through the firmware-visible Strata
 CFI workload.
+
+### 2026-05-27 AP Auto-Enable For Probe Runs
+
+Post-login, secure-service, and FWU probes all require the Primary Compute AP
+CPUs and Linux console. The runner now enables AP CPUs automatically for those
+probe modes so short validation runs cannot accidentally launch an RSE-only
+platform and then wait for a Linux login that can never appear.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `probe_requires_ap_cpus()` and sets `QBOX_RDASPEN_ENABLE_AP_CPUS=true` in `qbox_env()` for `--post-login-probe`, `--secure-service-probe`, and `--fwu-probe`. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| Helper-level import smoke | Passed; direct `qbox_env()` invocation with post-login and secure-service probes produced `QBOX_RDASPEN_ENABLE_AP_CPUS=true`. |
+| `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| `build/qbox-fvp-rd-aspen/rse-ap-auto-enable-smoke-20260527-v1/qbox-platform.log` | A 20-second runtime smoke launched without external AP env and logged `ap cpus:      4`. The run intentionally timed out before boot completion, so it is only AP auto-enable evidence. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps403-filter-nostats-ap-20260527-v1/result.json` | AP-enabled, no-copy, stats-disabled filtered PS 403 run timed out before Linux at U-Boot/SMM Gateway with `blocker=qbox_platform_timeout`; no login or PS command was sent. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps403-filter-copyflash-20260527-v1/result.json` | AP-enabled, per-run copied flash filtered PS 403 run also timed out before Linux at U-Boot/SMM Gateway. This is pre-Linux secure-storage timing evidence, not a PS 403 pass/fail result. |
+
+Current conclusion: probe runs are now guarded against an AP-disabled launch
+configuration. The two filtered PS 403 attempts after this cleanup did not
+reach Linux, while earlier unfiltered PS-only runs did reach test 403. Treat
+this as additional evidence that U-Boot/SMM Gateway secure-storage timing and
+the later PS flash workload both remain fidelity risks; do not count these
+filtered attempts as PSA PS test results.

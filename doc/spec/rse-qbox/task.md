@@ -1991,3 +1991,21 @@ richer fault status.
       dominates when stats collection is enabled in a short host window:
       `write_accesses=500000`, `program_ops=83333`,
       `compat_ff_sector_erase_ops=317`, and `backing_write_ops=0`.
+- [x] V038X Auto-enable AP CPUs for post-login, secure-service, and FWU
+      probes. These probes require Primary Compute Linux, so the runner now
+      sets `QBOX_RDASPEN_ENABLE_AP_CPUS=true` inside the QBox runtime
+      environment whenever `--post-login-probe`, `--secure-service-probe`, or
+      `--fwu-probe` is requested. Validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, a
+      helper-level import smoke that checks `qbox_env()`, `git diff --check`,
+      and a 20-second runtime smoke
+      `build/qbox-fvp-rd-aspen/rse-ap-auto-enable-smoke-20260527-v1/` run
+      without any external AP env. The smoke intentionally timed out early,
+      but `qbox-platform.log` reports `ap cpus:      4`, proving the runner no
+      longer creates invalid AP-disabled post-login probe runs. Two follow-up
+      filtered PS 403 attempts,
+      `rse-secure-service-ps403-filter-nostats-ap-20260527-v1/` and
+      `rse-secure-service-ps403-filter-copyflash-20260527-v1/`, used AP CPUs
+      but timed out before Linux at U-Boot/SMM Gateway, so they are
+      pre-Linux secure-storage timing evidence rather than PS test 403
+      pass/fail evidence.

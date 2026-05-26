@@ -1569,6 +1569,10 @@ def write_placeholder_logs(out_dir: Path, reason: str) -> dict[str, str]:
     return logs
 
 
+def probe_requires_ap_cpus(args: argparse.Namespace) -> bool:
+    return bool(args.post_login_probe or args.secure_service_probe or args.fwu_probe)
+
+
 def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -> dict[str, str]:
     env = os.environ.copy()
     lib_paths = [
@@ -1579,6 +1583,8 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if current:
         lib_paths.append(Path(current))
     env["LD_LIBRARY_PATH"] = ":".join(str(path) for path in lib_paths)
+    if probe_requires_ap_cpus(args):
+        env["QBOX_RDASPEN_ENABLE_AP_CPUS"] = "true"
     env["QBOX_RDASPEN_RSE_ROM"] = str(artifacts["rse_rom"])
     env["QBOX_RDASPEN_RSE_FLASH"] = str(artifacts["rse_flash"])
     env["QBOX_RDASPEN_RSE_OTP"] = str(artifacts["rse_otp"])
