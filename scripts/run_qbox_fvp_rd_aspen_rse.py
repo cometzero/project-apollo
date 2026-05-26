@@ -2716,10 +2716,33 @@ def main() -> int:
     fwu_probe_incomplete = bool(
         args.fwu_probe and post_login_probe and not post_login_probe.get("complete")
     )
+    secure_service_eval = (
+        post_login_probe.get("secure_service_probe")
+        if post_login_probe
+        else {}
+    )
+    secure_service_incomplete = bool(
+        args.secure_service_probe
+        and isinstance(secure_service_eval, dict)
+        and not secure_service_eval.get("done_marker")
+    )
+    post_login_probe_incomplete = bool(
+        args.post_login_probe
+        and post_login_probe
+        and not post_login_probe.get("complete")
+    )
     if fwu_probe_incomplete and timed_out:
         runtime_blocker = "qbox_fwu_probe_incomplete_timeout"
     elif fwu_probe_incomplete:
         runtime_blocker = "qbox_fwu_probe_incomplete"
+    elif secure_service_incomplete and timed_out:
+        runtime_blocker = "qbox_secure_service_probe_incomplete_timeout"
+    elif secure_service_incomplete:
+        runtime_blocker = "qbox_secure_service_probe_incomplete"
+    elif post_login_probe_incomplete and timed_out:
+        runtime_blocker = "qbox_post_login_probe_incomplete_timeout"
+    elif post_login_probe_incomplete:
+        runtime_blocker = "qbox_post_login_probe_incomplete"
     elif current_status["passed"]:
         runtime_blocker = None
     elif first_fault and first_fault.get("fault_address"):

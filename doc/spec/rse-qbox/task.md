@@ -2108,3 +2108,21 @@ richer fault status.
       the 180-second cap because stats collection is diagnostic and can distort
       bounded timing. Treat marker-only runs as pass/fail timing evidence and
       stats runs as CFI workload evidence.
+- [x] V038AF Validate UEFI variable persistence with a second boot and fix
+      secure-service timeout classification. Runtime
+      `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-20260527-v1/`
+      used the writable RSE flash from
+      `rse-uefi-marker-180s-20260527-v1/` as its input. U-Boot reported
+      `PK/KEK/db/dbx key has already been enrolled!`, then reached EFI boot at
+      123.885 seconds, Linux at 132.154 seconds, login at 155.050 seconds,
+      root shell at 160.737 seconds, and PS test 403 at 163.480 seconds. This
+      proves the first-boot UEFI variable writes persist in the RSE Strata
+      backing image and are consumed by the next boot. The runner also now
+      reports missing secure-service and post-login done markers as explicit
+      blockers instead of allowing Linux boot markers alone to pass a requested
+      secure-service probe. Validation passed with `python3 -m py_compile`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-classify-20260527-v1/`,
+      which returns `passed=false`, `timed_out=true`, and
+      `blocker=qbox_secure_service_probe_incomplete_timeout` while still
+      reaching Linux and PS test 403.

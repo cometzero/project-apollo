@@ -5805,3 +5805,27 @@ bounded timing, so marker-only runs remain the primary pass/fail timing
 evidence. The next implementation work should reduce or more faithfully model
 the RSE Protected Storage/Strata command workload rather than AP flash, Linux
 drivers, or AP/SI mailbox wiring.
+
+### 2026-05-27 Persisted UEFI Variables Second Boot
+
+The first-boot UEFI variable enrollment artifact was reused as the next run's
+RSE flash input to split two questions: whether QBox persists the UEFI variable
+writes into RSE flash, and whether the remaining timeout is only first-boot
+key enrollment or also the later Protected Storage workload.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-20260527-v1/result.json` | Using `--rse-flash build/qbox-fvp-rd-aspen/rse-uefi-marker-180s-20260527-v1/writable-images/rse-flash-image.img`, QBox reached EFI boot at 123.885 s, Linux at 132.154 s, login at 155.050 s, root shell at 160.737 s, and PS test 403 at 163.480 s. |
+| `rse-uefi-persisted-secondboot-20260527-v1/qbox-primary-console.log` | U-Boot prints `PK/KEK/db/dbx key has already been enrolled!`, then boots `\EFI\BOOT\BOOTAA64.EFI` and Linux. This proves the prior UEFI variable writes were persisted in the copied RSE flash image and consumed by the next boot. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Fixes runtime classification for requested secure-service probes: if the secure-service done marker is missing, a timeout now reports `qbox_secure_service_probe_incomplete_timeout` and forces `passed=false` instead of treating Linux boot markers alone as success. The same pattern is applied to generic post-login probe incompletion. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after the secure-service/post-login blocker classification fix. |
+| `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-classify-20260527-v1/result.json` | Re-running the persisted second boot with a 170-second cap now returns `passed=false`, `timed_out=true`, and `blocker=qbox_secure_service_probe_incomplete_timeout`. It still proves progress through Linux and into PS test 403: EFI boot at 120.643 s, Linux at 128.912 s, login at 151.621 s, root shell at 157.201 s, and `TEST: 403` at 159.741 s. |
+| `rse-uefi-persisted-secondboot-classify-20260527-v1/qbox-primary-console.log` | Confirms `PK key has already been enrolled!`, `Booting /\EFI\BOOT\BOOTAA64.EFI`, Linux version output, login, and PS test 403 in the classified run. |
+
+Current conclusion: QBox's RSE Strata writeback is sufficient for UEFI key
+variable persistence across a second boot, and persisted UEFI variables remove
+the first-boot key-enrollment delay enough to reach Linux and PS test 403
+inside a short cap. T064 remains open because the image lacks `uefi-test` and
+because first-boot UEFI variable enrollment is still much slower than FVP. The
+remaining post-login gap is the same Protected Storage test-403 workload, now
+reported with the correct secure-service-incomplete blocker.
