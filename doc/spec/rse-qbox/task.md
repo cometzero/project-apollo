@@ -971,6 +971,10 @@ richer fault status.
       QBox Strata device size before writeback is enabled. The padded
       PS-only runtime records no `backing_file` range errors and writes
       Strata stats, but `psa-ps-api-test` still returns 124 in PS test 403.
+      A follow-up no-copy control run keeps deploy flash images unmodified,
+      records `backing_write_ops=0`, and still times out in PS test 403,
+      narrowing the remaining blocker away from host backing-file writeback
+      and toward TF-M Protected Storage/Strata command workload completion.
       The current GDB split narrows one QBox path to SE-Proxy
       `secure_storage_ipc_set()` waiting for an RSE PS SET response while
       RSE/TF-M executes `tfm_its_remove()` through flash filesystem
@@ -1956,3 +1960,16 @@ richer fault status.
       `secure_psa_ps_api_test_rc=124` in test 403, so V038/T061/T063/T064/T076
       remain open for Protected Storage completion and FWU/UEFI persistence
       semantics, not for backing-file coverage of the modeled flash aperture.
+- [x] V038V Run a no-copy/writeback-off PS-only stats control. Runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-nocopy-stats-20260527-v1/`
+      uses `--no-copy-writable-flash`, preserves the deploy RSE/AP flash image
+      lengths, and reports `pad_state=skipped_source_not_copied`. It returns
+      `passed=true`, `timed_out=false`, `blocker=null`, completes post-login
+      driver checks, and records `secure_psa_ps_api_test_rc=124`. RSE Strata
+      stats still show a large firmware-visible workload
+      (`write_accesses=15750000`, `program_ops=2625000`,
+      `compat_ff_sector_erase_ops=1962`) while `backing_write_ops=0` and
+      `backing_write_bytes=0`. No `unable to ... backing_file`, AP/SI PBX
+      warning, MBOX queue warning, or RCU-stall pattern was found in the
+      checked logs. This confirms the current PS timeout is not caused by
+      host file writeback cost or backing-file range errors.

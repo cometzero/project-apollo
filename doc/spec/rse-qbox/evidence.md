@@ -5626,10 +5626,16 @@ persistence evidence.
 | `rse-secure-service-ps-only-padded-stats-20260527-v1/result.json` | Runtime returned `passed=true`, `timed_out=false`, `blocker=null`, completed the post-login probe, and kept driver patterns true for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio`. |
 | `rse-secure-service-ps-only-padded-stats-20260527-v1/rse-strata-stats.json` | Captures the PS-only Strata workload after padding: `write_accesses=16750000`, `word_program_cmds=2791667`, `program_ops=2791667`, `program_changed_bytes=2261678`, `compat_ff_sector_erase_ops=2034`, `sector_erase_bytes=8331264`, `backing_write_ops=2263712`, and `backing_write_bytes=10592942`. |
 | `rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | PS still passes tests 401 and 402, enters PS test 403 (`Insufficient space check`), and returns `secure_psa_ps_api_test_rc=124` at the 60-second command cap. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-nocopy-stats-20260527-v1/summary.txt` | No-copy/writeback-off control keeps the deploy RSE/AP flash images unmodified and records `pad_state=skipped_source_not_copied` with required-but-skipped padding of 62,074,880 bytes for RSE flash and 129,445,888 bytes for AP flash. |
+| `rse-secure-service-ps-only-nocopy-stats-20260527-v1/result.json` | Runtime returned `passed=true`, `timed_out=false`, `blocker=null`, completed the post-login probe, kept all checked driver patterns true, and recorded `secure_psa_ps_api_test_rc=124`. |
+| `rse-secure-service-ps-only-nocopy-stats-20260527-v1/rse-strata-stats.json` | With file writeback disabled, PS still performs a large CFI workload: `write_accesses=15750000`, `word_program_cmds=2625000`, `program_ops=2625000`, `program_changed_bytes=2114082`, `compat_ff_sector_erase_ops=1962`, and `sector_erase_bytes=8036352`, while `backing_write_ops=0` and `backing_write_bytes=0`. |
+| `rse-secure-service-ps-only-nocopy-stats-20260527-v1/qbox-platform.log` and console logs | Checked for `unable to ... backing_file`, `Spurious IRQ on PBX channel`, `Try increasing MBOX_TX_QUEUE_LEN`, and RCU-stall reports; none were found. The primary console still enters PS test 403 (`Insufficient space check`). |
 
 Current conclusion: per-run writable flash now covers the full RSE/AP Strata
 apertures used by the QBox platform, so future PS/FWU persistence evidence is
 not limited by the short deploy image length. This does not close Protected
 Storage completion: the padded PS-only run still times out in PS test 403, but
-it proves the remaining gap is flash-workload/service completion rather than a
-backing-file range miss.
+the no-copy control shows the same timeout with `backing_write_ops=0`. The
+remaining gap is therefore the firmware-visible Protected Storage/Strata CFI
+command workload and service completion, not host backing-file range coverage
+or writeback cost.
