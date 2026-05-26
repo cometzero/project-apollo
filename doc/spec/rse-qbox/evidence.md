@@ -5942,3 +5942,26 @@ never produced U-Boot or Linux output and no post-login command was injected.
 No additional fix is proposed from this artifact alone; it is recorded as
 pre-login/AP-handoff variability evidence to compare against future bounded
 runs. T063 remains open.
+
+### 2026-05-27 AP PC Trace Recheck
+
+The runner now parses the AP CPU PC trace artifact in addition to the RSE M55
+PC trace. This makes short-timeout runs useful for distinguishing AP reset or
+UART-backend problems from ordinary pre-login bootflow delay.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `AP_PC_TRACE_LOG`, parses component-qualified AP PC trace lines, and records `ap_pc_trace` in `result.json` and `summary.txt` with component counts, first/last samples, per-component last samples, tail PCs, and decoded exception/register state. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding AP PC-trace parsing. |
+| `build/qbox-fvp-rd-aspen/rse-ap-pc-trace-empty-primary-20260527-v1/result.json` | A 115-second diagnostic run timed out with `blocker=qbox_post_login_probe_not_reached_timeout`, `runtime_elapsed_s=115.0855377820044`, and no probe command sent. Marker timing reached RSE AP handoff at 63.825 s, measured boot `BL_33` at 65.432 s, `EFI: MM partition ID 0x8006` at 67.846 s, FWU regular state at 86.452 s, and bootflow script handoff at 106.974 s. |
+| `rse-ap-pc-trace-empty-primary-20260527-v1/qbox-primary-console.log` | The primary console was not empty in this run. It reached U-Boot, `EFI: MM partition ID 0x8006`, `FWU: System booting in Regular State`, PK/KEK/db/dbx already-enrolled output, and `** Booting bootflow 'virtio-blk#1.bootdev.part_1' with script`; it did not reach Linux before the short cap. |
+| `rse-ap-pc-trace-empty-primary-20260527-v1/ap-pc-trace.log` | Records AP0 reset release at about 63.323 s. Parsed trace has `component_counts={"platform.ap_cpu_0": 6, "platform.ap_cpu_1": 1, "platform.ap_cpu_2": 1, "platform.ap_cpu_3": 1}`. AP0 samples include EL1 `pc=0xffc032ec`, EL2 `pc=0xfef5b8a4`, and EL0 `pc=0x4006fc90`; AP1-AP3 remain powered off at `pc=0x82000`. |
+| `rse-ap-pc-trace-empty-primary-20260527-v1/rse-pc-trace.log` | Parsed RSE trace has 116 samples for `remote_platform.cpu_0.cpu`, no exception, and a final runtime PC of `0x3104e972`, confirming TF-M remains active while AP U-Boot progresses. |
+
+Current conclusion: the previous 195-second empty-primary artifact is not
+reproduced by the short PC-traced recheck, so it should not be treated as a
+confirmed AP reset-release or UART-backend regression. The latest bounded
+blocker is simply that Linux login and the requested post-login PS probe were
+not reached before the 115-second cap. T063 remains open, and future
+short-timeout debugging should use `--pc-trace` so AP execution state is
+captured in `result.json` instead of inferred from console size alone.

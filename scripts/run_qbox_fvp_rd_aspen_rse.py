@@ -57,6 +57,7 @@ REQUIRED_TARGETS = [
 PLATFORM_STDOUT_LOG = "qbox-platform.log"
 QEMU_TRACE_LOG = "qemu-rse-trace.log"
 RSE_PC_TRACE_LOG = "rse-pc-trace.log"
+AP_PC_TRACE_LOG = "ap-pc-trace.log"
 RSE_STRATA_STATS = "rse-strata-stats.json"
 AP_STRATA_STATS = "ap-strata-stats.json"
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
@@ -252,8 +253,8 @@ ATU_TRANSLATION_ERROR_RE = re.compile(
     r"physical=(?P<physical>0x[0-9a-fA-F]+) "
     r"len=(?P<length>0x[0-9a-fA-F]+) status=error"
 )
-RSE_PC_TRACE_RE = re.compile(
-    r"pc_trace sample=(?P<sample>\d+) seen=(?P<seen>\d+) "
+PC_TRACE_RE = re.compile(
+    r"(?:(?P<component>\S+)\s+)?pc_trace sample=(?P<sample>\d+) seen=(?P<seen>\d+) "
     r"sc_time=(?P<sc_time>.*?) vclock_ns=(?P<vclock_ns>\d+) "
     r"pc=(?P<pc>0x[0-9a-fA-F]+) mem_io_pc=(?P<mem_io_pc>0x[0-9a-fA-F]+)"
     r"(?P<extra>.*)$"
@@ -1570,13 +1571,16 @@ def armv7m_exception_name(exception: int) -> str:
     return ARMV7M_EXCEPTIONS.get(exception, f"Exception{exception}")
 
 
-def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None:
+def parse_cpu_pc_trace(
+    out_dir: Path, enabled: bool, filename: str, role: str
+) -> dict[str, object] | None:
     if not enabled:
         return None
-    trace_path = out_dir / RSE_PC_TRACE_LOG
+    trace_path = out_dir / filename
     if not trace_path.exists():
         return {
             "enabled": True,
+            "role": role,
             "trace_log": str(trace_path.resolve()),
             "present": False,
         }
@@ -1585,7 +1589,7 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
     line_count = 0
     for line in trace_path.read_text(encoding="utf-8", errors="replace").splitlines():
         line_count += 1
-        match = RSE_PC_TRACE_RE.search(line)
+        match = PC_TRACE_RE.search(line)
         if not match:
             continue
         sample: dict[str, object] = {
@@ -1596,6 +1600,9 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
             "pc": match.group("pc").lower(),
             "mem_io_pc": match.group("mem_io_pc").lower(),
         }
+        component = match.group("component")
+        if component:
+            sample["component"] = component
         exception_state = {
             kv.group("key"): parse_trace_value(kv.group("value"))
             for kv in TRACE_KV_RE.finditer(match.group("extra"))
@@ -1610,6 +1617,7 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
     if not samples:
         return {
             "enabled": True,
+            "role": role,
             "trace_log": str(trace_path.resolve()),
             "present": True,
             "line_count": line_count,
@@ -1617,6 +1625,12 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
         }
 
     unique_tail = []
+    last_samples_by_component: dict[str, dict[str, object]] = {}
+    component_counts: dict[str, int] = {}
+    for sample in samples:
+        component = str(sample.get("component", "unknown"))
+        last_samples_by_component[component] = sample
+        component_counts[component] = component_counts.get(component, 0) + 1
     for sample in samples[-32:]:
         pc = sample["pc"]
         if pc not in unique_tail:
@@ -1624,18 +1638,29 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
 
     result: dict[str, object] = {
         "enabled": True,
+        "role": role,
         "trace_log": str(trace_path.resolve()),
         "present": True,
         "line_count": line_count,
         "sample_count": len(samples),
+        "component_counts": component_counts,
         "first_sample": samples[0],
         "last_sample": samples[-1],
+        "last_samples_by_component": last_samples_by_component,
         "tail_unique_pcs": unique_tail,
     }
     last_exception_state = samples[-1].get("exception_state")
     if isinstance(last_exception_state, dict):
         result["last_exception_state"] = last_exception_state
     return result
+
+
+def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None:
+    return parse_cpu_pc_trace(out_dir, enabled, RSE_PC_TRACE_LOG, "rse")
+
+
+def parse_ap_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None:
+    return parse_cpu_pc_trace(out_dir, enabled, AP_PC_TRACE_LOG, "ap")
 
 
 def classify_pc_trace_blocker(
@@ -1775,7 +1800,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_RSE_PC_TRACE_INTERVAL"] = str(args.pc_trace_interval)
         env["QBOX_RDASPEN_RSE_PC_TRACE_LIMIT"] = str(args.pc_trace_limit)
         env["QBOX_RDASPEN_AP_PC_TRACE"] = "true"
-        env["QBOX_RDASPEN_AP_PC_TRACE_FILE"] = str(args.out_dir / "ap-pc-trace.log")
+        env["QBOX_RDASPEN_AP_PC_TRACE_FILE"] = str(args.out_dir / AP_PC_TRACE_LOG)
         env["QBOX_RDASPEN_AP_PC_TRACE_INTERVAL"] = str(args.pc_trace_interval)
         env["QBOX_RDASPEN_AP_PC_TRACE_LIMIT"] = str(args.pc_trace_limit)
         if args.exception_trace:
@@ -2061,6 +2086,7 @@ def write_result(
     runtime_elapsed_s: float | None = None,
     rse_fwu_private_metadata: dict[str, object] | None = None,
     rse_pc_trace: dict[str, object] | None = None,
+    ap_pc_trace: dict[str, object] | None = None,
     host_si_cl0_sram: dict[str, object] | None = None,
     host_si_cl1_sram: dict[str, object] | None = None,
     boot_enc_trace: dict[str, object] | None = None,
@@ -2147,6 +2173,7 @@ def write_result(
             ),
             "flash_stats": parse_flash_stats(args),
             "rse_pc_trace": rse_pc_trace,
+            "ap_pc_trace": ap_pc_trace,
             "boot_enc_trace": boot_enc_trace,
             "post_login_probe": post_login_probe
             if post_login_probe is not None
@@ -2210,6 +2237,12 @@ def write_result(
         + (
             json.dumps(rse_pc_trace, sort_keys=True)
             if rse_pc_trace
+            else "disabled"
+        ),
+        "ap_pc_trace: "
+        + (
+            json.dumps(ap_pc_trace, sort_keys=True)
+            if ap_pc_trace
             else "disabled"
         ),
         "host_si_cl0_sram: "
@@ -2746,6 +2779,7 @@ def main() -> int:
             platform_rc=platform_rc,
             rse_fwu_private_metadata=rse_fwu_private_metadata,
             rse_pc_trace=parse_rse_pc_trace(args.out_dir, args.pc_trace),
+            ap_pc_trace=parse_ap_pc_trace(args.out_dir, args.pc_trace),
             host_si_cl0_sram=host_si_cl0_sram,
             host_si_cl1_sram=host_si_cl1_sram,
         )
@@ -2768,6 +2802,7 @@ def main() -> int:
         host_si_cl1_sram_path, run_artifacts.get("rse_flash")
     )
     rse_pc_trace = parse_rse_pc_trace(args.out_dir, args.pc_trace)
+    ap_pc_trace = parse_ap_pc_trace(args.out_dir, args.pc_trace)
     boot_enc_trace = parse_boot_enc_trace(root, args.out_dir, args.boot_enc_trace)
     runtime_blocker = None
     first_fault = parse_qemu_trace(args.out_dir, qemu_trace_enabled(args))
@@ -2866,6 +2901,7 @@ def main() -> int:
         runtime_elapsed_s=runtime_elapsed_s,
         rse_fwu_private_metadata=rse_fwu_private_metadata,
         rse_pc_trace=rse_pc_trace,
+        ap_pc_trace=ap_pc_trace,
         host_si_cl0_sram=host_si_cl0_sram,
         host_si_cl1_sram=host_si_cl1_sram,
         boot_enc_trace=boot_enc_trace,

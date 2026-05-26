@@ -2195,3 +2195,21 @@ richer fault status.
       primary console stayed empty and the runner reported
       `qbox_post_login_probe_not_reached_timeout`. Treat this as pre-login
       variability evidence, not PS403 completion evidence; T063 remains open.
+- [x] V038AL Add AP PC-trace parsing to the RSE runner and recheck the
+      pre-login timeout with a short diagnostic cap. The runner now records
+      `ap_pc_trace` beside the existing `rse_pc_trace` in `result.json` and
+      `summary.txt`, including per-component counts and each CPU's last
+      sample. Static validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`. Runtime
+      `build/qbox-fvp-rd-aspen/rse-ap-pc-trace-empty-primary-20260527-v1/`
+      timed out at `runtime_elapsed_s=115.0855377820044` before login and
+      post-login probe injection, so it is not PS403 evidence. It did not
+      reproduce the prior empty-primary artifact: the primary console reached
+      U-Boot, `EFI: MM partition ID 0x8006`, `FWU: System booting in Regular
+      State`, PK/KEK/db/dbx already-enrolled output, and bootflow script
+      handoff. AP PC trace records AP0 release from reset and later samples
+      AP0 at EL0 `pc=0x4006fc90`, with AP1-AP3 parked powered off at
+      `pc=0x82000`. Treat the latest bounded blocker as Linux-login-not-yet
+      reached in the U-Boot/bootflow path, not as a reproduced AP
+      reset-release or UART-backend failure. T063 remains open.
