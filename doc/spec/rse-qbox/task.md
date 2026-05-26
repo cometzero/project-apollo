@@ -1973,3 +1973,21 @@ richer fault status.
       warning, MBOX queue warning, or RCU-stall pattern was found in the
       checked logs. This confirms the current PS timeout is not caused by
       host file writeback cost or backing-file range errors.
+- [x] V038W Add focused PSA PS test-list support for short PS debug runs. The
+      runner now accepts `--secure-service-ps-test-list`, validates PSA
+      Architecture Test Suite entries such as `test_403;`, and emits
+      `psa-ps-api-test -t 'test_403;'` only when the selected secure-service
+      test is `ps`. Validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, help-output
+      inspection, command-generation checks, `git diff --check --`, and the
+      focused Strata component build/test:
+      `timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8`
+      plus
+      `timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure`.
+      A stats-enabled no-copy runtime,
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps403-filter-20260527-v1/`,
+      timed out before Linux login with `qbox_platform_timeout`, so it is not
+      PS test 403 pass/fail evidence. It does show pre-Linux Strata work still
+      dominates when stats collection is enabled in a short host window:
+      `write_accesses=500000`, `program_ops=83333`,
+      `compat_ff_sector_erase_ops=317`, and `backing_write_ops=0`.

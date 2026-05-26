@@ -5639,3 +5639,28 @@ the no-copy control shows the same timeout with `backing_write_ops=0`. The
 remaining gap is therefore the firmware-visible Protected Storage/Strata CFI
 command workload and service completion, not host backing-file range coverage
 or writeback cost.
+
+### 2026-05-27 Focused PSA PS Test-List Runner
+
+The PSA Architecture Test Suite wrapper supports `-t <test_list>`, so the QBox
+runner now exposes a PS-specific filter for short Protected Storage debug
+runs. This does not change default secure-service coverage; it only narrows
+`psa-ps-api-test` when `--secure-service-probe-tests ps` is selected.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `--secure-service-ps-test-list`, validates entries such as `test_403;`, quotes the semicolon-bearing list, and emits `timeout <n>s psa-ps-api-test -t 'test_403;'` for PS-only secure-service probes. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| Helper-level import/command-generation check | Passed; `parse_psa_test_list('test_403;')` is accepted, `test_403` without the semicolon is rejected, and generated commands contain `psa-ps-api-test -t 'test_403;'`. |
+| `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --help \| rg -n "secure-service-ps-test-list\|secure-service-probe-tests\|secure-service-probe-timeout"` | Passed and shows the new CLI option with the existing secure-service probe controls. |
+| `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| `timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8` and `timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; `strata_flash_j3-tests` completed successfully. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps403-filter-20260527-v1/result.json` | Stats-enabled no-copy run with `--secure-service-ps-test-list 'test_403;'` timed out before Linux login (`blocker=qbox_platform_timeout`, `platform_returncode=-15`), so it is not PS test 403 pass/fail evidence. |
+| `rse-secure-service-ps403-filter-20260527-v1/rse-strata-stats.json` | At timeout the RSE boot-flash model already recorded `write_accesses=500000`, `word_program_cmds=83334`, `program_ops=83333`, `compat_ff_sector_erase_ops=317`, and `backing_write_ops=0`, reinforcing that short stats-enabled windows are dominated by pre-Linux Strata work. |
+
+Current conclusion: the runner can now isolate PS test 403 without running
+tests 401 and 402 first, but the first stats-enabled filtered attempt did not
+reach the post-login probe. Use the new filter with stats disabled or a longer
+host cap when collecting PS 403-specific pass/fail evidence. The open fidelity
+gap remains Protected Storage completion through the firmware-visible Strata
+CFI workload.
