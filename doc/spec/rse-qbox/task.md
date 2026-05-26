@@ -961,7 +961,11 @@ richer fault status.
       cap. FVP comparison completes `psa-its-api-test` with rc 0, and a
       PS-only FVP probe enters the PS test sequence through test 409 before
       the host-side post-login cap, confirming that FVP progresses further
-      than QBox on the PS path.
+      than QBox on the PS path. The runner now supports
+      `--secure-service-probe-tests ps`, and the PS-only QBox runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-60s-20260527-v1/`
+      still times out in PS test 403 after tests 401/402 pass. This confirms
+      the remaining PS gap is not caused by the preceding IAT/ITS commands.
       The current GDB split narrows one QBox path to SE-Proxy
       `secure_storage_ipc_set()` waiting for an RSE PS SET response while
       RSE/TF-M executes `tfm_its_remove()` through flash filesystem
@@ -1916,5 +1920,9 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-secure-service-30s-probe-20260527-v1/`
       timed out before Linux while logging thousands of AP-RSE MHU accesses,
       so high-volume MHU tracing is diagnostic only and should not be used for
-      bounded secure-service pass/fail timing. V038/T061/T063/T064/T076 remain
-      open for PS completion, UEFI/FWU storage coverage, and persistence.
+      bounded secure-service pass/fail timing. The runner now also supports
+      `--secure-service-probe-tests`, and PS-only runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-60s-20260527-v1/`
+      confirms PS still times out in test 403 even without IAT/ITS running
+      first. V038/T061/T063/T064/T076 remain open for PS completion, UEFI/FWU
+      storage coverage, and persistence.

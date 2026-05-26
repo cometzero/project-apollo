@@ -143,6 +143,15 @@ SECURE_SERVICE_PROBE_BINARIES = [
     "ts-service-test",
 ]
 SECURE_SERVICE_DIAG_DONE_MARKER = "__QBOX_SECURE_SERVICE_DIAG_DONE__"
+SECURE_SERVICE_TEST_COMMANDS = {
+    "ts": ("ts-service-test -lg", "secure_ts_service_test_lg_rc"),
+    "iat": ("psa-iat-api-test", "secure_psa_iat_api_test_rc"),
+    "its": ("psa-its-api-test", "secure_psa_its_api_test_rc"),
+    "ps": ("psa-ps-api-test", "secure_psa_ps_api_test_rc"),
+    "uefi": ("uefi-test", "secure_uefi_test_rc"),
+}
+DEFAULT_SECURE_SERVICE_TESTS = ["ts", "iat", "its", "ps", "uefi"]
+
 
 def fwu_probe_commands(system_running_timeout_s: int) -> list[str]:
     system_running_timeout_s = max(1, system_running_timeout_s)
@@ -930,9 +939,38 @@ def shell_safe_probe_key(binary: str) -> str:
     return binary.replace("-", "_")
 
 
-def secure_service_probe_commands(timeout_s: int) -> list[str]:
+def parse_secure_service_tests(value: str) -> list[str]:
+    requested: list[str] = []
+    valid = set(SECURE_SERVICE_TEST_COMMANDS)
+    for token in (part.strip().lower() for part in value.split(",")):
+        if not token:
+            continue
+        if token == "all":
+            requested.extend(DEFAULT_SECURE_SERVICE_TESTS)
+            continue
+        if token == "none":
+            continue
+        if token not in valid:
+            choices = ",".join(["all", "none"] + sorted(valid))
+            raise argparse.ArgumentTypeError(
+                f"unknown secure-service test '{token}', choose from {choices}"
+            )
+        requested.append(token)
+
+    selected: list[str] = []
+    for token in requested:
+        if token not in selected:
+            selected.append(token)
+    return selected
+
+
+def secure_service_probe_commands(timeout_s: int, tests: list[str]) -> list[str]:
     timeout_s = max(1, timeout_s)
-    commands = ["echo __QBOX_SECURE_SERVICE_PROBE_START__"]
+    selected_tests = tests or []
+    commands = [
+        "echo __QBOX_SECURE_SERVICE_PROBE_START__",
+        f"echo secure_service_tests:{','.join(selected_tests) or 'none'}",
+    ]
     for binary in SECURE_SERVICE_PROBE_BINARIES:
         key = shell_safe_probe_key(binary)
         commands.append(
@@ -972,20 +1010,10 @@ def secure_service_probe_commands(timeout_s: int) -> list[str]:
             f"echo {SECURE_SERVICE_DIAG_DONE_MARKER}",
         ]
     )
-    commands.extend(
-        [
-            f"timeout {timeout_s}s ts-service-test -lg; "
-            "echo secure_ts_service_test_lg_rc:$?",
-            f"timeout {timeout_s}s psa-iat-api-test; "
-            "echo secure_psa_iat_api_test_rc:$?",
-            f"timeout {timeout_s}s psa-its-api-test; "
-            "echo secure_psa_its_api_test_rc:$?",
-            f"timeout {timeout_s}s psa-ps-api-test; "
-            "echo secure_psa_ps_api_test_rc:$?",
-            f"timeout {timeout_s}s uefi-test; echo secure_uefi_test_rc:$?",
-            f"echo {SECURE_SERVICE_PROBE_DONE_MARKER}",
-        ]
-    )
+    for test_name in selected_tests:
+        command, rc_name = SECURE_SERVICE_TEST_COMMANDS[test_name]
+        commands.append(f"timeout {timeout_s}s {command}; echo {rc_name}:$?")
+    commands.append(f"echo {SECURE_SERVICE_PROBE_DONE_MARKER}")
     return commands
 
 
@@ -995,7 +1023,10 @@ def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
     for command in POST_LOGIN_PROBE_COMMANDS:
         if command == done_command and args.secure_service_probe:
             commands.extend(
-                secure_service_probe_commands(args.secure_service_probe_timeout)
+                secure_service_probe_commands(
+                    args.secure_service_probe_timeout,
+                    args.secure_service_probe_tests,
+                )
             )
         if command == done_command and args.fwu_probe:
             continue
@@ -2096,6 +2127,15 @@ def parse_args() -> argparse.Namespace:
         help="Per-command timeout in seconds for --secure-service-probe.",
     )
     parser.add_argument(
+        "--secure-service-probe-tests",
+        default="all",
+        help=(
+            "Comma-separated secure-service tests to run after diagnostics. "
+            "Use all, none, or any of: ts, iat, its, ps, uefi. This allows "
+            "PS-only runs that match the FVP comparison probes."
+        ),
+    )
+    parser.add_argument(
         "--fwu-probe",
         action="store_true",
         help=(
@@ -2171,6 +2211,12 @@ def parse_args() -> argparse.Namespace:
         help="Include Arm M-profile RSE and AArch64 AP register state in PC samples.",
     )
     args = parser.parse_args()
+    try:
+        args.secure_service_probe_tests = parse_secure_service_tests(
+            args.secure_service_probe_tests
+        )
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
     if args.exception_trace:
         args.pc_trace = True
     if args.secure_service_probe or args.fwu_probe:

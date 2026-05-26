@@ -5590,12 +5590,18 @@ transport from slow secure-storage work.
 | `build/fvp-boot-logs/rse-secure-service-probe-20260525-v1/terminal_ns_uart0_5004.log` | FVP comparison completes IAT and ITS with rc 0 under the 8-second cap. Its PS run reaches PS test 403 under that cap. |
 | `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/terminal_ns_uart0_5004.log` | The PS-only FVP probe progresses through PS test 409 before the host-side post-login cap, so QBox's remaining PS gap is still real even though IAT and ITS now pass. |
 | `build/qbox-fvp-rd-aspen/rse-secure-service-30s-probe-20260527-v1/result.json` | The same 30-second probe with `QBOX_RDASPEN_MHU_TRACE_LIMIT=60000` timed out before Linux. The MHU trace captured thousands of AP-RSE accesses, so high-volume MHU tracing is useful for protocol inspection but distorts bounded runtime pass/fail timing. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `--secure-service-probe-tests` so the existing secure-service diagnostic can run `all`, `none`, or selected tests such as `ps` without changing the default all-test behavior. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding secure-service test selection. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-60s-20260527-v1/result.json` | PS-only QBox runtime with `--secure-service-probe-tests ps` and a 60-second command cap returns `passed=true`, `timed_out=false`, completes post-login driver checks, and records `secure_service_tests:ps`. The only secure-service command return code is `secure_psa_ps_api_test_rc=124`. |
+| `rse-secure-service-ps-only-60s-20260527-v1/qbox-primary-console.log` | PS-only execution passes PS tests 401 and 402, enters PS test 403 (`Insufficient space check`), and then times out at 60 seconds. This proves the remaining PS gap is not caused by IAT or ITS running first. |
 
 Current conclusion: AP secure-world SE-Proxy transport to RSE is now proven for
 Initial Attestation and Internal Trusted Storage userspace validation. T062 is
 complete, and the ITS half of T063 is complete. The remaining secure-services
 gap is Protected Storage completion: QBox reaches PS test 403 with no AP/SI
-mailbox or Linux RCU warnings, but does not yet match the FVP PS-only reference
-that reaches test 409 within the bounded host window. Continue with the TF-M
-ITS/PS flash filesystem and Strata flash writeback path rather than basic
-FF-A discovery, AP-RSE MHU routing, or AP/SI mailbox IRQ delivery.
+mailbox or Linux RCU warnings, and a PS-only 60-second run confirms the same
+loss point without IAT/ITS preconditioning. It does not yet match the FVP
+PS-only reference that reaches test 409 within the bounded host window.
+Continue with the TF-M ITS/PS flash filesystem and Strata flash writeback path
+rather than basic FF-A discovery, AP-RSE MHU routing, or AP/SI mailbox IRQ
+delivery.
