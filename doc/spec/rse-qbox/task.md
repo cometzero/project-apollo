@@ -2180,3 +2180,18 @@ richer fault status.
       requested secure-service done marker. This proves the stats hot-path
       cleanup is useful but does not close T063; the remaining blocker is the
       firmware-visible Strata/Protected Storage test-403 workload.
+- [x] V038AK Cache Strata hot-path CCI parameters and bound the post-change
+      runtime check. QBox commit `bfedb120d87f` caches frequently read
+      `strata_flash_j3` parameters for trace, DMI, program-FF compatibility,
+      sector size, backing-file path, and stats enablement, while preserving
+      runtime updates through CCI post-write callbacks. Validation passed with
+      `git -C tools/qbox diff --check`, `strata_flash_j3-tests`,
+      `platforms-vp`, and
+      `build/qbox-fvp-rd-aspen/rse-strata-param-cache-smoke-20260527-v1/`.
+      A 195-second PS403 follow-up,
+      `build/qbox-fvp-rd-aspen/rse-ps403-after-param-cache-deployroot-20260527-v1/`,
+      did not reach post-login probe injection: RSE reached measured boot
+      `BL_33`, OP-TEE/SMM Gateway initialized on the secure console, but the
+      primary console stayed empty and the runner reported
+      `qbox_post_login_probe_not_reached_timeout`. Treat this as pre-login
+      variability evidence, not PS403 completion evidence; T063 remains open.

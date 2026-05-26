@@ -5912,3 +5912,33 @@ not reach the requested done marker inside the bounded run. T063 remains open,
 and the next implementation work should target the firmware-visible
 Strata/Protected Storage command workload rather than stats, Linux driver
 probe wiring, or boot-flash DMI.
+
+### 2026-05-27 Strata Hot-Parameter Cache Recheck
+
+QBox commit `bfedb120d87f` adds a second, semantics-preserving hot-path
+cleanup to `strata_flash_j3`: frequently read CCI parameters are cached for
+the normal CFI access path, and CCI post-write callbacks update the cache when
+tests or runtime configuration change those parameters. This avoids repeated
+broker lookups without changing firmware-visible command sequencing.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Caches trace, trace limit, DMI enable, `program_ff_sets_bits`, `program_ff_erases_sector`, sector size, backing-file path, and stats enablement state. |
+| `tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Adds post-construction parameter-change coverage for program-FF behavior, DMI hinting, and enabling stats after a prior no-stats access. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Passed before commit `bfedb120d87f`. |
+| `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4` | Passed after the hot-parameter cache change. |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; the focused component tests completed in 1.05 seconds. |
+| `cmake --build tools/qbox/build --target platforms-vp --parallel 4` | Passed; the RD-Aspen platform executable links with the updated Strata model. |
+| `build/qbox-fvp-rd-aspen/rse-strata-param-cache-smoke-20260527-v1/result.json` | A 35-second no-probe runtime smoke timed out as expected with `blocker=qbox_platform_timeout` and recorded `rse_bl1_1` at 0.503 seconds, proving the platform starts and the runner still emits marker artifacts. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-after-param-cache-deployroot-20260527-v1/result.json` | A bounded 195-second PS403 follow-up timed out with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached `rse_first_image_slot` at 62.564 seconds, `measured_boot_bl33` at 64.172 seconds, and `secure_smmgw_discovery_fallback` at 64.776 seconds, but sent no post-login probe. |
+| `rse-ps403-after-param-cache-deployroot-20260527-v1/qbox-rse.log` | RSE BL2 completes AP BL2 loading, ATU setup, AP power-domain handoff, TF-M runtime entry, and measured boot through `BL_33`. |
+| `rse-ps403-after-param-cache-deployroot-20260527-v1/qbox-secure-console.log` | BL31 and OP-TEE initialize, SMM Gateway starts, and the known early `sp_msg_send_direct_req(): error -4` discovery fallback appears. |
+| `rse-ps403-after-param-cache-deployroot-20260527-v1/qbox-primary-console.log` | File size is 0 bytes, so this run did not reach U-Boot, Linux, login, or PS test 403 on the primary console. |
+
+Current conclusion: the component-level cache change builds and passes focused
+tests, and the short smoke proves the platform still starts. The 195-second
+PS403 follow-up is not PS403 pass/fail evidence because the primary console
+never produced U-Boot or Linux output and no post-login command was injected.
+No additional fix is proposed from this artifact alone; it is recorded as
+pre-login/AP-handoff variability evidence to compare against future bounded
+runs. T063 remains open.
