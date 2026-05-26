@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import shutil
 import signal
 import struct
@@ -1018,12 +1019,27 @@ def parse_secure_service_tests(value: str) -> list[str]:
     return selected
 
 
-def secure_service_probe_commands(timeout_s: int, tests: list[str]) -> list[str]:
+def parse_psa_test_list(value: str) -> str:
+    test_list = value.strip()
+    if not test_list:
+        return ""
+    if not re.fullmatch(r"(test_[0-9]{3};)+", test_list):
+        raise argparse.ArgumentTypeError(
+            "PSA test list must match 'test_NNN;' entries, "
+            "for example 'test_403;'"
+        )
+    return test_list
+
+
+def secure_service_probe_commands(
+    timeout_s: int, tests: list[str], ps_test_list: str = ""
+) -> list[str]:
     timeout_s = max(1, timeout_s)
     selected_tests = tests or []
     commands = [
         "echo __QBOX_SECURE_SERVICE_PROBE_START__",
         f"echo secure_service_tests:{','.join(selected_tests) or 'none'}",
+        f"echo secure_service_ps_test_list:{ps_test_list or 'none'}",
     ]
     for binary in SECURE_SERVICE_PROBE_BINARIES:
         key = shell_safe_probe_key(binary)
@@ -1066,6 +1082,8 @@ def secure_service_probe_commands(timeout_s: int, tests: list[str]) -> list[str]
     )
     for test_name in selected_tests:
         command, rc_name = SECURE_SERVICE_TEST_COMMANDS[test_name]
+        if test_name == "ps" and ps_test_list:
+            command = f"{command} -t {shlex.quote(ps_test_list)}"
         commands.append(f"timeout {timeout_s}s {command}; echo {rc_name}:$?")
     commands.append(f"echo {SECURE_SERVICE_PROBE_DONE_MARKER}")
     return commands
@@ -1080,6 +1098,7 @@ def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
                 secure_service_probe_commands(
                     args.secure_service_probe_timeout,
                     args.secure_service_probe_tests,
+                    args.secure_service_ps_test_list,
                 )
             )
         if command == done_command and args.fwu_probe:
@@ -2187,6 +2206,17 @@ def parse_args() -> argparse.Namespace:
             "Comma-separated secure-service tests to run after diagnostics. "
             "Use all, none, or any of: ts, iat, its, ps, uefi. This allows "
             "PS-only runs that match the FVP comparison probes."
+        ),
+    )
+    parser.add_argument(
+        "--secure-service-ps-test-list",
+        type=parse_psa_test_list,
+        default="",
+        help=(
+            "Optional PSA Architecture Test Suite -t list for "
+            "psa-ps-api-test, for example 'test_403;'. Use with "
+            "--secure-service-probe-tests ps to focus short-timeout PS "
+            "debug runs on one protected-storage test."
         ),
     )
     parser.add_argument(
