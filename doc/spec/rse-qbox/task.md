@@ -982,6 +982,20 @@ richer fault status.
       records `backing_write_ops=0`, and still times out in PS test 403,
       narrowing the remaining blocker away from host backing-file writeback
       and toward TF-M Protected Storage/Strata command workload completion.
+      After deferred Strata backing-write fixes, a stats-disabled fresh
+      writable-flash run
+      `build/qbox-fvp-rd-aspen/rse-ps403-nostats-deferred-20260527-v1/`
+      persisted UEFI variables and reached EFI boot before the short cap. Two
+      second-boot runs from those persisted writable flash images reached
+      Linux, root shell, SI/RPMsg/virtio/ethsi1 driver evidence, secure-service
+      diagnostics, and focused PS test 403. The 185-second run timed out in
+      `[Check 1] Overload storage space`; the 260-second run progressed to
+      `UID 21 set failed due to insufficient space` and
+      `Remove all registered UIDs`, then timed out with
+      `qbox_secure_service_ps403_cleanup_timeout:uid_21`. This confirms the
+      active T063 gap is PS403 cleanup/second-overload completion, not Linux
+      driver setup, UEFI variable persistence, stats overhead, or raw
+      backing-file coverage.
       The current GDB split narrows one QBox path to SE-Proxy
       `secure_storage_ipc_set()` waiting for an RSE PS SET response while
       RSE/TF-M executes `tfm_its_remove()` through flash filesystem
@@ -2283,3 +2297,19 @@ richer fault status.
       wrote an RSE stats file before termination. The remaining T063 blocker is
       still Protected Storage PS403 throughput/completion, not backing-file
       range coverage.
+- [x] V038AR Recheck persisted no-stats PS403 after deferred writeback. Fresh
+      writable-flash runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-nostats-deferred-20260527-v1/`
+      ran with flash stats disabled and reached UEFI PK/KEK/db/dbx enrollment,
+      bootflow script handoff, and EFI boot before timing out at 185.154
+      seconds. Using that run's writable RSE/AP flash images as inputs,
+      `rse-ps403-secondboot-nostats-20260527-v1` reached Linux, root shell,
+      all expected driver patterns, secure-service diagnostics, and focused
+      PS403 before timing out at `check_1`. A longer bounded second boot,
+      `rse-ps403-secondboot-nostats-260s-20260527-v1`, reached
+      `UID 21 set failed due to insufficient space` and
+      `Remove all registered UIDs`, then timed out with
+      `qbox_secure_service_ps403_cleanup_timeout:uid_21`. T063 remains open:
+      QBox is now proven through Linux, driver probes, and PS403 UID
+      exhaustion in a stats-disabled persisted run, but it still does not
+      reach the FVP PS403 `TEST RESULT: PASSED` state.

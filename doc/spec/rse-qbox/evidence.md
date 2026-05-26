@@ -6044,3 +6044,30 @@ the bounded flush interval. This does not close T063: QBox still needs the
 Protected Storage PS403 workload to complete against FVP, and the remaining
 work is secure-storage service throughput/semantics rather than basic
 backing-file aperture coverage.
+
+### 2026-05-27 Persisted No-Stats PS403 Recheck
+
+The deferred-writeback QBox build was rechecked without flash stats collection
+so the run measures normal Strata command-path timing rather than diagnostic
+counter and JSON-file overhead. A fresh writable-flash run was first used to
+persist UEFI variables and RSE secure-storage state; the resulting writable
+RSE/AP flash images were then used as inputs for second-boot PS403 probes.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-ps403-nostats-deferred-20260527-v1/result.json` | Fresh copied writable-flash run with flash stats disabled timed out at `runtime_elapsed_s=185.154` before login, but reached `EFI: MM partition ID 0x8006`, `FWU: System booting in Regular State`, PK/KEK/db/dbx enrollment, bootflow script handoff, and `FWU: ExitBootServices: Booting in regular state`. |
+| `rse-ps403-nostats-deferred-20260527-v1/summary.txt` | Marker timing records `primary_pk_enrolled` at 136.339 s, `primary_kek_enrolled` at 144.283 s, `primary_db_enrolled` at 153.436 s, `primary_dbx_enrolled` at 163.092 s, `primary_bootflow_script` at 167.618 s, and `primary_efi_bootaa64` at 178.081 s. This proves the first run created a useful persisted-flash seed even though it did not reach Linux in the short cap. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-20260527-v1/result.json` | Second boot from the persisted writable flash reached Linux, root shell, post-login driver probes, and focused PS test 403. It timed out at 185.186 s with `blocker=qbox_secure_service_ps403_timeout:check_1`; driver patterns for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio` were all true. |
+| `rse-ps403-secondboot-nostats-20260527-v1/result.json` | Secure-service diagnostics found `/dev/tee0`, `/dev/teepriv0`, FF-A and TEE sysfs devices, and the `psa-ps-api-test` binary. PS403 progress was `started=true`, `checks_seen=[1]`, and no insufficient-space UID before the 185-second run cap. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/result.json` | Longer bounded second boot reached the same Linux and driver evidence, then progressed further inside PS403 before timing out at 260.209 s with `blocker=qbox_secure_service_ps403_cleanup_timeout:uid_21`. |
+| `rse-ps403-secondboot-nostats-260s-20260527-v1/result.json` | PS403 progress records `checks_seen=[1]`, `insufficient_space_uid=21`, `remove_all_registered_uids=true`, and no `TEST RESULT` marker. This moves the current no-stats QBox state from the first overload step into cleanup after UID exhaustion, but still behind the FVP PS403 result. |
+| `rse-ps403-secondboot-nostats-260s-20260527-v1/qbox-primary-console.log` | Console evidence shows Linux 6.18.5 boot, root login, successful SI/RPMsg/virtio/ethsi1 probe commands, secure-service diagnostics, and `UID 21 set failed due to insufficient space` followed by `Remove all registered UIDs`. |
+
+Current conclusion: stats-disabled second-boot PS403 runs prove that QBox can
+reach Linux, the expected Linux drivers, SE-Proxy diagnostics, and the
+Protected Storage test workload with persisted writable flash. T063 remains
+open because the best no-stats run still times out during PS403 cleanup after
+UID 21, while the FVP reference completes PS403 with `TEST RESULT: PASSED`.
+The next implementation target remains the firmware-visible
+TF-M Protected Storage/Strata CFI workload, not Linux driver probe setup,
+UEFI variable persistence, flash stats overhead, or raw backing-file coverage.
