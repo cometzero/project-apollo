@@ -176,6 +176,10 @@ SECURE_SERVICE_TEST_COMMANDS = {
     "ps": ("psa-ps-api-test", "secure_psa_ps_api_test_rc"),
     "uefi": ("uefi-test", "secure_uefi_test_rc"),
 }
+SECURE_SERVICE_TEST_BINARIES = {
+    name: command.split()[0]
+    for name, (command, _rc_name) in SECURE_SERVICE_TEST_COMMANDS.items()
+}
 DEFAULT_SECURE_SERVICE_TESTS = ["ts", "iat", "its", "ps", "uefi"]
 
 
@@ -1266,6 +1270,43 @@ def fwu_probe_stage_complete(logs: dict[str, str]) -> bool:
         for match in re.finditer(r"\b([A-Za-z0-9_]+_rc):(\d+)\b", primary)
     }
     return bool(evaluate_fwu_probe(primary, rse, secure, rc_hits)["complete"])
+
+
+def selected_secure_service_failures(
+    selected_tests: list[str], secure_service_eval: dict[str, object]
+) -> dict[str, object]:
+    presence = secure_service_eval.get("binary_presence_rc", {})
+    return_codes = secure_service_eval.get("return_codes", {})
+    diag_done = bool(secure_service_eval.get("diag_done_marker"))
+    probe_done = bool(secure_service_eval.get("done_marker"))
+    failures: dict[str, object] = {}
+
+    if not isinstance(presence, dict) or not isinstance(return_codes, dict):
+        return failures
+
+    for test_name in selected_tests:
+        binary = SECURE_SERVICE_TEST_BINARIES[test_name]
+        presence_key = f"secure_{shell_safe_probe_key(binary)}_present_rc"
+        presence_rc = presence.get(binary)
+        if presence_rc is None:
+            if diag_done:
+                failures[presence_key] = "missing"
+        elif presence_rc != 0:
+            failures[presence_key] = presence_rc
+
+        rc_name = SECURE_SERVICE_TEST_COMMANDS[test_name][1]
+        rc = return_codes.get(rc_name)
+        if rc is None:
+            if probe_done:
+                failures[rc_name] = "missing"
+        elif rc != 0:
+            failures[rc_name] = rc
+
+    return failures
+
+
+def format_rc_failures(failures: dict[str, object]) -> str:
+    return ",".join(f"{name}={failures[name]}" for name in sorted(failures))
 
 
 def classify_known_runtime_blocker(logs: dict[str, str]) -> str | None:
@@ -2749,6 +2790,15 @@ def main() -> int:
         and isinstance(secure_service_eval, dict)
         and not secure_service_eval.get("done_marker")
     )
+    secure_service_failures = (
+        selected_secure_service_failures(
+            args.secure_service_probe_tests, secure_service_eval
+        )
+        if args.secure_service_probe and isinstance(secure_service_eval, dict)
+        else {}
+    )
+    if secure_service_failures and isinstance(secure_service_eval, dict):
+        secure_service_eval["failed_return_codes"] = secure_service_failures
     post_login_probe_incomplete = bool(
         args.post_login_probe
         and post_login_probe
@@ -2771,6 +2821,11 @@ def main() -> int:
         runtime_blocker = "qbox_secure_service_probe_incomplete_timeout"
     elif secure_service_incomplete:
         runtime_blocker = "qbox_secure_service_probe_incomplete"
+    elif secure_service_failures:
+        runtime_blocker = (
+            "qbox_secure_service_probe_failed:"
+            + format_rc_failures(secure_service_failures)
+        )
     elif post_login_probe_incomplete and timed_out:
         runtime_blocker = "qbox_post_login_probe_incomplete_timeout"
     elif post_login_probe_incomplete:

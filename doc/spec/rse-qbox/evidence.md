@@ -5865,3 +5865,22 @@ model. The default `QBOX_RDASPEN_BOOT_FLASH_DMI=false` remains correct for
 storage, UEFI variable, and FWU validation. The next implementation work should
 stay on the `strata_flash_j3` command-state path and reduce the byte-level
 CFI read/program/status-poll overhead without hiding command writes.
+
+### 2026-05-27 Secure-Service Return-Code Classification
+
+The QBox RSE runner now treats non-zero return codes from explicitly requested
+secure-service tests as validation failures instead of letting the base Linux
+boot criteria mask them. This keeps PS, ITS, IAT, UEFI, and TS probe artifacts
+usable as pass/fail evidence when those probes are requested.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds selected secure-service return-code failure extraction and reports `qbox_secure_service_probe_failed:<rc-list>` when a requested test command or binary-presence check fails after the probe reaches its done marker. |
+| Existing artifact replay: `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/qbox-primary-console.log` | Re-evaluating the existing PS-only log now produces `{'secure_psa_ps_api_test_rc': 124}` and the blocker string `qbox_secure_service_probe_failed:secure_psa_ps_api_test_rc=124`. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding return-code classification. |
+
+Current conclusion: the PS test-403 timeout is now represented as an explicit
+secure-service probe failure in future generated `result.json` files. This
+does not solve the flash workload itself, but it prevents future reports from
+classifying a Linux boot with failing secure-service probes as a successful
+service-validation run.

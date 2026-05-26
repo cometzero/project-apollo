@@ -966,6 +966,10 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-60s-20260527-v1/`
       still times out in PS test 403 after tests 401/402 pass. This confirms
       the remaining PS gap is not caused by the preceding IAT/ITS commands.
+      The runner now also classifies requested secure-service non-zero return
+      codes as `qbox_secure_service_probe_failed:*`, so a completed boot with
+      `secure_psa_ps_api_test_rc=124` no longer appears as a passing
+      secure-service validation artifact.
       V038U fixes a separate per-run writable-flash backing-size bug: the RSE
       and AP raw flash copies are now padded with erased `0xff` bytes to the
       QBox Strata device size before writeback is enabled. The padded
