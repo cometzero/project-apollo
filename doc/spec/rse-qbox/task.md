@@ -2167,3 +2167,16 @@ richer fault status.
       grant. Keep `QBOX_RDASPEN_BOOT_FLASH_DMI=false` for storage, UEFI
       variable, and FWU evidence; future work should optimize the
       command-state Strata path rather than relying on boot-flash DMI.
+- [x] V038AJ Recheck PS 403 after Strata stats hot-path optimization. QBox
+      commit `941f28c42677` avoids per-access stats counter work when no stats
+      file or interval is configured, and `strata_flash_j3-tests` passed. The
+      first follow-up runtime,
+      `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-20260527-v1/`,
+      timed out before post-login probe injection and showed U-Boot FWU update
+      interference, so it is not PS 403 evidence. The deploy-rootfs follow-up,
+      `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-deployroot-20260527-v1/`,
+      reached Linux, root shell, and PS test 403 at 165.932 seconds, then
+      timed out with `qbox_secure_service_probe_incomplete_timeout` before the
+      requested secure-service done marker. This proves the stats hot-path
+      cleanup is useful but does not close T063; the remaining blocker is the
+      firmware-visible Strata/Protected Storage test-403 workload.

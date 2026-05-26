@@ -5884,3 +5884,31 @@ secure-service probe failure in future generated `result.json` files. This
 does not solve the flash workload itself, but it prevents future reports from
 classifying a Linux boot with failing secure-service probes as a successful
 service-validation run.
+
+### 2026-05-27 Strata Stats Hot-Path Recheck
+
+The `strata_flash_j3` model was rechecked after QBox commit `941f28c42677`
+changed stats collection so normal runs skip per-access counter updates unless
+`stats_file` or `stats_interval` is configured. This reduces diagnostic
+overhead in the normal storage path but intentionally leaves CFI command-state
+semantics unchanged.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Adds cached stats-collection gating used by `count_stat()` so counter updates are skipped when stats are disabled. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Passed before commit `941f28c42677`. |
+| `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4` | Passed after the stats hot-path change. |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; the focused Strata component tests completed successfully. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-20260527-v1/result.json` | Runtime timed out at `runtime_elapsed_s=210.1101314970001` with `blocker=qbox_post_login_probe_not_reached_timeout`; no post-login probe was sent. The primary console entered a U-Boot FWU update path before login, so this artifact is not PS 403 evidence. |
+| `rse-ps403-after-stats-opt-20260527-v1/summary.txt` | Marker timing reached `rse_first_image_slot` at 61.538 seconds, `measured_boot_bl33` at 63.045 seconds, `primary_efi_mm_partition` at 65.259 seconds, and `primary_fwu_regular_state` at 82.453 seconds before the non-isolated FWU/update path consumed the bounded run. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-deployroot-20260527-v1/result.json` | Runtime reached Linux, root shell, and the requested PS test 403, then timed out at `runtime_elapsed_s=205.16080862299714` with `blocker=qbox_secure_service_probe_incomplete_timeout`. |
+| `rse-ps403-after-stats-opt-deployroot-20260527-v1/result.json` | Post-login driver patterns are true for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio`; secure-service diagnostics found `/dev/tee0`, `/dev/teepriv0`, FF-A/TEE sysfs devices, and the `psa-ps-api-test` binary. |
+| `rse-ps403-after-stats-opt-deployroot-20260527-v1/summary.txt` | Marker timing reached EFI boot at 125.910 seconds, Linux at 134.580 seconds, login at 157.905 seconds, root shell at 163.391 seconds, and PS test 403 plus `Insufficient space check` at 165.932 seconds. |
+
+Current conclusion: removing disabled-stats overhead does not close the
+Protected Storage completion gap. The deploy-rootfs run proves Linux drivers
+and secure-service probe setup remain functional, but PS test 403 still does
+not reach the requested done marker inside the bounded run. T063 remains open,
+and the next implementation work should target the firmware-visible
+Strata/Protected Storage command workload rather than stats, Linux driver
+probe wiring, or boot-flash DMI.
