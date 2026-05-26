@@ -2731,7 +2731,16 @@ def main() -> int:
         and post_login_probe
         and not post_login_probe.get("complete")
     )
-    if fwu_probe_incomplete and timed_out:
+    post_login_probe_not_reached = bool(
+        args.post_login_probe
+        and post_login_probe
+        and not post_login_probe.get("sent_probe")
+    )
+    if post_login_probe_not_reached and timed_out:
+        runtime_blocker = "qbox_post_login_probe_not_reached_timeout"
+    elif post_login_probe_not_reached:
+        runtime_blocker = "qbox_post_login_probe_not_reached"
+    elif fwu_probe_incomplete and timed_out:
         runtime_blocker = "qbox_fwu_probe_incomplete_timeout"
     elif fwu_probe_incomplete:
         runtime_blocker = "qbox_fwu_probe_incomplete"

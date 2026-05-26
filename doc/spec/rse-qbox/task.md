@@ -2126,3 +2126,16 @@ richer fault status.
       which returns `passed=false`, `timed_out=true`, and
       `blocker=qbox_secure_service_probe_incomplete_timeout` while still
       reaching Linux and PS test 403.
+- [x] V038AG Split pre-login timeout classification from secure-service
+      timeout classification. A 195-second PS-only rerun with persisted RSE
+      flash,
+      `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-ps403-195s-20260527-v1/`,
+      timed out before post-login probe injection, so it is not PS403
+      completion evidence. The runner now reports
+      `qbox_post_login_probe_not_reached_timeout` when `--post-login-probe`
+      was requested but no probe command was sent. Validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
+      `build/qbox-fvp-rd-aspen/rse-post-login-not-reached-classify-smoke-20260527-v1/`,
+      which returns `passed=false`, `timed_out=true`,
+      `blocker=qbox_post_login_probe_not_reached_timeout`, and
+      `sent_probe=false`.

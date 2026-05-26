@@ -5821,11 +5821,15 @@ key enrollment or also the later Protected Storage workload.
 | `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after the secure-service/post-login blocker classification fix. |
 | `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-classify-20260527-v1/result.json` | Re-running the persisted second boot with a 170-second cap now returns `passed=false`, `timed_out=true`, and `blocker=qbox_secure_service_probe_incomplete_timeout`. It still proves progress through Linux and into PS test 403: EFI boot at 120.643 s, Linux at 128.912 s, login at 151.621 s, root shell at 157.201 s, and `TEST: 403` at 159.741 s. |
 | `rse-uefi-persisted-secondboot-classify-20260527-v1/qbox-primary-console.log` | Confirms `PK key has already been enrolled!`, `Booting /\EFI\BOOT\BOOTAA64.EFI`, Linux version output, login, and PS test 403 in the classified run. |
+| `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-ps403-195s-20260527-v1/result.json` | A follow-up 195-second PS-only rerun with the same persisted RSE flash did not reach post-login; it timed out in the RSE/AP BL2 load window after `rse_bl1_1`. This run is not PS403 evidence, but it shows wall-clock variability in the flash/image-load path and exposed a runner classification edge case. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `qbox_post_login_probe_not_reached_timeout` so secure-service timeout classification is used only after the post-login probe command was actually sent. |
+| `build/qbox-fvp-rd-aspen/rse-post-login-not-reached-classify-smoke-20260527-v1/result.json` | A 20-second smoke with `--post-login-probe --secure-service-probe --secure-service-probe-tests ps` now returns `passed=false`, `timed_out=true`, and `blocker=qbox_post_login_probe_not_reached_timeout`, with `sent_probe=false`. |
 
 Current conclusion: QBox's RSE Strata writeback is sufficient for UEFI key
 variable persistence across a second boot, and persisted UEFI variables remove
 the first-boot key-enrollment delay enough to reach Linux and PS test 403
 inside a short cap. T064 remains open because the image lacks `uefi-test` and
 because first-boot UEFI variable enrollment is still much slower than FVP. The
-remaining post-login gap is the same Protected Storage test-403 workload, now
-reported with the correct secure-service-incomplete blocker.
+remaining post-login gap is the same Protected Storage test-403 workload when
+Linux and the probe are reached. Earlier timeouts before probe injection are
+now classified separately as post-login-not-reached blockers.
