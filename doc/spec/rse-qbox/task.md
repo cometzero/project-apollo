@@ -2079,3 +2079,14 @@ richer fault status.
       marker appears by the 120-second cap. This narrows the fresh-flash
       pre-Linux timeout to the post-`EFI: MM partition ID 0x8006` SMM
       Gateway/secure-storage window.
+- [x] V038AD Extend runner progress markers for the UEFI variable path. The
+      runner now records first-hit timing for PK/KEK/db/dbx enrollment, FWU
+      regular-state detection, and bootflow script handoff in addition to the
+      existing RSE, EFI MM, EFI boot, Linux, SMM Gateway, SE-Proxy, and PS
+      markers. Validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      `build/qbox-fvp-rd-aspen/rse-uefi-marker-smoke-20260527-v1/`, which
+      still records marker timing in a three-second smoke window. This keeps
+      future short SMM Gateway runs file-backed and avoids tmux-only progress
+      inspection.
