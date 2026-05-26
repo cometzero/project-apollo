@@ -57,6 +57,8 @@ REQUIRED_TARGETS = [
 PLATFORM_STDOUT_LOG = "qbox-platform.log"
 QEMU_TRACE_LOG = "qemu-rse-trace.log"
 RSE_PC_TRACE_LOG = "rse-pc-trace.log"
+RSE_STRATA_STATS = "rse-strata-stats.json"
+AP_STRATA_STATS = "ap-strata-stats.json"
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
 WIC_BOOT_ENTRY = "::/loader/entries/boot.conf"
 
@@ -1313,6 +1315,39 @@ def parse_qemu_trace(out_dir: Path, enabled: bool) -> dict[str, str] | None:
     return first_fault
 
 
+def read_json_artifact(path: Path) -> dict[str, object] | None:
+    if not path.exists():
+        return None
+
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, dict) else None
+
+
+def parse_flash_stats(args: argparse.Namespace) -> dict[str, object]:
+    if not args.flash_stats:
+        return {"enabled": False}
+
+    result: dict[str, object] = {
+        "enabled": True,
+        "interval": args.flash_stats_interval,
+    }
+    for name, filename in (
+        ("rse_boot_flash", RSE_STRATA_STATS),
+        ("ap_flash", AP_STRATA_STATS),
+    ):
+        path = args.out_dir / filename
+        parsed = read_json_artifact(path)
+        result[name] = {
+            "path": str(path.resolve()),
+            "present": parsed is not None,
+            "stats": parsed,
+        }
+    return result
+
+
 def qemu_trace_enabled(args: argparse.Namespace) -> bool:
     return bool(args.qemu_trace or args.qemu_trace_filter or args.boot_enc_trace)
 
@@ -1660,6 +1695,16 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
+    if args.flash_stats:
+        env["QBOX_RDASPEN_RSE_BOOT_FLASH_STATS_FILE"] = str(
+            args.out_dir / RSE_STRATA_STATS
+        )
+        env["QBOX_RDASPEN_AP_FLASH_STATS_FILE"] = str(
+            args.out_dir / AP_STRATA_STATS
+        )
+        env["QBOX_RDASPEN_FLASH_STATS_INTERVAL"] = str(
+            args.flash_stats_interval
+        )
     if args.pc_trace:
         env["QBOX_RDASPEN_RSE_PC_TRACE"] = "true"
         env["QBOX_RDASPEN_RSE_PC_TRACE_FILE"] = str(args.out_dir / RSE_PC_TRACE_LOG)
@@ -2036,6 +2081,7 @@ def write_result(
                 if qemu_trace_enabled(args)
                 else None
             ),
+            "flash_stats": parse_flash_stats(args),
             "rse_pc_trace": rse_pc_trace,
             "boot_enc_trace": boot_enc_trace,
             "post_login_probe": post_login_probe
@@ -2095,6 +2141,7 @@ def write_result(
             or ["  none"]
         ),
         f"qemu_trace_log: {status['qemu_trace_log'] or 'disabled'}",
+        "flash_stats: " + json.dumps(status["flash_stats"], sort_keys=True),
         "rse_pc_trace: "
         + (
             json.dumps(rse_pc_trace, sort_keys=True)
@@ -2367,6 +2414,23 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--flash-stats",
+        action="store_true",
+        help=(
+            "Enable periodic Strata flash statistics files in the QBox run "
+            "directory for RSE boot flash and AP flash."
+        ),
+    )
+    parser.add_argument(
+        "--flash-stats-interval",
+        type=int,
+        default=512,
+        help=(
+            "Write Strata flash statistics every N target writes when "
+            "--flash-stats is enabled."
+        ),
+    )
+    parser.add_argument(
         "--pc-trace",
         action="store_true",
         help="Enable lightweight file-backed RSE Cortex-M55 PC sampling.",
@@ -2401,6 +2465,8 @@ def parse_args() -> argparse.Namespace:
         args.post_login_probe = True
     if args.qemu_trace_filter or args.boot_enc_trace:
         args.qemu_trace = True
+    if args.flash_stats and args.flash_stats_interval <= 0:
+        parser.error("--flash-stats-interval must be positive")
     return args
 
 

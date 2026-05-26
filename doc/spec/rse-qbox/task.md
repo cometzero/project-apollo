@@ -2090,3 +2090,21 @@ richer fault status.
       still records marker timing in a three-second smoke window. This keeps
       future short SMM Gateway runs file-backed and avoids tmux-only progress
       inspection.
+- [x] V038AE Add general-runner Strata flash stats for UEFI/PS debugging. The
+      runner now accepts `--flash-stats` and `--flash-stats-interval`, wires
+      the RSE/AP Strata stats environment variables, and records parsed
+      `flash_stats` in `result.json` and `summary.txt`. Static validation
+      passed with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and help
+      output inspection. The smoke
+      `build/qbox-fvp-rd-aspen/rse-flash-stats-smoke-20260527-v1/` proves the
+      result schema and configured paths even before flash command traffic.
+      Runtime
+      `build/qbox-fvp-rd-aspen/rse-uefi-marker-stats-180s-20260527-v1/`
+      captured RSE Strata workload before Linux: `write_accesses=3100000`,
+      `word_program_cmds=516667`, `program_ops=516667`,
+      `compat_ff_sector_erase_ops=817`, `sector_erase_bytes=3346432`, and
+      `backing_write_ops=307668`. The run did not reach PK enrollment before
+      the 180-second cap because stats collection is diagnostic and can distort
+      bounded timing. Treat marker-only runs as pass/fail timing evidence and
+      stats runs as CFI workload evidence.

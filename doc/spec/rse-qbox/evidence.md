@@ -5782,3 +5782,26 @@ mtime inference. The 120-second marker run narrows this specific bounded
 failure to the post-`EFI: MM partition ID 0x8006` window: RSE measured boot and
 AP handoff complete by roughly 65 seconds, but EFI boot and Linux do not start
 before timeout.
+
+### 2026-05-27 Runner Flash Stats For UEFI Storage
+
+The general QBox RSE runner now exposes the same Strata statistics controls
+that were previously only convenient through the GDB helper. This lets bounded
+SMM Gateway and Protected Storage runs leave file-backed CFI workload evidence
+without enabling verbose per-access tracing.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `--flash-stats` and `--flash-stats-interval`, wires `QBOX_RDASPEN_RSE_BOOT_FLASH_STATS_FILE`, `QBOX_RDASPEN_AP_FLASH_STATS_FILE`, and `QBOX_RDASPEN_FLASH_STATS_INTERVAL`, and records parsed `flash_stats` in `result.json` and `summary.txt`. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --help \| rg -n "flash-stats"` | Passed after adding the runner flash-stat controls. |
+| `build/qbox-fvp-rd-aspen/rse-flash-stats-smoke-20260527-v1/result.json` | A five-second smoke with `--flash-stats --flash-stats-interval 1` timed out before flash command traffic, but proved the result schema records `flash_stats.enabled=true`, the configured interval, and expected RSE/AP stats file paths. |
+| `build/qbox-fvp-rd-aspen/rse-uefi-marker-stats-180s-20260527-v1/result.json` | A 180-second UEFI marker run with `--flash-stats --flash-stats-interval 100000` timed out before Linux and before any secure-service command. Marker timing reached `primary_fwu_regular_state` at 106.212 s but did not reach PK enrollment before the cap, so this is workload evidence rather than timing acceptance evidence. |
+| `rse-uefi-marker-stats-180s-20260527-v1/rse-strata-stats.json` | The RSE boot flash recorded `write_accesses=3100000`, `command_writes=2583333`, `word_program_cmds=516667`, `program_ops=516667`, `program_changed_bytes=306851`, `program_noop_bytes=208999`, `compat_ff_sector_erase_ops=817`, `sector_erase_bytes=3346432`, `backing_write_ops=307668`, and `backing_write_bytes=3653283`. AP flash stats were absent because this bounded run did not touch the AP Strata model. |
+
+Current conclusion: the pre-Linux UEFI variable path is dominated by
+firmware-visible CFI byte-program/status-poll traffic against the RSE boot
+flash before Linux starts. Stats collection is diagnostic and can distort
+bounded timing, so marker-only runs remain the primary pass/fail timing
+evidence. The next implementation work should reduce or more faithfully model
+the RSE Protected Storage/Strata command workload rather than AP flash, Linux
+drivers, or AP/SI mailbox wiring.
