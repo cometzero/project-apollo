@@ -297,6 +297,16 @@ BOOT_ENC_TRACE_SYMBOLS = [
     "boot_enc_set_key",
     "boot_enc_decrypt",
 ]
+RSE_BL2_CFI_TRACE_SYMBOLS = [
+    "cfi_strataflashj3_read",
+    "cfi_strataflashj3_program",
+    "cfi_strataflashj3_program_data_byte",
+    "cfi_strataflashj3_erase",
+    "erase_block",
+    "nor_cfi_reg_read",
+    "nor_byte_program",
+    "nor_poll_dws_byte",
+]
 
 RSE_FWU_PRIVATE_METADATA_OFFSET = 0x5000
 RSE_FWU_PRIVATE_METADATA_SIZE = 68
@@ -1587,7 +1597,11 @@ def parse_rse_pc_trace(out_dir: Path, enabled: bool) -> dict[str, object] | None
     return result
 
 
-def classify_pc_trace_blocker(rse_pc_trace: dict[str, object] | None) -> str | None:
+def classify_pc_trace_blocker(
+    root: Path,
+    rse_pc_trace: dict[str, object] | None,
+    timed_out: bool,
+) -> str | None:
     if not rse_pc_trace:
         return None
     last_sample = rse_pc_trace.get("last_sample")
@@ -1603,6 +1617,15 @@ def classify_pc_trace_blocker(rse_pc_trace: dict[str, object] | None) -> str | N
     if isinstance(exception, int) and exception != 0:
         name = armv7m_exception_name(exception).lower()
         return f"rse_exception:{name}"
+    if timed_out and isinstance(pc, str):
+        try:
+            pc_value = int(pc, 16)
+        except ValueError:
+            return None
+        ranges = parse_map_text_ranges(default_bl2_map(root), RSE_BL2_CFI_TRACE_SYMBOLS)
+        for symbol, item in ranges.items():
+            if item["start"] <= pc_value < item["end"]:
+                return f"rse_bl2_cfi_flash_io_timeout:{symbol}"
     return None
 
 
@@ -2711,7 +2734,7 @@ def main() -> int:
         first_fault = parse_platform_translation_error(args.out_dir)
     current_status = evaluate(logs)
     known_runtime_blocker = classify_known_runtime_blocker(logs)
-    pc_trace_blocker = classify_pc_trace_blocker(rse_pc_trace)
+    pc_trace_blocker = classify_pc_trace_blocker(root, rse_pc_trace, timed_out)
     boot_enc_trace_blocker = classify_boot_enc_trace_blocker(logs, boot_enc_trace)
     fwu_probe_incomplete = bool(
         args.fwu_probe and post_login_probe and not post_login_probe.get("complete")

@@ -5824,6 +5824,10 @@ key enrollment or also the later Protected Storage workload.
 | `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-ps403-195s-20260527-v1/result.json` | A follow-up 195-second PS-only rerun with the same persisted RSE flash did not reach post-login; it timed out in the RSE/AP BL2 load window after `rse_bl1_1`. This run is not PS403 evidence, but it shows wall-clock variability in the flash/image-load path and exposed a runner classification edge case. |
 | `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `qbox_post_login_probe_not_reached_timeout` so secure-service timeout classification is used only after the post-login probe command was actually sent. |
 | `build/qbox-fvp-rd-aspen/rse-post-login-not-reached-classify-smoke-20260527-v1/result.json` | A 20-second smoke with `--post-login-probe --secure-service-probe --secure-service-probe-tests ps` now returns `passed=false`, `timed_out=true`, and `blocker=qbox_post_login_probe_not_reached_timeout`, with `sent_probe=false`. |
+| `build/qbox-fvp-rd-aspen/rse-image-load-pc-trace-75s-20260527-v1/result.json` | A 75-second PC trace run timed out before AP/Linux; the final RSE PC was `0x31023136` with tail PCs `0x31024c9c` and `0x31023136`, no exception, and registers showing the SI CL1 image load source/destination context. |
+| `llvm-addr2line -e .../build/bin/bl2.elf -f -C 0x31023136 0x31024c9c` | Resolves the tail PCs to `cfi_strataflashj3_read()` in `spi_strataflashj3_flash_lib.c:213` and `nor_cfi_reg_read()` in `cfi_drv.c:54`, confirming the timeout is in firmware-visible Strata flash byte reads rather than an exception path. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds BL2 CFI/Strata PC-range classification for timeout runs that include `--pc-trace`, using the BL2 map to report `rse_bl2_cfi_flash_io_timeout:<symbol>`. |
+| `build/qbox-fvp-rd-aspen/rse-cfi-pc-classify-smoke-20260527-v1/result.json` | A 35-second PC trace smoke now returns `passed=false`, `timed_out=true`, and `blocker=rse_bl2_cfi_flash_io_timeout:nor_cfi_reg_read`; the trace tail includes `0x31024c9c`, `0x31023136`, and `0x31024c9a`. |
 
 Current conclusion: QBox's RSE Strata writeback is sufficient for UEFI key
 variable persistence across a second boot, and persisted UEFI variables remove
@@ -5832,4 +5836,7 @@ inside a short cap. T064 remains open because the image lacks `uefi-test` and
 because first-boot UEFI variable enrollment is still much slower than FVP. The
 remaining post-login gap is the same Protected Storage test-403 workload when
 Linux and the probe are reached. Earlier timeouts before probe injection are
-now classified separately as post-login-not-reached blockers.
+now classified separately as post-login-not-reached blockers. PC-traced
+pre-Linux image-load timeouts are now classified down to the RSE BL2 CFI/Strata
+symbol, which points the next fidelity/performance work at the flash read path
+rather than mailbox, Linux driver, or secure-service userspace plumbing.

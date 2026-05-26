@@ -2139,3 +2139,15 @@ richer fault status.
       which returns `passed=false`, `timed_out=true`,
       `blocker=qbox_post_login_probe_not_reached_timeout`, and
       `sent_probe=false`.
+- [x] V038AH Classify PC-traced BL2 CFI/Strata flash I/O timeouts. Runtime
+      `build/qbox-fvp-rd-aspen/rse-image-load-pc-trace-75s-20260527-v1/`
+      timed out before AP/Linux with the RSE PC tail at `0x31023136` and
+      `0x31024c9c`. `llvm-addr2line` resolves those addresses to
+      `cfi_strataflashj3_read()` and `nor_cfi_reg_read()`, so the timeout is
+      in firmware-visible Strata byte-read traffic while loading SI images.
+      The runner now maps PC trace tail addresses through `bl2.map` and reports
+      `rse_bl2_cfi_flash_io_timeout:<symbol>` for such timeout runs. Validation
+      passed with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      `build/qbox-fvp-rd-aspen/rse-cfi-pc-classify-smoke-20260527-v1/`, which
+      returns `blocker=rse_bl2_cfi_flash_io_timeout:nor_cfi_reg_read`.
