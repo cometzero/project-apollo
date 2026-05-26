@@ -2243,3 +2243,18 @@ richer fault status.
       `secure_psa_ps_api_test_rc=124` as a selected-test failure when the done
       marker is reached. This keeps future short-timeout blocker strings tied
       to the actual PSA PS phase.
+- [x] V038AO Add secure-storage 403 comparison to the FVP/QBox log comparator.
+      `scripts/compare_fvp_qbox_rse_logs.py` now accepts
+      `--require-secure-storage` and emits a `storage_test_403` JSON payload
+      with ITS/PS section progress, UID exhaustion, cleanup count, result, and
+      FVP-vs-QBox stage delta. Existing boot marker comparison remains the
+      default behavior unless the new option is requested. Validation passed
+      with `python3 -m py_compile scripts/compare_fvp_qbox_rse_logs.py` and
+      `git diff --check -- scripts/compare_fvp_qbox_rse_logs.py`. The
+      FVP-vs-latest-QBox comparison intentionally exits 1 with
+      `boot_passed=true`, `stage_delta.PS.fvp=completed`,
+      `stage_delta.PS.qbox=check_1`, and
+      `missing_in_qbox_from_fvp=["PS:test_403_completed"]`. The padded QBox
+      comparison also exits 1 but reports `stage_delta.PS.qbox` as
+      `cleanup_after_uid_20`, proving the older run got past UID exhaustion
+      once and then stalled during cleanup/second-overload progress.

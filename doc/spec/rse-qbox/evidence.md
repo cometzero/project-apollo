@@ -5989,3 +5989,28 @@ whether PS test 403 stalls before UID exhaustion, after insufficient-space
 detection, or during cleanup without manual log inspection. Future
 secure-service timeout blocker strings now carry the same stage information
 when the PS 403 marker is present.
+
+### 2026-05-27 FVP/QBox Secure-Storage 403 Comparison
+
+The FVP/QBox comparison helper now has an explicit secure-storage gate for the
+PSA storage test-403 workload. This keeps the ordinary deterministic
+boot-marker comparison stable while allowing T063 evidence to fail specifically
+when FVP completes ITS/PS 403 and QBox does not.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/compare_fvp_qbox_rse_logs.py` | Adds `--require-secure-storage`, parses `TEST: 403 | DESCRIPTION: Insufficient space check | UT: ITS/PS`, and emits `storage_test_403` with section progress, UID exhaustion, cleanup count, `TEST RESULT`, and per-UT stage delta. |
+| `python3 -m py_compile scripts/compare_fvp_qbox_rse_logs.py` | Passed after adding the secure-storage comparator path. |
+| `git diff --check -- scripts/compare_fvp_qbox_rse_logs.py` | Passed after adding the secure-storage comparator path. |
+| `python3 scripts/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-ps403-after-stats-opt-deployroot-20260527-v1 --require-secure-storage --output build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-compare-20260527-v3/comparison.json` | Exited 1 as expected. The JSON records `boot_passed=true`, FVP PS403 `completed`, QBox PS403 `check_1`, and `missing_in_qbox_from_fvp=["PS:test_403_completed"]`. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-compare-20260527-v3/comparison.json` | FVP PS403 has `checks_seen=[1,2]`, `insufficient_space_uid=22`, `remove_all_registered_uids_count=2`, and `result=PASSED`. Latest QBox has `checks_seen=[1]`, no insufficient-space UID yet, and last observed line `[Check 1] Overload storage space`. |
+| `python3 scripts/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1 --require-secure-storage --output build/qbox-fvp-rd-aspen/rse-ps403-padded-fvp-qbox-compare-20260527-v3/comparison.json` | Exited 1 as expected. The JSON records `boot_passed=true`, FVP PS403 `completed`, and older QBox PS403 `cleanup_after_uid_20`. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-padded-fvp-qbox-compare-20260527-v3/comparison.json` | Older QBox evidence reached `UID 20 set failed due to insufficient space` and `Remove all registered UIDs`, but never completed PS403. |
+
+Current conclusion: the automated FVP/QBox comparison now proves that boot,
+measured-boot, RSE/SCP handoff, Linux login, and root shell markers are aligned
+for the compared QBox artifacts, while the remaining T063 delta is specifically
+the Protected Storage PS403 workload. The latest bounded artifact stalls during
+the first overload step; the older padded artifact got through one
+insufficient-space/cleanup pass but did not reach the second overload or
+`TEST RESULT: PASSED`.
