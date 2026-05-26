@@ -6014,3 +6014,33 @@ the Protected Storage PS403 workload. The latest bounded artifact stalls during
 the first overload step; the older padded artifact got through one
 insufficient-space/cleanup pass but did not reach the second overload or
 `TEST RESULT: PASSED`.
+
+### 2026-05-27 Deferred Strata Backing Writeback
+
+The Strata flash backing-file path now supports deferred backing writes for
+RSE/AP writable flash runs. This reduces host-side writeback overhead while
+keeping the logical Strata command and backing-write counters visible for
+PS403/FWU debugging. A follow-up fix adds bounded periodic flushes so timeout
+runs do not rely only on C++ object destruction for persistence.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Adds `defer_backing_write`, deferred dirty-range coalescing, backing deferred/flush counters, `defer_backing_flush_interval`, and recursion-safe periodic flush. |
+| `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` | Enables `defer_backing_write=true` for the RSE-oriented RSE boot flash and AP flash bindings. |
+| `tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Adds deferred backing-file destruction flush, interval flush, and stats counter coverage. |
+| QBox commit `1936df34ab42` | `perf(strata): defer backing writes`; pushed to `origin/feature/qbox-dev`. |
+| QBox commit `d9bb9f0b558d` | `fix(strata): flush deferred backing`; pushed to `origin/feature/qbox-dev`. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h tests/components/strata_flash_j3/strata_flash_j3-tests.cc platforms/fvp-rd-aspen-rse/conf.lua` | Passed for the deferred writeback implementation. |
+| `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` | Passed after wiring deferred backing writes in Lua. |
+| `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4` | Passed after both deferred writeback commits. |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; the focused Strata regression suite completed successfully. |
+| `cmake --build tools/qbox/build --target platforms-vp --parallel 4` | Passed after both deferred writeback commits. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-deferred-backing-20260527-v1/result.json` | Bounded 150-second PS403 writeback run reached U-Boot secure-variable enrollment but not Linux login. It recorded `blocker=qbox_post_login_probe_not_reached_timeout`, `primary_pk_enrolled` at 137.243 s, `primary_kek_enrolled` at 146.905 s, and RSE Strata stats with `backing_write_ops=559634`, `backing_deferred_ranges=559634`, and `backing_flush_ops=0`, proving destructor-only flush is insufficient for timeout-style runs. |
+| `build/qbox-fvp-rd-aspen/rse-deferred-backing-flush-20260527-v1..v4/` | Short 70-second caps were used to bound the follow-up behavior. They prove the platform still starts, but dirty-range count and stats-file timing vary under the short cap; these are not PS403 completion artifacts. |
+
+Current conclusion: deferred writeback is implemented and covered by focused
+component tests, and the timeout-run risk discovered by `v1` is addressed by
+the bounded flush interval. This does not close T063: QBox still needs the
+Protected Storage PS403 workload to complete against FVP, and the remaining
+work is secure-storage service throughput/semantics rather than basic
+backing-file aperture coverage.

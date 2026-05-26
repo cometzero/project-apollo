@@ -2258,3 +2258,28 @@ richer fault status.
       comparison also exits 1 but reports `stage_delta.PS.qbox` as
       `cleanup_after_uid_20`, proving the older run got past UID exhaustion
       once and then stalled during cleanup/second-overload progress.
+- [x] V038AP Defer Strata backing-file writes for writable flash runs. QBox
+      commit `1936df34ab42` adds `strata_flash_j3.defer_backing_write`,
+      coalesces dirty backing ranges, preserves logical write statistics, and
+      enables the deferred mode for the RSE-oriented RSE/AP flash bindings.
+      Validation passed with `git -C tools/qbox diff --check`, `luac -p`,
+      `strata_flash_j3-tests`, and `platforms-vp`. A bounded PS403 writeback
+      run,
+      `build/qbox-fvp-rd-aspen/rse-ps403-deferred-backing-20260527-v1/`,
+      reached U-Boot secure-variable enrollment but timed out before Linux
+      login; it also exposed that destructor-only deferred flush is unsafe for
+      timeout-style runs because the final stats had
+      `backing_deferred_ranges=559634` and `backing_flush_ops=0`. T063 remains
+      open and this is recorded as a writeback-overhead optimization plus a
+      follow-up fix requirement, not as PS403 completion evidence.
+- [x] V038AQ Add bounded flush for deferred Strata backing writes. QBox commit
+      `d9bb9f0b558d` adds `defer_backing_flush_interval`, preserves the dirty
+      range on failed flush attempts, avoids recursive close/flush, and covers
+      interval-based persistence in `strata_flash_j3-tests`. Validation passed
+      with focused Strata build/tests and `platforms-vp`. Short runtime
+      artifacts `rse-deferred-backing-flush-20260527-v1..v4` remain timeout
+      evidence only: they prove the platform still starts under short caps,
+      but the exact dirty-range count before timeout varied and not every run
+      wrote an RSE stats file before termination. The remaining T063 blocker is
+      still Protected Storage PS403 throughput/completion, not backing-file
+      range coverage.
