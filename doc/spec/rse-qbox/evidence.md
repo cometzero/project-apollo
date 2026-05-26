@@ -5569,3 +5569,33 @@ runtime proof. The secure-service userspace binaries still return 124 under
 the bounded 8-second probe, with `se_proxy_error` and `smm_gateway_error`
 observed, so V038/T061-T064/T076 remain open for secure-service completion and
 FWU persistence rather than for the AP/SI mailbox-warning path.
+
+### 2026-05-27 Secure-Service 30-Second Probe Recheck
+
+The Arm Zena CSS secure-services documentation describes the Primary Compute
+path as Linux userspace `libts`/`libpsats` over FF-A into the SE-Proxy and SMM
+Gateway secure partitions, with SE-Proxy forwarding RSE-backed services over
+AP-to-RSE MHUv3. After the AP/SI CL1 MHU fix, QBox was rechecked with a
+bounded but less aggressive 30-second per-command cap to distinguish missing
+transport from slow secure-storage work.
+
+| Evidence | Result |
+| --- | --- |
+| `arm-zena-css/documentation/design/secure_services.rst` | Documents that SE-Proxy receives Normal-world secure-service requests and forwards them to RSE runtime services over MHUv3; SMM Gateway stores UEFI variables through the RSE Protected Storage service via SE-Proxy. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-30s-notrace-20260527-v1/result.json` | `passed=true`, `timed_out=false`, `blocker=null`, post-login probe complete, and all Linux driver patterns true (`arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, `virtio`). |
+| `rse-secure-service-30s-notrace-20260527-v1/qbox-primary-console.log` | `psa-iat-api-test` prints the PSA Architecture Test Suite pass summary and returns `secure_psa_iat_api_test_rc:0`. This validates T062 on QBox. |
+| `rse-secure-service-30s-notrace-20260527-v1/qbox-primary-console.log` | `psa-its-api-test` passes ITS tests 401 through 410, reports `TOTAL PASSED : 10`, `TOTAL FAILED : 0`, and returns `secure_psa_its_api_test_rc:0`. |
+| `rse-secure-service-30s-notrace-20260527-v1/qbox-primary-console.log` | `psa-ps-api-test` passes PS tests 401 and 402, enters PS test 403 (`Insufficient space check`), then returns `secure_psa_ps_api_test_rc:124` at the 30-second cap. |
+| `rse-secure-service-30s-notrace-20260527-v1/qbox-primary-console.log`, `qbox-secure-console.log`, `qbox-rse.log` | All contain zero `Spurious IRQ on PBX channel`, zero `Try increasing MBOX_TX_QUEUE_LEN`, and zero RCU-stall reports. |
+| `build/fvp-boot-logs/rse-secure-service-probe-20260525-v1/terminal_ns_uart0_5004.log` | FVP comparison completes IAT and ITS with rc 0 under the 8-second cap. Its PS run reaches PS test 403 under that cap. |
+| `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/terminal_ns_uart0_5004.log` | The PS-only FVP probe progresses through PS test 409 before the host-side post-login cap, so QBox's remaining PS gap is still real even though IAT and ITS now pass. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-30s-probe-20260527-v1/result.json` | The same 30-second probe with `QBOX_RDASPEN_MHU_TRACE_LIMIT=60000` timed out before Linux. The MHU trace captured thousands of AP-RSE accesses, so high-volume MHU tracing is useful for protocol inspection but distorts bounded runtime pass/fail timing. |
+
+Current conclusion: AP secure-world SE-Proxy transport to RSE is now proven for
+Initial Attestation and Internal Trusted Storage userspace validation. T062 is
+complete, and the ITS half of T063 is complete. The remaining secure-services
+gap is Protected Storage completion: QBox reaches PS test 403 with no AP/SI
+mailbox or Linux RCU warnings, but does not yet match the FVP PS-only reference
+that reaches test 409 within the bounded host window. Continue with the TF-M
+ITS/PS flash filesystem and Strata flash writeback path rather than basic
+FF-A discovery, AP-RSE MHU routing, or AP/SI mailbox IRQ delivery.

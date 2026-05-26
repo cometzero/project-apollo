@@ -934,29 +934,34 @@ richer fault status.
       `400b0000.mhu`. The copy-flash runtime
       `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-ap-si-only-copyflash-20260527-v1/`
       reaches Linux, completes the post-login probe, and removes the AP/SI
-      spurious-PBX and `MBOX_TX_QUEUE_LEN` warnings. T061 remains open because
-      AP-RSE secure-service userspace tests still return 124 under the bounded
-      probe timeout.
-- [ ] T062 Validate Initial Attestation request path.
-      Current QBox post-login secure-service probe infrastructure runs
-      `psa-iat-api-test`, but the test times out with rc 124 while secure
-      console logs still report SE-Proxy/SMM Gateway failures. This remains an
-      implementation gap, now captured non-interactively in
-      `build/qbox-fvp-rd-aspen/rse-t065-secure-service-probe-20260525-v1/`
-      and the follow-up FF-A/TEE diagnostic artifact
-      `build/qbox-fvp-rd-aspen/rse-t061-secure-service-diag-20260525-v1/`.
-      FVP comparison
-      `build/fvp-boot-logs/rse-secure-service-probe-20260525-v1/`
-      completes `psa-iat-api-test` with rc 0 under the same short-command
-      probe style.
+      spurious-PBX and `MBOX_TX_QUEUE_LEN` warnings. The 30-second no-trace
+      secure-service runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-30s-notrace-20260527-v1/`
+      proves the AP secure-world SE-Proxy/RSE path now completes IAT and ITS
+      userspace tests with rc 0. T061 remains open until the remaining
+      Protected Storage test and FWU/UEFI storage paths complete.
+- [x] T062 Validate Initial Attestation request path.
+      Earlier QBox post-login secure-service probes timed out under shorter
+      caps while secure-console logs reported SE-Proxy/SMM Gateway messages.
+      The 2026-05-27 bounded no-trace runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-30s-notrace-20260527-v1/`
+      now reaches Linux, completes the post-login probe, runs
+      `psa-iat-api-test`, prints the PSA Architecture Test Suite pass summary,
+      and records `secure_psa_iat_api_test_rc=0`. The reference FVP artifact
+      `build/fvp-boot-logs/rse-secure-service-probe-20260525-v1/` also
+      completes IAT with rc 0, so this path is no longer a QBox open item.
 - [ ] T063 Validate Protected Storage and Internal Trusted Storage paths.
-      The same probe runs `psa-ps-api-test` and `psa-its-api-test`; both
-      binaries are present, but both commands hit the bounded timeout after
-      `libpsats` reports `Failed to open rpc session`. This keeps PS/ITS
-      validation open while providing a repeatable failure probe. FVP
-      comparison completes `psa-its-api-test` with rc 0, and a PS-only FVP
-      probe enters the PS test sequence through test 409 before the host-side
-      post-login cap, confirming that FVP does not fail at RPC session open.
+      The 2026-05-27 bounded no-trace runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-30s-notrace-20260527-v1/`
+      completes `psa-its-api-test` with rc 0 and all ten ITS tests passing.
+      It also proves that the previous immediate `libpsats` RPC-open failure
+      is no longer the active blocker. Protected Storage remains open:
+      `psa-ps-api-test` passes tests 401 and 402, enters test 403
+      (`Insufficient space check`), then returns 124 at the 30-second command
+      cap. FVP comparison completes `psa-its-api-test` with rc 0, and a
+      PS-only FVP probe enters the PS test sequence through test 409 before
+      the host-side post-login cap, confirming that FVP progresses further
+      than QBox on the PS path.
       The current GDB split narrows one QBox path to SE-Proxy
       `secure_storage_ipc_set()` waiting for an RSE PS SET response while
       RSE/TF-M executes `tfm_its_remove()` through flash filesystem
@@ -965,8 +970,9 @@ richer fault status.
       proves PS object-table initialization, authentication, key derivation,
       and RSE flash erase calls, while
       `build/qbox-fvp-rd-aspen/gdb-t064-db-read-post30-20260525-v1/` samples
-      a live Protected Storage GET_INFO transaction. This proves PS/ITS are
-      active but not yet validated.
+      a live Protected Storage GET_INFO transaction. ITS is now validated; the
+      remaining T063 work is Protected Storage throughput/completion through
+      the TF-M ITS/PS flash filesystem and Strata flash writeback path.
 - [ ] T064 Validate UEFI variable storage through SMM Gateway and RSE Protected
       Storage.
       The secure-service probe records U-Boot/secure-console SMM Gateway
@@ -1894,3 +1900,21 @@ richer fault status.
       and zero RCU-stall reports. V038, T061-T064, and T076 remain open for
       secure-service completion and FWU persistence, not for the AP/SI
       mailbox-warning path.
+- [x] V038T Recheck secure-service IAT/ITS after AP/SI MHU fix without heavy
+      tracing. Runtime
+      `build/qbox-fvp-rd-aspen/rse-secure-service-30s-notrace-20260527-v1/`
+      used per-run writable flash copies, AP CPUs, ATU DMI, host-memory DMI,
+      boot-flash DMI disabled, and `--secure-service-probe-timeout 30`.
+      It returned `passed=true`, `timed_out=false`, completed the post-login
+      probe, and kept Linux driver checks green. `psa-iat-api-test` returned
+      0 with one passed IAT suite; `psa-its-api-test` returned 0 with ten
+      passed ITS tests; `psa-ps-api-test` still returned 124 after passing PS
+      tests 401 and 402 and entering PS test 403. The primary, secure, and RSE
+      logs contain zero `Spurious IRQ on PBX channel`, zero
+      `Try increasing MBOX_TX_QUEUE_LEN`, and zero RCU-stall reports. The
+      companion high-MHU-trace run
+      `build/qbox-fvp-rd-aspen/rse-secure-service-30s-probe-20260527-v1/`
+      timed out before Linux while logging thousands of AP-RSE MHU accesses,
+      so high-volume MHU tracing is diagnostic only and should not be used for
+      bounded secure-service pass/fail timing. V038/T061/T063/T064/T076 remain
+      open for PS completion, UEFI/FWU storage coverage, and persistence.
