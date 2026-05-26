@@ -8,7 +8,7 @@
 	branch = apollo-fvp-linux-6.18-rt
 [submodule "layers/meta-arm"]
 	path = layers/meta-arm
-	url = https://git.yoctoproject.org/meta-arm
+	url = git@github.com:cometzero/meta-arm.git
 	branch = patched-21894cc2ea3197e6bfc1a56d889f757a09dc8b31
 [submodule "layers/meta-bluechi"]
 	path = layers/meta-bluechi
@@ -24,7 +24,7 @@
 	branch = walnascar
 [submodule "layers/meta-ewaol"]
 	path = layers/meta-ewaol
-	url = https://gitlab.com/soafee/ewaol/meta-ewaol
+	url = git@github.com:cometzero/meta-ewaol.git
 	branch = patched-4ba5f48c4e10ad2a0271bb2287a66688e6c2fa15
 [submodule "layers/meta-mender"]
 	path = layers/meta-mender
