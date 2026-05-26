@@ -5770,9 +5770,14 @@ first-hit timing for boot/probe markers in the QBox runner artifacts.
 | `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding progress-marker timing metadata. |
 | `build/qbox-fvp-rd-aspen/rse-progress-markers-smoke-20260527-v1/result.json` | A three-second smoke run intentionally timed out but recorded `runtime_elapsed_s=3.0408640089990513` and `progress_marker_first_hits.rse_bl1_1.elapsed_s=0.5025069439980143`. |
 | `rse-progress-markers-smoke-20260527-v1/summary.txt` | Prints `progress_marker_first_hits` with `rse_bl1_1: 0.503s`, proving the human-readable artifact carries the same first-hit timing. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-filter-marker-dmi-20260527-v1/result.json` | The same focused PS 403/range-limited DMI configuration was rerun after marker timing landed. It timed out at `runtime_elapsed_s=120.11020978200031` before Linux and before any secure-service command was sent. |
+| `rse-ps403-filter-marker-dmi-20260527-v1/summary.txt` | First-hit timing shows `rse_bl1_1` at 1.005 s, `rse_scp_power_on_ap` at 56.401 s, `rse_first_image_slot` at 56.501 s, `measured_boot_bl33` at 63.933 s, `secure_smmgw_discovery_fallback` at 64.536 s, `primary_efi_mm_partition` at 64.939 s, and `secure_seproxy_remove_missing` at 65.040 s. No EFI boot or Linux marker was observed by the 120-second cap. |
 
 Current conclusion: range-limited boot-flash DMI alone does not remove the
 fresh-flash U-Boot/SMM Gateway stall. Future short-timeout QBox runs now carry
 marker first-hit timing in the generated artifacts, so EFI, Linux, login, and
 PS test-403 regressions can be compared without tmux screen inspection or log
-mtime inference.
+mtime inference. The 120-second marker run narrows this specific bounded
+failure to the post-`EFI: MM partition ID 0x8006` window: RSE measured boot and
+AP handoff complete by roughly 65 seconds, but EFI boot and Linux do not start
+before timeout.

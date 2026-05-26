@@ -2066,3 +2066,16 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-progress-markers-smoke-20260527-v1/`,
       which records `rse_bl1_1` first hit at 0.503 seconds. This improves
       short-timeout judgment but does not close V038/T061/T063/T064/T076.
+- [x] V038AC Re-run the focused PS 403/range-limited DMI case with marker
+      timing enabled. Runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-filter-marker-dmi-20260527-v1/`
+      timed out at `runtime_elapsed_s=120.11020978200031` before Linux and
+      before any secure-service command was sent. The marker timing records
+      `rse_bl1_1` at 1.005 seconds, `rse_scp_power_on_ap` at 56.401 seconds,
+      `rse_first_image_slot` at 56.501 seconds, `measured_boot_bl33` at
+      63.933 seconds, `secure_smmgw_discovery_fallback` at 64.536 seconds,
+      `primary_efi_mm_partition` at 64.939 seconds, and
+      `secure_seproxy_remove_missing` at 65.040 seconds. No EFI boot or Linux
+      marker appears by the 120-second cap. This narrows the fresh-flash
+      pre-Linux timeout to the post-`EFI: MM partition ID 0x8006` SMM
+      Gateway/secure-storage window.
