@@ -2048,3 +2048,21 @@ richer fault status.
       are benign reference-model behavior, while QBox still needs work in the
       pre-Linux U-Boot/SMM Gateway secure-storage timing path and the later PS
       test-403 Strata workload.
+- [x] V038AB Recheck focused PS 403 with range-limited boot-flash DMI and add
+      runner marker first-hit timing. Runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-filter-ranged-dmi-20260527-v1/`
+      used `QBOX_RDASPEN_BOOT_FLASH_DMI=true`,
+      `QBOX_RDASPEN_BOOT_FLASH_DMI_RANGES=0x7000:0x260000`, and
+      `QBOX_RDASPEN_AP_FLASH_DMI_RANGES=0x7000:0x240000`, but still timed out
+      at `runtime_elapsed_s=120.13643014699846` before Linux or any
+      secure-service command. The primary console reached
+      `EFI: MM partition ID 0x8006` only. The runner now records
+      `progress_marker_first_hits` for key RSE, measured-boot, EFI, Linux,
+      login/root, SMM Gateway, SE-Proxy, and PS test-403 markers in
+      `result.json` and `summary.txt`. Validation passed with
+      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and the
+      three-second smoke
+      `build/qbox-fvp-rd-aspen/rse-progress-markers-smoke-20260527-v1/`,
+      which records `rse_bl1_1` first hit at 0.503 seconds. This improves
+      short-timeout judgment but does not close V038/T061/T063/T064/T076.

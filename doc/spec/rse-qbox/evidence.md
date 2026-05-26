@@ -5752,3 +5752,27 @@ continue to EFI boot and Linux within the same host cap. The QBox gap remains
 in the pre-Linux U-Boot/SMM Gateway secure-storage timing path for fresh
 writable flash copies, plus the later PSA Protected Storage test-403 Strata
 workload once Linux is reached.
+
+### 2026-05-27 Range-Limited DMI And Progress Markers
+
+The focused PS 403 path was rechecked with range-limited RSE/AP boot-flash DMI
+so executable image reads could use DMI while metadata, ITS, PS, and FWU update
+regions remained on the `strata_flash_j3` command-state path. The result still
+timed out before Linux, so the next short-run diagnostic is explicit
+first-hit timing for boot/probe markers in the QBox runner artifacts.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-ps403-filter-ranged-dmi-20260527-v1/result.json` | With `QBOX_RDASPEN_BOOT_FLASH_DMI=true`, `QBOX_RDASPEN_BOOT_FLASH_DMI_RANGES=0x7000:0x260000`, and `QBOX_RDASPEN_AP_FLASH_DMI_RANGES=0x7000:0x240000`, QBox still timed out with `blocker=qbox_platform_timeout`, `runtime_elapsed_s=120.13643014699846`, no login, and no secure-service command sent. |
+| `rse-ps403-filter-ranged-dmi-20260527-v1/qbox-primary-console.log` | The primary console reached `EFI: MM partition ID 0x8006` but did not reach `Booting /\EFI\BOOT\BOOTAA64.EFI` or Linux before the cap. |
+| `rse-ps403-filter-ranged-dmi-20260527-v1/qbox-secure-console.log` | The same SMM Gateway discovery fallback and SE-Proxy remove-missing-object startup messages appear, matching the FVP reference startup pattern. |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `PROGRESS_MARKERS` and records `progress_marker_first_hits` in `result.json` and `summary.txt` for RSE BL1, measured boot BL33, EFI MM, EFI boot, Linux, login/root, SMM Gateway, SE-Proxy, and PS test-403 markers. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding progress-marker timing metadata. |
+| `build/qbox-fvp-rd-aspen/rse-progress-markers-smoke-20260527-v1/result.json` | A three-second smoke run intentionally timed out but recorded `runtime_elapsed_s=3.0408640089990513` and `progress_marker_first_hits.rse_bl1_1.elapsed_s=0.5025069439980143`. |
+| `rse-progress-markers-smoke-20260527-v1/summary.txt` | Prints `progress_marker_first_hits` with `rse_bl1_1: 0.503s`, proving the human-readable artifact carries the same first-hit timing. |
+
+Current conclusion: range-limited boot-flash DMI alone does not remove the
+fresh-flash U-Boot/SMM Gateway stall. Future short-timeout QBox runs now carry
+marker first-hit timing in the generated artifacts, so EFI, Linux, login, and
+PS test-403 regressions can be compared without tmux screen inspection or log
+mtime inference.

@@ -93,6 +93,23 @@ REQUIRED_MARKERS = {
     ],
 }
 
+PROGRESS_MARKERS = {
+    "rse_bl1_1": "Starting TF-M BL1_1",
+    "rse_first_image_slot": "Jumping to the first image slot",
+    "rse_scp_power_on_ap": "RSE to SCP SCMI power on AP succeeded",
+    "measured_boot_bl33": "BL_33",
+    "primary_efi_mm_partition": "EFI: MM partition ID 0x8006",
+    "primary_efi_bootaa64": "Booting /\\EFI\\BOOT\\BOOTAA64.EFI",
+    "primary_linux_cpu": "Booting Linux on physical CPU",
+    "primary_linux_version": "Linux version ",
+    "primary_login_prompt": "fvp-rd-aspen login:",
+    "primary_root_shell": "root@fvp-rd-aspen",
+    "secure_smmgw_discovery_fallback": "Logging service discovery failed",
+    "secure_seproxy_remove_missing": "secure_storage_ipc_remove",
+    "ps_test_403": "TEST: 403",
+    "ps_insufficient_space": "Insufficient space check",
+}
+
 SERVICE_MODEL_GAPS = [
     "Safety Island CL0/SCP firmware is represented by a protocol-correct "
     "SystemC/TLM service model, not by a live SCP CPU.",
@@ -990,6 +1007,20 @@ def evaluate(logs: dict[str, str]) -> dict[str, object]:
     }
 
 
+def update_progress_marker_first_hits(
+    logs: dict[str, str],
+    first_hits: dict[str, dict[str, object]],
+    elapsed_s: float,
+) -> None:
+    combined = clean_text("\n".join(logs.values()))
+    for name, marker in PROGRESS_MARKERS.items():
+        if name not in first_hits and marker in combined:
+            first_hits[name] = {
+                "elapsed_s": elapsed_s,
+                "marker": marker,
+            }
+
+
 def shell_safe_probe_key(binary: str) -> str:
     return binary.replace("-", "_")
 
@@ -1729,7 +1760,15 @@ def drive_post_login_probe(
 
 def run_platform(
     root: Path, args: argparse.Namespace, artifacts: dict[str, Path]
-) -> tuple[int, dict[str, str], bool, bool, float, dict[str, object]]:
+) -> tuple[
+    int,
+    dict[str, str],
+    bool,
+    bool,
+    float,
+    dict[str, object],
+    dict[str, dict[str, object]],
+]:
     out_dir = args.out_dir
     cmd = [
         str((root / "tools/qbox/build/platforms-vp").resolve()),
@@ -1758,6 +1797,7 @@ def run_platform(
     timed_out = False
     interrupted = False
     logs = {role: "" for role in CONSOLE_LOGS}
+    progress_marker_first_hits: dict[str, dict[str, object]] = {}
     platform_log = out_dir / PLATFORM_STDOUT_LOG
     platform_stdout = ""
 
@@ -1789,6 +1829,11 @@ def run_platform(
                 logs = read_console_logs(out_dir)
                 drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
                 live_logs = {**logs, "platform_stdout": platform_stdout}
+                update_progress_marker_first_hits(
+                    live_logs,
+                    progress_marker_first_hits,
+                    time.monotonic() - start,
+                )
                 status = evaluate(live_logs)
                 probe_complete = bool(post_login_probe.get("complete"))
                 if (
@@ -1840,6 +1885,11 @@ def run_platform(
 
     if platform_stdout and not logs["rse"].strip():
         logs["rse"] = platform_stdout
+    update_progress_marker_first_hits(
+        {**logs, "platform_stdout": platform_stdout},
+        progress_marker_first_hits,
+        elapsed_s,
+    )
 
     rc = proc.returncode if proc.returncode is not None else 1
     probe_eval = evaluate_post_login_probe(
@@ -1866,7 +1916,15 @@ def run_platform(
         ]
         action_log.write_text("\n".join(action_lines) + "\n", encoding="utf-8")
         post_login_probe["action_log"] = str(action_log)
-    return rc, logs, timed_out, interrupted, elapsed_s, post_login_probe
+    return (
+        rc,
+        logs,
+        timed_out,
+        interrupted,
+        elapsed_s,
+        post_login_probe,
+        progress_marker_first_hits,
+    )
 
 
 def write_result(
@@ -1892,6 +1950,7 @@ def write_result(
     host_si_cl1_sram: dict[str, object] | None = None,
     boot_enc_trace: dict[str, object] | None = None,
     post_login_probe: dict[str, object] | None = None,
+    progress_marker_first_hits: dict[str, dict[str, object]] | None = None,
 ) -> int:
     out_dir = args.out_dir
     runtime_artifacts = artifacts if runtime_artifacts is None else runtime_artifacts
@@ -1992,6 +2051,7 @@ def write_result(
             "interrupted": interrupted,
             "platform_returncode": platform_rc,
             "runtime_elapsed_s": runtime_elapsed_s,
+            "progress_marker_first_hits": progress_marker_first_hits or {},
             "command": command,
             "runner_argv": sys.argv,
         }
@@ -2015,6 +2075,18 @@ def write_result(
             f"{runtime_elapsed_s:.3f}"
             if runtime_elapsed_s is not None
             else "not_run"
+        ),
+        "progress_marker_first_hits:",
+        *(
+            [
+                f"  - {name}: {float(hit['elapsed_s']):.3f}s "
+                f"({hit['marker']})"
+                for name, hit in sorted(
+                    (progress_marker_first_hits or {}).items(),
+                    key=lambda item: float(item[1].get("elapsed_s", 0.0)),
+                )
+            ]
+            or ["  none"]
         ),
         f"qemu_trace_log: {status['qemu_trace_log'] or 'disabled'}",
         "rse_pc_trace: "
@@ -2549,6 +2621,7 @@ def main() -> int:
         interrupted,
         runtime_elapsed_s,
         post_login_probe,
+        progress_marker_first_hits,
     ) = run_platform(
         root, args, run_artifacts
     )
@@ -2615,6 +2688,7 @@ def main() -> int:
         host_si_cl1_sram=host_si_cl1_sram,
         boot_enc_trace=boot_enc_trace,
         post_login_probe=post_login_probe,
+        progress_marker_first_hits=progress_marker_first_hits,
     )
 
 
