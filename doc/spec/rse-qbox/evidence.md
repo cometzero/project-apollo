@@ -5840,3 +5840,28 @@ now classified separately as post-login-not-reached blockers. PC-traced
 pre-Linux image-load timeouts are now classified down to the RSE BL2 CFI/Strata
 symbol, which points the next fidelity/performance work at the flash read path
 rather than mailbox, Linux driver, or secure-service userspace plumbing.
+
+### 2026-05-27 Boot-Flash DMI Fidelity Split
+
+The Strata model now records DMI hints, requests, grants, reject reasons, and
+invalidations in its JSON stats. This was used to test whether range-limited
+RSE boot-flash DMI can be used as a faithful speedup for BL2 image reads.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Adds `dmi_read_hints`, `dmi_requests`, `dmi_grants`, `dmi_reject_*`, and `dmi_invalidations` counters to `strata_flash_j3` stats and flushes stats from the DMI request path, including the first grant. |
+| `tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Extends focused tests to verify DMI counters are present and that the first grant writes stats before normal object destruction. |
+| `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4` | Passed after adding DMI stats counters and the DMI-path stats flush. |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; `strata_flash_j3-tests` completed in 0.83 seconds. |
+| `cmake --build tools/qbox/build --target platforms-vp --parallel 4` | Passed, proving the platform executable links against the updated Strata module. |
+| `build/qbox-fvp-rd-aspen/rse-dmi-stats-probe-20260527-v1/result.json` | A 45-second run with `QBOX_RDASPEN_BOOT_FLASH_DMI=true`, `QBOX_RDASPEN_BOOT_FLASH_DMI_RANGES=0x7000:0x260000`, `--flash-stats --flash-stats-interval 100000`, and PC trace reached BL2 SI CL1 load and timed out before AP/Linux. No stats file was produced before the DMI-path flush change because the target saw no qualifying flash writes. |
+| `build/qbox-fvp-rd-aspen/rse-dmi-stats-flush-20260527-v1/result.json` | The same DMI experiment after the flush change produced `rse-strata-stats.json` within a 25-second cap. The run timed out as `qbox_platform_timeout`, but the stats were present and parsed in `result.json`. |
+| `rse-dmi-stats-flush-20260527-v1/rse-strata-stats.json` | Records `read_accesses=69`, `dmi_read_hints=1`, `dmi_requests=1`, `dmi_grants=1`, `write_accesses=0`, and `command_writes=0`. This proves the range-limited DMI grant bypasses the firmware-visible CFI command-state model after the first direct mapping. |
+| `tools/qbox/platforms/fvp-rd-aspen/README.md` | Updated to classify RSE boot-flash DMI as a diagnostic-only shortcut, not pass/fail evidence for ITS, PS, UEFI variables, or FWU. |
+
+Current conclusion: boot-flash DMI is useful to split image-read throughput
+from command-state fidelity, but it is not a faithful fix for the RSE flash
+model. The default `QBOX_RDASPEN_BOOT_FLASH_DMI=false` remains correct for
+storage, UEFI variable, and FWU validation. The next implementation work should
+stay on the `strata_flash_j3` command-state path and reduce the byte-level
+CFI read/program/status-poll overhead without hiding command writes.

@@ -2151,3 +2151,15 @@ richer fault status.
       `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
       `build/qbox-fvp-rd-aspen/rse-cfi-pc-classify-smoke-20260527-v1/`, which
       returns `blocker=rse_bl2_cfi_flash_io_timeout:nor_cfi_reg_read`.
+- [x] V038AI Add Strata DMI stats and classify boot-flash DMI as diagnostic
+      only. `strata_flash_j3` now records DMI hint/request/grant/reject and
+      invalidation counters in stats and flushes stats from the DMI request
+      path. Validation passed with `strata_flash_j3-tests`, `platforms-vp`,
+      and runtime
+      `build/qbox-fvp-rd-aspen/rse-dmi-stats-flush-20260527-v1/`. That run
+      used range-limited RSE boot-flash DMI and produced
+      `dmi_grants=1`, `write_accesses=0`, and `command_writes=0`, proving the
+      direct mapping bypasses the CFI command-state model after the first
+      grant. Keep `QBOX_RDASPEN_BOOT_FLASH_DMI=false` for storage, UEFI
+      variable, and FWU evidence; future work should optimize the
+      command-state Strata path rather than relying on boot-flash DMI.
