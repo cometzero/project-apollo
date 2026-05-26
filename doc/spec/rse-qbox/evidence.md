@@ -5445,3 +5445,122 @@ FVP and are not the reason QBox remains before Linux. The next implementation
 step should either add a faithful Strata buffered-program path and teach the
 RD-Aspen TF-M Strata driver to use it, or reduce the QEMU/SystemC MMIO
 transaction cost without bypassing CFI command-state semantics.
+
+### 2026-05-26 Short Runtime Recheck
+
+The current short-timeout evidence now separates fresh writable-flash behavior
+from persisted deploy-flash behavior. This avoids treating a no-copy boot that
+benefits from already-initialized flash state as proof that first-boot
+writable flash is fast enough.
+
+| Evidence | Result |
+| --- | --- |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed; the focused Strata flash component test still succeeds with the current model. |
+| `build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-baseline-recheck-20260526-v1/progress-report.md` | Fresh writable-flash, range-limited-DMI GDB sample opened RSE/AP ports and host GDB captured QBox/SystemC/QEMU backtraces, but `Linux version` was not reached within 140.044 seconds. |
+| `gdb-linux-marker-range-dmi-baseline-recheck-20260526-v1/probes/tfm-s-later.txt` | RSE/TF-M sampled in `tfm_its_remove()` -> `Driver_FLASH0_EraseSector()` -> `cfi_strataflashj3_erase()` -> `erase_block()` -> `nor_byte_program()` -> `nor_send_cmd_byte()`, confirming the first-boot ITS/PS erase/writeback hot path. |
+| `gdb-linux-marker-range-dmi-baseline-recheck-20260526-v1/probes/ap-secure-services-later.txt` | AP SE-Proxy sampled in `secure_storage_ipc_set()` -> `rse_comms_platform_invoke()` -> `mhu_v3_x_doorbell_read(channel=127)`, so AP is waiting for RSE secure-storage service progress rather than blocked before secure-service dispatch. |
+| `gdb-linux-marker-range-dmi-baseline-recheck-20260526-v1/run/rse-strata-stats.json` | Quantifies the fresh writable-flash bottleneck at the sample: `write_accesses=5200000`, `word_program_cmds=866667`, `program_ops=866667`, `compat_ff_sector_erase_ops=1098`, `sector_erase_bytes=4497408`, and `backing_write_ops=584661`. |
+| `build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-nocopy-passcheck-20260526-v1/progress-report.md` | No-copy range-limited-DMI GDB control opened RSE/AP ports and sampled after 100.032 seconds without reaching `Linux version`; TF-M was already in `psa_wait_thread_fn_call()` and Strata stats recorded `backing_write_ops=0`. |
+| `build/qbox-fvp-rd-aspen/rse-runtime-nocopy-postlogin-20260526-v1/result.json` | Tight 210-second no-copy runtime reports `passed=true` with `timed_out=true`, no fatal fail patterns, RSE boot markers, RSE/SCP handoff markers, measured boot through `BL_33`, and Linux login marker present, but post-login commands were not sent before the cap. |
+| `build/qbox-fvp-rd-aspen/rse-runtime-nocopy-postlogin-20260526-v2/result.json` | No-copy runtime with a 260-second runner cap reports `passed=true`, `timed_out=false`, Linux login and root prompt present, and post-login probe `complete=true` with `done_marker=true`. |
+| `rse-runtime-nocopy-postlogin-20260526-v2/result.json` post-login probe | Driver-pattern checks are all true: `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio`. Return codes include `arm_si_rproc_modprobe_rc=0`, `rpmsg_ns_modprobe_rc=0`, `virtio_rpmsg_bus_modprobe_rc=0`, `rpmsg_net_modprobe_rc=0`, and `ethsi1_iplink_rc=0`. |
+| `rse-runtime-nocopy-postlogin-20260526-v2/qbox-primary-console.log` | Linux reaches `Linux version 6.18.5-rt3-yocto-preempt-rt`, `systemd 257.4`, SMMU v3 probe, virtio devices, SI remoteproc attach, `virtio_rpmsg_bus virtio6: rpmsg host is online`, `ethsi1`, multi-user, root shell, and the `__QBOX_PROBE_DONE__` marker. |
+| `rse-runtime-nocopy-postlogin-20260526-v2/qbox-secure-console.log` | Secure world reaches SCMI driver initialization and logs SMM Gateway discovery fallback plus the expected first-boot SE-Proxy secure-storage `-140` remove-missing-object messages. No SE-Proxy panic appears in this bounded no-copy run. |
+| `rse-runtime-nocopy-postlogin-20260526-v2/rse-strata-stats.json` | Even the no-copy login run executes a large RSE Strata program workload: `write_accesses=7200000`, `word_program_cmds=1200000`, `program_ops=1200000`, `compat_ff_sector_erase_ops=1298`, and `backing_write_ops=0`. |
+
+Current conclusion: QBox currently reaches Linux login, root shell, and the
+major Linux driver probes when it reuses the deploy flash state without
+write-through copies, but the first-boot writable-flash path remains too slow
+under the short FVP-like window. The limiting path is not AP release, Linux GDB
+setup, basic AP-RSE MHU wiring, or the current Linux driver surface; it is the
+firmware-visible TF-M ITS/PS CFI byte-program erase/writeback stream through
+the SystemC Strata flash model. Secure-service userspace validation, FWU bank
+selection, and cross-reboot writable-flash persistence remain open.
+
+### 2026-05-26 Secure-Service CC3XX PKA Recheck
+
+The current no-copy secure-service run reaches Linux and the post-login driver
+surface, but the PSA userspace tests still time out. A focused CC3XX PKA trace
+and TF-M source inspection narrow the post-login IAT timeout without treating
+the earlier pre-Linux PKA traffic as proof of the later userspace path.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-pka-trace-20260526-v1/result.json` | No-copy runtime completes with `passed=true`, `timed_out=false`, Linux login/root markers, post-login probe `complete=true`, and driver-pattern checks true. Secure-service binaries `psa-iat-api-test`, `psa-its-api-test`, and `psa-ps-api-test` are present, but all return `124` under the 3-second per-command cap. |
+| `rse-secure-service-cc3xx-pka-trace-20260526-v1/qbox-primary-console.log` | Linux reaches `Linux version 6.18.5-rt3-yocto-preempt-rt`; the secure-service diagnostic marker is printed; IAT times out before a test result, while ITS prints two `TEST RESULT: PASSED` lines before timing out. |
+| `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_FILTER=pka-opcode QBOX_RDASPEN_CC3XX_TRACE_LIMIT=20000 ... --secure-service-probe-timeout 3` | The trace reaches the configured CC3XX limit before the IAT userspace test, so this artifact proves heavy pre-Linux/RSE PKA traffic but does not capture the late IAT opcode stream. |
+| `scripts/analyze_qbox_cc3xx_trace.py` | Adds a reusable CC3XX trace decoder for `qbox-platform.log`, including PKA opcode decoding, offset counts, first/last opcode windows, JSON output, and trace-limit detection. |
+| `rse-secure-service-cc3xx-pka-trace-20260526-v1/cc3xx-pka-summary.txt` | Decodes `20000` CC3XX trace entries and reports `trace_limit_reached: True`, `pka_opcode_count: 8063`, with dominant ops `AND_TST0_CLR0=2317`, `MODMUL=2311`, `MODSUB_MODDEC_MODNEG=1676`, and `MODADD_MODINC=1150`. |
+| `build/qbox-fvp-rd-aspen/gdb-secure-service-iat-sample-20260526-v1/probes/ap-secure-services-later.txt` | During IAT sampling the AP SE-Proxy side is waiting on the RSE response in `mhu_v3_x_doorbell_read(channel=127)` under `rse_comms_platform_invoke()`. |
+| `gdb-secure-service-iat-sample-20260526-v1/probes/tfm-s-later.txt` | The RSE TF-M secure runtime is active in the IAT crypto path: `cc3xx_lowlevel_rng_get_random()` -> `cc3xx_lowlevel_pka_set_to_random_within_modulus()` -> `cc3xx_lowlevel_ecdsa_sign()` for `CC3XX_EC_CURVE_SECP_256_R1`. |
+| TF-M CC3XX source inspection | `cc3xx_lowlevel_pka_set_to_random_within_modulus()` repeatedly calls DRBG random generation and accepts the candidate only when `cc3xx_lowlevel_pka_less_than(r0, CC3XX_PKA_REG_N)` observes `PKA_STATUS.ALU_SIGN_OUT`. The QBox CC3XX model implements that less-than status via the `SUB_DEC_NEG` borrow/sign path, so the current evidence does not indicate a missing basic compare bit. |
+| FVP comparison artifacts `build/fvp-boot-logs/rse-secure-service-probe-20260525-v1/` | FVP completes `psa-iat-api-test` and `psa-its-api-test` with rc `0` under the same short cap, so the QBox gap is still real and local to the modeled RSE crypto/service path rather than image content for those two binaries. |
+
+Current conclusion: the post-login secure-service gap is now split from the
+first-boot Strata writeback gap. Basic AP-RSE MHU propagation and Linux driver
+probing still work, but IAT remains bounded in RSE TF-M CC3XX-backed ECDSA/RNG
+work while AP SE-Proxy waits for the response. The immediate next step is a
+late-gated or much higher-limit CC3XX PKA trace, or a semantics-preserving
+acceleration of the CC3XX PKA/ECDSA path, not another broad MHU wiring change.
+
+### 2026-05-26 Late-Gated CC3XX Trace And Cache Recheck
+
+The late trace gate now captures the userspace IAT/attestation PKA window
+without spending the short runtime window on earlier boot-time CC3XX traffic.
+The remaining secure-service gap is no longer classified as missing Linux
+driver setup or basic AP-RSE MHU discovery.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/cc3xx/include/cc3xx.h` | Adds `trace_skip` and `m_trace_seen_count` so trace output can start after a configured number of matching CC3XX events. It also caches the PKA modulus value and invalidates that cache on PKA SRAM reset, direct PKA SRAM writes, PKA register-0 remap, and result writes overlapping the modulus register. |
+| `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` | Wires `QBOX_RDASPEN_CC3XX_TRACE_SKIP` to both RSE CC3XX instances. The value is read directly at object construction so the Lua main chunk stays below the local-variable limit; `luac -p` passes. |
+| `tools/qbox/tests/components/cc3xx/cc3xx-tests.cc` | Adds `PkaTraceSkipCanGateEarlyOpcodes` and `PkaModulusCacheInvalidatesOnModulusRewrite` focused regressions. |
+| `timeout 120s cmake --build tools/qbox/build --target cc3xx-tests platforms-vp --parallel 8` | Passed after the trace-skip and modulus-cache changes. |
+| `timeout 120s ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure` | Passed. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-skip-trace-20260526-v2/` | `QBOX_RDASPEN_CC3XX_TRACE_SKIP=20000` captured the next `12000` matching CC3XX trace events but timed out before Linux. The artifact proves the skip gate works and shows the next window is still pre-Linux secure-runtime measured-boot traffic, with `pka_opcode_count=5071`. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-skip-trace-20260526-v3/result.json` | With `QBOX_RDASPEN_CC3XX_TRACE_SKIP=80000` and `QBOX_RDASPEN_CC3XX_TRACE_LIMIT=4000`, QBox reaches Linux login/root and completes the post-login probe. Driver return codes remain good, including `arm_si_rproc_modprobe_rc=0`, `rpmsg_ns_modprobe_rc=0`, `virtio_rpmsg_bus_modprobe_rc=0`, `rpmsg_net_modprobe_rc=0`, and `ethsi1_iplink_rc=0`. Secure-service userspace tests still return `124` under the 3-second per-command cap. |
+| `rse-secure-service-cc3xx-skip-trace-20260526-v3/cc3xx-pka-summary.txt` | Captures the late IAT/attestation PKA window: `trace_entries=4000`, `trace_limit_reached=True`, `pka_opcode_count=1681`, with `AND_TST0_CLR0=491`, `MODMUL=491`, `MODSUB_MODDEC_MODNEG=351`, `MODADD_MODINC=236`, `XOR_FLIP0_INVERT_COMPARE=89`, and `ADD_INC=23`. |
+| `rse-secure-service-cc3xx-skip-trace-20260526-v3/qbox-rse.log` | The RSE log reaches TF-M runtime and repeatedly prints `[Attest] ... PSA_IOT_PROFILE_1` while the AP userspace IAT test is active, confirming the late trace is aligned with the attestation path rather than only early boot validation. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-cache-probe-20260526-v1/result.json` | No-trace cache recheck still reaches Linux/root/post-login and all Linux driver probes, but `psa-iat-api-test`, `psa-its-api-test`, and `psa-ps-api-test` still return `124` with a 3-second per-command cap. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-cache-probe-15s-20260526-v1/qbox-primary-console.log` | Raising only the per-command cap to 15 seconds shows progress but not completion. IAT reaches checks 1..11 and logs `arm_tstee arm-ffa-4: invoke_func rpc status: -6`; ITS passes tests 401 and 402, reaches insufficient-space cleanup in test 403, then times out; PS passes test 401 before timing out. |
+
+Current conclusion: the immediate post-login secure-service blocker is a
+combination of slow or incomplete secure-service request completion and
+AP-RSE service backpressure, with late CC3XX PKA/ECDSA traffic proven in the
+IAT path. The cache optimization is safe and tested, but it is not sufficient
+to match the FVP short-command behavior. V038/T061-T064/T076 remain open until
+IAT/ITS/PS userspace tests complete with FVP-like short caps and fresh
+writable-flash/FWU persistence are proven.
+
+### 2026-05-26 AP/SI Synthetic MHU TXDone/PBX IRQ Recheck
+
+The Linux `arm-mhuv3-mailbox` warning seen in the 15-second secure-service
+cache probe was on the AP-to-SI CL1 service-model doorbell at AP logical
+`0x400b0000`, not on the AP-to-RSE secure-service bridge. The service-modeled
+AP/SI path injects a remoteproc/RPMsg name-service response without a real
+remote MHU peer, so the model must synthesize both the sender-side transfer
+completion and the PBX combined IRQ that Linux uses for interrupt-driven
+`txdone_irq`.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/mhuv3_stub/include/mhuv3_stub.h` | Adds `complete_synthetic_postbox_transfer()` and calls it after AP/SI CL1 doorbell auto-ack and after RPMsg-NS scheduling. The helper traces `postbox-synthetic-tx-complete` and clears the corresponding PBX doorbell status. `update_combined_irq()` now drives the exported `irq` for PBX frames as well as MBX frames, so `DBCW_INT_ST` can reach the Linux sender through the PBX combined interrupt. |
+| `tools/qbox/tests/components/mhuv3_stub/mhuv3_stub-tests.cc` | Extends the AP/SI CL1 test to bind the SI CL1 PBX IRQ, enable PBX `DBCW_INT_EN`, assert PBX `DBCW_ST` clears, assert `DBCW_INT_ST` is raised, and assert the IRQ output toggles for both the `0x8` resource-table seed kick and the `0x1` RPMsg host kick. |
+| `git -C tools/qbox diff --check -- systemc-components/mhuv3_stub/include/mhuv3_stub.h tests/components/mhuv3_stub/mhuv3_stub-tests.cc` | Passed. |
+| `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 8` | Passed after adding the synthetic txdone/PBX IRQ regression. |
+| `ctest --test-dir tools/qbox/build -R '^mhuv3_stub-tests$' --output-on-failure` | Passed. |
+| `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` and `cmake --build tools/qbox/build --target platforms-vp --parallel 8` | Passed, proving the Lua platform still parses and the rebuilt platform binary includes the MHU model update. |
+| `build/qbox-fvp-rd-aspen/rse-mhu-synthetic-txdone-postlogin-20260526-v1/result.json` | Earlier status-only txdone runtime reached Linux and the SI CL1 remoteproc/RPMsg/ethsi1 surface but timed out before the formal post-login probe. Its primary console did not contain the mailbox warning in that bounded window, but it did not exercise the later 20-second secure-service IAT window. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-txdone-20s-20260526-v1/result.json` | The next 20-second secure-service probe reached Linux, completed the driver module probes, started `psa-iat-api-test`, and then timed out. Driver return codes remained good, including `arm_si_rproc_modprobe_rc=0`, `virtio_rpmsg_bus_modprobe_rc=0`, `rpmsg_ns_modprobe_rc=0`, `rpmsg_net_modprobe_rc=0`, and `ethsi1_iplink_rc=0`. |
+| `rse-secure-service-mhu-txdone-20s-20260526-v1/qbox-primary-console.log` | Reproduced `arm-mhuv3-mailbox 400b0000.mhu: Try increasing MBOX_TX_QUEUE_LEN` before and during the IAT run, followed by an RCU stall. This proved that status-only synthetic txdone was insufficient because the PBX combined IRQ was not delivered. |
+| `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-irq-20s-20260526-v1/result.json` | Post-PBX-IRQ runtime timed out with `blocker=qbox_platform_timeout` before Linux login and before any post-login probe commands were sent. It is useful build/runtime smoke evidence but not acceptance proof for warning removal. |
+| `rse-secure-service-mhu-pbx-irq-20s-20260526-v1/qbox-primary-console.log` | Reached U-Boot EFI handoff, including `EFI: MM partition ID 0x8006` and `Booting /\EFI\BOOT\BOOTAA64.EFI`, but did not reach `Linux version` before the cap. No mailbox-warning conclusion can be drawn from this artifact. |
+
+Current conclusion: the component-level AP/SI CL1 sender completion and PBX
+IRQ root cause is fixed and covered by focused tests. The previous runtime
+claim that the Linux mailbox warning was gone is too strong: a later pre-fix
+20-second IAT run reproduced the warning, and the post-fix PBX IRQ run timed
+out before Linux/IAT. V038/T061-T064/T076 remain open until a post-fix
+runtime reaches Linux, exercises the secure-service IAT window, and shows
+that `MBOX_TX_QUEUE_LEN` no longer appears while the secure-service probes
+make FVP-like progress.

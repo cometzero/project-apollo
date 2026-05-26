@@ -416,7 +416,11 @@ Created: 2026-05-20
       binds `virtio6.ethsi1.-1.1024`, and post-login probe reports
       `ethsi1_iplink_rc:0`. Remaining fidelity work is tracked separately:
       the current `ethsi1` endpoint is service-modeled, not a real SI CL1
-      CPU/Zephyr peer with packet data-plane behavior.
+      CPU/Zephyr peer with packet data-plane behavior. Later AP/SI MHU work
+      now clears synthetic PBX doorbells and drives PBX transfer-ack IRQs for
+      service-modeled auto-ack/RPMsg-NS traffic; see V038S. Runtime proof that
+      this removes the Linux `Try increasing MBOX_TX_QUEUE_LEN` warning is
+      still pending because the post-fix run timed out before Linux/IAT.
 - [x] T019AW Establish reusable GDB inspection for QBox host, TF-M/RSE,
       SCP-Firmware symbols, and Linux/AP state. Script
       `scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py` creates per-run GDB
@@ -773,7 +777,10 @@ richer fault status.
       host-physical windows. Runtime
       `build/qbox-fvp-rd-aspen/rse-t019ba-ap-si-scmi-mhu-20260523-v1/`
       records `SCMI driver initialized` in BL31 after the previous
-      `PLAT_CSS_MHU_BASE + 0x10` abort is removed.
+      `PLAT_CSS_MHU_BASE + 0x10` abort is removed. Later V038S evidence
+      extends the AP/SI CL1 doorbell service-model path by emulating remote
+      transfer completion and PBX combined IRQ delivery for synthetic
+      auto-ack/RPMsg-NS PBX writes.
 - [x] T049 Keep direct-boot compatibility responder available only in direct
       mode. The legacy automatic doorbell success reply is now gated by the
       `direct_boot_compat` CCI parameter, which defaults to false. The direct
@@ -921,6 +928,10 @@ richer fault status.
       `mhu_v3_x_doorbell_read()`, while RSE/TF-M is erasing PS/ITS flash via
       `tfm_its_remove()`. This keeps the immediate short-timeout blocker in
       secure-storage transaction progress before Linux, not in GDB setup.
+      V038S fixes a separate AP/SI CL1 synthetic-MHU txdone/IRQ issue for
+      `400b0000.mhu`, but the post-fix runtime did not reach Linux/IAT.
+      T061 remains open because AP-RSE secure-service userspace tests still
+      time out and runtime proof of the AP/SI mailbox-warning fix is pending.
 - [ ] T062 Validate Initial Attestation request path.
       Current QBox post-login secure-service probe infrastructure runs
       `psa-iat-api-test`, but the test times out with rc 124 while secure
@@ -1750,3 +1761,121 @@ richer fault status.
       V038/T076 remain open; the next implementation target is a faithful
       Strata buffered-program path or another semantics-preserving way to
       reduce firmware-visible CFI transaction cost.
+- [x] V038P Recheck the current short-timeout behavior with 2026-05-26 GDB and
+      non-GDB evidence. Focused Strata flash component tests still pass with
+      `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$'
+      --output-on-failure`. Fresh writable-flash GDB artifact
+      `build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-baseline-recheck-20260526-v1/`
+      did not reach `Linux version` within 140.044 seconds; AP SE-Proxy was
+      waiting in `secure_storage_ipc_set()` / `mhu_v3_x_doorbell_read()` while
+      RSE/TF-M was in `tfm_its_remove()` -> `Driver_FLASH0_EraseSector()` ->
+      `cfi_strataflashj3_erase()` -> `erase_block()` ->
+      `nor_byte_program()` -> `nor_send_cmd_byte()`. The stats snapshot already
+      recorded `program_ops=866667`, `word_program_cmds=866667`,
+      `compat_ff_sector_erase_ops=1098`, and `backing_write_ops=584661`.
+      A no-copy GDB control
+      `gdb-linux-marker-range-dmi-nocopy-passcheck-20260526-v1/` sampled TF-M
+      in `psa_wait_thread_fn_call()` and recorded no backing writes, but still
+      did not reach `Linux version` within its 100.032-second cap. A regular
+      no-copy runtime with a 260-second runner cap,
+      `build/qbox-fvp-rd-aspen/rse-runtime-nocopy-postlogin-20260526-v2/`,
+      reached `Linux version`, root shell, systemd multi-user, RSE/SCP handoff,
+      measured-boot through `BL_33`, SMMU v3, virtio, SI remoteproc attach,
+      RPMsg, and `ethsi1`; post-login probe completed with
+      `arm_si_rproc_modprobe_rc=0`, RPMsg module rc values of 0,
+      `ethsi1_iplink_rc=0`, and all driver-pattern checks true. This confirms
+      QBox can reach Linux login and validate the current Linux driver surface
+      with the persisted deploy flash state, while fresh writable flash still
+      spends the short window in TF-M ITS/PS Strata byte-program
+      erase/writeback. V038/T061-T064/T076 remain open because secure-service
+      userspace command tests, FWU bank switching, and cross-reboot
+      writable-flash persistence are still unproven.
+- [x] V038Q Recheck the post-login secure-service CC3XX/PKA path with a
+      no-copy runtime, focused CC3XX trace, and TF-M source comparison.
+      Generated
+      `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-pka-trace-20260526-v1/`
+      with `QBOX_RDASPEN_CC3XX_TRACE=true`,
+      `QBOX_RDASPEN_CC3XX_TRACE_FILTER=pka-opcode`, and
+      `QBOX_RDASPEN_CC3XX_TRACE_LIMIT=20000`. The run reaches Linux login,
+      root, the post-login probe, and the expected Linux driver surface, but
+      the secure-service userspace tests remain bounded failures:
+      `secure_psa_iat_api_test_rc=124`,
+      `secure_psa_its_api_test_rc=124`, and
+      `secure_psa_ps_api_test_rc=124`. Added
+      `scripts/analyze_qbox_cc3xx_trace.py` and generated
+      `cc3xx-pka-summary.txt` / `cc3xx-pka-summary.json`; the summary decodes
+      `20000` CC3XX trace entries, reports `trace_limit_reached: True`, and
+      counts `8063` PKA opcode writes before the limit is consumed. The
+      dominant pre-Linux/RSE ops are `AND_TST0_CLR0=2317`, `MODMUL=2311`,
+      `MODSUB_MODDEC_MODNEG=1676`, and `MODADD_MODINC=1150`. Because the trace
+      limit is exhausted before IAT, this artifact proves heavy CC3XX PKA
+      traffic but does not yet capture the late userspace IAT opcode stream.
+      The current GDB artifact
+      `gdb-secure-service-iat-sample-20260526-v1/` still maps AP SE-Proxy to
+      `mhu_v3_x_doorbell_read(channel=127)` and RSE TF-M to
+      `cc3xx_lowlevel_rng_get_random()` ->
+      `cc3xx_lowlevel_pka_set_to_random_within_modulus()` ->
+      `cc3xx_lowlevel_ecdsa_sign()` for `CC3XX_EC_CURVE_SECP_256_R1`. TF-M
+      source inspection shows `set_to_random_within_modulus()` accepts random
+      candidates through `cc3xx_lowlevel_pka_less_than()`, which depends on
+      `SUB_DEC_NEG` setting `PKA_STATUS.ALU_SIGN_OUT`; the QBox CC3XX model
+      already implements that status path. V038/T061-T064/T076 remain open.
+      Next work should late-gate or increase the CC3XX trace enough to capture
+      IAT directly, then either fix a specific PKA semantic mismatch or
+      accelerate the CC3XX PKA/ECDSA path without bypassing the modeled
+      programming interface.
+- [x] V038R Add late-gated CC3XX trace control, capture the userspace IAT
+      PKA window, and recheck the bounded secure-service behavior after a
+      semantics-preserving CC3XX PKA cache increment. QBox now exposes
+      `QBOX_RDASPEN_CC3XX_TRACE_SKIP` through the RSE Lua platform without
+      adding another top-level Lua local, keeping `luac -p` valid. The focused
+      `PkaTraceSkipCanGateEarlyOpcodes` regression verifies the skip gate, and
+      `PkaModulusCacheInvalidatesOnModulusRewrite` verifies that caching the
+      PKA modulus register preserves results when `N` is rewritten. Runtime
+      artifact
+      `build/qbox-fvp-rd-aspen/rse-secure-service-cc3xx-skip-trace-20260526-v3/`
+      uses `QBOX_RDASPEN_CC3XX_TRACE_SKIP=80000` and
+      `QBOX_RDASPEN_CC3XX_TRACE_LIMIT=4000`; it reaches Linux/root and the
+      post-login probe, then captures late IAT/attestation PKA traffic with
+      `trace_limit_reached: True`, `pka_opcode_count: 1681`, and dominant
+      operations `AND_TST0_CLR0=491`, `MODMUL=491`,
+      `MODSUB_MODDEC_MODNEG=351`, and `MODADD_MODINC=236`. The no-trace
+      cache probe
+      `rse-secure-service-cc3xx-cache-probe-20260526-v1/` still returns
+      `124` for `psa-iat-api-test`, `psa-its-api-test`, and
+      `psa-ps-api-test` with the 3-second cap. A 15-second cap run
+      `rse-secure-service-cc3xx-cache-probe-15s-20260526-v1/` shows forward
+      progress but still returns `124`: IAT reaches checks 1..11 and reports
+      one `arm_tstee ... rpc status: -6`, ITS passes tests 401/402 and reaches
+      the insufficient-space cleanup path, and PS passes test 401 before the
+      cap. V038/T061-T064/T076 remain open; the next target is the
+      secure-service completion path and AP-RSE MHU queue/backpressure plus
+      remaining CC3XX/ECDSA latency, not basic boot or Linux driver wiring.
+- [x] V038S Fix AP/SI CL1 synthetic-MHU txdone and PBX IRQ delivery.
+      `mhuv3_stub` now clears the sender PBX status for synthetic AP/SI CL1
+      service-model transfers after the configured doorbell auto-ack and after
+      the RPMsg name-service packet is scheduled. It also drives the combined
+      IRQ output for PBX frames, not just MBX frames. This matters because the
+      Linux `arm_mhuv3` driver uses interrupt-driven `txdone_irq` when the PBX
+      combined IRQ is present; status-only synthetic completion is not enough
+      to drain the Linux mailbox queue. The focused `mhuv3_stub-tests`
+      regression now checks that PBX `DBCW_ST` is clear, `DBCW_INT_ST` is
+      raised, and the PBX IRQ asserts for both the `0x8` resource-table seed
+      kick and the later `0x1` RPMsg host kick. Static/build checks passed:
+      `git -C tools/qbox diff --check -- systemc-components/mhuv3_stub/include/mhuv3_stub.h tests/components/mhuv3_stub/mhuv3_stub-tests.cc`,
+      `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 8`,
+      `ctest --test-dir tools/qbox/build -R '^mhuv3_stub-tests$' --output-on-failure`,
+      `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`, and
+      `cmake --build tools/qbox/build --target platforms-vp --parallel 8`.
+      A pre-PBX-IRQ runtime,
+      `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-txdone-20s-20260526-v1/`,
+      reached Linux, started the secure-service IAT probe, and reproduced
+      `arm-mhuv3-mailbox 400b0000.mhu: Try increasing MBOX_TX_QUEUE_LEN`.
+      This proved that the earlier status-only sender-completion increment was
+      insufficient. The post-PBX-IRQ runtime,
+      `build/qbox-fvp-rd-aspen/rse-secure-service-mhu-pbx-irq-20s-20260526-v1/`,
+      reached U-Boot EFI handoff (`EFI: MM partition ID 0x8006` and
+      `Booting /\EFI\BOOT\BOOTAA64.EFI`) but timed out before Linux login, so
+      it does not yet prove the warning is gone. V038, T061-T064, and T076
+      remain open for secure-service completion, AP/SI warning proof under a
+      Linux/IAT-reaching run, and FWU persistence.
