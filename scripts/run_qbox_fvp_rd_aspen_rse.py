@@ -1729,7 +1729,7 @@ def drive_post_login_probe(
 
 def run_platform(
     root: Path, args: argparse.Namespace, artifacts: dict[str, Path]
-) -> tuple[int, dict[str, str], bool, bool, dict[str, object]]:
+) -> tuple[int, dict[str, str], bool, bool, float, dict[str, object]]:
     out_dir = args.out_dir
     cmd = [
         str((root / "tools/qbox/build/platforms-vp").resolve()),
@@ -1820,6 +1820,7 @@ def run_platform(
         interrupted = True
         stop_process(proc)
     finally:
+        elapsed_s = time.monotonic() - start
         stop_process(proc)
         if primary_uart_fd is not None:
             os.close(primary_uart_fd)
@@ -1865,7 +1866,7 @@ def run_platform(
         ]
         action_log.write_text("\n".join(action_lines) + "\n", encoding="utf-8")
         post_login_probe["action_log"] = str(action_log)
-    return rc, logs, timed_out, interrupted, post_login_probe
+    return rc, logs, timed_out, interrupted, elapsed_s, post_login_probe
 
 
 def write_result(
@@ -1884,6 +1885,7 @@ def write_result(
     interrupted: bool,
     blocker: str | None,
     platform_rc: int | None,
+    runtime_elapsed_s: float | None = None,
     rse_fwu_private_metadata: dict[str, object] | None = None,
     rse_pc_trace: dict[str, object] | None = None,
     host_si_cl0_sram: dict[str, object] | None = None,
@@ -1989,7 +1991,9 @@ def write_result(
             "timed_out": timed_out,
             "interrupted": interrupted,
             "platform_returncode": platform_rc,
+            "runtime_elapsed_s": runtime_elapsed_s,
             "command": command,
+            "runner_argv": sys.argv,
         }
     )
     result_path = out_dir / "result.json"
@@ -2006,6 +2010,12 @@ def write_result(
         "console_logs:",
         *[f"  - {role}: {path}" for role, path in status["console_logs"].items()],
         f"platform_stdout_log: {status['platform_stdout_log']}",
+        "runtime_elapsed_s: "
+        + (
+            f"{runtime_elapsed_s:.3f}"
+            if runtime_elapsed_s is not None
+            else "not_run"
+        ),
         f"qemu_trace_log: {status['qemu_trace_log'] or 'disabled'}",
         "rse_pc_trace: "
         + (
@@ -2532,7 +2542,14 @@ def main() -> int:
             host_si_cl1_sram=host_si_cl1_sram,
         )
 
-    platform_rc, logs, timed_out, interrupted, post_login_probe = run_platform(
+    (
+        platform_rc,
+        logs,
+        timed_out,
+        interrupted,
+        runtime_elapsed_s,
+        post_login_probe,
+    ) = run_platform(
         root, args, run_artifacts
     )
     host_si_cl0_sram = analyze_host_si_cl0_sram(
@@ -2591,6 +2608,7 @@ def main() -> int:
         interrupted=interrupted,
         blocker=runtime_blocker,
         platform_rc=platform_rc,
+        runtime_elapsed_s=runtime_elapsed_s,
         rse_fwu_private_metadata=rse_fwu_private_metadata,
         rse_pc_trace=rse_pc_trace,
         host_si_cl0_sram=host_si_cl0_sram,

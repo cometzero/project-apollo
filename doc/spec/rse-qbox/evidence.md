@@ -5688,3 +5688,23 @@ reach Linux, while earlier unfiltered PS-only runs did reach test 403. Treat
 this as additional evidence that U-Boot/SMM Gateway secure-storage timing and
 the later PS flash workload both remain fidelity risks; do not count these
 filtered attempts as PSA PS test results.
+
+### 2026-05-27 Runner Elapsed-Time Metadata
+
+Short QBox/FVP comparison runs now need exact host elapsed-time evidence
+because small timeout changes can move a run from Linux login to the
+U-Boot/SMM Gateway secure-storage window. The QBox RSE runner now records the
+runtime duration and the original runner argv in generated artifacts.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `runtime_elapsed_s` to `result.json`, prints it in `summary.txt`, and records `runner_argv` so later artifact triage can recover the exact runner-level options rather than only the generated `platforms-vp` command. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed. |
+| `build/qbox-fvp-rd-aspen/rse-runner-elapsed-smoke-20260527-v1/result.json` | Three-second smoke run intentionally timed out with `blocker=qbox_platform_timeout` and records `runtime_elapsed_s=3.0408413260011002`; `runner_argv` contains `--timeout`. |
+| `build/qbox-fvp-rd-aspen/rse-runner-elapsed-smoke-20260527-v1/summary.txt` | Prints `runtime_elapsed_s: 3.041`, proving the human-readable summary carries the same timing signal. |
+
+Current conclusion: future PS/SMM Gateway rechecks can be judged with exact
+runner-level timeout and elapsed-time metadata. This is diagnostic evidence;
+it does not change QBox platform behavior or close the remaining Protected
+Storage completion gap.

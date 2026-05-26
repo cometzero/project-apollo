@@ -2009,3 +2009,16 @@ richer fault status.
       but timed out before Linux at U-Boot/SMM Gateway, so they are
       pre-Linux secure-storage timing evidence rather than PS test 403
       pass/fail evidence.
+- [x] V038Y Record runner elapsed time and original argv in QBox RSE
+      `result.json`. The runner now reports `runtime_elapsed_s` and
+      `runner_argv`, and `summary.txt` prints the elapsed runtime or `not_run`
+      for check-only/preflight exits. This preserves the short-timeout
+      workflow while making it possible to compare old and new probe artifacts
+      without inferring host elapsed time from log mtimes. Validation passed
+      with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and a
+      three-second smoke run
+      `build/qbox-fvp-rd-aspen/rse-runner-elapsed-smoke-20260527-v1/` whose
+      result records `timed_out=true`, `blocker=qbox_platform_timeout`,
+      `runtime_elapsed_s=3.0408413260011002`, and a `runner_argv` containing
+      `--timeout`.
