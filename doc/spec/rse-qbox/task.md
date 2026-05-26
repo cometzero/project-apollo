@@ -2032,3 +2032,19 @@ richer fault status.
       Linux login markers are false and no post-login probe commands were
       sent. Treat this as pre-Linux U-Boot/SMM Gateway secure-storage timing
       evidence, not as a PSA PS test 403 result.
+- [x] V038AA Capture a fresh verbose FVP SMM Gateway reference for the same
+      bounded comparison window. Runtime
+      `build/fvp-boot-logs/rd-aspen-verbose-smmgw-20260527-v1/` was captured
+      with `scripts/runfvp_log_boot.py --timeout 180 --require critical
+      --no-login --runfvp-verbose`. The FVP summary reports `passed: False`
+      only because `terminal_ns_uart0` did not reach the critical login/root
+      marker in the bounded no-login run; the primary console still reaches
+      `Booting /\EFI\BOOT\BOOTAA64.EFI`, `Booting Linux on physical CPU`, and
+      `Linux version 6.18.5-rt3-yocto-preempt-rt`. The secure console contains
+      the same early SMM Gateway `sp_msg_send_direct_req(): error -4` fallback
+      and SE-Proxy `secure_storage_ipc_remove ... -140` messages as QBox, then
+      logs `tee_ta_close_session`. This narrows the QBox
+      `rse-ps403-filter-elapsed-20260527-v1` failure: those startup messages
+      are benign reference-model behavior, while QBox still needs work in the
+      pre-Linux U-Boot/SMM Gateway secure-storage timing path and the later PS
+      test-403 Strata workload.

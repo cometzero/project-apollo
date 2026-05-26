@@ -5730,3 +5730,25 @@ not exercise PSA PS test 403. The split remains: fresh per-run/padded flash
 still needs U-Boot/SMM Gateway secure-storage timing work before Linux, while
 older Linux-reaching PS-only artifacts still point to Protected Storage test
 403 completion throughput.
+
+### 2026-05-27 FVP Verbose SMM Gateway Reference
+
+A fresh verbose FVP run was captured with file-backed console logs to compare
+the QBox pre-Linux SMM Gateway stall against the Arm reference model. The run
+used `scripts/runfvp_log_boot.py --timeout 180 --require critical --no-login
+--runfvp-verbose` and intentionally avoided interactive screen inspection.
+
+| Evidence | Result |
+| --- | --- |
+| `build/fvp-boot-logs/rd-aspen-verbose-smmgw-20260527-v1/summary.txt` | The FVP process ran for 184.173 seconds and reported `passed: False` only because `terminal_ns_uart0` did not reach the critical login/root marker inside the bounded no-login run. All expected console logs were captured, and no `error_terms` were reported. |
+| `rd-aspen-verbose-smmgw-20260527-v1/terminal_ns_uart0_5004.log` | U-Boot reaches `EFI: MM partition ID 0x8006`, enrolls PK/KEK/db/dbx, reloads the keys as already enrolled, then logs `Booting /\EFI\BOOT\BOOTAA64.EFI`, `Booting Linux on physical CPU 0x0000000000`, and `Linux version 6.18.5-rt3-yocto-preempt-rt`. |
+| `rd-aspen-verbose-smmgw-20260527-v1/terminal_sec_uart_5003.log` | The secure console records the same early SMM Gateway `sp_msg_send_direct_req(): error -4` discovery fallback and SE-Proxy `secure_storage_ipc_remove ... -140` messages seen in QBox, followed by `tee_ta_close_session`. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-filter-elapsed-20260527-v1/result.json` | The comparable QBox focused PS 403 run timed out at `runtime_elapsed_s=180.15632524300236` before Linux login or any secure-service command was sent. |
+
+Current conclusion: the early SMM Gateway `-4` service-discovery fallback and
+SE-Proxy remove-missing-object `-140` messages are not sufficient to explain
+the QBox timeout, because the FVP logs contain the same startup messages and
+continue to EFI boot and Linux within the same host cap. The QBox gap remains
+in the pre-Linux U-Boot/SMM Gateway secure-storage timing path for fresh
+writable flash copies, plus the later PSA Protected Storage test-403 Strata
+workload once Linux is reached.
