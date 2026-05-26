@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shlex
 import signal
 import subprocess
 import textwrap
@@ -2171,6 +2172,14 @@ def runner_command(root: Path, args: argparse.Namespace, run_dir: Path) -> list[
     if args.secure_service_probe:
         cmd.append("--secure-service-probe")
         cmd.extend(["--secure-service-probe-timeout", str(args.secure_service_probe_timeout)])
+        cmd.extend(["--secure-service-probe-tests", args.secure_service_probe_tests])
+        if args.secure_service_ps_test_list:
+            cmd.extend(
+                [
+                    "--secure-service-ps-test-list",
+                    args.secure_service_ps_test_list,
+                ]
+            )
     if args.fwu_probe:
         cmd.append("--fwu-probe")
         cmd.extend(
@@ -2209,6 +2218,15 @@ def write_readme(
             f"          --secure-service-probe-timeout "
             f"{args.secure_service_probe_timeout} \\\n"
         )
+        runner_options += (
+            f"          --secure-service-probe-tests "
+            f"{args.secure_service_probe_tests} \\\n"
+        )
+        if args.secure_service_ps_test_list:
+            runner_options += (
+                f"          --secure-service-ps-test-list "
+                f"{shlex.quote(args.secure_service_ps_test_list)} \\\n"
+            )
     if args.fwu_probe:
         runner_options += "          --fwu-probe \\\n"
     if args.keep_running_after_pass:
@@ -3255,6 +3273,22 @@ def parse_args() -> argparse.Namespace:
         help="Per-command timeout in seconds for --secure-service-probe.",
     )
     parser.add_argument(
+        "--secure-service-probe-tests",
+        default="ps,iat,its",
+        help=(
+            "Comma-separated Trusted Services tests to pass through to "
+            "run_qbox_fvp_rd_aspen_rse.py."
+        ),
+    )
+    parser.add_argument(
+        "--secure-service-ps-test-list",
+        default="",
+        help=(
+            "Optional psa-ps-api-test -t list, for example 'test_403;', "
+            "passed through when --secure-service-probe-tests includes ps."
+        ),
+    )
+    parser.add_argument(
         "--fwu-probe",
         action="store_true",
         help=(
@@ -3459,6 +3493,8 @@ def main() -> int:
         "post_login_probe": args.post_login_probe,
         "secure_service_probe": args.secure_service_probe,
         "secure_service_probe_timeout": args.secure_service_probe_timeout,
+        "secure_service_probe_tests": args.secure_service_probe_tests,
+        "secure_service_ps_test_list": args.secure_service_ps_test_list,
         "fwu_probe": args.fwu_probe,
         "fwu_system_running_timeout": args.fwu_system_running_timeout,
         "keep_running_after_pass": args.keep_running_after_pass,
