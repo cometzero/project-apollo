@@ -2330,3 +2330,18 @@ richer fault status.
       before the short login cap. T063 remains open and still points to QBox's
       firmware-visible TF-M Protected Storage/Strata command workload rather
       than startup SE-Proxy/SMM Gateway messages.
+- [x] V038AT Optimize stats-disabled Strata hot paths without changing CFI
+      command-state behavior. QBox now bypasses command-counter decoding when
+      flash stats are disabled, uses a direct single-byte NOR program path for
+      stats-disabled firmware byte writes, and copies read-array/status
+      multi-byte reads in bulk. Validation passed with
+      `git -C tools/qbox diff --check`, focused `strata_flash_j3-tests`,
+      focused `ctest`, and `platforms-vp`. A persisted-flash PS403 rerun,
+      `build/qbox-fvp-rd-aspen/rse-ps403-strata-hotpath-220s-20260527-v1/`,
+      timed out at 220.065 seconds before Linux login and before post-login
+      probe injection. It reached RSE first image slot, RSE-to-SCP AP power-on,
+      measured boot through `BL_33`, and primary `EFI: MM partition ID 0x8006`,
+      but it is not PS403 pass/fail evidence. The current best QBox PS403
+      artifact remains `rse-ps403-secondboot-nostats-260s-20260527-v1`, which
+      reached cleanup after UID 21 but still did not reach the FVP
+      `TEST RESULT: PASSED` marker. T063 remains open.

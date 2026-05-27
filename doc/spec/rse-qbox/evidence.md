@@ -6096,3 +6096,34 @@ best PS403 state and instead exposed continued pre-login timing variability.
 The FVP verbose recheck confirms the startup SMM Gateway and SE-Proxy messages
 are reference behavior, so T063 remains focused on QBox's firmware-visible
 TF-M Protected Storage and Strata CFI command workload.
+
+### 2026-05-27 Strata Stats-Off Hot-Path Recheck
+
+QBox now keeps the Strata CFI command-state model on the normal firmware-visible
+path while avoiding extra work that is only useful when diagnostics are enabled.
+Stats-disabled command writes skip the stats-counter decode switch, stats-
+disabled single-byte programs use a direct NOR bit-clear/update path, and
+read-array/status multi-byte reads use bulk host copies. Stats-enabled behavior
+continues through the existing counter path.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Adds stats-off command-counter bypass, stats-off single-byte program fast path, and bulk read-array/status copies without enabling DMI or changing CFI command sequencing. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Passed after the Strata hot-path update. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed after the Strata hot-path update. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed; all focused Strata component tests passed in 1.03 s. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed; the RD-Aspen platform executable links against the updated Strata module. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-strata-hotpath-220s-20260527-v1/result.json` | Persisted-flash second-boot PS403 rerun timed out at `runtime_elapsed_s=220.065` with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached `rse_first_image_slot` and `RSE to SCP SCMI power on AP succeeded` at 198.478 s, `BL_33` at 211.246 s, and `EFI: MM partition ID 0x8006` at 213.561 s, but did not reach Linux login or send the PS403 probe. |
+| `arm-zena-css/documentation/design/secure_services.rst` | Reconfirmed that Primary Compute secure storage requests pass through libts, FF-A, SE-Proxy, MHUv3, and RSE, and that UEFI SMM Gateway variables are stored in RSE Protected Storage. |
+| `arm-zena-css/documentation/releasenotes.rst` | Reconfirmed that first-boot SE-Proxy `secure_storage_ipc_remove ... -140` messages are documented as normal while SMM Gateway creates new PS-backed variable indexes. |
+| `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/terminal_ns_uart0_5004.log` | FVP reference still completes PS test 403: Check 1 and Check 2 both reach UID 22 insufficient space, cleanup runs twice, and `TEST RESULT: PASSED` is printed. |
+
+Current conclusion: the stats-off hot-path update is behavior-preserving under
+focused tests and platform linking, but the bounded runtime did not close T063
+or improve the best persisted PS403 artifact. The latest run stopped before
+post-login probe injection, so the best QBox PS403 evidence remains
+`rse-ps403-secondboot-nostats-260s-20260527-v1`, which reached cleanup after
+UID 21 but not the FVP `TEST RESULT: PASSED` state. The next implementation
+target remains the TF-M Protected Storage flash-filesystem workload over the
+Strata command-state path, not startup secure-service discovery messages,
+Linux driver probing, boot-flash DMI, or stats overhead.
