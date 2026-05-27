@@ -2345,3 +2345,18 @@ richer fault status.
       artifact remains `rse-ps403-secondboot-nostats-260s-20260527-v1`, which
       reached cleanup after UID 21 but still did not reach the FVP
       `TEST RESULT: PASSED` marker. T063 remains open.
+- [x] V038AU Skip Strata backing writes for already-erased sectors. QBox now
+      detects all-`0xff` sectors in `strata_flash_j3::erase_sector()` and
+      returns ready/status state without writing the backing file when the
+      sector contents are unchanged. Focused coverage adds
+      `ErasedSectorSkipsBackingFileWrite`, using a deliberately too-small
+      backing file to prove the no-op erase does not write out of range.
+      Validation passed with `git -C tools/qbox diff --check`, focused
+      `strata_flash_j3-tests`, focused `ctest`, and `platforms-vp`. A bounded
+      persisted-flash PS403 rerun,
+      `build/qbox-fvp-rd-aspen/rse-ps403-erased-sector-skip-240s-20260527-v1/`,
+      reached RSE-to-SCP AP power-on, RSE first image slot, measured boot
+      through `BL_33`, and primary `EFI: MM partition ID 0x8006`, but timed
+      out before Linux login with `qbox_post_login_probe_not_reached_timeout`.
+      This is pre-login regression evidence only; it does not supersede the
+      previous best PS403 artifact. T063 remains open.

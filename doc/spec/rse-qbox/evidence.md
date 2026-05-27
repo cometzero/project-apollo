@@ -6127,3 +6127,26 @@ UID 21 but not the FVP `TEST RESULT: PASSED` state. The next implementation
 target remains the TF-M Protected Storage flash-filesystem workload over the
 Strata command-state path, not startup secure-service discovery messages,
 Linux driver probing, boot-flash DMI, or stats overhead.
+
+### 2026-05-27 Erased-Sector Writeback Skip
+
+The Strata model now skips backing-file writes when a sector-erase operation
+targets a sector that is already fully erased. This preserves the visible flash
+contents and status/mode transition while avoiding needless host writeback for
+cleanup paths that revisit erased sectors.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | `erase_sector()` now detects all-`0xff` sectors and returns ready/status state without writing the backing file. |
+| `tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Adds `ErasedSectorSkipsBackingFileWrite`, which uses a deliberately too-small backing file and proves an already-erased sector erase does not try to write out of range. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Passed after the erased-sector writeback skip. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed after the erased-sector writeback skip. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed; all focused Strata component tests passed in 1.04 s. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed; the RD-Aspen platform executable links against the updated Strata module. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-erased-sector-skip-240s-20260527-v1/result.json` | Persisted-flash second-boot PS403 rerun timed out at `runtime_elapsed_s=240.120` with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached RSE-to-SCP AP power-on at 198.531 s, first image slot at 198.631 s, `BL_33` at 215.810 s, and primary `EFI: MM partition ID 0x8006` at 218.125 s, but did not reach Linux login or send the PS403 probe. |
+
+Current conclusion: the erased-sector writeback skip is covered by focused
+tests and does not break the platform link or bounded boot path. It does not
+close T063. The latest runtime is pre-login evidence only, so the best QBox
+PS403 progress remains the prior stats-disabled 260 s run that reached cleanup
+after UID 21.
