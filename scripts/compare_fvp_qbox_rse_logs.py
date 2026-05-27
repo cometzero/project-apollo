@@ -219,10 +219,42 @@ def storage_stage(section: dict[str, object] | None) -> str:
     return "started"
 
 
+def missing_storage_steps(
+    ut: str,
+    fvp_section: dict[str, object] | None,
+    qbox_section: dict[str, object] | None,
+) -> list[str]:
+    if not fvp_section:
+        return []
+    if not qbox_section:
+        return [f"{ut}:test_403_started"]
+
+    missing: list[str] = []
+    fvp_checks = set(fvp_section.get("checks_seen", []))
+    qbox_checks = set(qbox_section.get("checks_seen", []))
+    for check in sorted(fvp_checks - qbox_checks):
+        missing.append(f"{ut}:check_{check}")
+
+    fvp_uid_count = len(fvp_section.get("insufficient_space_uids", []))
+    qbox_uid_count = len(qbox_section.get("insufficient_space_uids", []))
+    for index in range(qbox_uid_count + 1, fvp_uid_count + 1):
+        missing.append(f"{ut}:insufficient_space_uid_event_{index}")
+
+    fvp_cleanup_count = int(fvp_section.get("remove_all_registered_uids_count", 0))
+    qbox_cleanup_count = int(qbox_section.get("remove_all_registered_uids_count", 0))
+    for index in range(qbox_cleanup_count + 1, fvp_cleanup_count + 1):
+        missing.append(f"{ut}:remove_all_registered_uids_event_{index}")
+
+    if fvp_section.get("completed") and not qbox_section.get("completed"):
+        missing.append(f"{ut}:test_403_completed")
+    return missing
+
+
 def compare_storage_test_403(fvp_text: str, qbox_text: str) -> dict[str, object]:
     fvp = parse_storage_test_403(fvp_text)
     qbox = parse_storage_test_403(qbox_text)
     missing_in_qbox: list[str] = []
+    missing_steps: dict[str, list[str]] = {}
     stage_delta: dict[str, dict[str, str]] = {}
 
     fvp_by_ut = fvp["by_ut"]
@@ -237,18 +269,15 @@ def compare_storage_test_403(fvp_text: str, qbox_text: str) -> dict[str, object]
             "fvp": storage_stage(fvp_section),
             "qbox": storage_stage(qbox_section),
         }
-        if (
-            fvp_section
-            and fvp_section.get("completed")
-            and not (qbox_section and qbox_section.get("completed"))
-        ):
-            missing_in_qbox.append(f"{ut}:test_403_completed")
+        missing_steps[ut] = missing_storage_steps(ut, fvp_section, qbox_section)
+        missing_in_qbox.extend(missing_steps[ut])
 
     return {
         "passed": not missing_in_qbox,
         "fvp": fvp,
         "qbox": qbox,
         "stage_delta": stage_delta,
+        "missing_steps": missing_steps,
         "missing_in_qbox_from_fvp": missing_in_qbox,
     }
 

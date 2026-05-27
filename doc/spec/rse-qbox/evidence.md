@@ -6436,3 +6436,33 @@ best PS403 artifact that reached Linux, driver probes, and UID21 cleanup. The
 experiment was reverted. T063 remains focused on a faithful acceleration or
 batching strategy for the TF-M PS/ITS flash-filesystem byte-program and
 compaction workload, not on single-byte access micro-optimizations.
+
+### 2026-05-28 PS403 Missing-Step Comparison
+
+`scripts/compare_fvp_qbox_rse_logs.py` now reports
+`storage_test_403.missing_steps` in addition to the existing high-level
+`stage_delta`. This makes the FVP/QBox PS403 comparison name the exact
+Protected Storage test steps that remain missing in QBox artifacts.
+
+The current active baseline remains `fvp-rd-aspen` / RD-Aspen `cfg2` with four
+primary-compute CPUs. The Arm Zena CSS user guide shows the reference FVP
+trusted-services `test_05_psa_ps_api_test` passing, and the active TF-M layout
+uses byte-program Strata flash for RSE storage: `TFM_HAL_FLASH_PROGRAM_UNIT =
+0x1`, a 1 MiB PS partition, a 256 KiB ITS partition, and
+`TFM_HAL_PS_SECTORS_PER_BLOCK = 4`.
+
+| Evidence | Result |
+| --- | --- |
+| `python3 -m py_compile scripts/compare_fvp_qbox_rse_logs.py` | Passed after adding the missing-step comparison. |
+| Synthetic `compare_storage_test_403(...)` check | Passed; FVP text with Check 1, Check 2, two insufficient-space UID events, two cleanup events, and `TEST RESULT: PASSED` compared against a QBox text with only Check 1/UID/cleanup emits `PS:check_2`, `PS:insufficient_space_uid_event_2`, `PS:remove_all_registered_uids_event_2`, and `PS:test_403_completed`. |
+| `arm-zena-css/documentation/user_guide/reproduce.rst` | Reference documentation records `test_50_trusted_services.ArmAutoSolutionsTrustedServices.test_05_psa_ps_api_test: PASSED (59.09s)`. |
+| `build/tmp_baremetal/work/fvp_rd_aspen-poky-linux/trusted-firmware-m/2.2.2+git/git/tfm/platform/ext/target/arm/rse/automotive_rd/css-aspen/flash_layout.h` and `rse_memory_sizes.h` | Active TF-M source confirms the byte-program storage model and partition sizes used by the inspector/comparison work: 64 MiB RSE flash, 48 MiB image area, 1 MiB PS, 256 KiB ITS, PS program unit 1, ITS program unit 1, and four physical sectors per PS logical block. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-progress-20260528-v2/comparison.json` | Best QBox-vs-FVP comparison still fails as expected. FVP PS403 is `completed`; QBox reaches `cleanup_after_uid_21`. The missing steps are `PS:check_2`, `PS:insufficient_space_uid_event_2`, `PS:remove_all_registered_uids_event_2`, and `PS:test_403_completed`. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-progress-20260528-v2/rejected-single-byte-comparison.json` | The rejected single-byte fast-path runtime does not reach PS403 at all. Its missing-step list is `PS:test_403_started`, matching the runtime blocker `qbox_post_login_probe_not_reached_timeout`. |
+
+Current conclusion: the comparison output now names the remaining acceptance
+gap precisely. The next T063 implementation must move the best QBox artifact
+from cleanup after UID 21 to Check 2, the second insufficient-space event, the
+second cleanup, and final `TEST RESULT: PASSED`. The rejected single-byte
+fast-path result is excluded from acceptance evidence because it fails before
+PS403 starts.

@@ -2526,3 +2526,19 @@ richer fault status.
       PS403 artifact that reached Linux, driver probes, and UID21 cleanup.
       T063 remains open and should continue with a higher-level faithful
       batching/acceleration strategy for TF-M PS/ITS flash compaction.
+- [x] V038BD Add precise FVP/QBox PS403 missing-step comparison. The compare
+      helper now reports `storage_test_403.missing_steps`, not only the
+      high-level storage stage. Syntax and synthetic comparison checks passed.
+      Comparing the FVP reference
+      `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/` with the
+      best QBox artifact
+      `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/`
+      produces
+      `build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-progress-20260528-v2/comparison.json`.
+      FVP completes PS403 while QBox reaches `cleanup_after_uid_21`; the named
+      missing steps are `PS:check_2`, `PS:insufficient_space_uid_event_2`,
+      `PS:remove_all_registered_uids_event_2`, and `PS:test_403_completed`.
+      The rejected single-byte runtime comparison reports only
+      `PS:test_403_started`, confirming it is not acceptance evidence. T063
+      remains open with the next target narrowed to Check 2, the second
+      insufficient-space event, second cleanup, and final pass marker.
