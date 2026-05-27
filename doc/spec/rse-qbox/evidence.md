@@ -6071,3 +6071,28 @@ UID 21, while the FVP reference completes PS403 with `TEST RESULT: PASSED`.
 The next implementation target remains the firmware-visible
 TF-M Protected Storage/Strata CFI workload, not Linux driver probe setup,
 UEFI variable persistence, flash stats overhead, or raw backing-file coverage.
+
+### 2026-05-27 Strata Stats-Flag Cache And FVP Verbose Recheck
+
+QBox commit `11d2928b777a` keeps the existing Strata stats behavior but removes
+the per-access `collect_stats()` parameter check from the flash hot path. The
+stats-enabled flag is now refreshed when `stats_file` or `stats_interval`
+changes and the hot path checks the cached boolean directly.
+
+| Evidence | Result |
+| --- | --- |
+| `git -C tools/qbox diff --check` | Passed before the QBox commit. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed; all Strata component tests passed in 1.16 s. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-flag-cache-260s-20260527-v1/result.json` | Runtime timed out at 260.080 s with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached `RSE to SCP SCMI power on AP succeeded` at 198.949 s, `BL_33` at 214.028 s, `EFI: MM partition ID 0x8006` at 216.342 s, `FWU: System booting in Regular State` at 233.548 s, and bootflow script handoff at 253.675 s, but did not reach Linux login or PS403 in this bounded run. |
+| `build/fvp-boot-logs/rse-verbose-critical-150s-20260527-v1/result.json` | FVP verbose critical run used file-backed logs and the same deployed RD-Aspen FVP config. It timed out at 153.973 s only because the primary login marker was not reached, but RSE, secure-world AP, SCP/SI CL0, and SI CL1 critical markers passed. |
+| `rse-verbose-critical-150s-20260527-v1/terminal_uart_5000.log` | FVP RSE log reaches `RSE to SCP SCMI power on AP succeeded`, `Jumping to the first image slot`, `Creating an empty ITS flash layout.`, `Creating an empty PS flash layout.`, SCMI subscription, PS encryption selection, and measured boot through `BL_33`. |
+| `rse-verbose-critical-150s-20260527-v1/terminal_sec_uart_5003.log` | FVP secure console reproduces the known SMM Gateway discovery fallback and SE-Proxy `secure_storage_ipc_remove ... -140` messages, then reaches `tee_ta_close_session`. The Arm Zena CSS documentation describes the first-boot SE-Proxy remove errors as normal when SMM Gateway creates new PS-backed variable indexes. |
+
+Current conclusion: the stats-flag cache is a safe QBox model hot-path cleanup
+with focused build/test coverage, but the bounded runtime did not improve the
+best PS403 state and instead exposed continued pre-login timing variability.
+The FVP verbose recheck confirms the startup SMM Gateway and SE-Proxy messages
+are reference behavior, so T063 remains focused on QBox's firmware-visible
+TF-M Protected Storage and Strata CFI command workload.

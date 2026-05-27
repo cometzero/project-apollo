@@ -2313,3 +2313,20 @@ richer fault status.
       QBox is now proven through Linux, driver probes, and PS403 UID
       exhaustion in a stats-disabled persisted run, but it still does not
       reach the FVP PS403 `TEST RESULT: PASSED` state.
+- [x] V038AS Cache the Strata stats-enabled flag and recheck against bounded
+      QBox/FVP runtime evidence. QBox commit `11d2928b777a` removes the
+      per-access stats-parameter query from the Strata hot path while keeping
+      stats behavior covered by `strata_flash_j3-tests`. Validation passed with
+      `git -C tools/qbox diff --check`, focused Strata build/tests, and
+      `platforms-vp`. The follow-up QBox runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-after-stats-flag-cache-260s-20260527-v1/`
+      timed out before Linux login with
+      `qbox_post_login_probe_not_reached_timeout`, reaching bootflow script
+      handoff at 253.675 seconds. This did not improve the previous best PS403
+      state. The FVP verbose comparison
+      `build/fvp-boot-logs/rse-verbose-critical-150s-20260527-v1/` reached RSE
+      first image slot, RSE-to-SCP AP power-on, TF-M ITS/PS empty-layout
+      creation, secure-world `tee_ta_close_session`, and primary Linux boot
+      before the short login cap. T063 remains open and still points to QBox's
+      firmware-visible TF-M Protected Storage/Strata command workload rather
+      than startup SE-Proxy/SMM Gateway messages.
