@@ -211,6 +211,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"dsu-pmu-0"],
         "qbox_lua": [r"dsu_pmu_irq_0", r"spi_in_216"],
         "runtime": [r"arm_dsu_0|dsu-pmu-0"],
+        "runtime_result_driver_patterns": ["dsu_pmu"],
         "kernel_config": ["CONFIG_ARM_DSU_PMU"],
         "status": "implemented_runtime_pass",
     },

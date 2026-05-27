@@ -6391,3 +6391,27 @@ the runtime result and is now counted by the audit. This does not close the
 overall coverage gate because DSU PMU still lacks runtime-log proof in the
 best PS403 artifact, and it does not change the T063 Protected Storage
 blocker.
+
+### 2026-05-28 DSU PMU Structured Probe Hook
+
+`scripts/run_qbox_fvp_rd_aspen_rse.py` now emits a post-login event-source
+probe for DSU PMU devices and records the result under
+`post_login_probe.driver_patterns.dsu_pmu`. The coverage audit now accepts
+that structured result for the `dsu_pmu` block, matching the existing
+`pl011_uart`, `virtio`, `smmu_v3`, and SI remoteproc/RPMsg structured
+evidence path.
+
+| Evidence | Result |
+| --- | --- |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/audit_qbox_fvp_rd_aspen_coverage.py` | Passed after adding the DSU PMU post-login probe command and audit mapping. |
+| Synthetic `evaluate_post_login_probe(...)` checks | Passed for both `dsu_pmu_event_source:arm_dsu_0` with `dsu_pmu_event_source_rc:0` and the older kernel probe string `probe of dsu-pmu-0 returned 0`. |
+| `build/qbox-fvp-rd-aspen/rse-post-login-threaded-input-20260524-v3/coverage-audit-structured-dsu.json` | Existing post-login artifact passes all `19` implemented/static blocks: `implemented_blocks_passed=true`, `rse_fidelity_labels_passed=true`, `implemented_failed=0`, and `dsu_pmu.runtime_log_present=true`. |
+| `build/qbox-fvp-rd-aspen/rse-dsu-pmu-probe-20260528-v1/result.json` | Fresh-flash bounded DSU probe run timed out before login/probe at `210.138s`, with RSE reaching BL1_1, the first image slot, and AP power-on. |
+| `build/qbox-fvp-rd-aspen/rse-dsu-pmu-secondboot-20260528-v1/result.json` | Persisted-flash second-boot DSU probe run timed out before login/probe at `230.112s`, after reaching `BL_33`, secure SMM Gateway discovery fallback, and U-Boot `EFI: MM partition ID 0x8006`. |
+
+Current conclusion: DSU PMU runtime proof already exists in the prior
+post-login log, and the runner can now collect the same proof as structured
+`result.json` evidence when a bounded run reaches the login prompt. The latest
+best PS403 artifact predates this DSU probe key, so this improves audit
+observability but does not close the current T063 Protected Storage gap or the
+best-artifact DSU PMU coverage gap.

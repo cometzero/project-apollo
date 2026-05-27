@@ -2500,3 +2500,16 @@ richer fault status.
       records only `dsu_pmu` as missing runtime-log proof. This improves
       memory-map/IRQ/driver audit accuracy without changing the T063
       Protected Storage blocker.
+- [x] V038BB Add DSU PMU to the structured post-login driver probe. The RSE
+      runner now emits `dsu_pmu_event_source:*` and
+      `dsu_pmu_event_source_rc:*` from `/sys/bus/event_source/devices`, and
+      the coverage audit maps `post_login_probe.driver_patterns.dsu_pmu` into
+      the `dsu_pmu` runtime check. Syntax and synthetic pattern checks passed.
+      Re-auditing the existing post-login artifact
+      `rse-post-login-threaded-input-20260524-v3/coverage-audit-structured-dsu.json`
+      passes all `19` implemented/static blocks with `implemented_failed=0`.
+      Two short live reruns did not reach the login prompt: fresh flash timed
+      out before AP console/login at `210.138s`, and the persisted-flash
+      second boot reached BL_33/U-Boot EFI MM discovery before timing out at
+      `230.112s`. This records a valid DSU PMU evidence path for future
+      post-login artifacts but does not close T063.

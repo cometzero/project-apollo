@@ -154,6 +154,8 @@ POST_LOGIN_PROBE_COMMANDS = [
     "ls -l /sys/bus/virtio/devices || true",
     "ls -l /sys/bus/rpmsg/devices || true",
     "for d in /sys/bus/rpmsg/devices/*; do [ -e $d/name ] && echo rpmsg_device:$(basename $d):$(cat $d/name); done",
+    "for d in /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu*; do [ -d $d ] && echo dsu_pmu_event_source:$(basename $d); done",
+    "if ls -d /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu* >/dev/null 2>&1; then echo dsu_pmu_event_source_rc:0; else echo dsu_pmu_event_source_rc:1; fi",
     "ip link show ethsi1; echo ethsi1_iplink_rc:$?",
     "ip link show || true",
     f"echo {PROBE_DONE_MARKER}",
@@ -233,6 +235,10 @@ POST_LOGIN_DRIVER_PATTERNS = {
     ],
     "smmu_v3": [
         r"arm-smmu-v3|1c0000000\.iommu|iommu@1c0000000",
+    ],
+    "dsu_pmu": [
+        r"dsu_pmu_event_source_rc:0|probe of dsu-pmu-0 returned 0|arm_dsu_0",
+        r"dsu_pmu_event_source:.*(arm_dsu|dsu)|dsu-pmu-0|arm_dsu_0",
     ],
 }
 
