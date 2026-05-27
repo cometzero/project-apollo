@@ -115,6 +115,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"serial@1a400000", r"interrupts = <0 52 4>"],
         "qbox_lua": [r"pl011_uart_0", r"spi_in_52"],
         "runtime": [r"1a400000\.serial: ttyAMA0", r"AMBA PL011 UART driver"],
+        "runtime_result_driver_patterns": ["pl011_uart"],
         "status": "implemented_runtime_pass",
     },
     {
@@ -142,6 +143,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"virtio-block@30020000", r"interrupts = <0 257 4>", r"virtio-block@30050000"],
         "qbox_lua": [r"virtioblk_0", r"spi_in_257", r"virtioblk_3", r"spi_in_260"],
         "runtime": [r"virtio_blk virtio[0-9]+", r"\[vda\]", r"\[vdd\]"],
+        "runtime_result_driver_patterns": ["virtio"],
         "status": "implemented_runtime_pass",
     },
     {
@@ -151,6 +153,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"virtio-net@30060000", r"interrupts = <0 261 4>"],
         "qbox_lua": [r"virtionet0_0", r"spi_in_261"],
         "runtime": [r"30060000\.virtio-net", r"\beth0:"],
+        "runtime_result_driver_patterns": ["virtio"],
         "status": "implemented_runtime_pass",
     },
     {
@@ -160,6 +163,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"virtio-rng@30080000", r"interrupts = <0 263 4>"],
         "qbox_lua": [r"virtiorng_0", r"spi_in_263"],
         "runtime": [r"30080000\.virtio-rng"],
+        "runtime_result_driver_patterns": ["virtio"],
         "status": "implemented_runtime_pass",
     },
     {
@@ -227,6 +231,7 @@ BLOCKS: list[dict[str, object]] = [
         "qbox_dts": [r"iommu@1c0000000"],
         "qbox_lua": [r"1c0000000"],
         "runtime": [r"arm-smmu-v3|iommu@1c0000000|1c0000000\.iommu"],
+        "runtime_result_driver_patterns": ["smmu_v3"],
         "kernel_config": ["CONFIG_ARM_SMMU_V3"],
         "status": "implemented_runtime_pass",
     },
@@ -253,6 +258,7 @@ BLOCKS: list[dict[str, object]] = [
             r"virtio_rpmsg_bus .*rpmsg host is online",
             r"rpmsg_net_modprobe_rc:0|rpmsg_net",
         ],
+        "runtime_result_driver_patterns": ["arm_si_rproc", "rpmsg"],
         "kernel_config": ["CONFIG_REMOTEPROC", "CONFIG_RPMSG", "CONFIG_RPMSG_VIRTIO"],
         "status": "implemented_runtime_pass",
     },
@@ -269,7 +275,30 @@ def read_json(path: Path) -> dict[str, object]:
     return data if isinstance(data, dict) else {}
 
 
-def block_result(block: dict[str, object], texts: dict[str, str]) -> dict[str, object]:
+def runtime_result_driver_patterns_present(
+    block: dict[str, object],
+    runtime_result: dict[str, object],
+) -> bool | None:
+    pattern_keys = list(block.get("runtime_result_driver_patterns", []))
+    if not pattern_keys:
+        return None
+
+    post_login_probe = runtime_result.get("post_login_probe", {})
+    if not isinstance(post_login_probe, dict):
+        return False
+
+    driver_patterns = post_login_probe.get("driver_patterns", {})
+    if not isinstance(driver_patterns, dict):
+        return False
+
+    return all(bool(driver_patterns.get(key)) for key in pattern_keys)
+
+
+def block_result(
+    block: dict[str, object],
+    texts: dict[str, str],
+    runtime_result: dict[str, object],
+) -> dict[str, object]:
     reference_patterns = list(block.get("reference", []))
     qbox_dts_patterns = list(block.get("qbox_dts", []))
     qbox_lua_patterns = list(block.get("qbox_lua", []))
@@ -277,6 +306,19 @@ def block_result(block: dict[str, object], texts: dict[str, str]) -> dict[str, o
     kernel_symbols = list(block.get("kernel_config", []))
 
     status = str(block["status"])
+    runtime_log_present = (
+        has_all(texts["runtime"], runtime_patterns) if runtime_patterns else None
+    )
+    runtime_result_present = runtime_result_driver_patterns_present(
+        block, runtime_result
+    )
+    if runtime_log_present is None:
+        runtime_present = runtime_result_present
+    elif runtime_result_present is None:
+        runtime_present = runtime_log_present
+    else:
+        runtime_present = runtime_log_present or runtime_result_present
+
     result: dict[str, object] = {
         "name": block["name"],
         "driver": block["driver"],
@@ -284,7 +326,9 @@ def block_result(block: dict[str, object], texts: dict[str, str]) -> dict[str, o
         "reference_present": has_all(texts["reference"], reference_patterns),
         "qbox_dts_present": has_all(texts["qbox_dts"], qbox_dts_patterns),
         "qbox_lua_present": has_all(texts["qbox_lua"], qbox_lua_patterns),
-        "runtime_present": has_all(texts["runtime"], runtime_patterns) if runtime_patterns else None,
+        "runtime_present": runtime_present,
+        "runtime_log_present": runtime_log_present,
+        "runtime_result_present": runtime_result_present,
         "kernel_config": {
             symbol: config_value(texts["kernel_config"], symbol) for symbol in kernel_symbols
         },
@@ -412,7 +456,7 @@ def main() -> int:
         "runtime": read_text(args.runtime_log),
         "kernel_config": read_text(args.kernel_config),
     }
-    blocks = [block_result(block, texts) for block in BLOCKS]
+    blocks = [block_result(block, texts, runtime_result) for block in BLOCKS]
     implemented = [block for block in blocks if block["status"] != "not_emulated"]
     missing = [block for block in blocks if block["status"] == "not_emulated"]
     rse_audit = rse_fidelity_audit(runtime_result)

@@ -6370,3 +6370,24 @@ anchored by both runtime stack evidence and persistent flash-state evidence:
 faithfully reduce or batch the firmware-visible TF-M PS/ITS Strata
 program/poll workload without enabling unsafe boot-flash DMI or bypassing
 Protected Storage semantics.
+
+### 2026-05-28 Structured Coverage Audit Recheck
+
+`scripts/audit_qbox_fvp_rd_aspen_coverage.py` now accepts structured
+post-login driver evidence from `result.json` in addition to raw runtime-log
+regexes. This fixes a false negative for current PS403 artifacts where the
+console log records successful `arm_si_rproc`, `rpmsg_ns`,
+`virtio_rpmsg_bus`, and `rpmsg_net` commands, but the older coverage regexes
+expected earlier kernel probe wording.
+
+| Evidence | Result |
+| --- | --- |
+| `python3 -m py_compile scripts/audit_qbox_fvp_rd_aspen_coverage.py` | Passed after adding structured runtime-result driver-pattern handling. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/coverage-audit-v2.json` | Latest best PS403 artifact now passes `si_remoteproc_rpmsg` via `post_login_probe.driver_patterns.arm_si_rproc=true` and `rpmsg=true`; `smmu_v3`, `pl011_uart`, and generic `virtio` also expose structured evidence. |
+| `coverage-audit-v2.json` | `implemented_failed` is reduced to `1`; the remaining failure is `dsu_pmu` because the latest console log has no `arm_dsu_0` or `dsu-pmu-0` runtime probe string. |
+
+Current conclusion: the driver evidence for SI remoteproc/RPMsg was present in
+the runtime result and is now counted by the audit. This does not close the
+overall coverage gate because DSU PMU still lacks runtime-log proof in the
+best PS403 artifact, and it does not change the T063 Protected Storage
+blocker.

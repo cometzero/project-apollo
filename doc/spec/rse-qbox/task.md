@@ -2491,3 +2491,12 @@ richer fault status.
       evidence matching the GDB finding that QBox is still executing the
       TF-M PS/ITS compaction and Strata byte-program workload rather than
       failing in Linux, driver probing, or backing-file persistence.
+- [x] V038BA Count structured post-login driver evidence in the coverage
+      audit. `scripts/audit_qbox_fvp_rd_aspen_coverage.py` now treats selected
+      `post_login_probe.driver_patterns` keys from `result.json` as runtime
+      evidence alongside console regexes. The latest best PS403 artifact
+      `coverage-audit-v2.json` now passes `si_remoteproc_rpmsg` using
+      structured `arm_si_rproc=true` and `rpmsg=true` evidence, and still
+      records only `dsu_pmu` as missing runtime-log proof. This improves
+      memory-map/IRQ/driver audit accuracy without changing the T063
+      Protected Storage blocker.
