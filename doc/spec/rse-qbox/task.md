@@ -2513,3 +2513,16 @@ richer fault status.
       second boot reached BL_33/U-Boot EFI MM discovery before timing out at
       `230.112s`. This records a valid DSU PMU evidence path for future
       post-login artifacts but does not close T063.
+- [x] V038BC Reject a Strata single-byte fast-path experiment. A local QBox
+      source experiment special-cased stats-disabled single-byte read/status/
+      program operations and no-stats deferred backing writes. Focused checks
+      passed (`git -C tools/qbox diff --check`,
+      `strata_flash_j3-tests`, focused `ctest`, and `platforms-vp`), but the
+      persisted-flash runtime
+      `build/qbox-fvp-rd-aspen/rse-strata-single-byte-fastpath-240s-20260528-v1/`
+      timed out before Linux login/probe at `240.163s`, reaching only BL_33,
+      U-Boot EFI MM discovery, and `FWU: System booting in Regular State`.
+      The experiment was reverted because it regressed from the previous best
+      PS403 artifact that reached Linux, driver probes, and UID21 cleanup.
+      T063 remains open and should continue with a higher-level faithful
+      batching/acceleration strategy for TF-M PS/ITS flash compaction.

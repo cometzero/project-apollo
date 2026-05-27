@@ -6415,3 +6415,24 @@ post-login log, and the runner can now collect the same proof as structured
 best PS403 artifact predates this DSU probe key, so this improves audit
 observability but does not close the current T063 Protected Storage gap or the
 best-artifact DSU PMU coverage gap.
+
+### 2026-05-28 Rejected Strata Single-Byte Fast-Path Experiment
+
+A local QBox experiment attempted to reduce the stats-disabled Strata hot path
+by special-casing single-byte read/status/program operations and no-stats
+deferred backing writes. The source change was not kept.
+
+| Evidence | Result |
+| --- | --- |
+| `git -C tools/qbox diff --check` | Passed for the local experiment. |
+| `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4` | Passed for the focused Strata test target. |
+| `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure` | Passed: `1/1` test passed in `1.16s`. |
+| `cmake --build tools/qbox/build --target platforms-vp --parallel 4` | Passed after rebuilding the QBox platform binary. |
+| `build/qbox-fvp-rd-aspen/rse-strata-single-byte-fastpath-240s-20260528-v1/result.json` | Rejected runtime result: persisted-flash second boot timed out before login/probe at `240.163s`; it reached BL_33, secure SMM Gateway discovery fallback, U-Boot EFI MM discovery, and `FWU: System booting in Regular State`, but never reached Linux login, post-login driver probes, or PS403. |
+
+Current conclusion: this micro-optimization was build-safe but not runtime
+useful, and it regressed the short persisted-flash comparison from the previous
+best PS403 artifact that reached Linux, driver probes, and UID21 cleanup. The
+experiment was reverted. T063 remains focused on a faithful acceleration or
+batching strategy for the TF-M PS/ITS flash-filesystem byte-program and
+compaction workload, not on single-byte access micro-optimizations.
