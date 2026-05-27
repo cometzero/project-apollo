@@ -1041,7 +1041,13 @@ richer fault status.
       source experiment also regressed to pre-login timeout at 260 seconds, so
       it was reverted after focused tests and serialized `platforms-vp`
       rebuilds. T063 remains open on faithful PS/ITS compaction completion,
-      not on these rejected shortcuts.
+      not on these rejected shortcuts. V038AZ adds a persistent RSE flash
+      storage-state inspector and compares FVP/QBox PS403 writable images
+      against the deploy image baseline. The FVP PS403-pass image dirties all
+      PS and ITS sectors, while the best QBox UID21 timeout image changes only
+      `9` PS sectors and `1` ITS sector. This confirms the remaining gap is
+      workload completion through the TF-M PS/ITS flash filesystem rather than
+      marker extraction, Linux driver probing, or host backing-file writeback.
 - [ ] T064 Validate UEFI variable storage through SMM Gateway and RSE Protected
       Storage.
       The secure-service probe records U-Boot/secure-console SMM Gateway
@@ -2470,3 +2476,18 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-ps403-fastaccess-220s-20260528-v1/`, which
       reaches Linux, root, all driver probes, secure-service diagnostics, and
       PS403 `[Check 1]` before timing out.
+- [x] V038AZ Add an RSE flash PS/ITS storage-state inspector and compare
+      FVP/QBox PS403 artifacts. `scripts/inspect_rse_flash_storage.py` reads
+      raw or gzip RSE flash images, normalizes them to the 64 MiB RD-Aspen RSE
+      flash size, and reports dirty sector, dirty logical block, and baseline
+      delta counts for the Protected Storage and Internal Trusted Storage
+      partitions using the active TF-M layout constants. Validation passed with
+      `python3 -m py_compile scripts/inspect_rse_flash_storage.py`. The report
+      `build/qbox-fvp-rd-aspen/rse-storage-ps403-compare-20260528-v1/report.md`
+      shows the FVP PS403-pass writable image has dirty state across all PS
+      sectors (`256/256`) and ITS sectors (`64/64`), while the best QBox
+      UID21-cleanup timeout image has dirty state in only `9` PS sectors and
+      `1` ITS sector. T063 remains open, but now has persistent flash-state
+      evidence matching the GDB finding that QBox is still executing the
+      TF-M PS/ITS compaction and Strata byte-program workload rather than
+      failing in Linux, driver probing, or backing-file persistence.

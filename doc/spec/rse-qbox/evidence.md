@@ -6339,3 +6339,34 @@ artifact. The retained model remains the pre-existing Strata command-state
 implementation, and T063 remains open on the TF-M PS/ITS compaction workload.
 Future changes should avoid full boot-flash DMI, dirty-flash baselines, and
 unproven byte-access shortcuts as acceptance evidence.
+
+### 2026-05-28 RSE Flash Storage State Compare
+
+`scripts/inspect_rse_flash_storage.py` now inspects the RD-Aspen RSE flash
+Protected Storage and Internal Trusted Storage partitions using the active
+TF-M layout constants from `flash_layout.h` and `rse_memory_sizes.h`. The
+script accepts raw or gzip-compressed flash images, pads short raw images with
+erased `0xff` bytes to the 64 MiB RSE flash size, and writes JSON/Markdown
+reports with dirty sector, dirty logical block, and baseline-delta counts.
+
+The first comparison uses the deploy `rse-flash-image.img` as the erased
+baseline, the historical FVP PS403-pass writable image, the QBox clean
+persisted seed, and the best QBox UID21-cleanup timeout image.
+
+| Evidence | Result |
+| --- | --- |
+| `python3 -m py_compile scripts/inspect_rse_flash_storage.py` | Passed for the new storage inspection helper. |
+| `build/qbox-fvp-rd-aspen/rse-storage-ps403-compare-20260528-v1/report.json` | Generated JSON report comparing FVP and QBox writable RSE flash PS/ITS partition state against the deploy image baseline. |
+| `build/qbox-fvp-rd-aspen/rse-storage-ps403-compare-20260528-v1/report.md` | Markdown summary shows the FVP PS403-pass image changed the full PS partition footprint (`865304` non-erased bytes across `256/256` sectors and `64/64` logical blocks) and the full ITS partition footprint (`215442` non-erased bytes across `64/64` sectors). |
+| `build/qbox-fvp-rd-aspen/rse-ps403-nostats-deferred-20260527-v1/writable-images/rse-flash-image.img` | QBox clean persisted seed changed only `23019` PS bytes across `6` sectors and `1424` ITS bytes across `1` sector. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/writable-images/rse-flash-image.img` | The best QBox PS403 timeout image changed `32457` PS bytes across `9` sectors and `4` PS logical blocks, while ITS remained at `1424` bytes in `1` sector. |
+
+Current conclusion: the storage image comparison matches the marker-gated GDB
+result. FVP completes the PS403 workload and leaves PS/ITS storage state across
+the full configured partition footprints, while QBox's best artifact is still
+early in the same flash-filesystem workload when it times out after UID 21
+cleanup. T063 remains open, but the remaining implementation target is now
+anchored by both runtime stack evidence and persistent flash-state evidence:
+faithfully reduce or batch the firmware-visible TF-M PS/ITS Strata
+program/poll workload without enabling unsafe boot-flash DMI or bypassing
+Protected Storage semantics.
