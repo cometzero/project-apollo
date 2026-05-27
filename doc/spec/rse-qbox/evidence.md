@@ -6320,3 +6320,22 @@ evidence but not a PS403 comparison pass because post-login never started inside
 the cap. The historical file-backed FVP PS403 probe remains the reference for
 expected behavior, and the QBox gap remains the TF-M PS/ITS Strata
 byte-program/compaction workload observed by the marker-gated GDB sample.
+
+### 2026-05-28 Rejected PS403 Runtime Shortcuts
+
+Two follow-up QBox checks were used to avoid repeating low-confidence PS403
+shortcuts.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-ps403-deferflush0-240s-20260528-v1/result.json` | Clean persisted-flash input from `rse-ps403-nostats-deferred-20260527-v1` reached Linux login at 155.643 s, root shell at 160.932 s, post-login driver probes, secure-service diagnostics, and focused `psa-ps-api-test -t 'test_403;'`. It timed out at 240.196 s with `qbox_secure_service_ps403_timeout:check_1`; PS403 progress stayed at `[Check 1] Overload storage space` with no insufficient-space UID. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-current-baseline-220s-20260528-v1/result.json` | This run used the already-mutated `rse-ps403-fastaccess-220s-20260528-v1` writable flash as input and timed out before login at 220.075 s. It is therefore dirty-flash timing evidence, not a comparable clean-seed PS403 regression. |
+| Temporary `strata_flash_j3` 1-byte fast-path experiment | The experiment kept component semantics under `strata_flash_j3-tests`, but runtime `build/qbox-fvp-rd-aspen/rse-ps403-fastbyte-260s-20260528-v1/result.json` regressed to `qbox_post_login_probe_not_reached_timeout`: it reached `RSE to SCP SCMI power on AP succeeded` at 203.512 s, `BL_33` at 219.195 s, and `EFI: MM partition ID 0x8006` at 221.409 s, but never reached Linux login or PS403 before the 260-second cap. The source change was reverted and is not retained. |
+| `timeout 120 cmake --build build --target strata_flash_j3-tests --parallel 8` and `timeout 60 ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed after restoring the source tree, so the build directory again matches the retained Strata model. |
+| `timeout 120 cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed after restoring the source tree. A concurrent duplicate build attempt hit a transient Meson install/rpath parse failure while both commands tried to install libqemu; the serialized rebuild passed. |
+
+Current conclusion: these rechecks do not improve the best QBox PS403
+artifact. The retained model remains the pre-existing Strata command-state
+implementation, and T063 remains open on the TF-M PS/ITS compaction workload.
+Future changes should avoid full boot-flash DMI, dirty-flash baselines, and
+unproven byte-access shortcuts as acceptance evidence.

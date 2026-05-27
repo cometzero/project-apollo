@@ -1031,6 +1031,17 @@ richer fault status.
       focused on Protected Storage flash-filesystem throughput/completion
       rather than marker extraction, Linux driver probing, full flash DMI, or
       CC3XX chunk sizing.
+      A 2026-05-28 clean persisted-flash recheck
+      `build/qbox-fvp-rd-aspen/rse-ps403-deferflush0-240s-20260528-v1/`
+      reached Linux login/root shell, all post-login driver probes,
+      secure-service diagnostics, and PS403 `[Check 1]`, but still timed out
+      without an insufficient-space UID. A dirty-flash baseline using the
+      prior fastaccess run's writable images timed out before Linux and is not
+      comparable clean-seed PS403 evidence. A temporary Strata 1-byte fast-path
+      source experiment also regressed to pre-login timeout at 260 seconds, so
+      it was reverted after focused tests and serialized `platforms-vp`
+      rebuilds. T063 remains open on faithful PS/ITS compaction completion,
+      not on these rejected shortcuts.
 - [ ] T064 Validate UEFI variable storage through SMM Gateway and RSE Protected
       Storage.
       The secure-service probe records U-Boot/secure-console SMM Gateway
