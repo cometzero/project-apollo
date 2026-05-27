@@ -2360,3 +2360,20 @@ richer fault status.
       out before Linux login with `qbox_post_login_probe_not_reached_timeout`.
       This is pre-login regression evidence only; it does not supersede the
       previous best PS403 artifact. T063 remains open.
+- [x] V038AV Cache Strata erased-sector state and bound the follow-up runtime
+      evidence. QBox commit `1dfb07c84590` replaces the hot per-erase
+      sector-wide all-`0xff` scan with a sector-erased map that is refreshed
+      on image load, program, erase, and sector-size changes. Validation
+      passed with `git -C tools/qbox diff --check`, focused
+      `strata_flash_j3-tests`, focused `ctest`, and `platforms-vp`. Fresh
+      and persisted-flash runtime rechecks
+      `build/qbox-fvp-rd-aspen/rse-sector-cache-150s-20260528-v1/` and
+      `build/qbox-fvp-rd-aspen/rse-sector-cache-secondboot-190s-20260528-v1/`
+      both timed out before post-login probe injection. The persisted run
+      reached AP BL2 pre-load completion and stalled while loading the AP BL2
+      image from the Strata command-state path. A local no-stats access
+      fast-path experiment also reached the same tail point in two 190-second
+      rechecks and was reverted, so no ineffective source change is retained.
+      T063 remains open and the next implementation target stays on reducing
+      firmware-visible AP/RSE BL2 Strata image-read overhead without enabling
+      diagnostic boot-flash DMI.

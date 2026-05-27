@@ -6150,3 +6150,31 @@ tests and does not break the platform link or bounded boot path. It does not
 close T063. The latest runtime is pre-login evidence only, so the best QBox
 PS403 progress remains the prior stats-disabled 260 s run that reached cleanup
 after UID 21.
+
+### 2026-05-28 Strata Erased-Sector Cache Recheck
+
+QBox commit `1dfb07c84590` keeps the erased-sector writeback skip but removes
+the sector-wide all-`0xff` scan from the erase hot path. The Strata model now
+tracks a sector-erased map, initializes it with the storage vector, refreshes
+loaded-image ranges, marks programmed sectors dirty, marks erased sectors
+clean, and rebuilds the map when `sector_size` changes. This preserves the
+firmware-visible CFI command-state path and does not enable boot-flash DMI.
+
+| Evidence | Result |
+| --- | --- |
+| `tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Adds the sector-erased map and updates image load, program, erase, and sector-size paths to keep it synchronized. |
+| `git -C tools/qbox diff --check -- systemc-components/strata_flash_j3/include/strata_flash_j3.h` | Passed before the QBox commit. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed before the QBox commit. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed; the focused Strata component tests completed successfully. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed; the RD-Aspen platform executable links against the updated Strata module. |
+| `build/qbox-fvp-rd-aspen/rse-sector-cache-150s-20260528-v1/result.json` | Fresh writable-flash run timed out at 150.082 s with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached `rse_bl1_1` at 1.106 s and the RSE log tail was still in BL2 SI CL0 image-slot selection, so this is not PS403 evidence. |
+| `build/qbox-fvp-rd-aspen/rse-sector-cache-secondboot-190s-20260528-v1/result.json` | Persisted-flash PS403 rerun timed out at 190.066 s with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached `rse_bl1_1` and the RSE log tail reached AP BL2 pre-load completion plus AP BL2 primary/secondary slot reporting, but did not reach `RSE to SCP SCMI power on AP succeeded`, Linux login, or PS403. |
+| `build/qbox-fvp-rd-aspen/rse-strata-access-fastpath-190s-20260528-v1/result.json` and `rse-strata-access-fastpath-debug-190s-20260528-v1/result.json` | A local no-stats/no-DMI `access()` fast-path experiment was tried after the sector-cache run. Both 190-second persisted rechecks reached the same AP BL2 slot-reporting tail and no later marker, so the experiment was reverted and no ineffective source change remains. |
+
+Current conclusion: the sector-erased cache is covered by focused tests and
+keeps the command-state Strata model behavior, but bounded runtime evidence
+still does not close T063 or improve the best persisted PS403 artifact. The
+active short-timeout bottleneck is still firmware-visible Strata image-read
+throughput during BL2 AP image loading; the acceptance gap remains the
+Protected Storage PS403 completion delta against FVP, where FVP reaches
+`TEST RESULT: PASSED` and QBox's best run stops after UID 21 cleanup.
