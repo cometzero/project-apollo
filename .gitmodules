@@ -16,7 +16,7 @@
 	branch = walnascar
 [submodule "layers/meta-cassini"]
 	path = layers/meta-cassini
-	url = https://gitlab.arm.com/cassini/meta-cassini.git
+	url = git@github.com:cometzero/meta-cassini.git
 	branch = patched-4dad481980fb8a700cce8402bece7cf1bebbdee3
 [submodule "layers/meta-clang"]
 	path = layers/meta-clang
@@ -32,7 +32,7 @@
 	branch = styhead
 [submodule "layers/meta-openembedded"]
 	path = layers/meta-openembedded
-	url = https://git.openembedded.org/meta-openembedded
+	url = git@github.com:cometzero/meta-openembedded.git
 	branch = patched-80ab58cc404959ae2f0e8b2e68935b3bfd8e8cfe
 [submodule "layers/meta-ptx"]
 	path = layers/meta-ptx
@@ -40,7 +40,7 @@
 	branch = walnascar
 [submodule "layers/meta-secure-core"]
 	path = layers/meta-secure-core
-	url = https://github.com/Wind-River/meta-secure-core
+	url = git@github.com:cometzero/meta-secure-core.git
 	branch = patched-243281acbb4d3839b80b795030a7f4900e254735
 [submodule "layers/meta-security"]
 	path = layers/meta-security
@@ -56,7 +56,7 @@
 	branch = walnascar
 [submodule "layers/poky"]
 	path = layers/poky
-	url = https://git.yoctoproject.org/poky
+	url = git@github.com:cometzero/poky.git
 	branch = patched-a704e5171ce4f87e27408934b593e5a186ac1960
 [submodule "sw-ref-stack"]
 	path = sw-ref-stack
