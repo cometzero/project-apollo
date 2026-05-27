@@ -31,6 +31,8 @@ def qbox_probe_env_defaults(
     range_limited_flash_dmi: bool = False,
     flash_stats: bool = False,
     flash_stats_interval: int = 512,
+    mhu_trace: bool = True,
+    mhu_trace_limit: int = 2000,
 ) -> dict[str, str]:
     env = {
         "QBOX_RDASPEN_ENABLE_AP_CPUS": "true",
@@ -44,8 +46,8 @@ def qbox_probe_env_defaults(
         "QBOX_RDASPEN_RSE_DTCM_DMI": "true",
         "QBOX_RDASPEN_RSE_ITCM_DMI": "true",
         "QBOX_RDASPEN_RSE_VM_DMI": "true",
-        "QBOX_RDASPEN_MHU_TRACE": "true",
-        "QBOX_RDASPEN_MHU_TRACE_LIMIT": "2000",
+        "QBOX_RDASPEN_MHU_TRACE": "true" if mhu_trace else "false",
+        "QBOX_RDASPEN_MHU_TRACE_LIMIT": str(mhu_trace_limit),
         "QBOX_RDASPEN_MHU_TRACE_FILE": str(run_dir / "mhuv3-trace.log"),
     }
     if range_limited_flash_dmi:
@@ -71,12 +73,16 @@ def shell_env_block(
     range_limited_flash_dmi: bool = False,
     flash_stats: bool = False,
     flash_stats_interval: int = 512,
+    mhu_trace: bool = True,
+    mhu_trace_limit: int = 2000,
 ) -> str:
     env = qbox_probe_env(
         run_dir,
         range_limited_flash_dmi,
         flash_stats,
         flash_stats_interval,
+        mhu_trace,
+        mhu_trace_limit,
     )
     return (" \\\n" + indent).join(
         f"{key}={env[key]}"
@@ -85,6 +91,8 @@ def shell_env_block(
             range_limited_flash_dmi,
             flash_stats,
             flash_stats_interval,
+            mhu_trace,
+            mhu_trace_limit,
         )
     )
 
@@ -2277,7 +2285,7 @@ def write_readme(
         Run QBox with RSE and AP CPU GDB servers:
 
         ```bash
-        {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval)} \\
+        {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
         python3 scripts/run_qbox_fvp_rd_aspen_rse.py \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
@@ -2291,7 +2299,7 @@ def write_readme(
         attach restrictions and captures a short thread/backtrace sample:
 
         ```bash
-        {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval)} \\
+        {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
         python3 scripts/run_qbox_fvp_rd_aspen_rse.py \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
@@ -2507,6 +2515,8 @@ def qbox_probe_env(
     range_limited_flash_dmi: bool = False,
     flash_stats: bool = False,
     flash_stats_interval: int = 512,
+    mhu_trace: bool = True,
+    mhu_trace_limit: int = 2000,
 ) -> dict[str, str]:
     env = os.environ.copy()
     for key, value in qbox_probe_env_defaults(
@@ -2514,6 +2524,8 @@ def qbox_probe_env(
         range_limited_flash_dmi,
         flash_stats,
         flash_stats_interval,
+        mhu_trace,
+        mhu_trace_limit,
     ).items():
         env.setdefault(key, value)
     return env
@@ -2524,12 +2536,16 @@ def qbox_effective_probe_env(
     range_limited_flash_dmi: bool = False,
     flash_stats: bool = False,
     flash_stats_interval: int = 512,
+    mhu_trace: bool = True,
+    mhu_trace_limit: int = 2000,
 ) -> dict[str, str]:
     env = qbox_probe_env(
         run_dir,
         range_limited_flash_dmi,
         flash_stats,
         flash_stats_interval,
+        mhu_trace,
+        mhu_trace_limit,
     )
     return {
         key: env[key]
@@ -2539,6 +2555,8 @@ def qbox_effective_probe_env(
                 range_limited_flash_dmi,
                 flash_stats,
                 flash_stats_interval,
+                mhu_trace,
+                mhu_trace_limit,
             )
         )
         if key in env
@@ -2621,6 +2639,8 @@ def run_host_gdb_sample(
                 args.range_limited_flash_dmi,
                 args.flash_stats,
                 args.flash_stats_interval,
+                args.mhu_trace,
+                args.mhu_trace_limit,
             ),
             stdout=log,
             stderr=subprocess.STDOUT,
@@ -2716,6 +2736,8 @@ def launch_and_probe(
         args.range_limited_flash_dmi,
         args.flash_stats,
         args.flash_stats_interval,
+        args.mhu_trace,
+        args.mhu_trace_limit,
     )
     wrapper_log = out_dir / "runner-wrapper.log"
     wrapper_log.parent.mkdir(parents=True, exist_ok=True)
@@ -3345,6 +3367,28 @@ def parse_args() -> argparse.Namespace:
         help="Write Strata flash statistics every N target writes when --flash-stats is enabled.",
     )
     parser.add_argument(
+        "--mhu-trace",
+        dest="mhu_trace",
+        action="store_true",
+        default=True,
+        help="Enable QBox MHU trace logging in launched debug runs.",
+    )
+    parser.add_argument(
+        "--no-mhu-trace",
+        dest="mhu_trace",
+        action="store_false",
+        help=(
+            "Disable QBox MHU trace logging. This keeps marker-gated "
+            "post-login samples closer to normal runner timing."
+        ),
+    )
+    parser.add_argument(
+        "--mhu-trace-limit",
+        type=int,
+        default=2000,
+        help="Maximum MHU trace events requested from the QBox platform.",
+    )
+    parser.add_argument(
         "--ignore-fail-patterns",
         action="store_true",
         help=(
@@ -3435,6 +3479,8 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.flash_stats and args.flash_stats_interval <= 0:
         parser.error("--flash-stats-interval must be positive when --flash-stats is enabled")
+    if args.mhu_trace_limit < 0:
+        parser.error("--mhu-trace-limit must be non-negative")
     if args.secure_service_probe or args.fwu_probe:
         args.post_login_probe = True
     return args
@@ -3481,12 +3527,16 @@ def main() -> int:
             args.range_limited_flash_dmi,
             args.flash_stats,
             args.flash_stats_interval,
+            args.mhu_trace,
+            args.mhu_trace_limit,
         ),
         "launch_env_defaults": qbox_probe_env_defaults(
             args.out_dir / "run",
             args.range_limited_flash_dmi,
             args.flash_stats,
             args.flash_stats_interval,
+            args.mhu_trace,
+            args.mhu_trace_limit,
         ),
         "host_sample_seconds": args.host_sample_seconds,
         "sample_only": args.sample_only,
@@ -3500,6 +3550,8 @@ def main() -> int:
         "keep_running_after_pass": args.keep_running_after_pass,
         "copy_writable_flash": args.copy_writable_flash,
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
+        "mhu_trace": args.mhu_trace,
+        "mhu_trace_limit": args.mhu_trace_limit,
         "tfm_core_init_trace": args.tfm_core_init_trace,
         "tfm_static_boundary_trace": args.tfm_static_boundary_trace,
         "tfm_partition_panic_trace": args.tfm_partition_panic_trace,

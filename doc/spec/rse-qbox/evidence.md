@@ -6272,3 +6272,28 @@ evidence. The rejected DMI and CC3XX chunk experiments are not viable
 shortcuts. T063 remains open because the best QBox PS403 completion evidence
 is still `rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches UID
 21 cleanup but not the FVP `TEST RESULT: PASSED` marker.
+
+### 2026-05-28 Marker-Gated PS403 GDB Recheck
+
+The GDB helper now exposes explicit `--mhu-trace`, `--no-mhu-trace`, and
+`--mhu-trace-limit` options. This avoids relying on ad-hoc environment
+overrides when a marker-gated sample needs timing close to the normal
+file-backed runner.
+
+Three GDB attempts split the PS403 sampling conditions:
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/gdb-ps403-check1-20260528-v2/progress-report.md` | With the helper default MHU trace enabled, the run did not reach the PS403 marker within `sample_wait_seconds=230.066`. GDB sampled AP SE-Proxy in `secure_storage_ipc_get_info(uid=20)` waiting on `mhu_v3_x_doorbell_read()`, and RSE/TF-M in the SFCP MHU2 interrupt path. This is useful pre-login secure-storage evidence, but not PS403 Check 1 evidence. |
+| `build/qbox-fvp-rd-aspen/gdb-ps403-check1-20260528-v3/progress-report.md` | With MHU trace disabled but the helper's console-probe rootfs default, the run still did not reach the PS403 marker. U-Boot entered `FWU: Updating 5 payload(s)`, AP SE-Proxy sampled `psa_fwu_write(component=1, image_offset=143360, block_size=4096)`, and RSE/TF-M sampled the FWU partition writing through `Driver_FLASH0_ProgramData()` and `nor_send_cmd_byte()`. This is an FWU/rootfs selection artifact, not a PS403 blocker. |
+| `build/qbox-fvp-rd-aspen/gdb-ps403-check1-20260528-v4/progress-report.md` | With MHU trace disabled and the same baremetal rootfs used by the PS403 runtime artifacts, the marker was found after `sample_wait_seconds=174.053`. At Check 1 plus 20 seconds, RSE/TF-M sampled `tfm_its_remove()` -> `its_flash_fs_file_delete()` -> `its_flash_fs_delete_idx(del_file_idx=20)` -> `its_flash_fs_dblock_compact_block()` -> `its_flash_fs_block_to_block_move()` -> `its_flash_nor_write()` -> `Driver_FLASH0_ProgramData()` -> `cfi_strataflashj3_program()` -> `nor_byte_program()`. Linux CPU0 sampled `cpu_do_idle()`, while an AP SE-Proxy thread was still waiting for an RSE response through `rse_comms_platform_invoke()` / `mhu_adapter_wait_data()`. |
+| `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py` | Passed after adding explicit MHU trace controls. |
+| `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-helper-mhu-option-smoke-20260528-v1 --no-mhu-trace --mhu-trace-limit 17 --rootfs build/tmp_baremetal/deploy/images/fvp-rd-aspen/baremetal-image-fvp-rd-aspen-20260510034403.wic` | No-launch smoke passed and `debug-env.json` recorded `QBOX_RDASPEN_MHU_TRACE=false`, `QBOX_RDASPEN_MHU_TRACE_LIMIT=17`, `mhu_trace=false`, and `mhu_trace_limit=17`. |
+
+Current conclusion: the corrected marker-gated GDB sample confirms the T063
+runtime bottleneck is inside TF-M's PS-backed ITS flash filesystem compaction
+and Strata byte-program command path, while Linux and the AP userspace probe
+are idle/waiting for that RSE response. The next implementation work should
+target faithful acceleration or batching of this firmware-visible Strata
+program/poll workload without enabling full boot-flash DMI or bypassing
+TF-M PS/ITS semantics.

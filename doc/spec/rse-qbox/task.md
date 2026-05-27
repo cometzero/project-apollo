@@ -2418,3 +2418,24 @@ richer fault status.
       open: this improves the modeled CC3XX DMA path and blocker precision,
       but does not yet move the best PS403 evidence beyond cleanup after
       UID 21.
+- [x] V038AX Capture marker-gated GDB evidence for PS403 Check 1.
+      The GDB helper now has explicit `--mhu-trace`, `--no-mhu-trace`, and
+      `--mhu-trace-limit` controls so marker-gated samples can avoid heavy MHU
+      logging when matching normal runner timing. A no-launch smoke verified
+      the new metadata/env plumbing. Two control samples explain prior misses:
+      MHU trace enabled kept the run in pre-login SE-Proxy/RSE MHU secure
+      storage traffic at the 230-second cap, and the helper's console-probe
+      rootfs default sent U-Boot into `FWU: Updating 5 payload(s)`. The
+      corrected run
+      `build/qbox-fvp-rd-aspen/gdb-ps403-check1-20260528-v4/` used the same
+      baremetal rootfs as the PS403 runtime artifacts, disabled MHU trace,
+      found `[Check 1] Overload storage space` after 174.053 seconds, and
+      sampled RSE/TF-M 20 seconds later in `tfm_its_remove()` ->
+      `its_flash_fs_delete_idx(del_file_idx=20)` ->
+      `its_flash_fs_dblock_compact_block()` ->
+      `its_flash_fs_block_to_block_move()` -> `its_flash_nor_write()` ->
+      `Driver_FLASH0_ProgramData()` -> `cfi_strataflashj3_program()` ->
+      `nor_byte_program()`. AP SE-Proxy was waiting for the RSE response
+      through `rse_comms_platform_invoke()`, while Linux CPU0 was idle. T063
+      remains open, now specifically on faithful acceleration of the
+      firmware-visible TF-M PS/ITS Strata byte-program and compaction workload.
