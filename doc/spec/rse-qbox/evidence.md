@@ -6491,3 +6491,32 @@ previous best UID21-cleanup artifact. T063 remains open on the same
 firmware-visible TF-M PS/ITS compaction workload. Future runtime comparisons
 should continue to use the previous best artifact as the baseline unless a new
 run reaches at least Linux login, driver probes, and PS403 progress.
+
+### 2026-05-28 Sector Cache Byte Runtime Recheck
+
+QBox commit `86b1720d14dc` keeps the erased-sector cache but stores it as a
+byte vector instead of `std::vector<bool>`, and directly marks the affected
+sector for stats-disabled single-byte program operations. This preserves the
+existing Strata command-state model and the RD-Aspen `program_ff_erases_sector`
+compatibility path.
+
+| Evidence | Result |
+| --- | --- |
+| `git -C tools/qbox log -1 --format='%H %s'` | Current QBox submodule commit is `86b1720d14dcabae464c04d8cd6ee5ba9d663c5c perf(strata): streamline sector cache`. |
+| `git -C tools/qbox diff --check` | Passed before committing the QBox change. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed after the retained sector-cache byte change. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed: `1/1` Strata component test passed. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed after the focused test build. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-sector-u8-260s-20260528-v1/result.json` | Bounded persisted-flash run timed out at `260.073s` with `qbox_post_login_probe_not_reached_timeout`. It reached RSE first image/AP power-on at 194.633 s, BL_33 at 208.007 s, U-Boot EFI MM discovery at 210.119 s, `FWU: System booting in Regular State` at 227.521 s, and the U-Boot bootflow script at 248.238 s. It did not reach Linux login, driver probes, or PS403. |
+| `python3 scripts/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-ps403-sector-u8-260s-20260528-v1 --require-secure-storage --output build/qbox-fvp-rd-aspen/rse-ps403-fvp-qbox-sector-u8-20260528-v1/comparison.json` | Returned non-zero as expected for a non-acceptance comparison. The comparison records missing Linux login/root-shell markers and `PS:test_403_started`, because this run never reached the post-login PS command. |
+| `python3 scripts/inspect_rse_flash_storage.py --baseline build/tmp_baremetal/deploy/images/fvp-rd-aspen/rse-flash-image.img --output build/qbox-fvp-rd-aspen/rse-storage-ps403-sector-u8-compare-20260528-v1/report.json --markdown build/qbox-fvp-rd-aspen/rse-storage-ps403-sector-u8-compare-20260528-v1/report.md ...` | The flash-state comparison shows FVP PS403 pass dirties all PS/ITS sectors, the previous best QBox UID21-cleanup artifact dirties `9` PS sectors and `1` ITS sector, and the sector-cache byte run dirties only `8` PS sectors and `1` ITS sector. |
+
+Current conclusion: the retained sector-cache byte change is build/test clean
+and modestly improves the pre-login marker timing relative to
+`rse-ps403-cold-fastpath-260s-20260528-v1`, but it is not PS403 acceptance
+evidence. The stronger baseline remains
+`build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/`,
+which reaches Linux, driver probes, PS403, and cleanup after UID 21. T063
+remains open on completing the TF-M PS/ITS flash-filesystem workload through
+Check 2, the second insufficient-space event, second cleanup, and the final
+`TEST RESULT: PASSED` marker.

@@ -2558,3 +2558,20 @@ richer fault status.
       Linux login or PS403. The previous best artifact remains
       `rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches Linux,
       root, driver probes, PS403, and UID21 cleanup. T063 remains open.
+- [x] V038BF Record the retained Strata sector-cache byte runtime and storage
+      comparison. QBox commit `86b1720d14dc` replaces the erased-sector
+      `std::vector<bool>` cache with a byte vector and marks stats-disabled
+      single-byte program operations directly. Focused validation passed with
+      `git -C tools/qbox diff --check`, `strata_flash_j3-tests`, focused
+      `ctest`, and `platforms-vp`. Runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-sector-u8-260s-20260528-v1/`
+      reached RSE AP power-on at 194.633 s, BL_33 at 208.007 s, U-Boot EFI MM
+      at 210.119 s, `FWU: System booting in Regular State` at 227.521 s, and
+      the U-Boot bootflow script at 248.238 s, but timed out before Linux
+      login, driver probes, or PS403. The new FVP/QBox comparison artifact
+      `rse-ps403-fvp-qbox-sector-u8-20260528-v1/comparison.json` names
+      `PS:test_403_started` as missing, and the storage-state report
+      `rse-storage-ps403-sector-u8-compare-20260528-v1/report.md` shows this
+      run dirtied only `8` PS sectors and `1` ITS sector. The previous best
+      UID21-cleanup artifact remains the T063 baseline; the retained sector
+      cache change is not acceptance evidence.
