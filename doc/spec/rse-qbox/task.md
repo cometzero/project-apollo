@@ -1017,6 +1017,20 @@ richer fault status.
       programs and the restored setting reaches Linux, root shell, driver
       probes, secure-service diagnostics, and PS403 `[Check 1]` again in
       `build/qbox-fvp-rd-aspen/rse-strata-ff-sector-restored-secondboot-185s-20260528-v1/`.
+      A 2026-05-28 marker recheck adds explicit PS403 result markers for
+      `[Check 1]`, UID exhaustion, cleanup, and `[Check 2]`. The rebuilt QBox
+      platform and runner smoke pass, and
+      `build/qbox-fvp-rd-aspen/rse-ps403-progress-markers-185s-20260528-v2/`
+      records Linux login/root shell, all post-login driver probes, secure
+      diagnostics, `ps_test_403`, `ps_insufficient_space`, and
+      `ps_check_1_overload` before timing out at
+      `qbox_secure_service_ps403_timeout:check_1`. Full boot-flash DMI and a
+      2048-byte CC3XX DMA chunk were both rejected: the former creates an empty
+      ITS layout and fails partition initialization before Linux, while the
+      latter invalidates the SI CL1 primary image. These rechecks keep T063
+      focused on Protected Storage flash-filesystem throughput/completion
+      rather than marker extraction, Linux driver probing, full flash DMI, or
+      CC3XX chunk sizing.
 - [ ] T064 Validate UEFI variable storage through SMM Gateway and RSE Protected
       Storage.
       The secure-service probe records U-Boot/secure-console SMM Gateway

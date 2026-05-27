@@ -6239,3 +6239,36 @@ necessary to preserve UEFI variable persistence and the existing PS403 path.
 This recheck restores the pre-existing T063 state but does not close T063: the
 best QBox PS403 evidence is still the 260-second run that reaches cleanup after
 UID 21, while FVP reaches `TEST RESULT: PASSED`.
+
+### 2026-05-28 PS403 Marker And Rejected Shortcut Recheck
+
+The PS403 runner now records finer-grained progress markers for the focused
+Protected Storage insufficient-space test. This makes short timeout artifacts
+distinguish the first overload step, UID exhaustion, cleanup, and the second
+overload step without relying only on console tail inspection.
+
+Two shortcut experiments were also rechecked and rejected:
+
+- full boot-flash DMI hides required stateful Strata/ITS behavior and stalls
+  before Linux;
+- increasing the retained CC3XX DMA chunk above 1024 bytes regresses SI CL1
+  image validation.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/run_qbox_fvp_rd_aspen_rse.py` | Adds `ps_check_1_overload`, `ps_uid_insufficient_space`, `ps_remove_all_registered_uids`, and `ps_check_2_overload` progress markers. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding the PS403 progress markers. |
+| runner import smoke | Passed; synthetic PS403 log text populates `ps_test_403`, `ps_insufficient_space`, `ps_check_1_overload`, `ps_uid_insufficient_space`, `ps_remove_all_registered_uids`, and `ps_check_2_overload`. |
+| `cmake --build tools/qbox/build --target cc3xx-tests --parallel 8` and `ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure` | Passed after restoring `DMA_CHUNK_BYTES = 1024`, proving the retained CC3XX model remains covered before runtime. |
+| `cmake --build tools/qbox/build --target platforms-vp --parallel 8` | Passed after restoring the retained CC3XX model; the PS403 marker runtime used the rebuilt platform binary. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-progress-markers-185s-20260528-v2/result.json` | Persisted-flash PS403 rerun timed out at `runtime_elapsed_s=185.145` with `blocker=qbox_secure_service_ps403_timeout:check_1`. It reached Linux login at 162.060 s, root shell at 167.551 s, `TEST: 403` at 170.195 s, `Insufficient space check` at 170.195 s, and the new `ps_check_1_overload` marker at 170.195 s. Driver patterns for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio` were all true. |
+| `rse-ps403-progress-markers-185s-20260528-v2/qbox-primary-console.log` | Confirms the run completed post-login SI/RPMsg/virtio/ethsi1 probes and entered `timeout 45s psa-ps-api-test -t 'test_403;'`, then stopped at `[Check 1] Overload storage space`. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-bootflash-dmi-220s-20260528-v1/result.json` | Rejected full boot-flash DMI run timed out at `runtime_elapsed_s=220.147` with `blocker=qbox_post_login_probe_not_reached_timeout` and did not reach Linux or PS403. The RSE log reports `Creating an empty ITS flash layout.` followed by `Partition initialization FAILED in 0x31047cc5`, so full boot-flash DMI remains unsafe for stateful RSE flash paths. |
+| `build/qbox-fvp-rd-aspen/rse-cc3xx-dma2048-pctrace-90s-20260528-v1/result.json` | Rejected 2048-byte CC3XX DMA chunk run failed quickly with `blocker=qbox_platform_failed:-15`. The RSE log reached SI CL1 RAM loading and then reported `[ERR] Image in the primary slot is not valid!`, so the retained chunk remains 1024 bytes. |
+
+Current conclusion: the new markers improve T063 observability and the latest
+marker run reproduces the known PS403 Check 1 timeout with clean driver
+evidence. The rejected DMI and CC3XX chunk experiments are not viable
+shortcuts. T063 remains open because the best QBox PS403 completion evidence
+is still `rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches UID
+21 cleanup but not the FVP `TEST RESULT: PASSED` marker.

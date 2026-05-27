@@ -117,6 +117,10 @@ PROGRESS_MARKERS = {
     "secure_seproxy_remove_missing": "secure_storage_ipc_remove",
     "ps_test_403": "TEST: 403",
     "ps_insufficient_space": "Insufficient space check",
+    "ps_check_1_overload": "[Check 1] Overload storage space",
+    "ps_uid_insufficient_space": "set failed due to insufficient space",
+    "ps_remove_all_registered_uids": "Remove all registered UIDs",
+    "ps_check_2_overload": "[Check 2] Overload storage again",
 }
 
 SERVICE_MODEL_GAPS = [
