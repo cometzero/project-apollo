@@ -70,6 +70,18 @@ CRITICAL_TERMS = {
     "terminal_ns_uart0",
 }
 
+LOGIN_READY_PATTERNS = [
+    re.compile(r"fvp-rd-aspen login:"),
+    re.compile(r"Started .*Serial Getty on ttyAMA0"),
+    re.compile(r"Reached target .*Login Prompts"),
+]
+
+LOGIN_RETRY_READY_PATTERNS = [
+    re.compile(r"Linux version "),
+    re.compile(r"systemd\[1\]:"),
+]
+LOGIN_MAX_ATTEMPTS = 80
+
 
 class ConsoleCapture:
     def __init__(self, term: str, port: int, log_path: Path) -> None:
@@ -255,6 +267,16 @@ def check_console(term: str, text: str) -> dict:
     }
 
 
+def login_ready(text: str) -> bool:
+    return any(pattern.search(text) for pattern in LOGIN_READY_PATTERNS)
+
+
+def login_retry_ready(text: str) -> bool:
+    return login_ready(text) or any(
+        pattern.search(text) for pattern in LOGIN_RETRY_READY_PATTERNS
+    )
+
+
 def build_status(
     expected_terms: set[str],
     captures: dict[str, ConsoleCapture],
@@ -372,6 +394,8 @@ def write_summary(
         lines.append(f"post_login_requested: {post_login['requested']}")
         lines.append(f"post_login_started: {post_login['started']}")
         lines.append(f"post_login_done: {post_login['done']}")
+        lines.append(f"login_sent: {post_login['login_sent']}")
+        lines.append(f"login_attempts: {post_login['login_attempts']}")
         if post_login.get("timeout_s") is not None:
             lines.append(f"post_login_timeout_s: {post_login['timeout_s']}")
         if post_login.get("commands"):
@@ -483,6 +507,8 @@ def main() -> int:
     proc = start_fvp(command, boot_log)
     start_time = time.monotonic()
     login_sent = False
+    login_attempts = 0
+    last_login_time = 0.0
     post_login_started = False
     post_login_done = not args.post_login_command
     post_login_start_time: float | None = None
@@ -517,11 +543,18 @@ def main() -> int:
         while time.monotonic() - start_time < args.timeout:
             with lock:
                 default_capture = captures.get("terminal_ns_uart0")
-            if default_capture and not login_sent and not args.no_login:
+            if default_capture and not args.no_login and login_attempts < LOGIN_MAX_ATTEMPTS:
                 text = read_text(default_capture.log_path)
-                if "fvp-rd-aspen login:" in text:
+                should_retry_login = (
+                    login_sent
+                    and "root@fvp-rd-aspen" not in text
+                    and time.monotonic() - last_login_time >= 5.0
+                )
+                if (not login_sent and login_retry_ready(text)) or should_retry_login:
                     default_capture.sendline("root")
                     login_sent = True
+                    login_attempts += 1
+                    last_login_time = time.monotonic()
 
             if (
                 default_capture
@@ -580,6 +613,8 @@ def main() -> int:
         "done": post_login_done,
         "marker": post_login_marker if args.post_login_command else None,
         "timeout_s": args.post_login_timeout if args.post_login_command else None,
+        "login_sent": login_sent,
+        "login_attempts": login_attempts,
     }
     write_summary(
         out_dir=args.out_dir,

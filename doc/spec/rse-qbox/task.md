@@ -2439,3 +2439,23 @@ richer fault status.
       through `rse_comms_platform_invoke()`, while Linux CPU0 was idle. T063
       remains open, now specifically on faithful acceleration of the
       firmware-visible TF-M PS/ITS Strata byte-program and compaction workload.
+- [x] V038AY Recheck FVP PS403 login timing with file-backed logs.
+      `scripts/runfvp_log_boot.py` now starts bounded root-login retries once
+      Linux/systemd output appears, keeps retrying through late getty/login
+      target output, and records `login_sent` plus `login_attempts` in the
+      post-login result. The syntax check passed. A short verbose FVP run
+      `build/fvp-boot-logs/rse-ps403-focused-login-retry-20260528-v1/` passed
+      all boot-status consoles but did not reach the actual login prompt inside
+      the 220-second script cap. It sent 24 root attempts and reached
+      `Started Serial Getty on ttyAMA0` / `Reached target Login Prompts`, so the
+      run is boot/login timing evidence, not PS403 pass/fail evidence. After
+      that bounded run exhausted the previous retry budget, the helper retry
+      cap was raised to 80 for future longer FVP comparisons. The FVP reference
+      artifact
+      `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/` remains the
+      PS403 reference because it reaches Check 1, UID 22 insufficient space,
+      cleanup, Check 2, and `TEST RESULT: PASSED`. T063 remains open against the
+      latest QBox fastaccess artifact
+      `build/qbox-fvp-rd-aspen/rse-ps403-fastaccess-220s-20260528-v1/`, which
+      reaches Linux, root, all driver probes, secure-service diagnostics, and
+      PS403 `[Check 1]` before timing out.

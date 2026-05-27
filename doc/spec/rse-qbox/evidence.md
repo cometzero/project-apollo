@@ -6297,3 +6297,26 @@ are idle/waiting for that RSE response. The next implementation work should
 target faithful acceleration or batching of this firmware-visible Strata
 program/poll workload without enabling full boot-flash DMI or bypassing
 TF-M PS/ITS semantics.
+
+### 2026-05-28 FVP Login Retry Recheck
+
+The file-backed FVP helper now starts root-login retries after Linux/systemd
+output, continues retries through late getty/login-target output, and records
+the login retry state in both `summary.txt` and `result.json`. This keeps FVP
+comparison runs artifact-based instead of depending on an interactive tmux
+screen.
+
+| Evidence | Result |
+| --- | --- |
+| `scripts/runfvp_log_boot.py` | Adds Linux/systemd login-retry readiness and `login_sent` / `login_attempts` fields in post-login results. After the short recheck exhausted the previous retry budget, the final helper raises the cap to 80 attempts for future longer comparisons. |
+| `python3 -m py_compile scripts/runfvp_log_boot.py` | Passed after the FVP helper update. |
+| `build/fvp-boot-logs/rse-ps403-focused-login-retry-20260528-v1/result.json` | Short verbose FVP run completed boot-status validation in 224.428 s but did not reach the actual `fvp-rd-aspen login:` prompt or start the post-login PS403 command inside the 220-second script cap. The result records `login_sent=true` and `login_attempts=24`. |
+| `rse-ps403-focused-login-retry-20260528-v1/terminal_ns_uart0_5004.log` | The primary console reaches `Linux version`, `Started Serial Getty on ttyAMA0`, and `Reached target Login Prompts`; repeated `root` input is visible, but no root shell appears before the cap. |
+| `build/fvp-boot-logs/rse-secure-service-ps-probe-20260525-v1/terminal_ns_uart0_5004.log` | Existing FVP reference remains valid for PS403: Check 1 and Check 2 both reach UID 22 insufficient space, cleanup runs, and `TEST RESULT: PASSED` is printed. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-fastaccess-220s-20260528-v1/result.json` | Latest QBox short run reaches Linux login at 159.108 s, root shell at 164.703 s, driver probes, secure-service diagnostics, and PS403 `[Check 1] Overload storage space`, then times out with `qbox_secure_service_ps403_timeout:check_1`. |
+
+Current conclusion: the latest FVP short recheck is useful boot/login timing
+evidence but not a PS403 comparison pass because post-login never started inside
+the cap. The historical file-backed FVP PS403 probe remains the reference for
+expected behavior, and the QBox gap remains the TF-M PS/ITS Strata
+byte-program/compaction workload observed by the marker-gated GDB sample.
