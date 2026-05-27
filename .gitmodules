@@ -20,8 +20,8 @@
 	branch = patched-4dad481980fb8a700cce8402bece7cf1bebbdee3
 [submodule "layers/meta-clang"]
 	path = layers/meta-clang
-	url = https://github.com/kraj/meta-clang
-	branch = walnascar
+	url = git@github.com:cometzero/meta-clang.git
+	branch = patched-003cba92e982bdd565a6889f28799f8bba14957e
 [submodule "layers/meta-ewaol"]
 	path = layers/meta-ewaol
 	url = git@github.com:cometzero/meta-ewaol.git
@@ -48,8 +48,8 @@
 	branch = walnascar
 [submodule "layers/meta-virtualization"]
 	path = layers/meta-virtualization
-	url = https://git.yoctoproject.org/git/meta-virtualization
-	branch = walnascar
+	url = git@github.com:cometzero/meta-virtualization.git
+	branch = patched-898239e810acbb7db93299f20deec8afe434f11b
 [submodule "layers/meta-zephyr"]
 	path = layers/meta-zephyr
 	url = https://git.yoctoproject.org/meta-zephyr
