@@ -6207,3 +6207,35 @@ It improves the modeled CC3XX DMA path and makes short timeout artifacts more
 diagnostic, but it does not close T063. The best QBox PS403 evidence remains
 `rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches cleanup after
 UID 21 and still does not reach the FVP `TEST RESULT: PASSED` marker.
+
+### 2026-05-28 Strata FF-Program Sector Compatibility Recheck
+
+The active TF-M FVP Strata driver reports 4 KiB CMSIS flash sectors but its
+RSE erase helper sends byte-program commands with value `0xff`. A byte-scoped
+QBox experiment disabled the RD-Aspen Strata compatibility behavior that
+promotes sector-aligned `0xff` byte programs into a modeled sector erase. The
+experiment was rejected because it regressed the persisted-flash second boot
+before Linux. The RD-Aspen platform keeps sector promotion enabled and records
+the rejected experiment in the platform README.
+
+| Evidence | Result |
+| --- | --- |
+| `build/tmp_baremetal/work/fvp_rd_aspen-poky-linux/trusted-firmware-m/2.2.2+git/git/tfm/platform/ext/target/arm/rse/automotive_rd/css-aspen/cmsis_drivers/Driver_Flash.c` | The active RSE TF-M build reports Strata `sector_size = 0x1000`, `page_size = 256`, and `program_unit = 1` for RSE and AP boot flash. |
+| `build/tmp_baremetal/work/fvp_rd_aspen-poky-linux/trusted-firmware-m/2.2.2+git/git/tfm/platform/ext/target/arm/drivers/flash/strata/spi_strataflashj3_flash_lib.c` | The active Strata erase helper loops over `ERASE_BLOCK_SIZE = 256` and calls `nor_byte_program(..., 0xFF)`, while normal data programming also uses byte-program commands. |
+| `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` | Restores `program_ff_erases_sector = true` for the RD-Aspen RSE boot flash and AP secure flash instances. |
+| `tools/qbox/platforms/fvp-rd-aspen/README.md` | Documents that the byte-scoped `0xff` experiment was rejected because it broke persisted-flash U-Boot UEFI initialization. |
+| `lua -e 'assert(loadfile("tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua"))'` | Passed after restoring sector promotion. |
+| `git -C tools/qbox diff --check -- platforms/fvp-rd-aspen-rse/conf.lua platforms/fvp-rd-aspen/README.md tests/components/strata_flash_j3/strata_flash_j3-tests.cc` | Passed after the restored platform setting and README update. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` and `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed; the focused Strata component test suite completed in 1.08 s. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed; the RD-Aspen platform executable links against the restored Strata setting. |
+| `build/qbox-fvp-rd-aspen/rse-strata-byte-ff-secondboot-220s-20260528-v2/result.json` | Rejected byte-scoped run timed out at `runtime_elapsed_s=220.100` with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached RSE BL1_1, RSE-to-SCP AP power-on, BL_33, U-Boot bootflow, and EFI MM partition, but never reached Linux login. |
+| `rse-strata-byte-ff-secondboot-220s-20260528-v2/qbox-primary-console.log` | U-Boot printed `Cannot initialize UEFI sub-system, r = 7`, failed PK/KEK/db/dbx enrollment, failed the virtio bootflow, and fell back to network boot. |
+| `build/qbox-fvp-rd-aspen/rse-strata-ff-sector-restored-secondboot-185s-20260528-v1/result.json` | Restored sector-promotion run reached Linux, root shell, post-login driver probes, secure-service diagnostics, and PS403 at 164.579 s. It timed out at 185.201 s with `blocker=qbox_secure_service_ps403_timeout:check_1`. Driver patterns for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`, and `virtio` were all true. |
+| `rse-strata-ff-sector-restored-secondboot-185s-20260528-v1/qbox-primary-console.log` | U-Boot read persisted PK/KEK/db/dbx variables as already enrolled, booted `BOOTAA64.EFI`, reached Linux login/root shell, and ran the focused PS403 command until `[Check 1] Overload storage space`. |
+
+Current conclusion: byte-scoped `0xff` programming is too weak for the current
+RD-Aspen RSE flash behavior. The sector-aligned compatibility erase remains
+necessary to preserve UEFI variable persistence and the existing PS403 path.
+This recheck restores the pre-existing T063 state but does not close T063: the
+best QBox PS403 evidence is still the 260-second run that reaches cleanup after
+UID 21, while FVP reaches `TEST RESULT: PASSED`.

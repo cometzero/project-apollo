@@ -1007,6 +1007,16 @@ richer fault status.
       a live Protected Storage GET_INFO transaction. ITS is now validated; the
       remaining T063 work is Protected Storage throughput/completion through
       the TF-M ITS/PS flash filesystem and Strata flash writeback path.
+      A 2026-05-28 byte-scoped `0xff` program experiment was rejected. With
+      RD-Aspen Strata sector promotion disabled, the persisted-flash second
+      boot reached RSE BL_33 and U-Boot bootflow, but U-Boot reported
+      `Cannot initialize UEFI sub-system, r = 7`, failed PK/KEK/db/dbx
+      enrollment, fell back to network boot, and timed out before Linux. The
+      platform keeps the sector-aligned `0xff` compatibility erase behavior
+      because the active TF-M FVP Strata erase helper emits `0xff` byte
+      programs and the restored setting reaches Linux, root shell, driver
+      probes, secure-service diagnostics, and PS403 `[Check 1]` again in
+      `build/qbox-fvp-rd-aspen/rse-strata-ff-sector-restored-secondboot-185s-20260528-v1/`.
 - [ ] T064 Validate UEFI variable storage through SMM Gateway and RSE Protected
       Storage.
       The secure-service probe records U-Boot/secure-console SMM Gateway
