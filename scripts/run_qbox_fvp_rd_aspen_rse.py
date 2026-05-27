@@ -312,6 +312,20 @@ RSE_BL2_CFI_TRACE_SYMBOLS = [
     "nor_byte_program",
     "nor_poll_dws_byte",
 ]
+RSE_BL1_1_TRACE_SYMBOLS = [
+    "cfi_strataflashj3_read",
+    "nor_cfi_reg_read",
+    "cc3xx_lowlevel_hash_uninit",
+    "cc3xx_lowlevel_hash_init",
+    "cc3xx_lowlevel_hash_update",
+    "cc3xx_lowlevel_hash_get_state",
+    "cc3xx_lowlevel_hash_set_state",
+    "cc3xx_lowlevel_hash_finish",
+    "cc3xx_lowlevel_dma_buffered_input_data",
+    "cc3xx_lowlevel_dma_flush_buffer",
+    "cc3xx_lowlevel_set_engine",
+    "kmu_random_delay",
+]
 
 RSE_FWU_PRIVATE_METADATA_OFFSET = 0x5000
 RSE_FWU_PRIVATE_METADATA_SIZE = 68
@@ -1505,6 +1519,14 @@ def default_bl2_map(root: Path) -> Path:
     )
 
 
+def default_bl1_1_map(root: Path) -> Path:
+    return (
+        root
+        / "build/tmp_baremetal/work/fvp_rd_aspen-poky-linux"
+        / "trusted-firmware-m/2.2.2+git/build/bin/bl1_1.map"
+    )
+
+
 def parse_map_text_ranges(map_path: Path, symbols: list[str]) -> dict[str, dict[str, int]]:
     if not map_path.exists():
         return {}
@@ -1785,6 +1807,12 @@ def classify_pc_trace_blocker(
         for symbol, item in ranges.items():
             if item["start"] <= pc_value < item["end"]:
                 return f"rse_bl2_cfi_flash_io_timeout:{symbol}"
+        ranges = parse_map_text_ranges(default_bl1_1_map(root), RSE_BL1_1_TRACE_SYMBOLS)
+        for symbol, item in ranges.items():
+            if item["start"] <= pc_value < item["end"]:
+                if symbol.startswith("cfi_") or symbol.startswith("nor_"):
+                    return f"rse_bl1_1_cfi_flash_io_timeout:{symbol}"
+                return f"rse_bl1_1_cc3xx_crypto_timeout:{symbol}"
     return None
 
 

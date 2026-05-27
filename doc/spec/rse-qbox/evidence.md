@@ -6178,3 +6178,32 @@ active short-timeout bottleneck is still firmware-visible Strata image-read
 throughput during BL2 AP image loading; the acceptance gap remains the
 Protected Storage PS403 completion delta against FVP, where FVP reaches
 `TEST RESULT: PASSED` and QBox's best run stops after UID 21 cleanup.
+
+### 2026-05-28 CC3XX DMA Chunk And PC-Trace Classification
+
+The RSE PC trace shows that short pre-AP windows alternate between BL1_1
+shared CC3XX hash/DMA code and BL1_1 CFI flash reads while BL2 validates and
+loads SI images. The CC3XX model now uses a larger but bounded DMA chunk for
+host-side processing, and the runner classifies these short PC-trace timeouts
+instead of collapsing them to a generic platform timeout.
+
+| Evidence | Result |
+| --- | --- |
+| `build/qbox-fvp-rd-aspen/rse-pctrace-secondboot-90s-20260528-v1/result.json` | Baseline persisted-flash 90-second trace timed out with the old generic `qbox_platform_timeout`; replaying the new classifier maps the last PC to `rse_bl1_1_cc3xx_crypto_timeout:cc3xx_lowlevel_set_engine`. |
+| `llvm-addr2line -e .../bl1_1.elf 0x1100b1e2 0x1100c0c4 0x11007342` | Maps the observed tail PCs to `cc3xx_lowlevel_hash_uninit`, `cc3xx_lowlevel_set_engine`, and `nor_cfi_reg_read`, confirming the BL1_1 shared CC3XX/CFI path. |
+| `tools/qbox/systemc-components/cc3xx/include/cc3xx.h` | Adds `DMA_CHUNK_BYTES = 1024` and uses it for AES-CTR, AES-ECB, hash, and CMAC DMA processing. This preserves CC3XX register sequencing while reducing TLM memory transactions versus the old 256-byte chunk. |
+| `tools/qbox/tests/components/cc3xx/cc3xx-tests.cc` | Adds `AesCtrMemToMemDmaCoversLargeInPlaceTransfer`, which encrypts and decrypts an 8 KiB in-place buffer through the modeled CC3XX DMA path. |
+| Rejected local experiment | A 4096-byte chunk passed focused tests but produced `Image in the primary slot is not valid!` for SI CL1 in `rse-cc3xx-dma-chunk-pctrace-90s-20260528-v1`, so that size was not retained. |
+| `git -C tools/qbox diff --check -- systemc-components/cc3xx/include/cc3xx.h tests/components/cc3xx/cc3xx-tests.cc` | Passed with the retained 1024-byte chunk. |
+| `cmake --build build --target cc3xx-tests --parallel 8` and `ctest --test-dir build -R '^cc3xx-tests$' --output-on-failure` from `tools/qbox` | Passed; the focused CC3XX regression suite completed successfully. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed; the RD-Aspen platform executable links against the updated CC3XX model. |
+| `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py` | Passed after adding BL1_1 map-based PC-trace classification. |
+| `build/qbox-fvp-rd-aspen/rse-cc3xx-dma1024-pctrace-90s-20260528-v1/result.json` | With the retained chunk, the 90-second persisted run preserves SI CL1 validation: RSE log reaches `Key hash matched for image 4 at slot 0`, `Image 4 loaded from the primary slot`, and SI CL0 primary/secondary slot reporting before timeout. |
+| `build/qbox-fvp-rd-aspen/rse-cc3xx-dma1024-classify-45s-20260528-v1/result.json` | Fresh 45-second PC-trace smoke returns `blocker=rse_bl1_1_cfi_flash_io_timeout:nor_cfi_reg_read`, proving new result files keep the more precise pre-AP blocker classification. |
+
+Current conclusion: the retained 1024-byte CC3XX DMA chunk is covered by
+focused tests and does not reproduce the 4096-byte SI CL1 validation failure.
+It improves the modeled CC3XX DMA path and makes short timeout artifacts more
+diagnostic, but it does not close T063. The best QBox PS403 evidence remains
+`rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches cleanup after
+UID 21 and still does not reach the FVP `TEST RESULT: PASSED` marker.

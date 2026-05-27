@@ -2377,3 +2377,20 @@ richer fault status.
       T063 remains open and the next implementation target stays on reducing
       firmware-visible AP/RSE BL2 Strata image-read overhead without enabling
       diagnostic boot-flash DMI.
+- [x] V038AW Bound CC3XX DMA burst size and classify short PC-trace timeouts.
+      QBox now raises the CC3XX model's internal DMA processing chunk from
+      256 bytes to 1024 bytes for AES, hash, and CMAC DMA paths, reducing TLM
+      memory round trips while keeping the firmware-visible CC3XX register
+      programming interface unchanged. Focused coverage adds an 8 KiB
+      AES-CTR in-place regression. A 4096-byte local experiment was rejected
+      because it caused SI CL1 image validation failure, so only the
+      runtime-safe 1024-byte chunk is retained. Validation passed with
+      `git -C tools/qbox diff --check`, focused `cc3xx-tests`, focused
+      `ctest`, and `platforms-vp`. The RSE runner now classifies BL1_1 shared
+      CC3XX/CFI PC-trace tails using `bl1_1.map`; existing 90-second traces
+      replay to `rse_bl1_1_cc3xx_crypto_timeout:*`, and fresh runtime
+      `build/qbox-fvp-rd-aspen/rse-cc3xx-dma1024-classify-45s-20260528-v1/`
+      reports `rse_bl1_1_cfi_flash_io_timeout:nor_cfi_reg_read`. T063 remains
+      open: this improves the modeled CC3XX DMA path and blocker precision,
+      but does not yet move the best PS403 evidence beyond cleanup after
+      UID 21.

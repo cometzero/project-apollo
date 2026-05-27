@@ -157,6 +157,14 @@ now passes against
 RSE boot, RSE/SCP handoff, measured-boot, or Linux markers missing in QBox.
 The direct primary-compute path also remains available through
 `build/qbox-fvp-rd-aspen/direct-v008-primary-compute-20260525-v1/`.
+The latest RSE short-timeout diagnostics classify pre-AP PC traces through the
+TF-M BL1_1 map as shared CC3XX/CFI work instead of generic platform timeouts.
+The QBox CC3XX model now uses a bounded 1024-byte DMA processing chunk for
+AES, hash, and CMAC DMA paths; a larger 4096-byte experiment was rejected
+because it caused SI CL1 image validation failure. This does not close the
+Protected Storage PS403 acceptance gap, whose best QBox evidence still stops
+after UID 21 cleanup, but it keeps the CC3XX path closer to a useful hardware
+DMA model while preserving the firmware-visible register protocol.
 The FWU preflight helper
 `build/qbox-fvp-rd-aspen/fwu-inspect-20260525-v2/` now records the static CFG2
 Secure FWU baseline: RSE/AP flash raw sizes match the generated media, primary
