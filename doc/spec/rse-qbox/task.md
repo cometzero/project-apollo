@@ -2542,3 +2542,19 @@ richer fault status.
       `PS:test_403_started`, confirming it is not acceptance evidence. T063
       remains open with the next target narrowed to Check 2, the second
       insufficient-space event, second cleanup, and final pass marker.
+- [x] V038BE Recheck the current Strata cold fast path against the previous
+      PS403 baseline. The current QBox branch already includes
+      `perf(strata): skip cold access overhead`; no new QBox source edit was
+      made. Focused validation passed with `git -C tools/qbox diff --check`,
+      `cmake --build build --target strata_flash_j3-tests --parallel 8`,
+      focused `ctest`, and `cmake --build build --target platforms-vp`.
+      Runtime
+      `build/qbox-fvp-rd-aspen/rse-ps403-cold-fastpath-260s-20260528-v1/`
+      used the same persisted clean seed as the previous best second boot and
+      timed out at `260.116s` with
+      `qbox_post_login_probe_not_reached_timeout`. It reached RSE AP power-on
+      at 201.704 s, BL_33 at 215.874 s, U-Boot EFI MM at 218.089 s, and
+      `FWU: System booting in Regular State` at 240.933 s, but did not reach
+      Linux login or PS403. The previous best artifact remains
+      `rse-ps403-secondboot-nostats-260s-20260527-v1`, which reaches Linux,
+      root, driver probes, PS403, and UID21 cleanup. T063 remains open.

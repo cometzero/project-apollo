@@ -6466,3 +6466,28 @@ from cleanup after UID 21 to Check 2, the second insufficient-space event, the
 second cleanup, and final `TEST RESULT: PASSED`. The rejected single-byte
 fast-path result is excluded from acceptance evidence because it fails before
 PS403 starts.
+
+### 2026-05-28 Current Strata Fast-Path Runtime Recheck
+
+The current QBox branch already contains `perf(strata): skip cold access
+overhead`, which adds a no-trace/no-stats/no-DMI Strata target fast path while
+preserving the command-state write path. The focused component and platform
+build checks pass, but a live PS403 comparison rerun did not improve the best
+runtime artifact.
+
+| Evidence | Result |
+| --- | --- |
+| `git -C tools/qbox status --short --branch` | Clean at `feature/qbox-dev...origin/feature/qbox-dev`; no new QBox source edit was made for this recheck. |
+| `git -C tools/qbox diff --check` | Passed before rebuilding. |
+| `cmake --build build --target strata_flash_j3-tests --parallel 8` from `tools/qbox` | Passed; rebuilt the Strata component test target against the current branch. |
+| `ctest --test-dir build -R '^strata_flash_j3-tests$' --output-on-failure` from `tools/qbox` | Passed: `1/1` test passed in `1.17s`. |
+| `cmake --build build --target platforms-vp --parallel 8` from `tools/qbox` | Passed after the focused test build. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-cold-fastpath-260s-20260528-v1/result.json` | Bounded run used the same persisted clean seed as the previous best PS403 second boot, with `--skip-build`, PS-only secure-service probe, `test_403;`, and a 260-second cap. It timed out at `runtime_elapsed_s=260.116` with `blocker=qbox_post_login_probe_not_reached_timeout`. It reached RSE first image slot/AP power-on at 201.704 s, BL_33 at 215.874 s, U-Boot EFI MM discovery at 218.089 s, and `FWU: System booting in Regular State` at 240.933 s, but did not reach Linux login, post-login driver probes, or PS403. |
+| `build/qbox-fvp-rd-aspen/rse-ps403-secondboot-nostats-260s-20260527-v1/result.json` | Previous best artifact remains stronger: the same timeout cap reached Linux login at 158.802 s, root shell at 164.079 s, PS403 at 166.721 s, and cleanup after UID 21 before timing out. |
+
+Current conclusion: the current Strata fast-access path is build/test clean but
+the new bounded runtime is not acceptance evidence and does not supersede the
+previous best UID21-cleanup artifact. T063 remains open on the same
+firmware-visible TF-M PS/ITS compaction workload. Future runtime comparisons
+should continue to use the previous best artifact as the baseline unless a new
+run reaches at least Linux login, driver probes, and PS403 progress.
