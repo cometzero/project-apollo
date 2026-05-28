@@ -1,6 +1,6 @@
 ---
 name: arm-auto-solutions
-description: Workspace workflow for /build/arm/arm-auto-solutions. Use whenever a prompt mentions Arm Auto Solutions, Arm Zena CSS, RD-Aspen/RD Aspen, kas, Yocto or BitBake builds, FVP boot/runtime/logs, EWAOL images, Safety Island or Zephyr, RSE, TF-A, TF-M, OP-TEE, SCP, U-Boot, PFDI, HIPC, sw-ref-stack, arm-zena-css, layers, build/tmp_baremetal artifacts, boot/빌드/부팅/검증/log analysis, or project-local Codex automation in this workspace.
+description: Workspace workflow for /build/arm/arm-auto-solutions. Use whenever a prompt mentions Arm Auto Solutions, Arm Zena CSS, RD-Aspen/RD Aspen, Apollo FVP, Yocto or BitBake builds, FVP boot/runtime/logs, EWAOL images, Safety Island or Zephyr, RSE, TF-A, TF-M, OP-TEE, SCP, U-Boot, PFDI, HIPC, sw-ref-stack, arm-zena-css, layers, build/tmp_baremetal artifacts, boot/빌드/부팅/검증/log analysis, or project-local Codex automation in this workspace.
 ---
 
 # Arm Auto Solutions Project Skill
@@ -9,20 +9,23 @@ Use this skill for project work in `/build/arm/arm-auto-solutions`.
 
 ## Core Rule
 
-Treat the root as a kas-composed workspace, not a single Git repository. The
-source ownership boundaries are:
+Treat the root as a traditional Yocto/BitBake workspace, not a single Git
+repository. The source ownership boundaries are:
 
-- `arm-zena-css/` - Arm Zena CSS BSP, Safety Island, firmware, kas fragments,
-  and Zena documentation.
+- `arm-zena-css/` - Arm Zena CSS BSP, Safety Island, firmware, and Zena
+  documentation.
 - `sw-ref-stack/` - Arm Automotive Solutions shared images, EWAOL integration,
   test automation, and CI fragments.
-- `layers/*` - external Yocto layers, usually pinned and patched by kas.
-- `build/` - generated output, useful for evidence only.
+- `layers/*` - external Yocto layers, usually pinned upstream/downstream.
+- `build/conf/` - active local Yocto build configuration.
+- `build/` other than `build/conf/` - generated output, useful for evidence
+  only.
 - `doc/`, `.codex/`, `.omx/` - repo-local analysis and Codex automation.
 
 ## Intake
 
-1. Read `.config.yaml` before build or runtime claims.
+1. Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
+   `build/conf/templateconf.cfg` before build or runtime claims.
 2. Check local instructions with:
    `find . -path ./build -prune -o -path ./.omx -prune -o -name AGENTS.md -print`
 3. Use `git -C arm-zena-css status --short` and
@@ -34,8 +37,10 @@ source ownership boundaries are:
 
 ## Subsystem Map
 
-- kas/build config:
-  `arm-zena-css/yocto/kas`, `sw-ref-stack/yocto/kas`, `.config.yaml`
+- Yocto build config:
+  `build/conf/local.conf`, `build/conf/bblayers.conf`,
+  `build/conf/templateconf.cfg`, `build.sh`, and
+  `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
 - RD-Aspen BSP and firmware:
   `arm-zena-css/yocto/meta-zena-css-bsp`
 - Safety Island Zephyr:
@@ -46,28 +51,36 @@ source ownership boundaries are:
 - Test automation:
   `sw-ref-stack/test_automation`
 - Current generated evidence:
-  `build/tmp_baremetal/deploy/images/fvp-rd-aspen`,
-  `build/tmp_baremetal/log/cooker/fvp-rd-aspen`
+  `build/tmp_baremetal/deploy/images/apollo-fvp`,
+  `build/tmp_baremetal/log/cooker/apollo-fvp`
 
 ## Common Commands
 
-Current generated build config:
+Current build config:
 
 ```bash
-sed -n '1,120p' .config.yaml
+sed -n '1,160p' build/conf/local.conf
+sed -n '1,180p' build/conf/bblayers.conf
+cat build/conf/templateconf.cfg
 ```
 
 Current configured build:
 
 ```bash
-kas build .config.yaml
+./build.sh
+```
+
+Interactive BitBake shell:
+
+```bash
+source layers/poky/oe-init-build-env build
 ```
 
 Current build evidence:
 
 ```bash
-tail -80 build/tmp_baremetal/log/cooker/fvp-rd-aspen/20260510034323.log
-find build/tmp_baremetal/deploy/images/fvp-rd-aspen -maxdepth 2 -type f | sort
+find build/tmp_baremetal/log/cooker/apollo-fvp -maxdepth 1 -type f | sort | tail
+find build/tmp_baremetal/deploy/images/apollo-fvp -maxdepth 2 -type f | sort
 ```
 
 Python test automation smoke checks:
@@ -80,10 +93,11 @@ pytest sw-ref-stack/test_automation/unittests
 Yocto layer/recipe review:
 
 ```bash
-kas shell .config.yaml -c 'bitbake-layers show-layers'
-kas shell .config.yaml -c 'bitbake-layers show-recipes <recipe>'
-kas shell .config.yaml -c 'bitbake <recipe> -c package_qa'
-kas shell .config.yaml -c 'yocto-check-layer -- <layer>'
+source layers/poky/oe-init-build-env build
+bitbake-layers show-layers
+bitbake-layers show-recipes <recipe>
+bitbake <recipe> -c package_qa
+yocto-check-layer -- <layer>
 ```
 
 Use `$yocto-review` for dedicated Yocto metadata review. The project-local
@@ -97,9 +111,10 @@ layer, recipe, append, patch, image feature, or machine metadata.
 Linux kernel source review:
 
 ```bash
-kas shell .config.yaml -c 'bitbake <module-recipe> -c compile'
-kas shell .config.yaml -c 'bitbake <module-recipe> -c package_qa'
-kas shell .config.yaml -c 'bitbake virtual/kernel -c kernel_configcheck'
+source layers/poky/oe-init-build-env build
+bitbake <module-recipe> -c compile
+bitbake <module-recipe> -c package_qa
+bitbake virtual/kernel -c kernel_configcheck
 ```
 
 Use `$linux-kernel-review` for dedicated Linux kernel source and kernel metadata

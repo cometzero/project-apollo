@@ -1,6 +1,6 @@
 ---
 name: yocto-dev
-description: Use for Yocto Project, OpenEmbedded, BitBake, Poky, meta-* layers, recipes .bb/.bbappend/.inc, bbclass, image recipes, MACHINE/BSP, distro config, bblayers.conf, local.conf, PACKAGECONFIG, SRC_URI, SRCREV, LIC_FILES_CHKSUM, do_fetch/do_unpack/do_patch/do_configure/do_compile/do_install/do_package/do_rootfs/do_image/do_populate_sdk, devtool, recipetool, SDK/eSDK, ptest, QA errors, rootfs errors, package split errors, systemd service integration, kernel/device-tree/U-Boot changes, sstate, downloads, mirrors, kas, and Yocto build debugging. Trigger when the user asks to implement, debug, review, refactor, upgrade, package, build, analyze, or document Yocto/OpenEmbedded metadata.
+description: Use for Yocto Project, OpenEmbedded, BitBake, Poky, meta-* layers, recipes .bb/.bbappend/.inc, bbclass, image recipes, MACHINE/BSP, distro config, bblayers.conf, local.conf, TEMPLATECONF, PACKAGECONFIG, SRC_URI, SRCREV, LIC_FILES_CHKSUM, do_fetch/do_unpack/do_patch/do_configure/do_compile/do_install/do_package/do_rootfs/do_image/do_populate_sdk, devtool, recipetool, SDK/eSDK, ptest, QA errors, rootfs errors, package split errors, systemd service integration, kernel/device-tree/U-Boot changes, sstate, downloads, mirrors, and Yocto build debugging. Trigger when the user asks to implement, debug, review, refactor, upgrade, package, build, analyze, or document Yocto/OpenEmbedded metadata.
 ---
 
 # Yocto Development Skill
@@ -27,7 +27,7 @@ This skill is intended for tasks involving:
 - `devtool`, `recipetool`, SDK, and eSDK
 - QA errors, rootfs errors, package split errors
 - `sstate-cache`, `downloads`, mirrors, and CI build debugging
-- `kas`-based Yocto workspaces
+- traditional Yocto build directories initialized with `oe-init-build-env`
 
 ---
 
@@ -58,7 +58,7 @@ Start with lightweight inspection.
 ```bash
 pwd
 git status --short
-find . -maxdepth 4 -name 'bblayers.conf' -o -name 'local.conf' -o -name 'kas*.yml' -o -name 'kas*.yaml' -o -name 'oe-init-build-env'
+find . -maxdepth 4 -name 'bblayers.conf' -o -name 'local.conf' -o -name 'templateconf.cfg' -o -name 'oe-init-build-env'
 find . -maxdepth 5 -type f -path '*/conf/layer.conf' | sort
 find . -maxdepth 4 -type d -name 'meta-*' | sort
 find . -maxdepth 3 -iname 'README*' -o -iname '*setup*' -o -iname '*build*.sh' -o -iname 'Dockerfile'
@@ -76,7 +76,7 @@ If the environment is not initialized, inspect:
 
 - `README*`
 - setup scripts
-- `kas*.yml` / `kas*.yaml`
+- `TEMPLATECONF` samples and build setup scripts
 - repo manifests
 - Dockerfiles
 - CI scripts
@@ -948,28 +948,32 @@ Run tests according to project test infrastructure.
 
 ---
 
-## kas Workflow
+## Traditional Yocto Build Workflow
 
-If the project uses kas:
+If the project uses a traditional Yocto build directory:
 
 ```bash
-find . -name 'kas*.yml' -o -name 'kas*.yaml'
-kas shell <config>.yml
-kas build <config>.yml
+find . -path '*/conf/templates/*/local.conf.sample' -o \
+    -path '*/conf/templates/*/bblayers.conf.sample'
+export TEMPLATECONF=<layer>/conf/templates/<template>
+source layers/poky/oe-init-build-env build
+bitbake <target>
 ```
 
 Inspect:
 
-- repos
-- layers
-- branch pins
-- local conf header
+- `build/conf/bblayers.conf`
+- `build/conf/local.conf`
+- `build/conf/templateconf.cfg`
+- layer order and dependencies
 - machine
 - distro
 - target
 - environment passthrough
 
-Do not modify generated build files if the source of truth is kas YAML.
+Prefer durable layer metadata and TEMPLATECONF samples for reusable
+configuration. Edit `build/conf` only when the task explicitly concerns the
+active local build directory.
 
 ---
 
@@ -988,7 +992,7 @@ Check:
 - cache paths
 - `DL_DIR`
 - `SSTATE_DIR`
-- kas config
+- build config (`bblayers.conf`, `local.conf`, `templateconf.cfg`)
 - machine/image matrix
 - artifact collection
 - log collection
@@ -1152,5 +1156,5 @@ devtool로 recipe upgrade 해줘.
 MACHINE config 추가해줘.
 device tree fragment 연결해줘.
 SDK에 dev package 포함해줘.
-kas build 설정 분석해줘.
+TEMPLATECONF 기반 Yocto build 설정 분석해줘.
 ```

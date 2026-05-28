@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This workspace is a kas-composed Arm Auto Solutions tree and a QBox
+This workspace is an Arm Auto Solutions Yocto/BitBake tree and a QBox
 co-simulation development workspace. The top-level directory is not a single
 Git repository; source ownership is in nested repositories.
 
@@ -14,8 +14,10 @@ over register-only stubs.
 
 ## Active Baseline
 
-- Active generated kas config: `.config.yaml`
-- Current machine: `fvp-rd-aspen`
+- Active Yocto build directory: `build/`
+- Active Yocto template: `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- Build entrypoint: `./build.sh`
+- Current machine: `apollo-fvp`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`
 - Current configured CPU count: `PC_CPUS_COUNT_DEFAULT = "4"`
 - QBox platform under active development:
@@ -28,21 +30,25 @@ over register-only stubs.
 
 ## Source Boundaries
 
-- `arm-zena-css/`: Arm Zena CSS BSP, RD-Aspen FVP docs, firmware, Safety
-  Island, and kas fragments.
+- `arm-zena-css/`: Arm Zena CSS BSP, RD-Aspen FVP docs, firmware, and Safety
+  Island sources.
 - `sw-ref-stack/`: Arm Automotive Solutions images, demos, test automation,
   and CI fragments.
 - `layers/`: pinned upstream/downstream Yocto layers. Treat as external unless
   explicitly asked to patch them.
 - `tools/qbox/`: QBox SystemC/TLM/QEMU platform implementation.
 - `tools/qemu/`: local QEMU/libqemu source used by QBox.
-- `build/`: generated evidence only. Do not treat as source.
+- `build/conf/`: active local Yocto build configuration.
+- `build/` other than `build/conf/`: generated evidence only. Do not treat as
+  source.
 - `doc/`: project analysis, implementation plans, and verification reports.
 - `.codex/`: project-local Codex skills and sub-agent definitions.
 
 ## Required Working Style
 
-1. Inspect before editing. Read `.config.yaml` before any build/runtime claim.
+1. Inspect before editing. Read `build/conf/local.conf`,
+   `build/conf/bblayers.conf`, and `build/conf/templateconf.cfg` before any
+   Yocto build/runtime claim.
 2. Use project-local skills when relevant:
    - `$arm-auto-solutions` for workspace routing and evidence standards.
    - `$qbox-dev` for QBox/SystemC/QEMU virtual platform work.
@@ -84,17 +90,23 @@ Use the narrowest meaningful command first, then broaden only when needed.
    - `python3 -m py_compile scripts/*.py` for changed Python helpers.
    - `git -C tools/qbox diff --check` for QBox changes.
    - `./scripts/validate_qbox_fvp_rd_aspen_map.py`
-2. QBox build checks:
+2. Yocto build checks:
+   - Initialize with `source layers/poky/oe-init-build-env build`.
+   - Use `bitbake-layers show-layers` when layer order changes.
+   - Use targeted tasks first, such as
+     `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
+   - Use `./build.sh` for the configured `baremetal-image` build.
+3. QBox build checks:
    - Build targeted modules first with `cmake --build tools/qbox/build --target
      <target> --parallel <n>`.
    - Build `platforms-vp` when Lua platform wiring changes.
-3. Runtime checks:
+4. Runtime checks:
    - Use `scripts/run_qbox_fvp_rd_aspen_linux.py` with file-backed output.
    - Use `--post-login-probe` when driver evidence matters.
-4. Coverage checks:
+5. Coverage checks:
    - Run `scripts/audit_qbox_fvp_rd_aspen_coverage.py` with the runtime
      `result.json` and log path.
-5. FVP comparison:
+6. FVP comparison:
    - Use non-interactive FVP log scripts and compare boot, memory-map, IRQ,
      device-tree, driver probe, and service evidence.
 

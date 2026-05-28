@@ -5,8 +5,8 @@
 - `conf/layer.conf` has correct `BBFILES`, `BBFILE_COLLECTIONS`,
   `BBFILE_PATTERN`, `LAYERDEPENDS`, `LAYERSERIES_COMPAT`, and dynamic-layer
   handling.
-- New layer dependencies are represented in kas config and not hidden by local
-  build state.
+- New layer dependencies are represented in `build/conf/bblayers.conf` and the
+  TEMPLATECONF sample, not hidden by incidental local build state.
 - Layer-level QA overrides are narrow, documented, and not a broad escape hatch.
 - `yocto-check-layer` is run for new layers or compatibility-sensitive changes
   when available.

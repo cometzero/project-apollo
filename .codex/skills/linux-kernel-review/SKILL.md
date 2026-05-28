@@ -10,7 +10,8 @@ Use this skill for focused Linux kernel source and kernel metadata review in
 
 ## Intake
 
-1. Read `.config.yaml` and confirm the active kas variant.
+1. Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
+   `build/conf/templateconf.cfg`.
 2. If the request came from the auto-review hook, inspect
    `.omx/state/hooks/plugins/linux-kernel-auto-review/data.json`.
 3. Read `doc/linux-kernel-source-review.md` for the full project checklist.
@@ -52,10 +53,11 @@ rg -n "TODO|FIXME|XXX|BUG_ON|panic\\(|msleep\\(|udelay\\(" <paths>
 For module or kernel build validation:
 
 ```bash
-kas shell .config.yaml -c 'bitbake <module-recipe> -c compile'
-kas shell .config.yaml -c 'bitbake <module-recipe> -c package_qa'
-kas shell .config.yaml -c 'bitbake virtual/kernel -c kernel_configcheck'
-kas shell .config.yaml -c 'bitbake virtual/kernel -c compile'
+source layers/poky/oe-init-build-env build
+bitbake <module-recipe> -c compile
+bitbake <module-recipe> -c package_qa
+bitbake virtual/kernel -c kernel_configcheck
+bitbake virtual/kernel -c compile
 ```
 
 Use kernel tree tools only when the prepared source tree is available:

@@ -1,4 +1,4 @@
 interface:
   display_name: "Arm Auto Solutions"
   short_description: "RD-Aspen Yocto project workflow"
-  default_prompt: "Use $arm-auto-solutions to analyze the current RD-Aspen kas build state and report evidence."
+  default_prompt: "Use $arm-auto-solutions to analyze the current Apollo FVP Yocto build state and report evidence."

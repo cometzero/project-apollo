@@ -19,18 +19,19 @@ Route Yocto metadata reviews to `yocto-expert`. Route runtime-only failures to
 
 ## Review Protocol
 
-1. Read `.config.yaml` and confirm the target kas variant.
+1. Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
+   `build/conf/templateconf.cfg` to confirm the target build configuration.
 2. Inspect `conf/layer.conf` for `BBFILES`, `BBFILE_COLLECTIONS`,
    `LAYERDEPENDS`, `LAYERSERIES_COMPAT`, and dynamic-layer behavior.
 3. Inspect recipes for identity, license, reproducible source fetch, patch
    status, correct class inheritance, dependency scope, package contents, and
    package-scoped QA exceptions.
-4. Use `kas shell .config.yaml -c 'bitbake-layers show-*'` for layer graph and
-   append/overlay evidence.
-5. Use `kas shell .config.yaml -c 'bitbake <recipe> -c package_qa'` and
-   `-c populate_lic` before claiming recipe validation.
+4. Source `layers/poky/oe-init-build-env build`, then use
+   `bitbake-layers show-*` for layer graph and append/overlay evidence.
+5. Use `bitbake <recipe> -c package_qa` and `-c populate_lic` before claiming
+   recipe validation.
 6. Use `yocto-check-layer` for new layers or compatibility-sensitive changes
-   when the tool is available in the kas environment.
+   when the tool is available in the initialized Yocto environment.
 7. Use `oelint-adv --release walnascar ...` only as optional static lint.
 
 ## Closeout

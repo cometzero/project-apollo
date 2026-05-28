@@ -2,17 +2,18 @@
 
 ## Current Configuration
 
-The active generated kas configuration is `.config.yaml`. It includes:
+The active Yocto configuration is the traditional build directory under
+`build/conf/`:
 
-- `arm-zena-css/yocto/kas/zena-css-bsp.yml`
-- `arm-zena-css/yocto/kas/uefi-capsule.yml`
-- `sw-ref-stack/yocto/kas/baremetal.yml`
-- `sw-ref-stack/yocto/kas/demos.yml`
-- `arm-zena-css/yocto/kas/repos.pinned.yml`
+- `build/conf/local.conf`
+- `build/conf/bblayers.conf`
+- `build/conf/templateconf.cfg`
+- `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- top-level `build.sh`
 
 Current selected values:
 
-- `MACHINE = "fvp-rd-aspen"`
+- `MACHINE = "apollo-fvp"`
 - `RD_ASPEN_VARIANT = "cfg2"`
 - `PC_CPUS_COUNT_DEFAULT = "4"`
 - `ARM_FVP_EULA_ACCEPT = "1"`
@@ -54,8 +55,8 @@ Do not infer runtime success from build success.
 
 Current local build evidence is under:
 
-- `build/tmp_baremetal/log/cooker/fvp-rd-aspen/20260510034323.log`
-- `build/tmp_baremetal/deploy/images/fvp-rd-aspen/`
+- `build/tmp_baremetal/log/cooker/apollo-fvp/`
+- `build/tmp_baremetal/deploy/images/apollo-fvp/`
 
 Runtime validation needs:
 
