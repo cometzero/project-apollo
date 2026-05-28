@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run RD-Aspen FVP headlessly and capture per-console boot logs."""
+"""Run Apollo/RD-Aspen FVP headlessly and capture per-console boot logs."""
 
 from __future__ import annotations
 
@@ -25,43 +25,68 @@ ERROR_RE = re.compile(r"(\[ERR\]|\[ERROR\]|ERROR:)")
 
 CHECKS = {
     "terminal_uart": {
-        "name": "RSE",
+        "name": "RSE / TF-M",
         "all": [
+            "Starting TF-M BL1_1",
+            "Jumping to BL2",
             "Jumping to the first image slot",
             "RSE to SCP SCMI power on AP succeeded",
         ],
     },
     "terminal_uart_si_cluster0": {
-        "name": "SCP / Safety Island CL0",
+        "name": "Safety Island CL0 / SCP-firmware",
         "all": [
             "SSU initialized",
             "Module initialization complete",
         ],
     },
     "terminal_ns_uart0": {
-        "name": "Primary Compute Linux",
+        "name": "Primary Compute U-Boot/Linux",
         "all": [
+            "U-Boot ",
             "Booting Linux on physical CPU",
+            "Linux version",
         ],
         "any": [
-            "fvp-rd-aspen login:",
-            "root@fvp-rd-aspen",
+            " login:",
+            "root@",
         ],
     },
     "terminal_sec_uart": {
-        "name": "Secure-world AP console",
-        "any": [
-            "tee_ta_close_session",
+        "name": "TF-A / Secure-world AP",
+        "all": [
+            "NOTICE:  BL2:",
+            "NOTICE:  BL2: Booting BL31",
+            "NOTICE:  BL31:",
+            "INFO:    BL31: Preparing for EL3 exit to normal world",
         ],
     },
     "terminal_uart_si_cluster1": {
         "name": "Safety Island CL1",
-        "any": [
+        "all": [
+            "*** Booting Zephyr OS build",
             "Secondary CPU core 1",
+        ],
+        "any": [
             "Hello World",
             "Cluster control registers initialized",
+            "Secondary CPU core 3",
         ],
     },
+}
+
+BOOT_DOMAINS = {
+    "rse": ("RSE / TF-M", "terminal_uart"),
+    "safety_island_cl0": (
+        "Safety Island CL0 / SCP-firmware",
+        "terminal_uart_si_cluster0",
+    ),
+    "safety_island_cl1": (
+        "Safety Island CL1 / Zephyr",
+        "terminal_uart_si_cluster1",
+    ),
+    "tf_a": ("TF-A / BL31", "terminal_sec_uart"),
+    "u_boot_linux": ("U-Boot / Linux", "terminal_ns_uart0"),
 }
 
 CRITICAL_TERMS = {
@@ -71,7 +96,7 @@ CRITICAL_TERMS = {
 }
 
 LOGIN_READY_PATTERNS = [
-    re.compile(r"fvp-rd-aspen login:"),
+    re.compile(r"[\w.-]+ login:"),
     re.compile(r"Started .*Serial Getty on ttyAMA0"),
     re.compile(r"Reached target .*Login Prompts"),
 ]
@@ -81,6 +106,7 @@ LOGIN_RETRY_READY_PATTERNS = [
     re.compile(r"systemd\[1\]:"),
 ]
 LOGIN_MAX_ATTEMPTS = 80
+ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+")
 
 
 class ConsoleCapture:
@@ -326,6 +352,21 @@ def build_status(
     }
 
 
+def build_domain_status(status: dict) -> dict:
+    domains = {}
+    consoles = status["consoles"]
+    for domain, (name, term) in BOOT_DOMAINS.items():
+        console = consoles.get(term)
+        domains[domain] = {
+            "name": name,
+            "term": term,
+            "passed": bool(console and console["passed"]),
+            "path": console.get("path") if console else None,
+            "missing": console is None,
+        }
+    return domains
+
+
 def write_summary(
     out_dir: Path,
     command: list[str],
@@ -341,6 +382,7 @@ def write_summary(
     passed = status["passed"] and (
         not post_login.get("requested") or post_login.get("done")
     )
+    domains = build_domain_status(status)
     result = {
         "passed": passed,
         "duration_s": round(duration_s, 3),
@@ -351,6 +393,7 @@ def write_summary(
         "ports": ports,
         "labels": labels,
         "status": status,
+        "domains": domains,
         "post_login": post_login,
     }
     (out_dir / "result.json").write_text(
@@ -364,8 +407,17 @@ def write_summary(
         f"duration_s: {duration_s:.3f}",
         f"fvpconf: {fvpconf}",
         f"boot_log: {boot_log}",
-        "console_logs:",
+        "boot_domains:",
     ]
+    for domain, domain_status in domains.items():
+        lines.append(
+            f"  - {domain}: passed={domain_status['passed']}"
+            f" term={domain_status['term']}"
+            f" path={domain_status['path']}"
+        )
+    lines.extend([
+        "console_logs:",
+    ])
     for term, console in status["consoles"].items():
         label = labels.get(term, "")
         roles = ",".join(console.get("roles", []))
@@ -408,14 +460,21 @@ def write_summary(
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = argparse.ArgumentParser(
-        description="Run RD-Aspen FVP without a UI and save boot logs per console."
+        description="Run Apollo/RD-Aspen FVP without a UI and save boot logs per console."
+    )
+    parser.add_argument(
+        "--machine",
+        default="apollo-fvp",
+        help="Machine name used to derive the default deploy .fvpconf path.",
     )
     parser.add_argument(
         "--fvpconf",
         type=Path,
-        default=root
-        / "build/tmp_baremetal/deploy/images/fvp-rd-aspen/"
-        / "baremetal-image-fvp-rd-aspen.fvpconf",
+        default=None,
+        help=(
+            "Explicit runfvp .fvpconf path. Defaults to the selected "
+            "machine deploy symlink."
+        ),
     )
     parser.add_argument(
         "--runfvp-bin",
@@ -425,13 +484,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=root / "build/fvp-boot-logs" / timestamp(),
+        default=None,
+        help="Output directory. Defaults to build/fvp-boot-logs/<machine>-<timestamp>.",
     )
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument(
         "--require",
         choices=("critical", "all", "none"),
-        default="critical",
+        default="all",
         help="Pattern strictness before the run is marked passing.",
     )
     parser.add_argument(
@@ -474,6 +534,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    root = workspace_root()
+    if args.fvpconf is None:
+        args.fvpconf = (
+            root
+            / "build/tmp_baremetal/deploy/images"
+            / args.machine
+            / f"baremetal-image-{args.machine}.fvpconf"
+        )
+    if args.out_dir is None:
+        args.out_dir = root / "build/fvp-boot-logs" / f"{args.machine}-{timestamp()}"
     args.fvpconf = args.fvpconf.resolve()
     args.runfvp_bin = args.runfvp_bin.resolve()
     args.out_dir = args.out_dir.resolve()
@@ -547,7 +617,7 @@ def main() -> int:
                 text = read_text(default_capture.log_path)
                 should_retry_login = (
                     login_sent
-                    and "root@fvp-rd-aspen" not in text
+                    and not ROOT_PROMPT_RE.search(text)
                     and time.monotonic() - last_login_time >= 5.0
                 )
                 if (not login_sent and login_retry_ready(text)) or should_retry_login:
@@ -563,7 +633,7 @@ def main() -> int:
                 and not post_login_started
             ):
                 text = read_text(default_capture.log_path)
-                if "root@fvp-rd-aspen" in text:
+                if ROOT_PROMPT_RE.search(text):
                     for command_line in args.post_login_command:
                         default_capture.sendline(command_line)
                     default_capture.sendline(f"echo {post_login_marker}")
