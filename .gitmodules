@@ -82,3 +82,7 @@
 	path = hsoc-apollo/components/system_mgmt/trusted-firmware-m
 	url = git@github.com:cometzero/trusted-firmware-m.git
 	branch = apollo-fvp-tfm-2.2
+[submodule "hsoc-apollo/components/system_mgmt/scp-firmware"]
+	path = hsoc-apollo/components/system_mgmt/scp-firmware
+	url = git@github.com:cometzero/SCP-firmware.git
+	branch = apollo-fvp-scp-2.16
