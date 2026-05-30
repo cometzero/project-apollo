@@ -74,3 +74,7 @@
 	path = hsoc-apollo/components/primary_compute/u-boot
 	url = git@github.com:cometzero/u-boot.git
 	branch = apollo-fvp-u-boot-2026.01
+[submodule "hsoc-apollo/components/primary_compute/trusted-firmware-a"]
+	path = hsoc-apollo/components/primary_compute/trusted-firmware-a
+	url = git@github.com:cometzero/trusted-firmware-a.git
+	branch = apollo-fvp-tfa-2.14
