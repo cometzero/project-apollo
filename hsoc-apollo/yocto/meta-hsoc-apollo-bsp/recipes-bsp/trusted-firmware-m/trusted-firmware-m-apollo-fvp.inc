@@ -4,6 +4,8 @@
 
 inherit externalsrc
 
+TFM_PLATFORM:pn-trusted-firmware-m:apollo-fvp = "arm/rse/automotive_rd/apollo-fvp"
+
 EXTERNALSRC:pn-trusted-firmware-m:apollo-fvp = "${HSOC_APOLLO_TFM_SRC}"
 EXTERNALSRC_BUILD:pn-trusted-firmware-m:apollo-fvp = "${WORKDIR}/build"
 EXTERNALSRC_SYMLINKS:pn-trusted-firmware-m:apollo-fvp = ""
