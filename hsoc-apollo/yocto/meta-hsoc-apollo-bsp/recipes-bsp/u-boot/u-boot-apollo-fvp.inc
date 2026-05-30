@@ -4,8 +4,11 @@
 
 inherit externalsrc
 
+UBOOT_MACHINE:pn-u-boot:apollo-fvp = "apollo_fvp_defconfig"
+
 EXTERNALSRC:pn-u-boot:apollo-fvp = "${HSOC_APOLLO_UBOOT_SRC}"
 EXTERNALSRC_BUILD:pn-u-boot:apollo-fvp = "${WORKDIR}/build"
+EXTERNALSRC_SYMLINKS:pn-u-boot:apollo-fvp = ""
 
 do_configure:append() {
     capsule_crt_path="${@__import__('os').path.relpath('${B}/CRT.crt', '${S}')}"
