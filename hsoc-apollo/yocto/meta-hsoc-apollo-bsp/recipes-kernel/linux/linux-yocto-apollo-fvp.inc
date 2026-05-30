@@ -4,15 +4,18 @@
 
 inherit externalsrc
 
+FILESEXTRAPATHS:prepend := "${THISDIR}:"
+
 EXTERNALSRC:pn-linux-yocto:apollo-fvp = "${HSOC_APOLLO_LINUX_SRC}"
 EXTERNALSRC_BUILD:pn-linux-yocto:apollo-fvp = "${WORKDIR}/build"
 EXTERNALSRC:pn-linux-yocto-rt:apollo-fvp = "${HSOC_APOLLO_LINUX_SRC}"
 EXTERNALSRC_BUILD:pn-linux-yocto-rt:apollo-fvp = "${WORKDIR}/build"
 
-# Apollo FVP reuses RD-Aspen kernel metadata until Apollo-specific
-# kernel fragments are added.
-KMACHINE:pn-linux-yocto:apollo-fvp = "fvp-rd-aspen"
-KMACHINE:pn-linux-yocto-rt:apollo-fvp = "fvp-rd-aspen"
+SRC_URI:append:apollo-fvp = " file://apollo-kmeta;type=kmeta;name=apollo-kmeta;destsuffix=apollo-kmeta"
+
+KMACHINE:pn-linux-yocto:apollo-fvp = "apollo-fvp"
+KMACHINE:pn-linux-yocto-rt:apollo-fvp = "apollo-fvp"
+KERNEL_DEVICETREE:apollo-fvp = "arm/apollo-fvp.dtb"
 
 do_shared_workdir:append:apollo-fvp() {
     if [ "${MODSIGN_ENABLED}" = "1" ]; then
