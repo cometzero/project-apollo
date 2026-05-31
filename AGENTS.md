@@ -26,7 +26,9 @@ over register-only stubs.
   `scripts/build_qbox_fvp_rd_aspen_linux.sh`,
   `scripts/validate_qbox_fvp_rd_aspen_map.py`,
   `scripts/run_qbox_fvp_rd_aspen_linux.py`,
-  `scripts/audit_qbox_fvp_rd_aspen_coverage.py`
+  `scripts/audit_qbox_fvp_rd_aspen_coverage.py`,
+  `scripts/build_qbox_apollo_fvp_linux.sh`,
+  `scripts/run_qbox_apollo_fvp_linux.py`
 
 ## Source Boundaries
 
@@ -179,6 +181,9 @@ Use the narrowest meaningful command first, then broaden only when needed.
 4. Runtime checks:
    - Use `scripts/run_qbox_fvp_rd_aspen_linux.py` with file-backed output.
    - Use `--post-login-probe` when driver evidence matters.
+   - For Apollo local-build direct boot on QBox, use
+     `python3 scripts/run_qbox_apollo_fvp_linux.py --timeout 600
+     --post-login-probe` and inspect `build/qbox-apollo-fvp/<timestamp>/`.
    - For Apollo FVP local boot, use `./local-build.sh boot` and inspect
      `build/local-apollo-fvp/fvp-boot/result.json` plus per-UART logs before
      using GDB/Iris.
