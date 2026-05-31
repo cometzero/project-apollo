@@ -23,6 +23,8 @@ PORT_RE = re.compile(
 )
 ERROR_RE = re.compile(
     r"(\[ERR\]|\[ERROR\]|ERROR:|PFDI monitor timeout|"
+    r"local-initramfs: modprobe [^\r\n]+ failed|"
+    r"apollo-network-setup: [^\r\n]*(is not available|failed)|"
     r"Permission denied: CPU \d+ is not permitted to open cpu/\d+/pfdi)"
 )
 

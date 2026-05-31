@@ -30,6 +30,8 @@ OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/optee
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/u-boot}"
 LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/linux}"
 BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/buildroot}"
+ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src}"
+RPMSG_NET_SRC="${RPMSG_NET_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src}"
 PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src}"
 PFDI_LOCAL_AGENT_SRC="${PFDI_LOCAL_AGENT_SRC:-${ROOT_DIR}/tools/pfdi-local-agent/pfdi-local-agent.c}"
 
@@ -42,7 +44,7 @@ PC_CPUS_COUNT="${PC_CPUS_COUNT:-4}"
 NR_IMAGES_PER_FWU_BANK="${NR_IMAGES_PER_FWU_BANK:-5}"
 PFDI_SUPPORT="${PFDI_SUPPORT:-1}"
 PFDI_MONITOR_SUPPORT="${PFDI_MONITOR_SUPPORT:-1}"
-KERNEL_MODULES_AUTOLOAD="${KERNEL_MODULES_AUTOLOAD:-openvswitch pfdi_misc}"
+KERNEL_MODULES_AUTOLOAD="${KERNEL_MODULES_AUTOLOAD:-bridge openvswitch virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc}"
 KERNEL_DEBUG_INFO="${KERNEL_DEBUG_INFO:-1}"
 
 TFM_BUILD_DIR="${WORK_DIR}/trusted-firmware-m"
@@ -57,6 +59,8 @@ BUILDROOT_EXTERNAL="${WORK_DIR}/buildroot-external"
 BUILDROOT_OVERLAY="${WORK_DIR}/buildroot-overlay"
 BUILDROOT_TOOLCHAIN_DIR="${WORK_DIR}/buildroot-toolchain"
 BUILDROOT_TOOLCHAIN_SYSROOT="${BUILDROOT_TOOLCHAIN_DIR}/sysroot"
+ARM_SI_RPROC_BUILD_DIR="${WORK_DIR}/arm-si-rproc-mod"
+RPMSG_NET_BUILD_DIR="${WORK_DIR}/rpmsg-net-mod"
 PFDI_MISC_BUILD_DIR="${WORK_DIR}/pfdi-misc-mod"
 PFDI_LOCAL_AGENT_BUILD_DIR="${WORK_DIR}/pfdi-local-agent"
 SIGN_DIR="${WORK_DIR}/signing"
@@ -101,7 +105,7 @@ Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
-  KERNEL_MODULES_AUTOLOAD="openvswitch pfdi_misc" ./local-build.sh build
+  KERNEL_MODULES_AUTOLOAD="bridge virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc" ./local-build.sh build
   KERNEL_DEBUG_INFO=0 ./local-build.sh build
 EOF
 }
@@ -437,6 +441,37 @@ zephyr_modules_arg()
     printf '%s\n' "${modules[*]}"
 }
 
+validate_zephyr_cl1_features()
+{
+    local config="${ZEPHYR_BUILD_DIR}/zephyr/.config"
+    require_file "${config}"
+
+    local required=(
+        "CONFIG_MBOX_MHUV3=y"
+        "CONFIG_OPENAMP=y"
+        "CONFIG_VETH_RPMSG=y"
+        "CONFIG_NETWORKING=y"
+        "CONFIG_NET_IPV4=y"
+        "CONFIG_NET_ZPERF=y"
+        "CONFIG_NET_CONFIG_MY_IPV4_ADDR=\"192.168.1.1\""
+        "CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"192.168.1.2\""
+        "CONFIG_PFDI_MODULE=y"
+        "CONFIG_PFDI_MGMT=y"
+    )
+
+    if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
+        required+=("CONFIG_PFDI_AGENT=y")
+    fi
+
+    local symbol
+    for symbol in "${required[@]}"; do
+        grep -qxF "${symbol}" "${config}" ||
+            die "Safety Island CL1 is missing required Zephyr config: ${symbol}"
+    done
+
+    log "Validated Safety Island CL1 HIPC/zperf/PFDI Zephyr config"
+}
+
 build_zephyr()
 {
     require_dir "${ZEPHYRPROJECT_SRC}"
@@ -496,6 +531,7 @@ build_zephyr()
         -Wno-dev
 
     run_logged zephyr-build cmake --build "${ZEPHYR_BUILD_DIR}" --parallel "${JOBS}"
+    validate_zephyr_cl1_features
 
     install_artifact "${ZEPHYR_BUILD_DIR}/zephyr/zephyr.bin" "${FW_DIR}/zephyr-demos-cl1.bin"
     install_artifact "${ZEPHYR_BUILD_DIR}/zephyr/zephyr.elf" "${FW_DIR}/zephyr-demos-cl1.elf"
@@ -826,7 +862,7 @@ buildroot_env()
 prepare_buildroot_overlay()
 {
     rm -rf "${BUILDROOT_OVERLAY}"
-    mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d}
+    mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d,usr/bin}
     chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
 
     local module
@@ -870,6 +906,11 @@ load_modules()
 load_modules
 lsmod 2>/dev/null || true
 
+if [ -x /usr/bin/apollo-network-setup ]; then
+    echo "local-initramfs: starting apollo-network-setup"
+    /usr/bin/apollo-network-setup
+fi
+
 if [ -x /usr/bin/pfdi-local-agent ]; then
     echo "local-initramfs: starting pfdi-local-agent"
     /usr/bin/pfdi-local-agent \
@@ -885,6 +926,99 @@ echo "apollo-fvp login:"
 exec /bin/sh -i
 EOF
     chmod 0755 "${BUILDROOT_OVERLAY}/init"
+
+cat > "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" <<'EOF'
+#!/bin/sh
+set -u
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+export PATH
+
+bind_rpmsg_netdev()
+{
+    local driver
+    local path
+    local name
+    local dev
+
+    for driver in rpmsg_netdev rpmsg_net; do
+        [ -d "/sys/bus/rpmsg/drivers/${driver}" ] || continue
+
+        for path in /sys/bus/rpmsg/devices/*; do
+            [ -e "${path}/name" ] || continue
+            read -r name < "${path}/name" || continue
+            [ "${name}" = "ethsi1" ] || continue
+            [ ! -L "${path}/driver" ] || return 0
+
+            dev="${path##*/}"
+            echo "${driver}" > "${path}/driver_override" 2>/dev/null || true
+            if echo "${dev}" > "/sys/bus/rpmsg/drivers/${driver}/bind" 2>/dev/null; then
+                echo "apollo-network-setup: bound ${dev} to ${driver}"
+                return 0
+            fi
+            echo "apollo-network-setup: failed to bind ${dev} to ${driver}"
+        done
+    done
+}
+
+dump_rpmsg_sysfs()
+{
+    local path
+    local driver
+    local name
+    local modalias
+
+    echo "apollo-network-setup: rpmsg drivers:"
+    ls -1 /sys/bus/rpmsg/drivers 2>/dev/null || true
+
+    for path in /sys/bus/rpmsg/devices/*; do
+        [ -e "${path}" ] || continue
+        name="$(cat "${path}/name" 2>/dev/null || true)"
+        modalias="$(cat "${path}/modalias" 2>/dev/null || true)"
+        driver="none"
+        [ ! -L "${path}/driver" ] ||
+            driver="$(basename "$(readlink "${path}/driver")")"
+        echo "apollo-network-setup: rpmsg device ${path##*/} name=${name:-unknown} modalias=${modalias:-unknown} driver=${driver}"
+    done
+}
+
+for _ in 1 2 3 4 5 6 7 8 9 10 \
+    11 12 13 14 15 16 17 18 19 20 \
+    21 22 23 24 25 26 27 28 29 30; do
+    ip link show ethsi1 >/dev/null 2>&1 && break
+    bind_rpmsg_netdev
+    ip link show ethsi1 >/dev/null 2>&1 && break
+    sleep 1
+done
+
+if ! ip link show ethsi1 >/dev/null 2>&1; then
+    dump_rpmsg_sysfs
+    echo "apollo-network-setup: ethsi1 is not available"
+    exit 1
+fi
+
+modprobe bridge 2>/dev/null || true
+ip link add name brsi1 type bridge 2>/dev/null || true
+if ! ip link show brsi1 >/dev/null 2>&1; then
+    echo "apollo-network-setup: brsi1 is not available"
+    exit 1
+fi
+ip link set ethsi1 master brsi1 2>/dev/null || true
+if ! ip addr replace 192.168.1.2/24 dev brsi1; then
+    echo "apollo-network-setup: failed to configure brsi1"
+    exit 1
+fi
+if ! ip link set ethsi1 up; then
+    echo "apollo-network-setup: failed to bring up ethsi1"
+    exit 1
+fi
+if ! ip link set brsi1 up; then
+    echo "apollo-network-setup: failed to bring up brsi1"
+    exit 1
+fi
+ip -br addr show brsi1 ethsi1 2>/dev/null || true
+echo "apollo-network-setup: configured brsi1/ethsi1"
+EOF
+    chmod 0755 "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup"
 }
 
 prepare_buildroot_external()
@@ -953,12 +1087,60 @@ BR2_PACKAGE_BUSYBOX=y
 BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
 BR2_PACKAGE_KMOD=y
 BR2_PACKAGE_KMOD_TOOLS=y
+BR2_PACKAGE_IPROUTE2=y
+BR2_PACKAGE_LIBMNL=y
+BR2_PACKAGE_LIBCAP=y
+BR2_PACKAGE_ELFUTILS=y
+BR2_PACKAGE_IPERF=y
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_GZIP=y
 # BR2_TARGET_ROOTFS_TAR is not set
 # BR2_LINUX_KERNEL is not set
 EOF
     printf '%s\n' "${defconfig}"
+}
+
+validate_buildroot_zena_packages()
+{
+    local config="${BUILDROOT_BUILD_DIR}/.config"
+    require_file "${config}"
+
+    local required=(
+        "BR2_PACKAGE_KMOD=y"
+        "BR2_PACKAGE_KMOD_TOOLS=y"
+        "BR2_PACKAGE_IPROUTE2=y"
+        "BR2_PACKAGE_LIBMNL=y"
+        "BR2_PACKAGE_LIBCAP=y"
+        "BR2_PACKAGE_ELFUTILS=y"
+        "BR2_PACKAGE_IPERF=y"
+    )
+
+    local symbol
+    for symbol in "${required[@]}"; do
+        grep -qxF "${symbol}" "${config}" ||
+            die "Buildroot is missing required Arm Zena CSS package: ${symbol}"
+    done
+
+    log "Validated Buildroot Arm Zena CSS package selection"
+}
+
+validate_buildroot_runtime_files()
+{
+    require_file "${BUILDROOT_BUILD_DIR}/target/sbin/ip"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/iperf"
+
+    local lib
+    for lib in libmnl.so.0 libcap.so.2 libelf.so.1; do
+        find "${BUILDROOT_BUILD_DIR}/target" -name "${lib}" -print -quit |
+            grep -q . ||
+            die "Buildroot target is missing runtime dependency: ${lib}"
+    done
+
+    if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
+        require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-local-agent"
+    fi
+
+    log "Validated Buildroot Arm Zena CSS runtime files"
 }
 
 kernel_release()
@@ -991,23 +1173,59 @@ sign_kernel_module()
         "${sign_file}" "${hash}" "${key}" "${cert}" "${module}"
 }
 
+build_external_kernel_module()
+{
+    local name="$1"
+    local src="$2"
+    local build_dir="$3"
+    local module="$4"
+    local release="$5"
+    require_dir "${src}"
+
+    rm -rf "${build_dir}"
+    mkdir -p "${build_dir}"
+    cp -a "${src}/." "${build_dir}/"
+
+    run_logged "${name}-build" make -C "${LINUX_SRC}" \
+        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        M="${build_dir}" modules
+
+    sign_kernel_module "${build_dir}/${module}.ko"
+
+    install_artifact "${build_dir}/${module}.ko" \
+        "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/${module}.ko"
+}
+
+build_arm_si_rproc_module()
+{
+    build_external_kernel_module arm-si-rproc "${ARM_SI_RPROC_SRC}" \
+        "${ARM_SI_RPROC_BUILD_DIR}" arm_si_rproc "$1"
+}
+
+build_rpmsg_net_module()
+{
+    build_external_kernel_module rpmsg-net "${RPMSG_NET_SRC}" \
+        "${RPMSG_NET_BUILD_DIR}" rpmsg_net "$1"
+}
+
 build_pfdi_misc_module()
 {
+    build_external_kernel_module pfdi-misc "${PFDI_MISC_SRC}" \
+        "${PFDI_MISC_BUILD_DIR}" pfdi_misc "$1"
+}
+
+validate_zena_kernel_modules_overlay()
+{
     local release="$1"
-    require_dir "${PFDI_MISC_SRC}"
+    local module
 
-    rm -rf "${PFDI_MISC_BUILD_DIR}"
-    mkdir -p "${PFDI_MISC_BUILD_DIR}"
-    cp -a "${PFDI_MISC_SRC}/." "${PFDI_MISC_BUILD_DIR}/"
+    for module in arm_si_rproc rpmsg_net pfdi_misc; do
+        if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" ${module} "* ]]; then
+            require_file "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/${module}.ko"
+        fi
+    done
 
-    run_logged pfdi-misc-build make -C "${LINUX_SRC}" \
-        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        M="${PFDI_MISC_BUILD_DIR}" modules
-
-    sign_kernel_module "${PFDI_MISC_BUILD_DIR}/pfdi_misc.ko"
-
-    install_artifact "${PFDI_MISC_BUILD_DIR}/pfdi_misc.ko" \
-        "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/pfdi_misc.ko"
+    log "Validated Buildroot overlay Arm Zena CSS kernel modules"
 }
 
 build_pfdi_local_agent()
@@ -1037,6 +1255,12 @@ install_kernel_modules_overlay()
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
         INSTALL_MOD_PATH="${BUILDROOT_OVERLAY}" modules_install
 
+    if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" arm_si_rproc "* ]]; then
+        build_arm_si_rproc_module "${release}"
+    fi
+    if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" rpmsg_net "* ]]; then
+        build_rpmsg_net_module "${release}"
+    fi
     if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" pfdi_misc "* ]]; then
         build_pfdi_misc_module "${release}"
         if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
@@ -1045,6 +1269,7 @@ install_kernel_modules_overlay()
     fi
 
     run_logged linux-depmod depmod -b "${BUILDROOT_OVERLAY}" "${release}"
+    validate_zena_kernel_modules_overlay "${release}"
     find "${BUILDROOT_OVERLAY}/lib/modules/${release}" \
         \( -name build -o -name source \) -type l -delete
 }
@@ -1064,6 +1289,7 @@ build_buildroot_initramfs()
     run_logged buildroot-defconfig buildroot_env make -C "${BUILDROOT_SRC}" \
         O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
         BR2_DEFCONFIG="${defconfig}" defconfig
+    validate_buildroot_zena_packages
     rm -rf "${BUILDROOT_BUILD_DIR}/build/toolchain" \
         "${BUILDROOT_BUILD_DIR}/build/toolchain-external" \
         "${BUILDROOT_BUILD_DIR}/build/toolchain-external-custom"
@@ -1072,6 +1298,7 @@ build_buildroot_initramfs()
     run_logged buildroot-build buildroot_env make -C "${BUILDROOT_SRC}" \
         O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
         -j "${JOBS}"
+    validate_buildroot_runtime_files
 
     require_file "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz"
     install_artifact "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz" \
