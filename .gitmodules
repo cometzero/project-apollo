@@ -90,6 +90,7 @@
 	path = hsoc-apollo/components/primary_compute/optee-os
 	url = git@github.com:cometzero/optee_os.git
 	branch = apollo-fvp-optee-4.7
-[submodule "hsoc-apollo/components/primary_compute/busybox"]
-	path = hsoc-apollo/components/primary_compute/busybox
-	url = https://github.com/mirror/busybox
+[submodule "hsoc-apollo/components/primary_compute/buildroot"]
+	path = hsoc-apollo/components/primary_compute/buildroot
+	url = https://gitlab.com/buildroot.org/buildroot.git
+	branch = 2026.02.x

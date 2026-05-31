@@ -26,7 +26,8 @@ TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/trusted-f
 OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/optee-os}"
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/u-boot}"
 LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/linux}"
-BUSYBOX_SRC="${BUSYBOX_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/busybox}"
+BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/buildroot}"
+PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src}"
 
 AARCH64_PREFIX="${AARCH64_PREFIX:-aarch64-poky-linux-}"
 ARM_NONE_EABI_PREFIX="${ARM_NONE_EABI_PREFIX:-arm-none-eabi-}"
@@ -36,6 +37,7 @@ PC_CPUS_COUNT="${PC_CPUS_COUNT:-4}"
 NR_IMAGES_PER_FWU_BANK="${NR_IMAGES_PER_FWU_BANK:-5}"
 PFDI_SUPPORT="${PFDI_SUPPORT:-1}"
 PFDI_MONITOR_SUPPORT="${PFDI_MONITOR_SUPPORT:-1}"
+KERNEL_MODULES_AUTOLOAD="${KERNEL_MODULES_AUTOLOAD:-openvswitch pfdi_misc}"
 
 TFM_BUILD_DIR="${WORK_DIR}/trusted-firmware-m"
 SCP_BUILD_DIR="${WORK_DIR}/scp-firmware"
@@ -43,8 +45,12 @@ UBOOT_BUILD_DIR="${WORK_DIR}/u-boot"
 OPTEE_BUILD_DIR="${WORK_DIR}/optee-os"
 TFA_BUILD_DIR="${WORK_DIR}/trusted-firmware-a"
 LINUX_BUILD_DIR="${WORK_DIR}/linux"
-BUSYBOX_BUILD_DIR="${WORK_DIR}/busybox"
-INITRAMFS_ROOT="${WORK_DIR}/initramfs-root"
+BUILDROOT_BUILD_DIR="${WORK_DIR}/buildroot"
+BUILDROOT_EXTERNAL="${WORK_DIR}/buildroot-external"
+BUILDROOT_OVERLAY="${WORK_DIR}/buildroot-overlay"
+BUILDROOT_TOOLCHAIN_DIR="${WORK_DIR}/buildroot-toolchain"
+BUILDROOT_TOOLCHAIN_SYSROOT="${BUILDROOT_TOOLCHAIN_DIR}/sysroot"
+PFDI_MISC_BUILD_DIR="${WORK_DIR}/pfdi-misc-mod"
 SIGN_DIR="${WORK_DIR}/signing"
 FW_DIR="${DEPLOY_DIR}/firmware"
 BOOT_DIR="${DEPLOY_DIR}/boot"
@@ -78,13 +84,14 @@ Usage: ./local-build.sh [command]
 Commands:
   all       Build/install SDK if needed, build local images, and boot FVP.
   sdk       Build and install the Yocto SDK under build/local-sdk.
-  build     Build local TF-M/SCP/OP-TEE/U-Boot/TF-A/Linux/BusyBox images.
+  build     Build local TF-M/SCP/OP-TEE/U-Boot/TF-A/Linux/Buildroot images.
   boot      Boot the latest local images on apollo-fvp and validate logs.
   clean     Remove build/local-apollo-fvp.
 
 Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
+  KERNEL_MODULES_AUTOLOAD="openvswitch pfdi_misc" ./local-build.sh build
 EOF
 }
 
@@ -195,6 +202,7 @@ source_sdk()
     set -u
 
     AARCH64_PREFIX="${TARGET_PREFIX:-${AARCH64_PREFIX}}"
+    SDK_NATIVE_SYSROOT="${OECORE_NATIVE_SYSROOT:-}"
     SDK_TARGET_SYSROOT="${SDKTARGETSYSROOT:-}"
 
     # Component build systems receive explicit cross prefixes. Yocto SDK flags
@@ -237,6 +245,7 @@ setup_build_environment()
     require_command mkimage
     require_command cpio
     require_command gzip
+    require_command depmod
     require_command sgdisk
     require_command mkfs.vfat
     require_command mcopy
@@ -559,7 +568,7 @@ build_linux()
         olddefconfig
     run_logged linux-build make -C "${LINUX_SRC}" \
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        Image dtbs -j "${JOBS}"
+        Image dtbs modules -j "${JOBS}"
 
     local image="${LINUX_BUILD_DIR}/arch/arm64/boot/Image"
     local dtb="${LINUX_BUILD_DIR}/arch/arm64/boot/dts/arm/apollo-fvp.dtb"
@@ -569,134 +578,94 @@ build_linux()
     install_artifact "${dtb}" "${BOOT_DIR}/apollo-fvp.dtb"
 }
 
-copy_busybox_shared_libs()
+prepare_buildroot_toolchain()
 {
-    local busybox="$1"
-    local rootfs="$2"
-    [[ -n "${SDK_TARGET_SYSROOT:-}" ]] || die "SDKTARGETSYSROOT is not set; cannot copy dynamic libraries"
+    [[ -n "${SDK_NATIVE_SYSROOT:-}" ]] ||
+        die "OECORE_NATIVE_SYSROOT is not set; source the Yocto SDK first"
+    [[ -n "${SDK_TARGET_SYSROOT:-}" ]] ||
+        die "SDKTARGETSYSROOT is not set; source the Yocto SDK first"
 
-    local interp
-    interp="$("${AARCH64_PREFIX}readelf" -l "${busybox}" \
-        | sed -n 's/.*Requesting program interpreter: \(.*\)]/\1/p')"
-    if [[ -n "${interp}" ]]; then
-        require_file "${SDK_TARGET_SYSROOT}${interp}"
-        install -D -m 0755 "${SDK_TARGET_SYSROOT}${interp}" "${rootfs}${interp}"
-        install -D -m 0755 "${SDK_TARGET_SYSROOT}${interp}" \
-            "${rootfs}/usr/lib/$(basename "${interp}")"
+    local tuple="${AARCH64_PREFIX%-}"
+    local real_bin="${SDK_NATIVE_SYSROOT}/usr/bin/${tuple}"
+    require_dir "${real_bin}"
+
+    rm -rf "${BUILDROOT_TOOLCHAIN_DIR}"
+    mkdir -p "${BUILDROOT_TOOLCHAIN_DIR}/bin" "${BUILDROOT_TOOLCHAIN_SYSROOT}"
+    cp -al "${SDK_TARGET_SYSROOT}/." "${BUILDROOT_TOOLCHAIN_SYSROOT}/"
+    rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf"
+    rm -rf "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf.d"
+    rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/usr/bin/sudo"
+
+    # The Yocto SDK used here ships dynamic glibc development files but omits
+    # libc.a. Buildroot's external-toolchain sysroot detection still keys off
+    # `gcc -print-file-name=libc.a`, so provide an empty archive marker in the
+    # generated Buildroot-only sysroot without changing the SDK contents.
+    local libc_a="${BUILDROOT_TOOLCHAIN_SYSROOT}/usr/lib/libc.a"
+    if [[ ! -e "${libc_a}" ]]; then
+        mkdir -p "$(dirname "${libc_a}")"
+        "${AARCH64_PREFIX}ar" rcs "${libc_a}"
     fi
 
-    local lib
-    while read -r lib; do
-        [[ -n "${lib}" ]] || continue
-        local src
-        src="$(find "${SDK_TARGET_SYSROOT}/lib" "${SDK_TARGET_SYSROOT}/usr/lib" \
-            -name "${lib}" -type f -print -quit 2>/dev/null || true)"
-        [[ -n "${src}" ]] || die "could not find ${lib} in ${SDK_TARGET_SYSROOT}"
-        install -D -m 0755 "${src}" "${rootfs}/lib/${lib}"
-        install -D -m 0755 "${src}" "${rootfs}/usr/lib/${lib}"
-    done < <("${AARCH64_PREFIX}readelf" -d "${busybox}" \
-        | awk '/Shared library/ { gsub(/\[|\]/, "", $5); print $5 }')
+    local src
+    local name
+    shopt -s nullglob
+    for src in "${real_bin}/${AARCH64_PREFIX}"*; do
+        name="$(basename "${src}")"
+        case "${name}" in
+            "${AARCH64_PREFIX}gcc"|\
+            "${AARCH64_PREFIX}g++"|\
+            "${AARCH64_PREFIX}c++"|\
+            "${AARCH64_PREFIX}cpp")
+                continue
+                ;;
+        esac
+        ln -sf "${src}" "${BUILDROOT_TOOLCHAIN_DIR}/bin/${name}"
+    done
+    shopt -u nullglob
+
+    local tool
+    local real
+    for tool in gcc g++ c++ cpp; do
+        real="${real_bin}/${AARCH64_PREFIX}${tool}"
+        [[ -x "${real}" ]] || continue
+        rm -f "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}${tool}"
+        {
+            printf '#!/usr/bin/env bash\n'
+            printf 'exec %q --sysroot=%q "$@"\n' "${real}" "${BUILDROOT_TOOLCHAIN_SYSROOT}"
+        } > "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}${tool}"
+        chmod +x "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}${tool}"
+    done
+
+    require_file "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}gcc"
 }
 
-busybox_config_set()
+buildroot_env()
 {
-    local key="$1"
-    local value="$2"
-    local config="${BUSYBOX_BUILD_DIR}/.config"
-
-    if grep -q "^${key}=" "${config}"; then
-        sed -i "s|^${key}=.*|${key}=${value}|" "${config}"
-    elif grep -q "^# ${key} is not set" "${config}"; then
-        sed -i "s|^# ${key} is not set|${key}=${value}|" "${config}"
-    else
-        printf '%s=%s\n' "${key}" "${value}" >> "${config}"
-    fi
+    env \
+        -u CONFIG_SITE \
+        -u PKG_CONFIG_PATH \
+        -u PKG_CONFIG_SYSROOT_DIR \
+        -u PKG_CONFIG_LIBDIR \
+        -u PERL5LIB \
+        -u PERL_LOCAL_LIB_ROOT \
+        -u PERL_MB_OPT \
+        -u PERL_MM_OPT \
+        PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH}" \
+        "$@"
 }
 
-busybox_config_disable()
+prepare_buildroot_overlay()
 {
-    local key="$1"
-    local config="${BUSYBOX_BUILD_DIR}/.config"
+    rm -rf "${BUILDROOT_OVERLAY}"
+    mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d}
+    chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
 
-    if grep -q "^${key}=" "${config}"; then
-        sed -i "s|^${key}=.*|# ${key} is not set|" "${config}"
-    elif ! grep -q "^# ${key} is not set" "${config}"; then
-        printf '# %s is not set\n' "${key}" >> "${config}"
-    fi
-}
+    local module
+    for module in ${KERNEL_MODULES_AUTOLOAD}; do
+        printf '%s\n' "${module}"
+    done > "${BUILDROOT_OVERLAY}/etc/modules-load.d/apollo-fvp.conf"
 
-busybox_oldconfig()
-{
-    local name="$1"
-    run_logged "${name}" bash -c \
-        'yes "" | make -C "$1" O="$2" ARCH=arm64 CROSS_COMPILE="$3" oldconfig' \
-        _ "${BUSYBOX_SRC}" "${BUSYBOX_BUILD_DIR}" "${AARCH64_PREFIX}"
-}
-
-build_busybox_initramfs()
-{
-    require_dir "${BUSYBOX_SRC}"
-    mkdir -p "${BUSYBOX_BUILD_DIR}" "${BOOT_DIR}"
-
-    run_logged busybox-allnoconfig make -C "${BUSYBOX_SRC}" \
-        O="${BUSYBOX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        allnoconfig
-    busybox_config_set CONFIG_CROSS_COMPILER_PREFIX "\"${AARCH64_PREFIX}\""
-    busybox_config_set CONFIG_SYSROOT "\"${SDK_TARGET_SYSROOT}\""
-    busybox_config_set CONFIG_BUSYBOX y
-    busybox_config_set CONFIG_FEATURE_INSTALLER y
-    busybox_config_set CONFIG_INSTALL_APPLET_SYMLINKS y
-    busybox_config_disable CONFIG_INSTALL_APPLET_HARDLINKS
-    busybox_config_disable CONFIG_INSTALL_APPLET_SCRIPT_WRAPPERS
-    busybox_config_disable CONFIG_INSTALL_APPLET_DONT
-    busybox_config_set CONFIG_PREFIX "\"./_install\""
-    busybox_config_set CONFIG_SH_IS_ASH y
-    busybox_config_disable CONFIG_SH_IS_HUSH
-    busybox_config_disable CONFIG_SH_IS_NONE
-    busybox_config_set CONFIG_SHELL_ASH y
-    busybox_config_set CONFIG_ASH y
-    busybox_config_set CONFIG_ASH_ECHO y
-    busybox_config_set CONFIG_ASH_PRINTF y
-    busybox_config_set CONFIG_ASH_TEST y
-    busybox_config_set CONFIG_ASH_SLEEP y
-    busybox_config_set CONFIG_CAT y
-    busybox_config_set CONFIG_ECHO y
-    busybox_config_set CONFIG_FALSE y
-    busybox_config_set CONFIG_TRUE y
-    busybox_config_set CONFIG_LS y
-    busybox_config_set CONFIG_MKDIR y
-    busybox_config_set CONFIG_MOUNT y
-    busybox_config_set CONFIG_PS y
-    busybox_config_set CONFIG_UMOUNT y
-    busybox_config_set CONFIG_UNAME y
-    busybox_config_set CONFIG_STATIC y
-    busybox_oldconfig busybox-static-oldconfig
-
-    if ! run_logged busybox-static-build make -C "${BUSYBOX_SRC}" \
-        O="${BUSYBOX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        -j "${JOBS}"; then
-        log "Static BusyBox build failed; retrying as dynamic BusyBox"
-        busybox_config_disable CONFIG_STATIC
-        busybox_oldconfig busybox-dynamic-oldconfig
-        run_logged busybox-dynamic-build make -C "${BUSYBOX_SRC}" \
-            O="${BUSYBOX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-            -j "${JOBS}"
-    fi
-
-    rm -rf "${INITRAMFS_ROOT}"
-    run_logged busybox-install make -C "${BUSYBOX_SRC}" \
-        O="${BUSYBOX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        CONFIG_PREFIX="${INITRAMFS_ROOT}" install
-
-    mkdir -p "${INITRAMFS_ROOT}"/{dev,proc,sys,tmp,run,etc,lib,usr/lib}
-    chmod 1777 "${INITRAMFS_ROOT}/tmp"
-
-    if "${AARCH64_PREFIX}readelf" -l "${INITRAMFS_ROOT}/bin/busybox" \
-        | grep -q 'Requesting program interpreter'; then
-        copy_busybox_shared_libs "${INITRAMFS_ROOT}/bin/busybox" "${INITRAMFS_ROOT}"
-    fi
-
-    cat > "${INITRAMFS_ROOT}/init" <<'EOF'
+    cat > "${BUILDROOT_OVERLAY}/init" <<'EOF'
 #!/bin/sh
 mount -t devtmpfs devtmpfs /dev 2>/dev/null || mount -t tmpfs devtmpfs /dev
 if [ -e /dev/console ]; then
@@ -704,18 +673,206 @@ if [ -e /dev/console ]; then
 fi
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
-echo "Apollo FVP local BusyBox initramfs"
+mount -t tmpfs tmpfs /run 2>/dev/null || true
+
+echo "Apollo FVP local Buildroot initramfs"
 echo "local-initramfs: booted"
 cat /proc/cmdline
+
+load_modules()
+{
+    local conf
+    local module
+    local args
+
+    for conf in /etc/modules-load.d/*.conf /usr/lib/modules-load.d/*.conf; do
+        [ -e "${conf}" ] || continue
+        while read -r module args; do
+            case "${module}" in
+                ""|\#*) continue ;;
+            esac
+            echo "local-initramfs: modprobe ${module}"
+            modprobe "${module}" ${args} ||
+                echo "local-initramfs: modprobe ${module} failed"
+        done < "${conf}"
+    done
+}
+
+load_modules
+lsmod 2>/dev/null || true
+
 echo "apollo-fvp login:"
 exec /bin/sh -i
 EOF
-    chmod 0755 "${INITRAMFS_ROOT}/init"
+    chmod 0755 "${BUILDROOT_OVERLAY}/init"
+}
 
-    (
-        cd "${INITRAMFS_ROOT}"
-        find . -print0 | cpio --null -ov --format=newc | gzip -9
-    ) > "${BOOT_DIR}/initramfs.cpio.gz"
+prepare_buildroot_external()
+{
+    rm -rf "${BUILDROOT_EXTERNAL}"
+    mkdir -p "${BUILDROOT_EXTERNAL}"
+
+    cat > "${BUILDROOT_EXTERNAL}/external.desc" <<'EOF'
+name: APOLLO_FVP
+desc: Apollo FVP local Buildroot customizations
+EOF
+
+    cat > "${BUILDROOT_EXTERNAL}/Config.in" <<'EOF'
+# Apollo FVP does not currently add Buildroot packages.
+EOF
+
+    cat > "${BUILDROOT_EXTERNAL}/external.mk" <<'EOF'
+define APOLLO_FVP_REMOVE_LDCONF
+	rm -f $(TARGET_DIR)/etc/ld.so.conf
+	rm -rf $(TARGET_DIR)/etc/ld.so.conf.d
+endef
+TARGET_FINALIZE_HOOKS += APOLLO_FVP_REMOVE_LDCONF
+EOF
+}
+
+write_buildroot_defconfig()
+{
+    mkdir -p "${BUILDROOT_BUILD_DIR}"
+    local tuple="${AARCH64_PREFIX%-}"
+    local defconfig="${BUILDROOT_BUILD_DIR}/apollo-fvp-buildroot_defconfig"
+    local headers_major
+    local headers_patchlevel
+    headers_major="$(sed -n 's/^#define LINUX_VERSION_MAJOR //p' \
+        "${SDK_TARGET_SYSROOT}/usr/include/linux/version.h")"
+    headers_patchlevel="$(sed -n 's/^#define LINUX_VERSION_PATCHLEVEL //p' \
+        "${SDK_TARGET_SYSROOT}/usr/include/linux/version.h")"
+    [[ -n "${headers_major}" && -n "${headers_patchlevel}" ]] ||
+        die "could not read SDK kernel headers version"
+
+    cat > "${defconfig}" <<EOF
+BR2_aarch64=y
+BR2_cortex_a720=y
+BR2_TOOLCHAIN_EXTERNAL=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM=y
+BR2_TOOLCHAIN_EXTERNAL_PREINSTALLED=y
+BR2_TOOLCHAIN_EXTERNAL_PATH="${BUILDROOT_TOOLCHAIN_DIR}"
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_PREFIX="${tuple}"
+BR2_TOOLCHAIN_EXTERNAL_GCC_14=y
+BR2_TOOLCHAIN_EXTERNAL_HEADERS_${headers_major}_${headers_patchlevel}=y
+BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
+BR2_TOOLCHAIN_EXTERNAL_CXX=y
+BR2_TOOLCHAIN_EXTERNAL_HAS_SSP=y
+BR2_TOOLCHAIN_EXTERNAL_HAS_SSP_STRONG=y
+# BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
+BR2_TARGET_GENERIC_HOSTNAME="apollo-fvp"
+BR2_TARGET_GENERIC_ISSUE="Apollo FVP Buildroot"
+BR2_INIT_NONE=y
+BR2_SYSTEM_BIN_SH_BUSYBOX=y
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
+BR2_ROOTFS_OVERLAY="${BUILDROOT_OVERLAY}"
+BR2_PACKAGE_BUSYBOX=y
+BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_KMOD=y
+BR2_PACKAGE_KMOD_TOOLS=y
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_CPIO_GZIP=y
+# BR2_TARGET_ROOTFS_TAR is not set
+# BR2_LINUX_KERNEL is not set
+EOF
+    printf '%s\n' "${defconfig}"
+}
+
+kernel_release()
+{
+    make -s -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" \
+        ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" kernelrelease
+}
+
+kernel_module_sig_hash()
+{
+    sed -n 's/^CONFIG_MODULE_SIG_HASH="\(.*\)"$/\1/p' "${LINUX_BUILD_DIR}/.config"
+}
+
+sign_kernel_module()
+{
+    local module="$1"
+    local hash
+    hash="$(kernel_module_sig_hash)"
+    [[ -n "${hash}" ]] || hash="sha256"
+
+    local sign_file="${LINUX_BUILD_DIR}/scripts/sign-file"
+    local key="${LINUX_BUILD_DIR}/modsign_key.pem"
+    local cert="${LINUX_BUILD_DIR}/certs/signing_key.x509"
+    require_file "${sign_file}"
+    require_file "${key}"
+    require_file "${cert}"
+    require_file "${module}"
+
+    run_logged "sign-$(basename "${module}")" \
+        "${sign_file}" "${hash}" "${key}" "${cert}" "${module}"
+}
+
+build_pfdi_misc_module()
+{
+    local release="$1"
+    require_dir "${PFDI_MISC_SRC}"
+
+    rm -rf "${PFDI_MISC_BUILD_DIR}"
+    mkdir -p "${PFDI_MISC_BUILD_DIR}"
+    cp -a "${PFDI_MISC_SRC}/." "${PFDI_MISC_BUILD_DIR}/"
+
+    run_logged pfdi-misc-build make -C "${LINUX_SRC}" \
+        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        M="${PFDI_MISC_BUILD_DIR}" modules
+
+    sign_kernel_module "${PFDI_MISC_BUILD_DIR}/pfdi_misc.ko"
+
+    install_artifact "${PFDI_MISC_BUILD_DIR}/pfdi_misc.ko" \
+        "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/pfdi_misc.ko"
+}
+
+install_kernel_modules_overlay()
+{
+    local release
+    release="$(kernel_release)"
+    [[ -n "${release}" ]] || die "could not determine kernel release"
+
+    rm -rf "${BUILDROOT_OVERLAY}/lib/modules/${release}"
+    run_logged linux-modules-install make -C "${LINUX_SRC}" \
+        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        INSTALL_MOD_PATH="${BUILDROOT_OVERLAY}" modules_install
+
+    if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" pfdi_misc "* ]]; then
+        build_pfdi_misc_module "${release}"
+    fi
+
+    run_logged linux-depmod depmod -b "${BUILDROOT_OVERLAY}" "${release}"
+    find "${BUILDROOT_OVERLAY}/lib/modules/${release}" \
+        \( -name build -o -name source \) -type l -delete
+}
+
+build_buildroot_initramfs()
+{
+    require_dir "${BUILDROOT_SRC}"
+    mkdir -p "${BUILDROOT_BUILD_DIR}" "${BOOT_DIR}"
+
+    prepare_buildroot_toolchain
+    prepare_buildroot_external
+    prepare_buildroot_overlay
+    install_kernel_modules_overlay
+
+    local defconfig
+    defconfig="$(write_buildroot_defconfig)"
+    run_logged buildroot-defconfig buildroot_env make -C "${BUILDROOT_SRC}" \
+        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        BR2_DEFCONFIG="${defconfig}" defconfig
+    rm -rf "${BUILDROOT_BUILD_DIR}/build/toolchain" \
+        "${BUILDROOT_BUILD_DIR}/build/toolchain-external" \
+        "${BUILDROOT_BUILD_DIR}/build/toolchain-external-custom"
+    rm -f "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf"
+    rm -rf "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf.d"
+    run_logged buildroot-build buildroot_env make -C "${BUILDROOT_SRC}" \
+        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        -j "${JOBS}"
+
+    require_file "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz"
+    install_artifact "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz" \
+        "${BOOT_DIR}/initramfs.cpio.gz"
 }
 
 normalize_image_version()
@@ -1044,7 +1201,7 @@ build_all()
     build_optee
     build_tfa
     build_linux
-    build_busybox_initramfs
+    build_buildroot_initramfs
     package_flash_images
     create_boot_disk
     create_fvpconf
