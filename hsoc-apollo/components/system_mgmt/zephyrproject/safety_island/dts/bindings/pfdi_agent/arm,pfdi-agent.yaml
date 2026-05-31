@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: <text>Copyright 2026 Arm Limited and/or its
+# affiliates <open-source-office@arm.com></text>
+#
+# SPDX-License-Identifier: Apache-2.0
+---
+description: |
+  ARM PFDI Agent - Sends PFDI status to PFDI monitor software on the host.
+  Uses SCMI protocol over MHUv3 doorbell with shared memory
+
+compatible: "arm,pfdi-agent"
+
+include: base.yaml
+
+properties:
+  mboxes:
+    type: phandle-array
+    required: true
+    description: |
+      Per-core mailbox phandle-array for MHUv3 communication.
+      One entry per core, each specifying the MHU device and channel ID.
+      Channel ID encodes (doorbell_channel * 32) + flag.
+
+  shmem:
+    type: phandle
+    required: true
+    description: Reference to shared memory region for SCMI payload

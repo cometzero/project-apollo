@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 #
 
-# Apollo FVP reuses the RD-Aspen Safety Island Zephyr board until
-# Apollo-specific Safety Island board metadata is introduced.
-ZEPHYR_BOARD:apollo-fvp = "fvp_rd_aspen_safety_island_c1"
+ZEPHYR_DEMOS_CL1_HSOC_APOLLO_REQUIRE ?= ""
+ZEPHYR_DEMOS_CL1_HSOC_APOLLO_REQUIRE:apollo-fvp = "zephyr-demos-cl1-apollo-fvp.inc"
+
+require ${ZEPHYR_DEMOS_CL1_HSOC_APOLLO_REQUIRE}

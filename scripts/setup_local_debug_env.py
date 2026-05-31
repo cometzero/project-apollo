@@ -85,7 +85,7 @@ COMPONENTS = (
             "deploy/firmware/zephyr-demos-cl1.elf",
         ),
         ("z_cstart", "main"),
-        ("arm-zena-css/components/safety_island/zephyr/src",),
+        ("hsoc-apollo/components/system_mgmt/zephyrproject/safety_island",),
     ),
     Component(
         "tfa-bl2",

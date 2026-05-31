@@ -22,6 +22,9 @@ LOG_DIR="${LOCAL_BUILD_DIR}/logs"
 
 TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/trusted-firmware-m}"
 SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/scp-firmware}"
+ZEPHYRPROJECT_SRC="${ZEPHYRPROJECT_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/zephyrproject}"
+ZEPHYR_SAFETY_ISLAND_SRC="${ZEPHYR_SAFETY_ISLAND_SRC:-${ZEPHYRPROJECT_SRC}/safety_island}"
+ZEPHYR_MODULES_LIST="${ZEPHYR_MODULES_LIST:-${ZEPHYRPROJECT_SRC}/apollo-modules.list}"
 TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/trusted-firmware-a}"
 OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/optee-os}"
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/u-boot}"
@@ -32,6 +35,7 @@ PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_comp
 AARCH64_PREFIX="${AARCH64_PREFIX:-aarch64-poky-linux-}"
 ARM_NONE_EABI_PREFIX="${ARM_NONE_EABI_PREFIX:-arm-none-eabi-}"
 AARCH64_NONE_ELF_PREFIX="${AARCH64_NONE_ELF_PREFIX:-aarch64-none-elf-}"
+AARCH64_ZEPHYR_ELF_PREFIX="${AARCH64_ZEPHYR_ELF_PREFIX:-aarch64-zephyr-elf-}"
 
 PC_CPUS_COUNT="${PC_CPUS_COUNT:-4}"
 NR_IMAGES_PER_FWU_BANK="${NR_IMAGES_PER_FWU_BANK:-5}"
@@ -42,6 +46,7 @@ KERNEL_DEBUG_INFO="${KERNEL_DEBUG_INFO:-1}"
 
 TFM_BUILD_DIR="${WORK_DIR}/trusted-firmware-m"
 SCP_BUILD_DIR="${WORK_DIR}/scp-firmware"
+ZEPHYR_BUILD_DIR="${WORK_DIR}/zephyr-demos-cl1"
 UBOOT_BUILD_DIR="${WORK_DIR}/u-boot"
 OPTEE_BUILD_DIR="${WORK_DIR}/optee-os"
 TFA_BUILD_DIR="${WORK_DIR}/trusted-firmware-a"
@@ -85,12 +90,14 @@ Usage: ./local-build.sh [command]
 Commands:
   all       Build/install SDK if needed, build local images, and boot FVP.
   sdk       Build and install the Yocto SDK under build/local-sdk.
-  build     Build local TF-M/SCP/OP-TEE/U-Boot/TF-A/Linux/Buildroot images.
+  build     Build local TF-M/SCP/Zephyr/OP-TEE/U-Boot/TF-A/Linux/Buildroot images.
+  zephyr   Build only the local Safety Island CL1 Zephyr image.
   boot      Boot the latest local images on apollo-fvp and validate logs.
   clean     Remove build/local-apollo-fvp.
 
 Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
+  ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="openvswitch pfdi_misc" ./local-build.sh build
   KERNEL_DEBUG_INFO=0 ./local-build.sh build
@@ -255,6 +262,16 @@ setup_build_environment()
     require_command "${AARCH64_NONE_ELF_PREFIX}gcc"
 }
 
+setup_zephyr_build_environment()
+{
+    add_yocto_native_paths
+
+    require_command cmake
+    require_command ninja
+    require_command git
+    require_command python3
+}
+
 build_tfm()
 {
     require_dir "${TFM_SRC}"
@@ -352,6 +369,142 @@ build_scp()
         -print -quit)"
     require_file "${scp_bin}"
     install_artifact "${scp_bin}" "${FW_DIR}/si0_ramfw.bin"
+}
+
+find_zephyr_sdk_dir()
+{
+    if [[ -n "${ZEPHYR_SDK_INSTALL_DIR:-}" ]]; then
+        require_dir "${ZEPHYR_SDK_INSTALL_DIR}"
+        printf '%s\n' "${ZEPHYR_SDK_INSTALL_DIR}"
+        return 0
+    fi
+
+    local sdk="${YOCTO_TMP}/sysroots-components/x86_64/zephyr-sdk-native/usr/zephyr-sdk"
+    if [[ -d "${sdk}" ]]; then
+        printf '%s\n' "${sdk}"
+        return 0
+    fi
+
+    sdk="$(find "${YOCTO_TMP}/work" -path '*/recipe-sysroot-native/usr/zephyr-sdk' \
+        -type d -print -quit 2>/dev/null || true)"
+    [[ -n "${sdk}" ]] ||
+        die "could not find Zephyr SDK; set ZEPHYR_SDK_INSTALL_DIR or build zephyr-demos-cl1 once with Yocto"
+    printf '%s\n' "${sdk}"
+}
+
+yocto_native_python()
+{
+    local python="${YOCTO_TMP}/sysroots-components/x86_64/python3-native/usr/bin/python3-native/python3"
+    if [[ -x "${python}" ]]; then
+        printf '%s\n' "${python}"
+        return 0
+    fi
+
+    python="$(find "${YOCTO_TMP}/work" -path '*/recipe-sysroot-native/usr/bin/python3-native/python3' \
+        -type f -perm -111 -print -quit 2>/dev/null || true)"
+    if [[ -n "${python}" ]]; then
+        printf '%s\n' "${python}"
+        return 0
+    fi
+
+    command -v python3
+}
+
+yocto_native_pythonpath()
+{
+    local root="${YOCTO_TMP}/sysroots-components/x86_64"
+    [[ -d "${root}" ]] || return 0
+    find "${root}" -path '*/usr/lib/python3.13/site-packages' -type d -print |
+        paste -sd:
+}
+
+zephyr_modules_arg()
+{
+    require_file "${ZEPHYR_MODULES_LIST}"
+    local modules=()
+    local rel
+
+    while IFS= read -r rel; do
+        case "${rel}" in
+            ""|\#*) continue ;;
+        esac
+        modules+=("${ZEPHYRPROJECT_SRC}/${rel}")
+    done < "${ZEPHYR_MODULES_LIST}"
+
+    local IFS=";"
+    printf '%s\n' "${modules[*]}"
+}
+
+build_zephyr()
+{
+    require_dir "${ZEPHYRPROJECT_SRC}"
+    require_dir "${ZEPHYRPROJECT_SRC}/zephyr"
+    require_dir "${ZEPHYR_SAFETY_ISLAND_SRC}"
+    mkdir -p "${ZEPHYR_BUILD_DIR}" "${FW_DIR}"
+
+    local board="fvp_rd_aspen_safety_island_c1"
+    local zephyr_sdk
+    local python
+    local pythonpath
+    local modules
+    local overlay_config
+    local dtc_overlay
+    local saved_path="${PATH}"
+    local had_pythonpath=0
+    [[ -v PYTHONPATH ]] && had_pythonpath=1
+    local saved_pythonpath="${PYTHONPATH:-}"
+
+    zephyr_sdk="$(find_zephyr_sdk_dir)"
+    python="$(yocto_native_python)"
+    pythonpath="$(yocto_native_pythonpath)"
+    modules="$(zephyr_modules_arg)"
+    dtc_overlay="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.overlay"
+    overlay_config="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/zperf/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi/${board}.conf"
+    if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
+        dtc_overlay="${dtc_overlay};${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi_agent/${board}.overlay"
+        overlay_config="${overlay_config};${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi_agent/${board}.conf"
+    fi
+
+    export ZEPHYR_SDK_INSTALL_DIR="${zephyr_sdk}"
+    path_prepend "${zephyr_sdk}/aarch64-zephyr-elf/bin"
+    path_prepend "${zephyr_sdk}/sysroots/x86_64-pokysdk-linux/usr/bin"
+    if [[ -n "${pythonpath}" ]]; then
+        PYTHONPATH="${pythonpath}${PYTHONPATH:+:${PYTHONPATH}}"
+        export PYTHONPATH
+    fi
+    require_command "${AARCH64_ZEPHYR_ELF_PREFIX}gcc"
+
+    run_logged zephyr-configure cmake \
+        -S "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample" \
+        -B "${ZEPHYR_BUILD_DIR}" \
+        -G Ninja \
+        -DCMAKE_MAKE_PROGRAM=ninja \
+        -DPYTHON_EXECUTABLE:PATH="${python}" \
+        -DPython_EXECUTABLE:PATH="${python}" \
+        -DPython3_EXECUTABLE:PATH="${python}" \
+        -DCMAKE_TOOLCHAIN_FILE= \
+        -DZEPHYR_BASE="${ZEPHYRPROJECT_SRC}/zephyr" \
+        -DBOARD="${board}" \
+        -DZEPHYR_TOOLCHAIN_VARIANT=zephyr \
+        -DZEPHYR_MODULES="${modules}" \
+        -DZEPHYR_EXTRA_MODULES= \
+        -DUSER_CACHE_DIR="${ZEPHYR_BUILD_DIR}/.cache" \
+        -DDTC_OVERLAY_FILE="${dtc_overlay}" \
+        -DOVERLAY_CONFIG="${overlay_config}" \
+        -Wno-dev
+
+    run_logged zephyr-build cmake --build "${ZEPHYR_BUILD_DIR}" --parallel "${JOBS}"
+
+    install_artifact "${ZEPHYR_BUILD_DIR}/zephyr/zephyr.bin" "${FW_DIR}/zephyr-demos-cl1.bin"
+    install_artifact "${ZEPHYR_BUILD_DIR}/zephyr/zephyr.elf" "${FW_DIR}/zephyr-demos-cl1.elf"
+
+    PATH="${saved_path}"
+    if [[ "${had_pythonpath}" -eq 1 ]]; then
+        PYTHONPATH="${saved_pythonpath}"
+        export PYTHONPATH
+    else
+        unset PYTHONPATH
+    fi
 }
 
 build_uboot()
@@ -1048,7 +1201,10 @@ package_flash_images()
     sign_host_image "${FW_DIR}/si0_ramfw.bin" 0x70083C00 0x100000 \
         "$(pv_version scp-firmware)" "${signed}/signed_si0_ramfw.bin"
 
-    local si_cl1="${SAFETY_ISLAND_CL1_BIN:-${YOCTO_DEPLOY_DIR}/zephyr-demos-cl1.bin}"
+    local si_cl1="${SAFETY_ISLAND_CL1_BIN:-${FW_DIR}/zephyr-demos-cl1.bin}"
+    if [[ ! -f "${si_cl1}" && -z "${SAFETY_ISLAND_CL1_BIN:-}" ]]; then
+        si_cl1="${YOCTO_DEPLOY_DIR}/zephyr-demos-cl1.bin"
+    fi
     require_file "${si_cl1}"
     sign_host_image "${si_cl1}" 0x70185C00 0x100000 \
         "$(pv_version zephyr-demos-cl1)" "${signed}/signed_safety_island_cl1.bin"
@@ -1212,6 +1368,7 @@ build_all()
     mkdir -p "${WORK_DIR}" "${DEPLOY_DIR}" "${FW_DIR}" "${BOOT_DIR}" "${LOG_DIR}"
     build_tfm
     build_scp
+    build_zephyr
     build_uboot
     build_optee
     build_tfa
@@ -1240,6 +1397,10 @@ main()
         sdk)
             build_sdk
             setup_build_environment
+            ;;
+        zephyr)
+            setup_zephyr_build_environment
+            build_zephyr
             ;;
         build)
             setup_build_environment

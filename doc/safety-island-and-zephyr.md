@@ -5,11 +5,12 @@ Generated: 2026-05-15
 ## Summary
 
 The Safety Island is a Cortex-R82AE subsystem. In CFG2, Safety Island Cluster 1
-adds four SMP cores and runs Zephyr. Yocto integrates the Zephyr module from
-`arm-zena-css/components/safety_island/zephyr/src` through the
-`meta-zena-css-safety-island` layer. The important cross-domain features are
-HIPC over MHUv3/shared SRAM/RPMsg and PFDI on both Primary Compute and Safety
-Island CL1.
+adds four SMP cores and runs Zephyr. Apollo now carries the full Zephyr project
+workspace under `hsoc-apollo/components/system_mgmt/zephyrproject/` so the
+Safety Island CL1 image can be built either through Yocto `EXTERNALSRC` or
+through `./local-build.sh zephyr`. The important cross-domain features are HIPC
+over MHUv3/shared SRAM/RPMsg and PFDI on both Primary Compute and Safety Island
+CL1.
 
 ## Platform Role
 
@@ -48,7 +49,7 @@ The current generated config selects CFG2 (`.config.yaml:15`,
 
 ## Zephyr Module Layout
 
-The Yocto include file sets:
+The Yocto include file originally set:
 
 - `ZEPHYR_SAFETY_ISLAND_MODULE =
   "${ARM_ZENA_CSS_REPO_DIRECTORY}/components/safety_island/zephyr/src"`
@@ -111,7 +112,8 @@ MHUv3 mailbox:
 - `drivers/mbox/mbox_mhuv3.c`
 
 These paths were found under
-`arm-zena-css/components/safety_island/zephyr/src/`.
+`arm-zena-css/components/safety_island/zephyr/src/`; the Apollo-owned copy now
+lives under `hsoc-apollo/components/system_mgmt/zephyrproject/safety_island/`.
 
 ## HIPC
 
@@ -190,10 +192,24 @@ The current deploy directory contains Safety Island artifacts:
 These are local build outputs under
 `build/tmp_baremetal/deploy/images/fvp-rd-aspen/`, not source files.
 
+Apollo local builds produce the CL1 Zephyr image with:
+
+```bash
+./local-build.sh zephyr
+```
+
+The generated files are installed under
+`build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.bin` and
+`build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.elf`. The full
+`./local-build.sh build` flow uses those local artifacts when signing the
+Safety Island CL1 firmware image.
+
 ## Change Guidance
 
-- For Zephyr board, DTS, Kconfig, CMake, or driver changes, start under
-  `arm-zena-css/components/safety_island/zephyr/src`.
+- For Apollo Zephyr board, DTS, Kconfig, CMake, or driver changes, start under
+  `hsoc-apollo/components/system_mgmt/zephyrproject/safety_island`.
+- For Zephyr RTOS core or module dependency changes, start under
+  `hsoc-apollo/components/system_mgmt/zephyrproject`.
 - For Yocto build integration of Zephyr CL1 images, start in
   `arm-zena-css/yocto/meta-zena-css-safety-island/recipes-kernel/zephyr-kernel`.
 - For AP-side HIPC and Linux remoteproc/RPMsg integration, inspect
