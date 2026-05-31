@@ -1,155 +1,51 @@
-# Front matter
+<a id="front-matter"></a>
 
-Converted from `arm_zena_compute_subsystem_software_developer_guide_110125_0001_01_en.pdf`.
+# Arm® Zena™ Compute Subsystem Software Developer Guide
 
-<!-- Source PDF page: 1 -->
-
-Arm® Zena™ Compute Subsystem
-Revision r0p1
-
-Software Developer Guide
-
-Non-Confidential                                   Issue 01
-All rights reserved.
-
-<!-- Source PDF page: 2 -->
-
-Arm® Zena™ Compute Subsystem Software Developer Guide
+## Revision: r0p1
 
 This document is Non-Confidential.
 
-This document is protected by copyright and other intellectual property rights.
-Arm only permits use of this document if you have reviewed and accepted Arm's Proprietary Notice found at the end of
-this document.
+Copyright © 2026 Arm Limited (or its affiliates). All rights reserved.
 
-This document (110125_0001_01_en) was issued on 2026-01-27. There might be a later issue at
-https://developer.arm.com/documentation/110125
+This document is protected by copyright and other intellectual property
+rights. Arm only permits use of this document if you have reviewed and
+accepted [Arm's Terms and Conditions](https://www.arm.com/company/policies/terms-and-conditions).
 
-The product revision is r0p1.
+This document (`110125_0001_01_en`) was issued on `2026-01-27`. There
+might be a later issue at
+[https://developer.arm.com/documentation/110125](https://developer.arm.com/documentation/110125).
 
-See also: Proprietary notice | Product and document information | Useful resources
+The product revision is `r0p1`.
 
-Start reading
-If you prefer, you can skip to the start of the content.
+See also: [Terms and Conditions](https://www.arm.com/company/policies/terms-and-conditions),
+[Product and document information](91-product-and-document-information.md#product-and-document-information),
+and [Useful resources](92-useful-resources.md#useful-resources).
 
-Intended audience
-The Software Developer Guide is written for software developers that are developing software to
-run on hardware that includes the Zena CSS. The documentation does not assume prior knowledge
-of Arm products.
+## Start reading
 
-Inclusive language commitment
-Arm values inclusive communities. Arm recognizes that we and our industry have used language
-that can be offensive. Arm strives to lead the industry and create change.
+If you prefer, you can skip to [the start of the content](01-zena-css-product-highlights.md#zena-css-product-highlights).
 
-This document includes language that can be offensive. We will replace this language in a future
-issue of this document.
+<a id="frontmatter_lw__g.intended-audience.section"></a>
 
-To report offensive language in this document, email terms@arm.com.
+## Intended audience
 
-Feedback
-Arm welcomes feedback on this product and its documentation. To provide feedback on the
-product, create a ticket on https://support.developer.arm.com.
+The Software Developer Guide is written for software developers that are developing software to run on hardware that includes the Zena CSS. The documentation does not assume prior knowledge of Arm products.
 
-To provide feedback on the document, fill the following survey: https://developer.arm.com/
-documentation-feedback-survey.
+<a id="frontmatter_lw__g.progressive-terminology.section"></a>
 
-<!-- Source PDF page: 3 -->
+## Inclusive language commitment
 
-Contents
+Arm values inclusive communities. Arm recognizes that we and our industry have used language that can be offensive. Arm strives to lead the industry and create change.
 
-Contents
+This document includes language that can be offensive. We will replace this language in a future issue of this document.
 
-1. Zena CSS product highlights........................................................................................................................6
+To report offensive language in this document, email [terms@arm.com](mailto:terms@arm.com).
 
-2. Block diagram for Zena CSS........................................................................................................................ 7
+## Feedback
 
-3. Documentation for Zena CSS......................................................................................................................8
+Arm welcomes feedback on this product and its documentation. To provide feedback on the product, create a ticket on [https://support.developer.arm.com](https://support.developer.arm.com).
 
-4. Compliance of Zena CSS...............................................................................................................................9
+To provide feedback on the document, fill the following survey: [https://developer.arm.com/documentation-feedback-survey](https://developer.arm.com/documentation-feedback-survey).
 
-5. Functional blocks in Zena CSS..................................................................................................................10
-5.1 ROM tables.................................................................................................................................................... 12
-5.1.1 Debug port debug ROM with granular power requester................................................................12
-5.1.2 AP DBGROM ROM table....................................................................................................................... 13
-5.1.3 APP DBGROM ROM table.....................................................................................................................13
-5.1.4 Cluster DBG ROM table......................................................................................................................... 14
-5.1.5 Cluster Debug Block ROM (GPR ROM) ROM table.........................................................................15
-5.1.6 RSE ROM table......................................................................................................................................... 15
-5.1.7 Safety Island ROM table......................................................................................................................... 16
-
-6. Boot flow of Zena CSS............................................................................................................................... 18
-6.1 Main boot sequence....................................................................................................................................18
-6.2 Selecting and updating firmware images................................................................................................ 27
-
-7. Zena CSS software reference stack.........................................................................................................28
-
-8. Fixed Virtual Platform................................................................................................................................. 29
-8.1 About the FVP.............................................................................................................................................. 29
-8.2 FVP peripherals.............................................................................................................................................30
-
-9. Programmer's model for Zena CSS.......................................................................................................... 33
-9.1 Memory maps............................................................................................................................................... 33
-9.1.1 AP system memory map......................................................................................................................... 35
-9.1.2 Cluster management domain memory map........................................................................................38
-9.1.3 Memory controller control memory map............................................................................................ 40
-9.1.4 System management memory map...................................................................................................... 40
-
-<!-- Source PDF page: 4 -->
-
-Contents
-
-9.1.5 PCIe MMIO memory map...................................................................................................................... 46
-9.1.6 I/O Block configuration space memory map......................................................................................47
-9.1.7 Debug memory map................................................................................................................................ 48
-9.1.8 RSE memory map..................................................................................................................................... 50
-9.1.9 Safety Island memory map..................................................................................................................... 75
-9.2 Interrupt maps...............................................................................................................................................91
-9.2.1 AP interrupt map...................................................................................................................................... 91
-9.2.2 Interrupt map for RSE............................................................................................................................. 98
-9.2.3 RSE expansion interrupt map.............................................................................................................. 102
-9.2.4 SI interrupt map......................................................................................................................................102
-9.2.5 SI expansion interrupt map..................................................................................................................106
-9.3 Register descriptions for the Primary Compute subsystem............................................................. 108
-9.3.1 ATU_F1 registers summary..................................................................................................................109
-9.3.2 DBGTOP_PIK registers summary........................................................................................................135
-9.3.3 IO_REGBANK registers summary....................................................................................................... 156
-9.3.4 CSS_RGM registers summary.............................................................................................................. 189
-9.3.5 SMD_CSR registers summary..............................................................................................................203
-9.3.6 E_CPU_CSR registers summary.......................................................................................................... 219
-9.3.7 System_Generic_Timer_Synchronization registers summary........................................................ 333
-9.3.8 System_ID registers summary............................................................................................................. 362
-9.3.9 SYSTOP_PIK registers summary..........................................................................................................375
-9.4 Register descriptions for RSE..................................................................................................................438
-9.4.1 RSE Secure Access Configuration register summary..................................................................... 440
-9.4.2 RSE Non-secure Access Configuration register summary.............................................................492
-9.4.3 RSE Timestamp Timers register summary........................................................................................ 513
-9.4.4 RSE Timestamp Watchdogs Generic Watchdog Control Frame register summary................. 514
-9.4.5 RSE Timestamp Watchdogs Generic Watchdog Refresh Frame register summary................. 514
-9.4.6 RSE GPIO register summary................................................................................................................514
-9.4.7 RSE DMA register summary................................................................................................................ 515
-9.4.8 RSE SDC-600 Internal register summary......................................................................................... 515
-9.4.9 RSE Local System Counter register summary..................................................................................516
-9.4.10 RSE CPU0_IDENTITY register summary........................................................................................ 516
-9.4.11 RSE CPU0 SECCTRL register summary..........................................................................................525
-9.4.12 RSE System Information register summary....................................................................................534
-9.4.13 RSE System Control register summary........................................................................................... 548
-9.4.14 RSE Processor Private Peripheral Bus region................................................................................ 575
-
-<!-- Source PDF page: 5 -->
-
-Contents
-
-9.4.15 RSE Integration layer registers..........................................................................................................576
-9.5 Register descriptions for Safety Island..................................................................................................619
-9.5.1 Fault Management Unit register summary....................................................................................... 620
-9.5.2 System Control register summary...................................................................................................... 641
-9.5.3 Safety Status Unit register summary................................................................................................. 663
-
-Proprietary notice..........................................................................................................................................681
-
-Product and document information......................................................................................................... 683
-Product status...................................................................................................................................................683
-Revision history................................................................................................................................................ 683
-Conventions.......................................................................................................................................................684
-
-Useful resources............................................................................................................................................ 687
+<a id="frontmatter_lw__feedbacksupport"></a>
