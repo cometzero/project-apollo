@@ -38,6 +38,7 @@ NR_IMAGES_PER_FWU_BANK="${NR_IMAGES_PER_FWU_BANK:-5}"
 PFDI_SUPPORT="${PFDI_SUPPORT:-1}"
 PFDI_MONITOR_SUPPORT="${PFDI_MONITOR_SUPPORT:-1}"
 KERNEL_MODULES_AUTOLOAD="${KERNEL_MODULES_AUTOLOAD:-openvswitch pfdi_misc}"
+KERNEL_DEBUG_INFO="${KERNEL_DEBUG_INFO:-1}"
 
 TFM_BUILD_DIR="${WORK_DIR}/trusted-firmware-m"
 SCP_BUILD_DIR="${WORK_DIR}/scp-firmware"
@@ -92,6 +93,7 @@ Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="openvswitch pfdi_misc" ./local-build.sh build
+  KERNEL_DEBUG_INFO=0 ./local-build.sh build
 EOF
 }
 
@@ -549,6 +551,15 @@ build_linux()
     require_file "${config}"
     install -m 0644 "${config}" "${LINUX_BUILD_DIR}/.config"
 
+    if [[ "${KERNEL_DEBUG_INFO}" == "1" ]]; then
+        "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
+            --enable DEBUG_KERNEL \
+            --disable DEBUG_INFO_NONE \
+            --enable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
+            --enable GDB_SCRIPTS \
+            --enable KALLSYMS_ALL
+    fi
+
     local modsign_key
     modsign_key="$(find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
         -path '*/build/modsign_key.pem' -type f -print -quit 2>/dev/null || true)"
@@ -758,6 +769,10 @@ BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
 BR2_TOOLCHAIN_EXTERNAL_CXX=y
 BR2_TOOLCHAIN_EXTERNAL_HAS_SSP=y
 BR2_TOOLCHAIN_EXTERNAL_HAS_SSP_STRONG=y
+BR2_ENABLE_DEBUG=y
+BR2_DEBUG_2=y
+# BR2_STRIP_strip is not set
+BR2_OPTIMIZE_G=y
 # BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
 BR2_TARGET_GENERIC_HOSTNAME="apollo-fvp"
 BR2_TARGET_GENERIC_ISSUE="Apollo FVP Buildroot"
