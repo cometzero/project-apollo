@@ -31,6 +31,7 @@ UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/u-boo
 LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/linux}"
 BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/buildroot}"
 PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src}"
+PFDI_LOCAL_AGENT_SRC="${PFDI_LOCAL_AGENT_SRC:-${ROOT_DIR}/tools/pfdi-local-agent/pfdi-local-agent.c}"
 
 AARCH64_PREFIX="${AARCH64_PREFIX:-aarch64-poky-linux-}"
 ARM_NONE_EABI_PREFIX="${ARM_NONE_EABI_PREFIX:-arm-none-eabi-}"
@@ -57,6 +58,7 @@ BUILDROOT_OVERLAY="${WORK_DIR}/buildroot-overlay"
 BUILDROOT_TOOLCHAIN_DIR="${WORK_DIR}/buildroot-toolchain"
 BUILDROOT_TOOLCHAIN_SYSROOT="${BUILDROOT_TOOLCHAIN_DIR}/sysroot"
 PFDI_MISC_BUILD_DIR="${WORK_DIR}/pfdi-misc-mod"
+PFDI_LOCAL_AGENT_BUILD_DIR="${WORK_DIR}/pfdi-local-agent"
 SIGN_DIR="${WORK_DIR}/signing"
 FW_DIR="${DEPLOY_DIR}/firmware"
 BOOT_DIR="${DEPLOY_DIR}/boot"
@@ -759,6 +761,9 @@ prepare_buildroot_toolchain()
     rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf"
     rm -rf "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf.d"
     rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/usr/bin/sudo"
+    rm -rf "${BUILDROOT_TOOLCHAIN_SYSROOT}/usr/lib/debug"
+    find "${BUILDROOT_TOOLCHAIN_SYSROOT}" -type d -name .debug -prune \
+        -exec rm -rf {} +
 
     # The Yocto SDK used here ships dynamic glibc development files but omits
     # libc.a. Buildroot's external-toolchain sysroot detection still keys off
@@ -864,6 +869,17 @@ load_modules()
 
 load_modules
 lsmod 2>/dev/null || true
+
+if [ -x /usr/bin/pfdi-local-agent ]; then
+    echo "local-initramfs: starting pfdi-local-agent"
+    /usr/bin/pfdi-local-agent \
+        -c "${PFDI_CPU_COUNT:-0}" \
+        -s "${PFDI_TEST_START:-0}" \
+        -e "${PFDI_TEST_END:-40}" \
+        -p "${PFDI_PERIOD_MS:-60}" \
+        >/run/pfdi-local-agent.log 2>&1 &
+    echo "local-initramfs: pfdi-local-agent pid $!"
+fi
 
 echo "apollo-fvp login:"
 exec /bin/sh -i
@@ -994,6 +1010,22 @@ build_pfdi_misc_module()
         "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/pfdi_misc.ko"
 }
 
+build_pfdi_local_agent()
+{
+    require_file "${PFDI_LOCAL_AGENT_SRC}"
+    rm -rf "${PFDI_LOCAL_AGENT_BUILD_DIR}"
+    mkdir -p "${PFDI_LOCAL_AGENT_BUILD_DIR}"
+
+    run_logged pfdi-local-agent-build "${AARCH64_PREFIX}gcc" \
+        --sysroot="${SDK_TARGET_SYSROOT}" \
+        -O2 -g -Wall -Wextra -pthread \
+        -o "${PFDI_LOCAL_AGENT_BUILD_DIR}/pfdi-local-agent" \
+        "${PFDI_LOCAL_AGENT_SRC}"
+
+    install -D -m 0755 "${PFDI_LOCAL_AGENT_BUILD_DIR}/pfdi-local-agent" \
+        "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent"
+}
+
 install_kernel_modules_overlay()
 {
     local release
@@ -1007,6 +1039,9 @@ install_kernel_modules_overlay()
 
     if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" pfdi_misc "* ]]; then
         build_pfdi_misc_module "${release}"
+        if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
+            build_pfdi_local_agent
+        fi
     fi
 
     run_logged linux-depmod depmod -b "${BUILDROOT_OVERLAY}" "${release}"
@@ -1336,6 +1371,17 @@ import json
 import sys
 
 result = json.load(open(sys.argv[1], encoding="utf-8"))
+if not result.get("passed"):
+    status = result.get("status", {})
+    errors = ", ".join(status.get("error_terms", []))
+    missing = ", ".join(status.get("missing_required_patterns", []))
+    details = []
+    if errors:
+        details.append("error terms: " + errors)
+    if missing:
+        details.append("missing required patterns: " + missing)
+    print("boot result failed" + (": " + "; ".join(details) if details else ""), file=sys.stderr)
+    sys.exit(1)
 required = ["rse", "safety_island_cl0", "safety_island_cl1", "tf_a", "u_boot_linux"]
 missing = [name for name in required if not result.get("domains", {}).get(name, {}).get("passed")]
 if missing:
@@ -1358,6 +1404,7 @@ boot_fvp()
         --out-dir "${out_dir}" \
         --timeout "${FVP_TIMEOUT}" \
         --require all \
+        --min-runtime 70 \
         --no-login
 
     validate_boot_result "${out_dir}/result.json" | tee "${LOG_DIR}/fvp-boot-validate.log"

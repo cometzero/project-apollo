@@ -21,7 +21,10 @@ PORT_RE = re.compile(
     r"(?P<term>terminal_[A-Za-z0-9_]+): "
     r"Listening for serial connection on port (?P<port>\d+)"
 )
-ERROR_RE = re.compile(r"(\[ERR\]|\[ERROR\]|ERROR:)")
+ERROR_RE = re.compile(
+    r"(\[ERR\]|\[ERROR\]|ERROR:|PFDI monitor timeout|"
+    r"Permission denied: CPU \d+ is not permitted to open cpu/\d+/pfdi)"
+)
 
 CHECKS = {
     "terminal_uart": {
@@ -281,15 +284,17 @@ def check_console(term: str, text: str) -> dict:
     any_patterns = plan.get("any", [])
     all_results = {pattern: pattern in text for pattern in all_patterns}
     any_results = {pattern: pattern in text for pattern in any_patterns}
+    error_pattern_found = bool(ERROR_RE.search(text))
     passed = all(all_results.values())
     if any_patterns:
         passed = passed and any(any_results.values())
+    passed = passed and not error_pattern_found
     return {
         "name": plan.get("name", term),
         "all": all_results,
         "any": any_results,
-        "passed": passed if plan else bool(text),
-        "error_pattern_found": bool(ERROR_RE.search(text)),
+        "passed": passed if plan else bool(text) and not error_pattern_found,
+        "error_pattern_found": error_pattern_found,
     }
 
 
@@ -378,6 +383,7 @@ def write_summary(
     status: dict,
     duration_s: float,
     post_login: dict,
+    min_runtime_s: int,
 ) -> None:
     passed = status["passed"] and (
         not post_login.get("requested") or post_login.get("done")
@@ -395,6 +401,7 @@ def write_summary(
         "status": status,
         "domains": domains,
         "post_login": post_login,
+        "min_runtime_s": min_runtime_s,
     }
     (out_dir / "result.json").write_text(
         json.dumps(result, indent=2, sort_keys=True),
@@ -405,6 +412,7 @@ def write_summary(
         f"passed: {passed}",
         f"boot_status_passed: {status['passed']}",
         f"duration_s: {duration_s:.3f}",
+        f"min_runtime_s: {min_runtime_s}",
         f"fvpconf: {fvpconf}",
         f"boot_log: {boot_log}",
         "boot_domains:",
@@ -488,6 +496,15 @@ def parse_args() -> argparse.Namespace:
         help="Output directory. Defaults to build/fvp-boot-logs/<machine>-<timestamp>.",
     )
     parser.add_argument("--timeout", type=int, default=900)
+    parser.add_argument(
+        "--min-runtime",
+        type=int,
+        default=0,
+        help=(
+            "Keep FVP running for at least this many seconds after launch. "
+            "Useful for catching delayed monitor failures after Linux login."
+        ),
+    )
     parser.add_argument(
         "--require",
         choices=("critical", "all", "none"),
@@ -659,7 +676,10 @@ def main() -> int:
 
             with lock:
                 status = build_status(expected_terms, captures, roles, args.require)
-            if status["passed"] and post_login_done:
+            min_runtime_done = time.monotonic() - start_time >= args.min_runtime
+            if status["error_terms"] and min_runtime_done:
+                break
+            if status["passed"] and post_login_done and min_runtime_done:
                 break
             if proc.poll() is not None:
                 break
@@ -697,6 +717,7 @@ def main() -> int:
         status=status,
         duration_s=duration_s,
         post_login=post_login,
+        min_runtime_s=args.min_runtime,
     )
 
     passed = status["passed"] and (
