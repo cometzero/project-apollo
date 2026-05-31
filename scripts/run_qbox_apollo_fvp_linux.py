@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import datetime as _dt
 import json
 import os
@@ -14,6 +15,7 @@ import signal
 import subprocess
 import sys
 import time
+from typing import TypedDict
 
 
 REQUIRED_TARGETS = [
@@ -43,12 +45,72 @@ LOGIN_PATTERNS = [
     "apollo-fvp login:",
     "root@apollo-fvp",
 ]
+DEFAULT_LOCAL_BOOTARGS = (
+    "console=ttyAMA0,115200 earlycon=pl011,0x1A400000 "
+    "root=/dev/ram0 rw rdinit=/init loglevel=7 "
+    "cpuidle.governor=menu maxcpus=4 mem=4064M"
+)
+PROBE_DONE_MARKER = "__QBOX_APOLLO_PROBE_DONE__"
+PROBE_DONE_OUTPUT_RE = re.compile(
+    rf"(?:^|\n){re.escape(PROBE_DONE_MARKER)}:0(?:\r?\n|$)"
+)
+PRIMARY_VIRTIO_BLOCK_NODE = "/soc/virtio-block@30020000"
+POST_LOGIN_PROBE_COMMANDS = [
+    "uname -a",
+    "cat /proc/cmdline",
+    "cat /proc/meminfo | head -n 5",
+    "ls -l /dev/vd* 2>/dev/null || true",
+    "ip link show || true",
+    "dmesg | grep -Ei 'GIC|pl011|ttyAMA|virtio|rng|rtc|watchdog|initrd|Freeing initrd|VFS|Run /init' || true",
+    f"printf '\\n{PROBE_DONE_MARKER}:%s\\n' \"$?\"",
+]
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\a]*(?:\a|\x1b\\)")
+APOLLO_SHELL_PROMPT_RE = re.compile(
+    r"(?:^|\n)(?:root@apollo-fvp:[^\n]*[#>]|\S+ #)\s*$"
+)
 FAIL_PATTERNS = [
     "Kernel panic",
     "Unable to mount root fs",
     "No working init found",
 ]
+
+
+@dataclass(frozen=True)
+class LocalBuildArtifacts:
+    kernel: Path
+    initramfs: Path
+    disk: Path
+
+
+class EvalStatus(TypedDict, total=False):
+    pass_patterns: dict[str, bool]
+    login_patterns: dict[str, bool]
+    fail_patterns: dict[str, bool]
+    log_bytes: int
+    timeout_s: int | None
+    interrupted: bool
+    post_login_probe: bool
+    probe_complete: bool
+    duration_s: float
+    command: list[str]
+    log_path: str
+    kernel: str
+    dtb: str
+    initramfs: str | None
+    bootargs: str
+    initramfs_addr: str
+    disk: str | None
+    extra_disks: list[str]
+    passed: bool
+
+
+def resolve_local_build_artifacts(local_build_dir: Path) -> LocalBuildArtifacts:
+    boot_dir = local_build_dir / "deploy/boot"
+    return LocalBuildArtifacts(
+        kernel=boot_dir / "Image",
+        initramfs=boot_dir / "initramfs.cpio.gz",
+        disk=boot_dir / "apollo-fvp-local-disk.img",
+    )
 
 
 def workspace_root() -> Path:
@@ -77,12 +139,96 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     run(cmd, cwd=root)
 
 
-def compile_dtb(root: Path, dts: Path, dtb: Path) -> None:
+def initramfs_range(initramfs: Path, load_addr: int) -> tuple[int, int]:
+    size = initramfs.stat().st_size
+    return load_addr, load_addr + size
+
+
+def apollo_shell_prompt_ready(text: str) -> bool:
+    return bool(APOLLO_SHELL_PROMPT_RE.search(text))
+
+
+def probe_complete_from_log(text: str) -> bool:
+    return bool(PROBE_DONE_OUTPUT_RE.search(text))
+
+
+def fdt_patch_commands(
+    *,
+    dtb: Path,
+    bootargs: str,
+    initrd_start: int,
+    initrd_end: int,
+    primary_disk_enabled: bool = True,
+) -> list[list[str]]:
+    commands = [
+        ["fdtput", "-t", "s", str(dtb), "/chosen", "bootargs", bootargs],
+        [
+            "fdtput",
+            "-t",
+            "x",
+            str(dtb),
+            "/chosen",
+            "linux,initrd-start",
+            f"0x{initrd_start:x}",
+        ],
+        [
+            "fdtput",
+            "-t",
+            "x",
+            str(dtb),
+            "/chosen",
+            "linux,initrd-end",
+            f"0x{initrd_end:x}",
+        ],
+    ]
+    if not primary_disk_enabled:
+        commands.append(
+            [
+                "fdtput",
+                "-t",
+                "s",
+                str(dtb),
+                PRIMARY_VIRTIO_BLOCK_NODE,
+                "status",
+                "disabled",
+            ]
+        )
+    return commands
+
+
+def compile_dtb(
+    root: Path,
+    dts: Path,
+    dtb: Path,
+    *,
+    bootargs: str | None = None,
+    initramfs: Path | None = None,
+    initramfs_addr: int | None = None,
+    primary_disk_enabled: bool = True,
+) -> None:
     dtc = shutil.which("dtc")
     if not dtc:
         raise RuntimeError("dtc not found; install device-tree-compiler")
     dtb.parent.mkdir(parents=True, exist_ok=True)
     run([dtc, "-I", "dts", "-O", "dtb", "-o", str(dtb), str(dts)], cwd=root)
+
+    if bootargs is None and initramfs is None:
+        return
+
+    if not shutil.which("fdtput"):
+        raise RuntimeError("fdtput not found; install device-tree-compiler")
+    if bootargs is None or initramfs is None or initramfs_addr is None:
+        raise RuntimeError("bootargs, initramfs, and initramfs_addr must be set together")
+
+    initrd_start, initrd_end = initramfs_range(initramfs, initramfs_addr)
+    for cmd in fdt_patch_commands(
+        dtb=dtb,
+        bootargs=bootargs,
+        initrd_start=initrd_start,
+        initrd_end=initrd_end,
+        primary_disk_enabled=primary_disk_enabled,
+    ):
+        run(cmd, cwd=root)
 
 
 def copy_disk(src: Path, dst: Path) -> None:
@@ -110,7 +256,7 @@ def prepare_extra_disks(out_dir: Path, size_mib: int) -> list[Path]:
 
 
 def qbox_env(
-    root: Path, args: argparse.Namespace, disk: Path, extra_disks: list[Path]
+    root: Path, args: argparse.Namespace, disk: Path | None, extra_disks: list[Path]
 ) -> dict[str, str]:
     env = os.environ.copy()
     lib_paths = [
@@ -123,7 +269,14 @@ def qbox_env(
     env["LD_LIBRARY_PATH"] = ":".join(str(path) for path in lib_paths)
     env["QBOX_APOLLO_KERNEL"] = str(args.kernel.resolve())
     env["QBOX_APOLLO_DTB"] = str(args.dtb.resolve())
-    env["QBOX_APOLLO_ROOTFS"] = str(disk.resolve())
+    if getattr(args, "initramfs", None):
+        env["QBOX_APOLLO_INITRAMFS"] = str(args.initramfs.resolve())
+    else:
+        env.pop("QBOX_APOLLO_INITRAMFS", None)
+    if disk is not None:
+        env["QBOX_APOLLO_ROOTFS"] = str(disk.resolve())
+    else:
+        env.pop("QBOX_APOLLO_ROOTFS", None)
     for index, extra_disk in enumerate(extra_disks, start=1):
         env[f"QBOX_APOLLO_EXTRA_BLK{index}"] = str(extra_disk.resolve())
     env["QBOX_APOLLO_ACCEL"] = args.accel
@@ -151,7 +304,7 @@ def stop_process(proc: subprocess.Popen[bytes], *, process_group: bool = True) -
         proc.wait(timeout=5)
 
 
-def evaluate(text: str) -> tuple[bool, dict[str, object]]:
+def evaluate(text: str) -> tuple[bool, EvalStatus]:
     clean_text = ANSI_RE.sub("", text).replace("\r", "")
     pass_hits = {pattern: pattern in clean_text for pattern in PASS_PATTERNS}
     login_hits = {pattern: pattern in clean_text for pattern in LOGIN_PATTERNS}
@@ -168,8 +321,8 @@ def evaluate(text: str) -> tuple[bool, dict[str, object]]:
 
 
 def run_qbox(
-    root: Path, args: argparse.Namespace, disk: Path, extra_disks: list[Path]
-) -> tuple[int, dict[str, object]]:
+    root: Path, args: argparse.Namespace, disk: Path | None, extra_disks: list[Path]
+) -> tuple[int, EvalStatus]:
     out_dir = args.out_dir.resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = out_dir / "qbox-apollo-fvp.log"
@@ -188,6 +341,9 @@ def run_qbox(
     text = ""
     timed_out = False
     interrupted = False
+    sent_login = False
+    sent_probe = False
+    probe_complete = False
     process_group = not args.interactive
     proc = subprocess.Popen(
         cmd,
@@ -212,11 +368,35 @@ def run_qbox(
                     decoded = chunk.decode("utf-8", errors="replace")
                     log.write(decoded)
                     text += decoded
+                    clean_text = ANSI_RE.sub("", text).replace("\r", "")
+                    if (
+                        args.post_login_probe
+                        and not args.interactive
+                        and proc.stdin is not None
+                    ):
+                        prompt_ready = apollo_shell_prompt_ready(clean_text)
+                        if not sent_login and prompt_ready:
+                            sent_login = True
+                        elif not sent_login and "apollo-fvp login:" in clean_text:
+                            proc.stdin.write((args.login_user + "\n").encode())
+                            proc.stdin.flush()
+                            sent_login = True
+                        if sent_login and not sent_probe and prompt_ready:
+                            proc.stdin.write(
+                                ("\n".join(POST_LOGIN_PROBE_COMMANDS) + "\n").encode()
+                            )
+                            proc.stdin.flush()
+                            sent_probe = True
+                        probe_complete = probe_complete_from_log(clean_text)
                     if args.interactive:
                         sys.stdout.write(decoded)
                         sys.stdout.flush()
                     passed, status = evaluate(text)
-                    if passed and not args.interactive:
+                    if (
+                        passed
+                        and not args.interactive
+                        and (not args.post_login_probe or probe_complete)
+                    ):
                         stop_process(proc, process_group=process_group)
                         break
                     if any(status["fail_patterns"].values()) and not args.interactive:
@@ -237,14 +417,21 @@ def run_qbox(
 
     duration_s = time.monotonic() - start
     passed, status = evaluate(text)
+    if args.post_login_probe and not probe_complete:
+        passed = False
     status["timeout_s"] = args.timeout if timed_out and not passed else None
     status["interrupted"] = interrupted
+    status["post_login_probe"] = args.post_login_probe
+    status["probe_complete"] = probe_complete
     status["duration_s"] = round(duration_s, 3)
     status["command"] = cmd
     status["log_path"] = str(log_path)
     status["kernel"] = str(args.kernel.resolve())
     status["dtb"] = str(args.dtb.resolve())
-    status["disk"] = str(disk.resolve())
+    status["initramfs"] = str(args.initramfs.resolve()) if args.initramfs else None
+    status["bootargs"] = args.bootargs
+    status["initramfs_addr"] = f"0x{args.initramfs_addr:x}"
+    status["disk"] = str(disk.resolve()) if disk is not None else None
     status["extra_disks"] = [str(path.resolve()) for path in extra_disks]
     status["passed"] = passed
 
@@ -259,7 +446,12 @@ def run_qbox(
         f"log: {log_path}",
         f"kernel: {args.kernel.resolve()}",
         f"dtb: {args.dtb.resolve()}",
-        f"disk: {disk.resolve()}",
+        f"initramfs: {args.initramfs.resolve() if args.initramfs else None}",
+        f"bootargs: {args.bootargs}",
+        f"initramfs_addr: 0x{args.initramfs_addr:x}",
+        f"disk: {disk.resolve() if disk is not None else None}",
+        f"post_login_probe: {args.post_login_probe}",
+        f"probe_complete: {probe_complete}",
         "extra_disks:",
         *[f"  - {path.resolve()}" for path in extra_disks],
         "pass_patterns:",
@@ -303,16 +495,19 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=root / "build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb",
     )
+    parser.add_argument("--kernel", type=Path)
+    parser.add_argument("--disk", type=Path)
     parser.add_argument(
-        "--kernel",
+        "--local-build-dir",
         type=Path,
-        default=root / "build/tmp_baremetal/deploy/images/apollo-fvp/Image",
+        default=root / "build/local-apollo-fvp",
     )
+    parser.add_argument("--initramfs", type=Path)
+    parser.add_argument("--bootargs", default=DEFAULT_LOCAL_BOOTARGS)
     parser.add_argument(
-        "--disk",
-        type=Path,
-        default=root
-        / "build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.wic",
+        "--initramfs-addr",
+        type=lambda value: int(value, 0),
+        default=0x94000000,
     )
     parser.add_argument(
         "--out-dir",
@@ -350,6 +545,12 @@ def parse_args() -> argparse.Namespace:
         help="Print UART output to this terminal and pass stdin to the guest.",
     )
     parser.add_argument(
+        "--post-login-probe",
+        action="store_true",
+        help="Log in on the serial console and run Apollo direct-boot probes.",
+    )
+    parser.add_argument("--login-user", default="root")
+    parser.add_argument(
         "--no-copy-disk",
         action="store_true",
         help="Attach --disk directly instead of copying it into --out-dir.",
@@ -359,12 +560,24 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     root = workspace_root()
+    explicit_disk = any(
+        arg == "--disk" or arg.startswith("--disk=") for arg in sys.argv[1:]
+    )
     args = parse_args()
     args.conf = args.conf.resolve()
     args.dts = args.dts.resolve()
     args.dtb = args.dtb.resolve()
+    args.local_build_dir = args.local_build_dir.resolve()
+    artifacts = resolve_local_build_artifacts(args.local_build_dir)
+    if args.kernel is None:
+        args.kernel = artifacts.kernel
+    if args.initramfs is None:
+        args.initramfs = artifacts.initramfs
+    if args.disk is None:
+        args.disk = artifacts.disk
     args.kernel = args.kernel.resolve()
-    args.disk = args.disk.resolve()
+    args.initramfs = args.initramfs.resolve() if args.initramfs else None
+    args.disk = args.disk.resolve() if args.disk else None
     args.out_dir = args.out_dir.resolve()
     if args.extra_disk_size_mib <= 0:
         print("error: --extra-disk-size-mib must be positive", file=sys.stderr)
@@ -378,26 +591,40 @@ def main() -> int:
         required_paths.extend(
             [
                 (args.kernel, "kernel image"),
-                (args.disk, "disk image"),
+                (args.initramfs, "initramfs image"),
             ]
         )
+    elif not args.skip_dtb and args.initramfs is not None:
+        required_paths.append((args.initramfs, "initramfs image"))
 
     for path, label in required_paths:
-        if not path.exists():
+        if path is None or not path.exists():
             print(f"error: {label} not found: {path}", file=sys.stderr)
             return 2
+    if explicit_disk and args.disk is not None and not args.disk.exists():
+        print(f"error: disk image not found: {args.disk}", file=sys.stderr)
+        return 2
+    disk_available = args.disk is not None and args.disk.exists()
 
     try:
         if not args.skip_build:
             ensure_qbox_targets(root, args.jobs)
         if not args.skip_dtb:
-            compile_dtb(root, args.dts, args.dtb)
+            compile_dtb(
+                root,
+                args.dts,
+                args.dtb,
+                bootargs=args.bootargs,
+                initramfs=args.initramfs,
+                initramfs_addr=args.initramfs_addr,
+                primary_disk_enabled=disk_available,
+            )
         if args.build_only:
             print(args.dtb)
             return 0
-        disk = args.disk
-        if not args.no_copy_disk:
-            disk = args.out_dir / args.disk.name
+        disk = args.disk if disk_available else None
+        if disk is not None and not args.no_copy_disk:
+            disk = args.out_dir / disk.name
             copy_disk(args.disk, disk)
         extra_disks = prepare_extra_disks(args.out_dir, args.extra_disk_size_mib)
         rc, _status = run_qbox(root, args, disk, extra_disks)

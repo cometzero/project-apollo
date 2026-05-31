@@ -6,7 +6,7 @@ workspace_root="$(cd -- "${script_dir}/.." && pwd)"
 python_bin="${PYTHON:-python3}"
 jobs="${QBOX_APOLLO_JOBS:-}"
 
-args=(--build-only)
+args=(--build-only --local-build-dir "${workspace_root}/build/local-apollo-fvp")
 if [[ -n "${jobs}" ]]; then
     args+=(--jobs "${jobs}")
 fi
