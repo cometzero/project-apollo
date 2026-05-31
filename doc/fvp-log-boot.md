@@ -2,9 +2,36 @@
 
 Generated: 2026-05-28
 
-`scripts/runfvp_tmux.sh` is intended for interactive user inspection. For
-agent-side validation, prefer a file-log workflow so the result can be checked
-without attaching to a terminal UI.
+`scripts/run_local_fvp_tmux.sh` is intended for interactive inspection of the
+locally built Apollo FVP image. It starts FVP in tmux, opens one pane per known
+subsystem UART, and mirrors those UARTs to log files under the selected run
+directory:
+
+```bash
+scripts/run_local_fvp_tmux.sh
+scripts/run_local_fvp_tmux.sh --session apollo-demo
+scripts/run_local_fvp_tmux.sh --out-dir build/local-apollo-fvp/tmux-run/demo
+scripts/run_local_fvp_tmux.sh --no-attach
+```
+
+Default local-build inputs:
+
+- `build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf`
+- `build/local-apollo-fvp/tmux-run/<timestamp>/`
+
+Per-run logs for agent review:
+
+- `fvp_stdout.log`
+- `ports.tsv`
+- `uarts/rse.log`
+- `uarts/safety_island_cl0.log`
+- `uarts/safety_island_cl1.log`
+- `uarts/tf_a.log`
+- `uarts/u_boot_linux.log`
+
+The older `scripts/runfvp_tmux.sh` remains a generic runfvp tmux wrapper for
+Yocto deploy configs. For agent-side validation, prefer a file-log workflow so
+the result can be checked without attaching to a terminal UI.
 
 The existing `runfvp` tool already supports headless launch with `-t none`, and
 the test automation guide documents per-run boot logs under `logs/`. This
