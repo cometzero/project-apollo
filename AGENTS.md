@@ -63,6 +63,10 @@ over register-only stubs.
 6. For complex boot failures, debug in this order: log-based triage first,
    then symbol/source-level debugging with GDB and FVP Iris only after logs
    identify the likely component or handoff.
+7. For implementation and problem analysis involving Arm Zena CSS hardware or
+   software structure, consult `doc/arm_zena_css_dev_guide/` early. Use it for
+   memory maps, register maps, boot flows, firmware/domain responsibilities,
+   and other hardware/software interface details before changing code.
 
 ## Apollo FVP Debugging
 
@@ -137,8 +141,9 @@ Boot issue escalation path:
 For each hardware block or IP:
 
 1. Inventory the FVP-visible behavior from local RD-Aspen sources first:
-   `arm-zena-css/documentation/`, machine config, FVP include files, generated
-   DTB/DTS, firmware logs, and existing FVP boot logs.
+   `doc/arm_zena_css_dev_guide/`, `arm-zena-css/documentation/`, machine
+   config, FVP include files, generated DTB/DTS, firmware logs, and existing
+   FVP boot logs.
 2. Check official Arm documentation and TRMs for programming model, reset
    values, interrupts, register layout, timing assumptions, and integration
    constraints. Record document version and URL in the implementation notes.
