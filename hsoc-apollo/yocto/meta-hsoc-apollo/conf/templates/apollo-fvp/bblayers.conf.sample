@@ -5,6 +5,7 @@
 BBLAYERS ?= " \
     ##OEROOT##/../../arm-zena-css/yocto/meta-zena-css-bsp \
     ##OEROOT##/../../arm-zena-css/yocto/meta-zena-css-safety-island \
+    ##OEROOT##/../../hsoc-apollo/yocto/meta-hsoc-apollo \
     ##OEROOT##/../../hsoc-apollo/yocto/meta-hsoc-apollo-bsp \
     ##OEROOT##/../meta-arm/meta-arm \
     ##OEROOT##/../meta-arm/meta-arm-toolchain \
