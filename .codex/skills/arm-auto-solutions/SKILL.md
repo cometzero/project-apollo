@@ -40,7 +40,7 @@ repository. The source ownership boundaries are:
 - Yocto build config:
   `build/conf/local.conf`, `build/conf/bblayers.conf`,
   `build/conf/templateconf.cfg`, `build.sh`, and
-  `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+  `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
 - RD-Aspen BSP and firmware:
   `arm-zena-css/yocto/meta-zena-css-bsp`
 - Safety Island Zephyr:

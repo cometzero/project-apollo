@@ -8,7 +8,7 @@ The active Yocto configuration is the traditional build directory under
 - `build/conf/local.conf`
 - `build/conf/bblayers.conf`
 - `build/conf/templateconf.cfg`
-- `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
 - top-level `build.sh`
 
 Current selected values:

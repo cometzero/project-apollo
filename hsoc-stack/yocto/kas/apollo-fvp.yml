@@ -7,8 +7,8 @@ header:
   version: 16
 
 repos:
-  hsoc-apollo:
-    path: hsoc-apollo
+  hsoc-stack:
+    path: hsoc-stack
     layers:
       yocto/meta-hsoc-apollo-bsp:
 

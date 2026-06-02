@@ -83,22 +83,22 @@ Relevant files:
 
 Relevant files:
 
-- `hsoc-apollo/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/Toolchain-GNU.cmake`
+- `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/Toolchain-GNU.cmake`
   - Sets `SCP_AARCH64_PROCESSOR_TARGET` to `cortex-r82`.
-- `hsoc-apollo/components/system_mgmt/scp-firmware/arch/arm/aarch64/CMakeLists.txt`
+- `hsoc-stack/components/system_mgmt/scp-firmware/arch/arm/aarch64/CMakeLists.txt`
   - Does not define `ARMV8A64_EL3_SUPPORT` when the target is `cortex-r82`.
     This matches the Zena documentation: Cortex-R82AE Safety Island runs with
     EL2 as the highest exception level, not EL3.
-- `hsoc-apollo/components/system_mgmt/scp-firmware/arch/arm/aarch64/src/arch_crt0.S`
+- `hsoc-stack/components/system_mgmt/scp-firmware/arch/arm/aarch64/src/arch_crt0.S`
   - Starts at EL2 for Cortex-R82.
   - Reads `ID_AA64MMFR0_EL1` and checks MSA fields.
   - Writes `MAIR_EL2`, `PRSELR_EL2`, `PRBAR_EL2`, `PRLAR_EL2`, and
     `SCTLR_EL2`.
-- `hsoc-apollo/components/system_mgmt/scp-firmware/module/armv8r_mpu/src/mod_armv8r_mpu.c`
+- `hsoc-stack/components/system_mgmt/scp-firmware/module/armv8r_mpu/src/mod_armv8r_mpu.c`
   - Reads `MPUIR_EL2`.
   - Programs `MAIR_EL2`, `PRSELR_EL2`, `PRBAR_EL2`, `PRLAR_EL2`, and
     `SCTLR_EL2`.
-- `hsoc-apollo/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/config_armv8r_mpu.c`
+- `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/config_armv8r_mpu.c`
   - Programs Safety Island memory regions through 64-bit PRBAR/PRLAR values.
 
 ### External Reference Points

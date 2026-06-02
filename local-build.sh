@@ -20,16 +20,16 @@ WORK_DIR="${LOCAL_BUILD_DIR}/work"
 DEPLOY_DIR="${LOCAL_BUILD_DIR}/deploy"
 LOG_DIR="${LOCAL_BUILD_DIR}/logs"
 
-TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/trusted-firmware-m}"
-SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/scp-firmware}"
-ZEPHYRPROJECT_SRC="${ZEPHYRPROJECT_SRC:-${ROOT_DIR}/hsoc-apollo/components/system_mgmt/zephyrproject}"
+TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/trusted-firmware-m}"
+SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/scp-firmware}"
+ZEPHYRPROJECT_SRC="${ZEPHYRPROJECT_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/zephyrproject}"
 ZEPHYR_SAFETY_ISLAND_SRC="${ZEPHYR_SAFETY_ISLAND_SRC:-${ZEPHYRPROJECT_SRC}/safety_island}"
 ZEPHYR_MODULES_LIST="${ZEPHYR_MODULES_LIST:-${ZEPHYRPROJECT_SRC}/apollo-modules.list}"
-TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/trusted-firmware-a}"
-OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/optee-os}"
-UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/u-boot}"
-LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/linux}"
-BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-apollo/components/primary_compute/buildroot}"
+TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/trusted-firmware-a}"
+OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/optee-os}"
+UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/u-boot}"
+LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/linux}"
+BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/buildroot}"
 ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src}"
 RPMSG_NET_SRC="${RPMSG_NET_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src}"
 PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src}"
@@ -132,6 +132,40 @@ require_dir()
 require_command()
 {
     command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+canonical_dir()
+{
+    (cd "$1" && pwd -P)
+}
+
+reset_cmake_build_if_source_changed()
+{
+    local build_dir="$1"
+    local source_dir="$2"
+    local cache="${build_dir}/CMakeCache.txt"
+    local recorded
+    local expected
+
+    [[ -f "${cache}" ]] || return 0
+
+    recorded="$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "${cache}" | tail -n 1)"
+    [[ -n "${recorded}" ]] || return 0
+
+    expected="$(canonical_dir "${source_dir}")"
+    if [[ "${recorded}" != "${expected}" ]]; then
+        log "Removing stale CMake build directory for ${build_dir}"
+        log "  previous source: ${recorded}"
+        log "  current source:  ${expected}"
+        rm -rf "${build_dir}"
+    fi
+}
+
+reset_zephyr_generated_links()
+{
+    rm -rf "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_links"
+    rm -f "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_subdirs.trigger" \
+        "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_subdirs.txt"
 }
 
 path_prepend()
@@ -281,6 +315,7 @@ setup_zephyr_build_environment()
 build_tfm()
 {
     require_dir "${TFM_SRC}"
+    reset_cmake_build_if_source_changed "${TFM_BUILD_DIR}" "${TFM_SRC}"
     mkdir -p "${TFM_BUILD_DIR}/externalsrc-keys" "${FW_DIR}"
     local tfm_work
     tfm_work="$(tfm_recipe_workdir)"
@@ -345,6 +380,7 @@ build_tfm()
 build_scp()
 {
     require_dir "${SCP_SRC}"
+    reset_cmake_build_if_source_changed "${SCP_BUILD_DIR}" "${SCP_SRC}"
     local toolchain="${SCP_SRC}/product/automotive-rd/apollo-fvp/si0_ramfw/Toolchain-GNU.cmake"
     require_file "${toolchain}"
 
@@ -477,6 +513,8 @@ build_zephyr()
     require_dir "${ZEPHYRPROJECT_SRC}"
     require_dir "${ZEPHYRPROJECT_SRC}/zephyr"
     require_dir "${ZEPHYR_SAFETY_ISLAND_SRC}"
+    reset_cmake_build_if_source_changed "${ZEPHYR_BUILD_DIR}" "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample"
+    reset_zephyr_generated_links
     mkdir -p "${ZEPHYR_BUILD_DIR}" "${FW_DIR}"
 
     local board="fvp_rd_aspen_safety_island_c1"

@@ -15,13 +15,13 @@ over register-only stubs.
 ## Active Baseline
 
 - Active Yocto build directory: `build/`
-- Active Yocto template: `hsoc-apollo/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- Active Yocto template: `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
 - Build entrypoint: `./build.sh`
 - Current machine: `apollo-fvp`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`
 - Current configured CPU count: `PC_CPUS_COUNT_DEFAULT = "4"`
 - Apollo Safety Island Zephyr workspace:
-  `hsoc-apollo/components/system_mgmt/zephyrproject/`
+  `hsoc-stack/components/system_mgmt/zephyrproject/`
 - QBox platform under active development:
   `tools/qbox/platforms/fvp-rd-aspen/`
 - QBox helper scripts:
@@ -86,7 +86,7 @@ symbols by default:
 - Firmware and boot components are built from their unstripped local build
   ELF files.
 - Safety Island CL1 Zephyr is built locally from
-  `hsoc-apollo/components/system_mgmt/zephyrproject/` by
+  `hsoc-stack/components/system_mgmt/zephyrproject/` by
   `./local-build.sh zephyr` and as part of `./local-build.sh build`.
 
 Generate or refresh the debug manifest after a local build:

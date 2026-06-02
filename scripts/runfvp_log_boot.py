@@ -247,6 +247,7 @@ def start_fvp(cmd: list[str], boot_log: Path) -> subprocess.Popen[str]:
     env = os.environ.copy()
     return subprocess.Popen(
         cmd,
+        stdin=subprocess.DEVNULL,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,

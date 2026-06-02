@@ -6,7 +6,7 @@ Generated: 2026-05-15
 
 The Safety Island is a Cortex-R82AE subsystem. In CFG2, Safety Island Cluster 1
 adds four SMP cores and runs Zephyr. Apollo now carries the full Zephyr project
-workspace under `hsoc-apollo/components/system_mgmt/zephyrproject/` so the
+workspace under `hsoc-stack/components/system_mgmt/zephyrproject/` so the
 Safety Island CL1 image can be built either through Yocto `EXTERNALSRC` or
 through `./local-build.sh zephyr`. The important cross-domain features are HIPC
 over MHUv3/shared SRAM/RPMsg and PFDI on both Primary Compute and Safety Island
@@ -113,7 +113,7 @@ MHUv3 mailbox:
 
 These paths were found under
 `arm-zena-css/components/safety_island/zephyr/src/`; the Apollo-owned copy now
-lives under `hsoc-apollo/components/system_mgmt/zephyrproject/safety_island/`.
+lives under `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/`.
 
 ## HIPC
 
@@ -207,9 +207,9 @@ Safety Island CL1 firmware image.
 ## Change Guidance
 
 - For Apollo Zephyr board, DTS, Kconfig, CMake, or driver changes, start under
-  `hsoc-apollo/components/system_mgmt/zephyrproject/safety_island`.
+  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island`.
 - For Zephyr RTOS core or module dependency changes, start under
-  `hsoc-apollo/components/system_mgmt/zephyrproject`.
+  `hsoc-stack/components/system_mgmt/zephyrproject`.
 - For Yocto build integration of Zephyr CL1 images, start in
   `arm-zena-css/yocto/meta-zena-css-safety-island/recipes-kernel/zephyr-kernel`.
 - For AP-side HIPC and Linux remoteproc/RPMsg integration, inspect

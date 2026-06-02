@@ -37,7 +37,7 @@ COMPONENTS = (
         RSE_TARGET,
         ("work/trusted-firmware-m/bin/bl1_1.elf",),
         ("Reset_Handler", "_start", "main"),
-        ("hsoc-apollo/components/system_mgmt/trusted-firmware-m",),
+        ("hsoc-stack/components/system_mgmt/trusted-firmware-m",),
     ),
     Component(
         "tfm-bl1_2",
@@ -46,7 +46,7 @@ COMPONENTS = (
         RSE_TARGET,
         ("work/trusted-firmware-m/bin/bl1_2.elf",),
         ("Reset_Handler", "_start", "main"),
-        ("hsoc-apollo/components/system_mgmt/trusted-firmware-m",),
+        ("hsoc-stack/components/system_mgmt/trusted-firmware-m",),
     ),
     Component(
         "tfm-bl2",
@@ -55,7 +55,7 @@ COMPONENTS = (
         RSE_TARGET,
         ("work/trusted-firmware-m/bin/bl2.elf",),
         ("Reset_Handler", "_start", "main"),
-        ("hsoc-apollo/components/system_mgmt/trusted-firmware-m",),
+        ("hsoc-stack/components/system_mgmt/trusted-firmware-m",),
     ),
     Component(
         "tfm-s",
@@ -64,7 +64,7 @@ COMPONENTS = (
         RSE_TARGET,
         ("work/trusted-firmware-m/bin/tfm_s.elf",),
         ("tfm_core_init", "main", "Reset_Handler", "_start"),
-        ("hsoc-apollo/components/system_mgmt/trusted-firmware-m",),
+        ("hsoc-stack/components/system_mgmt/trusted-firmware-m",),
     ),
     Component(
         "scp-si0",
@@ -73,7 +73,7 @@ COMPONENTS = (
         SI_CL0_TARGET,
         ("work/scp-firmware/bin/apollo-fvp-si0-bl2.elf",),
         ("arch_exception_reset", "platform_init_hook", "fwk_arch_init"),
-        ("hsoc-apollo/components/system_mgmt/scp-firmware",),
+        ("hsoc-stack/components/system_mgmt/scp-firmware",),
     ),
     Component(
         "si-cl1-zephyr",
@@ -85,7 +85,7 @@ COMPONENTS = (
             "deploy/firmware/zephyr-demos-cl1.elf",
         ),
         ("z_cstart", "main"),
-        ("hsoc-apollo/components/system_mgmt/zephyrproject/safety_island",),
+        ("hsoc-stack/components/system_mgmt/zephyrproject/safety_island",),
     ),
     Component(
         "tfa-bl2",
@@ -94,7 +94,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf",),
         ("bl2_main", "_start"),
-        ("hsoc-apollo/components/primary_compute/trusted-firmware-a",),
+        ("hsoc-stack/components/primary_compute/trusted-firmware-a",),
     ),
     Component(
         "tfa-bl31",
@@ -103,7 +103,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/trusted-firmware-a/apollo_fvp/debug/bl31/bl31.elf",),
         ("bl31_main", "_start"),
-        ("hsoc-apollo/components/primary_compute/trusted-firmware-a",),
+        ("hsoc-stack/components/primary_compute/trusted-firmware-a",),
     ),
     Component(
         "optee-core",
@@ -112,7 +112,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/optee-os/core/tee.elf",),
         ("_start", "generic_boot_init_primary", "init_primary_helper"),
-        ("hsoc-apollo/components/primary_compute/optee-os",),
+        ("hsoc-stack/components/primary_compute/optee-os",),
     ),
     Component(
         "u-boot",
@@ -121,7 +121,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/u-boot/u-boot",),
         ("_start", "board_init_f", "main_loop"),
-        ("hsoc-apollo/components/primary_compute/u-boot",),
+        ("hsoc-stack/components/primary_compute/u-boot",),
     ),
     Component(
         "linux",
@@ -130,7 +130,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/linux/vmlinux",),
         ("start_kernel", "rest_init"),
-        ("hsoc-apollo/components/primary_compute/linux",),
+        ("hsoc-stack/components/primary_compute/linux",),
     ),
     Component(
         "buildroot-busybox",
@@ -139,7 +139,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/buildroot/build/busybox-*/busybox_unstripped",),
         ("main", "run_applet_no_and_exit"),
-        ("hsoc-apollo/components/primary_compute/buildroot",),
+        ("hsoc-stack/components/primary_compute/buildroot",),
     ),
 )
 
