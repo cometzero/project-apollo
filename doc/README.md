@@ -21,6 +21,13 @@ separate.
 - [QBox Apollo FVP Full-System Design](qbox-apollo-fvp-full-system-design.md) -
   review draft for using local Apollo boot artifacts to emulate RSE, Safety
   Island CL0/CL1, and Primary Compute together in QBox.
+- [QBox Apollo FVP Full-System Architecture KR](qbox-apollo-fvp-full-system-architecture-ko.md) -
+  Korean implementation summary, SW architecture, design rationale, subsystem
+  responsibilities, evidence model, and completion gate overview for the
+  Apollo full-system QBox implementation.
+- [QBox Apollo FVP Full-System Runbook KR](qbox-apollo-fvp-full-system-runbook-ko.md) -
+  Korean execution guide for building, running, validating, and debugging the
+  Apollo full-system QBox path.
 - [QBox Apollo FVP Full-System Goal And Verification](qbox-apollo-fvp-full-system-goal-verification.md) -
   review contract for the full-system objective, non-completion points,
   G0-G5 completion gates, final evidence bundle, and strict verifier command.

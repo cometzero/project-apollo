@@ -1,0 +1,542 @@
+# QBox Apollo FVP Full-System 실행 가이드
+
+생성일: 2026-06-03
+
+상태: 구현 및 검증 완료
+
+이 문서는 Apollo FVP local build 산출물을 사용해 QBox full-system
+emulation을 실행하고, G0-G5 completion gate를 검증하는 절차를 설명한다.
+
+## 빠른 요약
+
+최종 완료를 다시 검증하려면 아래 순서로 실행한다.
+
+```bash
+./local-build.sh build
+./scripts/build_qbox_apollo_fvp_full.sh
+
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
+
+./local-build.sh boot
+
+python3 scripts/compare_fvp_qbox_rse_logs.py \
+  --fvp build/local-apollo-fvp/fvp-boot \
+  --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
+
+python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+  --check memory,irq,atu \
+  --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
+
+python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+  --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
+
+python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+  --strict-final \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
+```
+
+성공 조건은 마지막 command가 exit 0이고,
+`final-verification.json`에 `completion_claim_allowed: true`가 기록되는
+것이다.
+
+## tmux 화면으로 실행
+
+사용자에게 subsystem별 UART 출력을 보여주려면 tmux wrapper를 사용한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh
+```
+
+기본 실행은 `live-cl0-cl1`, `--skip-build`, `--post-login-probe`,
+`--keep-running-after-pass`, `--rootfs-bootargs-profile none`, `--timeout 0`을
+사용한다. 따라서 Linux boot와 post-login probe가 끝나도 QBox target은
+자동 종료되지 않는다. 종료하려면 tmux에서 `F12`를 눌러 session을
+끝낸다. 실행하면 tmux session 안에 다음 pane이 생성된다.
+
+| Pane | 로그 |
+| --- | --- |
+| `qbox-runner` | QBox runner stdout |
+| `platform` | `qbox-platform.log` |
+| `rse` | `qbox-rse.log` |
+| `safety_island_cl0` | `qbox-safety-island-cl0.log` |
+| `safety_island_cl1` | `qbox-safety-island-cl1.log` |
+| `secure_console` | `qbox-secure-console.log` |
+| `primary_console` | `qbox-primary-console.log` |
+
+세션 이름과 출력 위치를 지정하려면 다음처럼 실행한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh \
+  --session apollo-qbox-demo \
+  --out-dir build/qbox-apollo-fvp/full-demo
+```
+
+빌드까지 포함하려면 `--build`를 사용한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh --build
+```
+
+검증용으로 pass 이후 자동 종료되는 bounded run이 필요하면
+`--exit-after-pass` 또는 `--timeout SECONDS`를 사용한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh \
+  --exit-after-pass \
+  --timeout 2400
+```
+
+실행하지 않고 command와 로그 layout만 확인하려면 `--dry-run`을 사용한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh --dry-run
+```
+
+tmux 안에서 `F12`를 누르면 전체 session이 종료된다. `--no-attach`를
+사용하면 session만 만들고 attach하지 않는다.
+
+## 사전 조건
+
+작업 디렉터리는 workspace top이어야 한다.
+
+```bash
+cd /build/arm/arm-auto-solutions
+```
+
+필요한 기본 산출물은 `build/local-apollo-fvp/` 아래에 있어야 한다.
+
+| Artifact | 기본 경로 |
+| --- | --- |
+| RSE ROM | `build/local-apollo-fvp/deploy/firmware/rse-rom-image.img` |
+| RSE flash | `build/local-apollo-fvp/deploy/firmware/rse-flash-image.img` |
+| RSE OTP | `build/local-apollo-fvp/deploy/firmware/rse-otp-image.img` |
+| AP flash | `build/local-apollo-fvp/deploy/firmware/ap-flash-image.img` |
+| AP BL2 ELF | `build/local-apollo-fvp/work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf` |
+| Root disk | `build/local-apollo-fvp/deploy/boot/apollo-fvp-local-disk.img` |
+| EFI capsule disk | `build/local-apollo-fvp/deploy/boot/boot-fat.img` |
+| Provisioning bundle | `build/local-apollo-fvp/deploy/firmware/combined_provisioning_message.bin` |
+| AP DTB | `build/local-apollo-fvp/deploy/boot/apollo-fvp.dtb` |
+| RSE symbols | `build/local-apollo-fvp/debug/symbols.json` |
+| SI CL0 image | `build/local-apollo-fvp/deploy/firmware/si0_ramfw.bin` |
+| SI CL1 image | `build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.bin` |
+| SI CL1 symbols | `build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.elf` |
+
+산출물이 없으면 먼저 local build를 실행한다.
+
+```bash
+./local-build.sh build
+```
+
+FVP 비교를 위해서는 FVP boot evidence도 필요하다.
+
+```bash
+./local-build.sh boot
+```
+
+이 command는 FVP 로그를 `build/local-apollo-fvp/fvp-boot/`에 저장한다.
+
+## QBox 빌드
+
+full-system에 필요한 QBox target을 빌드한다.
+
+```bash
+./scripts/build_qbox_apollo_fvp_full.sh
+```
+
+target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
+
+```bash
+cmake --build tools/qbox/build \
+  --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp \
+  --parallel 8
+```
+
+component 변경 이후에는 다음 검사를 권장한다.
+
+```bash
+cmake --build tools/qbox/build \
+  --target reset_fanout reset_fanout-tests mhuv3_stub mhuv3_stub-tests \
+  platforms-vp \
+  --parallel 8
+
+ctest --test-dir tools/qbox/build \
+  -R 'reset_fanout|mhuv3_stub' \
+  --output-on-failure
+```
+
+## G0: 사전 검사
+
+G0는 artifact와 source contract가 준비되었는지 확인한다.
+
+```bash
+python3 scripts/probe_qemu_cortex_r82.py --source-root .
+
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --check-only \
+  --out-dir build/qbox-apollo-fvp/full-check-only
+
+python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+  --check memory,irq,atu \
+  --out build/qbox-apollo-fvp/full-check-only/map-validation.json
+
+python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+  --check hardware-blocks \
+  --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
+```
+
+확인할 파일은 다음과 같다.
+
+```text
+build/qbox-apollo-fvp/full-check-only/result.json
+build/qbox-apollo-fvp/full-check-only/map-validation.json
+build/qbox-apollo-fvp/full-check-only/coverage-audit.json
+```
+
+## G1: Direct-Boot Guardrail
+
+기존 AP Linux direct-boot 경로가 깨지지 않았는지 확인한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_linux.py \
+  --skip-build \
+  --timeout 600 \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/direct-guardrail
+```
+
+이 결과는 regression guardrail이다. RSE/Safety Island를 우회하므로
+full-system 완료 증거가 아니다.
+
+## G2: Service-Model Full Boot
+
+RSE-first AP firmware boot가 동작하는지 확인한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode service-model \
+  --skip-build \
+  --timeout 1200 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-service-model
+
+python3 scripts/compare_fvp_qbox_rse_logs.py \
+  --fvp build/local-apollo-fvp/fvp-boot \
+  --qbox build/qbox-apollo-fvp/full-service-model \
+  --output build/qbox-apollo-fvp/full-service-model/comparison.json
+```
+
+`service-model`은 Safety Island CPU fidelity debt를 명시적으로 남긴다.
+
+## G3: Live CL1 Integration
+
+Safety Island CL1 Zephyr를 live Cortex-R82 domain으로 실행한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl1 \
+  --skip-build \
+  --timeout 1200 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-live-cl1
+
+python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+  --result-json build/qbox-apollo-fvp/full-live-cl1/result.json \
+  --output build/qbox-apollo-fvp/full-live-cl1/coverage-audit.json
+```
+
+확인할 marker는 CL1 Zephyr boot, PFDI agent/service, network configured,
+Linux post-login의 `arm_si_rproc`, `rpmsg`, `hipc_ethsi1`이다.
+
+## G4: Live CL0/CL1 Integration
+
+Safety Island CL0 SCP-firmware와 CL1 Zephyr를 모두 live domain으로
+실행한다. 최종 runtime completion candidate는 이 모드에서만 나온다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
+
+python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+  --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
+```
+
+성공 시 `result.json`에서 다음 항목을 확인한다.
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("build/qbox-apollo-fvp/full-live-cl0-cl1/result.json")
+data = json.loads(path.read_text())
+print("verdict:", data.get("verdict"))
+print("blocker:", data.get("blocker"))
+print("completion_gates:", data.get("completion_gates"))
+print("first_failing_marker:", data.get("first_failing_marker"))
+PY
+```
+
+기대값은 `verdict: pass`, `blocker: None`, `G0/G4: pass`,
+`first_failing_marker: None`이다.
+
+## G5: FVP Equivalence Closure
+
+FVP와 QBox full live run을 비교하고, map/coverage sidecar를 생성한다.
+
+```bash
+./local-build.sh boot
+
+python3 scripts/compare_fvp_qbox_rse_logs.py \
+  --fvp build/local-apollo-fvp/fvp-boot \
+  --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
+
+python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+  --check memory,irq,atu \
+  --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
+
+python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+  --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
+```
+
+## 최종 Strict Verification
+
+최종 완료 판정은 strict verifier로만 한다.
+
+```bash
+python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+  --strict-final \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
+```
+
+결과 확인:
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json")
+data = json.loads(path.read_text())
+print("completion_ready:", data.get("completion_ready"))
+print("completion_claim_allowed:", data.get("completion_claim_allowed"))
+print("overall_gates:", data.get("overall_gates"))
+print("first_blocker:", data.get("first_blocker"))
+print("rejection:", data.get("completion_rejection_reason"))
+PY
+```
+
+완료 조건:
+
+```text
+completion_ready: True
+completion_claim_allowed: True
+overall_gates.G0..G5: pass
+first_blocker: None
+completion_rejection_reason: None
+```
+
+## 결과 디렉터리 구조
+
+runner는 `--out-dir` 아래에 evidence를 저장한다.
+
+```text
+build/qbox-apollo-fvp/full-live-cl0-cl1/
+  result.json
+  summary.txt
+  rd-aspen-result.json
+  qbox-platform.log
+  qbox-rse.log
+  qbox-safety-island-cl0.log
+  qbox-safety-island-cl1.log
+  qbox-secure-console.log
+  qbox-primary-console.log
+  post-login-probe-actions.log
+  ap-si-mhuv3-trace.log
+  si-cl1-mhuv3-trace.log
+  si-cl0-pc-trace.log
+  comparison.json
+  map-comparison.json
+  coverage-audit.json
+  final-verification.json
+```
+
+중요 로그:
+
+| 로그 | 확인 내용 |
+| --- | --- |
+| `qbox-rse.log` | TF-M BL1_1, BL1_2/BL2 handoff, image manifest, RSE-to-SI/AP handoff |
+| `qbox-safety-island-cl0.log` | SCP start, module init, GIC multiview configured |
+| `qbox-safety-island-cl1.log` | Zephyr boot, CPU OoR, PFDI agent/service, network configured |
+| `qbox-secure-console.log` | AP BL2, BL31, OP-TEE |
+| `qbox-primary-console.log` | U-Boot, Linux kernel, login, root shell |
+| `ap-si-mhuv3-trace.log` | AP-SI MHU traffic |
+| `si-cl1-mhuv3-trace.log` | CL1 MHU/PFDI traffic |
+| `si-cl0-pc-trace.log` | CL0 SCP-firmware PC trace |
+
+## Artifact Override
+
+기본 artifact 대신 실험 이미지를 사용하려면 command-line option으로
+경로를 지정한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --post-login-probe \
+  --rse-rom /path/to/rse-rom-image.img \
+  --rse-flash /path/to/rse-flash-image.img \
+  --rse-otp /path/to/rse-otp-image.img \
+  --ap-flash /path/to/ap-flash-image.img \
+  --rootfs /path/to/apollo-fvp-local-disk.img \
+  --si-cl0-image /path/to/si0_ramfw.bin \
+  --si-cl1-image /path/to/zephyr-demos-cl1.bin \
+  --si-cl1-symbols /path/to/zephyr-demos-cl1.elf \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-experiment
+```
+
+모든 artifact override는 `result.json`의 `artifacts` 항목에 기록된다.
+
+## 단독 CL1 Bring-Up
+
+CL1 Zephyr만 빠르게 확인하려면 isolated mode를 사용한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl1 \
+  --isolated \
+  --skip-build \
+  --timeout 300 \
+  --out-dir build/qbox-apollo-fvp/si-cl1-isolated
+```
+
+이 결과는 milestone evidence이다. AP/RSE/SI 통합 완료 증거로는 사용할
+수 없다.
+
+## 문제 분석 순서
+
+복잡한 boot failure는 다음 순서로 본다.
+
+1. `summary.txt`에서 `verdict`, `blocker`, `first_failing_marker`를 본다.
+2. `result.json`의 `marker_groups`와 `completion_gates`를 본다.
+3. 가장 이른 실패 domain의 UART log를 본다.
+4. MHU나 PFDI 문제이면 `ap-si-mhuv3-trace.log`와
+   `si-cl1-mhuv3-trace.log`를 확인한다.
+5. CL0 hang이면 `si-cl0-pc-trace.log`를 확인한다.
+6. map/interrupt/ATU 문제이면 `map-comparison.json`과
+   `coverage-audit.json`을 본다.
+7. 로그가 특정 firmware stage나 handoff를 가리킨 뒤 GDB/Iris 또는
+   QBox/QEMU source-level debugging으로 넘어간다.
+
+## 자주 보는 실패와 대응
+
+### `missing_artifact:*`
+
+원인: `build/local-apollo-fvp/deploy/` 산출물이 없거나 경로가 다르다.
+
+대응:
+
+```bash
+./local-build.sh build
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --check-only \
+  --out-dir build/qbox-apollo-fvp/full-check-only
+```
+
+### `live_cl0_cl1_marker_blocked:*`
+
+원인: SI CL0 또는 SI CL1 live marker가 빠졌다.
+
+대응:
+
+```bash
+sed -n '1,220p' build/qbox-apollo-fvp/full-live-cl0-cl1/qbox-safety-island-cl0.log
+sed -n '1,220p' build/qbox-apollo-fvp/full-live-cl0-cl1/qbox-safety-island-cl1.log
+sed -n '1,220p' build/qbox-apollo-fvp/full-live-cl0-cl1/si-cl0-pc-trace.log
+```
+
+### `live_cl0_cl1_hipc_rpmsg_blocked:*`
+
+원인: Linux post-login에서 HIPC/RPMsg/PFDI 관련 device나 module marker가
+빠졌다.
+
+대응:
+
+```bash
+sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/post-login-probe-actions.log
+sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/qbox-primary-console.log
+sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/ap-si-mhuv3-trace.log
+sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/si-cl1-mhuv3-trace.log
+```
+
+특히 `ethsi1`, `rpmsg`, `arm_si_rproc`, `hipc_ethsi1` marker를 확인한다.
+
+### FVP comparison 실패
+
+원인: FVP baseline log가 없거나 QBox run과 비교할 marker가 빠졌다.
+
+대응:
+
+```bash
+./local-build.sh boot
+python3 scripts/compare_fvp_qbox_rse_logs.py \
+  --fvp build/local-apollo-fvp/fvp-boot \
+  --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
+  --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
+```
+
+### Cortex-R82 probe 실패
+
+원인: `tools/qemu` 또는 `tools/qbox`의 Cortex-R82 지원이 기대와 다르다.
+
+대응:
+
+```bash
+python3 scripts/probe_qemu_cortex_r82.py --source-root .
+git -C tools/qemu log -1 --oneline
+git -C tools/qbox log -1 --oneline
+```
+
+### 오래된 로그가 섞이는 경우
+
+runner는 `result.json`, `summary.txt`, UART log, trace log를 실행 전에
+정리한다. 그래도 결과가 의심되면 새 output directory를 사용한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-$(date +%Y%m%d-%H%M%S)
+```
+
+## 완료 보고 시 포함할 정보
+
+완료 또는 실패를 보고할 때는 다음 정보를 같이 남긴다.
+
+- 실행 command 전체
+- `result.json` 경로와 `verdict`
+- `final-verification.json` 경로와 `completion_claim_allowed`
+- 실패 시 `blocker`와 `first_failing_marker`
+- 주요 UART log 경로
+- FVP comparison, map comparison, coverage audit 결과
+- 사용한 `tools/qbox`와 `tools/qemu` commit
