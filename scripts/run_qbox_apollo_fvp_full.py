@@ -475,6 +475,8 @@ def write_result(
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "safety_island_mode": args.si_mode,
+        "range_limited_flash_dmi": args.range_limited_flash_dmi,
+        "live_trace": args.live_trace,
         "completion_gates": gates,
         "input_artifacts": input_artifacts,
         "runtime_artifacts": (child_status or {}).get("runtime_artifacts", {}),
@@ -506,6 +508,8 @@ def write_result(
         f"passed: {status['passed']}",
         f"verdict: {status['verdict']}",
         f"safety_island_mode: {args.si_mode}",
+        f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
+        f"live_trace: {status['live_trace']}",
         f"blocker: {status['blocker'] or 'none'}",
         "completion_gates:",
         *[f"  - {gate}: {verdict}" for gate, verdict in gates.items()],
@@ -686,6 +690,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--skip-build")
     if args.no_copy_writable_flash:
         cmd.append("--no-copy-writable-flash")
+    if args.range_limited_flash_dmi:
+        cmd.append("--range-limited-flash-dmi")
     if args.post_login_probe:
         cmd.append("--post-login-probe")
     if args.build_only:
@@ -713,29 +719,31 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
         env["QBOX_APOLLO_FULL_SI_CL0_LOG"] = str(
             (args.out_dir / "qbox-safety-island-cl0.log").resolve()
         )
-        env["QBOX_APOLLO_FULL_SI_GIC_MULTIVIEW_TRACE"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL0_EXCEPTION_TRACE"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_LIMIT"] = "4096"
-        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_FILE"] = str(
-            (args.out_dir / "si-cl0-pc-trace.log").resolve()
-        )
+        if args.live_trace:
+            env["QBOX_APOLLO_FULL_SI_GIC_MULTIVIEW_TRACE"] = "true"
+            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE"] = "true"
+            env["QBOX_APOLLO_FULL_SI_CL0_EXCEPTION_TRACE"] = "true"
+            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_LIMIT"] = "4096"
+            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_FILE"] = str(
+                (args.out_dir / "si-cl0-pc-trace.log").resolve()
+            )
     if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
         env["QBOX_APOLLO_FULL_LIVE_CL1"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_LIMIT"] = "8192"
-        env["QBOX_RDASPEN_MHU_TRACE"] = "true"
-        env["QBOX_RDASPEN_MHU_TRACE_LIMIT"] = "8192"
-        env["QBOX_RDASPEN_MHU_TRACE_FILE"] = str(
-            (args.out_dir / "ap-si-mhuv3-trace.log").resolve()
-        )
         env["QBOX_APOLLO_FULL_SI_CL1_IMAGE"] = str(artifacts["si_cl1_image"])
         env["QBOX_APOLLO_FULL_SI_CL1_LOG"] = str(
             (args.out_dir / "qbox-safety-island-cl1.log").resolve()
         )
-        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_FILE"] = str(
-            (args.out_dir / "si-cl1-mhuv3-trace.log").resolve()
-        )
+        if args.live_trace:
+            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE"] = "true"
+            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_LIMIT"] = "8192"
+            env["QBOX_RDASPEN_MHU_TRACE"] = "true"
+            env["QBOX_RDASPEN_MHU_TRACE_LIMIT"] = "8192"
+            env["QBOX_RDASPEN_MHU_TRACE_FILE"] = str(
+                (args.out_dir / "ap-si-mhuv3-trace.log").resolve()
+            )
+            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_FILE"] = str(
+                (args.out_dir / "si-cl1-mhuv3-trace.log").resolve()
+            )
     proc = subprocess.run(cmd, cwd=workspace_root(), env=env, check=False)
     return proc.returncode, cmd
 
@@ -776,6 +784,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--post-login-probe", action="store_true")
     parser.add_argument("--no-copy-writable-flash", action="store_true")
     parser.add_argument("--rootfs-bootargs-profile", default="none")
+    parser.add_argument(
+        "--range-limited-flash-dmi",
+        action="store_true",
+        help=(
+            "Forward the storage-safe Strata flash DMI fast path to the "
+            "RD-Aspen runner."
+        ),
+    )
+    parser.add_argument(
+        "--live-trace",
+        action="store_true",
+        help=(
+            "Enable verbose live Safety Island GIC/MHU/PC traces. The "
+            "default keeps UART logs and runtime markers but avoids trace "
+            "overhead during boot-performance checks."
+        ),
+    )
     parser.add_argument("--platform-param", action="append", default=[])
     parser.add_argument("--rse-rom", type=Path)
     parser.add_argument("--rse-flash", type=Path)

@@ -78,6 +78,7 @@ do_apply_local_src_patches:apollo-fvp() {
     apply_local_src_patches \
         ${ZENA_CSS_BSP_LAYER}/recipes-bsp/trusted-firmware-m/files/tf-m-extras/fvp-rd-aspen \
         ${UNPACKDIR}/git/tfm-extras
+    apply_local_src_patches ${S}/lib/ext/tf-m-extras ${UNPACKDIR}/git/tfm-extras
     apply_local_src_patches ${S}/lib/ext/qcbor ${UNPACKDIR}/git/qcbor
     apply_local_src_patches ${S}/lib/ext/mbedcrypto ${UNPACKDIR}/git/mbedtls
     apply_local_src_patches ${S}/lib/ext/t_cose ${UNPACKDIR}/git/t_cose

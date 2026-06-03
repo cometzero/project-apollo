@@ -72,6 +72,13 @@ CONSOLE_LOGS = {
     "secure_console": "qbox-secure-console.log",
     "primary_console": "qbox-primary-console.log",
 }
+RANGE_LIMITED_FLASH_DMI_DEFAULTS = {
+    "QBOX_RDASPEN_ATU_DMI": "true",
+    "QBOX_RDASPEN_BOOT_FLASH_DMI": "true",
+    "QBOX_RDASPEN_BOOT_FLASH_DMI_RANGES": "0x7000:0x260000",
+    "QBOX_RDASPEN_HOST_MEMORY_DMI": "true",
+    "QBOX_RDASPEN_AP_FLASH_DMI_RANGES": "0x7000:0x240000",
+}
 
 REQUIRED_MARKERS = {
     "rse_boot": [
@@ -101,6 +108,16 @@ REQUIRED_MARKERS = {
 
 PROGRESS_MARKERS = {
     "rse_bl1_1": "Starting TF-M BL1_1",
+    "rse_jump_bl1_2": "Jumping to BL1_2",
+    "rse_bl1_2": "Starting TF-M BL1_2",
+    "rse_attempt_image_0": "Attempting to boot image 0",
+    "rse_bl2_decrypted": "BL2 image decrypted successfully",
+    "rse_bl2_validated": "BL2 image validated successfully",
+    "rse_jump_bl2": "Jumping to BL2",
+    "rse_image_4_loaded": "Image 4 loaded from the primary slot",
+    "rse_image_3_loaded": "Image 3 loaded from the primary slot",
+    "rse_image_2_loaded": "Image 2 loaded from the primary slot",
+    "rse_image_0_loaded": "Image 0 loaded from the primary slot",
     "rse_first_image_slot": "Jumping to the first image slot",
     "rse_scp_power_on_ap": "RSE to SCP SCMI power on AP succeeded",
     "measured_boot_bl33": "BL_33",
@@ -1961,6 +1978,36 @@ def env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def parse_int_auto(value: str) -> int | None:
+    try:
+        return int(value, 0)
+    except ValueError:
+        return None
+
+
+def is_blank_file(path: Path) -> bool:
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                return True
+            if any(chunk):
+                return False
+
+
+def rse_lcm_uses_se_fast_path(args: argparse.Namespace) -> bool:
+    lcs = os.environ.get("QBOX_RDASPEN_RSE_LCM_LCS", "").strip()
+    for param in args.platform_param:
+        if param.startswith("platform.rse_lcm_regs.lcs="):
+            lcs = param.split("=", 1)[1].strip()
+
+    if not lcs:
+        return True
+
+    value = parse_int_auto(lcs)
+    return value is None or value == 0xEEEEA5A5
+
+
 def apply_primary_console_profile(args: argparse.Namespace) -> None:
     REQUIRED_MARKERS["linux_boot"] = [
         args.primary_login_prompt,
@@ -2031,6 +2078,8 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
+    if args.range_limited_flash_dmi:
+        env.update(RANGE_LIMITED_FLASH_DMI_DEFAULTS)
     if args.flash_stats:
         env["QBOX_RDASPEN_RSE_BOOT_FLASH_STATS_FILE"] = str(
             args.out_dir / RSE_STRATA_STATS
@@ -2356,15 +2405,7 @@ def write_result(
         else ("partial-model" if ap_boot_started else "not-modeled")
     )
     static_label = "not-modeled" if blocker else "static-map-only"
-    try:
-        conf_text = args.conf.read_text()
-    except OSError:
-        conf_text = ""
-    rse_boot_media_label = (
-        "cfi-strata-flash-partial-model"
-        if "strata_flash_j3" in conf_text
-        else ("functional-model" if rse_boot_complete else static_label)
-    )
+    rse_boot_media_label = "cfi-strata-flash-partial-model"
     rse_scp_endpoint_label = "functional-model" if rse_scp_complete else "not-modeled"
     scp_service_model = {
         "strategy": args.scp_strategy,
@@ -2378,6 +2419,7 @@ def write_result(
         {
             "boot_mode": "rse-oriented",
             "scp_strategy": args.scp_strategy,
+            "range_limited_flash_dmi": args.range_limited_flash_dmi,
             "scp_service_model": scp_service_model,
             "fidelity_labels": {
                 "rse_cortex_m55_boot": "functional-model" if rse_boot_started else static_label,
@@ -2456,6 +2498,7 @@ def write_result(
         f"passed: {status['passed']}",
         f"boot_mode: {status['boot_mode']}",
         f"scp_strategy: {status['scp_strategy']}",
+        f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         "scp_service_model: "
         + json.dumps(status["scp_service_model"], sort_keys=True),
         f"blocker: {blocker or 'none'}",
@@ -2628,6 +2671,15 @@ def parse_args() -> argparse.Namespace:
         help="Use deploy flash/OTP images directly instead of per-run copies.",
     )
     parser.add_argument(
+        "--allow-blank-rse-otp",
+        action="store_true",
+        help=(
+            "Allow launching with an all-zero RSE OTP image. This is only "
+            "useful for explicit LCM/provisioning experiments; normal SE "
+            "fast boot requires a provisioned OTP image."
+        ),
+    )
+    parser.add_argument(
         "--no-init-rse-fwu-metadata",
         action="store_true",
         help=(
@@ -2783,11 +2835,21 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--range-limited-flash-dmi",
+        action="store_true",
+        help=(
+            "Enable the storage-safe fast path: ATU DMI, host-memory DMI, "
+            "RSE boot-flash DMI limited to 0x7000:0x260000, and AP flash "
+            "DMI limited to 0x7000:0x240000. Full-device boot-flash DMI is "
+            "avoided because it can break TF-M ITS initialization."
+        ),
+    )
+    parser.add_argument(
         "--flash-stats-interval",
         type=int,
         default=512,
         help=(
-            "Write Strata flash statistics every N target writes when "
+            "Write Strata flash statistics every N target accesses when "
             "--flash-stats is enabled."
         ),
     )
@@ -2968,6 +3030,34 @@ def main() -> int:
         enabled=not args.no_init_rse_fwu_metadata,
         writable_copy=copy or bool(flash_image_preparation.get("changed")),
     )
+
+    if (
+        not args.allow_blank_rse_otp
+        and rse_lcm_uses_se_fast_path(args)
+        and is_blank_file(run_artifacts["rse_otp"])
+    ):
+        blocker = (
+            "blank_rse_otp_requires_provisioned_fast_boot:"
+            f"{run_artifacts['rse_otp']}"
+        )
+        logs = write_placeholder_logs(args.out_dir, blocker)
+        return write_result(
+            args,
+            artifacts,
+            copied,
+            logs,
+            runtime_artifacts=run_artifacts,
+            flash_image_preparation=flash_image_preparation,
+            ap_flash_image_preparation=ap_flash_image_preparation,
+            rootfs_preparation=rootfs_preparation,
+            command=command,
+            timed_out=timed_out,
+            interrupted=interrupted,
+            blocker=blocker,
+            platform_rc=platform_rc,
+            rse_fwu_private_metadata=rse_fwu_private_metadata,
+            rse_pc_trace=parse_rse_pc_trace(args.out_dir, args.pc_trace),
+        )
 
     if not args.skip_build:
         try:

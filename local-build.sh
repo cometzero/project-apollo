@@ -107,6 +107,7 @@ Useful overrides:
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="bridge virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc" ./local-build.sh build
   KERNEL_DEBUG_INFO=0 ./local-build.sh build
+  RSE_OTP_RESET=1 ./local-build.sh build
 EOF
 }
 
@@ -189,6 +190,38 @@ first_existing_glob()
     done
     shopt -u nullglob
     return 1
+}
+
+apply_git_patch_dir()
+{
+    local input_dir="$1"
+    local dest_dir="$2"
+    local patch
+
+    [[ -d "${input_dir}" ]] || die "missing local patch directory: ${input_dir}"
+    [[ -d "${dest_dir}" ]] || die "missing patch destination directory: ${dest_dir}"
+
+    shopt -s nullglob
+    for patch in "${input_dir}"/*.patch "${input_dir}"/*.diff; do
+        if git -C "${dest_dir}" apply --check "${patch}" >/dev/null 2>&1; then
+            log "Applying $(basename "${patch}") to ${dest_dir}"
+            git -C "${dest_dir}" apply "${patch}"
+        elif git -C "${dest_dir}" apply --reverse --check "${patch}" >/dev/null 2>&1; then
+            log "Patch already applied: $(basename "${patch}")"
+        else
+            die "failed to apply patch $(basename "${patch}") to ${dest_dir}"
+        fi
+    done
+    shopt -u nullglob
+}
+
+reset_generated_git_tree()
+{
+    local dest_dir="$1"
+
+    [[ -d "${dest_dir}/.git" ]] || die "missing generated git tree: ${dest_dir}"
+    git -C "${dest_dir}" reset --hard >/dev/null
+    git -C "${dest_dir}" clean -fd >/dev/null
 }
 
 find_first_file()
@@ -326,6 +359,19 @@ build_tfm()
     local saved_path="${PATH}"
     local tfm_native_bin="${tfm_work}/recipe-sysroot-native/usr/bin"
 
+    reset_generated_git_tree "${tfm_deps}/tfm-extras"
+    reset_generated_git_tree "${tfm_deps}/qcbor"
+    reset_generated_git_tree "${tfm_deps}/mbedtls"
+    reset_generated_git_tree "${tfm_deps}/t_cose"
+
+    apply_git_patch_dir \
+        "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m-extras/fvp-rd-aspen" \
+        "${tfm_deps}/tfm-extras"
+    apply_git_patch_dir "${TFM_SRC}/lib/ext/tf-m-extras" "${tfm_deps}/tfm-extras"
+    apply_git_patch_dir "${TFM_SRC}/lib/ext/qcbor" "${tfm_deps}/qcbor"
+    apply_git_patch_dir "${TFM_SRC}/lib/ext/mbedcrypto" "${tfm_deps}/mbedtls"
+    apply_git_patch_dir "${TFM_SRC}/lib/ext/t_cose" "${tfm_deps}/t_cose"
+
     install -m 0600 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.prv" \
         "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.prv"
     install -m 0644 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.pub" \
@@ -334,6 +380,19 @@ build_tfm()
         "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.prv"
     install -m 0644 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.pub" \
         "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.pub"
+
+    # TF-M signing rules can leave these outputs stale after an incremental
+    # externalsrc relink. Remove them so the signed boot images always match
+    # the current BL2 and runtime binaries.
+    rm -f \
+        "${TFM_BUILD_DIR}/bin/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bl1/bl1_2/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bl1/bl1_2/fwu_test_bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/fwu_test_tfm_s_signed.bin"
 
     run_logged tfm-configure "${cmake_bin}" \
         -S "${TFM_SRC}" \
@@ -361,6 +420,7 @@ build_tfm()
         -DNR_OF_IMAGES_IN_FW_BANK="${NR_IMAGES_PER_FWU_BANK}" \
         -DTFM_PLATFORM_VARIANT=fvp \
         -DTFM_RTL_VARIANT=emu \
+        -DPLATFORM_HAS_STRATA_FLASH=ON \
         -DTFM_BL1_2_CM_SIGNING_KEY_PATH="${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.pub" \
         -DTFM_BL1_2_DM_SIGNING_KEY_PATH="${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.pub"
 
@@ -1455,6 +1515,65 @@ raw_image()
     truncate -s "${size}" "${image}"
 }
 
+rse_otp_fingerprint()
+{
+    local files=(
+        "${FW_DIR}/combined_provisioning_message.bin"
+        "${FW_DIR}/enc_key_s.b64"
+        "${FW_DIR}/bl2_signed.bin"
+        "${FW_DIR}/tfm_s_signed.bin"
+    )
+    local file
+
+    for file in "${files[@]}"; do
+        require_file "${file}"
+    done
+
+    sha256sum "${files[@]}" | sha256sum | awk '{print $1}'
+}
+
+ensure_rse_otp_image()
+{
+    local image="$1"
+    local size="$2"
+    local reset="${RSE_OTP_RESET:-0}"
+    local fingerprint_file="${image}.fingerprint"
+    local fingerprint
+
+    fingerprint="$(rse_otp_fingerprint)"
+
+    case "${reset}" in
+        1|true|TRUE|yes|YES|on|ON)
+            raw_image "${image}" "${size}"
+            printf '%s\n' "${fingerprint}" > "${fingerprint_file}"
+            log "Reset RSE OTP image: ${image}"
+            return
+            ;;
+    esac
+
+    if [[ ! -f "${image}" ]]; then
+        raw_image "${image}" "${size}"
+        printf '%s\n' "${fingerprint}" > "${fingerprint_file}"
+        log "Created blank RSE OTP image: ${image}"
+        return
+    fi
+
+    local actual
+    actual="$(stat -c '%s' "${image}")"
+    [[ "${actual}" == "${size}" ]] || \
+        die "existing RSE OTP image ${image} is ${actual} bytes, expected ${size}; set RSE_OTP_RESET=1 to recreate it"
+
+    if [[ ! -f "${fingerprint_file}" ]] ||
+       [[ "$(cat "${fingerprint_file}")" != "${fingerprint}" ]]; then
+        raw_image "${image}" "${size}"
+        printf '%s\n' "${fingerprint}" > "${fingerprint_file}"
+        log "Reset RSE OTP image because TF-M provisioning artifacts changed: ${image}"
+        return
+    fi
+
+    log "Preserving RSE OTP image: ${image}"
+}
+
 gpt_add()
 {
     local image="$1"
@@ -1516,7 +1635,7 @@ package_flash_images()
     write_at "${rse_rom}" $((0x0)) "${FW_DIR}/bl1_1.bin"
     write_at "${rse_rom}" $((0x1f000)) "${FW_DIR}/rom_dma_ics.bin" $((0x400))
 
-    raw_image "${FW_DIR}/rse-otp-image.img" $((0x10000))
+    ensure_rse_otp_image "${FW_DIR}/rse-otp-image.img" $((0x10000))
 
     local rse_flash="${FW_DIR}/rse-flash-image.img"
     raw_image "${rse_flash}" $((0x4cd000))
