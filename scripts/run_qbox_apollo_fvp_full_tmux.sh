@@ -1,0 +1,528 @@
+#!/usr/bin/env bash
+#
+# Run the Apollo FVP full-system QBox target in a tmux session.
+#
+# The runner pane keeps the QBox wrapper output visible. Each known subsystem
+# UART log is tailed in its own tmux pane so the same run is useful for a
+# user-facing demo and for file-backed analysis.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SCRIPT_PATH="${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")"
+
+PYTHON_BIN="${PYTHON:-python3}"
+TMUX_BIN="${TMUX_BIN:-tmux}"
+RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
+TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-full-${RUN_STAMP}}"
+OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-tmux-${RUN_STAMP}}"
+LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+QBOX_CONF="${QBOX_CONF:-${ROOT_DIR}/tools/qbox/platforms/apollo-fvp/full.lua}"
+SI_MODE="${SI_MODE:-live-cl0-cl1}"
+TIMEOUT="${TIMEOUT:-0}"
+JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
+ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
+SKIP_BUILD="${SKIP_BUILD:-1}"
+POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
+KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+NO_ATTACH=0
+DRY_RUN=0
+
+RUNNER_ARGS_FILE="${RUNNER_ARGS_FILE:-}"
+
+usage()
+{
+    cat <<EOF
+Usage: scripts/run_qbox_apollo_fvp_full_tmux.sh [options] [-- runner args]
+
+Run the Apollo FVP full-system QBox path in tmux and tail subsystem logs.
+
+Options:
+  --session NAME       tmux session name (default: ${TMUX_SESSION})
+  --out-dir PATH       log/output directory (default: ${OUT_DIR})
+  --local-build-dir P  local build directory (default: ${LOCAL_BUILD_DIR})
+  --conf PATH          QBox Lua config (default: ${QBOX_CONF})
+  --si-mode MODE       service-model, live-cl1, or live-cl0-cl1
+                       (default: ${SI_MODE})
+  --timeout SECONDS    runner timeout, 0 means no timeout (default: ${TIMEOUT})
+  --jobs N             build jobs passed to the runner (default: ${JOBS})
+  --build              build QBox targets before running
+  --skip-build         skip QBox build before running (default)
+  --post-login-probe   run Linux post-login probes (default)
+  --no-post-login-probe
+  --keep-running-after-pass
+                       keep QBox alive after Linux boot/probes pass (default)
+  --exit-after-pass    stop QBox when the normal pass condition is reached
+  --rootfs-bootargs-profile NAME
+                       runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
+  --no-attach          start tmux but do not attach
+  --dry-run            print the run command and log layout only
+  -h, --help           show this help
+
+Environment overrides:
+  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_CONF
+  SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
+  ROOTFS_BOOTARGS_PROFILE
+
+Inside tmux:
+  F12                  kill the whole session
+  mouse                enabled
+
+Subsystem UART logs:
+  rse                  RSE / TF-M
+  safety_island_cl0    Safety Island CL0 / SCP-firmware
+  safety_island_cl1    Safety Island CL1 / Zephyr
+  secure_console       TF-A / OP-TEE secure AP console
+  primary_console      U-Boot / Linux primary console
+EOF
+}
+
+die()
+{
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+require_command()
+{
+    command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+abspath()
+{
+    case "$1" in
+        /*) printf '%s\n' "$1" ;;
+        *) printf '%s/%s\n' "$PWD" "$1" ;;
+    esac
+}
+
+quote_args()
+{
+    local arg
+    (($# > 0)) || return 0
+    printf '%q' "$1"
+    shift || true
+    for arg in "$@"; do
+        printf ' %q' "$arg"
+    done
+}
+
+validate_tmux_name()
+{
+    [[ "$1" =~ ^[A-Za-z0-9_.-]+$ ]] ||
+        die "tmux session name must contain only letters, numbers, dot, underscore, or dash: $1"
+}
+
+validate_bool()
+{
+    case "$2" in
+        0|1) ;;
+        *) die "$1 must be 0 or 1: $2" ;;
+    esac
+}
+
+validate_si_mode()
+{
+    case "$1" in
+        service-model|live-cl1|live-cl0-cl1) ;;
+        *) die "invalid --si-mode: $1" ;;
+    esac
+}
+
+tmux_cmd()
+{
+    env -u TMUX "${TMUX_BIN}" "$@"
+}
+
+runner_command()
+{
+    local -n _out="$1"
+    shift
+    local -a extra_args=("$@")
+
+    _out=(
+        "${PYTHON_BIN}"
+        "${ROOT_DIR}/scripts/run_qbox_apollo_fvp_full.py"
+        --conf "${QBOX_CONF}"
+        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --si-mode "${SI_MODE}"
+        --out-dir "${OUT_DIR}"
+        --timeout "${TIMEOUT}"
+        --jobs "${JOBS}"
+        --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+    )
+
+    if [[ "${SKIP_BUILD}" == "1" ]]; then
+        _out+=(--skip-build)
+    fi
+    if [[ "${POST_LOGIN_PROBE}" == "1" ]]; then
+        _out+=(--post-login-probe)
+    fi
+    if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
+        _out+=(--keep-running-after-pass)
+    fi
+    if ((${#extra_args[@]} > 0)); then
+        _out+=("${extra_args[@]}")
+    fi
+}
+
+known_logs()
+{
+    cat <<EOF
+platform:qbox-platform.log:QBox platform stdout
+rse:qbox-rse.log:RSE / TF-M
+safety_island_cl0:qbox-safety-island-cl0.log:Safety Island CL0 / SCP-firmware
+safety_island_cl1:qbox-safety-island-cl1.log:Safety Island CL1 / Zephyr
+secure_console:qbox-secure-console.log:TF-A / OP-TEE secure AP
+primary_console:qbox-primary-console.log:U-Boot / Linux
+EOF
+}
+
+prepare_log_files()
+{
+    mkdir -p "${OUT_DIR}"
+    local spec
+    local domain
+    local file
+    local title
+    : >"${OUT_DIR}/tmux-log-layout.tsv"
+    printf 'domain\tfile\ttitle\n' >"${OUT_DIR}/tmux-log-layout.tsv"
+    while IFS=: read -r domain file title; do
+        : >"${OUT_DIR}/${file}"
+        printf '%s\t%s\t%s\n' "${domain}" "${OUT_DIR}/${file}" "${title}" \
+            >>"${OUT_DIR}/tmux-log-layout.tsv"
+    done < <(known_logs)
+}
+
+tail_supports_pid()
+{
+    tail --help 2>&1 | grep -q -- '--pid'
+}
+
+tail_log()
+{
+    (($# == 3)) || die "--tail-log requires DOMAIN TITLE LOG_PATH"
+
+    local domain="$1"
+    local title="$2"
+    local log_path="$3"
+    local pid_file="${OUT_DIR}/qbox-run.pid"
+    local done_file="${OUT_DIR}/.qbox-run.done"
+    local pid=""
+
+    mkdir -p "$(dirname "${log_path}")"
+    : >>"${log_path}"
+
+    printf 'Subsystem: %s\n' "${title}"
+    printf 'Domain: %s\n' "${domain}"
+    printf 'Log: %s\n\n' "${log_path}"
+
+    while [[ ! -e "${pid_file}" && ! -e "${done_file}" ]]; do
+        sleep 0.2
+    done
+
+    if [[ -s "${pid_file}" ]]; then
+        pid="$(<"${pid_file}")"
+    fi
+
+    if [[ -n "${pid}" ]] && tail_supports_pid; then
+        tail --pid="${pid}" -n +1 -F "${log_path}" || true
+    elif [[ ! -e "${done_file}" ]]; then
+        tail -n +1 -F "${log_path}" || true
+    else
+        tail -n +1 "${log_path}" || true
+    fi
+
+    printf '\nLog pane exited. Press Enter to close this pane, or F12 to kill the session.\n'
+    read -r _ || true
+}
+
+supervise_run()
+{
+    require_command "${PYTHON_BIN}"
+
+    mapfile -t EXTRA_RUNNER_ARGS <"${RUNNER_ARGS_FILE}"
+    local -a cmd=()
+    runner_command cmd "${EXTRA_RUNNER_ARGS[@]}"
+
+    prepare_log_files
+    : >"${OUT_DIR}/qbox-runner.log"
+    : >"${OUT_DIR}/qbox-run.status"
+    rm -f "${OUT_DIR}/.qbox-run.done" "${OUT_DIR}/qbox-run.pid"
+    quote_args "${cmd[@]}" >"${OUT_DIR}/qbox-run.cmd"
+
+    printf 'QBox Apollo full-system tmux run\n'
+    printf 'Logs: %s\n' "${OUT_DIR}"
+    printf 'Runner log: %s\n' "${OUT_DIR}/qbox-runner.log"
+    printf 'Command: %s\n\n' "$(quote_args "${cmd[@]}")"
+    printf 'F12 kills the tmux session.\n\n'
+
+    local status_file="${OUT_DIR}/qbox-run.status.tmp"
+    rm -f "${status_file}"
+
+    set +e
+    if command -v stdbuf >/dev/null 2>&1; then
+        (
+            stdbuf -oL -eL "${cmd[@]}"
+            printf '%s\n' "$?" >"${status_file}"
+        ) 2>&1 | tee -a "${OUT_DIR}/qbox-runner.log" &
+    else
+        (
+            "${cmd[@]}"
+            printf '%s\n' "$?" >"${status_file}"
+        ) 2>&1 | tee -a "${OUT_DIR}/qbox-runner.log" &
+    fi
+    local run_pid=$!
+    printf '%s\n' "${run_pid}" >"${OUT_DIR}/qbox-run.pid"
+    wait "${run_pid}"
+    local pipeline_status=$?
+    set -e
+
+    local status="${pipeline_status}"
+    if [[ -s "${status_file}" ]]; then
+        status="$(<"${status_file}")"
+    fi
+    printf '%s\n' "${status}" >"${OUT_DIR}/qbox-run.status"
+    rm -f "${status_file}"
+    : >"${OUT_DIR}/.qbox-run.done"
+
+    printf '\nQBox runner exited with status %s.\n' "${status}" |
+        tee -a "${OUT_DIR}/qbox-runner.log"
+    printf 'Logs remain under: %s\n' "${OUT_DIR}" |
+        tee -a "${OUT_DIR}/qbox-runner.log"
+    printf 'Press Enter to close this pane, or F12 to kill the session.\n'
+    read -r _ || true
+    return "${status}"
+}
+
+print_dry_run()
+{
+    mapfile -t EXTRA_RUNNER_ARGS <"${RUNNER_ARGS_FILE}"
+    local -a cmd=()
+    runner_command cmd "${EXTRA_RUNNER_ARGS[@]}"
+
+    cat <<EOF
+Apollo QBox full-system tmux run
+  session: ${TMUX_SESSION}
+  si_mode: ${SI_MODE}
+  out_dir: ${OUT_DIR}
+  command: $(quote_args "${cmd[@]}")
+
+file-backed logs
+EOF
+    local domain
+    local file
+    local title
+    while IFS=: read -r domain file title; do
+        printf '  %-18s %s/%s (%s)\n' "${domain}" "${OUT_DIR}" "${file}" "${title}"
+    done < <(known_logs)
+}
+
+start_log_pane()
+{
+    local domain="$1"
+    local file="$2"
+    local title="$3"
+    local log_path="${OUT_DIR}/${file}"
+    local pane_body
+    local pane_id
+
+    pane_body=$(
+        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+        printf 'OUT_DIR=%q exec %q --tail-log %q %q %q' \
+            "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+    )
+
+    pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' -t "${TMUX_SESSION}:qbox" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
+    tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
+}
+
+start_tmux()
+{
+    validate_tmux_name "${TMUX_SESSION}"
+    validate_si_mode "${SI_MODE}"
+    validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
+    validate_bool "POST_LOGIN_PROBE" "${POST_LOGIN_PROBE}"
+    validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
+    require_command "${TMUX_BIN}"
+    require_command "${PYTHON_BIN}"
+
+    [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
+    [[ -d "${LOCAL_BUILD_DIR}" ]] ||
+        die "local build directory not found: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
+
+    ROOT_DIR="$(abspath "${ROOT_DIR}")"
+    SCRIPT_PATH="$(abspath "${SCRIPT_PATH}")"
+    OUT_DIR="$(abspath "${OUT_DIR}")"
+    LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+    QBOX_CONF="$(abspath "${QBOX_CONF}")"
+    mkdir -p "${OUT_DIR}"
+
+    local runner_args_file="${OUT_DIR}/extra-runner-args.txt"
+    : >"${runner_args_file}"
+    local arg
+    for arg in "${EXTRA_RUNNER_ARGS[@]}"; do
+        printf '%s\n' "${arg}" >>"${runner_args_file}"
+    done
+    RUNNER_ARGS_FILE="${runner_args_file}"
+
+    prepare_log_files
+
+    if ((DRY_RUN)); then
+        print_dry_run
+        return 0
+    fi
+
+    if tmux_cmd has-session -t "${TMUX_SESSION}" 2>/dev/null; then
+        die "tmux session already exists: ${TMUX_SESSION}"
+    fi
+
+    local supervisor_body
+    supervisor_body=$(
+        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+        printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
+            "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
+        printf 'LOCAL_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
+            "${LOCAL_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
+        printf 'ROOTFS_BOOTARGS_PROFILE=%q SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
+            "${ROOTFS_BOOTARGS_PROFILE}" "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
+        printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
+        printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
+            "${RUNNER_ARGS_FILE}" "${SCRIPT_PATH}"
+    )
+
+    local runner_pane_id
+    runner_pane_id="$(tmux_cmd new-session -d -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
+    tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
+    tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
+    tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
+    tmux_cmd select-pane -t "${runner_pane_id}" -T qbox-runner
+    tmux_cmd bind-key -n F12 kill-session -t "${TMUX_SESSION}"
+
+    local domain
+    local file
+    local title
+    while IFS=: read -r domain file title; do
+        start_log_pane "${domain}" "${file}" "${title}"
+    done < <(known_logs)
+
+    printf 'started tmux session: %s\n' "${TMUX_SESSION}"
+    printf 'logs: %s\n' "${OUT_DIR}"
+    printf 'attach command: %s attach-session -t %s\n' "${TMUX_BIN}" "${TMUX_SESSION}"
+    printf 'F12 kills the session.\n'
+
+    if ((NO_ATTACH)); then
+        return 0
+    fi
+
+    if [[ -n "${TMUX:-}" ]]; then
+        tmux_cmd switch-client -t "${TMUX_SESSION}:qbox"
+    else
+        tmux_cmd attach-session -t "${TMUX_SESSION}"
+    fi
+}
+
+if [[ "${1:-}" == "--supervise" ]]; then
+    supervise_run
+    exit $?
+fi
+
+if [[ "${1:-}" == "--tail-log" ]]; then
+    shift
+    tail_log "$@"
+    exit $?
+fi
+
+EXTRA_RUNNER_ARGS=()
+while (($# > 0)); do
+    case "$1" in
+        --session)
+            (($# >= 2)) || die "--session requires a value"
+            TMUX_SESSION="$2"
+            shift 2
+            ;;
+        --out-dir)
+            (($# >= 2)) || die "--out-dir requires a value"
+            OUT_DIR="$2"
+            shift 2
+            ;;
+        --local-build-dir)
+            (($# >= 2)) || die "--local-build-dir requires a value"
+            LOCAL_BUILD_DIR="$2"
+            shift 2
+            ;;
+        --conf)
+            (($# >= 2)) || die "--conf requires a value"
+            QBOX_CONF="$2"
+            shift 2
+            ;;
+        --si-mode)
+            (($# >= 2)) || die "--si-mode requires a value"
+            SI_MODE="$2"
+            shift 2
+            ;;
+        --timeout)
+            (($# >= 2)) || die "--timeout requires a value"
+            TIMEOUT="$2"
+            shift 2
+            ;;
+        --jobs)
+            (($# >= 2)) || die "--jobs requires a value"
+            JOBS="$2"
+            shift 2
+            ;;
+        --build)
+            SKIP_BUILD=0
+            shift
+            ;;
+        --skip-build)
+            SKIP_BUILD=1
+            shift
+            ;;
+        --post-login-probe)
+            POST_LOGIN_PROBE=1
+            shift
+            ;;
+        --no-post-login-probe)
+            POST_LOGIN_PROBE=0
+            shift
+            ;;
+        --keep-running-after-pass)
+            KEEP_RUNNING_AFTER_PASS=1
+            shift
+            ;;
+        --exit-after-pass)
+            KEEP_RUNNING_AFTER_PASS=0
+            shift
+            ;;
+        --rootfs-bootargs-profile)
+            (($# >= 2)) || die "--rootfs-bootargs-profile requires a value"
+            ROOTFS_BOOTARGS_PROFILE="$2"
+            shift 2
+            ;;
+        --no-attach)
+            NO_ATTACH=1
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --)
+            shift
+            EXTRA_RUNNER_ARGS=("$@")
+            break
+            ;;
+        *)
+            die "unknown argument: $1"
+            ;;
+    esac
+done
+
+start_tmux
