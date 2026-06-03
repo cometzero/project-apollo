@@ -23,6 +23,7 @@ import time
 REQUIRED_TARGETS = [
     "platforms-vp",
     "keep_alive",
+    "addrtr",
     "router",
     "gs_memory",
     "host_scr",
@@ -31,6 +32,7 @@ REQUIRED_TARGETS = [
     "char_backend_stdio",
     "uart-pl011",
     "cpu_arm_cortexA720AE",
+    "cpu_arm_cortexR82",
     "arm_gicv3",
     "arm_gicv3_its",
     "qemu_gpex",
@@ -42,6 +44,7 @@ REQUIRED_TARGETS = [
     "nvic_armv7m",
     "remote_cpu",
     "mhuv3_stub",
+    "gicx00_multiview",
     "host_ppu",
     "cc3xx",
     "dma350",
@@ -148,9 +151,12 @@ POST_LOGIN_PROBE_COMMANDS = [
     "for d in /sys/class/remoteproc/remoteproc*; do [ -f $d/name ] && echo remoteproc_state:$(cat $d/name):$(cat $d/state); done",
     "for d in /sys/class/remoteproc/remoteproc*; do [ -f $d/state ] && [ \"$(cat $d/state)\" = detached ] && echo attach > $d/state 2>/dev/null || true; done",
     "for d in /sys/class/remoteproc/remoteproc*; do [ -f $d/name ] && echo remoteproc_state_after:$(cat $d/name):$(cat $d/state); done",
+    "if command -v od >/dev/null && [ -r /dev/mem ]; then dd if=/dev/mem of=/tmp/si-cl1-rsctbl.bin bs=4096 skip=256 count=1 2>/dev/null; echo si_cl1_rsctbl_dd_rc:$?; od -An -tx4 -N 128 /tmp/si-cl1-rsctbl.bin 2>/dev/null | sed 's/^/si_cl1_rsctbl_word:/'; echo si_cl1_rsctbl_od_rc:$?; else echo si_cl1_rsctbl_dd_rc:127; fi",
     "modprobe -v rpmsg_ns; echo rpmsg_ns_modprobe_rc:$?",
     "modprobe -v virtio_rpmsg_bus; echo virtio_rpmsg_bus_modprobe_rc:$?",
     "modprobe -v rpmsg_net; echo rpmsg_net_modprobe_rc:$?",
+    "for i in $(seq 1 100); do ls /sys/bus/rpmsg/devices/virtio*.ethsi1.* >/dev/null 2>&1 && break; sleep 0.1; done",
+    "for i in $(seq 1 100); do ip link show ethsi1 >/dev/null 2>&1 && break; sleep 0.1; done",
     "ls -l /sys/bus/virtio/devices || true",
     "ls -l /sys/bus/rpmsg/devices || true",
     "for d in /sys/bus/rpmsg/devices/*; do [ -e $d/name ] && echo rpmsg_device:$(basename $d):$(cat $d/name); done",
@@ -358,6 +364,12 @@ HOST_SI_CL1_IMG_CODE_LOGICAL_BASE = 0x70186000
 HOST_SI_CL1_HEADER_FILE_OFFSET = 0x000FFC00
 HOST_SI_CL1_CODE_FILE_OFFSET = 0x00000000
 HOST_SI_CL1_SAMPLE_SIZE = 0x400
+HOST_AP_BL2_HEADER_SRAM_SIZE = 0x00080000
+HOST_AP_BL2_HEADER_RSC_TABLE_OFFSET = 0x00000000
+HOST_AP_BL2_HEADER_VRING0_OFFSET = 0x00020000
+HOST_AP_BL2_HEADER_VRING1_OFFSET = 0x00040000
+HOST_AP_BL2_HEADER_VDEV0BUFFER_OFFSET = 0x00060000
+HOST_AP_BL2_HEADER_SAMPLE_SIZE = 0x80
 EXTRA_VIRTIO_BLK_SIZE = 64 * 1024 * 1024
 SI_CL0_PRIMARY_FLASH_OFFSET = 0x00067000
 SI_CL0_SECONDARY_FLASH_OFFSET = 0x002C7000
@@ -965,6 +977,86 @@ def analyze_host_si_cl1_sram(
         primary_flash_offset=SI_CL1_PRIMARY_FLASH_OFFSET,
         secondary_flash_offset=SI_CL1_SECONDARY_FLASH_OFFSET,
     )
+
+
+def analyze_host_ap_bl2_header_sram(path: Path | None) -> dict[str, object] | None:
+    if path is None:
+        return None
+    info: dict[str, object] = {
+        "path": str(path),
+        "expected_size": HOST_AP_BL2_HEADER_SRAM_SIZE,
+        "logical_layout": {
+            "rsctbl_ap_pa": "0x00100000",
+            "vdev0vring0_ap_pa": "0x00120000",
+            "vdev0vring1_ap_pa": "0x00140000",
+            "vdev0buffer_ap_pa": "0x00160000",
+        },
+    }
+    if not path.exists():
+        info.update({"exists": False})
+        return info
+
+    data = path.read_bytes()
+    nonzero, ranges = find_nonzero_ranges(data)
+    sample = data[
+        HOST_AP_BL2_HEADER_RSC_TABLE_OFFSET:
+        HOST_AP_BL2_HEADER_RSC_TABLE_OFFSET + HOST_AP_BL2_HEADER_SAMPLE_SIZE
+    ]
+    words = list(struct.unpack_from("<" + ("I" * (len(sample) // 4)), sample)) if sample else []
+    rsc_offset = words[4] if len(words) > 4 else None
+    looks_like_resource_table = bool(
+        len(words) >= 5
+        and words[0] in {1, 2}
+        and 0 < words[1] < 16
+        and words[2] == 0
+        and words[3] == 0
+        and isinstance(rsc_offset, int)
+        and 0x14 <= rsc_offset < 0x20000
+    )
+    info.update(
+        {
+            "exists": True,
+            "size": len(data),
+            "nonzero_bytes": nonzero,
+            "nonzero_ranges": ranges,
+            "resource_table_words": [hex(word) for word in words[:16]],
+            "resource_table_candidate": looks_like_resource_table,
+            "resource_table_sample": sample_region(
+                data,
+                offset=HOST_AP_BL2_HEADER_RSC_TABLE_OFFSET,
+                size=HOST_AP_BL2_HEADER_SAMPLE_SIZE,
+                flash_path=None,
+            ),
+            "vdev0vring0_sample": sample_region(
+                data,
+                offset=HOST_AP_BL2_HEADER_VRING0_OFFSET,
+                size=HOST_AP_BL2_HEADER_SAMPLE_SIZE,
+                flash_path=None,
+            ),
+            "vdev0vring1_sample": sample_region(
+                data,
+                offset=HOST_AP_BL2_HEADER_VRING1_OFFSET,
+                size=HOST_AP_BL2_HEADER_SAMPLE_SIZE,
+                flash_path=None,
+            ),
+            "vdev0buffer_sample": sample_region(
+                data,
+                offset=HOST_AP_BL2_HEADER_VDEV0BUFFER_OFFSET,
+                size=HOST_AP_BL2_HEADER_SAMPLE_SIZE,
+                flash_path=None,
+            ),
+            "classification": (
+                "resource_table_visible"
+                if looks_like_resource_table
+                else (
+                    "host_window_contains_nonzero_runtime_data"
+                    if nonzero
+                    else "resource_table_not_written"
+                )
+            ),
+        }
+    )
+    return info
 
 
 def init_rse_fwu_private_metadata(
@@ -1865,6 +1957,24 @@ def probe_requires_ap_cpus(args: argparse.Namespace) -> bool:
     return bool(args.post_login_probe or args.secure_service_probe or args.fwu_probe)
 
 
+def env_flag(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def apply_primary_console_profile(args: argparse.Namespace) -> None:
+    REQUIRED_MARKERS["linux_boot"] = [
+        args.primary_login_prompt,
+        args.primary_shell_marker,
+    ]
+    PROGRESS_MARKERS["primary_login_prompt"] = args.primary_login_prompt
+    PROGRESS_MARKERS["primary_root_shell"] = args.primary_shell_marker
+    LOGIN_READY_PATTERNS[:] = [
+        re.escape(args.primary_login_prompt),
+        r"Started .*Serial Getty on ttyAMA0",
+        r"Reached target .*Login Prompts",
+    ]
+
+
 def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -> dict[str, str]:
     env = os.environ.copy()
     lib_paths = [
@@ -1887,6 +1997,8 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         "false" if args.no_copy_writable_flash else "true"
     )
     env["QBOX_RDASPEN_AP_FLASH"] = str(artifacts["ap_flash"])
+    if args.ap_bl2_elf:
+        env["QBOX_RDASPEN_AP_BL2_ELF"] = str(args.ap_bl2_elf)
     env["QBOX_RDASPEN_ROOTFS"] = str(artifacts["rootfs"])
     for index in range(1, 4):
         artifact_name = f"extra_blk{index}"
@@ -1899,6 +2011,10 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if "host_si_cl1_sram" in artifacts:
         env["QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE"] = str(
             artifacts["host_si_cl1_sram"]
+        )
+    if "host_ap_bl2_header_sram" in artifacts:
+        env["QBOX_RDASPEN_HOST_AP_BL2_HEADER_SRAM_MAP_FILE"] = str(
+            artifacts["host_ap_bl2_header_sram"]
         )
     env["QBOX_RDASPEN_PROVISIONING_BUNDLE"] = str(artifacts["provisioning_bundle"])
     env["QBOX_RDASPEN_RSE_SCP_STRATEGY"] = args.scp_strategy
@@ -2009,7 +2125,7 @@ def drive_post_login_probe(
         and time.monotonic() - last_login_time >= 5.0
     )
     if (not state["sent_login"] and login_ready) or retry_login:
-        prefix = "" if "fvp-rd-aspen login:" in clean_primary else "\n"
+        prefix = "" if args.primary_login_prompt in clean_primary else "\n"
         write_primary_uart(fifo_fd, prefix + args.login_user + "\n")
         state["sent_login"] = True
         state["login_attempts"] = login_attempts + 1
@@ -2018,7 +2134,7 @@ def drive_post_login_probe(
     if (
         state["sent_login"]
         and not state["sent_probe"]
-        and re.search(r"root@fvp-rd-aspen[^\n]*[#>]\s*$", clean_primary, re.MULTILINE)
+        and re.search(args.primary_shell_prompt_re, clean_primary, re.MULTILINE)
     ):
         write_primary_uart(fifo_fd, "\n".join(post_login_probe_commands(args)) + "\n")
         state["sent_probe"] = True
@@ -2220,6 +2336,7 @@ def write_result(
     ap_pc_trace: dict[str, object] | None = None,
     host_si_cl0_sram: dict[str, object] | None = None,
     host_si_cl1_sram: dict[str, object] | None = None,
+    host_ap_bl2_header_sram: dict[str, object] | None = None,
     boot_enc_trace: dict[str, object] | None = None,
     post_login_probe: dict[str, object] | None = None,
     progress_marker_first_hits: dict[str, dict[str, object]] | None = None,
@@ -2292,6 +2409,7 @@ def write_result(
             "rse_fwu_private_metadata": rse_fwu_private_metadata,
             "host_si_cl0_sram": host_si_cl0_sram,
             "host_si_cl1_sram": host_si_cl1_sram,
+            "host_ap_bl2_header_sram": host_ap_bl2_header_sram,
             "console_logs": {
                 role: str((out_dir / filename).resolve())
                 for role, filename in CONSOLE_LOGS.items()
@@ -2456,6 +2574,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rse-otp", type=Path, default=deploy / "rse-otp-image.img")
     parser.add_argument("--ap-flash", type=Path, default=deploy / "ap-flash-image.img")
     parser.add_argument(
+        "--ap-bl2-elf",
+        type=Path,
+        help=(
+            "Optional AP BL2 ELF used by the QBox reset loader. When omitted, "
+            "the Lua platform default is used."
+        ),
+    )
+    parser.add_argument(
         "--rootfs",
         type=Path,
         default=deploy / "baremetal-image-fvp-rd-aspen.wic",
@@ -2616,6 +2742,13 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--login-user", default="root")
+    parser.add_argument("--primary-login-prompt", default="fvp-rd-aspen login:")
+    parser.add_argument("--primary-shell-marker", default="root@fvp-rd-aspen")
+    parser.add_argument(
+        "--primary-shell-prompt-re",
+        default=r"root@fvp-rd-aspen[^\n]*[#>]\s*$",
+        help="Regex that indicates the primary console shell is ready.",
+    )
     parser.add_argument(
         "--qemu-trace",
         action="store_true",
@@ -2702,6 +2835,9 @@ def main() -> int:
     root = workspace_root()
     args = parse_args()
     args.out_dir = args.out_dir.resolve()
+    if args.ap_bl2_elf:
+        args.ap_bl2_elf = args.ap_bl2_elf.resolve()
+    apply_primary_console_profile(args)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     artifacts = {
         "rse_rom": args.rse_rom.resolve(),
@@ -2712,6 +2848,8 @@ def main() -> int:
         "efi_capsule_disk": args.efi_capsule_disk.resolve(),
         "provisioning_bundle": args.provisioning_bundle.resolve(),
     }
+    if args.ap_bl2_elf:
+        artifacts["ap_bl2_elf"] = args.ap_bl2_elf
 
     required_artifacts = artifacts
     missing = [
@@ -2731,6 +2869,8 @@ def main() -> int:
     host_si_cl0_sram_path: Path | None = None
     host_si_cl1_sram: dict[str, object] | None = None
     host_si_cl1_sram_path: Path | None = None
+    host_ap_bl2_header_sram: dict[str, object] | None = None
+    host_ap_bl2_header_sram_path: Path | None = None
     post_login_probe: dict[str, object] | None = None
 
     if missing:
@@ -2812,6 +2952,12 @@ def main() -> int:
         HOST_SI_CL1_SRAM_WINDOW_SIZE,
     )
     run_artifacts["host_si_cl1_sram"] = host_si_cl1_sram_path
+    if env_flag("QBOX_RDASPEN_CAPTURE_HOST_AP_BL2_HEADER_SRAM"):
+        host_ap_bl2_header_sram_path = prepare_sparse_file(
+            args.out_dir / "host-ap-bl2-header-sram.bin",
+            HOST_AP_BL2_HEADER_SRAM_SIZE,
+        )
+        run_artifacts["host_ap_bl2_header_sram"] = host_ap_bl2_header_sram_path
     for index in range(2, 4):
         run_artifacts[f"extra_blk{index}"] = prepare_sparse_file(
             args.out_dir / f"extra-blk{index}.raw",
@@ -2894,6 +3040,9 @@ def main() -> int:
         host_si_cl1_sram = analyze_host_si_cl1_sram(
             host_si_cl1_sram_path, run_artifacts.get("rse_flash")
         )
+        host_ap_bl2_header_sram = analyze_host_ap_bl2_header_sram(
+            host_ap_bl2_header_sram_path
+        )
         return write_result(
             args,
             artifacts,
@@ -2913,6 +3062,7 @@ def main() -> int:
             ap_pc_trace=parse_ap_pc_trace(args.out_dir, args.pc_trace),
             host_si_cl0_sram=host_si_cl0_sram,
             host_si_cl1_sram=host_si_cl1_sram,
+            host_ap_bl2_header_sram=host_ap_bl2_header_sram,
         )
 
     (
@@ -2931,6 +3081,9 @@ def main() -> int:
     )
     host_si_cl1_sram = analyze_host_si_cl1_sram(
         host_si_cl1_sram_path, run_artifacts.get("rse_flash")
+    )
+    host_ap_bl2_header_sram = analyze_host_ap_bl2_header_sram(
+        host_ap_bl2_header_sram_path
     )
     rse_pc_trace = parse_rse_pc_trace(args.out_dir, args.pc_trace)
     ap_pc_trace = parse_ap_pc_trace(args.out_dir, args.pc_trace)
@@ -3042,6 +3195,7 @@ def main() -> int:
         ap_pc_trace=ap_pc_trace,
         host_si_cl0_sram=host_si_cl0_sram,
         host_si_cl1_sram=host_si_cl1_sram,
+        host_ap_bl2_header_sram=host_ap_bl2_header_sram,
         boot_enc_trace=boot_enc_trace,
         post_login_probe=post_login_probe,
         progress_marker_first_hits=progress_marker_first_hits,

@@ -24,6 +24,16 @@ def require(text: str, needle: str, label: str) -> None:
         raise ProbeError(f"{label}: missing {needle!r}")
 
 
+def extract_between(text: str, start: str, end: str, label: str) -> str:
+    start_idx = text.find(start)
+    if start_idx < 0:
+        raise ProbeError(f"{label}: missing section start {start!r}")
+    end_idx = text.find(end, start_idx)
+    if end_idx < 0:
+        raise ProbeError(f"{label}: missing section end {end!r}")
+    return text[start_idx:end_idx]
+
+
 def probe_sources(source_root: Path) -> list[str]:
     root = source_root.resolve()
     checks: list[str] = []
@@ -31,9 +41,28 @@ def probe_sources(source_root: Path) -> list[str]:
     cpu64 = read_text(root / "tools/qemu/target/arm/tcg/cpu64.c")
     require(cpu64, "aarch64_cortex_r82_initfn", "QEMU CPU model")
     require(cpu64, '"cortex-r82"', "QEMU CPU model")
+    r82_init = extract_between(
+        cpu64,
+        "static void aarch64_cortex_r82_initfn",
+        "static const ARMCPUInfo",
+        "QEMU CPU model",
+    )
+    require(r82_init, "ID_AA64PFR0, 0x0000001000000222ull", "QEMU CPU model")
+    require(r82_init, "ID_AA64ISAR0, 0x00211120", "QEMU CPU model")
+    require(r82_init, "ID_ISAR0, 0x02101110", "QEMU CPU model")
     checks.append("qemu-cpu-model")
 
     helper = read_text(root / "tools/qemu/target/arm/helper.c")
+    require(helper, "CNTHPS_CTL_EL2", "QEMU FEAT_SEL2 timer sysregs")
+    require(helper, "arm_is_v8r_el2_sel2", "QEMU FEAT_SEL2 timer sysregs")
+    require(helper, "cpu_isar_feature(aa64_sel2, cpu)", "QEMU FEAT_SEL2 timer sysregs")
+    vmsa_pmsa = extract_between(
+        helper,
+        "static const ARMCPRegInfo vmsa_pmsa_cp_reginfo[]",
+        "static const ARMCPRegInfo vmsa_cp_reginfo[]",
+        "QEMU VMSA/PMSA EL1 sysregs",
+    )
+    require(vmsa_pmsa, '"ESR_EL1"', "QEMU VMSA/PMSA EL1 sysregs")
     for reg in ("MPUIR_EL2", "PRSELR_EL2", "PRBAR_EL2", "PRLAR_EL2"):
         require(helper, reg, "QEMU AArch64 EL2 MPU sysregs")
     checks.append("qemu-el2-mpu-sysregs")
@@ -65,6 +94,8 @@ def probe_sources(source_root: Path) -> list[str]:
     )
     require(qbox_header, "cpu_arm_cortexR82", "QBox CPU")
     require(qbox_header, '"cortex-r82-arm"', "QBox CPU")
+    require(qbox_header, "set_aarch64_mode(true)", "QBox CPU")
+    require(qbox_header, "mp_affinity", "QBox CPU")
     require(qbox_cmake, "gs_create_dymod(cpu_arm_cortexR82)", "QBox CPU")
     checks.append("qbox-cpu-wrapper")
 
