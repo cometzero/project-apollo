@@ -23,6 +23,12 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
+RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-0}"
+CC3XX_STATS="${CC3XX_STATS:-0}"
+CC3XX_STATS_INTERVAL="${CC3XX_STATS_INTERVAL:-1024}"
+CC3XX_STATUS_READ_FASTPATH="${CC3XX_STATUS_READ_FASTPATH:-0}"
+CC3XX_QEMU_NATIVE_BACKEND="${CC3XX_QEMU_NATIVE_BACKEND:-0}"
+CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
@@ -56,6 +62,19 @@ Options:
   --exit-after-pass    stop QBox when the normal pass condition is reached
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
+  --range-limited-flash-dmi
+                       enable range-limited flash DMI fast path
+  --no-range-limited-flash-dmi
+                       disable range-limited flash DMI (default)
+  --cc3xx-stats        collect RSE CC3XX aggregate statistics
+  --cc3xx-stats-interval N
+                       CC3XX stats write interval (default: ${CC3XX_STATS_INTERVAL})
+  --cc3xx-status-read-fastpath
+                       enable QEMU-side CC3XX ready/status read fast path
+  --cc3xx-qemu-native-backend
+                       use QEMU-native CC3XX and direct MMIO fast path
+  --cc3xx-local-mmio-fastpath
+                       enable QEMU-local CC3XX direct MMIO fast path
   --no-attach          start tmux but do not attach
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -63,7 +82,9 @@ Options:
 Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
-  ROOTFS_BOOTARGS_PROFILE
+  ROOTFS_BOOTARGS_PROFILE RANGE_LIMITED_FLASH_DMI CC3XX_STATS
+  CC3XX_STATS_INTERVAL CC3XX_STATUS_READ_FASTPATH CC3XX_QEMU_NATIVE_BACKEND
+  CC3XX_LOCAL_MMIO_FASTPATH
 
 Inside tmux:
   F12                  kill the whole session
@@ -153,6 +174,21 @@ runner_command()
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
     )
 
+    if [[ "${RANGE_LIMITED_FLASH_DMI}" == "1" ]]; then
+        _out+=(--range-limited-flash-dmi)
+    fi
+    if [[ "${CC3XX_STATS}" == "1" ]]; then
+        _out+=(--cc3xx-stats --cc3xx-stats-interval "${CC3XX_STATS_INTERVAL}")
+    fi
+    if [[ "${CC3XX_STATUS_READ_FASTPATH}" == "1" ]]; then
+        _out+=(--cc3xx-status-read-fastpath)
+    fi
+    if [[ "${CC3XX_QEMU_NATIVE_BACKEND}" == "1" ]]; then
+        _out+=(--cc3xx-qemu-native-backend)
+    fi
+    if [[ "${CC3XX_LOCAL_MMIO_FASTPATH}" == "1" ]]; then
+        _out+=(--cc3xx-local-mmio-fastpath)
+    fi
     if [[ "${SKIP_BUILD}" == "1" ]]; then
         _out+=(--skip-build)
     fi
@@ -306,6 +342,11 @@ print_dry_run()
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   si_mode: ${SI_MODE}
+  range_limited_flash_dmi: ${RANGE_LIMITED_FLASH_DMI}
+  cc3xx_stats: ${CC3XX_STATS}
+  cc3xx_status_read_fastpath: ${CC3XX_STATUS_READ_FASTPATH}
+  cc3xx_qemu_native_backend: ${CC3XX_QEMU_NATIVE_BACKEND}
+  cc3xx_local_mmio_fastpath: ${CC3XX_LOCAL_MMIO_FASTPATH}
   out_dir: ${OUT_DIR}
   command: $(quote_args "${cmd[@]}")
 
@@ -343,6 +384,11 @@ start_tmux()
 {
     validate_tmux_name "${TMUX_SESSION}"
     validate_si_mode "${SI_MODE}"
+    validate_bool "RANGE_LIMITED_FLASH_DMI" "${RANGE_LIMITED_FLASH_DMI}"
+    validate_bool "CC3XX_STATS" "${CC3XX_STATS}"
+    validate_bool "CC3XX_STATUS_READ_FASTPATH" "${CC3XX_STATUS_READ_FASTPATH}"
+    validate_bool "CC3XX_QEMU_NATIVE_BACKEND" "${CC3XX_QEMU_NATIVE_BACKEND}"
+    validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "POST_LOGIN_PROBE" "${POST_LOGIN_PROBE}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
@@ -386,8 +432,15 @@ start_tmux()
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
         printf 'LOCAL_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
-        printf 'ROOTFS_BOOTARGS_PROFILE=%q SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
-            "${ROOTFS_BOOTARGS_PROFILE}" "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
+        printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
+        printf 'RANGE_LIMITED_FLASH_DMI=%q CC3XX_STATS=%q ' \
+            "${RANGE_LIMITED_FLASH_DMI}" "${CC3XX_STATS}"
+        printf 'CC3XX_STATS_INTERVAL=%q CC3XX_STATUS_READ_FASTPATH=%q ' \
+            "${CC3XX_STATS_INTERVAL}" "${CC3XX_STATUS_READ_FASTPATH}"
+        printf 'CC3XX_QEMU_NATIVE_BACKEND=%q ' "${CC3XX_QEMU_NATIVE_BACKEND}"
+        printf 'CC3XX_LOCAL_MMIO_FASTPATH=%q ' "${CC3XX_LOCAL_MMIO_FASTPATH}"
+        printf 'SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
+            "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
             "${RUNNER_ARGS_FILE}" "${SCRIPT_PATH}"
@@ -501,6 +554,35 @@ while (($# > 0)); do
             (($# >= 2)) || die "--rootfs-bootargs-profile requires a value"
             ROOTFS_BOOTARGS_PROFILE="$2"
             shift 2
+            ;;
+        --range-limited-flash-dmi)
+            RANGE_LIMITED_FLASH_DMI=1
+            shift
+            ;;
+        --no-range-limited-flash-dmi)
+            RANGE_LIMITED_FLASH_DMI=0
+            shift
+            ;;
+        --cc3xx-stats)
+            CC3XX_STATS=1
+            shift
+            ;;
+        --cc3xx-stats-interval)
+            (($# >= 2)) || die "--cc3xx-stats-interval requires a value"
+            CC3XX_STATS_INTERVAL="$2"
+            shift 2
+            ;;
+        --cc3xx-status-read-fastpath)
+            CC3XX_STATUS_READ_FASTPATH=1
+            shift
+            ;;
+        --cc3xx-qemu-native-backend)
+            CC3XX_QEMU_NATIVE_BACKEND=1
+            shift
+            ;;
+        --cc3xx-local-mmio-fastpath)
+            CC3XX_LOCAL_MMIO_FASTPATH=1
+            shift
             ;;
         --no-attach)
             NO_ATTACH=1

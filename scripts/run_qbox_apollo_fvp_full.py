@@ -23,6 +23,7 @@ CONSOLE_LOGS = {
     "secure_console": "qbox-secure-console.log",
     "primary_console": "qbox-primary-console.log",
 }
+RD_ASPEN_CHILD_RESULT = "rd-aspen-result.json"
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
 EXPECTED_AP_CPUS = 4
@@ -278,6 +279,36 @@ def post_login_probe(child_status: dict[str, Any] | None) -> dict[str, Any]:
     return probe if isinstance(probe, dict) else {}
 
 
+def child_rse_boot_timing_profile(
+    child_status: dict[str, Any] | None,
+) -> dict[str, Any]:
+    profile = (child_status or {}).get("rse_boot_timing_profile")
+    if isinstance(profile, dict):
+        return profile
+
+    first_hits = (child_status or {}).get("progress_marker_first_hits")
+    if not isinstance(first_hits, dict):
+        return {}
+    markers = []
+    for name, hit in sorted(
+        first_hits.items(),
+        key=lambda item: float(item[1].get("elapsed_s", 0.0))
+        if isinstance(item[1], dict)
+        else 0.0,
+    ):
+        if not isinstance(hit, dict):
+            continue
+        markers.append(
+            {
+                "name": str(name),
+                "marker": hit.get("marker"),
+                "seen": True,
+                "elapsed_s": hit.get("elapsed_s"),
+            }
+        )
+    return {"markers": markers, "deltas": [], "slowest_delta": None, "summary": {}}
+
+
 def marker_from_child(
     markers: dict[str, dict[str, bool]],
     group: str,
@@ -446,7 +477,9 @@ def write_result(
         blocker=blocker,
         check_only=check_only,
     )
-    passed = bool(not blocker and (check_only or args.build_only or (child_status or {}).get("passed")))
+    passed = bool(
+        not blocker and (check_only or args.build_only or (child_status or {}).get("passed"))
+    )
     if (check_only or args.build_only) and not blocker:
         passed = True
     if blocker:
@@ -487,13 +520,17 @@ def write_result(
         "secure_console_observations": secure_obs,
         "primary_console_observations": primary_obs,
         "marker_groups": marker_groups,
-        "first_failing_marker": first_failing_marker(marker_groups),
+        "first_failing_marker": (
+            None if check_only or args.build_only else first_failing_marker(marker_groups)
+        ),
         "post_login_probe": (child_status or {}).get("post_login_probe"),
+        "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
+        "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "completion_gate_blocker": gate_blocker,
         "child_scp_service_model": (child_status or {}).get("scp_service_model"),
         "service_model_debt": service_model_debt,
         "blocker": blocker or (child_status or {}).get("blocker"),
-        "child_result": str((args.out_dir / "rd-aspen-result.json").resolve())
+        "child_result": str((args.out_dir / RD_ASPEN_CHILD_RESULT).resolve())
         if child_status
         else None,
         "child_returncode": child_returncode,
@@ -507,10 +544,13 @@ def write_result(
     lines = [
         f"passed: {status['passed']}",
         f"verdict: {status['verdict']}",
+        f"boot_mode: {status['boot_mode']}",
         f"safety_island_mode: {args.si_mode}",
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         f"live_trace: {status['live_trace']}",
         f"blocker: {status['blocker'] or 'none'}",
+        "rse_boot_timing_profile: "
+        + json.dumps(status["rse_boot_timing_profile"], sort_keys=True),
         "completion_gates:",
         *[f"  - {gate}: {verdict}" for gate, verdict in gates.items()],
         "input_artifacts:",
@@ -575,7 +615,7 @@ def clear_run_outputs(out_dir: Path) -> None:
     stale_files = {
         "result.json",
         "summary.txt",
-        "rd-aspen-result.json",
+        RD_ASPEN_CHILD_RESULT,
         "post-login-probe-actions.log",
         "primary-uart-input.fifo",
         "comparison.json",
@@ -692,8 +732,19 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--no-copy-writable-flash")
     if args.range_limited_flash_dmi:
         cmd.append("--range-limited-flash-dmi")
+    if args.cc3xx_stats:
+        cmd.append("--cc3xx-stats")
+        cmd.extend(["--cc3xx-stats-interval", str(args.cc3xx_stats_interval)])
+    if args.cc3xx_status_read_fastpath:
+        cmd.append("--cc3xx-status-read-fastpath")
+    if args.cc3xx_qemu_native_backend:
+        cmd.append("--cc3xx-qemu-native-backend")
+    if args.cc3xx_local_mmio_fastpath:
+        cmd.append("--cc3xx-local-mmio-fastpath")
     if args.post_login_probe:
         cmd.append("--post-login-probe")
+    if args.keep_running_after_pass:
+        cmd.append("--keep-running-after-pass")
     if args.build_only:
         cmd.append("--check-only")
     for param in args.platform_param:
@@ -782,6 +833,14 @@ def parse_args() -> argparse.Namespace:
         help="Run the isolated live Safety Island mode for this --si-mode.",
     )
     parser.add_argument("--post-login-probe", action="store_true")
+    parser.add_argument(
+        "--keep-running-after-pass",
+        action="store_true",
+        help=(
+            "Forward to the RSE-oriented runner so QBox remains alive after "
+            "the pass condition."
+        ),
+    )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
     parser.add_argument("--rootfs-bootargs-profile", default="none")
     parser.add_argument(
@@ -791,6 +850,30 @@ def parse_args() -> argparse.Namespace:
             "Forward the storage-safe Strata flash DMI fast path to the "
             "RD-Aspen runner."
         ),
+    )
+    parser.add_argument(
+        "--cc3xx-stats",
+        action="store_true",
+        help="Forward CC3XX aggregate statistics collection to the RSE runner.",
+    )
+    parser.add_argument("--cc3xx-stats-interval", type=int, default=1024)
+    parser.add_argument(
+        "--cc3xx-status-read-fastpath",
+        action="store_true",
+        help="Forward the RSE CC3XX QEMU-side status-read fast path.",
+    )
+    parser.add_argument(
+        "--cc3xx-qemu-native-backend",
+        action="store_true",
+        help=(
+            "Forward the RSE CC3XX QEMU-native backend selection. This also "
+            "enables the CC3XX direct MMIO fast path in the RSE runner."
+        ),
+    )
+    parser.add_argument(
+        "--cc3xx-local-mmio-fastpath",
+        action="store_true",
+        help="Forward the RSE CC3XX QEMU-local direct MMIO fast path.",
     )
     parser.add_argument(
         "--live-trace",
@@ -871,9 +954,11 @@ def main() -> int:
     child_result = args.out_dir / "result.json"
     child_status = read_json(child_result)
     if child_status:
-        shutil.copy2(child_result, args.out_dir / "rd-aspen-result.json")
+        shutil.copy2(child_result, args.out_dir / RD_ASPEN_CHILD_RESULT)
     copy_child_logs(args)
     blocker = child_status.get("blocker") if child_status else f"child_failed:{child_rc}"
+    if child_status and not child_status.get("passed") and not blocker and child_rc:
+        blocker = f"child_failed:{child_rc}"
     if args.build_only and blocker == "check_only_no_runtime":
         child_status["passed"] = True
         child_status["blocker"] = None

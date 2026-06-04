@@ -63,6 +63,8 @@ RSE_PC_TRACE_LOG = "rse-pc-trace.log"
 AP_PC_TRACE_LOG = "ap-pc-trace.log"
 RSE_STRATA_STATS = "rse-strata-stats.json"
 AP_STRATA_STATS = "ap-strata-stats.json"
+RSE_CC3XX_STATS = "rse-cc3xx-stats.json"
+RSE_CC3XX_BASE_S = 0x50154000
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
 WIC_BOOT_ENTRY = "::/loader/entries/boot.conf"
 
@@ -78,6 +80,23 @@ RANGE_LIMITED_FLASH_DMI_DEFAULTS = {
     "QBOX_RDASPEN_BOOT_FLASH_DMI_RANGES": "0x7000:0x260000",
     "QBOX_RDASPEN_HOST_MEMORY_DMI": "true",
     "QBOX_RDASPEN_AP_FLASH_DMI_RANGES": "0x7000:0x240000",
+}
+CC3XX_STATUS_READ_FASTPATH_VALUES = {
+    0x0B0: 0x00000001,  # PKA_PIPE_RDY
+    0x0B4: 0x00000001,  # PKA_DONE
+    0x470: 0x00000000,  # AES_BUSY
+    0x4FC: 0x00000001,  # AES_RBG_SEEDING_RDY
+    0x824: 0xFFFFFFFF,  # CLK_STATUS
+    0x910: 0x00000000,  # CRYPTO_BUSY
+    0x91C: 0x00000000,  # HASH_BUSY
+    0xA7C: 0x00000001,  # HOST_CC_IS_IDLE
+    0xA90: 0x00000001,  # HOST_SF_READY
+    0xC20: 0x00000000,  # DIN_MEM_DMA_BUSY
+    0xC38: 0x00000000,  # DIN_SRAM_DMA_BUSY
+    0xC50: 0x00000001,  # FIFO_IN_EMPTY
+    0xD20: 0x00000000,  # DOUT_MEM_DMA_BUSY
+    0xD38: 0x00000000,  # DOUT_SRAM_DMA_BUSY
+    0xD50: 0x00000001,  # DOUT_FIFO_EMPTY
 }
 
 REQUIRED_MARKERS = {
@@ -142,6 +161,25 @@ PROGRESS_MARKERS = {
     "ps_remove_all_registered_uids": "Remove all registered UIDs",
     "ps_check_2_overload": "[Check 2] Overload storage again",
 }
+
+RSE_BOOT_PROFILE_MARKERS = [
+    ("rse_bl1_1", "TF-M BL1_1 start"),
+    ("rse_jump_bl1_2", "BL1_1 to BL1_2 handoff"),
+    ("rse_bl1_2", "TF-M BL1_2 start"),
+    ("rse_attempt_image_0", "BL1_2 image 0 selection"),
+    ("rse_bl2_decrypted", "BL2 decrypt complete"),
+    ("rse_bl2_validated", "BL2 validation complete"),
+    ("rse_jump_bl2", "BL1_2 to BL2 handoff"),
+    ("rse_image_4_loaded", "SI CL0 image loaded"),
+    ("rse_image_3_loaded", "SI CL1 image loaded"),
+    ("rse_image_2_loaded", "AP BL2 image loaded"),
+    ("rse_image_0_loaded", "RSE runtime image loaded"),
+    ("rse_scp_power_on_ap", "AP power-on SCMI complete"),
+    ("rse_first_image_slot", "RSE runtime handoff"),
+    ("measured_boot_bl33", "U-Boot measured boot marker"),
+    ("primary_linux_cpu", "Linux CPU boot marker"),
+    ("primary_login_prompt", "Linux login prompt"),
+]
 
 SERVICE_MODEL_GAPS = [
     "Safety Island CL0/SCP firmware is represented by a protocol-correct "
@@ -1177,6 +1215,98 @@ def update_progress_marker_first_hits(
             }
 
 
+def progress_elapsed_s(
+    first_hits: dict[str, dict[str, object]], name: str
+) -> float | None:
+    hit = first_hits.get(name)
+    if not isinstance(hit, dict):
+        return None
+    try:
+        return float(hit["elapsed_s"])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def rounded_s(value: float | None) -> float | None:
+    return round(value, 3) if value is not None else None
+
+
+def build_rse_boot_timing_profile(
+    first_hits: dict[str, dict[str, object]] | None,
+) -> dict[str, object]:
+    first_hits = first_hits or {}
+    markers: list[dict[str, object]] = []
+    deltas: list[dict[str, object]] = []
+    previous_name: str | None = None
+    previous_label: str | None = None
+    previous_elapsed: float | None = None
+
+    for name, label in RSE_BOOT_PROFILE_MARKERS:
+        elapsed = progress_elapsed_s(first_hits, name)
+        entry: dict[str, object] = {
+            "name": name,
+            "label": label,
+            "marker": PROGRESS_MARKERS[name],
+            "seen": elapsed is not None,
+            "elapsed_s": rounded_s(elapsed),
+        }
+        markers.append(entry)
+        if elapsed is None:
+            continue
+        if previous_elapsed is not None and previous_name is not None:
+            delta = elapsed - previous_elapsed
+            deltas.append(
+                {
+                    "from": previous_name,
+                    "from_label": previous_label,
+                    "to": name,
+                    "to_label": label,
+                    "delta_s": rounded_s(delta),
+                }
+            )
+        previous_name = name
+        previous_label = label
+        previous_elapsed = elapsed
+
+    slowest_delta = None
+    if deltas:
+        slowest_delta = max(
+            deltas,
+            key=lambda item: float(item.get("delta_s") or 0.0),
+        )
+
+    def span(start: str, end: str) -> float | None:
+        start_elapsed = progress_elapsed_s(first_hits, start)
+        end_elapsed = progress_elapsed_s(first_hits, end)
+        if start_elapsed is None or end_elapsed is None:
+            return None
+        return end_elapsed - start_elapsed
+
+    return {
+        "markers": markers,
+        "deltas": deltas,
+        "slowest_delta": slowest_delta,
+        "summary": {
+            "bl1_1_to_bl2_s": rounded_s(span("rse_bl1_1", "rse_jump_bl2")),
+            "bl2_to_rse_runtime_handoff_s": rounded_s(
+                span("rse_jump_bl2", "rse_first_image_slot")
+            ),
+            "rse_start_to_runtime_handoff_s": rounded_s(
+                span("rse_bl1_1", "rse_first_image_slot")
+            ),
+            "rse_start_to_ap_power_on_s": rounded_s(
+                span("rse_bl1_1", "rse_scp_power_on_ap")
+            ),
+            "rse_start_to_linux_boot_s": rounded_s(
+                span("rse_bl1_1", "primary_linux_cpu")
+            ),
+            "rse_start_to_login_prompt_s": rounded_s(
+                span("rse_bl1_1", "primary_login_prompt")
+            ),
+        },
+    }
+
+
 def shell_safe_probe_key(binary: str) -> str:
     return binary.replace("-", "_")
 
@@ -1626,8 +1756,39 @@ def parse_flash_stats(args: argparse.Namespace) -> dict[str, object]:
     return result
 
 
+def parse_cc3xx_stats(args: argparse.Namespace) -> dict[str, object]:
+    if not args.cc3xx_stats:
+        return {"enabled": False}
+
+    path = args.out_dir / RSE_CC3XX_STATS
+    parsed = read_json_artifact(path)
+    return {
+        "enabled": True,
+        "interval": args.cc3xx_stats_interval,
+        "path": str(path.resolve()),
+        "present": parsed is not None,
+        "stats": parsed,
+    }
+
+
 def qemu_trace_enabled(args: argparse.Namespace) -> bool:
     return bool(args.qemu_trace or args.qemu_trace_filter or args.boot_enc_trace)
+
+
+def cc3xx_status_read_fastpath_spec() -> str:
+    return ",".join(
+        f"0x{RSE_CC3XX_BASE_S + offset:x}=0x{value:x}"
+        for offset, value in sorted(CC3XX_STATUS_READ_FASTPATH_VALUES.items())
+    )
+
+
+def cc3xx_local_mmio_fastpath_spec() -> str:
+    return f"0x{RSE_CC3XX_BASE_S:x}:0x2000"
+
+
+def append_env_csv(env: dict[str, str], key: str, value: str) -> None:
+    existing = env.get(key, "").strip()
+    env[key] = f"{existing},{value}" if existing else value
 
 
 def default_bl2_map(root: Path) -> Path:
@@ -2090,6 +2251,28 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_FLASH_STATS_INTERVAL"] = str(
             args.flash_stats_interval
         )
+    if args.cc3xx_stats:
+        env["QBOX_RDASPEN_CC3XX_STATS_FILE"] = str(
+            args.out_dir / RSE_CC3XX_STATS
+        )
+        env["QBOX_RDASPEN_CC3XX_STATS_INTERVAL"] = str(
+            args.cc3xx_stats_interval
+        )
+    if args.cc3xx_qemu_native_backend:
+        env["QBOX_RDASPEN_CC3XX_BACKEND"] = "qemu-native"
+        append_env_csv(
+            env,
+            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            cc3xx_local_mmio_fastpath_spec(),
+        )
+    if args.cc3xx_status_read_fastpath:
+        env["QBOX_MMIO_READ_FASTPATH"] = cc3xx_status_read_fastpath_spec()
+    if args.cc3xx_local_mmio_fastpath:
+        append_env_csv(
+            env,
+            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            cc3xx_local_mmio_fastpath_spec(),
+        )
     if args.pc_trace:
         env["QBOX_RDASPEN_RSE_PC_TRACE"] = "true"
         env["QBOX_RDASPEN_RSE_PC_TRACE_FILE"] = str(args.out_dir / RSE_PC_TRACE_LOG)
@@ -2404,6 +2587,20 @@ def write_result(
         if status["passed"]
         else ("partial-model" if ap_boot_started else "not-modeled")
     )
+    rse_boot_timing_profile = build_rse_boot_timing_profile(
+        progress_marker_first_hits
+    )
+    cc3xx_backend = "qemu-native" if args.cc3xx_qemu_native_backend else "systemc"
+    cc3xx_label = (
+        "hash-aes-cmac-modular-pka-qemu-native-model"
+        if args.cc3xx_qemu_native_backend
+        else "hash-aes-cmac-modular-pka-model"
+    )
+    if args.cc3xx_local_mmio_fastpath:
+        cc3xx_label += "-local-mmio-fastpath"
+    if args.cc3xx_status_read_fastpath:
+        cc3xx_label += "-status-read-fastpath"
+
     static_label = "not-modeled" if blocker else "static-map-only"
     rse_boot_media_label = "cfi-strata-flash-partial-model"
     rse_scp_endpoint_label = "functional-model" if rse_scp_complete else "not-modeled"
@@ -2420,11 +2617,31 @@ def write_result(
             "boot_mode": "rse-oriented",
             "scp_strategy": args.scp_strategy,
             "range_limited_flash_dmi": args.range_limited_flash_dmi,
+            "cc3xx_status_read_fastpath": {
+                "enabled": args.cc3xx_status_read_fastpath,
+                "entries": len(CC3XX_STATUS_READ_FASTPATH_VALUES)
+                if args.cc3xx_status_read_fastpath
+                else 0,
+            },
+            "cc3xx_backend": cc3xx_backend,
+            "cc3xx_local_mmio_fastpath": {
+                "enabled": (
+                    args.cc3xx_local_mmio_fastpath
+                    or args.cc3xx_qemu_native_backend
+                ),
+                "implicit_by_qemu_native_backend": args.cc3xx_qemu_native_backend,
+                "ranges": [cc3xx_local_mmio_fastpath_spec()]
+                if (
+                    args.cc3xx_local_mmio_fastpath
+                    or args.cc3xx_qemu_native_backend
+                )
+                else [],
+            },
             "scp_service_model": scp_service_model,
             "fidelity_labels": {
                 "rse_cortex_m55_boot": "functional-model" if rse_boot_started else static_label,
                 "rse_boot_media": rse_boot_media_label,
-                "rse_cc3xx": "hash-aes-cmac-modular-pka-model",
+                "rse_cc3xx": cc3xx_label,
                 "rse_dma350": "functional-fill-copy-model",
                 "rse_lcm": "otp-backed-register-model",
                 "rse_integrity_checker": "touched-status-model",
@@ -2463,6 +2680,7 @@ def write_result(
                 else None
             ),
             "flash_stats": parse_flash_stats(args),
+            "cc3xx_stats": parse_cc3xx_stats(args),
             "rse_pc_trace": rse_pc_trace,
             "ap_pc_trace": ap_pc_trace,
             "boot_enc_trace": boot_enc_trace,
@@ -2486,6 +2704,7 @@ def write_result(
             "platform_returncode": platform_rc,
             "runtime_elapsed_s": runtime_elapsed_s,
             "progress_marker_first_hits": progress_marker_first_hits or {},
+            "rse_boot_timing_profile": rse_boot_timing_profile,
             "command": command,
             "runner_argv": sys.argv,
         }
@@ -2499,6 +2718,11 @@ def write_result(
         f"boot_mode: {status['boot_mode']}",
         f"scp_strategy: {status['scp_strategy']}",
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
+        "cc3xx_status_read_fastpath: "
+        + json.dumps(status["cc3xx_status_read_fastpath"], sort_keys=True),
+        "cc3xx_backend: " + str(status["cc3xx_backend"]),
+        "cc3xx_local_mmio_fastpath: "
+        + json.dumps(status["cc3xx_local_mmio_fastpath"], sort_keys=True),
         "scp_service_model: "
         + json.dumps(status["scp_service_model"], sort_keys=True),
         f"blocker: {blocker or 'none'}",
@@ -2523,8 +2747,26 @@ def write_result(
             ]
             or ["  none"]
         ),
+        "rse_boot_timing_profile:",
+        "  summary: " + json.dumps(
+            rse_boot_timing_profile["summary"], sort_keys=True
+        ),
+        "  slowest_delta: " + (
+            json.dumps(rse_boot_timing_profile["slowest_delta"], sort_keys=True)
+            if rse_boot_timing_profile["slowest_delta"]
+            else "none"
+        ),
         f"qemu_trace_log: {status['qemu_trace_log'] or 'disabled'}",
         "flash_stats: " + json.dumps(status["flash_stats"], sort_keys=True),
+        "cc3xx_stats: "
+        + json.dumps(
+            {
+                "enabled": status["cc3xx_stats"].get("enabled"),
+                "path": status["cc3xx_stats"].get("path"),
+                "present": status["cc3xx_stats"].get("present"),
+            },
+            sort_keys=True,
+        ),
         "rse_pc_trace: "
         + (
             json.dumps(rse_pc_trace, sort_keys=True)
@@ -2854,6 +3096,51 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--cc3xx-stats",
+        action="store_true",
+        help=(
+            "Enable aggregate CC3XX statistics in the QBox run directory for "
+            "RSE BL1_2 validation slow-path analysis."
+        ),
+    )
+    parser.add_argument(
+        "--cc3xx-stats-interval",
+        type=int,
+        default=1024,
+        help=(
+            "Write CC3XX statistics every N target accesses when "
+            "--cc3xx-stats is enabled."
+        ),
+    )
+    parser.add_argument(
+        "--cc3xx-status-read-fastpath",
+        action="store_true",
+        help=(
+            "Enable an opt-in QEMU-side MMIO read fast path for RSE CC3XX "
+            "ready/status registers. Writes and data-path reads still go "
+            "through the SystemC CC3XX model."
+        ),
+    )
+    parser.add_argument(
+        "--cc3xx-qemu-native-backend",
+        action="store_true",
+        help=(
+            "Use the QEMU-native RSE CC3XX backend. It reuses the shared "
+            "cc3xx_core model but exposes the register window as a QEMU "
+            "MemoryRegion and enables the CC3XX direct MMIO fast path to "
+            "remove the per-MMIO run_on_sysc bridge."
+        ),
+    )
+    parser.add_argument(
+        "--cc3xx-local-mmio-fastpath",
+        action="store_true",
+        help=(
+            "Enable an opt-in QEMU-local direct TLM fast path for the RSE "
+            "CC3XX MMIO window. This preserves the CC3XX model side effects "
+            "but skips the run_on_sysc bridge for that window."
+        ),
+    )
+    parser.add_argument(
         "--pc-trace",
         action="store_true",
         help="Enable lightweight file-backed RSE Cortex-M55 PC sampling.",
@@ -2890,6 +3177,8 @@ def parse_args() -> argparse.Namespace:
         args.qemu_trace = True
     if args.flash_stats and args.flash_stats_interval <= 0:
         parser.error("--flash-stats-interval must be positive")
+    if args.cc3xx_stats and args.cc3xx_stats_interval <= 0:
+        parser.error("--cc3xx-stats-interval must be positive")
     return args
 
 
@@ -3004,6 +3293,8 @@ def main() -> int:
     if rootfs_preparation and rootfs_preparation.get("changed"):
         copied["rootfs"] = run_artifacts["rootfs"]
     run_artifacts["extra_blk1"] = artifacts["efi_capsule_disk"]
+    if args.cc3xx_stats:
+        run_artifacts["rse_cc3xx_stats"] = args.out_dir / RSE_CC3XX_STATS
     host_si_cl0_sram_path = prepare_sparse_file(
         args.out_dir / "host-si-cl0-sram.bin",
         HOST_SI_CL0_SRAM_WINDOW_SIZE,

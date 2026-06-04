@@ -94,6 +94,29 @@ BOOT_DOMAINS = {
     "u_boot_linux": ("U-Boot / Linux", "terminal_ns_uart0"),
 }
 
+PROGRESS_MARKERS = {
+    "rse_bl1_1": "Starting TF-M BL1_1",
+    "rse_jump_bl1_2": "Jumping to BL1_2",
+    "rse_bl1_2": "Starting TF-M BL1_2",
+    "rse_attempt_image_0": "Attempting to boot image 0",
+    "rse_bl2_decrypted": "BL2 image decrypted successfully",
+    "rse_bl2_validated": "BL2 image validated successfully",
+    "rse_jump_bl2": "Jumping to BL2",
+    "rse_image_4_loaded": "Image 4 loaded from the primary slot",
+    "rse_image_3_loaded": "Image 3 loaded from the primary slot",
+    "rse_image_2_loaded": "Image 2 loaded from the primary slot",
+    "rse_image_0_loaded": "Image 0 loaded from the primary slot",
+    "rse_first_image_slot": "Jumping to the first image slot",
+    "rse_scp_power_on_ap": "RSE to SCP SCMI power on AP succeeded",
+    "measured_boot_bl33": "BL_33",
+    "primary_linux_cpu": "Booting Linux on physical CPU",
+    "primary_linux_version": "Linux version ",
+    "primary_login_prompt": "apollo-fvp login:",
+    "primary_root_shell": "root@apollo-fvp",
+    "si_cl0_module_init": "Module initialization complete",
+    "si_cl1_zephyr": "*** Booting Zephyr OS build",
+}
+
 CRITICAL_TERMS = {
     "terminal_uart",
     "terminal_uart_si_cluster0",
@@ -115,12 +138,24 @@ ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+")
 
 
 class ConsoleCapture:
-    def __init__(self, term: str, port: int, log_path: Path) -> None:
+    def __init__(
+        self,
+        term: str,
+        port: int,
+        log_path: Path,
+        marker_hits: dict[str, dict[str, object]],
+        marker_lock: threading.Lock,
+        start_time: float,
+    ) -> None:
         self.term = term
         self.port = port
         self.log_path = log_path
+        self.marker_hits = marker_hits
+        self.marker_lock = marker_lock
+        self.start_time = start_time
         self.proc: subprocess.Popen[str] | None = None
         self._file = None
+        self._reader_thread: threading.Thread | None = None
 
     def start(self) -> None:
         telnet = shutil.which("telnet")
@@ -139,11 +174,35 @@ class ConsoleCapture:
         self.proc = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
-            stdout=self._file,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
         )
+        self._reader_thread = threading.Thread(target=self._reader, daemon=True)
+        self._reader_thread.start()
+
+    def _reader(self) -> None:
+        if not self.proc or not self.proc.stdout or not self._file:
+            return
+        for line in self.proc.stdout:
+            self._file.write(line)
+            self._record_markers(line)
+
+    def _record_markers(self, line: str) -> None:
+        now = time.monotonic() - self.start_time
+        for name, marker in PROGRESS_MARKERS.items():
+            if marker not in line:
+                continue
+            with self.marker_lock:
+                if name in self.marker_hits:
+                    continue
+                self.marker_hits[name] = {
+                    "elapsed_s": round(now, 6),
+                    "marker": marker,
+                    "term": self.term,
+                    "path": str(self.log_path),
+                }
 
     def sendline(self, line: str) -> None:
         if not self.proc or not self.proc.stdin:
@@ -162,6 +221,8 @@ class ConsoleCapture:
             except subprocess.TimeoutExpired:
                 self.proc.kill()
                 self.proc.wait(timeout=5)
+        if self._reader_thread:
+            self._reader_thread.join(timeout=5)
         if self._file:
             self._file.close()
 
@@ -387,6 +448,7 @@ def write_summary(
     duration_s: float,
     post_login: dict,
     min_runtime_s: int,
+    progress_marker_first_hits: dict[str, dict[str, object]],
 ) -> None:
     passed = status["passed"] and (
         not post_login.get("requested") or post_login.get("done")
@@ -405,6 +467,7 @@ def write_summary(
         "domains": domains,
         "post_login": post_login,
         "min_runtime_s": min_runtime_s,
+        "progress_marker_first_hits": progress_marker_first_hits,
     }
     (out_dir / "result.json").write_text(
         json.dumps(result, indent=2, sort_keys=True),
@@ -465,6 +528,17 @@ def write_summary(
             lines.append("post_login_commands:")
             for command_line in post_login["commands"]:
                 lines.append(f"  - {command_line}")
+    if progress_marker_first_hits:
+        lines.append("progress_marker_first_hits:")
+        for name, hit in sorted(
+            progress_marker_first_hits.items(),
+            key=lambda item: float(item[1].get("elapsed_s", 0.0)),
+        ):
+            lines.append(
+                f"  - {name}: {float(hit['elapsed_s']):.3f}s"
+                f" ({hit['marker']})"
+                f" term={hit['term']}"
+            )
     (out_dir / "summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -592,6 +666,8 @@ def main() -> int:
 
     captures: dict[str, ConsoleCapture] = {}
     ports: dict[str, int] = {}
+    progress_marker_first_hits: dict[str, dict[str, object]] = {}
+    progress_marker_lock = threading.Lock()
     lock = threading.Lock()
 
     proc = start_fvp(command, boot_log)
@@ -622,6 +698,9 @@ def main() -> int:
                         term=term,
                         port=port,
                         log_path=args.out_dir / f"{term}_{port}.log",
+                        marker_hits=progress_marker_first_hits,
+                        marker_lock=progress_marker_lock,
+                        start_time=start_time,
                     )
                     capture.start()
                     captures[term] = capture
@@ -697,6 +776,8 @@ def main() -> int:
     duration_s = time.monotonic() - start_time
     with lock:
         status = build_status(expected_terms, captures, roles, args.require)
+    with progress_marker_lock:
+        progress_marker_first_hits_result = dict(progress_marker_first_hits)
     if time.monotonic() - start_time >= args.timeout and not status["passed"]:
         status["timeout_s"] = args.timeout
     post_login = {
@@ -721,6 +802,7 @@ def main() -> int:
         duration_s=duration_s,
         post_login=post_login,
         min_runtime_s=args.min_runtime,
+        progress_marker_first_hits=progress_marker_first_hits_result,
     )
 
     passed = status["passed"] and (

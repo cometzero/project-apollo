@@ -47,6 +47,150 @@ python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
 `final-verification.json`에 `completion_claim_allowed: true`가 기록되는
 것이다.
 
+`run_qbox_apollo_fvp_full.py`는 RSE-first firmware chain을 그대로 사용한다.
+RSE 전체를 우회하는 full-system fast boot mode는 제공하지 않는다. Flash
+read 병목을 분리해서 확인할 때만 range-limited flash DMI fast path를
+명시적으로 켠다. CFI command-state, storage, UEFI variable, FWU fidelity를
+확인할 때는 이 옵션을 사용하지 않는다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --range-limited-flash-dmi \
+  --post-login-probe \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-flash-dmi
+```
+
+RSE가 느린 구간은 실행 결과의 다음 필드에서 확인한다.
+
+```text
+build/qbox-apollo-fvp/<run>/result.json
+  rse_boot_timing_profile.summary
+  rse_boot_timing_profile.slowest_delta
+  rse_boot_timing_profile.markers
+```
+
+`summary.txt`에도 같은 profile 요약이 기록된다.
+느린 구간별 stub/fast-path 가능성은
+`doc/qbox-rse-boot-slow-path-analysis-ko.md`에 정리되어 있으며, 저장된
+run 결과는 다음처럼 재분석할 수 있다.
+
+```bash
+python3 scripts/analyze_qbox_rse_boot_timing.py --markdown \
+  build/qbox-apollo-fvp/full-live-cl0-cl1/result.json
+```
+
+FVP 대비 상대 속도를 확인하려면 FVP도 같은 marker 방식으로 재실행한다.
+
+```bash
+python3 scripts/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot-timed-<run-id> \
+  --timeout 120 \
+  --min-runtime 0
+```
+
+2026-06-04 측정 기준으로 QBox full-system login은 FVP 대비 약 3.8배 느리고,
+핵심 병목인 `rse_bl2_decrypted` -> `rse_bl2_validated` 구간은 약 100배
+느리다. 상세 수치와 QEMU-side CC3XX backend 설계는
+`doc/qbox-rse-boot-slow-path-analysis-ko.md`를 본다.
+
+RSE BL1_2 validation 내부의 CC3XX HASH/PKA 비중을 같이 보려면 다음 옵션을
+추가한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --cc3xx-stats \
+  --cc3xx-stats-interval 65536 \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-cc3xx-stats
+```
+
+또는 tmux 화면 실행에서 `--cc3xx-stats --cc3xx-stats-interval 65536`을
+붙인다. 결과의 `rse-cc3xx-stats.json`은
+`scripts/analyze_qbox_rse_boot_timing.py`가 자동으로 읽는다.
+
+RSE CC3XX polling read 비용만 분리해서 확인하려면 opt-in status-read fast
+path를 추가한다. 이 옵션은 secure boot 검증을 skip하지 않고, side-effect 없는
+ready/busy status read만 QEMU initiator에서 바로 반환한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --cc3xx-stats \
+  --cc3xx-stats-interval 65536 \
+  --cc3xx-status-read-fastpath \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-cc3xx-status-fastpath
+```
+
+`HOST_RGF_IRR`처럼 write/clear side effect와 연결된 register는 이 fast path
+대상이 아니다. 실험 결과와 QEMU-side CC3XX backend 계획은
+`doc/qbox-rse-boot-slow-path-analysis-ko.md`에 기록한다.
+
+현재 더 효과적인 QBox-side 성능 옵션은 CC3XX local MMIO fast path이다. 이
+옵션은 CC3XX register model과 DMA side effect는 유지하고, RSE CC3XX window
+`0x50154000:0x2000`의 QEMU -> SystemC scheduler bridge만 우회한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --cc3xx-stats \
+  --cc3xx-stats-interval 65536 \
+  --cc3xx-local-mmio-fastpath \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-cc3xx-local-mmio
+```
+
+가장 빠른 debug iteration은 `--cc3xx-local-mmio-fastpath`와
+`--cc3xx-status-read-fastpath`를 같이 켜는 것이다. 다만 status-read fast path는
+CC3XX operation mix가 baseline과 달라질 수 있으므로, fidelity-oriented
+comparison에는 local MMIO fast path만 사용한다.
+
+RSE CC3XX를 QEMU-native backend로 실행하려면 `--cc3xx-qemu-native-backend`를
+사용한다. 이 옵션은 기존 SystemC `cc3xx`와 동일한 `cc3xx_core`를 사용하지만,
+RSE CPU의 CC3XX MMIO window를 QEMU `MemoryRegionOps` callback으로 처리한다.
+default는 여전히 SystemC backend이며, qemu-native backend는 secure boot
+검증을 skip하지 않는다. runner는 qemu-native 선택 시
+`0x50154000:0x2000` direct MMIO fast path를 자동으로 켠다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --range-limited-flash-dmi \
+  --cc3xx-stats \
+  --cc3xx-stats-interval 65536 \
+  --cc3xx-qemu-native-backend \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-cc3xx-qemu-native
+```
+
+RSE 단독 timing 기준으로 qemu-native backend는 local-MMIO status fast path의
+BL2 validation delta를 151.321초에서 133.339초로 줄였다. 같은 결과 bundle은
+`build/qbox-apollo-fvp/cc3xx-qemu-native-20260605-001939/rse/`에 남아 있다.
+full-system 검증 bundle은
+`build/qbox-apollo-fvp/cc3xx-qemu-native-20260605-003557/full/`을 사용한다.
+이 run은 `passed: true`, `blocker: none`, Linux login, post-login probe,
+SI CL1 remoteproc/RPMsg, `ethsi1`, DSU PMU evidence를 남긴다. 기존 direct-boot
+guardrail은 `build/qbox-apollo-fvp/direct-guardrail-20260605-004025/`에서
+`passed: true`로 확인했다.
+
 ## tmux 화면으로 실행
 
 사용자에게 subsystem별 UART 출력을 보여주려면 tmux wrapper를 사용한다.
@@ -60,6 +204,16 @@ scripts/run_qbox_apollo_fvp_full_tmux.sh
 사용한다. 따라서 Linux boot와 post-login probe가 끝나도 QBox target은
 자동 종료되지 않는다. 종료하려면 tmux에서 `F12`를 눌러 session을
 끝낸다. 실행하면 tmux session 안에 다음 pane이 생성된다.
+
+qemu-native CC3XX backend를 화면 실행에 적용하려면 다음처럼 실행한다.
+
+```bash
+scripts/run_qbox_apollo_fvp_full_tmux.sh \
+  --cc3xx-stats \
+  --cc3xx-stats-interval 65536 \
+  --cc3xx-qemu-native-backend \
+  --range-limited-flash-dmi
+```
 
 | Pane | 로그 |
 | --- | --- |
@@ -214,6 +368,11 @@ python3 scripts/run_qbox_apollo_fvp_linux.py \
 
 이 결과는 regression guardrail이다. RSE/Safety Island를 우회하므로
 full-system 완료 증거가 아니다.
+
+Direct-boot guardrail은 RSE/Safety Island/TF-A/OP-TEE/U-Boot을 의도적으로
+우회하는 별도 runner 결과로만 관리한다. Full-system runner에서는 빠른 stub
+옵션을 제공하지 않으며, direct-boot 결과는 G2-G5 full-system completion에
+사용하지 않는다.
 
 ## G2: Service-Model Full Boot
 
