@@ -64,6 +64,11 @@ AP_PC_TRACE_LOG = "ap-pc-trace.log"
 RSE_STRATA_STATS = "rse-strata-stats.json"
 AP_STRATA_STATS = "ap-strata-stats.json"
 RSE_CC3XX_STATS = "rse-cc3xx-stats.json"
+QBOX_PERF_PROFILE_DIR = "qbox-perf-profile"
+QEMU_INITIATOR_PROFILE_DIR = "qemu-initiator"
+REMOTEPASS_PROFILE_DIR = "remotepass"
+CC3XX_PROFILE = "qemu-cc3xx-profile.json"
+RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
 RSE_CC3XX_BASE_S = 0x50154000
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
 WIC_BOOT_ENTRY = "::/loader/entries/boot.conf"
@@ -404,6 +409,7 @@ RSE_FWU_COMPONENT_NUMBER = 5
 RSE_FWU_BOOT_INDEX_SLOT0 = 0
 RSE_FWU_VALID_BOOT_INDICES = {0, 1}
 RSE_FWU_VALID_STATES = set(range(9))
+RSE_BOOT_FLASH_BASE_S = 0xB0000000
 RSE_BOOT_FLASH_SIZE = 0x04000000
 AP_BOOT_FLASH_IMAGE_SIZE = 0x08000000
 FLASH_ERASED_VALUE = 0xFF
@@ -419,6 +425,15 @@ HOST_SI_CL1_IMG_CODE_LOGICAL_BASE = 0x70186000
 HOST_SI_CL1_HEADER_FILE_OFFSET = 0x000FFC00
 HOST_SI_CL1_CODE_FILE_OFFSET = 0x00000000
 HOST_SI_CL1_SAMPLE_SIZE = 0x400
+HOST_SI_IMG_HEADER_ALIAS_SIZE = 0x400
+HOST_SI_IMG_CODE_ALIAS_SIZE_FALLBACK = 0x00100000
+HOST_AP_SHARED_SRAM_SIZE = 0x00100000
+HOST_AP_BL2_IMG_HDR_LOGICAL_BASE = 0x70001C00
+HOST_AP_BL2_IMG_CODE_LOGICAL_BASE = 0x70002000
+HOST_AP_BL2_HEADER_FILE_OFFSET = 0x00001C00
+HOST_AP_BL2_CODE_FILE_OFFSET = 0x00082000
+HOST_AP_BL2_IMG_HEADER_ALIAS_SIZE = 0x400
+HOST_AP_BL2_IMG_CODE_ALIAS_SIZE_FALLBACK = 0x00080000
 HOST_AP_BL2_HEADER_SRAM_SIZE = 0x00080000
 HOST_AP_BL2_HEADER_RSC_TABLE_OFFSET = 0x00000000
 HOST_AP_BL2_HEADER_VRING0_OFFSET = 0x00020000
@@ -430,6 +445,66 @@ SI_CL0_PRIMARY_FLASH_OFFSET = 0x00067000
 SI_CL0_SECONDARY_FLASH_OFFSET = 0x002C7000
 SI_CL1_PRIMARY_FLASH_OFFSET = 0x00167000
 SI_CL1_SECONDARY_FLASH_OFFSET = 0x003C7000
+RSE_SECURE_PRIMARY_FLASH_OFFSET = 0x00027000
+RSE_SECURE_SECONDARY_FLASH_OFFSET = 0x00287000
+RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_OFFSET = 0x00007000
+RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_SIZE = (
+    RSE_SECURE_PRIMARY_FLASH_OFFSET - RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_OFFSET
+)
+RSE_FLASH_IMG_SIZE = 0x03000000
+RSE_FLASH_PS_SIZE = 0x00010000
+RSE_FLASH_ITS_SIZE = 0x00100000
+RSE_BOOT_FLASH_STORAGE_OFFSET = RSE_FLASH_IMG_SIZE
+RSE_BOOT_FLASH_STORAGE_SIZE = RSE_FLASH_PS_SIZE + RSE_FLASH_ITS_SIZE
+RSE_BOOT_FLASH_IMAGE_SLOT_OFFSETS = [
+    RSE_SECURE_PRIMARY_FLASH_OFFSET,
+    SI_CL0_PRIMARY_FLASH_OFFSET,
+    SI_CL1_PRIMARY_FLASH_OFFSET,
+    RSE_SECURE_SECONDARY_FLASH_OFFSET,
+    SI_CL0_SECONDARY_FLASH_OFFSET,
+    SI_CL1_SECONDARY_FLASH_OFFSET,
+]
+HOST_AP_FLASH_LOGICAL_BASE = 0x703A6000
+AP_FLASH_FIP_PRIMARY_OFFSET = 0x00007000
+AP_FLASH_FIP_SECONDARY_OFFSET = 0x00247000
+AP_FLASH_FIP_SIZE = 0x00240000
+RSE_BL2_SYMBOL_DEFAULTS = {
+    "boot_go_for_image_id": 0x3101E288,
+    "boot_load_image_to_sram": 0x3101E758,
+    "boot_enc_load": 0x3101EEB6,
+    "boot_enc_set_key": 0x3101EF52,
+    "boot_enc_decrypt": 0x3101EF8C,
+    "bootutil_img_validate": 0x3101F010,
+    "bootutil_img_hash": 0x3101F3AA,
+    "bootutil_verify_sig": 0x3101F5BC,
+    "bootutil_keys": 0x31000454,
+    "bootutil_key_cnt": 0x3102BBD0,
+    "FIH_SUCCESS": 0x310027DC,
+}
+RSE_BL2_HOOK_SYMBOLS = {
+    "rse_bl2_boot_go_for_image_id_addr": "boot_go_for_image_id",
+    "rse_bl2_boot_load_image_to_sram_addr": "boot_load_image_to_sram",
+    "rse_bl2_boot_enc_load_addr": "boot_enc_load",
+    "rse_bl2_boot_enc_set_key_addr": "boot_enc_set_key",
+    "rse_bl2_boot_enc_decrypt_addr": "boot_enc_decrypt",
+    "rse_bl2_bootutil_img_validate_addr": "bootutil_img_validate",
+    "rse_bl2_bootutil_img_hash_addr": "bootutil_img_hash",
+    "rse_bl2_bootutil_verify_sig_addr": "bootutil_verify_sig",
+    "rse_bl2_bootutil_keys_addr": "bootutil_keys",
+    "rse_bl2_bootutil_key_cnt_addr": "bootutil_key_cnt",
+    "rse_bl2_fih_success_addr": "FIH_SUCCESS",
+}
+RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS = {
+    "image_count": 5,
+    "curr_img_offset": 0x10C8,
+    "imgs_offset": 0x0,
+    "image_stride": 88,
+    "slot_stride": 44,
+    "slot_usage_offset": 0x10D0,
+    "slot_usage_stride": 16,
+    "slot_usage_img_dst_offset": 8,
+    "slot_usage_img_sz_offset": 12,
+}
 IMAGE_MAGIC = 0x96F3B83D
 IMAGE_TLV_INFO_MAGIC = 0x6907
 IMAGE_TLV_PROT_INFO_MAGIC = 0x6908
@@ -1757,7 +1832,7 @@ def parse_flash_stats(args: argparse.Namespace) -> dict[str, object]:
 
 
 def parse_cc3xx_stats(args: argparse.Namespace) -> dict[str, object]:
-    if not args.cc3xx_stats:
+    if not (args.cc3xx_stats or args.qbox_perf_profile):
         return {"enabled": False}
 
     path = args.out_dir / RSE_CC3XX_STATS
@@ -1768,6 +1843,58 @@ def parse_cc3xx_stats(args: argparse.Namespace) -> dict[str, object]:
         "path": str(path.resolve()),
         "present": parsed is not None,
         "stats": parsed,
+    }
+
+
+def parse_qbox_perf_profile(args: argparse.Namespace) -> dict[str, object]:
+    if not args.qbox_perf_profile:
+        return {"enabled": False}
+
+    profile_root = args.out_dir / QBOX_PERF_PROFILE_DIR
+    qemu_initiator_dir = profile_root / QEMU_INITIATOR_PROFILE_DIR
+    remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
+    cc3xx_profile = profile_root / CC3XX_PROFILE
+    hotpath_profile = profile_root / RSE_HOTPATH_PROFILE
+
+    def parse_profile_dir(path: Path) -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        if not path.exists():
+            return result
+        for profile in sorted(path.glob("*.json")):
+            parsed = read_json_artifact(profile)
+            result.append(
+                {
+                    "path": str(profile.resolve()),
+                    "present": parsed is not None,
+                    "stats": parsed,
+                }
+            )
+        return result
+
+    cc3xx_parsed = read_json_artifact(cc3xx_profile)
+    hotpath_parsed = read_json_artifact(hotpath_profile)
+    return {
+        "enabled": True,
+        "root": str(profile_root.resolve()),
+        "qemu_initiator_dir": str(qemu_initiator_dir.resolve()),
+        "remotepass_dir": str(remotepass_dir.resolve()),
+        "initiator_addr_profile": {
+            "enabled": bool(args.qbox_initiator_addr_profile),
+            "shift": args.qbox_initiator_addr_profile_shift,
+            "limit": args.qbox_initiator_addr_profile_limit,
+        },
+        "cc3xx_profile": {
+            "path": str(cc3xx_profile.resolve()),
+            "present": cc3xx_parsed is not None,
+            "stats": cc3xx_parsed,
+        },
+        "rse_hotpath_profile": {
+            "path": str(hotpath_profile.resolve()),
+            "present": hotpath_parsed is not None,
+            "stats": hotpath_parsed,
+        },
+        "qemu_initiator_profiles": parse_profile_dir(qemu_initiator_dir),
+        "remotepass_profiles": parse_profile_dir(remotepass_dir),
     }
 
 
@@ -1786,9 +1913,261 @@ def cc3xx_local_mmio_fastpath_spec() -> str:
     return f"0x{RSE_CC3XX_BASE_S:x}:0x2000"
 
 
+def rse_storage_direct_fastpath_spec() -> str:
+    return (
+        f"0x{RSE_BOOT_FLASH_BASE_S + RSE_BOOT_FLASH_STORAGE_OFFSET:x}:"
+        f"0x{RSE_BOOT_FLASH_STORAGE_SIZE:x}"
+    )
+
+
 def append_env_csv(env: dict[str, str], key: str, value: str) -> None:
     existing = env.get(key, "").strip()
     env[key] = f"{existing},{value}" if existing else value
+
+
+def direct_file_alias_entry(
+    address: int, size: int, file_offset: int, access: str, path: Path
+) -> str:
+    return f"0x{address:x}:0x{size:x}:0x{file_offset:x}:{access}:{path}"
+
+
+def round_up(value: int, alignment: int) -> int:
+    return ((value + alignment - 1) // alignment) * alignment
+
+
+def rse_si_payload_alias_size(
+    flash_path: Path | None, offsets: list[int], override_size: int
+) -> int:
+    if override_size > 0:
+        return override_size
+    if flash_path is None or not flash_path.exists():
+        return HOST_SI_IMG_CODE_ALIAS_SIZE_FALLBACK
+
+    try:
+        flash = flash_path.read_bytes()
+    except OSError:
+        return HOST_SI_IMG_CODE_ALIAS_SIZE_FALLBACK
+
+    payload_sizes: list[int] = []
+    for offset in offsets:
+        image_info = parse_mcuboot_ram_load_size(flash, offset)
+        boot_size_hex = image_info.get("boot_read_image_size")
+        if not image_info.get("valid") or not isinstance(boot_size_hex, str):
+            continue
+        boot_size = int(boot_size_hex, 16)
+        payload_sizes.append(max(0, boot_size - HOST_SI_IMG_HEADER_ALIAS_SIZE))
+
+    if not payload_sizes:
+        return HOST_SI_IMG_CODE_ALIAS_SIZE_FALLBACK
+    return round_up(max(payload_sizes), 0x1000)
+
+
+def rse_ap_bl2_payload_alias_size(
+    flash_path: Path | None, override_size: int
+) -> int:
+    if override_size > 0:
+        return override_size
+    if flash_path is None or not flash_path.exists():
+        return HOST_AP_BL2_IMG_CODE_ALIAS_SIZE_FALLBACK
+
+    try:
+        flash = flash_path.read_bytes()
+    except OSError:
+        return HOST_AP_BL2_IMG_CODE_ALIAS_SIZE_FALLBACK
+
+    magic = IMAGE_MAGIC.to_bytes(4, "little")
+    payload_sizes: list[int] = []
+    start = 0
+    while True:
+        offset = flash.find(magic, start)
+        if offset < 0:
+            break
+        image_info = parse_mcuboot_ram_load_size(flash, offset)
+        boot_size_hex = image_info.get("boot_read_image_size")
+        if (
+            image_info.get("valid")
+            and image_info.get("load_addr") == hex(HOST_AP_BL2_IMG_HDR_LOGICAL_BASE)
+            and isinstance(boot_size_hex, str)
+        ):
+            boot_size = int(boot_size_hex, 16)
+            payload_sizes.append(max(0, boot_size - HOST_AP_BL2_IMG_HEADER_ALIAS_SIZE))
+        start = offset + 1
+
+    if not payload_sizes:
+        return HOST_AP_BL2_IMG_CODE_ALIAS_SIZE_FALLBACK
+    return round_up(max(payload_sizes), 0x1000)
+
+
+def mcuboot_read_alias_ranges(
+    flash_path: Path | None, offsets: list[int]
+) -> list[tuple[int, int]]:
+    if flash_path is None or not flash_path.exists():
+        return []
+
+    try:
+        flash = flash_path.read_bytes()
+    except OSError:
+        return []
+
+    ranges: list[tuple[int, int]] = []
+    for offset in offsets:
+        image_info = parse_mcuboot_ram_load_size(flash, offset)
+        boot_size_hex = image_info.get("boot_read_image_size")
+        if not image_info.get("valid") or not isinstance(boot_size_hex, str):
+            continue
+        boot_size = int(boot_size_hex, 16)
+        ranges.append((offset, round_up(boot_size, 0x1000)))
+    return ranges
+
+
+def rse_boot_flash_direct_read_ranges(
+    flash_path: Path | None,
+) -> list[tuple[str, int, int]]:
+    if flash_path is None or not flash_path.exists():
+        return []
+
+    ranges: list[tuple[str, int, int]] = [
+        (
+            "pre_primary_scan",
+            RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_OFFSET,
+            RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_SIZE,
+        )
+    ]
+    ranges.extend(
+        (f"mcuboot_slot_{offset:x}", offset, size)
+        for offset, size in mcuboot_read_alias_ranges(
+            flash_path, RSE_BOOT_FLASH_IMAGE_SLOT_OFFSETS
+        )
+    )
+    return ranges
+
+
+def rse_direct_rse_flash_alias_spec(artifacts: dict[str, Path]) -> str:
+    rse_flash = artifacts.get("rse_flash")
+    return ";".join(
+        direct_file_alias_entry(
+            RSE_BOOT_FLASH_BASE_S + offset,
+            size,
+            offset,
+            "ro",
+            rse_flash,
+        )
+        for _, offset, size in rse_boot_flash_direct_read_ranges(rse_flash)
+    )
+
+
+def rse_direct_ap_fip_alias_spec(artifacts: dict[str, Path]) -> str:
+    ap_flash = artifacts.get("ap_flash")
+    if ap_flash is None or not ap_flash.exists():
+        return ""
+    return direct_file_alias_entry(
+        HOST_AP_FLASH_LOGICAL_BASE + AP_FLASH_FIP_PRIMARY_OFFSET,
+        AP_FLASH_FIP_SIZE,
+        AP_FLASH_FIP_PRIMARY_OFFSET,
+        "ro",
+        ap_flash,
+    )
+
+
+def rse_direct_si_sram_alias_spec(
+    artifacts: dict[str, Path], code_alias_size: int
+) -> str:
+    rse_flash = artifacts.get("rse_flash")
+    cl0_code_alias_size = rse_si_payload_alias_size(
+        rse_flash,
+        [SI_CL0_PRIMARY_FLASH_OFFSET, SI_CL0_SECONDARY_FLASH_OFFSET],
+        code_alias_size,
+    )
+    cl1_code_alias_size = rse_si_payload_alias_size(
+        rse_flash,
+        [SI_CL1_PRIMARY_FLASH_OFFSET, SI_CL1_SECONDARY_FLASH_OFFSET],
+        code_alias_size,
+    )
+    return ";".join(
+        [
+            direct_file_alias_entry(
+                HOST_SI_CL0_IMG_HDR_LOGICAL_BASE,
+                HOST_SI_IMG_HEADER_ALIAS_SIZE,
+                HOST_SI_CL0_HEADER_FILE_OFFSET,
+                "rw",
+                artifacts["host_si_cl0_sram"],
+            ),
+            direct_file_alias_entry(
+                HOST_SI_CL0_IMG_CODE_LOGICAL_BASE,
+                cl0_code_alias_size,
+                HOST_SI_CL0_CODE_FILE_OFFSET,
+                "rw",
+                artifacts["host_si_cl0_sram"],
+            ),
+            direct_file_alias_entry(
+                HOST_SI_CL1_IMG_HDR_LOGICAL_BASE,
+                HOST_SI_IMG_HEADER_ALIAS_SIZE,
+                HOST_SI_CL1_HEADER_FILE_OFFSET,
+                "rw",
+                artifacts["host_si_cl1_sram"],
+            ),
+            direct_file_alias_entry(
+                HOST_SI_CL1_IMG_CODE_LOGICAL_BASE,
+                cl1_code_alias_size,
+                HOST_SI_CL1_CODE_FILE_OFFSET,
+                "rw",
+                artifacts["host_si_cl1_sram"],
+            ),
+        ]
+    )
+
+
+def rse_direct_ap_bl2_alias_spec(
+    artifacts: dict[str, Path], code_alias_size: int
+) -> str:
+    ap_flash = artifacts.get("ap_flash")
+    ap_bl2_code_alias_size = rse_ap_bl2_payload_alias_size(
+        ap_flash, code_alias_size
+    )
+    return ";".join(
+        [
+            direct_file_alias_entry(
+                HOST_AP_BL2_IMG_HDR_LOGICAL_BASE,
+                HOST_AP_BL2_IMG_HEADER_ALIAS_SIZE,
+                HOST_AP_BL2_HEADER_FILE_OFFSET,
+                "rw",
+                artifacts["host_ap_bl2_header_sram"],
+            ),
+            direct_file_alias_entry(
+                HOST_AP_BL2_IMG_CODE_LOGICAL_BASE,
+                ap_bl2_code_alias_size,
+                HOST_AP_BL2_CODE_FILE_OFFSET,
+                "rw",
+                artifacts["host_ap_shared_sram"],
+            ),
+        ]
+    )
+
+
+def rse_direct_file_aliases_for_args(
+    args: argparse.Namespace, artifacts: dict[str, Path]
+) -> str:
+    if args.rse_direct_file_aliases:
+        return args.rse_direct_file_aliases
+
+    specs: list[str] = []
+    if args.rse_direct_si_sram_alias:
+        specs.append(
+            rse_direct_si_sram_alias_spec(
+                artifacts, args.rse_direct_si_sram_code_alias_size
+            )
+        )
+    if args.rse_direct_ap_bl2_alias:
+        specs.append(
+            rse_direct_ap_bl2_alias_spec(
+                artifacts, args.rse_direct_ap_bl2_code_alias_size
+            )
+        )
+    if args.rse_direct_rse_flash_alias:
+        specs.append(rse_direct_rse_flash_alias_spec(artifacts))
+    if args.rse_direct_ap_fip_alias:
+        specs.append(rse_direct_ap_fip_alias_spec(artifacts))
+    return ";".join(spec for spec in specs if spec)
 
 
 def default_bl2_map(root: Path) -> Path:
@@ -1796,6 +2175,14 @@ def default_bl2_map(root: Path) -> Path:
         root
         / "build/tmp_baremetal/work/fvp_rd_aspen-poky-linux"
         / "trusted-firmware-m/2.2.2+git/build/bin/bl2.map"
+    )
+
+
+def default_rse_bl2_elf(root: Path) -> Path:
+    return (
+        root
+        / "build/tmp_baremetal/work/fvp_rd_aspen-poky-linux"
+        / "trusted-firmware-m/2.2.2+git/build/bin/bl2.elf"
     )
 
 
@@ -1831,6 +2218,70 @@ def parse_map_text_ranges(map_path: Path, symbols: list[str]) -> dict[str, dict[
         ranges[current_symbol] = {"start": start, "end": start + size, "size": size}
         current_symbol = None
     return ranges
+
+
+def parse_elf_symbols(elf_path: Path, symbols: list[str]) -> dict[str, int]:
+    if not elf_path.exists():
+        return {}
+
+    nm = shutil.which("llvm-nm") or shutil.which("nm")
+    if nm is None:
+        return {}
+
+    proc = subprocess.run(
+        [nm, "-n", str(elf_path)],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return {}
+
+    wanted = set(symbols)
+    found: dict[str, int] = {}
+    for line in proc.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        value, _kind, name = parts[:3]
+        if name not in wanted:
+            continue
+        try:
+            found[name] = int(value, 16)
+        except ValueError:
+            continue
+    return found
+
+
+def resolve_rse_bl2_hook_symbols(args: argparse.Namespace, root: Path) -> None:
+    if args.rse_bl2_elf is None:
+        args.rse_bl2_elf = default_rse_bl2_elf(root)
+    else:
+        args.rse_bl2_elf = args.rse_bl2_elf.resolve()
+
+    parsed = parse_elf_symbols(args.rse_bl2_elf, list(RSE_BL2_SYMBOL_DEFAULTS))
+    resolved: dict[str, int] = {}
+    missing: list[str] = []
+    for attr, symbol in RSE_BL2_HOOK_SYMBOLS.items():
+        explicit = getattr(args, attr)
+        if explicit is not None:
+            value = explicit
+        elif symbol in parsed:
+            value = parsed[symbol]
+        else:
+            value = RSE_BL2_SYMBOL_DEFAULTS[symbol]
+            missing.append(symbol)
+        setattr(args, attr, value)
+        resolved[symbol] = value
+
+    args.rse_bl2_symbol_source = {
+        "elf": str(args.rse_bl2_elf),
+        "elf_exists": args.rse_bl2_elf.exists(),
+        "parsed": bool(parsed),
+        "missing": missing,
+        "resolved": {name: hex(value) for name, value in sorted(resolved.items())},
+    }
 
 
 def default_boot_enc_trace_filter(root: Path) -> str | None:
@@ -2220,6 +2671,10 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE"] = str(
             artifacts["host_si_cl1_sram"]
         )
+    if "host_ap_shared_sram" in artifacts:
+        env["QBOX_RDASPEN_HOST_AP_SHARED_SRAM_MAP_FILE"] = str(
+            artifacts["host_ap_shared_sram"]
+        )
     if "host_ap_bl2_header_sram" in artifacts:
         env["QBOX_RDASPEN_HOST_AP_BL2_HEADER_SRAM_MAP_FILE"] = str(
             artifacts["host_ap_bl2_header_sram"]
@@ -2251,12 +2706,177 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_FLASH_STATS_INTERVAL"] = str(
             args.flash_stats_interval
         )
-    if args.cc3xx_stats:
+    if args.cc3xx_stats or args.qbox_perf_profile:
         env["QBOX_RDASPEN_CC3XX_STATS_FILE"] = str(
             args.out_dir / RSE_CC3XX_STATS
         )
         env["QBOX_RDASPEN_CC3XX_STATS_INTERVAL"] = str(
             args.cc3xx_stats_interval
+        )
+    if args.qbox_perf_profile:
+        profile_root = args.out_dir / QBOX_PERF_PROFILE_DIR
+        qemu_initiator_dir = profile_root / QEMU_INITIATOR_PROFILE_DIR
+        remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
+        qemu_initiator_dir.mkdir(parents=True, exist_ok=True)
+        remotepass_dir.mkdir(parents=True, exist_ok=True)
+        env["QBOX_QEMU_INITIATOR_PROFILE_DIR"] = str(qemu_initiator_dir)
+        env["QBOX_REMOTEPASS_PROFILE_DIR"] = str(remotepass_dir)
+        env["QBOX_CC3XX_PROFILE_FILE"] = str(profile_root / CC3XX_PROFILE)
+        env["QBOX_CC3XX_TIMING_STATS"] = "1"
+        env["QBOX_PROFILE_FLUSH_INTERVAL"] = str(args.qbox_perf_profile_interval)
+        if args.qbox_initiator_addr_profile:
+            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE"] = "true"
+            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE_SHIFT"] = str(
+                args.qbox_initiator_addr_profile_shift
+            )
+            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE_LIMIT"] = str(
+                args.qbox_initiator_addr_profile_limit
+            )
+        if (
+            args.rse_hotpath_accel
+            or args.rse_lms_accel
+            or args.rse_bl2_load_profile
+            or args.rse_bl2_load_accel
+            or args.rse_bl2_boot_enc_accel
+            or args.rse_bl2_img_hash_accel
+            or args.rse_bl2_verify_sig_accel
+        ):
+            env["QBOX_RDASPEN_RSE_HOTPATH_PROFILE_FILE"] = str(
+                profile_root / RSE_HOTPATH_PROFILE
+            )
+            env["QBOX_RDASPEN_RSE_HOTPATH_PROFILE_INTERVAL"] = str(
+                args.qbox_perf_profile_interval
+            )
+    if args.remotepass_dmi_cache:
+        env["QBOX_RDASPEN_REMOTEPASS_DMI_CACHE"] = "true"
+    if args.rse_hotpath_accel:
+        env["QBOX_RDASPEN_RSE_HOTPATH_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_HOTPATH_MAX_BYTES"] = str(
+            args.rse_hotpath_max_bytes
+        )
+    if args.rse_lms_accel:
+        env["QBOX_RDASPEN_RSE_LMS_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_LMS_MAX_DATA_BYTES"] = str(
+            args.rse_lms_max_data_bytes
+        )
+    if args.rse_bl2_load_profile:
+        env["QBOX_RDASPEN_RSE_BL2_LOAD_PROFILE"] = "true"
+    if (
+        args.rse_bl2_load_profile
+        or args.rse_bl2_load_accel
+        or args.rse_bl2_boot_enc_accel
+        or args.rse_bl2_img_hash_accel
+        or args.rse_bl2_verify_sig_accel
+    ):
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_GO_FOR_IMAGE_ID_ADDR"] = str(
+            args.rse_bl2_boot_go_for_image_id_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_LOAD_IMAGE_TO_SRAM_ADDR"] = str(
+            args.rse_bl2_boot_load_image_to_sram_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_LOAD_ADDR"] = str(
+            args.rse_bl2_boot_enc_load_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_SET_KEY_ADDR"] = str(
+            args.rse_bl2_boot_enc_set_key_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_DECRYPT_ADDR"] = str(
+            args.rse_bl2_boot_enc_decrypt_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOTUTIL_IMG_VALIDATE_ADDR"] = str(
+            args.rse_bl2_bootutil_img_validate_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOTUTIL_IMG_HASH_ADDR"] = str(
+            args.rse_bl2_bootutil_img_hash_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOTUTIL_VERIFY_SIG_ADDR"] = str(
+            args.rse_bl2_bootutil_verify_sig_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOTUTIL_KEYS_ADDR"] = str(
+            args.rse_bl2_bootutil_keys_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOTUTIL_KEY_CNT_ADDR"] = str(
+            args.rse_bl2_bootutil_key_cnt_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_FIH_SUCCESS_ADDR"] = str(
+            args.rse_bl2_fih_success_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_IMAGE_COUNT"] = str(
+            args.rse_bl2_boot_image_count
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_CURR_IMG_OFFSET"] = str(
+            args.rse_bl2_boot_state_curr_img_offset
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_IMGS_OFFSET"] = str(
+            args.rse_bl2_boot_state_imgs_offset
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_IMAGE_STRIDE"] = str(
+            args.rse_bl2_boot_state_image_stride
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_SLOT_STRIDE"] = str(
+            args.rse_bl2_boot_state_slot_stride
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_SLOT_USAGE_OFFSET"] = str(
+            args.rse_bl2_boot_state_slot_usage_offset
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATE_SLOT_USAGE_STRIDE"] = str(
+            args.rse_bl2_boot_state_slot_usage_stride
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_SLOT_USAGE_IMG_DST_OFFSET"] = str(
+            args.rse_bl2_boot_slot_usage_img_dst_offset
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_SLOT_USAGE_IMG_SZ_OFFSET"] = str(
+            args.rse_bl2_boot_slot_usage_img_sz_offset
+        )
+    if args.rse_bl2_load_accel:
+        env["QBOX_RDASPEN_RSE_BL2_LOAD_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_BL2_LOAD_ACCEL_MAX_BYTES"] = str(
+            args.rse_bl2_load_accel_max_bytes
+        )
+    if args.rse_bl2_boot_enc_accel:
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_ACCEL"] = "true"
+    if args.rse_bl2_boot_enc_accel or args.rse_bl2_load_accel:
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_STATUS_ENCKEY_OFFSET"] = str(
+            args.rse_bl2_boot_status_enckey_offset
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_KEY_BYTES"] = str(
+            args.rse_bl2_boot_enc_key_bytes
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_KEY_STRIDE"] = str(
+            args.rse_bl2_boot_enc_key_stride
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_SLOTS"] = str(
+            args.rse_bl2_boot_enc_slots
+        )
+        env["QBOX_RDASPEN_RSE_BL2_BOOT_ENC_MAX_BYTES"] = str(
+            args.rse_bl2_boot_enc_max_bytes
+        )
+    if args.rse_bl2_img_hash_accel:
+        env["QBOX_RDASPEN_RSE_BL2_IMG_HASH_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_BL2_IMG_HASH_MAX_BYTES"] = str(
+            args.rse_bl2_img_hash_max_bytes
+        )
+        env["QBOX_RDASPEN_RSE_BL2_IMG_HASH_MAX_SEED_BYTES"] = str(
+            args.rse_bl2_img_hash_max_seed_bytes
+        )
+    if args.rse_bl2_verify_sig_accel:
+        env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_MAX_KEY_BYTES"] = str(
+            args.rse_bl2_verify_sig_max_key_bytes
+        )
+        env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_MAX_SIG_BYTES"] = str(
+            args.rse_bl2_verify_sig_max_sig_bytes
+        )
+    if args.rse_bl2_verify_sig_skip:
+        env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_SKIP"] = "true"
+    direct_file_aliases = rse_direct_file_aliases_for_args(args, artifacts)
+    if direct_file_aliases:
+        env["QBOX_RDASPEN_RSE_DIRECT_FILE_ALIASES"] = direct_file_aliases
+    if args.rse_direct_si_sram_alias:
+        env["QBOX_RDASPEN_RSE_DIRECT_SI_SRAM_ALIAS"] = "true"
+        env["QBOX_RDASPEN_RSE_DIRECT_SI_SRAM_CODE_ALIAS_SIZE"] = str(
+            args.rse_direct_si_sram_code_alias_size
         )
     if args.cc3xx_qemu_native_backend:
         env["QBOX_RDASPEN_CC3XX_BACKEND"] = "qemu-native"
@@ -2264,6 +2884,12 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
             env,
             "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
             cc3xx_local_mmio_fastpath_spec(),
+        )
+    if args.rse_storage_direct_fastpath:
+        append_env_csv(
+            env,
+            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            rse_storage_direct_fastpath_spec(),
         )
     if args.cc3xx_status_read_fastpath:
         env["QBOX_MMIO_READ_FASTPATH"] = cc3xx_status_read_fastpath_spec()
@@ -2637,6 +3263,21 @@ def write_result(
                 )
                 else [],
             },
+            "rse_storage_direct_fastpath": {
+                "enabled": bool(args.rse_storage_direct_fastpath),
+                "range": rse_storage_direct_fastpath_spec()
+                if args.rse_storage_direct_fastpath
+                else "",
+                "flash_layout": {
+                    "image_offset": hex(RSE_FLASH_IMG_SIZE),
+                    "ps_size": hex(RSE_FLASH_PS_SIZE),
+                    "its_size": hex(RSE_FLASH_ITS_SIZE),
+                },
+                "fidelity_note": (
+                    "keeps the Strata CFI model active; removes QEMU-to-SystemC "
+                    "thread crossing for the RSE PS/ITS flash storage window"
+                ),
+            },
             "scp_service_model": scp_service_model,
             "fidelity_labels": {
                 "rse_cortex_m55_boot": "functional-model" if rse_boot_started else static_label,
@@ -2681,6 +3322,159 @@ def write_result(
             ),
             "flash_stats": parse_flash_stats(args),
             "cc3xx_stats": parse_cc3xx_stats(args),
+            "qbox_perf_profile": parse_qbox_perf_profile(args),
+            "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},
+            "rse_hotpath_accel": {
+                "enabled": bool(args.rse_hotpath_accel),
+                "memcpy_addr": "0x11000488",
+                "memset_addr": "0x11000448",
+                "max_bytes": args.rse_hotpath_max_bytes,
+            },
+            "rse_lms_accel": {
+                "enabled": bool(args.rse_lms_accel),
+                "verify_addr": "0x11009bad",
+                "max_data_bytes": args.rse_lms_max_data_bytes,
+                "hook": "qemu-tcg-pc-entry",
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.lms_hits > 0",
+            },
+            "rse_bl2_load_profile": {
+                "enabled": bool(args.rse_bl2_load_profile),
+                "hook": "qemu-tcg-pc-entry",
+                "symbol_source": args.rse_bl2_symbol_source,
+                "addresses": {
+                    "boot_go_for_image_id": hex(args.rse_bl2_boot_go_for_image_id_addr),
+                    "boot_load_image_to_sram": hex(args.rse_bl2_boot_load_image_to_sram_addr),
+                    "boot_enc_load": hex(args.rse_bl2_boot_enc_load_addr),
+                    "boot_enc_set_key": hex(args.rse_bl2_boot_enc_set_key_addr),
+                    "boot_enc_decrypt": hex(args.rse_bl2_boot_enc_decrypt_addr),
+                    "bootutil_img_validate": hex(args.rse_bl2_bootutil_img_validate_addr),
+                    "bootutil_img_hash": hex(args.rse_bl2_bootutil_img_hash_addr),
+                    "bootutil_verify_sig": hex(args.rse_bl2_bootutil_verify_sig_addr),
+                },
+                "state_layout": {
+                    "image_count": args.rse_bl2_boot_image_count,
+                    "curr_img_offset": hex(args.rse_bl2_boot_state_curr_img_offset),
+                    "imgs_offset": hex(args.rse_bl2_boot_state_imgs_offset),
+                    "image_stride": args.rse_bl2_boot_state_image_stride,
+                    "slot_stride": args.rse_bl2_boot_state_slot_stride,
+                    "slot_usage_offset": hex(args.rse_bl2_boot_state_slot_usage_offset),
+                    "slot_usage_stride": args.rse_bl2_boot_state_slot_usage_stride,
+                    "slot_usage_img_dst_offset": hex(
+                        args.rse_bl2_boot_slot_usage_img_dst_offset
+                    ),
+                    "slot_usage_img_sz_offset": hex(
+                        args.rse_bl2_boot_slot_usage_img_sz_offset
+                    ),
+                },
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_load_profile.sites.*.hits > 0",
+            },
+            "rse_bl2_load_accel": {
+                "enabled": bool(args.rse_bl2_load_accel),
+                "hook": "qemu-tcg-pc-entry",
+                "decrypt_addr": hex(args.rse_bl2_boot_enc_decrypt_addr),
+                "max_bytes": args.rse_bl2_load_accel_max_bytes,
+                "supported_flags": "0x24",
+                "guest_checks_preserved": [
+                    "boot_enc_load",
+                    "boot_enc_set_key",
+                    "boot_verify_ram_load_address",
+                    "bootutil_img_validate",
+                    "bootutil_verify_sig",
+                    "security counter check",
+                ],
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_load_accel.hits > 0",
+            },
+            "rse_bl2_boot_enc_accel": {
+                "enabled": bool(args.rse_bl2_boot_enc_accel),
+                "hook": "qemu-tcg-pc-entry",
+                "set_key_addr": hex(args.rse_bl2_boot_enc_set_key_addr),
+                "decrypt_addr": hex(args.rse_bl2_boot_enc_decrypt_addr),
+                "boot_status_enckey_offset": hex(args.rse_bl2_boot_status_enckey_offset),
+                "key_bytes": args.rse_bl2_boot_enc_key_bytes,
+                "key_stride": args.rse_bl2_boot_enc_key_stride,
+                "slots": args.rse_bl2_boot_enc_slots,
+                "max_bytes": args.rse_bl2_boot_enc_max_bytes,
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_boot_enc_accel.decrypt_hits > 0",
+            },
+            "rse_bl2_img_hash_accel": {
+                "enabled": bool(args.rse_bl2_img_hash_accel),
+                "hook": "qemu-tcg-pc-entry",
+                "img_hash_addr": hex(args.rse_bl2_bootutil_img_hash_addr),
+                "max_bytes": args.rse_bl2_img_hash_max_bytes,
+                "max_seed_bytes": args.rse_bl2_img_hash_max_seed_bytes,
+                "guest_checks_preserved": [
+                    "bootutil_img_validate TLV traversal",
+                    "bootutil_verify_sig",
+                    "MCUBOOT_HW_ROLLBACK_PROT security counter",
+                ],
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_img_hash_accel.hits > 0",
+            },
+            "rse_bl2_verify_sig_accel": {
+                "enabled": bool(args.rse_bl2_verify_sig_accel),
+                "hook": "qemu-tcg-pc-entry",
+                "skip_enabled": bool(args.rse_bl2_verify_sig_skip),
+                "verify_sig_addr": hex(args.rse_bl2_bootutil_verify_sig_addr),
+                "bootutil_keys_addr": hex(args.rse_bl2_bootutil_keys_addr),
+                "bootutil_key_cnt_addr": hex(args.rse_bl2_bootutil_key_cnt_addr),
+                "fih_success_addr": hex(args.rse_bl2_fih_success_addr),
+                "max_key_bytes": args.rse_bl2_verify_sig_max_key_bytes,
+                "max_sig_bytes": args.rse_bl2_verify_sig_max_sig_bytes,
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_verify_sig_accel.verify_matches > 0",
+            },
+            "rse_direct_si_sram_alias": {
+                "enabled": bool(
+                    args.rse_direct_si_sram_alias
+                    or args.rse_direct_ap_bl2_alias
+                    or args.rse_direct_rse_flash_alias
+                    or args.rse_direct_ap_fip_alias
+                    or args.rse_direct_file_aliases
+                ),
+                "fast_boot_aliases_preset": bool(args.rse_fast_boot_aliases),
+                "si_sram_preset": bool(args.rse_direct_si_sram_alias),
+                "ap_bl2_preset": bool(args.rse_direct_ap_bl2_alias),
+                "rse_boot_flash_preset": bool(args.rse_direct_rse_flash_alias),
+                "ap_fip_preset": bool(args.rse_direct_ap_fip_alias),
+                "code_alias_size": args.rse_direct_si_sram_code_alias_size,
+                "ap_bl2_code_alias_size": args.rse_direct_ap_bl2_code_alias_size,
+                "header_alias_size": HOST_SI_IMG_HEADER_ALIAS_SIZE,
+                "ap_bl2_header_alias_size": HOST_AP_BL2_IMG_HEADER_ALIAS_SIZE,
+                "rse_boot_flash_ranges": [
+                    {"name": name, "offset": hex(offset), "size": hex(size)}
+                    for name, offset, size in rse_boot_flash_direct_read_ranges(
+                        runtime_artifacts.get("rse_flash")
+                    )
+                ] if args.rse_direct_rse_flash_alias else [],
+                "ap_fip_range": {
+                    "offset": hex(AP_FLASH_FIP_PRIMARY_OFFSET),
+                    "size": hex(AP_FLASH_FIP_SIZE),
+                    "logical_base": hex(
+                        HOST_AP_FLASH_LOGICAL_BASE + AP_FLASH_FIP_PRIMARY_OFFSET
+                    ),
+                } if args.rse_direct_ap_fip_alias else {},
+                "direct_file_aliases": (
+                    rse_direct_file_aliases_for_args(args, runtime_artifacts)
+                    if (
+                        args.rse_direct_file_aliases
+                        or (
+                            args.rse_direct_si_sram_alias
+                            and "host_si_cl0_sram" in runtime_artifacts
+                            and "host_si_cl1_sram" in runtime_artifacts
+                        )
+                        or (
+                            args.rse_direct_ap_bl2_alias
+                            and "host_ap_shared_sram" in runtime_artifacts
+                            and "host_ap_bl2_header_sram" in runtime_artifacts
+                        )
+                        or args.rse_direct_rse_flash_alias
+                        or args.rse_direct_ap_fip_alias
+                    )
+                    else ""
+                ),
+                "fidelity_note": (
+                    "opt-in performance mode; bypasses RSE ATU/SystemC "
+                    "routing only for selected RAM-load image ranges"
+                ),
+            },
             "rse_pc_trace": rse_pc_trace,
             "ap_pc_trace": ap_pc_trace,
             "boot_enc_trace": boot_enc_trace,
@@ -2723,6 +3517,24 @@ def write_result(
         "cc3xx_backend: " + str(status["cc3xx_backend"]),
         "cc3xx_local_mmio_fastpath: "
         + json.dumps(status["cc3xx_local_mmio_fastpath"], sort_keys=True),
+        "rse_storage_direct_fastpath: "
+        + json.dumps(status["rse_storage_direct_fastpath"], sort_keys=True),
+        "rse_hotpath_accel: "
+        + json.dumps(status["rse_hotpath_accel"], sort_keys=True),
+        "rse_lms_accel: "
+        + json.dumps(status["rse_lms_accel"], sort_keys=True),
+        "rse_bl2_load_profile: "
+        + json.dumps(status["rse_bl2_load_profile"], sort_keys=True),
+        "rse_bl2_load_accel: "
+        + json.dumps(status["rse_bl2_load_accel"], sort_keys=True),
+        "rse_bl2_boot_enc_accel: "
+        + json.dumps(status["rse_bl2_boot_enc_accel"], sort_keys=True),
+        "rse_bl2_img_hash_accel: "
+        + json.dumps(status["rse_bl2_img_hash_accel"], sort_keys=True),
+        "rse_bl2_verify_sig_accel: "
+        + json.dumps(status["rse_bl2_verify_sig_accel"], sort_keys=True),
+        "rse_direct_si_sram_alias: "
+        + json.dumps(status["rse_direct_si_sram_alias"], sort_keys=True),
         "scp_service_model: "
         + json.dumps(status["scp_service_model"], sort_keys=True),
         f"blocker: {blocker or 'none'}",
@@ -2767,6 +3579,16 @@ def write_result(
             },
             sort_keys=True,
         ),
+        "qbox_perf_profile: "
+        + json.dumps(
+            {
+                "enabled": status["qbox_perf_profile"].get("enabled"),
+                "root": status["qbox_perf_profile"].get("root"),
+            },
+            sort_keys=True,
+        ),
+        "remotepass_dmi_cache: "
+        + json.dumps(status["remotepass_dmi_cache"], sort_keys=True),
         "rse_pc_trace: "
         + (
             json.dumps(rse_pc_trace, sort_keys=True)
@@ -2864,6 +3686,14 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Optional AP BL2 ELF used by the QBox reset loader. When omitted, "
             "the Lua platform default is used."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-elf",
+        type=Path,
+        help=(
+            "Optional RSE TF-M BL2 ELF used to resolve BL2 hook symbols. "
+            "When omitted, the Yocto build BL2 ELF is used if present."
         ),
     )
     parser.add_argument(
@@ -3104,6 +3934,410 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--qbox-perf-profile",
+        action="store_true",
+        help=(
+            "Enable QBox-side performance profile artifacts for QEMU "
+            "initiator path, RemotePass RPC path, and QEMU-native CC3XX. "
+            "This also enables CC3XX timing stats in rse-cc3xx-stats.json."
+        ),
+    )
+    parser.add_argument(
+        "--qbox-perf-profile-interval",
+        type=int,
+        default=1024,
+        help=(
+            "Flush QBox performance profile JSON files every N profiled "
+            "events when --qbox-perf-profile is enabled."
+        ),
+    )
+    parser.add_argument(
+        "--qbox-initiator-addr-profile",
+        action="store_true",
+        help=(
+            "Add an address-bucket histogram to QEMU initiator profile JSON "
+            "files. Requires --qbox-perf-profile and is intended for finding "
+            "remaining RSE regular-path MMIO/memory hot ranges."
+        ),
+    )
+    parser.add_argument(
+        "--qbox-initiator-addr-profile-shift",
+        type=int,
+        default=12,
+        help="Address bucket shift for --qbox-initiator-addr-profile.",
+    )
+    parser.add_argument(
+        "--qbox-initiator-addr-profile-limit",
+        type=int,
+        default=64,
+        help="Maximum number of address buckets emitted per QEMU initiator profile.",
+    )
+    parser.add_argument(
+        "--remotepass-dmi-cache",
+        action="store_true",
+        help=(
+            "Enable the opt-in RemotePass shared-memory DMI cache in the RSE "
+            "remote CPU process. This targets QEMU-to-SystemC RPC overhead "
+            "for DMI-capable memory ranges."
+        ),
+    )
+    parser.add_argument(
+        "--rse-hotpath-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in QBox semantic acceleration for known RSE BL1_1 "
+            "memcpy/memset loop heads. This targets the RSE BL2 image "
+            "validation slow path and falls back to normal QEMU execution "
+            "when the active PC or DMI range does not match."
+        ),
+    )
+    parser.add_argument(
+        "--rse-hotpath-max-bytes",
+        type=int,
+        default=16 * 1024 * 1024,
+        help=(
+            "Maximum byte count accepted by --rse-hotpath-accel for one "
+            "semantic memcpy/memset operation."
+        ),
+    )
+    parser.add_argument(
+        "--rse-lms-accel",
+        action="store_true",
+        help=(
+            "Enable experimental opt-in RSE BL1_2 LMS verify semantic "
+            "acceleration. The QEMU TCG PC-entry hook validates the fixed "
+            "LMS/LMOTS signature in host code when it observes the verify "
+            "function entry PC, then falls back to normal firmware execution "
+            "on PC, input length, DMI, or signature mismatch. Check "
+            "qbox_perf_profile.rse_hotpath_profile.stats.lms_hits to confirm "
+            "it was effective."
+        ),
+    )
+    parser.add_argument(
+        "--rse-lms-max-data-bytes",
+        type=int,
+        default=16 * 1024 * 1024,
+        help="Maximum message byte count accepted by --rse-lms-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-load-profile",
+        action="store_true",
+        help=(
+            "Record opt-in RSE BL2 image load/decrypt/validate function "
+            "entry samples in qbox_perf_profile/rse-hotpath-profile.json. "
+            "This is profiling only and does not skip guest firmware code."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-go-for-image-id-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 boot_go_for_image_id Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-load-image-to-sram-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 boot_load_image_to_sram Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-load-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 boot_enc_load Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-set-key-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 boot_enc_set_key Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-decrypt-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 boot_enc_decrypt Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-bootutil-img-validate-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 bootutil_img_validate Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-bootutil-img-hash-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 bootutil_img_hash Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-bootutil-verify-sig-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 bootutil_verify_sig Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-bootutil-keys-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 bootutil_keys address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-bootutil-key-cnt-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 bootutil_key_cnt address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-fih-success-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE BL2 FIH_SUCCESS address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-image-count",
+        type=int,
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["image_count"],
+        help="MCUBoot BOOT_IMAGE_NUMBER for BL2 boot_loader_state snapshots.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-curr-img-offset",
+        type=lambda value: int(value, 0),
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["curr_img_offset"],
+        help="Offset of boot_loader_state.curr_img_idx for BL2 RAM-load snapshots.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-imgs-offset",
+        type=lambda value: int(value, 0),
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["imgs_offset"],
+        help="Offset of boot_loader_state.imgs for BL2 RAM-load snapshots.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-image-stride",
+        type=int,
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["image_stride"],
+        help="Stride between boot_loader_state.imgs image entries.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-slot-stride",
+        type=int,
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["slot_stride"],
+        help="Stride between boot_loader_state.imgs slot entries.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-slot-usage-offset",
+        type=lambda value: int(value, 0),
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["slot_usage_offset"],
+        help="Offset of boot_loader_state.slot_usage.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-state-slot-usage-stride",
+        type=int,
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["slot_usage_stride"],
+        help="Stride between boot_loader_state.slot_usage entries.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-slot-usage-img-dst-offset",
+        type=lambda value: int(value, 0),
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["slot_usage_img_dst_offset"],
+        help="Offset of slot_usage_t.img_dst.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-slot-usage-img-sz-offset",
+        type=lambda value: int(value, 0),
+        default=RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS["slot_usage_img_sz_offset"],
+        help="Offset of slot_usage_t.img_sz.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in RSE BL2 boot_enc_decrypt acceleration. The hook "
+            "captures the AES key at boot_enc_set_key, decrypts only matching "
+            "boot_enc_decrypt chunks with the same AES-CTR algorithm, and "
+            "falls back to guest firmware execution on any mismatch."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-load-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in RSE BL2 RAM-load payload acceleration. The hook "
+            "uses the boot_load_image_to_sram snapshot and the key captured at "
+            "boot_enc_set_key to decrypt one supported RAM_LOAD AES-128 image "
+            "payload in host code, then skips only the remaining decrypt calls "
+            "for that already-decrypted image."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-load-accel-max-bytes",
+        type=int,
+        default=16 * 1024 * 1024,
+        help="Maximum payload byte count accepted by --rse-bl2-load-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-status-enckey-offset",
+        type=lambda value: int(value, 0),
+        default=0x0C,
+        help="Offset of struct boot_status.enckey in the active RSE BL2 build.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-key-bytes",
+        type=int,
+        default=16,
+        help="AES key byte count used by RSE BL2 encrypted images.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-key-stride",
+        type=int,
+        default=16,
+        help="Byte stride between boot_status.enckey slots.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-slots",
+        type=int,
+        default=2,
+        help="Number of encrypted image slots in struct boot_status.enckey.",
+    )
+    parser.add_argument(
+        "--rse-bl2-boot-enc-max-bytes",
+        type=int,
+        default=4096,
+        help="Maximum byte count accepted by --rse-bl2-boot-enc-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-img-hash-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in RSE BL2 bootutil_img_hash acceleration. The hook "
+            "computes the MCUBoot RAM_LOAD SHA256 in host code, writes the "
+            "guest hash result buffer, and leaves signature and rollback "
+            "counter verification on the normal guest firmware path."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-img-hash-max-bytes",
+        type=int,
+        default=16 * 1024 * 1024,
+        help="Maximum image hash byte count accepted by --rse-bl2-img-hash-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-img-hash-max-seed-bytes",
+        type=int,
+        default=4096,
+        help="Maximum optional seed byte count accepted by --rse-bl2-img-hash-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-verify-sig-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in RSE BL2 bootutil_verify_sig host verification. The "
+            "QEMU TCG PC-entry hook reads bootutil_keys, hash, and DER "
+            "signature from guest memory and performs host-native ECDSA-P256 "
+            "verification for profiling. Guest firmware still performs the "
+            "secure-boot verification unless the low-level CCI skip switch is "
+            "set manually for experiments."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-verify-sig-skip",
+        action="store_true",
+        help=(
+            "After host-native ECDSA verification succeeds, skip the guest "
+            "bootutil_verify_sig body by returning FIH_SUCCESS. This is a "
+            "positive-boot performance experiment and must stay disabled for "
+            "negative secure-boot, FWU, and fidelity evidence."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-verify-sig-max-key-bytes",
+        type=int,
+        default=512,
+        help="Maximum public-key byte count accepted by --rse-bl2-verify-sig-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-verify-sig-max-sig-bytes",
+        type=int,
+        default=128,
+        help="Maximum DER signature byte count accepted by --rse-bl2-verify-sig-accel.",
+    )
+    parser.add_argument(
+        "--rse-direct-si-sram-alias",
+        action="store_true",
+        help=(
+            "Install opt-in QEMU direct file-backed aliases for the RSE view "
+            "of SI CL0/CL1 image header and payload SRAM windows. This targets "
+            "RemotePass overhead during RSE BL2 SI image loading and bypasses "
+            "ATU/SystemC routing only for those narrow ranges."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-si-sram-code-alias-size",
+        type=int,
+        default=0,
+        help=(
+            "Override per-cluster code payload alias size for "
+            "--rse-direct-si-sram-alias. The default 0 computes the size from "
+            "the current rse-flash MCUBoot headers and rounds up to 4KiB."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-ap-bl2-alias",
+        action="store_true",
+        help=(
+            "Install opt-in QEMU direct file-backed aliases for the RSE AP "
+            "BL2 RAM-load header and payload windows. The header maps to "
+            "host-ap-bl2-header-sram.bin offset 0x1c00 and the payload maps "
+            "to host-ap-shared-sram.bin offset 0x82000 to match the TF-M AP "
+            "BL2 ATU layout."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-ap-bl2-code-alias-size",
+        type=int,
+        default=0,
+        help=(
+            "Override AP BL2 payload alias size for --rse-direct-ap-bl2-alias. "
+            "The default 0 computes the size from the current AP flash "
+            "MCUBoot header and rounds up to 4KiB."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-rse-flash-alias",
+        action="store_true",
+        help=(
+            "Install opt-in read-only QEMU direct file aliases for valid "
+            "MCUBoot image read ranges and the pre-primary scan window in "
+            "RSE boot flash. Empty secondary slots and FWU metadata outside "
+            "that scan window remain on the flash model."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-ap-fip-alias",
+        action="store_true",
+        help=(
+            "Install an opt-in read-only QEMU direct file alias for the active "
+            "AP flash FIP slot as seen through the RSE AP-flash ATU window."
+        ),
+    )
+    parser.add_argument(
+        "--rse-fast-boot-aliases",
+        action="store_true",
+        help=(
+            "Enable the validated QBox RSE fast-boot alias set: SI SRAM, AP "
+            "BL2 RAM-load, RSE boot-flash image reads, AP FIP reads, and the "
+            "RSE PS/ITS storage direct-MMIO fastpath. This is a "
+            "performance/fidelity tradeoff preset and does not bypass "
+            "signature, hash, or CFI flash command success checks."
+        ),
+    )
+    parser.add_argument(
+        "--rse-storage-direct-fastpath",
+        action="store_true",
+        help=(
+            "Use QBox local direct MMIO calls for the RSE boot-flash PS/ITS "
+            "storage window. The Strata CFI model remains active, but QEMU "
+            "does not bounce each byte access through run_on_sysc."
+        ),
+    )
+    parser.add_argument(
+        "--rse-direct-file-aliases",
+        default="",
+        help=(
+            "Override direct file aliases with a semicolon-separated "
+            "addr:size:file_offset:ro|rw:path spec."
+        ),
+    )
+    parser.add_argument(
         "--cc3xx-stats-interval",
         type=int,
         default=1024,
@@ -3177,8 +4411,61 @@ def parse_args() -> argparse.Namespace:
         args.qemu_trace = True
     if args.flash_stats and args.flash_stats_interval <= 0:
         parser.error("--flash-stats-interval must be positive")
-    if args.cc3xx_stats and args.cc3xx_stats_interval <= 0:
+    if (args.cc3xx_stats or args.qbox_perf_profile) and args.cc3xx_stats_interval <= 0:
         parser.error("--cc3xx-stats-interval must be positive")
+    if args.qbox_perf_profile and args.qbox_perf_profile_interval <= 0:
+        parser.error("--qbox-perf-profile-interval must be positive")
+    if args.rse_hotpath_max_bytes <= 0:
+        parser.error("--rse-hotpath-max-bytes must be positive")
+    if args.rse_lms_max_data_bytes <= 0:
+        parser.error("--rse-lms-max-data-bytes must be positive")
+    if args.rse_bl2_boot_enc_key_bytes not in (16, 24, 32):
+        parser.error("--rse-bl2-boot-enc-key-bytes must be 16, 24, or 32")
+    if args.rse_bl2_boot_enc_key_stride < args.rse_bl2_boot_enc_key_bytes:
+        parser.error("--rse-bl2-boot-enc-key-stride must be >= key bytes")
+    if args.rse_bl2_boot_enc_slots <= 0:
+        parser.error("--rse-bl2-boot-enc-slots must be positive")
+    if args.rse_bl2_boot_enc_max_bytes <= 0:
+        parser.error("--rse-bl2-boot-enc-max-bytes must be positive")
+    if args.rse_bl2_load_accel_max_bytes <= 0:
+        parser.error("--rse-bl2-load-accel-max-bytes must be positive")
+    if args.rse_bl2_img_hash_max_bytes <= 0:
+        parser.error("--rse-bl2-img-hash-max-bytes must be positive")
+    if args.rse_bl2_img_hash_max_seed_bytes < 0:
+        parser.error("--rse-bl2-img-hash-max-seed-bytes must be non-negative")
+    if args.rse_bl2_verify_sig_max_key_bytes <= 0:
+        parser.error("--rse-bl2-verify-sig-max-key-bytes must be positive")
+    if args.rse_bl2_verify_sig_max_sig_bytes <= 0:
+        parser.error("--rse-bl2-verify-sig-max-sig-bytes must be positive")
+    if args.rse_bl2_boot_image_count <= 0:
+        parser.error("--rse-bl2-boot-image-count must be positive")
+    if args.rse_bl2_boot_state_image_stride <= 0:
+        parser.error("--rse-bl2-boot-state-image-stride must be positive")
+    if args.rse_bl2_boot_state_slot_stride <= 0:
+        parser.error("--rse-bl2-boot-state-slot-stride must be positive")
+    if args.rse_bl2_boot_state_slot_usage_stride <= 0:
+        parser.error("--rse-bl2-boot-state-slot-usage-stride must be positive")
+    if args.rse_bl2_verify_sig_skip:
+        args.rse_bl2_verify_sig_accel = True
+    if args.qbox_initiator_addr_profile and not args.qbox_perf_profile:
+        parser.error("--qbox-initiator-addr-profile requires --qbox-perf-profile")
+    if args.qbox_initiator_addr_profile_shift < 0:
+        parser.error("--qbox-initiator-addr-profile-shift must be non-negative")
+    if args.qbox_initiator_addr_profile_shift > 30:
+        parser.error("--qbox-initiator-addr-profile-shift must be <= 30")
+    if args.qbox_initiator_addr_profile_limit <= 0:
+        parser.error("--qbox-initiator-addr-profile-limit must be positive")
+    if args.rse_direct_si_sram_code_alias_size < 0:
+        parser.error("--rse-direct-si-sram-code-alias-size must be non-negative")
+    if args.rse_direct_ap_bl2_code_alias_size < 0:
+        parser.error("--rse-direct-ap-bl2-code-alias-size must be non-negative")
+    if args.rse_fast_boot_aliases:
+        args.rse_direct_si_sram_alias = True
+        args.rse_direct_ap_bl2_alias = True
+        args.rse_direct_rse_flash_alias = True
+        args.rse_direct_ap_fip_alias = True
+        args.rse_storage_direct_fastpath = True
+    resolve_rse_bl2_hook_symbols(args, root)
     return args
 
 
@@ -3293,8 +4580,10 @@ def main() -> int:
     if rootfs_preparation and rootfs_preparation.get("changed"):
         copied["rootfs"] = run_artifacts["rootfs"]
     run_artifacts["extra_blk1"] = artifacts["efi_capsule_disk"]
-    if args.cc3xx_stats:
+    if args.cc3xx_stats or args.qbox_perf_profile:
         run_artifacts["rse_cc3xx_stats"] = args.out_dir / RSE_CC3XX_STATS
+    if args.qbox_perf_profile:
+        run_artifacts["qbox_perf_profile"] = args.out_dir / QBOX_PERF_PROFILE_DIR
     host_si_cl0_sram_path = prepare_sparse_file(
         args.out_dir / "host-si-cl0-sram.bin",
         HOST_SI_CL0_SRAM_WINDOW_SIZE,
@@ -3305,7 +4594,12 @@ def main() -> int:
         HOST_SI_CL1_SRAM_WINDOW_SIZE,
     )
     run_artifacts["host_si_cl1_sram"] = host_si_cl1_sram_path
-    if env_flag("QBOX_RDASPEN_CAPTURE_HOST_AP_BL2_HEADER_SRAM"):
+    if args.rse_direct_ap_bl2_alias:
+        run_artifacts["host_ap_shared_sram"] = prepare_sparse_file(
+            args.out_dir / "host-ap-shared-sram.bin",
+            HOST_AP_SHARED_SRAM_SIZE,
+        )
+    if args.rse_direct_ap_bl2_alias or env_flag("QBOX_RDASPEN_CAPTURE_HOST_AP_BL2_HEADER_SRAM"):
         host_ap_bl2_header_sram_path = prepare_sparse_file(
             args.out_dir / "host-ap-bl2-header-sram.bin",
             HOST_AP_BL2_HEADER_SRAM_SIZE,

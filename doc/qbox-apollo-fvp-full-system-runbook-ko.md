@@ -191,6 +191,125 @@ SI CL1 remoteproc/RPMsg, `ethsi1`, DSU PMU evidence를 남긴다. 기존 direct-
 guardrail은 `build/qbox-apollo-fvp/direct-guardrail-20260605-004025/`에서
 `passed: true`로 확인했다.
 
+RSE boot time을 FVP에 가깝게 비교할 때는 RSE runner로 전달되는
+`--rse-fast-boot-aliases`를 함께 사용할 수 있다. full-system wrapper는
+알 수 없는 인자를 RSE runner로 forward하므로 별도 wrapper option 없이
+다음처럼 실행한다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --skip-build \
+  --timeout 2400 \
+  --rootfs-bootargs-profile none \
+  --post-login-probe \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-fast-rse
+```
+
+이 preset은 SI SRAM, AP BL2, RSE boot flash read-only window, AP FIP
+read-only window, RSE PS/ITS storage direct-MMIO fast path를 켠다. RSE 전체
+stub이나 secure boot success stub은 아니다. 다만 일부 storage access가
+QEMU-local fast path를 타므로 FWU, PS/ITS persistence, negative secure-boot,
+flash command-state fidelity 검증에는 preset을 끄고 기존 flash path를
+사용한다.
+
+RSE 부팅 시간 자체를 FVP와 비교하는 짧은 smoke에서는 full-system wrapper보다
+RSE runner를 직접 쓰는 편이 빠르다. 2026-06-08 기준 가장 빠른 QBox-side
+성능 조합은 qemu-native CC3XX backend, LMS verifier accelerator, fast boot
+alias preset이다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-fast-boot-perf
+```
+
+현재 best evidence는
+`build/qbox-apollo-fvp/rse-step1-storage-direct-fastpath-20260608-1/`이며,
+`rse_bl1_1` -> `rse_first_image_slot`은 22.668초였다. 같은 기준의 FVP timed
+run은 `build/local-apollo-fvp/fvp-boot-timed-20260604/`의 4.818초다. 따라서
+현재 QBox RSE는 FVP 대비 약 4.7배 느리고, 다음 개선 목표는 15초 이하, 최종
+목표는 10초 이하로 잡는다.
+
+성능 비교에서는 `--rse-bl2-load-profile`과 `--qbox-perf-profile`을 끈다.
+두 옵션은 BL2 함수 hit/counter를 확인하는 분석용 hook이며, 최단 wall-time
+비교에는 계측 overhead를 더한다. BL2 accelerator를 켠 positive smoke도
+최종 timing 비교는 no-profile 형태로 실행한다.
+
+`bootutil_verify_sig()` positive skip을 함께 켠 최신 profile smoke는
+`build/qbox-apollo-fvp/rse-bl2-verify-sig-skip-remote-rebuild-smoke-20260608/`
+에 저장되어 있다. 이 run은 `rse_bl1_1` -> `rse_first_image_slot = 24.773초`,
+`verify_matches=1`, `skip_hits=1`, `last_fih_success=0x0`으로 image 4/3/2/0
+load와 AP power-on, first image slot까지 진행했다. 다만 현재 최단 시간은
+아니므로 `--rse-bl2-verify-sig-skip`은 PKA traffic 제거를 확인하는 positive
+boot smoke 전용 옵션으로 사용하고, FWU/negative secure-boot fidelity 증거로
+사용하지 않는다.
+
+profile overhead를 뺀 같은 옵션의 smoke는
+`build/qbox-apollo-fvp/rse-bl2-verify-sig-skip-noprofile-smoke-20260608/`이며,
+`rse_bl1_1` -> `rse_first_image_slot = 24.179초`를 기록했다.
+
+BL2 boot encryption/hash accelerator와 positive signature skip을 함께 켜되
+profile hook을 끈 smoke는
+`build/qbox-apollo-fvp/rse-bl2-accel-no-load-profile-smoke-20260608/`이다. 이
+run은 `[ERR]` 없이 image 4/3/2/0 load, AP power-on, first image slot까지
+진행했고 `rse_bl1_1` -> `rse_first_image_slot = 22.772초`를 기록했다. 현재
+최단 run인 22.668초와 거의 같지만 넘어서지는 못했으므로, BL2 accelerator는
+다음 image-level accelerator 개발을 위한 기능 검증 옵션으로 둔다.
+
+BL2 hook 기반 profile/accelerator를 사용할 때 RSE runner는 `--rse-bl2-elf`
+에서 `boot_load_image_to_sram`, `boot_enc_decrypt`, `bootutil_img_hash`,
+`bootutil_verify_sig` 등의 symbol 주소를 자동으로 resolve한다. full-system
+wrapper는 local-build TF-M BL2 ELF를 자동으로 전달하므로 일반적으로 별도
+주소 override를 줄 필요가 없다. 실제로 사용된 주소는 child result JSON의
+`rse_bl2_load_profile.symbol_source`에서 확인한다.
+
+BL2 image-level accelerator 후보를 profiling하려면 다음 옵션을 추가한다.
+성능 비교가 아니라 hook/counter 확인이 목적이다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-fast-boot-bl2-image-accel
+```
+
+`bootutil_img_hash` accelerator는 분할된 direct-file alias window를 4KB
+chunk로 읽는 fallback이 필요하다. 해당 fallback이 동작하면
+`qbox-perf-profile/rse-hotpath-profile.json`에서
+`bl2_img_hash_accel.hits > 0`과 `dmi_failures = 0`을 확인할 수 있다. 이
+accelerator는 hash/signature/security-counter flow를 보존하지만, 아직 최단
+시간 조합은 아니므로 성능 비교 후보로만 사용한다.
+
+`--rse-bl2-verify-sig-accel`은 기본 safe mode에서 host-native ECDSA 검증 결과를
+기록하고 캐시하지만 guest firmware의 PKA 기반 `bootutil_verify_sig()` 실행은
+유지한다. 따라서 `verify_matches`를 확인하는 profile 도구로는 유용하지만,
+그 자체로 PKA traffic을 줄이지는 않는다. 실제 성능 개선은 이후
+`boot_load_image_to_sram()` 단위 semantic accelerator에서 hash/ECDSA/AES-CTR
+처리를 함께 검증하고 guest-visible 상태를 반영하는 방식으로 진행해야 한다.
+PKA traffic 제거 실험에는 `--rse-bl2-verify-sig-skip`을 추가할 수 있다. 이
+옵션은 host-native ECDSA 검증이 성공한 positive path에서만 guest
+`bootutil_verify_sig()` body를 건너뛰며, BL2 ELF에서 resolve한 `FIH_SUCCESS`
+변수 값을 guest memory에서 읽어 반환한다.
+
 ## tmux 화면으로 실행
 
 사용자에게 subsystem별 UART 출력을 보여주려면 tmux wrapper를 사용한다.
@@ -312,6 +431,12 @@ cmake --build tools/qbox/build \
   --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp \
   --parallel 8
 ```
+
+RSE CPU hook 또는 `tools/qbox/qemu-components/common/include/cpu.h`를 바꾼
+뒤에는 반드시 `remote_cpu`를 포함해 다시 빌드한다. RSE `RemoteCPU`는
+`cpu_arm_cortexM55.so`를 직접 로드하지 않고 `remote_cpu` 실행 파일에 CPU
+header 구현을 링크하므로, `cpu_arm_cortexM55` 모듈만 빌드하면 RSE smoke가
+이전 hook 코드로 실행될 수 있다.
 
 component 변경 이후에는 다음 검사를 권장한다.
 

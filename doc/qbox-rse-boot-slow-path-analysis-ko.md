@@ -1,6 +1,7 @@
 # QBox RSE Boot Slow Path 분석
 
 작성일: 2026-06-04
+업데이트: 2026-06-08
 
 ## 결론
 
@@ -20,7 +21,30 @@ TF-M BL1_2에서 BL2 image를 복호화한 뒤 서명 검증을 완료하기까�
 
 따라서 stub/fast-path 후보는 RSE 전체가 아니라
 `BL2 image decrypted successfully` 이후 `BL2 image validated successfully`
-이전의 BL1_2 image validation 구간이다.
+이전의 BL1_2 image validation 구간이었다.
+
+2026-06-08 기준으로는 QEMU-native CC3XX backend, LMS verifier accelerator,
+fast boot alias preset, storage direct fast path, BL2 boot encryption/hash
+accelerator 조합을 시험해 RSE runtime handoff가 수십 초대로 줄었다. FVP의
+`rse_bl1_1` -> `rse_first_image_slot` 4.818초와 비교하면 아직 느리지만,
+초기 QBox full-system의 191.484초 대비 병목은 상당히 줄었다.
+
+| Run | 핵심 옵션 | `rse_bl1_1` -> `rse_first_image_slot` | FVP 대비 |
+| --- | --- | ---: | ---: |
+| FVP timed run | FVP 기준 | 4.818초 | 1.0x |
+| QBox 초기 full-system | 기존 SystemC CC3XX/flash path | 191.484초 | 39.7x |
+| QBox qemu-native + fast aliases + storage direct | `--cc3xx-qemu-native-backend --rse-lms-accel --rse-fast-boot-aliases` | 22.668초 | 4.7x |
+| QBox + BL2 accelerators(no profiling) | 위 옵션 + `--rse-bl2-boot-enc-accel --rse-bl2-img-hash-accel --rse-bl2-verify-sig-skip` | 22.772초 | 4.7x |
+| QBox + BL2 boot_enc/img_hash profiled | 위 옵션 + `--rse-bl2-load-profile --qbox-perf-profile` | 25.073초 | 5.2x |
+| QBox + positive `bootutil_verify_sig` skip | 위 옵션 + `--rse-bl2-verify-sig-skip` | 24.179초(no profile), 24.773초(profile) | 5.0x |
+
+따라서 현재 남은 목표는 “RSE 전체 stub”이 아니라 QEMU-native CC3XX와
+flash/storage direct path를 더 FVP 내부 fast-path에 가깝게 만드는 것이다.
+`bootutil_verify_sig` skip은 PKA traffic 제거에는 효과가 있지만 현재 최단
+시간은 아니므로, 기본 성능 기준선은 여전히 fast alias/storage direct run으로
+둔다.
+`--rse-bl2-load-profile`과 `--qbox-perf-profile`은 병목 분석용이다. 최단 시간
+비교에서는 이 둘을 끄고 marker timing만 사용한다.
 
 ## FVP 대비 정량 비교
 
@@ -579,6 +603,92 @@ full-system run의 BL2 validation delta는 127.195초였다. direct-boot guardra
 `build/qbox-apollo-fvp/direct-guardrail-20260605-004025/result.json`에서
 `passed: true`로 확인했다.
 
+2026-06-08 재측정에서는 `--rse-lms-accel`과 fast alias preset을 함께 사용해
+BL1_2 LMS validation 구간 자체는 약 0.1초 수준으로 줄었다. 이 상태에서
+남는 시간은 BL2 이후 SI/AP image load, PS/ITS storage initialization, RSE-SCP
+handoff 전후의 flash/storage/CC3XX DMA traffic이다. 가장 빠른 관측 run은
+다음이다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-step1-storage-direct-fastpath-20260608-1
+```
+
+| Marker | 시간 |
+| --- | ---: |
+| `rse_bl1_1` | 3.211초 |
+| `rse_bl2_decrypted` | 11.537초 |
+| `rse_bl2_validated` | 11.637초 |
+| `rse_image_4_loaded` | 12.339초 |
+| `rse_image_3_loaded` | 21.765초 |
+| `rse_image_2_loaded` | 22.769초 |
+| `rse_image_0_loaded` | 25.779초 |
+| `rse_first_image_slot` | 25.879초 |
+
+이 run은 `qbox_platform_timeout`으로 끝나는 RSE timing smoke이며 full-system
+completion 증거는 아니다. 하지만 RSE boot time 비교에는 현재 가장 좋은
+QBox-side 성능 기준이다.
+
+### 2.5순위: BL2 Image-Level Semantic Accelerator
+
+BL2 image load 구간에서는 `boot_enc_decrypt`와 `bootutil_img_hash` entry hook을
+사용한 semantic accelerator를 시험했다. 이 방식은 guest가 수행하는
+MCUBoot TLV traversal, `bootutil_verify_sig`, security counter check를 유지하고,
+반복적인 AES-CTR decrypt/hash DMA만 QEMU host memory에서 처리한다.
+
+초기 `bootutil_img_hash` accelerator는 hash 대상 이미지가 분할된 direct-file
+alias 창에 걸쳐 있어 단일 DMI/direct alias 범위로 읽지 못했다. 증상은
+`bl2_img_hash_accel.hits=0`, `dmi_failures=22159`였다.
+`hotpath_read_bytes_or_alias()`에 4KB 단위 chunk fallback을 추가한 뒤 같은
+image hash가 분할 alias를 따라 읽히도록 고쳤다.
+
+검증 결과:
+
+| Run | 결과 |
+| --- | --- |
+| `rse-bl2-symbol-img-hash-accel-smoke-20260608` | pre-fix, `hits=0`, `dmi_failures=22159` |
+| `rse-bl2-img-hash-chunked-rebuilt-smoke5-20260608` | fixed, `hits=3`, `bytes=1116786`, `direct_file_alias_hits=3`, `dmi_failures=0`, `rse_first_image_slot=31.510초` |
+| `rse-bl2-boot-enc-img-hash-combined-smoke-20260608` | combined, `rse_first_image_slot=28.585초`, `boot_enc decrypt_hits=1206`, `img_hash hits=3` |
+
+`boot_enc`와 `img_hash` accelerator는 기능적으로 동작하지만 현재 최단 시간은
+storage direct fast path 단독 조합보다 빠르지 않았다. 따라서 이 옵션은
+“정확한 함수 entry hook 기반 semantic accelerator가 안전하게 동작하는지”를
+검증하는 후보로 유지하고, 기본 추천 preset은 qemu-native CC3XX + LMS accel +
+fast aliases + storage direct fast path로 둔다.
+
+`bootutil_verify_sig()` safe accelerator도 같은 조합에서 재확인했다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-image-all-safe-accel-smoke-20260608
+```
+
+결과는 `verify_matches=3`, `cache_hits=2`, `cache_misses=1`,
+`verify_failures=0`으로 host-native ECDSA 검증은 성공했다. 하지만 기본
+safe mode는 guest firmware의 `bootutil_verify_sig()` 실행을 유지하므로
+`PKA_OPCODE=72899`, `PKA_PIPE_RDY=72899`, `PKA_DONE=28266`이 그대로 남았다.
+`rse_bl1_1` -> `rse_first_image_slot`도 25.986초로 최단 run보다 느렸다.
+따라서 `--rse-bl2-verify-sig-accel`은 현재는 “semantic accelerator 내부에
+사용할 검증 primitive”로 유지하고, 독립 safe mode만으로는 성능 개선 후보로
+보지 않는다.
+
 ### 3순위: BL1_2 한정 Persistent Hash Mode
 
 1순위 후에도 충분하지 않으면 CC3XX PSA hash driver에 BL1_2/QBox 전용
@@ -617,6 +727,53 @@ save/restore 구조를 줄이는 쪽이 우선이다.
 가장 빠른 방법은 `pq_crypto_verify()` 또는 LMS verify 결과를 known-good
 tuple 기준으로 바로 성공 처리하는 것이다. 하지만 이는 signature 검증 자체를
 우회하므로 full-system completion 증거에는 사용하지 않는다.
+
+## FVP 수준 접근을 위한 QBox 수정 중심 제안
+
+남은 gap을 줄이기 위한 우선순위는 다음과 같다.
+
+| 순서 | 제안 | 기대 효과 | 검증 방법 | 주의점 |
+| --- | --- | --- | --- | --- |
+| 1 | qemu-native CC3XX backend의 DMA/memory path 확대 | CC3XX register callback 안에서 DMI cache miss와 TLM fallback을 더 줄임 | `qemu-cc3xx-profile.json`의 `tlm_*`, `address_space_*`, callback ns 감소 확인 | CC3XX DMA side effect와 interrupt clear 순서를 유지해야 함 |
+| 2 | RSE PS/ITS storage direct path 정식화 | runtime handoff 전 storage byte access의 `run_on_sysc()` 왕복 제거 | `--rse-fast-boot-aliases` smoke에서 `rse_image_*` delta와 PS/ITS marker 비교 | FWU, persistence, negative storage test에는 opt-in으로만 사용 |
+| 3 | direct-file alias chunk reader를 image load/hash 공통 경로로 유지 | 분할 alias image를 host memory에서 직접 처리 | `bl2_img_hash_accel.dmi_failures=0`, direct alias hit 확인 | write side effect가 필요한 flash command 경로에는 사용 금지 |
+| 4 | CC3XX PKA/P-256 path의 함수 단위 accelerator | BL2 image signature 검증이 만드는 72k PKA opcode/polling traffic 제거 | `pka_opcode_writes`, `PKA_PIPE_RDY`, `PKA_DONE` 감소와 `verify_matches` 확인 | 검증 실패를 성공으로 바꾸면 안 되며 skip은 positive smoke 전용 |
+| 5 | BL2 image-load 함수 단위 semantic accelerator 확장 | AP/SI image decrypt/hash/copy/verify 반복을 QEMU host memory에서 batch 처리 | `bl2_load_profile.sites.*.hits`, image marker, hash/signature marker 유지 확인 | secure boot result를 강제 성공시키면 안 됨 |
+| 6 | qbox RemotePass/DMI cache와 router lookup hot path 계측 | 아직 남은 TLM 경계 비용을 정량화 | `rse-hotpath-profile.json`, `qemu-cc3xx-profile.json`, router cache stats 추가 | 계측 overhead와 실제 개선을 분리해야 함 |
+| 7 | negative secure-boot/FWU/persistence 전용 slow-fidelity profile 유지 | 빠른 preset으로 놓치는 fidelity debt 방지 | 빠른 preset off 상태의 기존 full-system/FWU 검증 | FVP 동등성 최종 증거는 fast preset만으로 주장하지 않음 |
+
+현 시점에서 바로 권장하는 RSE 부팅 시간 비교 command는 다음이다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-fast-boot-perf-<run-id>
+```
+
+BL2 image-level accelerator까지 같이 시험할 때는 다음을 추가한다.
+
+```text
+--rse-bl2-load-profile
+--rse-bl2-boot-enc-accel
+--rse-bl2-img-hash-accel
+--rse-bl2-verify-sig-accel
+```
+
+단, `--rse-bl2-verify-sig-accel`은 기본 safe mode에서 guest ECDSA/PKA 검증을
+그대로 실행한다. 성능 개선을 내려면 다음 단계에서 `bootutil_verify_sig()`를
+skip하는 것이 아니라, `boot_load_image_to_sram()` semantic accelerator 내부에서
+header/TLV/hash/ECDSA/encryption TLV를 host에서 모두 검증한 뒤 guest-visible
+상태를 반영하는 구조로 통합해야 한다.
+
+목표 완료 기준은 FVP의 `rse_bl1_1` -> `rse_first_image_slot` 4.818초에 대해
+QBox가 2배 이내, 즉 약 10초 이하로 들어오는 것이다. 그 전 단계의 실용적
+milestone은 현재 22.668초를 15초 이하로 낮추는 것이다.
 
 사용 가능한 조건:
 
@@ -812,3 +969,1377 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 - secure boot 검증을 skip하지 않았다는 fidelity label이 `result.json`에 남는다.
 - `cc3xx-tests`와 RSE runtime stats가 기존 SystemC backend와 기능적으로
   동등하다.
+
+## 2026-06-07 QBox-side Profile 재분석
+
+FVP와 비슷한 RSE 부팅 시간을 목표로 QEMU-native CC3XX 이후의 남은 비용을
+분리하기 위해 QBox 내부 profile을 추가했다. 이 계측은 기본 off이며,
+`--qbox-perf-profile`을 켰을 때만 wall-clock counter를 기록한다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --qbox-perf-profile \
+  --qbox-perf-profile-interval 65536 \
+  --cc3xx-stats-interval 65536 \
+  --timeout 230 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/perf-profile-validation-20260607-224345
+```
+
+이 run은 RSE-oriented timeout으로 종료되지만 BL1_2 validation marker까지
+도달했다.
+
+| 항목 | 값 |
+| --- | ---: |
+| `rse_bl2_decrypted` | 12.943초 |
+| `rse_bl2_validated` | 155.639초 |
+| validation delta | 142.696초 |
+| `rse_image_4_loaded` | 189.448초 |
+| CC3XX total accesses | 1,638,400 |
+| CC3XX reads / writes | 531,020 / 1,107,380 |
+| SHA-256 resets / finishes | 32,239 / 4,610 |
+| SHA-256 transforms | 8,759 |
+
+QEMU-native CC3XX profile은 register callback 비용과 실제 crypto/DMA 비용을
+분리한다.
+
+| 항목 | 값 |
+| --- | ---: |
+| QEMU CC3XX read / write callbacks | 531,020 / 1,107,380 |
+| QEMU CC3XX read / write callback time | 0.197초 / 2.083초 |
+| CC3XX address-space read / write hits | 0 / 0 |
+| CC3XX TLM read / write hits | 5,345 / 425 |
+| CC3XX TLM read / write time | 1.555초 / 0.023초 |
+| `sha256_transform_ns` | 0.0036초 |
+| `sha256_finish_ns` | 0.0040초 |
+| `hash_dma_ns` | 1.545초 |
+
+QEMU initiator와 RemotePass profile은 RSE CPU memory/peripheral path가 아직
+큰 비중을 차지함을 보여준다.
+
+| 항목 | 값 |
+| --- | ---: |
+| `remote_platform.cpu_0.cpu.mem` total accesses | 1,114,112 |
+| regular initiator accesses | 1,114,111 |
+| regular initiator time | 73.642초 |
+| DMI-allowed transactions | 625,691 |
+| RemotePass outbound b_transport | 667,497 |
+| RemotePass outbound b_transport time | 40.723초 |
+| RemotePass outbound DMI requests | 643,223 |
+| RemotePass outbound DMI request time | 24.565초 |
+
+판단:
+
+- CC3XX의 SHA/PKA host crypto 자체는 FVP 대비 100배 차이를 만들지 않는다.
+  SHA transform/finish는 합쳐도 10ms 미만이고, HASH DMA 처리도 약 1.5초다.
+- QEMU-native backend가 register model을 QEMU callback으로 옮겼지만, guest
+  firmware는 여전히 LMS/LMOTS 검증과 CC3XX driver state save/restore 코드를
+  실제로 실행한다. 따라서 QEMU callback 수 160만 회와 RSE CPU instruction
+  실행이 남는다.
+- `address_space_*_hits=0`은 CC3XX DMA 대상이 현재 remote QEMU address
+  space에 직접 등록되지 않고 TLM fallback으로 처리됨을 의미한다.
+- RSE ITCM/DTCM/VM은 설정상 DMI를 허용하지만, profile상 QEMU initiator
+  regular path와 RemotePass DMI request가 매우 많다. FVP에 근접하려면 단순
+  CC3XX register 최적화보다 RSE CPU memory path의 QEMU-local화가 우선이다.
+
+### QBox 수정 우선순위
+
+1. **RSE TCM/VM QEMU-local shared RAM backend**
+
+   RSE remote process 안에 ITCM, DTCM, VM0, VM1을 QEMU RAM region으로 직접
+   등록하고, SystemC `gs_memory`와 같은 shared memory backing을 사용한다.
+   `libqemu-cxx`에는 `MemoryRegion::init_ram_ptr(..., fd, fd_offset)`가 이미
+   있어 fd-backed RAM region을 만들 수 있다. 목표는 RSE CPU instruction/data
+   access와 CC3XX DMA source/destination access를 QEMU address space hit로
+   바꾸는 것이다.
+
+   완료 기준:
+
+   - `qemu-cc3xx-profile.json`의 `address_space_*_hits`가 0이 아니고,
+     TLM fallback hit가 크게 감소한다.
+   - `qemu-initiator` profile의 `regular_ns`와 RemotePass
+     `outbound_b_transport_ns`가 현재 73.642초 / 40.723초 대비 크게 줄어든다.
+   - RSE BL1_2 validation marker와 SI/AP image load marker가 유지된다.
+
+2. **RemotePass DMI request cache 또는 QEMU alias 안정화**
+
+   현재 DMI request가 643,223회 발생한다. 같은 shared memory range에 대한
+   반복 DMI query가 CPU fast path로 충분히 흡수되지 않으면, RemotePass에
+   opt-in DMI cache를 추가하거나 QEMU alias 설치 조건을 추적해 반복 request를
+   제거한다. 기존 `DMICACHE` 블록은 compile-time off 상태이므로, runtime
+   option으로 다시 설계해야 한다.
+
+   완료 기준:
+
+   - RemotePass `outbound_dmi_request`와 `outbound_dmi_request_ns`가 한 자리
+     수 수준의 초기 mapping 비용으로 수렴한다.
+   - DMI invalidation, shared memory write coherency, read-only alias write
+     fallback이 깨지지 않는다.
+
+   1차 구현으로 `RemotePass`에 runtime opt-in `dmi_cache` CCI parameter와
+   RSE runner의 `--remotepass-dmi-cache` option을 추가했다. 35초 smoke에서는
+   early boot marker가 유지되고 cache hit가 발생했다.
+
+   ```bash
+   python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+     --skip-build \
+     --cc3xx-qemu-native-backend \
+     --remotepass-dmi-cache \
+     --qbox-perf-profile \
+     --qbox-perf-profile-interval 1024 \
+     --cc3xx-stats-interval 65536 \
+     --timeout 35 \
+     --ignore-fail-patterns \
+     --out-dir build/qbox-apollo-fvp/remotepass-dmi-cache-smoke-20260607-230225
+   ```
+
+   | 항목 | cache off | cache on | 변화 |
+   | --- | ---: | ---: | ---: |
+   | `rse_bl2_decrypted` | 14.045초 | 13.349초 | -0.696초 |
+   | QEMU initiator regular time | 3.332초 | 3.072초 | -0.260초 |
+   | RemotePass outbound b_transport time | 1.443초 | 1.285초 | -0.157초 |
+   | RemotePass outbound b_transport | 11,243 | 10,742 | -501 |
+   | RemotePass DMI cache b_transport hits | 0 | 501 | +501 |
+
+   같은 option으로 230초 validation run도 수행했다.
+
+   ```bash
+   python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+     --skip-build \
+     --cc3xx-qemu-native-backend \
+     --remotepass-dmi-cache \
+     --qbox-perf-profile \
+     --qbox-perf-profile-interval 65536 \
+     --cc3xx-stats-interval 65536 \
+     --timeout 230 \
+     --ignore-fail-patterns \
+     --out-dir build/qbox-apollo-fvp/remotepass-dmi-cache-validation-20260607-230416
+   ```
+
+   | 항목 | cache off | cache on | 변화 |
+   | --- | ---: | ---: | ---: |
+   | `rse_bl2_decrypted` -> `rse_bl2_validated` | 142.696초 | 142.440초 | -0.256초 |
+   | `rse_image_4_loaded` | 189.448초 | 187.796초 | -1.652초 |
+   | QEMU initiator regular time | 73.642초 | 75.582초 | +1.940초 |
+   | RemotePass outbound b_transport time | 40.723초 | 39.783초 | -0.940초 |
+   | RemotePass outbound DMI request time | 24.565초 | 24.195초 | -0.370초 |
+   | RemotePass DMI cache b_transport hits | 0 | 800 | +800 |
+
+   이 결과는 DMI cache가 올바른 경로의 보조 최적화임을 보여주지만, hit 수가
+   전체 RSE validation workload에 비해 작고 장시간 validation delta 개선도
+   1초 미만이다. 따라서 FVP 수준에 근접하는 핵심 작업은 여전히 1번의 RSE
+   TCM/VM QEMU-local shared RAM backend이고, DMI cache는 그 작업과 병행 가능한
+   보조 option으로 유지한다.
+
+3. **RSE CPU hot-PC / translation-block profile**
+
+   위 두 작업 후에도 validation delta가 10초대 이상이면, 남은 비용은
+   QEMU Cortex-M55 TCG가 LMS/LMOTS C code를 실행하는 instruction 비용일
+   가능성이 높다. 기존 RSE PC trace는 marker 중심 분석에는 충분하지만
+   hot loop 비중을 보기에는 거칠다. QEMU plugin 또는 TB/PC histogram을
+   추가해 `lmots.c`, `lms.c`, CC3XX low-level driver loop의 host 시간을
+   분리한다.
+
+   완료 기준:
+
+   - `mbedtls_lmots_calculate_public_key_candidate()`,
+     `hash_digit_array()`, `cc3xx_hash_*()` 주변 PC가 전체 runtime에서 차지하는
+     비중을 JSON으로 기록한다.
+   - QBox bridge 최적화 후 남은 비용이 CPU execution인지 다시 판단한다.
+
+4. **QBox opt-in LMS/CC3XX semantic accelerator**
+
+   QBox-only로 FVP의 1.4초 validation delta에 가까워지려면, hardware fidelity
+   path와 분리된 debug/iteration 전용 accelerator가 필요할 수 있다. 후보는
+   known-good BL2 hash/ROTPK/signature tuple을 기준으로 LMS verify 결과를
+   빠르게 반환하거나, CC3XX HASH state save/restore 패턴을 QEMU-side에서
+   semantic cache로 흡수하는 방식이다.
+
+   이 옵션은 secure boot negative test, FWU, provisioning 검증에는 사용할 수
+   없다. `result.json`에 fidelity debt를 명시하고, 기본 full-system completion
+   경로에서는 비활성화해야 한다.
+
+5. **RSE CPU execution backend 개선**
+
+   QEMU Cortex-M55 TCG 실행 자체가 최종 병목으로 확인되면, RSE CPU를 더 빠른
+   backend로 대체하거나 TCG translation/cache option을 조정한다. 단, 이는
+   QBox 구조 변경이 크고 M-profile exception/NVIC/TrustZone 동작 fidelity에
+   직접 영향을 주므로 1-3번 이후에 진행한다.
+
+### 결론
+
+FVP와 비슷한 시간까지 줄이는 가장 현실적인 QBox 수정 경로는
+`CC3XX qemu-native` 다음에 `RSE TCM/VM QEMU-local shared RAM backend`를
+추가하는 것이다. 이 작업으로 CC3XX DMA fallback과 RemotePass memory traffic을
+줄인 뒤에도 BL1_2 validation이 여전히 10초대 이상이면, 그때는
+QEMU Cortex-M55 TCG의 LMS/LMOTS instruction 실행을 줄이는 semantic
+accelerator를 opt-in debug mode로 분리해 검토한다.
+
+## 2026-06-07 추가 검증: Memory/Hotpath 단독 개선 한계
+
+`CC3XX qemu-native` 이후 남은 병목을 줄이기 위해 DMI translation mask,
+CC3XX DMA DMI cache, RSE BL1_1 `memcpy/memset` semantic hotpath를 차례로
+검증했다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --qbox-perf-profile \
+  --qbox-perf-profile-interval 65536 \
+  --cc3xx-stats-interval 65536 \
+  --timeout 190 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-hotpath-validation-20260607-235536
+```
+
+| Run | `rse_bl2_decrypted` | `rse_bl2_validated` | Delta | `rse_image_4_loaded` | QEMU initiator regular | Regular time | RemotePass outbound time | CC3XX DMI cache hit R/W | Hotpath hit memcpy/memset |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 12.943초 | 155.639초 | 142.696초 | 189.448초 | 1,114,111 | 73.642초 | 40.723초 | 0 / 0 | 0 / 0 |
+| DMI mask fix | 13.450초 | 155.812초 | 142.363초 | 188.599초 | 851,967 | 47.411초 | 25.120초 | 0 / 0 | 0 / 0 |
+| CC3XX DMA DMI cache | 13.351초 | 154.563초 | 141.212초 | 187.465초 | 851,967 | 47.285초 | 23.733초 | 5,207 / 149 | 0 / 0 |
+| BL1_1 hotpath | 13.238초 | 153.489초 | 140.251초 | 187.485초 | 720,895 | 35.597초 | 17.165초 | 5,207 / 149 | 5,714 / 3,487 |
+
+판단:
+
+- DMI mask fix와 CC3XX DMA DMI cache는 QEMU/SystemC bridge 시간을 줄인다.
+  하지만 validation delta 개선은 약 1.5초 수준이다.
+- `memcpy/memset` hotpath는 실제로 hit되고 DMI/stack/state 실패가 0이다.
+  그런데 validation delta는 baseline 대비 약 2.4초만 줄었다.
+- 따라서 FVP의 약 1.4초 validation delta와 비슷하게 만들려면, QBox 외부
+  `sync_with_kernel()` 경계에서 일부 loop를 건너뛰는 방식으로는 부족하다.
+  남은 핵심은 BL1_2의 LMS/LMOTS 검증 C code 자체를 Cortex-M55 TCG로 장시간
+  실행하는 비용이다.
+
+## FVP 근접을 위한 권장 QBox 수정안
+
+### 1순위: Host-side LMS verifier accelerator
+
+FVP에 가장 가깝게 접근할 수 있는 QBox 중심 방법은 BL1_2의
+`mbedtls_lms_verify()` 또는 `pq_crypto_verify()` 진입을 QBox/libqemu가
+symbol 기반으로 감지하고, guest 메모리의 message/signature/public key를
+DMI로 읽어 host-side LMS verifier를 실행한 뒤 AAPCS return value를 R0에
+써서 guest PC를 LR로 진행시키는 방식이다.
+
+이 방식은 단순 success stub이 아니라 실제 LMS 검증을 host native code로
+수행하므로 positive secure boot 의미를 유지할 수 있다. 다만 QBox-only
+accelerator이므로 기본 off, opt-in, 그리고 `result.json` fidelity label에
+명시해야 한다.
+
+완료 기준:
+
+- 일반 path와 accelerator path가 같은 BL2 image/signature/key에 대해 같은
+  verify 결과를 낸다.
+- positive boot에서 `rse_bl2_decrypted -> rse_bl2_validated`가 FVP의
+  1.4초에 근접한다.
+- negative signature/FWU/provisioning 검증 run에서는 accelerator를 끄거나,
+  mismatch가 발견되면 즉시 normal path로 fallback한다.
+- symbol 주소는 고정값이 아니라 local build ELF 또는 debug manifest에서
+  추출하고, 함수 prologue instruction fingerprint로 빌드 drift를 방어한다.
+
+2026-06-08 구현/검증 상태:
+
+- QBox에 opt-in `--rse-lms-accel` option과 host-side fixed-parameter
+  LMS/LMOTS verifier helper를 추가했다. 현재 지원 범위는 TF-M BL1_2에서 쓰는
+  `LMS_SHA256_M32_H10` + `LMOTS_SHA256_N32_W8` 조합이다.
+- helper는 Mbed TLS `test_suite_lms.data`의 successful vector로 검증했다.
+  따라서 host-side 검증 알고리즘 자체는 단순 success stub이 아니다.
+- `QemuCpu::sync_with_kernel()` 기반 prototype은 함수 진입 PC를 안정적으로
+  잡지 못했다. 45초 RSE smoke 결과:
+
+```json
+{
+  "lms_accel_enabled": true,
+  "lms_verify_addr": "0x11009414",
+  "lms_hits": 0,
+  "lms_pc_misses": 43008
+}
+```
+
+- 결론적으로 host-side LMS verifier는 유효한 방향이지만, 현재 QBox 외부
+  loop-end callback만으로는 FVP급 개선을 만들 수 없다. 다음 구현은
+  libqemu/QEMU 쪽에서 `pq_crypto_verify()` 또는 `mbedtls_lms_verify()` 함수
+  진입 시점에 직접 callback을 호출하는 PC-entry hook이어야 한다.
+- 권장 hook 지점은 QEMU target/arm TCG translation 또는 TB 시작 경계이다.
+  해당 hook은 Thumb PC, CPU object, guest register file 접근, DMI memory read,
+  R0/PC update, TB invalidation/exit를 한 함수에서 처리해야 한다. 이 구조가
+  들어가면 현재 추가한 host-side LMS verifier를 그대로 재사용할 수 있다.
+
+### 2순위: QEMU TCG-side Thumb hot loop helper
+
+현재 구현한 `QemuCpu` external hotpath는 QEMU loop가 SystemC로 빠져나온 뒤에만
+동작한다. 다음 단계는 QEMU ARM M-profile TCG translation 단계에서 BL1_1/BL1_2
+`memcpy`, `memset`, 필요 시 LMOTS inner hash loop PC를 감지하고 helper로
+치환하는 것이다.
+
+이 방식은 guest 함수 ABI를 덜 건드리지만 QEMU target/arm TCG 코드 수정이
+필요하고, symbol-specific 최적화가 되기 쉽다. 따라서 host-side LMS verifier보다
+일반성은 높지만 구현 비용과 검증 비용이 크다.
+
+### 3순위: RSE QEMU-local memory backend 완성
+
+ITCM/DTCM/VM을 remote QEMU address space에 shared RAM으로 더 직접 등록하면
+RemotePass와 TLM memory traffic을 더 줄일 수 있다. 이미 DMI mask와 DMA DMI
+cache로 bridge 비용이 줄어드는 것은 확인했다.
+
+다만 최신 profile에서 memory/bridge 시간을 크게 줄여도 validation delta는
+140초대에 남았다. 따라서 이 작업은 필요하지만 FVP 근접의 결정타가 아니라
+semantic/TCG accelerator를 받쳐주는 기반 작업으로 분류한다.
+
+### 4순위: CC3XX HASH sequence coalescing/cache
+
+CC3XX backend에서 HASH register write sequence를 인식해 SHA operation을
+더 큰 단위로 coalescing하거나 state save/restore 패턴을 cache할 수 있다.
+하지만 현재 profile상 host SHA/AES 자체 시간은 작고, register callback도
+FVP 대비 100배 차이를 설명하지 못한다. 효과는 제한적일 가능성이 높다.
+
+### 최종 제안
+
+FVP 수준의 RSE boot time이 목표라면 다음 순서가 가장 현실적이다.
+
+1. 현재 적용한 DMI mask, CC3XX DMA DMI cache, hotpath profile은 유지하되
+   기본 off인 opt-in 성능/계측 option으로 둔다.
+2. 현재 추가한 host-side LMS verifier helper를 QEMU/libqemu PC-entry hook에
+   연결한다. `sync_with_kernel()` 기반 prototype은 함수 진입을 놓치므로
+   성능 개선 경로가 아니다.
+3. PC-entry accelerator 결과가 여전히 부족하면 QEMU TCG-side Thumb helper로
+   `memcpy/memset`과 LMOTS inner loop를 더 낮은 레벨에서 치환한다.
+4. full-system completion 검증에는 accelerator 사용 여부를 `result.json`과
+   summary에 반드시 기록하고, secure boot negative test는 accelerator off
+   또는 strict fallback mode로 별도 수행한다.
+
+## 2026-06-08 추가 구현: QEMU PC-entry LMS accelerator
+
+위 제안의 1순위였던 QEMU/libqemu PC-entry hook을 구현해 RSE BL1_2
+`pq_crypto_verify()` 진입 시점에 host-side LMS verifier를 직접 실행하도록
+연결했다. 이 경로는 단순 success stub이 아니라 guest memory에서 public key,
+message, signature를 읽고 QBox host-side `LMS_SHA256_M32_H10` +
+`LMOTS_SHA256_N32_W8` verifier로 검증한 뒤 성공 시 R0를 `FIH_SUCCESS`로,
+PC를 LR로 갱신한다.
+
+핵심 구현:
+
+- `tools/qemu/libqemu/*`: `libqemu_set_cpu_pc_entry_cb()` callback API 추가
+- `tools/qemu/accel/tcg/cpu-exec.c`: TCG CPU loop의 TB lookup 전 PC-entry hook 호출
+- `tools/qbox/qemu-components/common/*`: C++ `Cpu::set_pc_entry_callback()`와
+  `QemuCpu` LMS accelerator 연결
+- `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`: 현재 BL1_2 ELF의
+  `pq_crypto_verify` entry인 `0x11009bad`를 기본 verify PC로 설정
+- `scripts/run_qbox_fvp_rd_aspen_rse.py`,
+  `scripts/run_qbox_apollo_fvp_full.py`: `--rse-lms-accel` 옵션의 기본
+  data limit을 image verification payload에 맞춰 16MiB로 상향
+
+검증 명령:
+
+```bash
+cmake --build build --target rse_lms_accel-tests remote_cpu cortex-m55-vp platforms-vp --parallel 8
+
+python3 -m py_compile \
+  scripts/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run_qbox_apollo_fvp_full.py
+
+QBOX_RSE_LMS_TEST_DATA=/build/arm/arm-auto-solutions/hsoc-stack/components/system_mgmt/zephyrproject/modules/crypto/mbedtls/tests/suites/test_suite_lms.data \
+  tools/qbox/build/tests/components/cc3xx/rse_lms_accel-tests
+
+ctest --test-dir tools/qbox/build \
+  -R 'rse_lms_accel|cc3xx|qemu_cc3xx|cortex_m55_remote_dmi_byte_store' \
+  --output-on-failure
+```
+
+RSE smoke:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --qbox-perf-profile \
+  --qbox-perf-profile-interval 1024 \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-lms-accel-smoke-20260608-004007
+```
+
+결과:
+
+| 항목 | 결과 |
+| --- | ---: |
+| `lms_hits` | 1 |
+| `lms_unsupported` | 0 |
+| `lms_dmi_failures` | 0 |
+| `lms_verify_failures` | 0 |
+| `lms_state_failures` | 0 |
+| `rse_bl2_decrypted` | 14.653초 |
+| `rse_bl2_validated` | 14.753초 |
+| decrypt-to-validate delta | 0.100초 |
+| `rse_jump_bl2` | 14.853초 |
+| `rse_image_4_loaded` | 46.955초 |
+
+이전 `sync_with_kernel()` prototype은 `lms_hits=0`으로 효과가 없었지만,
+PC-entry hook은 BL1_2 LMS 검증 구간을 사실상 제거한다. FVP의 약 1.4초
+validation delta보다도 작은 delta가 나왔으므로, BL1_2 LMS verification
+문제는 해결된 것으로 본다.
+
+### 남은 병목
+
+PC-entry LMS accelerator 이후에도 90초 RSE smoke는 full RSE runtime handoff까지
+도달하지 못했다. slowest delta는 `rse_jump_bl2 -> rse_image_4_loaded`
+32.102초이며, 이 구간은 RSE BL2가 SI image를 decrypt/load/verify하는 단계다.
+
+동일 run의 profile 요약:
+
+- QEMU initiator `regular`: 1,192,959회
+- QEMU initiator `regular_ns`: 약 76.375초
+- RemotePass `outbound_b_transport`: 704,653회
+- RemotePass `outbound_b_transport_ns`: 약 40.143초
+- RemotePass `outbound_dmi_request`: 686,963회
+- RemotePass `outbound_dmi_request_ns`: 약 25.417초
+- CC3XX PKA opcode writes: 18,657회
+- CC3XX AES CTR bytes: 403,573 bytes
+- CC3XX hash DMA bytes: 412,963 bytes
+
+`--remotepass-dmi-cache` 비교 run
+`build/qbox-apollo-fvp/rse-lms-remotepass-dmi-smoke-20260608-004222`는
+`rse_image_4_loaded=47.741초`로 개선이 없었다. DMI cache hit가 6회뿐이라
+이 경로의 per-access overhead를 줄이지 못했다.
+
+RSE VM/host SRAM을 `QBOX_MMIO_DIRECT_FASTPATH_RANGES`로 직접 fastpath 처리하는
+시험 run `build/qbox-apollo-fvp/rse-lms-direct-range-smoke-20260608-004437`은
+16.163초에 조기 종료되어 기본 적용 후보에서 제외한다. 해당 접근은
+SystemC thread hop을 우회하기 때문에 일부 memory/window side effect나
+동기화 전제를 깨는 것으로 보인다.
+
+### 최신 권장 순서
+
+1. **적용 완료:** PC-entry LMS accelerator는 RSE BL1_2 LMS 검증 병목을 해결했다.
+   `--rse-lms-accel`은 positive boot 성능 검증용 opt-in 옵션으로 유지한다.
+2. **다음 1순위:** QEMU initiator DMI alias 재사용 문제를 수정한다. 현재 DMI가
+   allowed로 보고되지만 실제 CPU access는 대부분 regular TLM/RPC로 남는다.
+   목표는 RSE VM/host SRAM/flash read-write를 QEMU memory alias 또는 안전한
+   shared-memory backed RAM으로 처리해 `regular`와 RemotePass access 수를
+   자릿수 단위로 줄이는 것이다.
+3. **다음 2순위:** RSE BL2 semantic accelerator를 별도 opt-in으로 추가한다.
+   대상은 ECDSA P-256 verify, image hash, AES-CTR decrypt/copy sequence다.
+   CC3XX register-level PKA model은 정확도 검증용으로 유지하고, FVP 근접
+   성능 모드는 함수/sequence 단위 host helper로 우회한다.
+4. **다음 3순위:** direct fastpath는 범위별 allowlist와 side-effect 검증을
+   거친 뒤 제한적으로만 사용한다. 이번 broad range 시험처럼 VM/host SRAM을
+   한 번에 우회하는 방식은 안전하지 않다.
+
+## 2026-06-08 추가 검토: FVP 근접 RSE boot time 개선안
+
+QBox RSE boot time을 Arm Zena CSS FVP에 더 가깝게 만들기 위해 QBox 수정
+위주의 후보를 재검토했다. 결론은 CC3XX crypto 연산 자체보다 QEMU
+initiator/RemotePass 경로의 반복 비용이 더 큰 병목이라는 것이다.
+
+### 바로 적용 가능한 개선
+
+1. **PC-entry hook 안정화**
+
+   최초 PC-entry hook은 TB lookup 경로에서만 `pq_crypto_verify()` 진입을
+   확인했기 때문에 QEMU TB chaining 상태에 따라 `lms_hits=0`이 되는 run이
+   있었다. `libqemu_cpu_pc_entry_cb_enabled()`가 true인 동안 `CF_NO_GOTO_TB`
+   와 `CF_NO_GOTO_PTR`를 설정해 entry PC를 안정적으로 관측하도록 했다.
+   단, chaining을 계속 끄면 `rse_image_4_loaded`가 65.210초까지 느려졌으므로,
+   LMS verify가 한 번 성공하면 `Cpu::clear_pc_entry_callback()`으로 callback을
+   해제해 이후 BL2/SI image load 구간은 정상 TB chaining을 사용하도록 했다.
+
+   검증 run:
+
+   - `build/qbox-apollo-fvp/rse-pc-entry-clear-smoke-20260608-010111`
+   - `lms_hits=1`
+   - `rse_bl2_decrypted=13.239초`
+   - `rse_bl2_validated=13.340초`
+   - `rse_image_4_loaded=47.346초`
+
+   이 결과는 PC-entry hook 안정성을 확보하면서 no-chain 전체 적용의 성능
+   악화를 피한 상태다.
+
+2. **host memory DMI 파라미터 수정**
+
+   `gs_memory`의 실제 CCI parameter는 `dmi_allow`인데, RD-Aspen RSE platform의
+   host memory window 일부는 `dmi = host_memory_dmi`를 사용하고 있었다. 이
+   설정은 `p_dmi`에 연결되지 않아 기본값 `true`가 남고, QEMU initiator가
+   DMI hint를 계속 받은 뒤 RemotePass DMI request/fallback을 반복한다.
+
+   `dmi_allow = host_memory_dmi`로 수정한 뒤 기본값 false에서 측정한 결과:
+
+   - `build/qbox-apollo-fvp/rse-host-dmi-param-smoke-20260608-010341`
+   - `dmi_allowed`: 660,228회 -> 27회
+   - RemotePass `outbound_dmi_request`: 660,851회 -> 1,117회
+   - `rse_image_4_loaded`: 47.346초 -> 35.806초
+
+   전체 host memory DMI를 `QBOX_RDASPEN_HOST_MEMORY_DMI=true`로 다시 켜면
+   DMI 실패 반복이 되살아나고 `rse_image_4_loaded=47.247초`로 악화된다.
+   따라서 현재 권장값은 전체 host memory DMI off이다.
+
+### 추가 개발 후보
+
+1. **negative DMI cache**
+
+   host memory DMI 파라미터 수정 후에는 RSE boot smoke 기준 반복 DMI request가
+   크게 줄어 우선순위가 낮아졌다. 그래도 다른 boot mode나 AP-enabled path에서
+   DMI 실패 RPC가 다시 커질 수 있으므로, RemotePass에는 no-DMI 결과를 range
+   단위로 cache하고 invalidation 때 지우는 negative cache를 추가할 수 있다.
+
+2. **file-backed SI SRAM DMI**
+
+   SI CL0/CL1 SRAM만 별도 DMI로 여는 옵션을 추가해 검토했지만,
+   `QBOX_RDASPEN_HOST_SI_SRAM_DMI=true` run은 `lms_hits=0` 조기 종료가 나와
+   유효 성능 결과로 쓰지 않았다. 이 경로는 DMI alias priority, file-backed
+   MemoryRegion alias, TB invalidation/flush를 별도로 정리한 뒤 다시 검토한다.
+
+3. **QEMU MemoryRegion alias priority/overlap**
+
+   DMI alias가 valid한 경우에도 QEMU root가 전체 address space IO region으로
+   잡혀 있어 priority 0 `add_subregion()` alias가 충분히 이기지 못할 수 있다.
+   `add_subregion_overlap()` wrapper에 TLB flush를 보강하고, DMI alias를
+   priority 1로 설치하는 실험을 적용했다.
+
+   검증 run:
+
+   - `build/qbox-apollo-fvp/rse-dmi-overlap-smoke-20260608-011808`
+   - `lms_hits=1`
+   - `rse_bl2_decrypted=13.148초`
+   - `rse_bl2_validated=13.349초`
+   - `rse_image_4_loaded=35.117초`
+   - RemotePass `outbound_b_transport`: 1,053,603회 -> 1,024,931회
+
+   `rse_image_4_loaded` 기준으로 35.806초에서 35.117초로 약 0.69초 개선됐다.
+   큰 폭의 개선은 아니지만, QEMU memory topology 변경 시 overlap alias도
+   add/del wrapper와 동일하게 TLB flush를 보장한다는 점에서 유지할 가치가 있다.
+
+4. **RSE BL2 semantic accelerator**
+
+   FVP 수준의 시간을 더 공격적으로 목표로 하면 BL2 image load/decrypt/verify
+   sequence를 함수 또는 이미지 단위로 host helper에 연결하는 것이 가장 큰
+   추가 개선 후보이다. CC3XX register-level model은 fidelity 검증용으로 유지하고,
+   성능 모드는 opt-in semantic accelerator로 분리한다.
+
+### 현재 권장 순서
+
+1. PC-entry LMS accelerator 안정화와 host memory `dmi_allow` 수정은 기본 개선으로
+   유지한다.
+2. short boot smoke에서 `rse_image_4_loaded` 35.117초를 현재 기준선으로 삼는다.
+3. `QBOX_RDASPEN_HOST_SI_SRAM_DMI=true`는 overlap/flush 보강 후에도
+   `rse_image_4_loaded=45.948초`로 악화되므로 기본값으로 사용하지 않는다.
+4. FVP 대비 격차가 여전히 크면 RSE BL2 semantic accelerator를 opt-in으로 추가한다.
+
+## FVP 근접을 위한 QBox 중심 추가 제안
+
+현재 기준선은 다음 run이다.
+
+- `build/qbox-apollo-fvp/rse-dmi-overlap-smoke-20260608-011808`
+- `rse_bl2_validated=13.349초`
+- `rse_image_4_loaded=35.117초`
+- slowest delta: `rse_jump_bl2 -> rse_image_4_loaded = 21.768초`
+- QEMU initiator `regular=1,835,007`, `regular_ns=77.478초`
+- RemotePass `outbound_b_transport=1,024,931`, `outbound_b_transport_ns=58.931초`
+- CC3XX native backend crypto 처리 자체는 `aes_dma_ns=0.101초`,
+  `hash_dma_ns=0.036초`, `pka_opcode_ns=0.014초` 수준이다.
+
+즉, 지금 남은 차이는 CC3XX 알고리즘 실행 시간이 아니라 RSE BL2의
+MCUboot image hash/decrypt/copy path가 만드는 QEMU CPU memory access와
+SystemC/RemotePass 왕복 비용이다. BL2 map도 이 해석과 맞는다.
+`bootutil_img_validate()`는 `0x3101eea4`, `bootutil_verify_sig()`는
+`0x3101f450`에 있고, 현재 BL2는 `image_ecdsa.c` 경로를 사용한다.
+따라서 BL1_2의 LMS accelerator를 BL2에 그대로 확장하는 것은 핵심 해법이
+아니다.
+
+### 1순위: SI SRAM QEMU-native direct file alias
+
+가장 먼저 적용할 QBox 수정은 RSE CPU가 SI CL0/CL1 RAM-load image header와
+payload를 접근하는 구간을 QEMU process 안의 `MemoryRegion` RAM alias로
+직접 보이게 하는 것이다. 단순히 SystemC memory target에 DMI를 허용한
+`QBOX_RDASPEN_HOST_SI_SRAM_DMI=true`는 `rse_image_4_loaded=45.948초`로
+악화됐기 때문에 사용하지 않는다. 이번 구현은 DMI hint에 의존하지 않고
+RSE CPU address space에 좁은 alias를 명시적으로 추가한다.
+
+구현 형태:
+
+1. `QemuInitiatorSocket`에 opt-in `direct_file_aliases` CCI parameter를
+   추가한다.
+2. `addr:size:file_offset:ro|rw:path` spec을 파싱해
+   `MemoryRegion::init_ram_ptr()` 기반 alias를 QEMU root memory 아래
+   overlap priority 20으로 설치한다.
+3. unaligned MCUBoot header file offset은 4 KiB 아래로 align해 host file을
+   mapping하고, guest alias start도 같은 delta만큼 보정한다.
+4. `run_qbox_fvp_rd_aspen_rse.py --rse-direct-si-sram-alias`는 현재
+   `rse-flash` MCUBoot header에서 CL0/CL1 payload size를 계산해 다음 alias를
+   자동 생성한다.
+
+검증 run:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-direct-si-sram-alias \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-direct-si-sram-alias-smoke-20260608-015007
+```
+
+결과:
+
+- `rse_jump_bl2 -> rse_image_4_loaded`가 `21.768초`에서 `2.909초`로 감소했다.
+- `rse_image_4_loaded`는 `35.117초`에서 `16.353초`로 감소했다.
+- 기존 기준선은 90초 안에 SI CL1/AP BL2/RSE runtime handoff까지 가지
+  못했지만, direct alias run은 `rse_first_image_slot=54.582초`까지 도달했다.
+- RemotePass `outbound_b_transport`는 `1,024,931회`에서 `426,764회`로,
+  `outbound_b_transport_ns`는 `58.931초`에서 `24.637초`로 감소했다.
+- QEMU initiator profile에는 `direct_file_aliases=4`,
+  `direct_file_alias_bytes=1,026,048`로 alias 설치가 기록됐다.
+
+따라서 현재 QBox 수정 중 FVP에 가장 가깝게 다가가는 실질적인 해법은
+SI SRAM direct file alias를 opt-in 성능 모드로 유지하는 것이다. 다만 이
+모드는 RSE ATU/SystemC routing을 해당 image header/payload range에서
+우회하므로 fidelity label을 명확히 남긴다.
+
+### 2순위: AP BL2 RAM-load alias
+
+처음 시도한 AP BL2 단일 alias는 실패했다.
+
+- run: `build/qbox-apollo-fvp/rse-direct-ramload-alias-smoke-20260608-015505`
+- 실패 로그: `Image in the primary slot is not valid!`,
+  `Image in the secondary slot is not valid!`, `Unable to find bootable image`
+
+원인은 AP BL2가 SI SRAM과 달리 header와 payload가 다른 backing file/window에
+놓이는 구조였기 때문이다. TF-M `host_atu_base_address.h` 기준으로 AP BL2는
+다음 두 구간을 분리해야 한다.
+
+- header: `0x70001c00:0x400` -> `host-ap-bl2-header-sram.bin` offset `0x1c00`
+- payload: `0x70002000:<computed>` -> `host-ap-shared-sram.bin` offset `0x82000`
+
+이를 `--rse-direct-ap-bl2-alias`로 구현하고 검증했다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-direct-si-sram-alias \
+  --rse-direct-ap-bl2-alias \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-direct-si-ap-bl2-alias-smoke-20260608-continue1
+```
+
+결과:
+
+- `rse_first_image_slot`이 `54.582초`에서 `47.542초`로 감소했다.
+- AP BL2 구간인 `rse_image_3_loaded -> rse_image_2_loaded`가
+  `17.661초`에서 `7.123초`로 감소했다.
+- RemotePass `outbound_b_transport`는 `426,764회`에서 `330,399회`로 감소했다.
+- RSE 로그는 image 4/3/2/0 load 성공과
+  `RSE to SCP SCMI power on AP succeeded`를 모두 유지했다.
+
+### 3순위: RSE boot flash/AP FIP read-only alias
+
+남은 큰 비용은 flash image/FIP read path였다. 전 영역 flash stub은 fidelity
+debt가 크므로, 다음 read-only alias만 opt-in으로 추가했다.
+
+- `--rse-direct-rse-flash-alias`: RSE boot flash에서 valid MCUBoot image의
+  실제 boot-read 범위만 alias한다. 현재 image 기준 range는
+  `0x27000:0x31000`, `0x67000:0xb6000`, `0x167000:0x44000`이다.
+- `--rse-direct-ap-fip-alias`: RSE AP-flash ATU window에서 active AP FIP slot
+  `0x703ad000:0x240000`만 alias한다.
+- `--rse-fast-boot-aliases`: SI SRAM, AP BL2, RSE boot flash, AP FIP alias를
+  함께 켜는 검증된 preset이다.
+
+분리 검증 결과:
+
+| Run | `rse_first_image_slot` | Slowest delta | RemotePass outbound |
+| --- | ---: | --- | ---: |
+| SI + AP BL2 alias | 47.542초 | image 4 -> 3: 17.953초 | 330,399 |
+| + RSE boot flash alias | 35.321초 | image 4 -> 3: 10.331초 | 330,399 |
+| + AP FIP alias | 39.424초 | image 4 -> 3: 16.448초 | 235,167 |
+| + RSE boot flash + AP FIP | 27.886초 | image 4 -> 3: 9.629초 | 235,167 |
+
+검증 command:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --qbox-perf-profile \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-fast-boot-aliases-preset-smoke-20260608-continue1
+```
+
+preset 검증 결과:
+
+- `rse_first_image_slot=28.692초`
+- `rse_bl1_1 -> rse_first_image_slot = 25.481초`
+- QEMU initiator `direct_file_aliases=10`, `direct_file_alias_bytes=4,709,376`
+- RSE 로그는 image 4/3/2/0 load 성공과 AP power-on 성공을 유지했다.
+
+FVP timed run의 `rse_bl1_1 -> rse_first_image_slot`은 `4.818초`이므로,
+현재 preset은 FVP 대비 약 5.3배 수준까지 줄었다. 기존 QBox full-system의
+`191.484초` 대비로는 약 7.5배 빠르다.
+
+### 4순위: RSE BL2 semantic image-load accelerator
+
+FVP 수준에 더 가까워지려면 남은 `image 4 -> image 3` 약 9~10초 구간을
+줄여야 한다. 현재 CC3XX QEMU-native profile에서 CC3XX callback 자체는
+1초 미만이고, QEMU initiator/RemotePass 작은 access가 여전히 남아 있다.
+따라서 다음 단계는 register polling stub이 아니라 BL2 image-load semantic
+accelerator이다.
+
+이를 확인하기 위해 기본 off인 `--rse-bl2-load-profile`을 추가했다. 이
+옵션은 QEMU TCG PC-entry hook에서 RSE BL2 함수 진입 PC와 R0-R3/SP/LR/stack
+word만 기록하며, guest firmware 실행은 건드리지 않는다. RSE가 remote CPU
+프로세스에서 동작하므로 QBox 변경 검증 시에는 `cpu_arm_cortexM55`뿐 아니라
+`remote_cpu`도 함께 빌드해야 한다.
+
+검증 command:
+
+```bash
+cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
+cmake --build tools/qbox/build --target remote_cpu --parallel 8
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --qbox-perf-profile \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-load-profile-smoke-20260608-remote-rebuild
+```
+
+결과:
+
+- run은 60초 timeout 때문에 `qbox_platform_timeout`으로 종료됐지만,
+  RSE image 4/3/2/0 load, runtime handoff,
+  `RSE to SCP SCMI power on AP succeeded`, measured boot RT_0 marker는
+  모두 유지됐다.
+- `rse_bl1_1 -> rse_first_image_slot = 28.392초`로 fast alias preset과
+  같은 등급이며, profile 계측 부하가 있는 run임을 감안해야 한다.
+- `rse-hotpath-profile.json`에 BL2 site hit가 기록됐다.
+  - `boot_go_for_image_id`: 3 hits
+  - `boot_load_image_to_sram`: 3 hits
+  - `boot_enc_load`: 3 hits
+  - `boot_enc_decrypt`: 592 hits
+  - `bootutil_img_validate`: 1 hit
+  - `bootutil_verify_sig`: 1 hit
+- 마지막 `boot_enc_decrypt` sample은
+  `r0=0x310033d0`, `slot=0`, `off=0x40400`, `sz=0x400`,
+  `blk_off=0`, `buf=0x700c4400`였다. 즉 남은 병목은 1KiB 단위
+  AES-CTR decrypt chunk 반복이 지배한다.
+
+대상:
+
+- `boot_go_for_image_id()`
+- `bootutil_img_validate()`
+- `boot_enc_load()`
+- `boot_enc_decrypt()`
+- `bootutil_verify_sig()`
+
+원칙:
+
+- secure boot를 무조건 성공시키는 stub은 사용하지 않는다.
+- host helper는 MCUBoot header/TLV/hash/signature/encryption TLV를 읽고
+  실제 hash, AES-CTR decrypt, ECDSA verify를 수행한다.
+- 결과가 현재 flash image와 정확히 맞을 때만 RAM-load destination에 bulk
+  write하고 firmware return state를 진행시킨다.
+- 기본 fidelity mode는 register-level CC3XX/QBox path를 유지하고,
+  `--rse-bl2-load-accel` 같은 명시 옵션에서만 켠다.
+
+구현 우선순위는 두 단계로 나누는 것이 좋다.
+
+1. 먼저 `boot_enc_decrypt()` chunk accelerator를 opt-in으로 추가한다. 이
+   방식은 `boot_load_image_to_sram()` 전체를 건너뛰지 않으므로 boot state,
+   slot 선택, TLV scan, log 순서를 보존하기 쉽다. 단, `enc_state` 내부의 AES
+   key/CTR state를 정확히 읽거나 QEMU-native CC3XX core에서 session state를
+   조회할 수 있어야 한다.
+2. 그 다음 `boot_load_image_to_sram()` semantic accelerator로 확장한다. 이
+   방식은 MCUBoot header/TLV/hash/signature/encryption TLV를 host에서 검증한
+   뒤 destination SRAM에 bulk write하고, 검증 실패 시 즉시 guest path로
+   fallback해야 한다.
+
+#### `boot_enc_decrypt()` chunk accelerator 적용 결과
+
+1단계로 기본 off인 `--rse-bl2-boot-enc-accel`을 추가했다. 이 옵션은 RSE
+BL2의 `boot_enc_set_key()` 진입에서 `boot_status.enckey[slot]`를 캡처하고,
+`boot_enc_decrypt()` 진입에서 MCUBoot와 같은 AES-CTR counter 규칙으로
+destination buffer를 직접 복호화한 뒤 guest PC를 LR로 복귀시킨다. 구현은
+secure boot 성공을 강제하지 않고, key capture 실패, slot/key size 불일치,
+buffer DMI/alias 조회 실패, unsupported argument는 guest path로 fallback한다.
+
+검증 command:
+
+```bash
+cmake --build tools/qbox/build --target cc3xx_core-tests --parallel 8
+ctest --test-dir tools/qbox/build -R '^cc3xx_core-tests$' --output-on-failure
+cmake --build tools/qbox/build --target remote_cpu --parallel 8
+cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --rse-bl2-boot-enc-accel \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-boot-enc-accel-smoke-20260608-3
+```
+
+결과:
+
+| Run | `rse_bl1_1 -> rse_first_image_slot` | `BL2 -> RSE runtime handoff` | Slowest delta | `boot_enc_decrypt` 처리 |
+| --- | ---: | ---: | --- | ---: |
+| BL2 load profile baseline | 28.392초 | 18.159초 | image 4 -> image 3: 11.234초 | profile hit 592 |
+| `boot_enc_decrypt` accel | 25.473초 | 15.445초 | image 4 -> image 3: 10.830초 | accel hit 930 / 951,488 bytes |
+
+세부 profile:
+
+- `key_captures=3`, `key_capture_failures=0`
+- `decrypt_hits=930`, `decrypt_bytes=951488`
+- `decrypt_direct_file_alias_hits=930`
+- `decrypt_dmi_failures=0`, `decrypt_key_misses=0`,
+  `decrypt_state_failures=0`, `decrypt_unsupported=0`
+- RSE log는 image 4/3/2/0 load, AP power-on SCMI, RSE runtime handoff,
+  measured boot RT_0 marker를 유지했다.
+- run은 90초 cap 때문에 `qbox_platform_timeout`으로 종료됐지만, 이 smoke의
+  목적이었던 RSE chain 검증은 통과했다.
+
+해석:
+
+- chunk 단위 AES-CTR 복호화는 정확히 가속됐고 기능 회귀는 보이지 않는다.
+- 개선폭은 `rse_bl1_1 -> rse_first_image_slot` 기준 약 2.9초다. 즉,
+  `boot_enc_decrypt()`만으로는 FVP timed run의 4.818초에 근접하기 어렵다.
+- 남은 최장 구간은 여전히 SI CL0/CL1 RAM-load image 처리이며,
+  `image 4 -> image 3`가 10.830초다.
+- 다음 성능 단계는 `boot_enc_decrypt()`보다 한 단계 높은 host-native
+  검증/복사 경로가 맞다. 다만 `boot_load_image_to_sram()` 전체를 바로
+  건너뛰는 방식은 `boot_enc_load()`/`boot_enc_set_key()`의 key unwrap과
+  `boot_loader_state`/`boot_status` 상태 갱신까지 QBox가 복제해야 하므로
+  위험하다.
+- 더 안전한 다음 단계는 `bootutil_verify_sig()`를 host-native ECDSA-P256
+  검증으로 대체하는 것이다. 이 함수는 `hash`, `sig`, `key_id`와
+  `bootutil_keys[]`의 public key만 필요하므로 secure boot 성공을 강제하지
+  않고 실제 검증이 성공할 때만 `FIH_SUCCESS`를 반환할 수 있다.
+- `bootutil_verify_sig()` 가속 후에도 남은 병목이 RAM-load copy/decrypt라면,
+  그 다음에 MCUBoot header/TLV/hash/signature/encryption TLV를 host에서 모두
+  재현하는 `boot_load_image_to_sram()` image-level semantic accelerator로
+  확장한다.
+
+### FVP 수준에 근접하기 위한 QBox 수정 중심 권장안
+
+현재 기준점은 다음과 같다.
+
+| Run | `rse_bl1_1 -> rse_first_image_slot` | `BL2 -> RSE runtime handoff` | Slowest delta |
+| --- | ---: | ---: | --- |
+| FVP timed run | 4.818초 | - | - |
+| QBox BL2 load profile baseline | 28.392초 | 18.159초 | image 4 -> image 3: 11.234초 |
+| QBox `boot_enc_decrypt` accel | 25.473초 | 15.445초 | image 4 -> image 3: 10.830초 |
+
+권장 순서는 다음과 같다.
+
+1. `bootutil_verify_sig()` host-native ECDSA profile/helper를 먼저 추가한다.
+   - 대상 심볼: `bootutil_verify_sig=0x3101f450`,
+     `bootutil_keys=0x31000454`, `bootutil_key_cnt=0x3102b424`.
+   - QEMU CPU hook에서 AAPCS 인자 `R0=hash`, `R1=hlen`, `R2=sig`,
+     `R3=slen`, `SP[0]=key_id`를 읽는다.
+   - `bootutil_keys[key_id]`의 `key`/`len` pointer를 guest memory에서 읽고,
+     DER public key와 DER ECDSA signature를 host C++에서 검증한다.
+   - 기본 모드는 profile/host-verify only이다. 즉, host 검증이 성공해도 guest
+     firmware의 `bootutil_verify_sig()`는 그대로 실행한다.
+   - 직접 skip은 `bl2_verify_sig_skip` CCI 옵션으로 분리하고 기본 off로 둔다.
+     fast alias 및 `boot_enc_decrypt` accelerator와 결합했을 때 image validation을
+     깨는 run이 확인되었기 때문이다.
+   - host 검증 결과는 public key/hash/signature 바이트 기준으로 cache한다.
+     cache 없이 매 entry에서 P-256 scalar multiply를 반복하면 profile 옵션
+     자체가 부팅 시간을 크게 늘린다.
+   - 이 단계의 주 목적은 image-level semantic accelerator에 넣을 ECDSA 검증
+     primitive와 계측을 마련하는 것이다. guest 검증을 유지하는 safe mode만으로는
+     FVP 수준의 성능 개선을 만들지 않는다.
+
+2. `boot_load_image_to_sram()` semantic accelerator는 2단계로 진행한다.
+   - 1단계에서는 guest의 `boot_enc_set_key()`까지는 그대로 실행해 key unwrap과
+     상태 갱신을 보존하고, 이후 payload copy/decrypt loop를 image 단위 bulk
+     operation으로 대체한다.
+   - 2단계에서는 QBox가 MCUBoot header, protected TLV, key hash, image hash,
+     signature, encryption TLV를 모두 검증한 뒤 전체 함수 skip을 허용한다.
+   - 이 옵션은 positive boot smoke 전용으로 기본 off여야 하며,
+     FWU/negative secure-boot test에서는 반드시 끈다.
+
+3. RemotePass/DMI cache는 full-system profile에서 다시 병목으로 확인될 때
+   적용한다.
+   - shared SRAM, flash read-only range, frequently-polled MMIO에 positive/
+     negative DMI cache를 적용한다.
+   - `invalidate_direct_mem_ptr()` range invalidation을 구현하지 않은 cache는
+     사용하지 않는다.
+   - 이 개선은 RSE 단독보다 AP/full-system long run에서 효과가 커질 가능성이
+     높다.
+
+4. 장기적으로 CC3XX QEMU-native backend를 register polling bypass가 아니라
+   cryptographic operation backend로 확장한다.
+   - AES-CTR, ECDSA verify, SHA/HMAC, TRNG/status register 모델을
+     SystemC register frontend와 QEMU-native crypto core로 분리한다.
+   - guest-visible register/status/interrupt 순서는 유지하고, 내부 crypto
+     연산만 host-native로 처리한다.
+   - 이 경로가 FVP와 가장 유사한 성능/동작 균형점이다.
+
+5. 전체 RSE stub은 사용하지 않는다.
+   - RSE boot가 빠르더라도 TF-M BL1/BL2 secure boot, SI/AP image loading,
+     measured boot, AP power-on SCMI handoff 증거가 사라진다.
+   - 허용 가능한 stub은 문제가 되는 함수 또는 IP operation 단위의 opt-in
+     accelerator로 제한한다.
+
+### 2026-06-08 `bootutil_verify_sig()` 구현 및 검증 결과
+
+QBox CPU hook에 P-256 ECDSA host verifier와 BL2 `bootutil_verify_sig()`
+profile/helper를 추가했다. 구현은 `tools/qbox/qemu-components/common/include`
+아래의 `rse_p256_ecdsa.h`와 `cpu.h`에 있다.
+
+검증 결과는 다음과 같다.
+
+| Run | 결과 | 주요 counter |
+| --- | --- | --- |
+| uncached safe profile | BL2에서 image 4 검증 중 90초 timeout | `verify_matches=3593`, `skip_hits=0` |
+| cached safe profile | RSE runtime handoff 도달, Linux login 전 90초 timeout | `verify_matches=9`, `cache_hits=6`, `cache_misses=3`, `skip_hits=0`, failure counter 0 |
+| positive skip after `remote_cpu` rebuild | RSE runtime handoff 도달, Linux login 전 90초 timeout | `verify_matches=1`, `skip_hits=1`, `last_fih_success=0x0`, failure counter 0 |
+
+cached run의 evidence는
+`build/qbox-apollo-fvp/rse-bl2-verify-sig-profile-cache-smoke-20260608-1/`에
+있다. `summary.txt` 기준 RSE는 `25.771초`에 AP power-on/runtime handoff까지
+도달했다. image 4/3/2/0 load, SCP power-on, first image slot, measured boot
+marker도 모두 확인되었다. timeout은 해당 smoke가 Linux login까지 요구하는
+runner 판정 때문에 남았고, RSE boot 자체는 정상 진행했다.
+
+positive skip run의 profile evidence는
+`build/qbox-apollo-fvp/rse-bl2-verify-sig-skip-remote-rebuild-smoke-20260608/`
+에 있다. 이 run은 image 4/3/2/0 load, AP power-on, first image slot까지
+진행했고 `[ERR]` fail pattern은 없었다. `last_fih_success=0x0`인 이유는
+현재 BL2 MCUBoot FIH profile이 off라서 `FIH_SUCCESS` 변수의 실제 guest 값이
+0이기 때문이다. 이 값을 상수로 가정하지 않고 BL2 ELF에서 resolve한
+`FIH_SUCCESS` 주소를 guest memory에서 읽어 반환한다.
+
+profile overhead를 뺀 evidence는
+`build/qbox-apollo-fvp/rse-bl2-verify-sig-skip-noprofile-smoke-20260608/`에
+있다. 이 run은 `[ERR]` 없이 `rse_first_image_slot=27.392초`,
+`rse_bl1_1 -> rse_first_image_slot=24.179초`를 기록했다.
+
+주의할 점은 RSE `RemoteCPU`가 `cpu_arm_cortexM55.so`를 직접 로드하지 않고
+`remote_cpu` 실행 파일에 CPU header 구현을 링크한다는 것이다. `cpu.h`의
+hook/profile 코드를 바꾼 뒤 `remote_cpu`를 다시 빌드하지 않으면 이전
+동작으로 smoke가 실행될 수 있다.
+
+```bash
+cmake --build tools/qbox/build --target remote_cpu cpu_arm_cortexM55 platforms-vp --parallel 8
+```
+
+따라서 ECDSA host verifier와 positive skip은 유지하되, skip은 positive
+boot smoke 전용 opt-in으로 둔다. FVP 수준에 더 가까운 다음 작업은
+`boot_load_image_to_sram()` 또는 `boot_enc_load()` 단위의 image-level
+semantic accelerator이며, 그 내부에서 MCUBoot header/TLV/hash/ECDSA/AES-CTR
+처리를 일괄 검증하고 guest-visible 결과만 반영해야 한다.
+
+### 5순위: RemotePass/DMI cache 정리
+
+direct alias 후에도 profile에는 RemotePass outbound가 약 235k회 남는다.
+full-system/AP-enabled path에서는 이 비용이 다시 커질 수 있으므로 다음 cache를
+보강하면 안정적이다.
+
+- positive DMI cache: 공유 메모리 DMI range를 local b_transport path로 재사용
+- negative DMI cache: DMI가 불가능한 range의 반복 request를 억제
+- invalidation: `invalidate_direct_mem_ptr()` 때 range별 cache를 정리
+
+다만 RSE boot time을 FVP 수준으로 더 줄이는 결정타는 4순위 semantic
+accelerator이다.
+
+### 권장 실행 순서
+
+1. RSE boot smoke/perf 비교에는
+   `--cc3xx-qemu-native-backend --rse-lms-accel --rse-fast-boot-aliases`를
+   기본 성능 preset으로 사용한다.
+2. fidelity 검증이나 flash write/FWU 검증에서는 `--rse-fast-boot-aliases`를
+   끄고 기존 flash model path를 사용한다.
+3. 빠른 positive-boot smoke에는 `--rse-bl2-boot-enc-accel`을 함께 켠다.
+4. BL2 hook/counter를 확인할 때만 `--rse-bl2-load-profile`과
+   `--qbox-perf-profile`을 켠다. 최단 시간 비교에서는 두 옵션을 끈다.
+5. PKA traffic 제거 여부만 확인할 때는 `--rse-bl2-verify-sig-skip`을 추가한다.
+   단, 이 옵션은 positive boot smoke 전용이며 FWU/negative secure-boot
+   fidelity 증거로 사용하지 않는다.
+6. FVP `4.818초`에 더 가까워지는 다음 구현은 `--rse-bl2-load-accel`
+   image-level semantic accelerator로 진행한다.
+7. ECDSA accelerator는 독립 기능보다 semantic accelerator 내부의 검증 단계로
+   통합한다.
+8. RemotePass/DMI cache는 full-system long run profile에서 병목으로 다시
+   확인될 때 보강한다.
+
+### 2026-06-08 재검토: FVP 근접화를 위한 다음 해법
+
+최신 `build/local-apollo-fvp/work/trusted-firmware-m/bin/bl2.elf` 기준 BL2
+심볼은 다음과 같이 바뀌어 있다.
+
+| Symbol | Address |
+| --- | ---: |
+| `boot_go_for_image_id` | `0x3101e288` |
+| `boot_load_image_to_sram` | `0x3101e758` |
+| `boot_enc_load` | `0x3101eeb6` |
+| `boot_enc_set_key` | `0x3101ef52` |
+| `boot_enc_decrypt` | `0x3101ef8c` |
+| `bootutil_img_validate` | `0x3101f010` |
+| `bootutil_img_hash` | `0x3101f3aa` |
+| `bootutil_verify_sig` | `0x3101f5bc` |
+
+`bootutil_img_hash()`만 host-native SHA256으로 처리하는 opt-in accelerator를
+실험적으로 추가했다. 이 방식은 `bootutil_img_validate()`의 TLV 순회,
+`bootutil_verify_sig()`, `MCUBOOT_HW_ROLLBACK_PROT` security counter check를
+guest에 남기므로 `bootutil_img_validate()` 전체 skip보다 안전하다.
+
+하지만 현재 QEMU/libqemu PC-entry hook 기반으로는 BL2 함수 진입점이 안정적으로
+잡히지 않는다. 다음 smoke에서 RSE runtime handoff는 유지됐지만 모든 BL2
+profile/accelerator counter가 0이었다.
+
+| Run | `rse_bl1_1 -> rse_first_image_slot` | `BL2 -> RSE runtime handoff` | 주요 counter |
+| --- | ---: | ---: | --- |
+| control | 28.392초 | 18.161초 | `bl2_load_profile.*.hits=0`, `verify_matches=0` |
+| `bootutil_img_hash` accel | 30.292초 | 19.863초 | `bl2_img_hash_accel.hits=0` |
+| PC trace diagnostic | 30.086초 | 19.759초 | BL2 symbol entry hit 없음 |
+
+PC trace의 BL2 range 최다 sample은 `memset()`(`0x3101d160`)과
+`get_zero_count_region()`(`0x31021aca`)였다. runtime profile도
+`remote_platform.cpu_0.cpu.mem.regular`가 약 1.1M회,
+`platform.rse_cpu_pass.inbound_b_transport_rpc`가 약 235k회로 남아 있다.
+따라서 현재 남은 차이는 CC3XX 알고리즘 자체보다 QEMU memory/TLM crossing과
+guest memory loop 비용이다.
+
+#### 수정 중심 권장 순서
+
+1. **RemotePass/DMI와 direct memory path를 먼저 줄인다.**
+   - RSE VM/host SRAM, SI CL0/CL1 RAM-load destination, AP BL2/FIP
+     read-only path에 대해 현재 direct alias보다 더 좁고 확실한
+     QEMU-local backdoor를 만든다.
+   - positive DMI cache와 negative DMI cache를 `RemotePass`에 넣고,
+     `invalidate_direct_mem_ptr()` range invalidation을 같이 구현한다.
+   - 목표 metric은 `remote_platform.cpu_0.cpu.mem.regular`와
+     `inbound_b_transport_rpc`를 먼저 절반 이하로 낮추는 것이다.
+
+2. **BL2 함수 entry hook을 신뢰 가능한 방식으로 바꾼다.**
+   - 현재 TB lookup 전 `s.pc` 콜백은 BL2 callsite/entry를 놓친다.
+   - QEMU TCG translation-time breakpoint, per-TB edge hook, 또는 특정
+     callsite patchpoint 방식으로 `bootutil_img_hash()`,
+     `boot_enc_decrypt()`, `boot_load_image_to_sram()` 진입을 검출해야 한다.
+   - 이 단계가 끝나야 함수 단위 semantic accelerator의 hit counter가
+     실제 성능과 연결된다.
+
+3. **image-level semantic accelerator는 PC hook 안정화 후 적용한다.**
+   - `bootutil_img_validate()` 전체 skip은 `MCUBOOT_HW_ROLLBACK_PROT`를
+     건너뛰므로 바로 쓰지 않는다.
+   - 안전한 1단계는 `bootutil_img_hash()` host SHA256이다.
+   - 공격적인 2단계는 MCUBoot header/protected TLV/hash/ECDSA/encryption
+     TLV를 QBox가 모두 검증하고 `boot_load_image_to_sram()`의 bulk
+     copy/decrypt 결과만 guest-visible buffer와 state에 반영하는 방식이다.
+   - 이 옵션은 positive boot smoke 전용, 기본 off로 유지한다.
+
+4. **OTP/zero-count/LCM hotpath를 QEMU-native 또는 cached model로 옮긴다.**
+   - PC trace의 `get_zero_count_region()` 반복은 RSE firmware가 OTP/LCM
+     style state를 bit-level로 스캔하는 비용으로 보인다.
+   - register-visible 상태는 유지하되 read-only zero-count 결과나 OTP region
+     read path를 QEMU-local cache로 제공하면 FVP와 유사한 backdoor 효과를 낼
+     수 있다.
+
+5. **CC3XX는 register polling bypass에서 crypto operation backend로 확장한다.**
+   - 지금의 QEMU-native CC3XX backend는 register polling/write 비용을 줄이는
+     데 초점이 있다.
+   - FVP 수준을 목표로 하면 AES-CTR, SHA, ECDSA verify를 SystemC register
+     frontend 뒤의 QEMU-native crypto core로 처리하고, guest-visible
+     status/IRQ ordering만 유지하는 구조가 더 적합하다.
+
+6. **전체 RSE stub은 사용하지 않는다.**
+   - 전체 stub은 BL1/BL2 secure boot, measured boot, SI/AP image loading,
+     AP power-on SCMI evidence를 잃는다.
+   - 허용 범위는 함수/IP operation 단위의 opt-in accelerator와
+     read-only/cacheable hardware path로 제한한다.
+
+현재 결론은 `bootutil_img_hash()` 자체는 좋은 가속 단위이지만, 그 전에
+QEMU의 BL2 entry detection과 RemotePass/memory path를 고쳐야 FVP
+`4.818초`에 의미 있게 접근할 수 있다는 것이다.
+
+### 2026-06-08 최신 제안: FVP 근접을 위한 QBox 수정 우선순위
+
+추가 address profile 결과에서 `--rse-fast-boot-aliases` 이후에도 두 종류의
+QBox 비용이 남는 것을 확인했다.
+
+1. RSE boot flash의 secure primary slot 앞쪽 scan window
+   `0xb0007000..0xb0026fff`가 약 129k회의 regular access를 만든다.
+2. TF-M PS/ITS storage window `0xb3000000:0x110000`이 byte program,
+   status read, clear-status command를 반복하면서 Strata flash access를
+   크게 만든다.
+
+따라서 다음 제안은 전체 RSE stub이 아니라, FVP fast model 내부 backdoor와
+유사한 QEMU-local read/write path를 좁은 range에만 추가하는 것이다.
+
+#### 적용 완료 및 유지할 항목
+
+1. **pre-primary scan read-only alias**
+   - `--rse-direct-rse-flash-alias`에 `pre_primary_scan`
+     `0xb0007000:0x20000` alias를 추가했다.
+   - profiled run에서 `remote_platform.cpu_0.cpu.mem.total_accesses`가
+     `1,117,184`에서 `988,160`으로 줄었다.
+   - `rse_bl1_1 -> rse_first_image_slot`은 `25.479초`에서 `23.879초`로
+     감소했다.
+   - read-only alias라서 CFI command write나 PS/ITS state update는 우회하지
+     않는다.
+
+2. **RSE PS/ITS storage direct-MMIO fastpath**
+   - TF-M flash layout 기준 image area 뒤의 PS/ITS window
+     `0xb3000000:0x110000`을 `QBOX_MMIO_DIRECT_FASTPATH_RANGES`로 추가했다.
+   - 이 방식은 full flash DMI가 아니다. Strata CFI model은 그대로 실행하고,
+     QEMU -> SystemC scheduler thread 왕복만 제거한다.
+   - manual env run 기준 `regular` access는 `988,159`에서 `347,539`로
+     줄고, `640,621`회가 `local_fastpath`로 이동했다.
+   - 같은 run에서 `rse_bl1_1 -> rse_first_image_slot`은 `22.668초`,
+     `BL2 -> RSE runtime handoff`는 `14.142초`였다.
+   - scripted preset run에서는 `rse_storage_direct_fastpath.enabled=true`와
+     range `0xb3000000:0x110000`이 result JSON에 기록됐다. wall time은
+     profile 부하와 host 상태에 따라 `24초`대까지 흔들렸으므로, 이 옵션의
+     1차 성공 기준은 wall time 하나가 아니라 `regular -> local_fastpath`
+     이동량으로 본다.
+
+3. **`--rse-fast-boot-aliases` preset 확장**
+   - 기존 SI SRAM, AP BL2, RSE boot flash image read, AP FIP alias에
+     RSE PS/ITS storage direct-MMIO fastpath를 포함한다.
+   - positive boot smoke/perf 비교에는 이 preset을 사용한다.
+   - FWU, PS/ITS persistence, negative secure-boot, flash command-state 검증에는
+     preset을 끄고 기존 flash path를 사용한다.
+
+#### 새 profile에서 확인한 storage 병목
+
+`--flash-stats` run의 Strata flash counter는 PS/ITS storage가 실제로 byte
+program 중심 workload임을 보여준다.
+
+| Counter | 값 |
+| --- | ---: |
+| `total_accesses` | 717,824 |
+| `read_accesses` / `write_accesses` | 191,692 / 526,132 |
+| `command_writes` | 438,443 |
+| `read_status_cmds` | 175,377 |
+| `clear_status_cmds` | 87,689 |
+| `word_program_cmds` | 87,689 |
+| `program_bytes` | 87,689 |
+| `program_changed_bytes` | 4,489 |
+| `program_noop_bytes` | 82,875 |
+| `backing_write_ops` | 4,489 |
+
+이 결과는 flash storage 전체를 stub 처리하면 빠르겠지만 fidelity debt가 너무
+커진다는 것을 의미한다. 반대로 direct-MMIO fastpath는 같은 Strata command
+state와 backing write 조건을 유지하면서 per-access scheduler crossing만
+줄이므로, FVP 근접 성능 모드로 허용할 수 있다.
+
+#### 다음 구현 우선순위
+
+1. **QEMU-local memory/direct path 고도화**
+   - `--rse-fast-boot-aliases`를 현재 성능 기준선으로 둔다.
+   - RSE VM, host SRAM, PS/ITS처럼 side effect가 명확히 분리되는 range는
+     read-only alias 또는 direct-MMIO fastpath로 처리한다.
+   - 목표 metric은 `remote_platform.cpu_0.cpu.mem.regular`를 현재
+     `347k`보다 더 낮추고, RemotePass `outbound_b_transport` 약 `235k`회를
+     절반 이하로 줄이는 것이다.
+
+2. **BL2 function-entry hook 재설계**
+   - 현재 BL2 symbol PC hook은 run에 따라 hit가 0이 된다.
+   - TCG translation-time hook, per-TB edge hook, 또는 callsite patchpoint로
+     `boot_load_image_to_sram()`, `boot_enc_decrypt()`,
+     `bootutil_img_hash()`, `bootutil_verify_sig()` entry를 안정적으로 잡는다.
+   - 이 단계가 끝나야 함수 단위 accelerator가 재현 가능한 성능 옵션이 된다.
+
+3. **image-level semantic accelerator**
+   - FVP의 `rse_bl1_1 -> rse_first_image_slot = 4.818초`에 접근하려면
+     현재 남은 14~15초대 BL2/runtime 구간을 함수 몇 개가 아니라 image load
+     operation 단위로 줄여야 한다.
+   - QBox가 MCUBoot header, protected TLV, image hash, ECDSA signature,
+     encryption TLV를 모두 검증한 뒤 destination SRAM에 bulk copy/decrypt를
+     반영하는 opt-in accelerator를 만든다.
+   - 검증 실패, unsupported TLV, FWU/negative test에서는 즉시 guest path로
+     fallback한다.
+
+4. **OTP/LCM zero-count hotpath cache**
+   - PC trace에서 `get_zero_count_region()`이 자주 보인다.
+   - OTP/LCM register-visible state는 유지하되, read-only zero-count 결과와
+     OTP region scan을 QEMU-local cache로 제공하면 FVP 내부 model과 비슷한
+     효과를 낼 수 있다.
+
+5. **CC3XX QEMU-native backend 확장**
+   - 현재 CC3XX qemu-native는 register path 최적화 중심이다.
+   - FVP 근접 목표에서는 AES-CTR, SHA, ECDSA verify, LMS helper를
+     operation backend로 묶고, guest-visible register/status/IRQ 순서만
+     유지하는 구조가 장기 해법이다.
+
+#### 제안 결론
+
+가장 현실적인 순서는 다음이다.
+
+1. 기본 성능 비교 preset:
+   `--cc3xx-qemu-native-backend --rse-lms-accel --rse-fast-boot-aliases`
+2. 빠른 positive RSE boot smoke:
+   위 preset에 `--rse-bl2-boot-enc-accel`을 추가한다.
+3. FVP 수준 근접을 위한 다음 개발:
+   BL2 entry hook 재설계 후 `--rse-bl2-load-accel` image-level semantic
+   accelerator를 구현한다.
+4. 전체 RSE stub은 사용하지 않는다. 허용 범위는 좁은 address range,
+   IP operation, firmware function 단위의 opt-in accelerator로 제한한다.
+
+### 2026-06-08 Step 2 진행: BL2 Hook Symbol 자동 Resolve
+
+BL2 function-entry hook의 `hits=0` 문제는 QEMU callback 자체만의 문제가
+아니라 BL2 artifact drift도 포함하고 있었다. standalone RSE runner의 기본
+deploy artifact는 `build/tmp_baremetal`의 Yocto BL2를 사용하지만, 일부 hook
+기본 주소는 `build/local-apollo-fvp` BL2 기준으로 남아 있었다. 특히
+`bootutil_key_cnt`는 두 build 사이에서 다른 주소를 갖는다.
+
+현재 runner는 `--rse-bl2-elf`를 받아 다음 symbol을 ELF에서 자동으로 resolve한다.
+명시 주소 option이 주어지면 그 값을 우선하고, ELF가 없거나 symbol이 없으면
+기존 fallback 상수를 사용한다.
+
+| Symbol | Yocto BL2 | Local-build BL2 |
+| --- | ---: | ---: |
+| `boot_go_for_image_id` | `0x3101e218` | `0x3101e288` |
+| `boot_load_image_to_sram` | `0x3101e66c` | `0x3101e758` |
+| `boot_enc_load` | `0x3101ed4a` | `0x3101eeb6` |
+| `boot_enc_set_key` | `0x3101ede6` | `0x3101ef52` |
+| `boot_enc_decrypt` | `0x3101ee20` | `0x3101ef8c` |
+| `bootutil_img_validate` | `0x3101eea4` | `0x3101f010` |
+| `bootutil_img_hash` | `0x3101f23e` | `0x3101f3aa` |
+| `bootutil_verify_sig` | `0x3101f450` | `0x3101f5bc` |
+| `bootutil_key_cnt` | `0x3102b424` | `0x3102bbd0` |
+
+full-system wrapper는 local-build의
+`build/local-apollo-fvp/work/trusted-firmware-m/bin/bl2.elf`를 RSE runner로
+전달한다. standalone RSE runner는 기본값으로 Yocto BL2 ELF
+`build/tmp_baremetal/work/fvp_rd_aspen-poky-linux/trusted-firmware-m/2.2.2+git/build/bin/bl2.elf`
+를 사용한다. Result JSON의 `rse_bl2_load_profile.symbol_source`에 실제 ELF,
+resolved address, missing symbol 목록을 기록한다.
+
+검증 command:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --qbox-perf-profile \
+  --timeout 70 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-symbol-profile-smoke-20260608
+```
+
+결과:
+
+- `symbol_source.parsed=true`, `missing=[]`
+- `boot_enc_decrypt=1571 hits`
+- `boot_enc_load=6 hits`
+- `boot_go_for_image_id=5 hits`
+- `boot_load_image_to_sram=4 hits`
+- `bootutil_img_hash=3 hits`
+- `bootutil_img_validate=5 hits`
+- `bootutil_verify_sig=4 hits`
+- RSE marker는 image 4/3/2/0 load, AP power-on, first image slot까지 유지
+
+`--rse-bl2-boot-enc-accel`도 같은 resolver로 재검증했다.
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --rse-bl2-boot-enc-accel \
+  --qbox-perf-profile \
+  --timeout 70 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-symbol-boot-enc-accel-smoke-20260608
+```
+
+결과:
+
+- `decrypt_hits=1229`
+- `decrypt_bytes=1,256,688`
+- `key_captures=4`
+- `decrypt_key_misses=0`
+- `decrypt_dmi_failures=0`
+- `decrypt_state_failures=0`
+- `decrypt_unsupported=0`
+- `key_capture_failures=0`
+- `rse_first_image_slot=28.995초`
+
+이로써 Step 2의 최소 gate인 BL2 function-entry 검출과 guest state capture는
+재현 가능해졌다. 다음 단계는 이 안정화된 hook 위에서
+`boot_load_image_to_sram()` image-level semantic accelerator를 구현하는 것이다.
+
+### 2026-06-08 Step 3 진행: BL2 RAM-load image별 상태 관측
+
+`boot_load_image_to_sram()` semantic accelerator를 바로 구현하기 전에,
+QBox CPU hook이 BL2 `boot_loader_state`와 MCUBoot header를 image별로 안정적으로
+읽을 수 있는지 확인했다. 이를 위해 `rse-hotpath-profile.json`의
+`bl2_load_profile.ram_load_snapshot`에 `by_image` 항목을 추가했다.
+
+검증 command:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-profile \
+  --qbox-perf-profile \
+  --timeout 45 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-ram-load-by-image-smoke-20260608
+```
+
+결과:
+
+- `ram_load_snapshot.hits=4`
+- `dmi_failures=0`, `unsupported=0`
+- image별 snapshot은 `0`, `2`, `3`, `4`가 각각 1회씩 기록됨
+- RSE marker는 image 4/3/2/0 load, AP power-on, first image slot까지 유지
+- 짧은 timeout run이므로 최종 판정은 `qbox_platform_timeout`이지만,
+  RSE boot chain 관측 목적은 충족함
+
+관측된 RAM-load 대상:
+
+| Image | 역할 추정 | `load_addr` | `img_size` | `hash_region_size` | `flags` |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 4 | SI CL1 | `0x70185c00` | 275,648 | 276,800 | `0x24` |
+| 3 | SI CL0 | `0x70083c00` | 743,664 | 744,817 | `0x24` |
+| 2 | AP BL2 | `0x70001c00` | 94,016 | 95,169 | `0x24` |
+| 0 | RSE runtime | `0x3103f800` | 197,568 | 198,620 | `0x24` |
+
+최신 smoke의 slowest delta는 여전히
+`rse_image_4_loaded -> rse_image_3_loaded = 11.132초`다. 위 snapshot 기준으로
+이 구간은 다음 image인 SI CL0 image 3의 744 KiB RAM-load/validate/decrypt
+처리가 지배한다. 따라서 FVP 4.818초에 더 가까워지기 위한 다음 구현은
+전체 RSE stub이 아니라 `boot_load_image_to_sram()`에 한정된 image-level
+semantic accelerator가 맞다.
+
+다음 구현 gate:
+
+1. `by_image` snapshot을 입력으로 image 3과 image 4부터 positive boot 전용
+   `--rse-bl2-load-accel`을 실험한다.
+2. guest `bootutil_img_validate()`, `bootutil_verify_sig()`, security counter
+   check는 유지하고, guest가 성공한 image에 대해서만 bulk copy/decrypt와
+   `slot_usage` 상태 갱신을 QBox-native path로 대체한다.
+3. `flags=0x24`인 RAM-load + AES-128 encrypted image만 지원하고,
+   나머지 flag/TLV/slot layout은 즉시 guest path로 fallback한다.
+4. FWU, negative secure-boot, flash command-state fidelity 검증에서는 기본 off로
+   유지한다.

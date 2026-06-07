@@ -158,6 +158,7 @@ def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
         "ap_bl2_elf": (
             local_build_dir / "work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf"
         ),
+        "rse_bl2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl2.elf",
         "rootfs": boot / "apollo-fvp-local-disk.img",
         "efi_capsule_disk": boot / "boot-fat.img",
         "provisioning_bundle": firmware / "combined_provisioning_message.bin",
@@ -177,6 +178,7 @@ def resolved_artifacts(args: argparse.Namespace) -> dict[str, Path]:
         "rse_otp": args.rse_otp,
         "ap_flash": args.ap_flash,
         "ap_bl2_elf": args.ap_bl2_elf,
+        "rse_bl2_elf": args.rse_bl2_elf,
         "rootfs": args.rootfs,
         "efi_capsule_disk": args.efi_capsule_disk,
         "provisioning_bundle": args.provisioning_bundle,
@@ -199,6 +201,7 @@ def missing_required(args: argparse.Namespace, artifacts: dict[str, Path]) -> li
         "rse_otp",
         "ap_flash",
         "ap_bl2_elf",
+        "rse_bl2_elf",
         "rootfs",
         "efi_capsule_disk",
         "provisioning_bundle",
@@ -526,6 +529,8 @@ def write_result(
         "post_login_probe": (child_status or {}).get("post_login_probe"),
         "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
+        "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
+        "remotepass_dmi_cache": (child_status or {}).get("remotepass_dmi_cache"),
         "completion_gate_blocker": gate_blocker,
         "child_scp_service_model": (child_status or {}).get("scp_service_model"),
         "service_model_debt": service_model_debt,
@@ -703,6 +708,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         str(artifacts["ap_flash"]),
         "--ap-bl2-elf",
         str(artifacts["ap_bl2_elf"]),
+        "--rse-bl2-elf",
+        str(artifacts["rse_bl2_elf"]),
         "--rootfs",
         str(artifacts["rootfs"]),
         "--efi-capsule-disk",
@@ -735,6 +742,44 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
     if args.cc3xx_stats:
         cmd.append("--cc3xx-stats")
         cmd.extend(["--cc3xx-stats-interval", str(args.cc3xx_stats_interval)])
+    if args.qbox_perf_profile:
+        cmd.append("--qbox-perf-profile")
+        cmd.extend([
+            "--qbox-perf-profile-interval",
+            str(args.qbox_perf_profile_interval),
+        ])
+    if args.remotepass_dmi_cache:
+        cmd.append("--remotepass-dmi-cache")
+    if args.rse_hotpath_accel:
+        cmd.append("--rse-hotpath-accel")
+        cmd.extend(["--rse-hotpath-max-bytes", str(args.rse_hotpath_max_bytes)])
+    if args.rse_lms_accel:
+        cmd.append("--rse-lms-accel")
+        cmd.extend(["--rse-lms-max-data-bytes", str(args.rse_lms_max_data_bytes)])
+    if args.rse_bl2_load_accel:
+        cmd.append("--rse-bl2-load-accel")
+        cmd.extend([
+            "--rse-bl2-load-accel-max-bytes",
+            str(args.rse_bl2_load_accel_max_bytes),
+        ])
+    if args.rse_bl2_img_hash_accel:
+        cmd.append("--rse-bl2-img-hash-accel")
+        cmd.extend([
+            "--rse-bl2-img-hash-max-bytes",
+            str(args.rse_bl2_img_hash_max_bytes),
+            "--rse-bl2-img-hash-max-seed-bytes",
+            str(args.rse_bl2_img_hash_max_seed_bytes),
+        ])
+    if args.rse_bl2_verify_sig_accel:
+        cmd.append("--rse-bl2-verify-sig-accel")
+        cmd.extend([
+            "--rse-bl2-verify-sig-max-key-bytes",
+            str(args.rse_bl2_verify_sig_max_key_bytes),
+            "--rse-bl2-verify-sig-max-sig-bytes",
+            str(args.rse_bl2_verify_sig_max_sig_bytes),
+        ])
+    if args.rse_bl2_verify_sig_skip:
+        cmd.append("--rse-bl2-verify-sig-skip")
     if args.cc3xx_status_read_fastpath:
         cmd.append("--cc3xx-status-read-fastpath")
     if args.cc3xx_qemu_native_backend:
@@ -856,6 +901,64 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Forward CC3XX aggregate statistics collection to the RSE runner.",
     )
+    parser.add_argument(
+        "--qbox-perf-profile",
+        action="store_true",
+        help=(
+            "Forward QBox-side performance profile collection to the RSE "
+            "runner."
+        ),
+    )
+    parser.add_argument("--qbox-perf-profile-interval", type=int, default=1024)
+    parser.add_argument(
+        "--remotepass-dmi-cache",
+        action="store_true",
+        help="Forward the RSE RemotePass shared-memory DMI cache option.",
+    )
+    parser.add_argument(
+        "--rse-hotpath-accel",
+        action="store_true",
+        help="Forward RSE BL1_1 memcpy/memset semantic hotpath acceleration.",
+    )
+    parser.add_argument("--rse-hotpath-max-bytes", type=int, default=16 * 1024 * 1024)
+    parser.add_argument(
+        "--rse-lms-accel",
+        action="store_true",
+        help=(
+            "Forward experimental RSE BL1_2 LMS verify semantic acceleration. "
+            "Confirm effectiveness from the forwarded RSE perf profile "
+            "lms_hits counter."
+        ),
+    )
+    parser.add_argument("--rse-lms-max-data-bytes", type=int, default=16 * 1024 * 1024)
+    parser.add_argument(
+        "--rse-bl2-load-accel",
+        action="store_true",
+        help="Forward RSE BL2 RAM-load payload semantic acceleration.",
+    )
+    parser.add_argument("--rse-bl2-load-accel-max-bytes", type=int, default=16 * 1024 * 1024)
+    parser.add_argument(
+        "--rse-bl2-img-hash-accel",
+        action="store_true",
+        help="Forward RSE BL2 bootutil_img_hash host-native SHA256 acceleration.",
+    )
+    parser.add_argument("--rse-bl2-img-hash-max-bytes", type=int, default=16 * 1024 * 1024)
+    parser.add_argument("--rse-bl2-img-hash-max-seed-bytes", type=int, default=4096)
+    parser.add_argument(
+        "--rse-bl2-verify-sig-accel",
+        action="store_true",
+        help="Forward RSE BL2 bootutil_verify_sig host-native ECDSA acceleration.",
+    )
+    parser.add_argument(
+        "--rse-bl2-verify-sig-skip",
+        action="store_true",
+        help=(
+            "Forward the positive-boot-only RSE BL2 bootutil_verify_sig skip "
+            "after host-native ECDSA verification succeeds."
+        ),
+    )
+    parser.add_argument("--rse-bl2-verify-sig-max-key-bytes", type=int, default=512)
+    parser.add_argument("--rse-bl2-verify-sig-max-sig-bytes", type=int, default=128)
     parser.add_argument("--cc3xx-stats-interval", type=int, default=1024)
     parser.add_argument(
         "--cc3xx-status-read-fastpath",
@@ -890,6 +993,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rse-otp", type=Path)
     parser.add_argument("--ap-flash", type=Path)
     parser.add_argument("--ap-bl2-elf", type=Path)
+    parser.add_argument("--rse-bl2-elf", type=Path)
     parser.add_argument("--rootfs", type=Path)
     parser.add_argument("--efi-capsule-disk", type=Path)
     parser.add_argument("--provisioning-bundle", type=Path)
@@ -903,6 +1007,22 @@ def parse_args() -> argparse.Namespace:
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     args.out_dir = args.out_dir.resolve()
+    if args.rse_hotpath_max_bytes <= 0:
+        parser.error("--rse-hotpath-max-bytes must be positive")
+    if args.rse_lms_max_data_bytes <= 0:
+        parser.error("--rse-lms-max-data-bytes must be positive")
+    if args.rse_bl2_load_accel_max_bytes <= 0:
+        parser.error("--rse-bl2-load-accel-max-bytes must be positive")
+    if args.rse_bl2_img_hash_max_bytes <= 0:
+        parser.error("--rse-bl2-img-hash-max-bytes must be positive")
+    if args.rse_bl2_img_hash_max_seed_bytes < 0:
+        parser.error("--rse-bl2-img-hash-max-seed-bytes must be non-negative")
+    if args.rse_bl2_verify_sig_max_key_bytes <= 0:
+        parser.error("--rse-bl2-verify-sig-max-key-bytes must be positive")
+    if args.rse_bl2_verify_sig_max_sig_bytes <= 0:
+        parser.error("--rse-bl2-verify-sig-max-sig-bytes must be positive")
+    if args.rse_bl2_verify_sig_skip:
+        args.rse_bl2_verify_sig_accel = True
     return args
 
 
