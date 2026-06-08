@@ -411,3 +411,140 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
    `rse_image_4_loaded -> rse_image_3_loaded` 10초대를 먼저 줄이는 것이다.
 5. fidelity-oriented runbook에는 현재 최단인 fast-alias/storage-direct baseline을
    유지하고, BL2 accelerator 계열은 development-only opt-in으로 둔다.
+
+## 2026-06-08 추가 진행: local BL1_2 LMS hook resolve
+
+### 문제
+
+full-system local artifact 실행에서 RSE BL1_2의 `BL2 image decrypted
+successfully` 이후 `BL2 image validated successfully`까지 123초 이상 걸렸다.
+RSE-only Yocto artifact에서는 LMS accelerator가 동작했지만, local full-system은
+`build/local-apollo-fvp/work/trusted-firmware-m/bin/bl1_2.elf`를 사용한다.
+
+확인 결과 `pq_crypto_verify` 주소가 artifact마다 달랐다.
+
+- `fvp_rd_aspen` Yocto BL1_2: `0x11009bad`
+- `apollo_fvp` Yocto/local BL1_2: `0x11009415`
+
+기존 Lua 기본값은 `0x11009bad`였기 때문에 local full-system에서는
+`--rse-lms-accel` PC-entry hook이 맞지 않았다.
+
+### 변경
+
+- RSE runner에 `--rse-bl1-2-elf`와 `--rse-lms-verify-addr`를 추가했다.
+- `--rse-lms-verify-addr`가 없으면 선택된 `--rse-bl2-elf`와 같은 디렉터리의
+  `bl1_2.elf`에서 `pq_crypto_verify`를 `llvm-nm`/`nm`으로 resolve한다.
+- resolve 결과를 `QBOX_RDASPEN_RSE_LMS_VERIFY_ADDR`로 QBox에 전달한다.
+- full-system wrapper가 local BL1_2 ELF를 child RSE runner에 전달한다.
+- result summary에 BL1_2 symbol source와 resolved address를 기록한다.
+
+### 검증
+
+정적 검증:
+
+```bash
+python3 -m py_compile \
+  scripts/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run_qbox_apollo_fvp_full.py
+
+git diff --check -- \
+  scripts/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run_qbox_apollo_fvp_full.py
+
+git -C tools/qbox diff --check
+git -C tools/qemu diff --check
+```
+
+full-system perf run:
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --skip-build \
+  --si-mode service-model \
+  --timeout 600 \
+  --post-login-probe \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-libc-hotpath \
+  --rse-bl2-delay-accel \
+  --rse-bl2-load-accel \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --qbox-perf-profile \
+  --out-dir build/qbox-apollo-fvp/full-safe-accel-lms-resolve-20260608
+```
+
+결과:
+
+- `blocker: qbox_post_login_probe_not_reached_timeout`
+- `G0: pass`, `G2: blocked`
+- RSE runtime handoff: `24.209s`
+- `rse_bl2_decrypted -> rse_bl2_validated`: `0.100s`
+- perf profile:
+  - `lms_verify_addr: 0x11009415`
+  - `lms_hits: 1`
+  - `bl2_delay_accel.hits: 3`
+  - `bl2_load_accel.hits: 4`
+  - `bl2_img_hash_accel.hits: 4`
+  - `bl2_verify_sig_accel.verify_matches: 9`
+- `measured_boot_bl33` marker는 `72.021s`에 관측됐다.
+- Linux marker와 login prompt는 timeout 전까지 관측되지 않았다.
+- secure console은 OP-TEE `SE Proxy` secure partition 로드 중 멈췄고,
+  primary console은 비어 있었다.
+
+RSE-only no-profile local artifact run:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --rse-rom build/local-apollo-fvp/deploy/firmware/rse-rom-image.img \
+  --rse-flash build/local-apollo-fvp/deploy/firmware/rse-flash-image.img \
+  --rse-otp build/local-apollo-fvp/deploy/firmware/rse-otp-image.img \
+  --ap-flash build/local-apollo-fvp/deploy/firmware/ap-flash-image.img \
+  --ap-bl2-elf build/local-apollo-fvp/work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf \
+  --rse-bl1-2-elf build/local-apollo-fvp/work/trusted-firmware-m/bin/bl1_2.elf \
+  --rse-bl2-elf build/local-apollo-fvp/work/trusted-firmware-m/bin/bl2.elf \
+  --rootfs build/local-apollo-fvp/deploy/boot/apollo-fvp-local-disk.img \
+  --provisioning-bundle build/local-apollo-fvp/deploy/firmware/combined_provisioning_message.bin \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-libc-hotpath \
+  --rse-bl2-delay-accel \
+  --rse-bl2-load-accel \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --timeout 70 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-local-safe-accel-lms-resolve-noprofile-20260608
+```
+
+결과:
+
+- `blocker: qbox_platform_timeout`
+- RSE runtime handoff: `24.792s`
+- resolved LMS hook:
+  - ELF:
+    `build/local-apollo-fvp/work/trusted-firmware-m/bin/bl1_2.elf`
+  - `pq_crypto_verify: 0x11009415`
+- BL2 symbols were resolved from local
+  `build/local-apollo-fvp/work/trusted-firmware-m/bin/bl2.elf`.
+- `rse_bl2_decrypted -> rse_bl2_validated`: `0.100s`
+- slowest RSE delta remains
+  `rse_image_4_loaded -> rse_image_3_loaded = 11.340s`.
+
+### 최신 결론
+
+- local full-system의 123초 BL1_2 validation stall은 LMS hook 주소 mismatch가
+  원인이었다.
+- active BL1_2 ELF 기반 symbol resolve 후 해당 구간은 0.1초 수준으로 줄었다.
+- RSE-only local artifact 기준 전체 RSE runtime handoff는 24.8초이며,
+  남은 RSE 병목은 SI CL1 image load/validate 구간이다.
+- full-system은 이제 RSE가 아니라 AP/secure-world 쪽이 다음 blocker다.
+  OP-TEE secure partition 로드 중 AP memory regular path가 계속 증가하고,
+  Linux primary console은 timeout 전까지 출력되지 않았다.
+- 다음 최적화는 RSE가 아니라 AP/OP-TEE SP load 경로의 QEMU DMI/local fastpath
+  또는 secure partition image load 경로 분석으로 분리해서 진행해야 한다.

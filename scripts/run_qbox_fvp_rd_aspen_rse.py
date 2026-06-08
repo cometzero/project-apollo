@@ -70,6 +70,9 @@ REMOTEPASS_PROFILE_DIR = "remotepass"
 CC3XX_PROFILE = "qemu-cc3xx-profile.json"
 RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
 RSE_CC3XX_BASE_S = 0x50154000
+RSE_HOTPATH_MEMCPY_DEFAULT = 0x11000488
+RSE_HOTPATH_MEMSET_DEFAULT = 0x11000448
+RSE_LMS_VERIFY_DEFAULT = 0x11009BAD
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
 WIC_BOOT_ENTRY = "::/loader/entries/boot.conf"
 
@@ -480,6 +483,16 @@ RSE_BL2_SYMBOL_DEFAULTS = {
     "bootutil_keys": 0x31000454,
     "bootutil_key_cnt": 0x3102BBD0,
     "FIH_SUCCESS": 0x310027DC,
+    "delay_cycles": 0x31021AC8,
+    "memcpy": 0x3101D176,
+    "memset": 0x3101D136,
+}
+RSE_BL2_LIBC_HOTPATH_SYMBOLS = {
+    "rse_hotpath_memcpy_addr": "memcpy",
+    "rse_hotpath_memset_addr": "memset",
+}
+RSE_BL1_2_SYMBOL_DEFAULTS = {
+    "pq_crypto_verify": RSE_LMS_VERIFY_DEFAULT,
 }
 RSE_BL2_HOOK_SYMBOLS = {
     "rse_bl2_boot_go_for_image_id_addr": "boot_go_for_image_id",
@@ -493,6 +506,7 @@ RSE_BL2_HOOK_SYMBOLS = {
     "rse_bl2_bootutil_keys_addr": "bootutil_keys",
     "rse_bl2_bootutil_key_cnt_addr": "bootutil_key_cnt",
     "rse_bl2_fih_success_addr": "FIH_SUCCESS",
+    "rse_bl2_delay_cycles_addr": "delay_cycles",
 }
 RSE_BL2_BOOT_STATE_LAYOUT_DEFAULTS = {
     "image_count": 5,
@@ -2186,6 +2200,14 @@ def default_rse_bl2_elf(root: Path) -> Path:
     )
 
 
+def default_rse_bl1_2_elf(root: Path) -> Path:
+    return (
+        root
+        / "build/tmp_baremetal/work/fvp_rd_aspen-poky-linux"
+        / "trusted-firmware-m/2.2.2+git/build/bin/bl1_2.elf"
+    )
+
+
 def default_bl1_1_map(root: Path) -> Path:
     return (
         root
@@ -2272,8 +2294,26 @@ def resolve_rse_bl2_hook_symbols(args: argparse.Namespace, root: Path) -> None:
         else:
             value = RSE_BL2_SYMBOL_DEFAULTS[symbol]
             missing.append(symbol)
+        if explicit is None and symbol == "delay_cycles":
+            value += 2
         setattr(args, attr, value)
         resolved[symbol] = value
+
+    libc_resolved: dict[str, int] = {}
+    libc_missing: list[str] = []
+    if args.rse_bl2_libc_hotpath:
+        args.rse_hotpath_accel = True
+        for attr, symbol in RSE_BL2_LIBC_HOTPATH_SYMBOLS.items():
+            explicit = getattr(args, attr)
+            if explicit is not None:
+                value = explicit
+            elif symbol in parsed:
+                value = parsed[symbol]
+            else:
+                value = RSE_BL2_SYMBOL_DEFAULTS[symbol]
+                libc_missing.append(symbol)
+            setattr(args, attr, value)
+            libc_resolved[symbol] = value
 
     args.rse_bl2_symbol_source = {
         "elf": str(args.rse_bl2_elf),
@@ -2281,6 +2321,46 @@ def resolve_rse_bl2_hook_symbols(args: argparse.Namespace, root: Path) -> None:
         "parsed": bool(parsed),
         "missing": missing,
         "resolved": {name: hex(value) for name, value in sorted(resolved.items())},
+        "libc_hotpath": {
+            "enabled": bool(args.rse_bl2_libc_hotpath),
+            "missing": libc_missing,
+            "resolved": {
+                name: hex(value) for name, value in sorted(libc_resolved.items())
+            },
+        },
+    }
+
+
+def resolve_rse_bl1_2_lms_symbol(args: argparse.Namespace, root: Path) -> None:
+    if args.rse_bl1_2_elf is None:
+        if args.rse_bl2_elf is not None:
+            sibling = args.rse_bl2_elf.with_name("bl1_2.elf")
+            args.rse_bl1_2_elf = sibling if sibling.exists() else default_rse_bl1_2_elf(root)
+        else:
+            args.rse_bl1_2_elf = default_rse_bl1_2_elf(root)
+    else:
+        args.rse_bl1_2_elf = args.rse_bl1_2_elf.resolve()
+
+    symbol = "pq_crypto_verify"
+    parsed = parse_elf_symbols(args.rse_bl1_2_elf, list(RSE_BL1_2_SYMBOL_DEFAULTS))
+    explicit = args.rse_lms_verify_addr
+    if explicit is not None:
+        value = explicit
+        missing: list[str] = []
+    elif symbol in parsed:
+        value = parsed[symbol]
+        missing = []
+    else:
+        value = RSE_BL1_2_SYMBOL_DEFAULTS[symbol]
+        missing = [symbol]
+
+    args.rse_lms_verify_addr = value
+    args.rse_bl1_2_symbol_source = {
+        "elf": str(args.rse_bl1_2_elf),
+        "elf_exists": args.rse_bl1_2_elf.exists(),
+        "parsed": bool(parsed),
+        "missing": missing,
+        "resolved": {symbol: hex(value)},
     }
 
 
@@ -2740,6 +2820,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
             or args.rse_bl2_boot_enc_accel
             or args.rse_bl2_img_hash_accel
             or args.rse_bl2_verify_sig_accel
+            or args.rse_bl2_delay_accel
         ):
             env["QBOX_RDASPEN_RSE_HOTPATH_PROFILE_FILE"] = str(
                 profile_root / RSE_HOTPATH_PROFILE
@@ -2754,8 +2835,19 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_RSE_HOTPATH_MAX_BYTES"] = str(
             args.rse_hotpath_max_bytes
         )
+        if args.rse_hotpath_memcpy_addr is not None:
+            env["QBOX_RDASPEN_RSE_HOTPATH_MEMCPY_ADDR"] = str(
+                args.rse_hotpath_memcpy_addr
+            )
+        if args.rse_hotpath_memset_addr is not None:
+            env["QBOX_RDASPEN_RSE_HOTPATH_MEMSET_ADDR"] = str(
+                args.rse_hotpath_memset_addr
+            )
     if args.rse_lms_accel:
         env["QBOX_RDASPEN_RSE_LMS_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_LMS_VERIFY_ADDR"] = str(
+            args.rse_lms_verify_addr
+        )
         env["QBOX_RDASPEN_RSE_LMS_MAX_DATA_BYTES"] = str(
             args.rse_lms_max_data_bytes
         )
@@ -2767,6 +2859,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         or args.rse_bl2_boot_enc_accel
         or args.rse_bl2_img_hash_accel
         or args.rse_bl2_verify_sig_accel
+        or args.rse_bl2_delay_accel
     ):
         env["QBOX_RDASPEN_RSE_BL2_BOOT_GO_FOR_IMAGE_ID_ADDR"] = str(
             args.rse_bl2_boot_go_for_image_id_addr
@@ -2800,6 +2893,9 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         )
         env["QBOX_RDASPEN_RSE_BL2_FIH_SUCCESS_ADDR"] = str(
             args.rse_bl2_fih_success_addr
+        )
+        env["QBOX_RDASPEN_RSE_BL2_DELAY_CYCLES_ADDR"] = str(
+            args.rse_bl2_delay_cycles_addr
         )
         env["QBOX_RDASPEN_RSE_BL2_BOOT_IMAGE_COUNT"] = str(
             args.rse_bl2_boot_image_count
@@ -2870,6 +2966,14 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if args.rse_bl2_verify_sig_skip:
         env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_ACCEL"] = "true"
         env["QBOX_RDASPEN_RSE_BL2_VERIFY_SIG_SKIP"] = "true"
+    if args.rse_bl2_delay_accel:
+        env["QBOX_RDASPEN_RSE_BL2_DELAY_ACCEL"] = "true"
+        env["QBOX_RDASPEN_RSE_BL2_DELAY_MAX_CYCLES"] = str(
+            args.rse_bl2_delay_max_cycles
+        )
+        env["QBOX_RDASPEN_RSE_BL2_DELAY_EXPECTED_HITS"] = str(
+            args.rse_bl2_delay_expected_hits
+        )
     direct_file_aliases = rse_direct_file_aliases_for_args(args, artifacts)
     if direct_file_aliases:
         env["QBOX_RDASPEN_RSE_DIRECT_FILE_ALIASES"] = direct_file_aliases
@@ -3238,6 +3342,17 @@ def write_result(
             SERVICE_MODEL_GAPS if args.scp_strategy == "service-model" else []
         ),
     }
+    rse_hotpath_memcpy_addr = (
+        args.rse_hotpath_memcpy_addr
+        if args.rse_hotpath_memcpy_addr is not None
+        else RSE_HOTPATH_MEMCPY_DEFAULT
+    )
+    rse_hotpath_memset_addr = (
+        args.rse_hotpath_memset_addr
+        if args.rse_hotpath_memset_addr is not None
+        else RSE_HOTPATH_MEMSET_DEFAULT
+    )
+
     status.update(
         {
             "boot_mode": "rse-oriented",
@@ -3326,14 +3441,16 @@ def write_result(
             "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},
             "rse_hotpath_accel": {
                 "enabled": bool(args.rse_hotpath_accel),
-                "memcpy_addr": "0x11000488",
-                "memset_addr": "0x11000448",
+                "bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
+                "memcpy_addr": hex(rse_hotpath_memcpy_addr),
+                "memset_addr": hex(rse_hotpath_memset_addr),
                 "max_bytes": args.rse_hotpath_max_bytes,
             },
             "rse_lms_accel": {
                 "enabled": bool(args.rse_lms_accel),
-                "verify_addr": "0x11009bad",
+                "verify_addr": hex(args.rse_lms_verify_addr),
                 "max_data_bytes": args.rse_lms_max_data_bytes,
+                "symbol_source": args.rse_bl1_2_symbol_source,
                 "hook": "qemu-tcg-pc-entry",
                 "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.lms_hits > 0",
             },
@@ -3350,6 +3467,7 @@ def write_result(
                     "bootutil_img_validate": hex(args.rse_bl2_bootutil_img_validate_addr),
                     "bootutil_img_hash": hex(args.rse_bl2_bootutil_img_hash_addr),
                     "bootutil_verify_sig": hex(args.rse_bl2_bootutil_verify_sig_addr),
+                    "delay_cycles": hex(args.rse_bl2_delay_cycles_addr),
                 },
                 "state_layout": {
                     "image_count": args.rse_bl2_boot_image_count,
@@ -3420,6 +3538,18 @@ def write_result(
                 "max_key_bytes": args.rse_bl2_verify_sig_max_key_bytes,
                 "max_sig_bytes": args.rse_bl2_verify_sig_max_sig_bytes,
                 "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_verify_sig_accel.verify_matches > 0",
+            },
+            "rse_bl2_delay_accel": {
+                "enabled": bool(args.rse_bl2_delay_accel),
+                "hook": "qemu-tcg-pc-entry",
+                "delay_cycles_addr": hex(args.rse_bl2_delay_cycles_addr),
+                "max_cycles": args.rse_bl2_delay_max_cycles,
+                "expected_hits": args.rse_bl2_delay_expected_hits,
+                "fidelity_note": (
+                    "opt-in performance mode; skips TF-M BL2 delay_cycles loops "
+                    "used to mimic LBIST, MBIST, and CL1 boot wait time"
+                ),
+                "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_delay_accel.hits > 0",
             },
             "rse_direct_si_sram_alias": {
                 "enabled": bool(
@@ -3533,6 +3663,8 @@ def write_result(
         + json.dumps(status["rse_bl2_img_hash_accel"], sort_keys=True),
         "rse_bl2_verify_sig_accel: "
         + json.dumps(status["rse_bl2_verify_sig_accel"], sort_keys=True),
+        "rse_bl2_delay_accel: "
+        + json.dumps(status["rse_bl2_delay_accel"], sort_keys=True),
         "rse_direct_si_sram_alias: "
         + json.dumps(status["rse_direct_si_sram_alias"], sort_keys=True),
         "scp_service_model: "
@@ -3694,6 +3826,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Optional RSE TF-M BL2 ELF used to resolve BL2 hook symbols. "
             "When omitted, the Yocto build BL2 ELF is used if present."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl1-2-elf",
+        type=Path,
+        help=(
+            "Optional RSE TF-M BL1_2 ELF used to resolve the LMS verify hook "
+            "symbol. When omitted, the runner uses bl1_2.elf next to the "
+            "selected BL2 ELF, then the Yocto default."
         ),
     )
     parser.add_argument(
@@ -3992,6 +4133,25 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--rse-hotpath-memcpy-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE hotpath memcpy Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-hotpath-memset-addr",
+        type=lambda value: int(value, 0),
+        help="Override RSE hotpath memset Thumb entry address.",
+    )
+    parser.add_argument(
+        "--rse-bl2-libc-hotpath",
+        action="store_true",
+        help=(
+            "Use the active RSE BL2 ELF memcpy/memset symbols for "
+            "--rse-hotpath-accel. This targets TF-M BL2 libc loops instead "
+            "of the BL1_1 defaults."
+        ),
+    )
+    parser.add_argument(
         "--rse-hotpath-max-bytes",
         type=int,
         default=16 * 1024 * 1024,
@@ -4018,6 +4178,14 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=16 * 1024 * 1024,
         help="Maximum message byte count accepted by --rse-lms-accel.",
+    )
+    parser.add_argument(
+        "--rse-lms-verify-addr",
+        type=lambda value: int(value, 0),
+        help=(
+            "Override RSE BL1_2 pq_crypto_verify Thumb entry address for "
+            "--rse-lms-accel."
+        ),
     )
     parser.add_argument(
         "--rse-bl2-load-profile",
@@ -4251,6 +4419,35 @@ def parse_args() -> argparse.Namespace:
         help="Maximum DER signature byte count accepted by --rse-bl2-verify-sig-accel.",
     )
     parser.add_argument(
+        "--rse-bl2-delay-accel",
+        action="store_true",
+        help=(
+            "Enable opt-in RSE BL2 delay_cycles acceleration. The hook skips "
+            "the guest spin loops used to mimic LBIST, MBIST, and CL1 boot "
+            "wait timing without changing TF-M binaries."
+        ),
+    )
+    parser.add_argument(
+        "--rse-bl2-delay-cycles-addr",
+        type=lambda value: int(value, 0),
+        help="Override effective RSE BL2 delay_cycles hook PC.",
+    )
+    parser.add_argument(
+        "--rse-bl2-delay-max-cycles",
+        type=int,
+        default=50 * 1000 * 1000,
+        help="Maximum cycle count accepted by --rse-bl2-delay-accel.",
+    )
+    parser.add_argument(
+        "--rse-bl2-delay-expected-hits",
+        type=int,
+        default=3,
+        help=(
+            "Clear the BL2 delay PC watch after this many successful skips. "
+            "Use 0 to keep it armed."
+        ),
+    )
+    parser.add_argument(
         "--rse-direct-si-sram-alias",
         action="store_true",
         help=(
@@ -4417,8 +4614,14 @@ def parse_args() -> argparse.Namespace:
         parser.error("--qbox-perf-profile-interval must be positive")
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
+    if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:
+        parser.error("--rse-hotpath-memcpy-addr must be positive")
+    if args.rse_hotpath_memset_addr is not None and args.rse_hotpath_memset_addr <= 0:
+        parser.error("--rse-hotpath-memset-addr must be positive")
     if args.rse_lms_max_data_bytes <= 0:
         parser.error("--rse-lms-max-data-bytes must be positive")
+    if args.rse_lms_verify_addr is not None and args.rse_lms_verify_addr <= 0:
+        parser.error("--rse-lms-verify-addr must be positive")
     if args.rse_bl2_boot_enc_key_bytes not in (16, 24, 32):
         parser.error("--rse-bl2-boot-enc-key-bytes must be 16, 24, or 32")
     if args.rse_bl2_boot_enc_key_stride < args.rse_bl2_boot_enc_key_bytes:
@@ -4437,6 +4640,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-bl2-verify-sig-max-key-bytes must be positive")
     if args.rse_bl2_verify_sig_max_sig_bytes <= 0:
         parser.error("--rse-bl2-verify-sig-max-sig-bytes must be positive")
+    if args.rse_bl2_delay_max_cycles <= 0:
+        parser.error("--rse-bl2-delay-max-cycles must be positive")
+    if args.rse_bl2_delay_expected_hits < 0:
+        parser.error("--rse-bl2-delay-expected-hits must be non-negative")
     if args.rse_bl2_boot_image_count <= 0:
         parser.error("--rse-bl2-boot-image-count must be positive")
     if args.rse_bl2_boot_state_image_stride <= 0:
@@ -4466,6 +4673,7 @@ def parse_args() -> argparse.Namespace:
         args.rse_direct_ap_fip_alias = True
         args.rse_storage_direct_fastpath = True
     resolve_rse_bl2_hook_symbols(args, root)
+    resolve_rse_bl1_2_lms_symbol(args, root)
     return args
 
 

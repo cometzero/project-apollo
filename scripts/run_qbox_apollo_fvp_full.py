@@ -158,6 +158,7 @@ def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
         "ap_bl2_elf": (
             local_build_dir / "work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf"
         ),
+        "rse_bl1_2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl1_2.elf",
         "rse_bl2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl2.elf",
         "rootfs": boot / "apollo-fvp-local-disk.img",
         "efi_capsule_disk": boot / "boot-fat.img",
@@ -178,6 +179,7 @@ def resolved_artifacts(args: argparse.Namespace) -> dict[str, Path]:
         "rse_otp": args.rse_otp,
         "ap_flash": args.ap_flash,
         "ap_bl2_elf": args.ap_bl2_elf,
+        "rse_bl1_2_elf": args.rse_bl1_2_elf,
         "rse_bl2_elf": args.rse_bl2_elf,
         "rootfs": args.rootfs,
         "efi_capsule_disk": args.efi_capsule_disk,
@@ -201,6 +203,7 @@ def missing_required(args: argparse.Namespace, artifacts: dict[str, Path]) -> li
         "rse_otp",
         "ap_flash",
         "ap_bl2_elf",
+        "rse_bl1_2_elf",
         "rse_bl2_elf",
         "rootfs",
         "efi_capsule_disk",
@@ -708,6 +711,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         str(artifacts["ap_flash"]),
         "--ap-bl2-elf",
         str(artifacts["ap_bl2_elf"]),
+        "--rse-bl1-2-elf",
+        str(artifacts["rse_bl1_2_elf"]),
         "--rse-bl2-elf",
         str(artifacts["rse_bl2_elf"]),
         "--rootfs",
@@ -753,15 +758,25 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
     if args.rse_hotpath_accel:
         cmd.append("--rse-hotpath-accel")
         cmd.extend(["--rse-hotpath-max-bytes", str(args.rse_hotpath_max_bytes)])
+    if args.rse_hotpath_memcpy_addr is not None:
+        cmd.extend(["--rse-hotpath-memcpy-addr", hex(args.rse_hotpath_memcpy_addr)])
+    if args.rse_hotpath_memset_addr is not None:
+        cmd.extend(["--rse-hotpath-memset-addr", hex(args.rse_hotpath_memset_addr)])
+    if args.rse_bl2_libc_hotpath:
+        cmd.append("--rse-bl2-libc-hotpath")
     if args.rse_lms_accel:
         cmd.append("--rse-lms-accel")
         cmd.extend(["--rse-lms-max-data-bytes", str(args.rse_lms_max_data_bytes)])
+    if args.rse_lms_verify_addr is not None:
+        cmd.extend(["--rse-lms-verify-addr", hex(args.rse_lms_verify_addr)])
     if args.rse_bl2_load_accel:
         cmd.append("--rse-bl2-load-accel")
         cmd.extend([
             "--rse-bl2-load-accel-max-bytes",
             str(args.rse_bl2_load_accel_max_bytes),
         ])
+    if args.rse_bl2_boot_enc_accel:
+        cmd.append("--rse-bl2-boot-enc-accel")
     if args.rse_bl2_img_hash_accel:
         cmd.append("--rse-bl2-img-hash-accel")
         cmd.extend([
@@ -780,6 +795,14 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         ])
     if args.rse_bl2_verify_sig_skip:
         cmd.append("--rse-bl2-verify-sig-skip")
+    if args.rse_bl2_delay_accel:
+        cmd.append("--rse-bl2-delay-accel")
+        cmd.extend([
+            "--rse-bl2-delay-max-cycles",
+            str(args.rse_bl2_delay_max_cycles),
+            "--rse-bl2-delay-expected-hits",
+            str(args.rse_bl2_delay_expected_hits),
+        ])
     if args.cc3xx_status_read_fastpath:
         cmd.append("--cc3xx-status-read-fastpath")
     if args.cc3xx_qemu_native_backend:
@@ -922,6 +945,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rse-hotpath-max-bytes", type=int, default=16 * 1024 * 1024)
     parser.add_argument(
+        "--rse-hotpath-memcpy-addr",
+        type=lambda value: int(value, 0),
+        help="Forward RSE hotpath memcpy Thumb entry address override.",
+    )
+    parser.add_argument(
+        "--rse-hotpath-memset-addr",
+        type=lambda value: int(value, 0),
+        help="Forward RSE hotpath memset Thumb entry address override.",
+    )
+    parser.add_argument(
+        "--rse-bl2-libc-hotpath",
+        action="store_true",
+        help="Forward RSE BL2 libc memcpy/memset hotpath selection.",
+    )
+    parser.add_argument(
         "--rse-lms-accel",
         action="store_true",
         help=(
@@ -932,11 +970,21 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rse-lms-max-data-bytes", type=int, default=16 * 1024 * 1024)
     parser.add_argument(
+        "--rse-lms-verify-addr",
+        type=lambda value: int(value, 0),
+        help="Forward RSE BL1_2 pq_crypto_verify Thumb entry override.",
+    )
+    parser.add_argument(
         "--rse-bl2-load-accel",
         action="store_true",
         help="Forward RSE BL2 RAM-load payload semantic acceleration.",
     )
     parser.add_argument("--rse-bl2-load-accel-max-bytes", type=int, default=16 * 1024 * 1024)
+    parser.add_argument(
+        "--rse-bl2-boot-enc-accel",
+        action="store_true",
+        help="Forward RSE BL2 boot_enc_decrypt semantic acceleration.",
+    )
     parser.add_argument(
         "--rse-bl2-img-hash-accel",
         action="store_true",
@@ -959,6 +1007,16 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rse-bl2-verify-sig-max-key-bytes", type=int, default=512)
     parser.add_argument("--rse-bl2-verify-sig-max-sig-bytes", type=int, default=128)
+    parser.add_argument(
+        "--rse-bl2-delay-accel",
+        action="store_true",
+        help=(
+            "Forward RSE BL2 delay_cycles acceleration for LBIST, MBIST, "
+            "and CL1 boot wait mimic loops."
+        ),
+    )
+    parser.add_argument("--rse-bl2-delay-max-cycles", type=int, default=50 * 1000 * 1000)
+    parser.add_argument("--rse-bl2-delay-expected-hits", type=int, default=3)
     parser.add_argument("--cc3xx-stats-interval", type=int, default=1024)
     parser.add_argument(
         "--cc3xx-status-read-fastpath",
@@ -993,6 +1051,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--rse-otp", type=Path)
     parser.add_argument("--ap-flash", type=Path)
     parser.add_argument("--ap-bl2-elf", type=Path)
+    parser.add_argument("--rse-bl1-2-elf", type=Path)
     parser.add_argument("--rse-bl2-elf", type=Path)
     parser.add_argument("--rootfs", type=Path)
     parser.add_argument("--efi-capsule-disk", type=Path)
@@ -1009,8 +1068,14 @@ def parse_args() -> argparse.Namespace:
     args.out_dir = args.out_dir.resolve()
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
+    if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:
+        parser.error("--rse-hotpath-memcpy-addr must be positive")
+    if args.rse_hotpath_memset_addr is not None and args.rse_hotpath_memset_addr <= 0:
+        parser.error("--rse-hotpath-memset-addr must be positive")
     if args.rse_lms_max_data_bytes <= 0:
         parser.error("--rse-lms-max-data-bytes must be positive")
+    if args.rse_lms_verify_addr is not None and args.rse_lms_verify_addr <= 0:
+        parser.error("--rse-lms-verify-addr must be positive")
     if args.rse_bl2_load_accel_max_bytes <= 0:
         parser.error("--rse-bl2-load-accel-max-bytes must be positive")
     if args.rse_bl2_img_hash_max_bytes <= 0:
@@ -1021,6 +1086,10 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-bl2-verify-sig-max-key-bytes must be positive")
     if args.rse_bl2_verify_sig_max_sig_bytes <= 0:
         parser.error("--rse-bl2-verify-sig-max-sig-bytes must be positive")
+    if args.rse_bl2_delay_max_cycles <= 0:
+        parser.error("--rse-bl2-delay-max-cycles must be positive")
+    if args.rse_bl2_delay_expected_hits < 0:
+        parser.error("--rse-bl2-delay-expected-hits must be non-negative")
     if args.rse_bl2_verify_sig_skip:
         args.rse_bl2_verify_sig_accel = True
     return args
