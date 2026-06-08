@@ -48,19 +48,20 @@ python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
 것이다.
 
 `run_qbox_apollo_fvp_full.py`는 RSE-first firmware chain을 그대로 사용한다.
-RSE 전체를 우회하는 full-system fast boot mode는 제공하지 않는다. Flash
-read 병목을 분리해서 확인할 때만 range-limited flash DMI fast path를
-명시적으로 켠다. CFI command-state, storage, UEFI variable, FWU fidelity를
-확인할 때는 이 옵션을 사용하지 않는다.
+RSE 전체를 우회하는 full-system fast boot mode는 제공하지 않는다.
+Apollo full-system boot는 AP flash와 host memory의 regular TLM 병목을
+피하기 위해 range-limited flash DMI fast path를 기본으로 켠다. 이 경로는
+스토리지 전체를 stub하지 않고 제한된 boot flash read 범위와 DMI 가능한
+메모리 창만 빠르게 연결한다. CFI command-state, storage, UEFI variable,
+FWU fidelity를 확인할 때만 `--no-range-limited-flash-dmi`로 끈다.
 
 ```bash
 python3 scripts/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --range-limited-flash-dmi \
   --post-login-probe \
-  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-flash-dmi
+  --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
 ```
 
 RSE가 느린 구간은 실행 결과의 다음 필드에서 확인한다.
@@ -319,8 +320,9 @@ scripts/run_qbox_apollo_fvp_full_tmux.sh
 ```
 
 기본 실행은 `live-cl0-cl1`, `--skip-build`, `--post-login-probe`,
-`--keep-running-after-pass`, `--rootfs-bootargs-profile none`, `--timeout 0`을
-사용한다. 따라서 Linux boot와 post-login probe가 끝나도 QBox target은
+`--keep-running-after-pass`, `--rootfs-bootargs-profile none`, `--timeout 0`,
+`--range-limited-flash-dmi`를 사용한다. 따라서 Linux boot와 post-login
+probe가 끝나도 QBox target은
 자동 종료되지 않는다. 종료하려면 tmux에서 `F12`를 눌러 session을
 끝낸다. 실행하면 tmux session 안에 다음 pane이 생성된다.
 
@@ -330,8 +332,7 @@ qemu-native CC3XX backend를 화면 실행에 적용하려면 다음처럼 실�
 scripts/run_qbox_apollo_fvp_full_tmux.sh \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
-  --cc3xx-qemu-native-backend \
-  --range-limited-flash-dmi
+  --cc3xx-qemu-native-backend
 ```
 
 | Pane | 로그 |

@@ -23,7 +23,7 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
-RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-0}"
+RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-1}"
 CC3XX_STATS="${CC3XX_STATS:-0}"
 CC3XX_STATS_INTERVAL="${CC3XX_STATS_INTERVAL:-1024}"
 CC3XX_STATUS_READ_FASTPATH="${CC3XX_STATUS_READ_FASTPATH:-0}"
@@ -63,9 +63,9 @@ Options:
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
   --range-limited-flash-dmi
-                       enable range-limited flash DMI fast path
+                       enable range-limited flash DMI fast path (default)
   --no-range-limited-flash-dmi
-                       disable range-limited flash DMI (default)
+                       disable range-limited flash DMI
   --cc3xx-stats        collect RSE CC3XX aggregate statistics
   --cc3xx-stats-interval N
                        CC3XX stats write interval (default: ${CC3XX_STATS_INTERVAL})

@@ -911,14 +911,27 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
     parser.add_argument("--rootfs-bootargs-profile", default="none")
-    parser.add_argument(
+    dmi_group = parser.add_mutually_exclusive_group()
+    dmi_group.add_argument(
         "--range-limited-flash-dmi",
+        dest="range_limited_flash_dmi",
         action="store_true",
         help=(
             "Forward the storage-safe Strata flash DMI fast path to the "
-            "RD-Aspen runner."
+            "RD-Aspen runner. This is enabled by default for Apollo full-system "
+            "boot performance."
         ),
     )
+    dmi_group.add_argument(
+        "--no-range-limited-flash-dmi",
+        dest="range_limited_flash_dmi",
+        action="store_false",
+        help=(
+            "Disable the range-limited flash DMI fast path for storage "
+            "fidelity experiments."
+        ),
+    )
+    parser.set_defaults(range_limited_flash_dmi=True)
     parser.add_argument(
         "--cc3xx-stats",
         action="store_true",

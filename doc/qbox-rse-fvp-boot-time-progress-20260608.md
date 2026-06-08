@@ -548,3 +548,106 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
   Linux primary console은 timeout 전까지 출력되지 않았다.
 - 다음 최적화는 RSE가 아니라 AP/OP-TEE SP load 경로의 QEMU DMI/local fastpath
   또는 secure partition image load 경로 분석으로 분리해서 진행해야 한다.
+
+## 2026-06-08 AP DMI 계측 및 적용 결과
+
+앞선 full-system timeout은 RSE가 아니라 AP/secure-world boot path의
+regular TLM 병목으로 확인했다. `--range-limited-flash-dmi`를 켜면
+`QBOX_RDASPEN_HOST_MEMORY_DMI=true`,
+`QBOX_RDASPEN_AP_FLASH_DMI_RANGES=0x7000:0x240000`가 적용되어 AP flash와
+host memory가 DMI 가능한 경로를 사용한다. 같은 RSE acceleration 조합에
+이 옵션과 QEMU initiator address profile을 추가해서 재검증했다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --skip-build \
+  --si-mode service-model \
+  --timeout 600 \
+  --post-login-probe \
+  --range-limited-flash-dmi \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-libc-hotpath \
+  --rse-bl2-delay-accel \
+  --rse-bl2-load-accel \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --qbox-perf-profile \
+  --qbox-perf-profile-interval 4096 \
+  --qbox-initiator-addr-profile \
+  --qbox-initiator-addr-profile-limit 128 \
+  --out-dir build/qbox-apollo-fvp/full-safe-accel-ap-dmi-profile-20260608
+```
+
+결과:
+
+- `build/qbox-apollo-fvp/full-safe-accel-ap-dmi-profile-20260608/result.json`
+  기준 `blocker: null`, `G0: pass`, `G2: pass`.
+- RSE start to runtime handoff: `27.318s`.
+- RSE start to Linux boot marker: `56.699s`.
+- RSE start to login prompt: `66.125s`.
+- 전체 elapsed marker 기준 login prompt는 `69.741s`에 관측됐다.
+- `qbox-primary-console.log`에서 post-login probe가 완료됐고
+  `arm_si_rproc`, `rpmsg_net`, `pfdi_misc`, SI CL1 remoteproc attach,
+  `ethsi1`/`brsi1` 구성이 확인됐다.
+
+AP initiator profile:
+
+- `platform.ap_cpu_0.mem`
+  - total accesses: `417792`
+  - regular path: `417792`
+  - `regular_ns`: `4222356483`
+  - `dmi_valid`: `9`
+  - `dmi_alias_added`: `9`
+  - address profile 상위 bucket:
+    - `0x40681000`: `308062`
+    - `0x1a400000`: `39695`
+    - `0x1a410000`: `30518`
+    - `0x406b1000`: `19891`
+- 같은 timeout run의 `platform.ap_cpu_0.mem`은 total accesses
+  `48032768`, regular `48030702`, `regular_ns` `421456154941`,
+  `dmi_alias_added` `2`였다.
+
+결론:
+
+- AP/OP-TEE secure partition load timeout은 full-system에서 AP flash/host
+  memory DMI를 끄고 실행한 것이 직접 원인이다.
+- `--range-limited-flash-dmi`는 stubbing이 아니라 제한된 boot flash read
+  범위와 DMI 가능한 메모리 창만 빠르게 연결하는 QBox DMI fast path다.
+- Apollo full-system runner와 tmux wrapper는 이 경로를 기본값으로 사용한다.
+  CFI command-state, storage, UEFI variable, FWU fidelity를 검증할 때만
+  `--no-range-limited-flash-dmi`로 명시적으로 끈다.
+
+기본값 적용 후 explicit `--range-limited-flash-dmi` 없이 재실행했다.
+
+```bash
+python3 scripts/run_qbox_apollo_fvp_full.py \
+  --skip-build \
+  --si-mode service-model \
+  --timeout 180 \
+  --post-login-probe \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-libc-hotpath \
+  --rse-bl2-delay-accel \
+  --rse-bl2-load-accel \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-accel \
+  --out-dir build/qbox-apollo-fvp/full-default-dmi-boot-20260608
+```
+
+결과:
+
+- child command에 `--range-limited-flash-dmi`가 자동 추가됐다.
+- `build/qbox-apollo-fvp/full-default-dmi-boot-20260608/result.json` 기준
+  `blocker: null`, `range_limited_flash_dmi: true`, `G0: pass`, `G2: pass`.
+- RSE start to runtime handoff: `26.902s`.
+- RSE start to Linux boot marker: `58.100s`.
+- RSE start to login prompt: `68.416s`.
+- 전체 elapsed marker 기준 login prompt는 `71.931s`에 관측됐다.
+- `qbox-primary-console.log`에서 `__QBOX_PROBE_DONE__`, SI CL1 remoteproc
+  attach, rpmsg `ethsi1`, `pfdi_misc` 로딩이 확인됐다.
