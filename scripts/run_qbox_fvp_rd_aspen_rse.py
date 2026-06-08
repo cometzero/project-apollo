@@ -45,6 +45,9 @@ REQUIRED_TARGETS = [
     "remote_cpu",
     "mhuv3_stub",
     "gicx00_multiview",
+    "host_cmn_cyprus",
+    "host_gtimer",
+    "host_ni710ae_nci",
     "host_ppu",
     "cc3xx",
     "dma350",
@@ -54,6 +57,9 @@ REQUIRED_TARGETS = [
     "rse_lcm",
     "rse_sam",
     "strata_flash_j3",
+    "host_smcf_mgi",
+    "host_system_pll",
+    "reset_fanout",
     "rse_sysctrl",
 ]
 
