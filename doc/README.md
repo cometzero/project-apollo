@@ -31,6 +31,9 @@ separate.
 - [QBox Apollo FVP Full-System Goal And Verification](qbox-apollo-fvp-full-system-goal-verification.md) -
   review contract for the full-system objective, non-completion points,
   G0-G5 completion gates, final evidence bundle, and strict verifier command.
+- [QBox Apollo FVP Full-System Goal Completion Report KR](qbox-apollo-fvp-full-system-goal-completion-report-ko.md) -
+  Korean completion report for the G0-G5 goal execution, live CL0/CL1 fix,
+  final evidence bundle, and pushed commit.
 - [QBox Apollo FVP Map Analysis](qbox-apollo-fvp-map-analysis.md) -
   source-backed memory map, interrupt map, ATU, and hardware block analysis for
   the Apollo full-system QBox design.
