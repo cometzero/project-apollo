@@ -93,6 +93,8 @@ usage()
     cat <<'EOF'
 Usage: ./local-build.sh [command]
 
+Default command: build
+
 Commands:
   all       Build/install SDK if needed, build local images, and boot FVP.
   sdk       Build and install the Yocto SDK under build/local-sdk.
@@ -1817,7 +1819,7 @@ clean()
 
 main()
 {
-    local cmd="${1:-all}"
+    local cmd="${1:-build}"
     case "${cmd}" in
         all)
             build_sdk

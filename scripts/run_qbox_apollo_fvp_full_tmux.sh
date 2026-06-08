@@ -29,6 +29,7 @@ CC3XX_STATS_INTERVAL="${CC3XX_STATS_INTERVAL:-1024}"
 CC3XX_STATUS_READ_FASTPATH="${CC3XX_STATUS_READ_FASTPATH:-0}"
 CC3XX_QEMU_NATIVE_BACKEND="${CC3XX_QEMU_NATIVE_BACKEND:-0}"
 CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
+NETDEV="${NETDEV:-${QBOX_RDASPEN_NETDEV:-${QBOX_APOLLO_NETDEV:-}}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
@@ -75,6 +76,8 @@ Options:
                        use QEMU-native CC3XX and direct MMIO fast path
   --cc3xx-local-mmio-fastpath
                        enable QEMU-local CC3XX direct MMIO fast path
+  --netdev SPEC        QEMU user-net specification forwarded to the AP virtio
+                       net device, for example type=user,hostfwd=tcp::2223-:22
   --no-attach          start tmux but do not attach
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -84,7 +87,7 @@ Environment overrides:
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
   ROOTFS_BOOTARGS_PROFILE RANGE_LIMITED_FLASH_DMI CC3XX_STATS
   CC3XX_STATS_INTERVAL CC3XX_STATUS_READ_FASTPATH CC3XX_QEMU_NATIVE_BACKEND
-  CC3XX_LOCAL_MMIO_FASTPATH
+  CC3XX_LOCAL_MMIO_FASTPATH NETDEV QBOX_RDASPEN_NETDEV QBOX_APOLLO_NETDEV
 
 Inside tmux:
   F12                  kill the whole session
@@ -347,6 +350,7 @@ Apollo QBox full-system tmux run
   cc3xx_status_read_fastpath: ${CC3XX_STATUS_READ_FASTPATH}
   cc3xx_qemu_native_backend: ${CC3XX_QEMU_NATIVE_BACKEND}
   cc3xx_local_mmio_fastpath: ${CC3XX_LOCAL_MMIO_FASTPATH}
+  netdev: ${NETDEV:-default}
   out_dir: ${OUT_DIR}
   command: $(quote_args "${cmd[@]}")
 
@@ -439,6 +443,10 @@ start_tmux()
             "${CC3XX_STATS_INTERVAL}" "${CC3XX_STATUS_READ_FASTPATH}"
         printf 'CC3XX_QEMU_NATIVE_BACKEND=%q ' "${CC3XX_QEMU_NATIVE_BACKEND}"
         printf 'CC3XX_LOCAL_MMIO_FASTPATH=%q ' "${CC3XX_LOCAL_MMIO_FASTPATH}"
+        if [[ -n "${NETDEV}" ]]; then
+            printf 'NETDEV=%q QBOX_RDASPEN_NETDEV=%q QBOX_APOLLO_NETDEV=%q ' \
+                "${NETDEV}" "${NETDEV}" "${NETDEV}"
+        fi
         printf 'SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
             "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
@@ -583,6 +591,11 @@ while (($# > 0)); do
         --cc3xx-local-mmio-fastpath)
             CC3XX_LOCAL_MMIO_FASTPATH=1
             shift
+            ;;
+        --netdev)
+            (($# >= 2)) || die "--netdev requires a value"
+            NETDEV="$2"
+            shift 2
             ;;
         --no-attach)
             NO_ATTACH=1

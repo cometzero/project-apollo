@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+#
+# Launch the Apollo FVP full-system QBox demo from the workspace top directory.
+#
+# The script keeps the user-facing tmux layout from
+# scripts/run_qbox_apollo_fvp_full_tmux.sh, selects a free SSH host-forward
+# port, and applies the current default RSE/QBox performance options.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
+TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
+OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-user-demo-${RUN_STAMP}}"
+LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+SI_MODE="${SI_MODE:-live-cl0-cl1}"
+TIMEOUT="${TIMEOUT:-0}"
+JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
+SSH_PORT_START="${SSH_PORT_START:-2222}"
+SSH_PORT_END="${SSH_PORT_END:-2299}"
+RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-1}"
+DRY_RUN=0
+
+die()
+{
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+usage()
+{
+    cat <<EOF
+Usage: ./run_qbox.sh [tmux-runner options]
+
+Build local boot artifacts first:
+  ./local-build.sh
+
+Then launch QBox in tmux:
+  ./run_qbox.sh
+
+Common overrides:
+  TMUX_SESSION=apollo-demo ./run_qbox.sh
+  OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox.sh
+  SSH_PORT=2225 ./run_qbox.sh
+  ./run_qbox.sh --no-attach
+  ./run_qbox.sh --dry-run
+
+Defaults:
+  session: ${TMUX_SESSION}
+  out_dir: ${OUT_DIR}
+  local_build_dir: ${LOCAL_BUILD_DIR}
+  si_mode: ${SI_MODE}
+  timeout: ${TIMEOUT}
+
+The selected SSH host-forward port is exposed as host port <port> -> guest :22.
+Per-run writable copies of the local rootfs and EFI capsule disks are created
+under <out_dir>/input-images by default.
+EOF
+}
+
+abspath()
+{
+    case "$1" in
+        /*) printf '%s\n' "$1" ;;
+        *) printf '%s/%s\n' "$PWD" "$1" ;;
+    esac
+}
+
+port_in_use()
+{
+    local port="$1"
+
+    if command -v ss >/dev/null 2>&1; then
+        ss -H -ltn 2>/dev/null | awk '{print $4}' |
+            grep -Eq "(^|[:.])${port}$|\\]:${port}$"
+        return $?
+    fi
+
+    python3 - "${port}" <<'PY'
+import socket
+import sys
+
+port = int(sys.argv[1])
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+    sock.settimeout(0.2)
+    try:
+        sock.connect(("127.0.0.1", port))
+    except OSError:
+        sys.exit(1)
+sys.exit(0)
+PY
+}
+
+find_free_port()
+{
+    local port
+
+    if [[ -n "${SSH_PORT:-}" ]]; then
+        port="${SSH_PORT}"
+        [[ "${port}" =~ ^[0-9]+$ ]] || die "SSH_PORT must be numeric: ${port}"
+        if port_in_use "${port}"; then
+            die "requested SSH_PORT is already in use: ${port}"
+        fi
+        printf '%s\n' "${port}"
+        return 0
+    fi
+
+    [[ "${SSH_PORT_START}" =~ ^[0-9]+$ ]] ||
+        die "SSH_PORT_START must be numeric: ${SSH_PORT_START}"
+    [[ "${SSH_PORT_END}" =~ ^[0-9]+$ ]] ||
+        die "SSH_PORT_END must be numeric: ${SSH_PORT_END}"
+    ((SSH_PORT_START <= SSH_PORT_END)) ||
+        die "SSH_PORT_START must be <= SSH_PORT_END"
+
+    for ((port = SSH_PORT_START; port <= SSH_PORT_END; port++)); do
+        if ! port_in_use "${port}"; then
+            printf '%s\n' "${port}"
+            return 0
+        fi
+    done
+
+    die "no free SSH host-forward port in ${SSH_PORT_START}-${SSH_PORT_END}"
+}
+
+preparse_args()
+{
+    local -a args=("$@")
+    local i=0
+    local arg
+
+    while ((i < ${#args[@]})); do
+        arg="${args[$i]}"
+        case "${arg}" in
+            --session)
+                ((i + 1 < ${#args[@]})) || die "--session requires a value"
+                TMUX_SESSION="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --out-dir)
+                ((i + 1 < ${#args[@]})) || die "--out-dir requires a value"
+                OUT_DIR="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --local-build-dir)
+                ((i + 1 < ${#args[@]})) || die "--local-build-dir requires a value"
+                LOCAL_BUILD_DIR="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --si-mode)
+                ((i + 1 < ${#args[@]})) || die "--si-mode requires a value"
+                SI_MODE="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --timeout)
+                ((i + 1 < ${#args[@]})) || die "--timeout requires a value"
+                TIMEOUT="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --jobs)
+                ((i + 1 < ${#args[@]})) || die "--jobs requires a value"
+                JOBS="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
+            --dry-run)
+                DRY_RUN=1
+                i=$((i + 1))
+                ;;
+            --)
+                break
+                ;;
+            *)
+                i=$((i + 1))
+                ;;
+        esac
+    done
+}
+
+copy_image()
+{
+    local src="$1"
+    local dst="$2"
+
+    [[ -f "${src}" ]] || die "missing input image: ${src}"
+    mkdir -p "$(dirname "${dst}")"
+    cp --reflink=auto --sparse=always -- "${src}" "${dst}"
+}
+
+prepare_run_disks()
+{
+    local rootfs_src="${LOCAL_BUILD_DIR}/deploy/boot/apollo-fvp-local-disk.img"
+    local efi_src="${LOCAL_BUILD_DIR}/deploy/boot/boot-fat.img"
+    local image_dir="${OUT_DIR}/input-images"
+
+    RUN_ROOTFS="${image_dir}/apollo-fvp-local-disk.img"
+    RUN_EFI_CAPSULE_DISK="${image_dir}/boot-fat.img"
+
+    if [[ "${RUN_QBOX_COPY_DISKS}" != "1" ]]; then
+        RUN_ROOTFS="${rootfs_src}"
+        RUN_EFI_CAPSULE_DISK="${efi_src}"
+        return 0
+    fi
+
+    if ((DRY_RUN)); then
+        return 0
+    fi
+
+    copy_image "${rootfs_src}" "${RUN_ROOTFS}"
+    copy_image "${efi_src}" "${RUN_EFI_CAPSULE_DISK}"
+}
+
+main()
+{
+    case "${1:-}" in
+        -h|--help|help)
+            usage
+            return 0
+            ;;
+    esac
+
+    preparse_args "$@"
+    OUT_DIR="$(abspath "${OUT_DIR}")"
+    LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+
+    [[ -d "${LOCAL_BUILD_DIR}" ]] ||
+        die "missing local build directory: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
+
+    local ssh_port
+    local netdev
+    ssh_port="$(find_free_port)"
+    netdev="${QBOX_NETDEV:-type=user,hostfwd=tcp::${ssh_port}-:22}"
+    prepare_run_disks
+
+    printf 'Apollo QBox full-system launch\n'
+    printf '  session: %s\n' "${TMUX_SESSION}"
+    printf '  out_dir: %s\n' "${OUT_DIR}"
+    printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"
+    printf '  netdev: %s\n' "${netdev}"
+    printf '  rootfs: %s\n' "${RUN_ROOTFS}"
+    printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
+
+    exec "${ROOT_DIR}/scripts/run_qbox_apollo_fvp_full_tmux.sh" \
+        --session "${TMUX_SESSION}" \
+        --out-dir "${OUT_DIR}" \
+        --local-build-dir "${LOCAL_BUILD_DIR}" \
+        --si-mode "${SI_MODE}" \
+        --timeout "${TIMEOUT}" \
+        --jobs "${JOBS}" \
+        --skip-build \
+        --post-login-probe \
+        --keep-running-after-pass \
+        --cc3xx-qemu-native-backend \
+        --netdev "${netdev}" \
+        "$@" \
+        -- \
+        --rootfs "${RUN_ROOTFS}" \
+        --efi-capsule-disk "${RUN_EFI_CAPSULE_DISK}" \
+        --rse-lms-accel \
+        --rse-fast-boot-aliases \
+        --rse-bl2-libc-hotpath \
+        --rse-bl2-delay-accel \
+        --rse-bl2-load-accel \
+        --rse-bl2-boot-enc-accel \
+        --rse-bl2-img-hash-accel \
+        --rse-bl2-verify-sig-accel
+}
+
+main "$@"

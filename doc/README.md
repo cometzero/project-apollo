@@ -28,6 +28,9 @@ separate.
 - [QBox Apollo FVP Full-System Runbook KR](qbox-apollo-fvp-full-system-runbook-ko.md) -
   Korean execution guide for building, running, validating, and debugging the
   Apollo full-system QBox path.
+- [QBox Apollo FVP Full-System Quickstart KR](qbox-apollo-fvp-full-system-quickstart-ko.md) -
+  Korean quickstart for launching the Apollo full-system QBox path in tmux,
+  watching subsystem UART logs, and checking run evidence.
 - [QBox Apollo FVP Full-System Goal And Verification](qbox-apollo-fvp-full-system-goal-verification.md) -
   review contract for the full-system objective, non-completion points,
   G0-G5 completion gates, final evidence bundle, and strict verifier command.
