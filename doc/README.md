@@ -15,6 +15,13 @@ separate.
 - [Arm Zena CSS Hardware Blocks](arm-zena-css-hardware-blocks.md) - RD-Aspen
   hardware block map, Safety Island/RSE/Primary Compute relationships, and
   FVP-visible device evidence.
+- [Apollo FVP Hardware Analysis KR](apollo-fvp-hardware-analysis-ko.md) -
+  Korean source-backed hardware analysis for Apollo FVP/RD-Aspen CFG2 covering
+  RSE, Safety Island CL0/CL1, interconnect, interrupt, processor, I/O, system
+  management, and peripheral blocks.
+- [Apollo QBox Hardware KR](apollo-qbox-hardware-ko.md) - Korean mapping from
+  Apollo FVP hardware blocks to current QBox/QEMU emulation paths, including
+  Lua instances, SystemC modules, QEMU modules, and fidelity status.
 - [QBox FVP Emulation Project](qbox-fvp-emulation-project.md) - project
   mission and workflow for implementing the Arm Zena CSS/RD-Aspen FVP behavior
   in QBox with SystemC/TLM/QEMU fidelity.
@@ -68,9 +75,10 @@ separate.
 ## Evidence Scope
 
 The analysis is grounded in repository-local files and current generated
-artifacts. Source evidence is cited as `path:line` references. Generated build
-outputs under `build/tmp_baremetal` are treated as evidence of this checkout's
-current local state, not as upstream source.
+artifacts. Source evidence is cited as file paths and, where useful,
+`path:line` references. Generated build outputs under `build/tmp_baremetal` are
+treated as evidence of this checkout's current local state, not as upstream
+source.
 
 ## Edit Scope
 
