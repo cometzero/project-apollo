@@ -443,12 +443,12 @@ component 변경 이후에는 다음 검사를 권장한다.
 
 ```bash
 cmake --build tools/qbox/build \
-  --target reset_fanout reset_fanout-tests mhuv3_stub mhuv3_stub-tests \
+  --target reset_fanout reset_fanout-tests mhu320ae mhu320ae-tests \
   platforms-vp \
   --parallel 8
 
 ctest --test-dir tools/qbox/build \
-  -R 'reset_fanout|mhuv3_stub' \
+  -R 'reset_fanout|mhu320ae' \
   --output-on-failure
 ```
 

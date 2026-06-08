@@ -248,12 +248,15 @@ main()
         --skip-build \
         --post-login-probe \
         --keep-running-after-pass \
+        --qbox-performance-preset \
         --cc3xx-qemu-native-backend \
+        --remotepass-dmi-cache \
         --netdev "${netdev}" \
         "$@" \
         -- \
         --rootfs "${RUN_ROOTFS}" \
         --efi-capsule-disk "${RUN_EFI_CAPSULE_DISK}" \
+        --rse-hotpath-accel \
         --rse-lms-accel \
         --rse-fast-boot-aliases \
         --rse-bl2-libc-hotpath \

@@ -509,11 +509,28 @@ def write_result(
             "ap_si": str((args.out_dir / "ap-si-mhuv3-trace.log").resolve()),
             "si_cl1": str((args.out_dir / "si-cl1-mhuv3-trace.log").resolve()),
         }
+    qbox_performance_options = {
+        "remotepass_dmi_cache": bool(args.remotepass_dmi_cache),
+        "rse_hotpath_accel": bool(args.rse_hotpath_accel),
+        "rse_bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
+        "rse_lms_accel": bool(args.rse_lms_accel),
+        "rse_bl2_load_accel": bool(args.rse_bl2_load_accel),
+        "rse_bl2_boot_enc_accel": bool(args.rse_bl2_boot_enc_accel),
+        "rse_bl2_img_hash_accel": bool(args.rse_bl2_img_hash_accel),
+        "rse_bl2_verify_sig_accel": bool(args.rse_bl2_verify_sig_accel),
+        "rse_bl2_delay_accel": bool(args.rse_bl2_delay_accel),
+        "cc3xx_qemu_native_backend": bool(args.cc3xx_qemu_native_backend),
+        "rse_fast_boot_aliases": bool(args.rse_fast_boot_aliases),
+    }
     status: dict[str, Any] = {
         "passed": passed,
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "safety_island_mode": args.si_mode,
+        "smmu_backend": args.smmu_backend,
+        "mhu_backend": "systemc-mhu320ae",
+        "qbox_performance_preset": args.qbox_performance_preset,
+        "qbox_performance_options": qbox_performance_options,
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
         "live_trace": args.live_trace,
         "completion_gates": gates,
@@ -554,6 +571,11 @@ def write_result(
         f"verdict: {status['verdict']}",
         f"boot_mode: {status['boot_mode']}",
         f"safety_island_mode: {args.si_mode}",
+        f"smmu_backend: {status['smmu_backend']}",
+        f"mhu_backend: {status['mhu_backend']}",
+        f"qbox_performance_preset: {status['qbox_performance_preset']}",
+        "qbox_performance_options: "
+        + json.dumps(status["qbox_performance_options"], sort_keys=True),
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         f"live_trace: {status['live_trace']}",
         f"blocker: {status['blocker'] or 'none'}",
@@ -729,6 +751,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         str(args.jobs),
         "--scp-strategy",
         scp_strategy,
+        "--smmu-backend",
+        args.smmu_backend,
         "--rootfs-bootargs-profile",
         args.rootfs_bootargs_profile,
         "--primary-login-prompt",
@@ -809,6 +833,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--cc3xx-qemu-native-backend")
     if args.cc3xx_local_mmio_fastpath:
         cmd.append("--cc3xx-local-mmio-fastpath")
+    if args.rse_fast_boot_aliases:
+        cmd.append("--rse-fast-boot-aliases")
     if args.post_login_probe:
         cmd.append("--post-login-probe")
     if args.keep_running_after_pass:
@@ -909,8 +935,33 @@ def parse_args() -> argparse.Namespace:
             "the pass condition."
         ),
     )
+    parser.add_argument(
+        "--smmu-backend",
+        choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
+        default="systemc-mmu720ae",
+        help="Forwarded SMMU backend for the AP side of the QBox platform.",
+    )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
     parser.add_argument("--rootfs-bootargs-profile", default="none")
+    perf_group = parser.add_mutually_exclusive_group()
+    perf_group.add_argument(
+        "--qbox-performance-preset",
+        dest="qbox_performance_preset",
+        action="store_true",
+        help=(
+            "Enable the validated QBox Apollo full-system boot acceleration "
+            "preset. This is the default."
+        ),
+    )
+    perf_group.add_argument(
+        "--no-qbox-performance-preset",
+        dest="qbox_performance_preset",
+        action="store_false",
+        help=(
+            "Disable the default acceleration preset for fidelity or debug "
+            "experiments."
+        ),
+    )
     dmi_group = parser.add_mutually_exclusive_group()
     dmi_group.add_argument(
         "--range-limited-flash-dmi",
@@ -931,7 +982,7 @@ def parse_args() -> argparse.Namespace:
             "fidelity experiments."
         ),
     )
-    parser.set_defaults(range_limited_flash_dmi=True)
+    parser.set_defaults(qbox_performance_preset=True, range_limited_flash_dmi=True)
     parser.add_argument(
         "--cc3xx-stats",
         action="store_true",
@@ -1050,6 +1101,14 @@ def parse_args() -> argparse.Namespace:
         help="Forward the RSE CC3XX QEMU-local direct MMIO fast path.",
     )
     parser.add_argument(
+        "--rse-fast-boot-aliases",
+        action="store_true",
+        help=(
+            "Forward the validated RSE fast-boot direct alias preset to the "
+            "RSE runner."
+        ),
+    )
+    parser.add_argument(
         "--live-trace",
         action="store_true",
         help=(
@@ -1079,6 +1138,18 @@ def parse_args() -> argparse.Namespace:
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     args.out_dir = args.out_dir.resolve()
+    if args.qbox_performance_preset:
+        args.remotepass_dmi_cache = True
+        args.rse_hotpath_accel = True
+        args.rse_bl2_libc_hotpath = True
+        args.rse_lms_accel = True
+        args.rse_bl2_load_accel = True
+        args.rse_bl2_boot_enc_accel = True
+        args.rse_bl2_img_hash_accel = True
+        args.rse_bl2_verify_sig_accel = True
+        args.rse_bl2_delay_accel = True
+        args.cc3xx_qemu_native_backend = True
+        args.rse_fast_boot_aliases = True
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
     if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:

@@ -142,7 +142,6 @@ def validate_qbox_lua(lua_path: Path) -> list[dict[str, object]]:
         "sbsa_gwdt_refresh": "refresh_mem",
         "sbsa_gwdt_control": "control_mem",
         "armv7_timer_mem": "timer_mem_0",
-        "smmu_v3": "smmu_0",
         "si_cl1_mhu_tx": "mhuv3_si_rproc_tx_0",
         "si_cl1_mhu_rx": "mhuv3_si_rproc_rx_0",
         "virtio_blk0": "virtioblk_0",
@@ -155,6 +154,8 @@ def validate_qbox_lua(lua_path: Path) -> list[dict[str, object]]:
     }
 
     for name, region in {**MEMORY_REGIONS, **DEVICE_REGIONS}.items():
+        if name not in module_names:
+            continue
         checks.append(
             check_regex(
                 f"lua:{name}:reg",
@@ -193,7 +194,25 @@ def validate_qbox_lua(lua_path: Path) -> list[dict[str, object]]:
         )
     )
     checks.append(
-        check_regex("lua:smmu_v3:module", text, r"moduletype\s*=\s*\"arm_smmuv3\"")
+        check_regex(
+            "lua:smmu_v3:reg",
+            text,
+            r"smmu0_component.*?address\s*=\s*0x0*1c0000000\s*[,;].*?"
+            r"size\s*=\s*0x0*8000000\s*[,;]",
+        )
+    )
+    checks.append(
+        check_regex(
+            "lua:smmu_v3:backend-selector",
+            text,
+            r"QBOX_RDASPEN_SMMU_BACKEND",
+        )
+    )
+    checks.append(
+        check_regex("lua:smmu_v3:qemu-module", text, r"moduletype\s*=\s*\"arm_smmuv3\"")
+    )
+    checks.append(
+        check_regex("lua:smmu_v3:systemc-module", text, r"moduletype\s*=\s*\"mmu720ae\"")
     )
     checks.append(
         check_regex(

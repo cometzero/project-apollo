@@ -25,7 +25,7 @@ REQUIRED_TARGETS = [
     "uart-pl011",
     "arm_gicv3",
     "cpu_arm_cortexR82",
-    "mhuv3_stub",
+    "mhu320ae",
 ]
 
 REQUIRED_MARKERS = {

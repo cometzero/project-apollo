@@ -95,7 +95,7 @@ tools/qbox/platforms/apollo-fvp/si-cl1.lua
 +---------------------------------------------------------------+
 | SystemC/TLM Host Models                                        |
 |  - gicx00_multiview                                            |
-|  - mhuv3_stub                                                  |
+|  - mhu320ae                                                    |
 |  - host_cmn_cyprus                                             |
 |  - host_gtimer                                                 |
 |  - host_ni710ae_nci                                            |
@@ -209,11 +209,11 @@ bring-up 회귀 검사에 유용하다.
 | `host_system_pll` | system PLL status/control surface를 제공한다. |
 | `host_ppu` | policy, dynamic/off-lock, operating status bit를 모델링한다. |
 | `host_scr` | CL0 config와 PCID reset value를 Apollo에 맞게 설정할 수 있게 한다. |
-| `mhuv3_stub` | SCMI channel range, PFDI monitor protocol, AP-SI/CL1 MHU trace를 지원한다. |
+| `mhu320ae` | MHU-320AE/MHUv3-compatible SCMI channel range, PFDI monitor protocol, AP-SI/CL1 MHU trace를 지원한다. |
 | `reset_fanout` | 하나의 reset 신호를 여러 CPU reset 입력으로 분배한다. |
 
 각 모델에는 `tools/qbox/tests/components/` 아래에 component test가
-추가되었다. 최소 검증 대상은 `reset_fanout`과 `mhuv3_stub`이며, 전체
+추가되었다. 최소 검증 대상은 `reset_fanout`과 `mhu320ae`이며, 전체
 component build는 `platforms-vp` target으로 확인한다.
 
 ## QEMU Cortex-R82 변경
@@ -282,7 +282,7 @@ full-system boot에서 중요한 통신 경로는 다음과 같다.
 | AP <-> SI HIPC/RPMsg MHU | Linux `ethsi1`, OpenAMP/RPMsg path | `hipc_ethsi1`, `rpmsg`, `arm_si_rproc` markers |
 | CL1 <-> CL0 MHU | PFDI monitor/agent path | SI CL0/CL1 logs, `si-cl1-mhuv3-trace.log` |
 
-`mhuv3_stub`는 단순 doorbell만 처리하지 않고, SCMI channel base index와
+`mhu320ae`는 단순 doorbell만 처리하지 않고, SCMI channel base index와
 PFDI monitor protocol에 필요한 register/channel 동작을 포함한다.
 
 ## Evidence 및 검증 모델

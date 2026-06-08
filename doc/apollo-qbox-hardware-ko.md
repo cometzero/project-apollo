@@ -49,7 +49,7 @@ QBox 구현은 한 종류의 backend만 쓰지 않는다. 현재 Apollo FVP 하�
 | --- | --- | --- |
 | Lua platform wiring | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file` | 주소 decode, alias, image load, log backend |
 | QEMU-backed CPU/IP | `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, `arm_gicv3`, `arm_gicv3_its`, `arm_smmuv3`, `virtio_mmio_*`, `pl031`, `sbsa_gwdt` | QEMU/libqemu device model을 SystemC socket으로 노출 |
-| SystemC/TLM behavioral model | `rse_atu`, `mhuv3_stub`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `host_ppu`, `gicx00_multiview` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
+| SystemC/TLM behavioral model | `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `host_ppu`, `gicx00_multiview` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
 | QEMU-native fast backend | `qemu_cc3xx` | `cc3xx_core`를 QEMU MemoryRegionOps fast path로 실행 |
 | Remote CPU bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` | RSE Cortex-M55 실행과 SystemC host platform 연결 |
 | Placeholder/memory-backed model | `gs_memory` | 아직 full behavioral model이 없는 register window 보존 |
@@ -149,13 +149,13 @@ SystemC scheduler bridge 비용을 줄인다. 이는 secure boot 검증을 우�
 
 | 통신 경로 | QBox instance | Module | 프로토콜 |
 | --- | --- | --- | --- |
-| RSE local MHU0 sender/receiver | `rse_mhu0_sender_s`, `rse_mhu0_receiver_s` | `mhuv3_stub` | doorbell |
-| RSE local MHU2 sender/receiver | `rse_mhu2_sender_s`, `rse_mhu2_receiver_s` | `mhuv3_stub` | doorbell-bridge |
-| RSE <-> SI CL0 host MHU | `host_rse_si_mhu_pbx`, `host_rse_si_mhu_mbx` | `mhuv3_stub` | SCMI, `rse-bl2` transport |
-| AP secure <-> RSE MHU | `host_ap_rse_mhu_pbx`, `host_ap_rse_mhu_mbx` | `mhuv3_stub` | doorbell-bridge |
+| RSE local MHU0 sender/receiver | `rse_mhu0_sender_s`, `rse_mhu0_receiver_s` | `mhu320ae` | doorbell |
+| RSE local MHU2 sender/receiver | `rse_mhu2_sender_s`, `rse_mhu2_receiver_s` | `mhu320ae` | doorbell-bridge |
+| RSE <-> SI CL0 host MHU | `host_rse_si_mhu_pbx`, `host_rse_si_mhu_mbx` | `mhu320ae` | SCMI, `rse-bl2` transport |
+| AP secure <-> RSE MHU | `host_ap_rse_mhu_pbx`, `host_ap_rse_mhu_mbx` | `mhu320ae` | doorbell-bridge |
 | AP/RSE mailbox SRAM | `host_ap_rse_mailbox` | `gs_memory` | MHU pointer-access window |
 
-`mhuv3_stub`는 이름은 stub이지만 단순 register sink가 아니다. 현재 설정에서
+`mhu320ae`는 MHU-320AE/MHUv3-compatible SystemC component다. 현재 설정에서
 SCMI service-model, doorbell bridge, RPMsg namespace seed, PFDI monitor
 shared-memory 초기화, reset pulse 같은 platform service 기능을 함께 갖는다.
 
@@ -215,8 +215,8 @@ CL1은 full-system과 isolated 경로 모두 4-core live Zephyr 대상으로
 | CL1 HIPC shared RAM | isolated: `si_cl1_shared_ram`, full: `host_ap_bl2_header_sram` alias | `gs_memory` | resource table/vring/RPMsg buffer |
 | CL1 GIC view 2 | `si_cl1_gic` | `arm_gicv3` | GICD `0x30200000`, 4 redistributors |
 | CL1 UART | `si_cl1_uart` | `Pl011` | Zephyr console file log |
-| CL1 HIPC PBX/MBX | `si_cl1_hipc_mhu_pbx`, `si_cl1_hipc_mhu_mbx` | `mhuv3_stub` | doorbell 또는 doorbell-bridge |
-| CL1 PFDI MHU | `si_cl1_pfdi_mhu_pbx` | `mhuv3_stub` | SCMI `pfdi-monitor` transport |
+| CL1 HIPC PBX/MBX | `si_cl1_hipc_mhu_pbx`, `si_cl1_hipc_mhu_mbx` | `mhu320ae` | doorbell 또는 doorbell-bridge |
+| CL1 PFDI MHU | `si_cl1_pfdi_mhu_pbx` | `mhu320ae` | SCMI `pfdi-monitor` transport |
 | CL1 image loader | `si_cl1_loader` | `loader` | `zephyr-demos-cl1.bin` load |
 | CL1 reset fanout | `apollo_si_cl1_reset_fanout` | `reset_fanout` | live CL0가 CL1/AP reset release 연동 |
 
@@ -252,7 +252,7 @@ surface를 표현한다.
 | GIC multiview control surface | `gicx00_multiview` | SCP가 접근하는 view0/multiview registers |
 | AP timer PPIs | `cpu_arm_cortexA720AE` timer outputs -> `arm_gicv3.ppi_in_cpu_*` | architectural timer |
 | SI timer PPIs | `cpu_arm_cortexR82` timer outputs -> `arm_gicv3.ppi_in_cpu_*` | CL0/CL1 timers |
-| MHU SPIs | `mhuv3_stub.irq` -> `arm_gicv3.spi_in_*` | SCMI/HIPC/PFDI doorbells |
+| MHU SPIs | `mhu320ae.irq` -> `arm_gicv3.spi_in_*` | SCMI/HIPC/PFDI doorbells |
 
 QBox는 현재 GIC-720AE를 하나의 monolithic model로 구현하지 않는다. QEMU
 GICv3 backend를 AP, SI CL0, SI CL1에 각각 두고, SystemC
@@ -279,9 +279,9 @@ AP-RSE, RSE-SI MHU와 shared memory를 더 많이 포함한다.
 
 | FVP 기능 | QBox instance/module | 설명 |
 | --- | --- | --- |
-| RGM/reset release | `reset_gpio`, `reset_fanout`, `host_ppu`, `mhuv3_stub` reset hooks | AP/CL1 reset pulse와 power domain reset 연결 |
+| RGM/reset release | `reset_gpio`, `reset_fanout`, `host_ppu`, `mhu320ae` reset hooks | AP/CL1 reset pulse와 power domain reset 연결 |
 | SMD SRAM | `host_rse_si_ssram`, `host_smcf_sram`, `si_cl0_smd_shared_sram` | SCMI/SMCF/shared payload backing memory |
-| SCMI | `mhuv3_stub` protocol `scmi` | RSE-SI, AP-SI, PFDI monitor service-model transport |
+| SCMI | `mhu320ae` protocol `scmi` | RSE-SI, AP-SI, PFDI monitor service-model transport |
 | PFDI monitor | `host_ap_si_pfdi_monitor_mhu_pbx`, `si_cl1_pfdi_mhu_pbx` | AP 16 channels, CL1 4 channels shared-memory SCMI |
 | SMCF | `host_smcf_mgi`, `gs_memory` SMCF SRAM | monitor group interface register model |
 | FMU/SSU | `gs_memory` windows | register access placeholder; full fault semantics pending |
@@ -298,16 +298,16 @@ System management은 현재 “모든 IP를 full semantic model로 구현”한 
 | 도메인 | FVP peripheral | QBox module |
 | --- | --- | --- |
 | AP | UART, watchdog, RTC, timer, virtio | `Pl011`, `sbsa_gwdt`, `pl031`, `qemu_hexagon_qtimer`, `virtio_mmio_*` |
-| RSE | UART, boot flash, DMA350, CC3XX, KMU, LCM, SAM, ATU, MHU | `Pl011`, `strata_flash_j3`, `dma350`, `cc3xx`/`qemu_cc3xx`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_atu`, `mhuv3_stub` |
+| RSE | UART, boot flash, DMA350, CC3XX, KMU, LCM, SAM, ATU, MHU | `Pl011`, `strata_flash_j3`, `dma350`, `cc3xx`/`qemu_cc3xx`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_atu`, `mhu320ae` |
 | SI CL0 | UART, GIC, timers, SCR, NI-710AE, CMN, PPU, SMCF, SSU/FMU | `Pl011`, `arm_gicv3`, `gicx00_multiview`, `host_gtimer`, `host_scr`, `host_ni710ae_nci`, `host_cmn_cyprus`, `host_ppu`, `host_smcf_mgi`, `gs_memory` |
-| SI CL1 | UART, GIC, HIPC/PFDI MHU, SCMI shmem, SRAM | `Pl011`, `arm_gicv3`, `mhuv3_stub`, `gs_memory` |
+| SI CL1 | UART, GIC, HIPC/PFDI MHU, SCMI shmem, SRAM | `Pl011`, `arm_gicv3`, `mhu320ae`, `gs_memory` |
 
 ## 모듈 상태 분류
 
 | 분류 | 모듈 |
 | --- | --- |
 | QEMU-backed live model | `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, `arm_gicv3`, `arm_gicv3_its`, `arm_smmuv3`, `virtio_mmio_blk`, `virtio_mmio_net`, `virtio_mmio_rng`, `pl031`, `sbsa_gwdt`, `qemu_gpex` |
-| SystemC behavioral model | `rse_atu`, `mhuv3_stub`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_sysctrl`, `rse_integrity_checker`, `host_gtimer`, `host_ppu`, `host_scr`, `host_cmn_cyprus`, `host_ni710ae_nci`, `host_smcf_mgi`, `host_system_pll`, `gicx00_multiview` |
+| SystemC behavioral model | `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_sysctrl`, `rse_integrity_checker`, `host_gtimer`, `host_ppu`, `host_scr`, `host_cmn_cyprus`, `host_ni710ae_nci`, `host_smcf_mgi`, `host_system_pll`, `gicx00_multiview` |
 | QEMU-native fast path | `qemu_cc3xx` |
 | Remote bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` |
 | Infrastructure | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file`, `char_backend_stdio`, `global_peripheral_initiator`, `reset_fanout`, `reset_gpio`, `keep_alive`, `QemuInstance`, `QemuInstanceManager` |
@@ -322,9 +322,9 @@ System management은 현재 “모든 IP를 full semantic model로 구현”한 
 3. GIC-720AE multiview는 QEMU GICv3 backend와 SystemC
    `gicx00_multiview` control surface 조합이다. FVP의 물리 GIC와 1:1
    구조는 아니다.
-4. `mhuv3_stub`는 boot/service integration을 많이 수행한다. 이름 때문에
-   단순 register stub로 오해하면 안 되지만, full MHUv3 architectural model도
-   아니다.
+4. `mhu320ae`는 boot/service integration을 많이 수행한다. 단순 register
+   sink로 오해하면 안 되지만, full MHU-320AE architectural model parity는
+   아직 남아 있다.
 5. `gs_memory`로 처리되는 windows는 firmware access를 막지 않기 위한
    placeholder일 수 있다. fault propagation, access permission, side effect가
    필요한 IP는 추후 full model로 승격해야 한다.

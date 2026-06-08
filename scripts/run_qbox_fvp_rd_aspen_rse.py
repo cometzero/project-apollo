@@ -37,13 +37,14 @@ REQUIRED_TARGETS = [
     "arm_gicv3_its",
     "qemu_gpex",
     "arm_smmuv3",
+    "mmu720ae",
     "reset_gpio",
     "pl031",
     "sbsa_gwdt",
     "cpu_arm_cortexM55",
     "nvic_armv7m",
     "remote_cpu",
-    "mhuv3_stub",
+    "mhu320ae",
     "gicx00_multiview",
     "host_cmn_cyprus",
     "host_gtimer",
@@ -2741,6 +2742,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     env["QBOX_RDASPEN_FLASH_WRITEBACK"] = (
         "false" if args.no_copy_writable_flash else "true"
     )
+    env["QBOX_RDASPEN_SMMU_BACKEND"] = args.smmu_backend
     env["QBOX_RDASPEN_AP_FLASH"] = str(artifacts["ap_flash"])
     if args.ap_bl2_elf:
         env["QBOX_RDASPEN_AP_BL2_ELF"] = str(args.ap_bl2_elf)
@@ -3363,6 +3365,7 @@ def write_result(
         {
             "boot_mode": "rse-oriented",
             "scp_strategy": args.scp_strategy,
+            "smmu_backend": args.smmu_backend,
             "range_limited_flash_dmi": args.range_limited_flash_dmi,
             "cc3xx_status_read_fastpath": {
                 "enabled": args.cc3xx_status_read_fastpath,
@@ -3417,7 +3420,7 @@ def write_result(
                     if os.environ.get("QBOX_RDASPEN_ATU_DMI") == "true"
                     else "translation-model"
                 ),
-                "mhuv3": "temporary-stub",
+                "mhuv3": "systemc-mhu320ae",
                 "rse_scp_endpoint": rse_scp_endpoint_label,
                 "rse_oriented_ap_boot": ap_boot_label,
             },
@@ -3647,6 +3650,7 @@ def write_result(
         f"passed: {status['passed']}",
         f"boot_mode: {status['boot_mode']}",
         f"scp_strategy: {status['scp_strategy']}",
+        f"smmu_backend: {status['smmu_backend']}",
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         "cc3xx_status_read_fastpath: "
         + json.dumps(status["cc3xx_status_read_fastpath"], sort_keys=True),
@@ -3882,6 +3886,12 @@ def parse_args() -> argparse.Namespace:
         "--scp-strategy",
         choices=["service-model", "real-si-scp"],
         default="service-model",
+    )
+    parser.add_argument(
+        "--smmu-backend",
+        choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
+        default="systemc-mmu720ae",
+        help="SMMU backend used by the AP side of the RD-Aspen Lua platform.",
     )
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument(

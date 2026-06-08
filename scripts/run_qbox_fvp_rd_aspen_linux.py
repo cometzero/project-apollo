@@ -28,7 +28,8 @@ REQUIRED_TARGETS = [
     "arm_gicv3",
     "arm_gicv3_its",
     "arm_smmuv3",
-    "mhuv3_stub",
+    "mmu720ae",
+    "mhu320ae",
     "mhuv3_rproc_stub",
     "ras_ffh_stub",
     "qemu_hexagon_qtimer",
@@ -214,6 +215,7 @@ def qbox_env(
         env[f"QBOX_RDASPEN_EXTRA_BLK{index}"] = str(extra_disk.resolve())
     env["QBOX_RDASPEN_ACCEL"] = args.accel
     env["QBOX_RDASPEN_NETDEV"] = args.netdev
+    env["QBOX_RDASPEN_SMMU_BACKEND"] = args.smmu_backend
     return env
 
 
@@ -371,6 +373,7 @@ def run_qbox(
     status["post_login_probe"] = args.post_login_probe
     status["probe_complete"] = probe_complete
     status["duration_s"] = round(duration_s, 3)
+    status["smmu_backend"] = args.smmu_backend
     status["command"] = cmd
     status["log_path"] = str(log_path)
     status["kernel"] = str(args.kernel.resolve())
@@ -387,6 +390,7 @@ def run_qbox(
     lines = [
         f"passed: {passed}",
         f"duration_s: {duration_s:.3f}",
+        f"smmu_backend: {args.smmu_backend}",
         f"log: {log_path}",
         f"kernel: {args.kernel.resolve()}",
         f"dtb: {args.dtb.resolve()}",
@@ -457,6 +461,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     parser.add_argument("--accel", default="tcg")
     parser.add_argument("--netdev", default="type=user,hostfwd=tcp::2222-:22")
+    parser.add_argument(
+        "--smmu-backend",
+        choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
+        default="systemc-mmu720ae",
+        help="SMMU backend used by the RD-Aspen Lua platform.",
+    )
     parser.add_argument(
         "--extra-disk-size-mib",
         type=int,
