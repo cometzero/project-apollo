@@ -229,28 +229,185 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 
 ## 중단 시점의 상태
 
-사용자가 중지를 요청했으므로 추가 runtime 실험은 진행하지 않았다. 현재 커밋은
-완료 전이며, 변경은 아래 세 저장소에 나뉘어 있다.
+사용자가 중지를 요청했으므로 당시 추가 runtime 실험은 진행하지 않았다. 이후
+체크포인트를 커밋/푸시했다.
 
-- `tools/qemu`: libqemu callback/memory/state wrapper 확장
-- `tools/qbox`: QBox CC3XX/RSE hot path 및 BL2 load accelerator 구현
-- top-level `project-apollo`: runner wiring, runbook, 분석 문서, submodule pointer
+- `tools/qemu`: `8d387e0857b0 feat(libqemu): expose hotpath hooks`
+- `tools/qbox`: `0accb9e6e60a perf(rse): accelerate boot hot paths`
+- top-level `project-apollo`:
+  `0b6e4b02b7c7 perf(qbox): wire RSE boot accelerators`
 
 생성 디렉터리 `.omc/`는 작업 상태로 남아 있으나 커밋 대상이 아니다.
 
+## 2026-06-08 재개 후 추가 검증
+
+활성 목표의 1-5 검증 순서를 이어서 진행했다.
+
+### 1. focused regression
+
+명령:
+
+```bash
+ctest --test-dir tools/qbox/build \
+  -R 'rse_p256_ecdsa|rse_mcuboot_image|rse_lms_accel|cc3xx_core' \
+  --output-on-failure
+```
+
+결과:
+
+- 4/4 통과
+- `cc3xx_core-tests`, `rse_lms_accel-tests`,
+  `rse_mcuboot_image-tests`, `rse_p256_ecdsa-tests` 모두 통과
+
+### 2. split-DMI smoke 재실행
+
+명령:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-accel \
+  --qbox-perf-profile \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-load-accel-split-dmi-smoke2-20260608
+```
+
+결과:
+
+- `passed: False`
+- `blocker: qbox_platform_timeout`
+- 이전 14초 조기 종료는 재현되지 않았다.
+- RSE는 image 4/3/2/0 load, AP power-on SCMI, first image slot까지 도달했다.
+- 주요 marker:
+  - `rse_bl1_1`: 3.320s
+  - `rse_bl2_validated`: 11.851s
+  - `rse_image_4_loaded`: 13.355s
+  - `rse_image_3_loaded`: 24.488s
+  - `rse_image_2_loaded`: 26.193s
+  - `rse_image_0_loaded`: 26.996s
+  - `rse_first_image_slot`: 27.498s
+- `rse_bl1_1 -> rse_first_image_slot`: 24.178s
+- profile:
+  - `bl2_load_accel.enabled: true`
+  - `hits: 2`
+  - `skip_hits: 579`
+  - `bytes: 1019312`
+  - `key_misses: 0`
+  - `dmi_failures: 0`
+  - `direct_file_alias_hits: 2`
+  - `unsupported: 0`
+  - snapshot `by_image`에는 image 4/3만 기록됨
+
+해석:
+
+- split-DMI fallback 자체는 image0 boundary DMI failure를 만들지 않았다.
+- 그러나 이번 run에서는 BL2 load accelerator가 image 4/3에만 적용되고
+  image 2/0에는 적용되지 않았다.
+- runtime chain은 유지되었지만, 기대했던 `hits == 4` gate는 미충족이다.
+
+### 3. no-profile timing
+
+명령:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-accel \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-bl2-load-accel-noprofile-timing-20260608
+```
+
+결과:
+
+- `passed: False`
+- `blocker: qbox_platform_timeout`
+- RSE first image slot까지 도달했다.
+- `rse_bl1_1 -> rse_first_image_slot`: 23.983s
+- slowest delta:
+  `rse_image_4_loaded -> rse_image_3_loaded = 10.734s`
+
+해석:
+
+- BL2 load accelerator 단독 no-profile run은 기존 최단
+  fast-alias/storage-direct baseline `22.668s`보다 빠르지 않다.
+- FVP timed run `4.818s`와 비교하면 아직 약 5.0x 느리다.
+- 병목은 계속 SI CL0 image 3 load/validate 구간에 남아 있다.
+
+### 4. 기존 opt-in accelerator 조합 확인
+
+처음에는 `/build` 아래에 all-accel timing out-dir를 만들었으나, flash image
+padding 단계에서 `/build` filesystem이 100%라 `ENOSPC`가 발생했다. 실패한
+partial output은 삭제했다.
+
+이후 `/tmp`에 출력해서 같은 조합을 확인했다.
+
+명령:
+
+```bash
+python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-aliases \
+  --rse-bl2-load-accel \
+  --rse-bl2-boot-enc-accel \
+  --rse-bl2-img-hash-accel \
+  --rse-bl2-verify-sig-skip \
+  --timeout 60 \
+  --ignore-fail-patterns \
+  --out-dir /tmp/qbox-apollo-fvp/rse-bl2-all-accel-noprofile-timing-20260608
+```
+
+결과:
+
+- RSE first image slot까지 도달했다.
+- `rse_bl1_1 -> rse_first_image_slot`: 24.177s
+- slowest delta:
+  `rse_image_4_loaded -> rse_image_3_loaded = 11.135s`
+
+해석:
+
+- 기존 opt-in accelerator를 모두 조합해도 현재 최단 baseline을 넘지 못했다.
+- `--rse-bl2-verify-sig-skip`은 positive smoke용 aggressive 옵션이므로,
+  이 조합은 fidelity-oriented 기본 추천 대상도 아니다.
+
+### 5. 최신 결론
+
+- 이번 1-5 검증으로 split-DMI 보완 후 RSE runtime handoff가 유지되는 것은
+  재확인했다.
+- 단, `--rse-bl2-load-accel`은 현재 구현 그대로는 최단 timing bundle이 아니다.
+- FVP `4.818s`에 접근하려면 `boot_enc_decrypt()`/hash/signature 단위보다 더
+  큰 단위의 QBox 수정이 필요하다.
+- 다음 유효한 구현 후보는 `boot_load_image_to_sram()` image-level semantic
+  accelerator다. 다만 이 경우에도 전체 RSE stub이 아니라 MCUBoot
+  header/protected TLV/hash/ECDSA/encryption TLV를 host에서 검증하고, guest-visible
+  SRAM/state update만 동일하게 반영하는 positive boot 전용 opt-in 경로로
+  제한해야 한다.
+- `/build` filesystem이 100%라 추가 대형 runtime evidence는 `/tmp`를 쓰거나
+  오래된 generated output을 정리한 뒤 수행해야 한다.
+
 ## 다음 재개 시 권장 순서
 
-1. split-DMI smoke를 같은 옵션으로 한 번 재실행해 조기 종료가 재현되는지
-   확인한다.
-2. 재현되면 `--rse-bl2-load-accel`을 끈 baseline smoke를 같은 빌드로 실행해
-   split-DMI 보완 자체의 영향인지 runner/platform lifecycle 문제인지 분리한다.
-3. baseline이 정상이라면 BL1_2의 BL2 validation/jump 직전 PC-entry callback과
-   runner stop 조건을 우선 추적한다.
-4. split-DMI smoke가 정상화되면 다음 profile 조건을 확인한다.
-   - `bl2_load_accel.enabled == true`
+1. `/build` 용량을 먼저 확보한다. 최소 수 GB가 없으면 QBox runner가 flash
+   image copy/padding 단계에서 실패한다.
+2. `--rse-bl2-load-accel`이 image 2/0에서 hit하지 않는 이유를 profile한다.
+   후보는 `boot_load_image_to_sram()` entry capture timing, `curr_img` state
+   update timing, PC-entry callback 누락이다.
+3. BL2 load accel을 계속 유지할 경우 success gate는 다음으로 둔다.
    - `bl2_load_accel.hits == 4`
-   - `bl2_load_accel.dmi_failures == 0`
-   - `bl2_load_accel.key_misses == 0`
-   - RSE가 최소 `rse_first_image_slot`까지 도달
-5. 이후 profiling을 끈 no-profile timing run으로 FVP 4.818s 기준과 다시
-   비교한다.
+   - `dmi_failures == 0`
+   - `key_misses == 0`
+   - `rse_bl1_1 -> rse_first_image_slot < 22.668s`
+4. FVP에 더 가까워지는 주 구현은 image-level semantic accelerator로 진행한다.
+   목표는 SI CL0 image 3 구간, 특히
+   `rse_image_4_loaded -> rse_image_3_loaded` 10초대를 먼저 줄이는 것이다.
+5. fidelity-oriented runbook에는 현재 최단인 fast-alias/storage-direct baseline을
+   유지하고, BL2 accelerator 계열은 development-only opt-in으로 둔다.
