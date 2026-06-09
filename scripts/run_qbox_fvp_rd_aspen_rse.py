@@ -31,11 +31,15 @@ REQUIRED_TARGETS = [
     "char_backend_file",
     "char_backend_stdio",
     "uart-pl011",
+    "global_peripheral_initiator",
     "cpu_arm_cortexA720AE",
     "cpu_arm_cortexR82",
     "arm_gicv3",
     "arm_gicv3_its",
     "qemu_gpex",
+    "virtio_mmio_blk",
+    "virtio_mmio_net",
+    "virtio_mmio_rng",
     "arm_smmuv3",
     "mmu720ae",
     "reset_gpio",
@@ -44,6 +48,8 @@ REQUIRED_TARGETS = [
     "cpu_arm_cortexM55",
     "nvic_armv7m",
     "remote_cpu",
+    "qemu_cc3xx",
+    "qemu_hexagon_qtimer",
     "mhu320ae",
     "gicx00_multiview",
     "host_cmn_cyprus",
@@ -549,11 +555,57 @@ def run(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> None
     subprocess.run(cmd, cwd=cwd, env=env, check=True)
 
 
+def cmake_cache_values(cache: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not cache.exists():
+        return values
+
+    for line in cache.read_text(errors="replace").splitlines():
+        if not line or line.startswith(("#", "//")) or "=" not in line:
+            continue
+        key_type, value = line.split("=", 1)
+        key = key_type.split(":", 1)[0]
+        values[key] = value
+    return values
+
+
 def ensure_qbox_targets(root: Path, jobs: int) -> None:
+    qbox_dir = root / "tools/qbox"
+    build_dir = qbox_dir / "build"
+    cache = build_dir / "CMakeCache.txt"
+    preset = os.environ.get("QBOX_CMAKE_PRESET", "gcc")
+    libqemu_targets = os.environ.get("QBOX_LIBQEMU_TARGETS", "aarch64")
+    local_qemu = (root / "tools/qemu").resolve()
+    libqemu_git = os.environ.get("QBOX_LIBQEMU_GIT", f"file://{local_qemu}")
+    libqemu_source = os.environ.get(
+        "QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU", str(local_qemu)
+    )
+    git_branch = os.environ.get("QBOX_GIT_BRANCH", "libqemu-v11.0-v0.5")
+
+    configure_cmd = ["cmake", "--preset", preset]
+    expected_cache = {
+        "LIBQEMU_TARGETS": libqemu_targets,
+        "LIBQEMU_GIT": libqemu_git,
+        "FETCHCONTENT_SOURCE_DIR_LIBQEMU": libqemu_source,
+        "GIT_BRANCH": git_branch,
+    }
+    for key, value in expected_cache.items():
+        if value:
+            configure_cmd.append(f"-D{key}={value}")
+
+    cache_values = cmake_cache_values(cache)
+    needs_configure = not cache.exists()
+    for key, value in expected_cache.items():
+        if value and cache_values.get(key) != value:
+            needs_configure = True
+            break
+    if needs_configure:
+        run(configure_cmd, cwd=qbox_dir)
+
     cmd = [
         "cmake",
         "--build",
-        str(root / "tools/qbox/build"),
+        str(build_dir),
         "--target",
         *REQUIRED_TARGETS,
         "--parallel",
@@ -2684,6 +2736,18 @@ def parse_int_auto(value: str) -> int | None:
         return None
 
 
+def qbox_platform_param_value(param: str) -> str:
+    key, sep, value = param.partition("=")
+    if not sep:
+        return param
+
+    parsed = parse_int_auto(value.strip())
+    if parsed is None:
+        return param
+
+    return f"{key}={parsed}"
+
+
 def is_blank_file(path: Path) -> bool:
     with path.open("rb") as handle:
         while True:
@@ -3133,7 +3197,7 @@ def run_platform(
         str(args.conf.resolve()),
     ]
     for param in args.platform_param:
-        cmd.extend(["-p", param])
+        cmd.extend(["-p", qbox_platform_param_value(param)])
     if args.host_gdb_script:
         cmd = [
             "gdb",
@@ -4919,7 +4983,7 @@ def main() -> int:
         str(args.conf.resolve()),
     ]
     for param in args.platform_param:
-        command.extend(["-p", param])
+        command.extend(["-p", qbox_platform_param_value(param)])
     if args.host_gdb_script:
         command = [
             "gdb",

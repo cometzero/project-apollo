@@ -24,6 +24,8 @@ CONSOLE_LOGS = {
     "primary_console": "qbox-primary-console.log",
 }
 RD_ASPEN_CHILD_RESULT = "rd-aspen-result.json"
+RSE_LCS_CM = "0xcccc3c3c"
+RSE_LCS_SE = 0xEEEEA5A5
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
 EXPECTED_AP_CPUS = 4
@@ -222,6 +224,202 @@ def missing_required(args: argparse.Namespace, artifacts: dict[str, Path]) -> li
     if not args.conf.exists():
         missing.append(f"missing_artifact:conf:{args.conf}")
     return missing
+
+
+def parse_int_auto(value: str) -> int | None:
+    try:
+        return int(value, 0)
+    except ValueError:
+        return None
+
+
+def is_blank_file(path: Path) -> bool:
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                return True
+            if any(chunk):
+                return False
+
+
+def forwarded_arg_present(args: argparse.Namespace, name: str) -> bool:
+    return any(item == name or item.startswith(name + "=") for item in args.forward_args)
+
+
+def platform_param_value(args: argparse.Namespace, key: str) -> str | None:
+    prefix = key + "="
+    for param in args.platform_param:
+        if param.startswith(prefix):
+            return param.split("=", 1)[1].strip()
+    return None
+
+
+def rse_lcm_uses_se_fast_path(args: argparse.Namespace) -> bool:
+    lcs = platform_param_value(args, "platform.rse_lcm_regs.lcs")
+    if lcs is None:
+        lcs = os.environ.get("QBOX_RDASPEN_RSE_LCM_LCS", "").strip()
+    if not lcs:
+        return True
+    value = parse_int_auto(lcs)
+    return value is None or value == RSE_LCS_SE
+
+
+def ensure_default_debug_manifest(
+    args: argparse.Namespace,
+    artifacts: dict[str, Path],
+) -> str | None:
+    if args.rse_symbols is not None:
+        return None
+    symbol_path = artifacts["rse_symbols"]
+    if symbol_path.exists():
+        return None
+    default_symbol_path = default_artifacts(args.local_build_dir)["rse_symbols"].resolve()
+    if symbol_path != default_symbol_path:
+        return None
+
+    setup_script = workspace_root() / "scripts/setup_local_debug_env.py"
+    if not setup_script.exists():
+        return f"missing_artifact:rse_symbols:{symbol_path}"
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    log_path = args.out_dir / "debug-manifest-generate.log"
+    cmd = [
+        sys.executable,
+        str(setup_script),
+        "--local-build-dir",
+        str(args.local_build_dir),
+        "--out-dir",
+        str(symbol_path.parent),
+    ]
+    proc = subprocess.run(
+        cmd,
+        cwd=workspace_root(),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    log_path.write_text(
+        "+ " + " ".join(cmd) + "\n" + proc.stdout,
+        encoding="utf-8",
+    )
+    if proc.returncode:
+        return f"debug_manifest_generation_failed:{proc.returncode}:{log_path}"
+    if not symbol_path.exists():
+        return f"missing_artifact:rse_symbols:{symbol_path}"
+    return None
+
+
+def should_auto_provision_rse_otp(
+    args: argparse.Namespace,
+    artifacts: dict[str, Path],
+) -> tuple[bool, str]:
+    if not args.auto_provision_rse_otp:
+        return False, "disabled"
+    if args.check_only or args.build_only or args.isolated:
+        return False, "non_runtime_mode"
+    if args.rse_otp is not None:
+        return False, "explicit_rse_otp"
+    if args.no_copy_writable_flash:
+        return False, "no_copy_writable_flash"
+    if forwarded_arg_present(args, "--allow-blank-rse-otp"):
+        return False, "explicit_blank_otp_experiment"
+    if not rse_lcm_uses_se_fast_path(args):
+        return False, "non_se_lifecycle"
+    otp = artifacts["rse_otp"]
+    if not otp.exists():
+        return False, "missing_rse_otp"
+    if not is_blank_file(otp):
+        return False, "already_provisioned"
+    return True, "blank_default_rse_otp"
+
+
+def clone_args(args: argparse.Namespace) -> argparse.Namespace:
+    values = vars(args).copy()
+    values["platform_param"] = list(args.platform_param)
+    values["forward_args"] = list(args.forward_args)
+    return argparse.Namespace(**values)
+
+
+def make_rse_otp_provision_args(args: argparse.Namespace) -> argparse.Namespace:
+    provision_args = clone_args(args)
+    provision_args.out_dir = args.out_dir / "rse-otp-provisioning-pass"
+    provision_args.si_mode = "service-model"
+    provision_args.post_login_probe = False
+    provision_args.keep_running_after_pass = False
+    provision_args.live_trace = False
+    provision_args.timeout = args.rse_otp_provision_timeout
+    provision_args.provision_blank_rse_otp = True
+    if platform_param_value(provision_args, "platform.rse_lcm_regs.lcs") is None:
+        provision_args.platform_param.append(f"platform.rse_lcm_regs.lcs={RSE_LCS_CM}")
+    return provision_args
+
+
+def persist_provisioned_rse_otp(
+    artifacts: dict[str, Path],
+    child_status: dict[str, Any] | None,
+) -> tuple[bool, str | None]:
+    runtime_path = (child_status or {}).get("runtime_artifacts", {}).get("rse_otp")
+    if not runtime_path:
+        return False, "missing_runtime_rse_otp"
+    runtime_otp = Path(str(runtime_path))
+    if not runtime_otp.exists():
+        return False, f"missing_runtime_rse_otp:{runtime_otp}"
+    if is_blank_file(runtime_otp):
+        return False, f"blank_runtime_rse_otp:{runtime_otp}"
+
+    deploy_otp = artifacts["rse_otp"]
+    deploy_otp.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(runtime_otp, deploy_otp)
+    return True, str(runtime_otp.resolve())
+
+
+def auto_provision_rse_otp(
+    args: argparse.Namespace,
+    artifacts: dict[str, Path],
+) -> str | None:
+    requested, reason = should_auto_provision_rse_otp(args, artifacts)
+    status: dict[str, Any] = {
+        "enabled": args.auto_provision_rse_otp,
+        "requested": requested,
+        "reason": reason,
+    }
+    args.rse_otp_auto_provision = status
+    if not requested:
+        return None
+
+    provision_args = make_rse_otp_provision_args(args)
+    status.update(
+        {
+            "out_dir": str(provision_args.out_dir.resolve()),
+            "lcs": RSE_LCS_CM,
+            "si_mode": provision_args.si_mode,
+            "timeout": provision_args.timeout,
+        }
+    )
+    child_rc, command = run_child(provision_args, artifacts)
+    child_result = provision_args.out_dir / "result.json"
+    child_status = read_json(child_result)
+    status.update(
+        {
+            "child_returncode": child_rc,
+            "child_result": str(child_result.resolve()),
+            "child_passed": bool(child_status.get("passed")) if child_status else False,
+            "child_blocker": child_status.get("blocker") if child_status else None,
+            "command": command,
+        }
+    )
+
+    persisted, detail = persist_provisioned_rse_otp(artifacts, child_status)
+    status["persisted"] = persisted
+    if persisted:
+        status["runtime_rse_otp"] = detail
+        status["deploy_rse_otp"] = str(artifacts["rse_otp"].resolve())
+        return None
+
+    status["error"] = detail
+    return "rse_otp_auto_provision_failed:" + str(detail)
 
 
 def gate_status(
@@ -531,6 +729,11 @@ def write_result(
         "mhu_backend": "systemc-mhu320ae",
         "qbox_performance_preset": args.qbox_performance_preset,
         "qbox_performance_options": qbox_performance_options,
+        "rse_otp_auto_provision": getattr(
+            args,
+            "rse_otp_auto_provision",
+            {"enabled": False, "requested": False},
+        ),
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
         "live_trace": args.live_trace,
         "completion_gates": gates,
@@ -576,6 +779,8 @@ def write_result(
         f"qbox_performance_preset: {status['qbox_performance_preset']}",
         "qbox_performance_options: "
         + json.dumps(status["qbox_performance_options"], sort_keys=True),
+        "rse_otp_auto_provision: "
+        + json.dumps(status["rse_otp_auto_provision"], sort_keys=True),
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         f"live_trace: {status['live_trace']}",
         f"blocker: {status['blocker'] or 'none'}",
@@ -835,6 +1040,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--cc3xx-local-mmio-fastpath")
     if args.rse_fast_boot_aliases:
         cmd.append("--rse-fast-boot-aliases")
+    if getattr(args, "provision_blank_rse_otp", False):
+        cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe:
         cmd.append("--post-login-probe")
     if args.keep_running_after_pass:
@@ -922,6 +1129,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--build-only", action="store_true")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument(
+        "--auto-provision-rse-otp",
+        dest="auto_provision_rse_otp",
+        action="store_true",
+        help=(
+            "Fallback for legacy or experimental local-build outputs: when "
+            "the RSE OTP image is all zeroes, run a bounded CM-lifecycle QBox "
+            "provisioning pass first and persist the resulting OTP before the "
+            "requested full-system boot."
+        ),
+    )
+    parser.add_argument(
+        "--no-auto-provision-rse-otp",
+        dest="auto_provision_rse_otp",
+        action="store_false",
+        help="Disable the blank RSE OTP fallback helper.",
+    )
+    parser.add_argument("--rse-otp-provision-timeout", type=int, default=600)
+    parser.add_argument(
         "--isolated",
         action="store_true",
         help="Run the isolated live Safety Island mode for this --si-mode.",
@@ -983,6 +1208,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.set_defaults(qbox_performance_preset=True, range_limited_flash_dmi=True)
+    parser.set_defaults(auto_provision_rse_otp=True)
     parser.add_argument(
         "--cc3xx-stats",
         action="store_true",
@@ -1174,6 +1400,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-bl2-delay-max-cycles must be positive")
     if args.rse_bl2_delay_expected_hits < 0:
         parser.error("--rse-bl2-delay-expected-hits must be non-negative")
+    if args.rse_otp_provision_timeout <= 0:
+        parser.error("--rse-otp-provision-timeout must be positive")
     if args.rse_bl2_verify_sig_skip:
         args.rse_bl2_verify_sig_accel = True
     return args
@@ -1181,9 +1409,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    args.provision_blank_rse_otp = False
+    args.rse_otp_auto_provision = {
+        "enabled": args.auto_provision_rse_otp,
+        "requested": False,
+        "reason": "not_evaluated",
+    }
     artifacts = resolved_artifacts(args)
+    debug_manifest_blocker = ensure_default_debug_manifest(args, artifacts)
     missing = missing_required(args, artifacts)
-    blocker = "; ".join(missing) if missing else None
+    blocker = debug_manifest_blocker or ("; ".join(missing) if missing else None)
     if args.check_only or blocker:
         return write_result(
             args,
@@ -1211,6 +1446,19 @@ def main() -> int:
         return run_isolated(args, artifacts)
 
     blocker = live_mode_blocker(args)
+    if blocker:
+        write_blocker_logs(args, blocker)
+        return write_result(
+            args,
+            artifacts,
+            command=[],
+            child_status=None,
+            child_returncode=None,
+            blocker=blocker,
+            check_only=False,
+        )
+
+    blocker = auto_provision_rse_otp(args, artifacts)
     if blocker:
         write_blocker_logs(args, blocker)
         return write_result(
