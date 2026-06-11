@@ -82,6 +82,20 @@ log()
     printf '[%(%Y-%m-%d %H:%M:%S)T] %s\n' -1 "$*"
 }
 
+timer_now()
+{
+    date +%s
+}
+
+format_elapsed()
+{
+    local elapsed="$1"
+    printf '%02d:%02d:%02d' \
+        $((elapsed / 3600)) \
+        $(((elapsed % 3600) / 60)) \
+        $((elapsed % 60))
+}
+
 die()
 {
     printf 'error: %s\n' "$*" >&2
@@ -98,6 +112,7 @@ Default command: build
 Commands:
   all       Build/install SDK if needed, build local images, and boot FVP.
   sdk       Build and install the Yocto SDK under build/local-sdk.
+  qbox      Build the QBox targets required by Apollo full-system boot.
   build     Build local TF-M/SCP/Zephyr/OP-TEE/U-Boot/TF-A/Linux/Buildroot images.
   zephyr   Build only the local Safety Island CL1 Zephyr image.
   boot      Boot the latest local images on apollo-fvp and validate logs.
@@ -119,8 +134,121 @@ run_logged()
     local name="$1"
     shift
     mkdir -p "${LOG_DIR}"
+    local start
+    local end
+    local status
+    start="$(timer_now)"
     log "Running ${name}; log: ${LOG_DIR}/${name}.log"
+    set +e
     "$@" 2>&1 | tee "${LOG_DIR}/${name}.log"
+    status="${PIPESTATUS[0]}"
+    set -e
+    end="$(timer_now)"
+    log "Completed ${name} in $(format_elapsed "$((end - start))")"
+    return "${status}"
+}
+
+run_step()
+{
+    local name="$1"
+    shift
+    local start
+    local end
+    start="$(timer_now)"
+    log "Starting ${name}"
+    "$@"
+    end="$(timer_now)"
+    log "Completed ${name} in $(format_elapsed "$((end - start))")"
+}
+
+write_file_if_changed()
+{
+    local dst="$1"
+    local tmp
+
+    mkdir -p "$(dirname "${dst}")"
+    tmp="$(mktemp "${dst}.tmp.XXXXXX")"
+    cat > "${tmp}"
+    if [[ -f "${dst}" ]] && cmp -s "${tmp}" "${dst}"; then
+        rm -f "${tmp}"
+    else
+        mv "${tmp}" "${dst}"
+    fi
+}
+
+copy_file_if_changed()
+{
+    local src="$1"
+    local dst="$2"
+    local mode="${3:-0644}"
+
+    require_file "${src}"
+    mkdir -p "$(dirname "${dst}")"
+    if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+        chmod "${mode}" "${dst}"
+    else
+        install -m "${mode}" "${src}" "${dst}"
+    fi
+}
+
+command_digest()
+{
+    local arg
+
+    for arg in "$@"; do
+        printf '%s\0' "${arg}"
+    done | sha256sum | awk '{print $1}'
+}
+
+git_tree_manifest()
+{
+    local root="$1"
+    local label="$2"
+
+    [[ -d "${root}/.git" ]] || return 0
+    printf '%s-dir=%s\n' "${label}" "$(canonical_dir "${root}")"
+    printf '%s-head=' "${label}"
+    git -C "${root}" rev-parse HEAD 2>/dev/null || true
+    printf '%s-status\n' "${label}"
+    git -C "${root}" status --porcelain=v1 --untracked-files=no 2>/dev/null || true
+    printf '%s-diff=' "${label}"
+    git -C "${root}" diff --no-ext-diff --binary 2>/dev/null |
+        sha256sum | awk '{print $1}'
+}
+
+cmake_configure_current()
+{
+    local name="$1"
+    local build_dir="$2"
+    shift 2
+    local marker="${build_dir}/.apollo-${name}.sha256"
+    local digest
+
+    [[ "${APOLLO_FORCE_CONFIGURE:-0}" != "1" ]] || return 1
+    [[ -f "${build_dir}/CMakeCache.txt" ]] || return 1
+    [[ -f "${build_dir}/build.ninja" ]] || return 1
+    [[ -f "${marker}" ]] || return 1
+
+    digest="$(command_digest "$@")"
+    [[ "$(cat "${marker}")" == "${digest}" ]]
+}
+
+run_cmake_configure_if_needed()
+{
+    local name="$1"
+    local build_dir="$2"
+    shift 2
+    local marker="${build_dir}/.apollo-${name}.sha256"
+    local digest
+
+    digest="$(command_digest "$@")"
+    if cmake_configure_current "${name}" "${build_dir}" "$@"; then
+        log "${name} is up to date"
+        return 0
+    fi
+
+    run_logged "${name}" "$@"
+    printf '%s\n' "${digest}" > "${marker}"
 }
 
 require_file()
@@ -227,6 +355,52 @@ reset_generated_git_tree()
     git -C "${dest_dir}" clean -fd >/dev/null
 }
 
+patch_dirs_manifest()
+{
+    local dest_dir="$1"
+    shift
+    local patch_dir
+    local patch
+
+    printf 'dest=%s\n' "$(canonical_dir "${dest_dir}")"
+    git -C "${dest_dir}" rev-parse HEAD
+    for patch_dir in "$@"; do
+        printf 'patch_dir=%s\n' "$(canonical_dir "${patch_dir}")"
+        shopt -s nullglob
+        for patch in "${patch_dir}"/*.patch "${patch_dir}"/*.diff; do
+            sha256sum "${patch}"
+        done
+        shopt -u nullglob
+    done
+}
+
+apply_git_patch_dirs_cached()
+{
+    local name="$1"
+    local dest_dir="$2"
+    shift 2
+    local marker_dir="${TFM_BUILD_DIR}/patch-stamps"
+    local marker="${marker_dir}/${name}.sha256"
+    local manifest
+    local digest
+    local patch_dir
+
+    mkdir -p "${marker_dir}"
+    manifest="$(patch_dirs_manifest "${dest_dir}" "$@")"
+    digest="$(printf '%s\n' "${manifest}" | sha256sum | awk '{print $1}')"
+
+    if [[ -f "${marker}" ]] && [[ "$(cat "${marker}")" == "${digest}" ]]; then
+        log "Patch set is up to date for ${dest_dir}"
+        return 0
+    fi
+
+    reset_generated_git_tree "${dest_dir}"
+    for patch_dir in "$@"; do
+        apply_git_patch_dir "${patch_dir}" "${dest_dir}"
+    done
+    printf '%s\n' "${digest}" > "${marker}"
+}
+
 find_first_file()
 {
     local root="$1"
@@ -239,8 +413,7 @@ install_artifact()
 {
     local src="$1"
     local dst="$2"
-    require_file "${src}"
-    install -D -m 0644 "${src}" "${dst}"
+    copy_file_if_changed "${src}" "${dst}" 0644
 }
 
 host_cpus()
@@ -452,6 +625,94 @@ setup_zephyr_build_environment()
     require_command python3
 }
 
+build_qbox()
+{
+    require_file "${ROOT_DIR}/scripts/run_qbox_fvp_rd_aspen_rse.py"
+    require_dir "${ROOT_DIR}/tools/qbox"
+    mkdir -p "${LOG_DIR}"
+
+    run_logged qbox-build env PYTHONDONTWRITEBYTECODE=1 \
+        python3 "${ROOT_DIR}/scripts/run_qbox_fvp_rd_aspen_rse.py" \
+        --build-only \
+        --jobs "${JOBS}"
+}
+
+remove_tfm_signed_outputs()
+{
+    rm -f \
+        "${TFM_BUILD_DIR}/bin/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bl1/bl1_2/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bl1/bl1_2/fwu_test_bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/fwu_test_tfm_s_signed.bin"
+}
+
+tfm_signed_outputs_stale()
+{
+    local bl2="${TFM_BUILD_DIR}/bin/bl2.bin"
+    local tfm_s="${TFM_BUILD_DIR}/bin/tfm_s.bin"
+    local output
+
+    for output in \
+        "${TFM_BUILD_DIR}/bin/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_bl2_signed.bin"; do
+        [[ -f "${output}" ]] || return 0
+        [[ -f "${bl2}" && "${bl2}" -nt "${output}" ]] && return 0
+    done
+
+    for output in \
+        "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/fwu_test_tfm_s_signed.bin"; do
+        [[ -f "${output}" ]] || return 0
+        [[ -f "${tfm_s}" && "${tfm_s}" -nt "${output}" ]] && return 0
+    done
+
+    return 1
+}
+
+tfm_build_outputs_present()
+{
+    local file
+
+    for file in \
+        "${TFM_BUILD_DIR}/bin/bl1_1.bin" \
+        "${TFM_BUILD_DIR}/bin/bl2_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" \
+        "${TFM_BUILD_DIR}/bin/rom_dma_ics.bin" \
+        "${TFM_BUILD_DIR}/bin/enc_key_s.b64" \
+        "${TFM_BUILD_DIR}/bin/provisioning/combined_provisioning_message.bin"; do
+        [[ -f "${file}" ]] || return 1
+    done
+}
+
+tfm_build_manifest()
+{
+    local tfm_deps="$1"
+    local dep
+
+    printf 'ARM_NONE_EABI_PREFIX=%s\n' "${ARM_NONE_EABI_PREFIX}"
+    printf 'ARM_NONE_EABI_GCC=%s\n' "$(command -v "${ARM_NONE_EABI_PREFIX}gcc")"
+    printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
+    printf 'TFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp\n'
+    printf 'TFM_PLATFORM_VARIANT=fvp\n'
+    printf 'TFM_RTL_VARIANT=emu\n'
+    git_tree_manifest "${TFM_SRC}" tfm-src
+    for dep in tfm-extras qcbor mbedtls t_cose mcuboot cmsis tf-m-tests; do
+        git_tree_manifest "${tfm_deps}/${dep}" "tfm-dep-${dep}"
+    done
+    fingerprint_file_hash "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.prv" tfm-rotpk-prv
+    fingerprint_file_hash "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.pub" tfm-rotpk-pub
+    fingerprint_file_hash "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.prv" tfm-rotpk-1-prv
+    fingerprint_file_hash "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.pub" tfm-rotpk-1-pub
+    fingerprint_file_hash "${TFM_BUILD_DIR}/patch-stamps/tfm-extras.sha256" tfm-patch-tfm-extras
+    fingerprint_file_hash "${TFM_BUILD_DIR}/patch-stamps/qcbor.sha256" tfm-patch-qcbor
+    fingerprint_file_hash "${TFM_BUILD_DIR}/patch-stamps/mbedtls.sha256" tfm-patch-mbedtls
+    fingerprint_file_hash "${TFM_BUILD_DIR}/patch-stamps/t-cose.sha256" tfm-patch-t-cose
+}
+
 build_tfm()
 {
     require_dir "${TFM_SRC}"
@@ -466,42 +727,44 @@ build_tfm()
     local saved_path="${PATH}"
     local tfm_native_bin="${tfm_work}/recipe-sysroot-native/usr/bin"
 
-    reset_generated_git_tree "${tfm_deps}/tfm-extras"
-    reset_generated_git_tree "${tfm_deps}/qcbor"
-    reset_generated_git_tree "${tfm_deps}/mbedtls"
-    reset_generated_git_tree "${tfm_deps}/t_cose"
-
-    apply_git_patch_dir \
+    apply_git_patch_dirs_cached tfm-extras "${tfm_deps}/tfm-extras" \
         "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m-extras/fvp-rd-aspen" \
-        "${tfm_deps}/tfm-extras"
-    apply_git_patch_dir "${TFM_SRC}/lib/ext/tf-m-extras" "${tfm_deps}/tfm-extras"
-    apply_git_patch_dir "${TFM_SRC}/lib/ext/qcbor" "${tfm_deps}/qcbor"
-    apply_git_patch_dir "${TFM_SRC}/lib/ext/mbedcrypto" "${tfm_deps}/mbedtls"
-    apply_git_patch_dir "${TFM_SRC}/lib/ext/t_cose" "${tfm_deps}/t_cose"
+        "${TFM_SRC}/lib/ext/tf-m-extras"
+    apply_git_patch_dirs_cached qcbor "${tfm_deps}/qcbor" \
+        "${TFM_SRC}/lib/ext/qcbor"
+    apply_git_patch_dirs_cached mbedtls "${tfm_deps}/mbedtls" \
+        "${TFM_SRC}/lib/ext/mbedcrypto"
+    apply_git_patch_dirs_cached t-cose "${tfm_deps}/t_cose" \
+        "${TFM_SRC}/lib/ext/t_cose"
 
-    install -m 0600 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.prv" \
-        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.prv"
-    install -m 0644 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.pub" \
-        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.pub"
-    install -m 0600 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.prv" \
-        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.prv"
-    install -m 0644 "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.pub" \
-        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.pub"
+    copy_file_if_changed "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.prv" \
+        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.prv" 0600
+    copy_file_if_changed "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk.pub" \
+        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.pub" 0644
+    copy_file_if_changed "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.prv" \
+        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.prv" 0600
+    copy_file_if_changed "${TFM_SRC}/bl1/bl1_2/bl1_dummy_rotpk_1.pub" \
+        "${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk_1.pub" 0644
 
-    # TF-M signing rules can leave these outputs stale after an incremental
-    # externalsrc relink. Remove them so the signed boot images always match
-    # the current BL2 and runtime binaries.
-    rm -f \
-        "${TFM_BUILD_DIR}/bin/bl2_signed.bin" \
-        "${TFM_BUILD_DIR}/bin/fwu_test_bl2_signed.bin" \
-        "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" \
-        "${TFM_BUILD_DIR}/bin/fwu_test_tfm_s_signed.bin" \
-        "${TFM_BUILD_DIR}/bl1/bl1_2/bl2_signed.bin" \
-        "${TFM_BUILD_DIR}/bl1/bl1_2/fwu_test_bl2_signed.bin" \
-        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/tfm_s_signed.bin" \
-        "${TFM_BUILD_DIR}/bl2/ext/mcuboot/fwu_test_tfm_s_signed.bin"
+    local tfm_marker="${TFM_BUILD_DIR}/.apollo-tfm-build.sha256"
+    local tfm_digest
+    tfm_digest="$(tfm_build_manifest "${tfm_deps}" | sha256sum | awk '{print $1}')"
+    if [[ "${APOLLO_TFM_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${tfm_marker}" ]] &&
+        [[ "$(cat "${tfm_marker}")" == "${tfm_digest}" ]] &&
+        tfm_build_outputs_present; then
+        log "TF-M build outputs are up to date"
+        install_artifact "${TFM_BUILD_DIR}/bin/bl1_1.bin" "${FW_DIR}/bl1_1.bin"
+        install_artifact "${TFM_BUILD_DIR}/bin/bl2_signed.bin" "${FW_DIR}/bl2_signed.bin"
+        install_artifact "${TFM_BUILD_DIR}/bin/tfm_s_signed.bin" "${FW_DIR}/tfm_s_signed.bin"
+        install_artifact "${TFM_BUILD_DIR}/bin/rom_dma_ics.bin" "${FW_DIR}/rom_dma_ics.bin"
+        install_artifact "${TFM_BUILD_DIR}/bin/enc_key_s.b64" "${FW_DIR}/enc_key_s.b64"
+        install_artifact "${TFM_BUILD_DIR}/bin/provisioning/combined_provisioning_message.bin" \
+            "${FW_DIR}/combined_provisioning_message.bin"
+        return 0
+    fi
 
-    run_logged tfm-configure "${cmake_bin}" \
+    run_cmake_configure_if_needed tfm-configure "${TFM_BUILD_DIR}" "${cmake_bin}" \
         -S "${TFM_SRC}" \
         -B "${TFM_BUILD_DIR}" \
         -G Ninja \
@@ -533,6 +796,11 @@ build_tfm()
 
     PATH="${tfm_native_bin}:${saved_path}"
     run_logged tfm-build "${cmake_bin}" --build "${TFM_BUILD_DIR}" --target install --parallel "${JOBS}"
+    if tfm_signed_outputs_stale; then
+        log "Refreshing stale TF-M signed outputs"
+        remove_tfm_signed_outputs
+        run_logged tfm-build-resign "${cmake_bin}" --build "${TFM_BUILD_DIR}" --target install --parallel "${JOBS}"
+    fi
     PATH="${saved_path}"
 
     install_artifact "${TFM_BUILD_DIR}/bin/bl1_1.bin" "${FW_DIR}/bl1_1.bin"
@@ -542,6 +810,7 @@ build_tfm()
     install_artifact "${TFM_BUILD_DIR}/bin/enc_key_s.b64" "${FW_DIR}/enc_key_s.b64"
     install_artifact "${TFM_BUILD_DIR}/bin/provisioning/combined_provisioning_message.bin" \
         "${FW_DIR}/combined_provisioning_message.bin"
+    printf '%s\n' "${tfm_digest}" > "${tfm_marker}"
 }
 
 build_scp()
@@ -551,7 +820,7 @@ build_scp()
     local toolchain="${SCP_SRC}/product/automotive-rd/apollo-fvp/si0_ramfw/Toolchain-GNU.cmake"
     require_file "${toolchain}"
 
-    run_logged scp-configure cmake \
+    run_cmake_configure_if_needed scp-configure "${SCP_BUILD_DIR}" cmake \
         -S "${SCP_SRC}" \
         -B "${SCP_BUILD_DIR}" \
         -G Ninja \
@@ -690,7 +959,6 @@ build_zephyr()
     require_dir "${ZEPHYRPROJECT_SRC}/zephyr"
     require_dir "${ZEPHYR_SAFETY_ISLAND_SRC}"
     reset_cmake_build_if_source_changed "${ZEPHYR_BUILD_DIR}" "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample"
-    reset_zephyr_generated_links
     mkdir -p "${ZEPHYR_BUILD_DIR}" "${FW_DIR}"
 
     local board="fvp_rd_aspen_safety_island_c1"
@@ -725,7 +993,8 @@ build_zephyr()
     fi
     require_command "${AARCH64_ZEPHYR_ELF_PREFIX}gcc"
 
-    run_logged zephyr-configure cmake \
+    local zephyr_configure_cmd=(
+        cmake
         -S "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample" \
         -B "${ZEPHYR_BUILD_DIR}" \
         -G Ninja \
@@ -743,6 +1012,13 @@ build_zephyr()
         -DDTC_OVERLAY_FILE="${dtc_overlay}" \
         -DOVERLAY_CONFIG="${overlay_config}" \
         -Wno-dev
+    )
+    if ! cmake_configure_current zephyr-configure "${ZEPHYR_BUILD_DIR}" \
+        "${zephyr_configure_cmd[@]}"; then
+        reset_zephyr_generated_links
+    fi
+    run_cmake_configure_if_needed zephyr-configure "${ZEPHYR_BUILD_DIR}" \
+        "${zephyr_configure_cmd[@]}"
 
     run_logged zephyr-build cmake --build "${ZEPHYR_BUILD_DIR}" --parallel "${JOBS}"
     validate_zephyr_cl1_features
@@ -766,26 +1042,51 @@ build_uboot()
     require_file "${key}"
     mkdir -p "${UBOOT_BUILD_DIR}" "${DEPLOY_DIR}/u-boot"
 
-    install -m 0600 "${key}" "${UBOOT_BUILD_DIR}/CRT.key"
-    run_logged u-boot-capsule-cert openssl req -new -x509 \
-        -key "${UBOOT_BUILD_DIR}/CRT.key" \
-        -out "${UBOOT_BUILD_DIR}/CRT.crt" \
-        -days 365 \
-        -subj /CN=CRT/
-
-    run_logged u-boot-defconfig make -C "${UBOOT_SRC}" \
-        O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
-        apollo_fvp_defconfig
+    copy_file_if_changed "${key}" "${UBOOT_BUILD_DIR}/CRT.key" 0600
+    if [[ ! -f "${UBOOT_BUILD_DIR}/CRT.crt" ]] ||
+        [[ "${UBOOT_BUILD_DIR}/CRT.key" -nt "${UBOOT_BUILD_DIR}/CRT.crt" ]]; then
+        run_logged u-boot-capsule-cert openssl req -new -x509 \
+            -key "${UBOOT_BUILD_DIR}/CRT.key" \
+            -out "${UBOOT_BUILD_DIR}/CRT.crt" \
+            -days 365 \
+            -subj /CN=CRT/
+    else
+        log "u-boot-capsule-cert is up to date"
+    fi
 
     local crt_rel
     crt_rel="$(realpath --relative-to="${UBOOT_SRC}" "${UBOOT_BUILD_DIR}/CRT.crt")"
-    "${UBOOT_SRC}/scripts/config" --file "${UBOOT_BUILD_DIR}/.config" \
-        --set-str EFI_CAPSULE_CRT_FILE "${crt_rel}"
-    run_logged u-boot-olddefconfig make -C "${UBOOT_SRC}" \
-        O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
-        olddefconfig
+    local config_marker="${UBOOT_BUILD_DIR}/.apollo-config.sha256"
+    local config_digest
+    config_digest="$(
+        {
+            printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
+            printf 'VARIANT=%s\n' "${VARIANT}"
+            printf 'EFI_CAPSULE_CRT_FILE=%s\n' "${crt_rel}"
+            fingerprint_file_hash "${key}" u-boot-capsule-key
+            fingerprint_file_hash "${UBOOT_SRC}/configs/apollo_fvp_defconfig" u-boot-defconfig
+        } | sha256sum | awk '{print $1}'
+    )"
+    if [[ "${APOLLO_UBOOT_FORCE_CONFIG:-0}" != "1" ]] &&
+        [[ -f "${UBOOT_BUILD_DIR}/.config" ]] &&
+        [[ -f "${config_marker}" ]] &&
+        [[ "$(cat "${config_marker}")" == "${config_digest}" ]]; then
+        log "U-Boot config is up to date"
+    else
+        run_logged u-boot-defconfig make -C "${UBOOT_SRC}" \
+            O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
+            apollo_fvp_defconfig
+        "${UBOOT_SRC}/scripts/config" --file "${UBOOT_BUILD_DIR}/.config" \
+            --set-str EFI_CAPSULE_CRT_FILE "${crt_rel}"
+        run_logged u-boot-olddefconfig make -C "${UBOOT_SRC}" \
+            O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
+            olddefconfig
+        printf '%s\n' "${config_digest}" > "${config_marker}"
+    fi
 
-    run_logged u-boot-build make -C "${UBOOT_SRC}" \
+    run_logged u-boot-build env \
+        SOURCE_DATE_EPOCH="${APOLLO_SOURCE_DATE_EPOCH:-${SOURCE_DATE_EPOCH:-0}}" \
+        make -C "${UBOOT_SRC}" \
         O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
         RD_ASPEN_VARIANT="${VARIANT}" -j "${JOBS}"
 
@@ -857,6 +1158,33 @@ build_tfa()
     require_file "${DEPLOY_DIR}/optee/tee-pager_v2.bin"
     mkdir -p "${TFA_BUILD_DIR}" "${DEPLOY_DIR}/tf-a"
 
+    local tfa_marker="${TFA_BUILD_DIR}/.apollo-tfa-build.sha256"
+    local tfa_digest
+    tfa_digest="$(
+        {
+            printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
+            printf 'PC_CPUS_COUNT=%s\n' "${PC_CPUS_COUNT}"
+            printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
+            printf 'PFDI_SUPPORT=%s\n' "${PFDI_SUPPORT}"
+            printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
+            printf 'VARIANT=%s\n' "${VARIANT}"
+            git -C "${TFA_SRC}" rev-parse HEAD 2>/dev/null || true
+            git -C "${TFA_SRC}" status --porcelain=v1 --untracked-files=no 2>/dev/null || true
+            fingerprint_file_hash "${DEPLOY_DIR}/u-boot/u-boot.bin" tfa-bl33
+            fingerprint_file_hash "${DEPLOY_DIR}/optee/tee-pager_v2.bin" tfa-bl32
+        } | sha256sum | awk '{print $1}'
+    )"
+    if [[ "${APOLLO_TFA_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" ]] &&
+        [[ -f "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" ]] &&
+        [[ -f "${tfa_marker}" ]] &&
+        [[ "$(cat "${tfa_marker}")" == "${tfa_digest}" ]]; then
+        log "TF-A build outputs are up to date"
+        install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" "${FW_DIR}/bl2.bin"
+        install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" "${FW_DIR}/fip.bin"
+        return 0
+    fi
+
     local tfa_work
     tfa_work="$(tfa_recipe_workdir)"
     local saved_path="${PATH}"
@@ -910,6 +1238,7 @@ build_tfa()
     fi
     install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" "${FW_DIR}/bl2.bin"
     install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" "${FW_DIR}/fip.bin"
+    printf '%s\n' "${tfa_digest}" > "${tfa_marker}"
 }
 
 find_linux_config()
@@ -954,35 +1283,64 @@ build_linux()
     local config
     config="$(find_linux_config || true)"
     require_file "${config}"
-    install -m 0644 "${config}" "${LINUX_BUILD_DIR}/.config"
-
-    if [[ "${KERNEL_DEBUG_INFO}" == "1" ]]; then
-        "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
-            --enable DEBUG_KERNEL \
-            --disable DEBUG_INFO_NONE \
-            --enable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
-            --enable GDB_SCRIPTS \
-            --enable KALLSYMS_ALL
-    fi
 
     local modsign_key
     modsign_key="$(find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
         -path '*/build/modsign_key.pem' -type f -print -quit 2>/dev/null || true)"
-    if [[ -n "${modsign_key}" ]]; then
-        install -m 0600 "${modsign_key}" "${LINUX_BUILD_DIR}/modsign_key.pem"
-    elif grep -q '^CONFIG_MODULE_SIG_KEY="modsign_key.pem"' "${LINUX_BUILD_DIR}/.config"; then
-        require_file "${LINUX_SRC}/certs/x509.genkey"
-        openssl req -new -nodes -utf8 -sha256 -days 36500 -batch -x509 \
-            -config "${LINUX_SRC}/certs/x509.genkey" \
-            -outform PEM -out "${LINUX_BUILD_DIR}/modsign_key.pem" \
-            -keyout "${LINUX_BUILD_DIR}/modsign_key.pem"
-        chmod 0600 "${LINUX_BUILD_DIR}/modsign_key.pem"
+
+    local config_marker="${LINUX_BUILD_DIR}/.apollo-config.sha256"
+    local config_digest
+    config_digest="$(
+        {
+            printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
+            printf 'KERNEL_DEBUG_INFO=%s\n' "${KERNEL_DEBUG_INFO}"
+            fingerprint_file_hash "${config}" linux-input-config
+            [[ -z "${modsign_key}" ]] || fingerprint_file_hash "${modsign_key}" linux-input-modsign-key
+            find "${LINUX_SRC}" \( -name Kconfig -o -name 'Kconfig.*' \) \
+                -type f -printf 'linux-kconfig/%P|%s|%T@\n' | LC_ALL=C sort
+        } | sha256sum | awk '{print $1}'
+    )"
+
+    if [[ "${APOLLO_LINUX_FORCE_CONFIG:-0}" != "1" ]] &&
+        [[ -f "${LINUX_BUILD_DIR}/.config" ]] &&
+        [[ -f "${config_marker}" ]] &&
+        [[ "$(cat "${config_marker}")" == "${config_digest}" ]]; then
+        log "Linux kernel config is up to date"
+    else
+        write_file_if_changed "${LINUX_BUILD_DIR}/.config" < "${config}"
+
+        if [[ "${KERNEL_DEBUG_INFO}" == "1" ]]; then
+            "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
+                --enable DEBUG_KERNEL \
+                --disable DEBUG_INFO_NONE \
+                --enable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
+                --enable GDB_SCRIPTS \
+                --enable KALLSYMS_ALL
+        fi
+
+        if [[ -n "${modsign_key}" ]]; then
+            copy_file_if_changed "${modsign_key}" "${LINUX_BUILD_DIR}/modsign_key.pem" 0600
+        elif grep -q '^CONFIG_MODULE_SIG_KEY="modsign_key.pem"' "${LINUX_BUILD_DIR}/.config"; then
+            if [[ ! -f "${LINUX_BUILD_DIR}/modsign_key.pem" ]]; then
+                require_file "${LINUX_SRC}/certs/x509.genkey"
+                openssl req -new -nodes -utf8 -sha256 -days 36500 -batch -x509 \
+                    -config "${LINUX_SRC}/certs/x509.genkey" \
+                    -outform PEM -out "${LINUX_BUILD_DIR}/modsign_key.pem" \
+                    -keyout "${LINUX_BUILD_DIR}/modsign_key.pem"
+                chmod 0600 "${LINUX_BUILD_DIR}/modsign_key.pem"
+            fi
+        fi
+
+        run_logged linux-olddefconfig make -C "${LINUX_SRC}" \
+            O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+            olddefconfig
+        printf '%s\n' "${config_digest}" > "${config_marker}"
     fi
 
-    run_logged linux-olddefconfig make -C "${LINUX_SRC}" \
-        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        olddefconfig
-    run_logged linux-build make -C "${LINUX_SRC}" \
+    run_logged linux-build env \
+        KBUILD_BUILD_TIMESTAMP="${APOLLO_KBUILD_BUILD_TIMESTAMP:-Thu Jan 1 00:00:00 UTC 1970}" \
+        KBUILD_BUILD_VERSION="${APOLLO_KBUILD_BUILD_VERSION:-1}" \
+        make -C "${LINUX_SRC}" \
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
         Image dtbs modules -j "${JOBS}"
 
@@ -992,6 +1350,24 @@ build_linux()
     require_file "${dtb}"
     install_artifact "${image}" "${BOOT_DIR}/Image"
     install_artifact "${dtb}" "${BOOT_DIR}/apollo-fvp.dtb"
+}
+
+buildroot_toolchain_manifest()
+{
+    local tuple="${AARCH64_PREFIX%-}"
+    local real_bin="${SDK_NATIVE_SYSROOT}/usr/bin/${tuple}"
+    local item
+
+    printf 'SDK_NATIVE_SYSROOT=%s\n' "$(canonical_dir "${SDK_NATIVE_SYSROOT}")"
+    printf 'SDK_TARGET_SYSROOT=%s\n' "$(canonical_dir "${SDK_TARGET_SYSROOT}")"
+    printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
+    for item in \
+        "${real_bin}/${AARCH64_PREFIX}gcc" \
+        "${real_bin}/${AARCH64_PREFIX}g++" \
+        "${SDK_TARGET_SYSROOT}/usr/include/linux/version.h"; do
+        [[ -e "${item}" ]] || continue
+        stat -Lc '%n|%s|%Y' "${item}"
+    done
 }
 
 prepare_buildroot_toolchain()
@@ -1005,6 +1381,21 @@ prepare_buildroot_toolchain()
     local real_bin="${SDK_NATIVE_SYSROOT}/usr/bin/${tuple}"
     require_dir "${real_bin}"
 
+    local manifest="${BUILDROOT_TOOLCHAIN_DIR}/.apollo-toolchain.manifest"
+    local current_manifest
+    current_manifest="$(buildroot_toolchain_manifest)"
+    BUILDROOT_TOOLCHAIN_REFRESHED=0
+    if [[ "${APOLLO_BUILDROOT_TOOLCHAIN_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${manifest}" ]] &&
+        [[ -x "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}gcc" ]] &&
+        [[ -d "${BUILDROOT_TOOLCHAIN_SYSROOT}" ]] &&
+        [[ "$(cat "${manifest}")" == "${current_manifest}" ]]; then
+        log "Buildroot toolchain cache is up to date"
+        return 0
+    fi
+
+    log "Refreshing Buildroot toolchain cache"
+    BUILDROOT_TOOLCHAIN_REFRESHED=1
     rm -rf "${BUILDROOT_TOOLCHAIN_DIR}"
     mkdir -p "${BUILDROOT_TOOLCHAIN_DIR}/bin" "${BUILDROOT_TOOLCHAIN_SYSROOT}"
     cp -al "${SDK_TARGET_SYSROOT}/." "${BUILDROOT_TOOLCHAIN_SYSROOT}/"
@@ -1056,6 +1447,7 @@ prepare_buildroot_toolchain()
     done
 
     require_file "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}gcc"
+    printf '%s\n' "${current_manifest}" > "${manifest}"
 }
 
 buildroot_env()
@@ -1075,16 +1467,17 @@ buildroot_env()
 
 prepare_buildroot_overlay()
 {
-    rm -rf "${BUILDROOT_OVERLAY}"
     mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d,usr/bin}
     chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
 
     local module
-    for module in ${KERNEL_MODULES_AUTOLOAD}; do
-        printf '%s\n' "${module}"
-    done > "${BUILDROOT_OVERLAY}/etc/modules-load.d/apollo-fvp.conf"
+    {
+        for module in ${KERNEL_MODULES_AUTOLOAD}; do
+            printf '%s\n' "${module}"
+        done
+    } | write_file_if_changed "${BUILDROOT_OVERLAY}/etc/modules-load.d/apollo-fvp.conf"
 
-    cat > "${BUILDROOT_OVERLAY}/init" <<'EOF'
+    write_file_if_changed "${BUILDROOT_OVERLAY}/init" <<'EOF'
 #!/bin/sh
 mount -t devtmpfs devtmpfs /dev 2>/dev/null || mount -t tmpfs devtmpfs /dev
 if [ -e /dev/console ]; then
@@ -1141,7 +1534,7 @@ exec /bin/sh -i
 EOF
     chmod 0755 "${BUILDROOT_OVERLAY}/init"
 
-cat > "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" <<'EOF'
+    write_file_if_changed "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" <<'EOF'
 #!/bin/sh
 set -u
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
@@ -1237,19 +1630,18 @@ EOF
 
 prepare_buildroot_external()
 {
-    rm -rf "${BUILDROOT_EXTERNAL}"
     mkdir -p "${BUILDROOT_EXTERNAL}"
 
-    cat > "${BUILDROOT_EXTERNAL}/external.desc" <<'EOF'
+    write_file_if_changed "${BUILDROOT_EXTERNAL}/external.desc" <<'EOF'
 name: APOLLO_FVP
 desc: Apollo FVP local Buildroot customizations
 EOF
 
-    cat > "${BUILDROOT_EXTERNAL}/Config.in" <<'EOF'
+    write_file_if_changed "${BUILDROOT_EXTERNAL}/Config.in" <<'EOF'
 # Apollo FVP does not currently add Buildroot packages.
 EOF
 
-    cat > "${BUILDROOT_EXTERNAL}/external.mk" <<'EOF'
+    write_file_if_changed "${BUILDROOT_EXTERNAL}/external.mk" <<'EOF'
 define APOLLO_FVP_REMOVE_LDCONF
 	rm -f $(TARGET_DIR)/etc/ld.so.conf
 	rm -rf $(TARGET_DIR)/etc/ld.so.conf.d
@@ -1272,7 +1664,7 @@ write_buildroot_defconfig()
     [[ -n "${headers_major}" && -n "${headers_patchlevel}" ]] ||
         die "could not read SDK kernel headers version"
 
-    cat > "${defconfig}" <<EOF
+    write_file_if_changed "${defconfig}" <<EOF
 BR2_aarch64=y
 BR2_cortex_a720=y
 BR2_TOOLCHAIN_EXTERNAL=y
@@ -1312,6 +1704,37 @@ BR2_TARGET_ROOTFS_CPIO_GZIP=y
 # BR2_LINUX_KERNEL is not set
 EOF
     printf '%s\n' "${defconfig}"
+}
+
+buildroot_defconfig_digest()
+{
+    local defconfig="$1"
+
+    {
+        sha256sum "${defconfig}"
+        fingerprint_tree_metadata "${BUILDROOT_EXTERNAL}" buildroot-external
+    } | sha256sum | awk '{print $1}'
+}
+
+configure_buildroot_if_needed()
+{
+    local defconfig="$1"
+    local marker="${BUILDROOT_BUILD_DIR}/.apollo-defconfig.sha256"
+    local digest
+    digest="$(buildroot_defconfig_digest "${defconfig}")"
+
+    if [[ "${APOLLO_BUILDROOT_FORCE_DEFCONFIG:-0}" != "1" ]] &&
+        [[ -f "${BUILDROOT_BUILD_DIR}/.config" ]] &&
+        [[ -f "${marker}" ]] &&
+        [[ "$(cat "${marker}")" == "${digest}" ]]; then
+        log "Buildroot defconfig is up to date"
+        return 0
+    fi
+
+    run_logged buildroot-defconfig buildroot_env make -C "${BUILDROOT_SRC}" \
+        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        BR2_DEFCONFIG="${defconfig}" defconfig
+    printf '%s\n' "${digest}" > "${marker}"
 }
 
 validate_buildroot_zena_packages()
@@ -1442,6 +1865,45 @@ validate_zena_kernel_modules_overlay()
     log "Validated Buildroot overlay Arm Zena CSS kernel modules"
 }
 
+fingerprint_tree_metadata()
+{
+    local root="$1"
+    local label="$2"
+
+    [[ -d "${root}" ]] || return 0
+    find "${root}" -type f -printf "${label}/%P|%s|%T@\n" | LC_ALL=C sort
+}
+
+fingerprint_file_hash()
+{
+    local path="$1"
+    local label="$2"
+
+    [[ -f "${path}" ]] || return 0
+    printf '%s|' "${label}"
+    sha256sum "${path}"
+}
+
+kernel_modules_overlay_manifest()
+{
+    local release="$1"
+
+    printf 'release=%s\n' "${release}"
+    printf 'KERNEL_MODULES_AUTOLOAD=%s\n' "${KERNEL_MODULES_AUTOLOAD}"
+    printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
+    fingerprint_file_hash "${LINUX_BUILD_DIR}/.config" linux-config
+    fingerprint_file_hash "${LINUX_BUILD_DIR}/Module.symvers" linux-module-symvers
+    fingerprint_file_hash "${LINUX_BUILD_DIR}/modules.order" linux-modules-order
+    fingerprint_file_hash "${LINUX_BUILD_DIR}/modsign_key.pem" linux-modsign-key
+    fingerprint_file_hash "${LINUX_BUILD_DIR}/certs/signing_key.x509" linux-modsign-cert
+    fingerprint_tree_metadata "${LINUX_BUILD_DIR}" linux-build |
+        grep '\.ko|' || true
+    fingerprint_tree_metadata "${ARM_SI_RPROC_SRC}" arm-si-rproc-src
+    fingerprint_tree_metadata "${RPMSG_NET_SRC}" rpmsg-net-src
+    fingerprint_tree_metadata "${PFDI_MISC_SRC}" pfdi-misc-src
+    fingerprint_file_hash "${PFDI_LOCAL_AGENT_SRC}" pfdi-local-agent-src
+}
+
 build_pfdi_local_agent()
 {
     require_file "${PFDI_LOCAL_AGENT_SRC}"
@@ -1463,6 +1925,22 @@ install_kernel_modules_overlay()
     local release
     release="$(kernel_release)"
     [[ -n "${release}" ]] || die "could not determine kernel release"
+
+    mkdir -p "${BUILDROOT_OVERLAY}/lib/modules"
+    find "${BUILDROOT_OVERLAY}/lib/modules" -mindepth 1 -maxdepth 1 \
+        ! -name "${release}" -exec rm -rf {} +
+
+    local modules_dir="${BUILDROOT_OVERLAY}/lib/modules/${release}"
+    local marker="${modules_dir}/.apollo-modules.manifest"
+    local manifest
+    manifest="$(kernel_modules_overlay_manifest "${release}")"
+    if [[ "${APOLLO_KERNEL_MODULES_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${marker}" ]] &&
+        [[ "$(cat "${marker}")" == "${manifest}" ]]; then
+        validate_zena_kernel_modules_overlay "${release}"
+        log "Buildroot kernel module overlay is up to date"
+        return 0
+    fi
 
     rm -rf "${BUILDROOT_OVERLAY}/lib/modules/${release}"
     run_logged linux-modules-install make -C "${LINUX_SRC}" \
@@ -1486,6 +1964,28 @@ install_kernel_modules_overlay()
     validate_zena_kernel_modules_overlay "${release}"
     find "${BUILDROOT_OVERLAY}/lib/modules/${release}" \
         \( -name build -o -name source \) -type l -delete
+    printf '%s\n' "${manifest}" > "${marker}"
+}
+
+buildroot_initramfs_manifest()
+{
+    local release="$1"
+
+    printf 'BUILDROOT_SRC=%s\n' "$(canonical_dir "${BUILDROOT_SRC}")"
+    git -C "${BUILDROOT_SRC}" rev-parse HEAD 2>/dev/null || true
+    git -C "${BUILDROOT_SRC}" status --porcelain=v1 --untracked-files=no 2>/dev/null || true
+    printf 'release=%s\n' "${release}"
+    printf 'KERNEL_MODULES_AUTOLOAD=%s\n' "${KERNEL_MODULES_AUTOLOAD}"
+    printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
+    fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.config" buildroot-config
+    fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.apollo-defconfig.sha256" buildroot-defconfig
+    fingerprint_file_hash "${BUILDROOT_TOOLCHAIN_DIR}/.apollo-toolchain.manifest" buildroot-toolchain
+    fingerprint_file_hash "${BUILDROOT_OVERLAY}/lib/modules/${release}/.apollo-modules.manifest" kernel-modules-overlay
+    fingerprint_tree_metadata "${BUILDROOT_EXTERNAL}" buildroot-external
+    find "${BUILDROOT_OVERLAY}" \
+        -path "${BUILDROOT_OVERLAY}/lib/modules" -prune -o \
+        -type f -printf 'buildroot-overlay/%P|%s|%T@\n' |
+        LC_ALL=C sort
 }
 
 build_buildroot_initramfs()
@@ -1500,13 +2000,31 @@ build_buildroot_initramfs()
 
     local defconfig
     defconfig="$(write_buildroot_defconfig)"
-    run_logged buildroot-defconfig buildroot_env make -C "${BUILDROOT_SRC}" \
-        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
-        BR2_DEFCONFIG="${defconfig}" defconfig
+    configure_buildroot_if_needed "${defconfig}"
     validate_buildroot_zena_packages
-    rm -rf "${BUILDROOT_BUILD_DIR}/build/toolchain" \
-        "${BUILDROOT_BUILD_DIR}/build/toolchain-external" \
-        "${BUILDROOT_BUILD_DIR}/build/toolchain-external-custom"
+
+    local release
+    release="$(kernel_release)"
+    local image_marker="${BUILDROOT_BUILD_DIR}/images/.apollo-initramfs.manifest"
+    local image_manifest
+    mkdir -p "${BUILDROOT_BUILD_DIR}/images"
+    image_manifest="$(buildroot_initramfs_manifest "${release}")"
+    if [[ "${APOLLO_BUILDROOT_IMAGE_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz" ]] &&
+        [[ -f "${image_marker}" ]] &&
+        [[ "$(cat "${image_marker}")" == "${image_manifest}" ]]; then
+        validate_buildroot_runtime_files
+        install_artifact "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz" \
+            "${BOOT_DIR}/initramfs.cpio.gz"
+        log "Buildroot initramfs is up to date"
+        return 0
+    fi
+
+    if [[ "${BUILDROOT_TOOLCHAIN_REFRESHED:-0}" == "1" ]]; then
+        rm -rf "${BUILDROOT_BUILD_DIR}/build/toolchain" \
+            "${BUILDROOT_BUILD_DIR}/build/toolchain-external" \
+            "${BUILDROOT_BUILD_DIR}/build/toolchain-external-custom"
+    fi
     rm -f "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf"
     rm -rf "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf.d"
     run_logged buildroot-build buildroot_env make -C "${BUILDROOT_SRC}" \
@@ -1517,6 +2035,7 @@ build_buildroot_initramfs()
     require_file "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz"
     install_artifact "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz" \
         "${BOOT_DIR}/initramfs.cpio.gz"
+    printf '%s\n' "${image_manifest}" > "${image_marker}"
 }
 
 normalize_image_version()
@@ -1743,11 +2262,86 @@ write_at()
     dd if="${input}" of="${image}" bs=1 seek="${offset}" conv=notrunc status=none
 }
 
+package_flash_manifest()
+{
+    local si_cl1="$1"
+    local fw_work
+    fw_work="$(firmware_recipe_workdir)"
+
+    printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
+    printf 'RSE_OTP_HOST_PROVISION=%s\n' "${RSE_OTP_HOST_PROVISION:-1}"
+    printf 'trusted-firmware-a-pv=%s\n' "$(pv_version trusted-firmware-a)"
+    printf 'scp-firmware-pv=%s\n' "$(pv_version scp-firmware)"
+    printf 'zephyr-demos-cl1-pv=%s\n' "$(pv_version zephyr-demos-cl1)"
+    fingerprint_file_hash "${FW_DIR}/bl1_1.bin" package-bl1-1
+    fingerprint_file_hash "${FW_DIR}/bl2.bin" package-tfa-bl2
+    fingerprint_file_hash "${FW_DIR}/fip.bin" package-fip
+    fingerprint_file_hash "${FW_DIR}/bl2_signed.bin" package-tfm-bl2
+    fingerprint_file_hash "${FW_DIR}/tfm_s_signed.bin" package-tfm-runtime
+    fingerprint_file_hash "${FW_DIR}/si0_ramfw.bin" package-si0
+    fingerprint_file_hash "${si_cl1}" package-si-cl1
+    fingerprint_file_hash "${FW_DIR}/rom_dma_ics.bin" package-rom-dma-ics
+    fingerprint_file_hash "${FW_DIR}/enc_key_s.b64" package-enc-key
+    fingerprint_file_hash "${FW_DIR}/combined_provisioning_message.bin" package-provisioning-message
+    fingerprint_file_hash "${ROOT_DIR}/scripts/provision_rse_otp_image.py" package-rse-otp-tool
+    fingerprint_file_hash "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/images/files/fvp-rd-aspen/init_fwu_metadata.py" package-fwu-metadata-tool
+    fingerprint_file_hash "${fw_work}/recipe-sysroot-native/usr/share/tfm/root-EC-P256.pem" package-root-key
+}
+
+rse_otp_image_current()
+{
+    local image="${FW_DIR}/rse-otp-image.img"
+    local fingerprint_file="${image}.fingerprint"
+    local fingerprint
+
+    [[ -f "${image}" ]] || return 1
+    [[ -f "${fingerprint_file}" ]] || return 1
+    fingerprint="$(rse_otp_fingerprint)"
+    [[ "$(cat "${fingerprint_file}")" == "${fingerprint}" ]]
+}
+
+package_flash_outputs_present()
+{
+    local signed="$1"
+    local file
+
+    for file in \
+        "${signed}/signed_bl2.bin" \
+        "${signed}/fip_with_bl2.bin" \
+        "${signed}/signed_si0_ramfw.bin" \
+        "${signed}/signed_safety_island_cl1.bin" \
+        "${FW_DIR}/init_fwu_metadata.bin" \
+        "${FW_DIR}/rse-rom-image.img" \
+        "${FW_DIR}/rse-flash-image.img" \
+        "${FW_DIR}/ap-flash-image.img"; do
+        [[ -f "${file}" ]] || return 1
+    done
+    rse_otp_image_current
+}
+
 package_flash_images()
 {
     mkdir -p "${FW_DIR}" "${BOOT_DIR}"
     local signed="${SIGN_DIR}/deploy"
     mkdir -p "${signed}"
+
+    local si_cl1="${SAFETY_ISLAND_CL1_BIN:-${FW_DIR}/zephyr-demos-cl1.bin}"
+    if [[ ! -f "${si_cl1}" && -z "${SAFETY_ISLAND_CL1_BIN:-}" ]]; then
+        si_cl1="${YOCTO_DEPLOY_DIR}/zephyr-demos-cl1.bin"
+    fi
+    require_file "${si_cl1}"
+
+    local package_marker="${FW_DIR}/.apollo-flash-images.manifest"
+    local package_manifest
+    package_manifest="$(package_flash_manifest "${si_cl1}")"
+    if [[ "${APOLLO_FLASH_IMAGES_REFRESH:-0}" != "1" ]] &&
+        [[ "${RSE_OTP_RESET:-0}" != "1" ]] &&
+        [[ -f "${package_marker}" ]] &&
+        [[ "$(cat "${package_marker}")" == "${package_manifest}" ]] &&
+        package_flash_outputs_present "${signed}"; then
+        log "Apollo flash images are up to date"
+        return 0
+    fi
 
     sign_host_image "${FW_DIR}/bl2.bin" 0x70001c00 0x80000 \
         "$(pv_version trusted-firmware-a)" "${signed}/signed_bl2.bin"
@@ -1757,11 +2351,6 @@ package_flash_images()
     sign_host_image "${FW_DIR}/si0_ramfw.bin" 0x70083C00 0x100000 \
         "$(pv_version scp-firmware)" "${signed}/signed_si0_ramfw.bin"
 
-    local si_cl1="${SAFETY_ISLAND_CL1_BIN:-${FW_DIR}/zephyr-demos-cl1.bin}"
-    if [[ ! -f "${si_cl1}" && -z "${SAFETY_ISLAND_CL1_BIN:-}" ]]; then
-        si_cl1="${YOCTO_DEPLOY_DIR}/zephyr-demos-cl1.bin"
-    fi
-    require_file "${si_cl1}"
     sign_host_image "${si_cl1}" 0x70185C00 0x100000 \
         "$(pv_version zephyr-demos-cl1)" "${signed}/signed_safety_island_cl1.bin"
 
@@ -1814,6 +2403,16 @@ package_flash_images()
     write_at "${ap_flash}" $((0x6000)) "${FW_DIR}/init_fwu_metadata.bin" $((0x0200))
     write_at "${ap_flash}" $((0x7000)) "${signed}/fip_with_bl2.bin" "${fip_a_size}"
     write_at "${ap_flash}" $((0x247000)) "${signed}/fip_with_bl2.bin" $((0x240000))
+    printf '%s\n' "${package_manifest}" > "${package_marker}"
+}
+
+boot_disk_manifest()
+{
+    sha256sum \
+        "${BOOT_DIR}/Image" \
+        "${BOOT_DIR}/apollo-fvp.dtb" \
+        "${BOOT_DIR}/initramfs.cpio.gz" \
+        "${BOOT_DIR}/boot.scr"
 }
 
 create_boot_disk()
@@ -1822,7 +2421,7 @@ create_boot_disk()
     require_file "${BOOT_DIR}/apollo-fvp.dtb"
     require_file "${BOOT_DIR}/initramfs.cpio.gz"
 
-    cat > "${BOOT_DIR}/boot.cmd" <<'EOF'
+    write_file_if_changed "${BOOT_DIR}/boot.cmd" <<'EOF'
 setenv kernel_addr_r 0x80080000
 setenv fdt_addr_r 0x8fc00000
 setenv ramdisk_addr_r 0x94000000
@@ -1834,12 +2433,28 @@ setenv initrd_size ${filesize}
 echo "Booting Apollo FVP local Linux"
 booti ${kernel_addr_r} ${ramdisk_addr_r}:${initrd_size} ${fdt_addr_r}
 EOF
-    run_logged boot-script mkimage -A arm64 -T script -C none \
-        -n "Apollo FVP local boot" \
-        -d "${BOOT_DIR}/boot.cmd" "${BOOT_DIR}/boot.scr"
+    if [[ ! -f "${BOOT_DIR}/boot.scr" ]] || [[ "${BOOT_DIR}/boot.cmd" -nt "${BOOT_DIR}/boot.scr" ]]; then
+        run_logged boot-script mkimage -A arm64 -T script -C none \
+            -n "Apollo FVP local boot" \
+            -d "${BOOT_DIR}/boot.cmd" "${BOOT_DIR}/boot.scr"
+    else
+        log "U-Boot boot script is up to date"
+    fi
 
     local fat="${BOOT_DIR}/boot-fat.img"
     local disk="${BOOT_DIR}/apollo-fvp-local-disk.img"
+    local marker="${disk}.manifest"
+    local manifest
+    manifest="$(boot_disk_manifest)"
+    if [[ "${APOLLO_BOOT_DISK_REFRESH:-0}" != "1" ]] &&
+        [[ -f "${fat}" ]] &&
+        [[ -f "${disk}" ]] &&
+        [[ -f "${marker}" ]] &&
+        [[ "$(cat "${marker}")" == "${manifest}" ]]; then
+        log "Apollo FVP boot disk is up to date"
+        return 0
+    fi
+
     rm -f "${fat}" "${disk}"
     truncate -s 256M "${fat}"
     mkfs.vfat "${fat}" >/dev/null
@@ -1855,6 +2470,7 @@ EOF
         --change-name=1:boot \
         "${disk}" >/dev/null
     dd if="${fat}" of="${disk}" bs=512 seek=2048 conv=notrunc status=none
+    printf '%s\n' "${manifest}" > "${marker}"
 }
 
 create_fvpconf()
@@ -1942,18 +2558,18 @@ boot_fvp()
 build_all()
 {
     mkdir -p "${WORK_DIR}" "${DEPLOY_DIR}" "${FW_DIR}" "${BOOT_DIR}" "${LOG_DIR}"
-    build_tfm
-    build_scp
-    build_zephyr
-    build_uboot
-    build_optee
-    build_tfa
-    build_linux
-    build_buildroot_initramfs
-    package_flash_images
-    create_boot_disk
-    create_fvpconf
-    generate_debug_manifest
+    run_step build-tfm build_tfm
+    run_step build-scp build_scp
+    run_step build-zephyr build_zephyr
+    run_step build-u-boot build_uboot
+    run_step build-optee build_optee
+    run_step build-tfa build_tfa
+    run_step build-linux build_linux
+    run_step build-buildroot-initramfs build_buildroot_initramfs
+    run_step package-flash-images package_flash_images
+    run_step create-boot-disk create_boot_disk
+    run_step create-fvpconf create_fvpconf
+    run_step generate-debug-manifest generate_debug_manifest
 }
 
 clean()
@@ -1966,6 +2582,7 @@ main()
     local cmd="${1:-build}"
     case "${cmd}" in
         all)
+            build_qbox
             build_sdk
             setup_build_environment
             build_all
@@ -1975,11 +2592,15 @@ main()
             build_sdk
             setup_build_environment
             ;;
+        qbox)
+            build_qbox
+            ;;
         zephyr)
             setup_zephyr_build_environment
             build_zephyr
             ;;
         build)
+            build_qbox
             setup_build_environment
             build_all
             ;;

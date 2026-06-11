@@ -61,9 +61,10 @@ The active build directory is `build/`. Before changing Yocto metadata, inspect
 
 ## Local Build
 
-The local build uses the Yocto SDK as the cross-toolchain provider, then builds
-TF-M, SCP-firmware, Safety Island CL1 Zephyr, OP-TEE, U-Boot, TF-A, Linux, and
-Buildroot images from local sources:
+The local build builds the QBox Apollo full-system targets first, then uses the
+Yocto SDK as the cross-toolchain provider for TF-M, SCP-firmware, Safety Island
+CL1 Zephyr, OP-TEE, U-Boot, TF-A, Linux, and Buildroot images from local
+sources:
 
 ```bash
 ./local-build.sh build
@@ -81,6 +82,21 @@ To build the SDK first when it is not installed:
 ./local-build.sh sdk
 ./local-build.sh build
 ```
+
+To prebuild only the QBox targets used by the Apollo full-system runner:
+
+```bash
+./local-build.sh qbox
+```
+
+Repeated `local-build.sh build` runs check the QBox CMake cache and required
+Apollo QBox targets through the QBox runner's `--build-only` path. The runner
+builds QBox's `apollo_fvp_full_system` aggregate target by default, so Makefile
+generators evaluate the shared QBox/libqemu dependency graph once instead of
+once per dynamic module. libqemu uses CMake external-project stamps by default,
+so unchanged QEMU sources do not repeat the QEMU build/install step on every
+local build. Set `QBOX_LIBQEMU_BUILD_ALWAYS=ON` only when you explicitly need
+to force the QEMU external project build step.
 
 Main output directory:
 
@@ -119,8 +135,11 @@ with the checkout-local `tools/qemu` submodule as libqemu and
 `LIBQEMU_TARGETS=aarch64` before building the required Apollo platform targets.
 This avoids an ABI mismatch with upstream `qualcomm/qemu.git`. Set
 `QBOX_CMAKE_PRESET=<preset>`, `QBOX_LIBQEMU_TARGETS=<targets>`,
-`QBOX_LIBQEMU_GIT=<url>`, `QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU=<path>`, or
-`QBOX_GIT_BRANCH=<ref>` to override those clean-configure defaults.
+`QBOX_LIBQEMU_GIT=<url>`, `QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU=<path>`,
+`QBOX_GIT_BRANCH=<ref>`, or `QBOX_APOLLO_BUILD_TARGET=<target>` to override
+those clean-configure defaults. Set `QBOX_APOLLO_BUILD_TARGET=` to use the
+legacy explicit target list, or `QBOX_LIBQEMU_BUILD_ALWAYS=ON` to restore
+libqemu's always-build behavior for QEMU development.
 
 `local-build.sh build` creates a provisioned RSE OTP image from the TF-M local
 build outputs so a clean checkout can boot directly in QBox without first

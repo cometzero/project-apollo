@@ -581,6 +581,10 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
         "QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU", str(local_qemu)
     )
     git_branch = os.environ.get("QBOX_GIT_BRANCH", "libqemu-v11.0-v0.5")
+    libqemu_build_always = os.environ.get("QBOX_LIBQEMU_BUILD_ALWAYS", "OFF")
+    apollo_build_target = os.environ.get(
+        "QBOX_APOLLO_BUILD_TARGET", "apollo_fvp_full_system"
+    )
 
     configure_cmd = ["cmake", "--preset", preset]
     expected_cache = {
@@ -588,6 +592,8 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
         "LIBQEMU_GIT": libqemu_git,
         "FETCHCONTENT_SOURCE_DIR_LIBQEMU": libqemu_source,
         "GIT_BRANCH": git_branch,
+        "LIBQEMU_BUILD_ALWAYS": libqemu_build_always,
+        "QBOX_APOLLO_BUILD_TARGET": apollo_build_target,
     }
     for key, value in expected_cache.items():
         if value:
@@ -602,12 +608,13 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     if needs_configure:
         run(configure_cmd, cwd=qbox_dir)
 
+    build_targets = [apollo_build_target] if apollo_build_target else REQUIRED_TARGETS
     cmd = [
         "cmake",
         "--build",
         str(build_dir),
         "--target",
-        *REQUIRED_TARGETS,
+        *build_targets,
         "--parallel",
         str(jobs),
     ]
@@ -3986,6 +3993,11 @@ def parse_args() -> argparse.Namespace:
         help="Validate inputs and write result.json without launching QBox.",
     )
     parser.add_argument(
+        "--build-only",
+        action="store_true",
+        help="Build required QBox targets and exit before artifact validation.",
+    )
+    parser.add_argument(
         "--platform-param",
         action="append",
         default=[],
@@ -4752,6 +4764,10 @@ def parse_args() -> argparse.Namespace:
         args.rse_direct_rse_flash_alias = True
         args.rse_direct_ap_fip_alias = True
         args.rse_storage_direct_fastpath = True
+    if args.build_only and args.skip_build:
+        parser.error("--build-only cannot be used with --skip-build")
+    if args.build_only:
+        return args
     resolve_rse_bl2_hook_symbols(args, root)
     resolve_rse_bl1_2_lms_symbol(args, root)
     return args
@@ -4765,6 +4781,14 @@ def main() -> int:
         args.ap_bl2_elf = args.ap_bl2_elf.resolve()
     apply_primary_console_profile(args)
     args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.build_only:
+        try:
+            ensure_qbox_targets(root, args.jobs)
+        except subprocess.CalledProcessError as exc:
+            return exc.returncode or 1
+        return 0
+
     artifacts = {
         "rse_rom": args.rse_rom.resolve(),
         "rse_flash": args.rse_flash.resolve(),
