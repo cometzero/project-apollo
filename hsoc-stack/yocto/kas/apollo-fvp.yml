@@ -10,7 +10,7 @@ repos:
   hsoc-stack:
     path: hsoc-stack
     layers:
-      yocto/meta-hsoc-apollo-bsp:
+      yocto/meta-hsoc-bsp:
 
 local_conf_header:
   apollo-fvp: |

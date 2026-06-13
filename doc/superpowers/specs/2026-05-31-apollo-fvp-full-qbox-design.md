@@ -23,9 +23,9 @@ and file-backed logs for several subsystems.
 - Local Apollo artifacts:
   `build/local-apollo-fvp/deploy/`
 - Yocto Apollo machine and component overrides:
-  `hsoc-stack/yocto/meta-hsoc-apollo-bsp/conf/machine/apollo-fvp.conf`
+  `hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-fvp.conf`
   and Apollo-specific recipe includes under
-  `hsoc-stack/yocto/meta-hsoc-apollo-bsp/recipes-*`
+  `hsoc-stack/yocto/meta-hsoc-bsp/recipes-*`
 - Hardware and boot-flow notes:
   `doc/arm-zena-css-hardware-blocks.md`
   and `doc/arm_zena_css_dev_guide/`

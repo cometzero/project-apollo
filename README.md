@@ -31,7 +31,7 @@ scripts/bootstrap_project.sh --jobs 8 --force
 ## Yocto Build
 
 The Yocto entrypoint uses the Apollo template under
-`hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/` and builds the
+`hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/` and builds the
 `baremetal-image` target for `MACHINE = "apollo-fvp"`:
 
 ```bash

@@ -15,7 +15,7 @@ over register-only stubs.
 ## Active Baseline
 
 - Active Yocto build directory: `build/`
-- Active Yocto template: `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- Active Yocto template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
 - Build entrypoint: `./build.sh`
 - Current machine: `apollo-fvp`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`

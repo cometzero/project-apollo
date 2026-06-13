@@ -9,7 +9,7 @@ WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POKY_DIR="${WORKSPACE_DIR}/layers/poky"
 
 BUILD_DIR="${BUILD_DIR:-${WORKSPACE_DIR}/build}"
-TEMPLATECONF="${TEMPLATECONF:-${WORKSPACE_DIR}/hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp}"
+TEMPLATECONF="${TEMPLATECONF:-${WORKSPACE_DIR}/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp}"
 
 host_cpus() {
     nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1

@@ -5,8 +5,8 @@
 BBLAYERS ?= " \
     ##OEROOT##/../../arm-zena-css/yocto/meta-zena-css-bsp \
     ##OEROOT##/../../arm-zena-css/yocto/meta-zena-css-safety-island \
-    ##OEROOT##/../../hsoc-stack/yocto/meta-hsoc-apollo \
-    ##OEROOT##/../../hsoc-stack/yocto/meta-hsoc-apollo-bsp \
+    ##OEROOT##/../../hsoc-stack/yocto/meta-hsoc-auto-solutions \
+    ##OEROOT##/../../hsoc-stack/yocto/meta-hsoc-bsp \
     ##OEROOT##/../meta-arm/meta-arm \
     ##OEROOT##/../meta-arm/meta-arm-toolchain \
     ##OEROOT##/../meta-bluechi/meta-bluechi \
