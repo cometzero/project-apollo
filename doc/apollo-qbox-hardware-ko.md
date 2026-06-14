@@ -1,6 +1,6 @@
 # Apollo QBox 하드웨어 에뮬레이션 분석
 
-작성일: 2026-06-13
+작성일: 2026-06-14
 
 이 문서는 `doc/apollo-fvp-hardware-analysis-ko.md`의 Apollo FVP 하드웨어
 분석을 기준으로, 현재 QBox/QEMU가 각 하드웨어 IP를 어떤 모듈로
@@ -24,7 +24,7 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | QEMU backend source | `tools/qemu/` |
 | Apollo full-system runner | `scripts/run_qbox_apollo_fvp_full.py` |
 | Full-system 설계/맵 | `doc/qbox-apollo-fvp-full-system-design.md`, `doc/qbox-apollo-fvp-map-analysis.md` |
-| 최근 검증 결과 | `build/qbox-apollo-fvp/layer-rename-local-qbox-final-20260613-131822/result.json` |
+| 최근 검증 결과 | `build/qbox-apollo-fvp/full-model-debug-no-trace/result.json`, `build/qbox-apollo-fvp/full-model-debug-no-trace/coverage-audit.json` |
 
 ## 실행 경로
 
@@ -115,7 +115,7 @@ QBox 구현은 한 종류의 backend만 쓰지 않는다. 현재 Apollo FVP 하�
 | --- | --- | --- |
 | Lua platform wiring | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file` | 주소 decode, alias, image load, log backend |
 | QEMU-backed CPU/IP | `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, `arm_gicv3`, `arm_gicv3_its`, `arm_smmuv3` fallback, `virtio_mmio_*`, `pl031`, `sbsa_gwdt` | QEMU/libqemu device model을 SystemC socket으로 노출 |
-| SystemC/TLM behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `host_ppu`, `gicx00_multiview` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
+| SystemC/TLM behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `rse_protection_ctrl`, `zena_fmu`, `zena_ssu`, `host_ppu`, `gicx00_multiview` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
 | QEMU-native fast backend | `qemu_cc3xx` | `cc3xx_core`를 QEMU MemoryRegionOps fast path로 실행 |
 | Remote CPU bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` | RSE Cortex-M55 실행과 SystemC host platform 연결 |
 | Placeholder/memory-backed model | `gs_memory` | 아직 full behavioral model이 없는 register window 보존 |
@@ -209,7 +209,8 @@ helper를 통해 RSE 실행과 host SystemC model을 연결한다.
 | RSE ATU | `rse_atu_regs` | `rse_atu` | secure/non-secure host window translation |
 | Integrity checker | `rse_integrity_checker_regs` | `rse_integrity_checker` | build config/status model |
 | System control | `rse_sysctrl` | `rse_sysctrl` | reset syndrome, CPUWAIT, DMA boot registers |
-| SACFG/NSACFG/MPC/SIC/TRAM/counters | `rse_*_regs`, `rse_tram` | `gs_memory` | firmware-visible register window 보존 |
+| SACFG/NSACFG/MPC/SIC protection control | `rse_nsacfg_regs`, `rse_sacfg_regs`, `rse_mpc_vm0_regs`, `rse_mpc_vm1_regs`, `rse_sic_regs`, `rse_mpc_sic_regs` | `rse_protection_ctrl` | first-wave SystemC model. VM0/VM1은 `profile=1`, `blk_max=1`, `blk_cfg=0x7`; SIC MPC는 `blk_max=127` |
+| TRAM/counters | `rse_tram`, selected counter windows | `gs_memory` | firmware-visible register window 보존 |
 | RSE host UART | `rse_host_uart0_s` | `Pl011` | RSE UART file-backed log |
 
 CC3XX는 성능상 중요한 예외이다. 기본은 SystemC `cc3xx`이지만,
@@ -259,8 +260,8 @@ control surface이다. 실제 interrupt delivery는 CL0/CL1/AP 각각의
 | RSE/SCP shared SRAM | `si_cl0_rse_shared_sram` | `gs_memory` | CL0 local `0x40000000` view |
 | SCR/System ID | `si_cl0_scr`, `si_cl0_system_id` | `host_scr` | CL1 present bit, ID/PID/CID reset values |
 | Generic timers/counters | `si_cl0_timer_cntctl`, `si_cl0_timer_cntbase`, `si_cl0_refclk_cntcontrol` | `host_gtimer` | counter/control register behavior |
-| SSU | `si_cl0_ssu` | `gs_memory` | register window placeholder |
-| FMU | `si_cl0_fmu` | `gs_memory` | FMU window placeholder |
+| SSU | `si_cl0_ssu` | `zena_ssu` | FMU critical/non-critical signal 수신, firmware-visible SSU register surface |
+| FMU | `si_cl0_fmu` | `zena_fmu` | 5 banks, 384 records, CL0 GIC SPI 128/129와 SSU signal 연결 |
 | NI-710AE NCI | `si_cl0_ni710ae_primary_nci`, `*_secondary_nci`, `*_mhu_nci` | `host_ni710ae_nci` | topology/build register model |
 | CMN S3(AE) ATW0 | `si_cl0_cmn_cyprus` | `host_cmn_cyprus` | CMN GPV touched/status model |
 | PLL | `si_cl0_pll` | `host_system_pll` | lock bit behavior |
@@ -271,8 +272,10 @@ control surface이다. 실제 interrupt delivery는 CL0/CL1/AP 각각의
 
 CL0 live model은 현재 실제 SCP-firmware가 진행하는 polling과 register writes를
 통과시키기 위해 필요한 최소 behavior를 SystemC 모델로 추가한 상태이다.
-FMU/SSU 같은 safety block은 아직 full fault propagation 모델이라기보다
-firmware-visible window를 보존하는 쪽에 가깝다.
+FMU/SSU는 first-wave에서 `gs_memory` placeholder를 벗어나 `zena_fmu`와
+`zena_ssu`로 승격되었다. 다만 현재 범위는 boot-critical register surface,
+FMU interrupt, SSU critical/non-critical propagation에 초점을 둔 것이며,
+FVP 수준의 전체 fault injection/RAS parity는 후속 fidelity 과제로 남아 있다.
 
 ## Safety Island CL1 Block
 
@@ -356,7 +359,7 @@ AP-RSE, RSE-SI MHU와 shared memory를 더 많이 포함한다.
 | SCMI | `mhu320ae` protocol `scmi` | RSE-SI, AP-SI, PFDI monitor service-model transport |
 | PFDI monitor | `host_ap_si_pfdi_monitor_mhu_pbx`, `si_cl1_pfdi_mhu_pbx` | AP 16 channels, CL1 4 channels shared-memory SCMI |
 | SMCF | `host_smcf_mgi`, `gs_memory` SMCF SRAM | monitor group interface register model |
-| FMU/SSU | `gs_memory` windows | register access placeholder; full fault semantics pending |
+| FMU/SSU | `zena_fmu`, `zena_ssu` | first-wave safety/control model; full fault semantics/RAS parity pending |
 | Power/clock | `host_ppu`, `host_system_pll`, `host_gtimer` | polling/status-friendly control models |
 | SCR/System ID | `host_scr` | CL1 presence, ID/PID/CID values |
 
@@ -392,7 +395,7 @@ SMD/SCMI/PFDI object construction은 `system_mgmt.lua`로 옮기는 것이 적�
 | --- | --- | --- |
 | AP | UART, watchdog, RTC, timer, virtio | `Pl011`, `sbsa_gwdt`, `pl031`, `qemu_hexagon_qtimer`, `virtio_mmio_*` |
 | RSE | UART, boot flash, DMA350, CC3XX, KMU, LCM, SAM, ATU, MHU | `Pl011`, `strata_flash_j3`, `dma350`, `cc3xx`/`qemu_cc3xx`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_atu`, `mhu320ae` |
-| SI CL0 | UART, GIC, timers, SCR, NI-710AE, CMN, PPU, SMCF, SSU/FMU | `Pl011`, `arm_gicv3`, `gicx00_multiview`, `host_gtimer`, `host_scr`, `host_ni710ae_nci`, `host_cmn_cyprus`, `host_ppu`, `host_smcf_mgi`, `gs_memory` |
+| SI CL0 | UART, GIC, timers, SCR, NI-710AE, CMN, PPU, SMCF, SSU/FMU | `Pl011`, `arm_gicv3`, `gicx00_multiview`, `host_gtimer`, `host_scr`, `host_ni710ae_nci`, `host_cmn_cyprus`, `host_ppu`, `host_smcf_mgi`, `zena_ssu`, `zena_fmu`, `gs_memory` |
 | SI CL1 | UART, GIC, HIPC/PFDI MHU, SCMI shmem, SRAM | `Pl011`, `arm_gicv3`, `mhu320ae`, `gs_memory` |
 
 ## 모듈 상태 분류
@@ -400,11 +403,11 @@ SMD/SCMI/PFDI object construction은 `system_mgmt.lua`로 옮기는 것이 적�
 | 분류 | 모듈 |
 | --- | --- |
 | QEMU-backed live model | `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, `arm_gicv3`, `arm_gicv3_its`, `arm_smmuv3` fallback, `virtio_mmio_blk`, `virtio_mmio_net`, `virtio_mmio_rng`, `pl031`, `sbsa_gwdt`, `qemu_gpex` |
-| SystemC behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_sysctrl`, `rse_integrity_checker`, `host_gtimer`, `host_ppu`, `host_scr`, `host_cmn_cyprus`, `host_ni710ae_nci`, `host_smcf_mgi`, `host_system_pll`, `gicx00_multiview` |
+| SystemC behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_sysctrl`, `rse_integrity_checker`, `rse_protection_ctrl`, `zena_fmu`, `zena_ssu`, `host_gtimer`, `host_ppu`, `host_scr`, `host_cmn_cyprus`, `host_ni710ae_nci`, `host_smcf_mgi`, `host_system_pll`, `gicx00_multiview` |
 | QEMU-native fast path | `qemu_cc3xx` |
 | Remote bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` |
 | Infrastructure | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file`, `char_backend_stdio`, `global_peripheral_initiator`, `reset_fanout`, `reset_gpio`, `keep_alive`, `QemuInstance`, `QemuInstanceManager` |
-| Placeholder/fidelity debt | SSU/FMU windows as `gs_memory`, broad fallback windows, selected AP/SI cluster control windows as `gs_memory`, secure watchdog placeholder |
+| Placeholder/fidelity debt | broad fallback windows, selected AP/SI cluster control windows as `gs_memory`, secure watchdog placeholder, TRAM/counter windows without side-effect model |
 
 상세 placeholder 분류와 full-model 승격 gate는
 [`doc/apollo-qbox-full-model/coverage-ledger.md`](apollo-qbox-full-model/coverage-ledger.md)에
@@ -413,9 +416,10 @@ P0/P1 `full-model-required` 항목은 SystemC/TLM 모델로 교체한다.
 
 ## 최근 검증 상태
 
-최근 full-system 검증 결과
-`build/qbox-apollo-fvp/layer-rename-local-qbox-final-20260613-131822/result.json`는
-다음 상태를 기록한다.
+최근 first-wave full-model 검증 결과
+`build/qbox-apollo-fvp/full-model-debug-no-trace/result.json`와
+`build/qbox-apollo-fvp/full-model-debug-no-trace/coverage-audit.json`는 다음
+상태를 기록한다.
 
 | 항목 | 결과 |
 | --- | --- |
@@ -426,12 +430,16 @@ P0/P1 `full-model-required` 항목은 SystemC/TLM 모델로 교체한다.
 | MHU backend | `systemc-mhu320ae` |
 | performance preset | enabled |
 | blocker / first failing marker | 없음 |
+| backend coverage audit | pass, 49 checks / 0 failures |
 
 marker group 기준으로 RSE boot, RSE-SCP handoff, AP firmware chain, Linux
 boot, SI CL0, SI CL1, measured boot, map/interrupt, post-login evidence가 모두
-true로 확인되었다. 이 결과는 현재 문서의 “기본 full-system 실행 상태”를
-대표하지만, `build/` 아래 생성물이므로 재현이 필요한 경우 runner를 다시
-실행해 갱신해야 한다.
+true로 확인되었다. Coverage audit은 `si_cl0_ssu=zena_ssu`,
+`si_cl0_fmu=zena_fmu`, RSE protection register windows의
+`rse_protection_ctrl`, RSE/SI/AP/SMD ATU windows의 `rse_atu` backend를
+확인한다. 이 결과는 현재 문서의 “기본 full-system 실행 상태”를 대표하지만,
+`build/` 아래 생성물이므로 재현이 필요한 경우 runner를 다시 실행해 갱신해야
+한다.
 
 ## FVP 대비 주요 차이와 주의점
 
