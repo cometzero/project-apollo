@@ -49,7 +49,7 @@ JSON evidence로 확인되어야 한다.
 ```text
 scripts/run_qbox_apollo_fvp_linux.py
 scripts/build_qbox_apollo_fvp_linux.sh
-tools/qbox/platforms/apollo-fvp/conf.lua
+tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
 이 경로는 Linux kernel, initramfs, AP device model 검증에는 빠르다.
@@ -65,8 +65,8 @@ scripts/run_qbox_apollo_fvp_si_cl1.py
 scripts/validate_qbox_apollo_fvp_full_map.py
 scripts/audit_qbox_apollo_fvp_full_coverage.py
 scripts/verify_qbox_apollo_fvp_full_completion.py
-tools/qbox/platforms/apollo-fvp/full.lua
-tools/qbox/platforms/apollo-fvp/si-cl1.lua
+tools/qbox/platforms/apollo/apollo-qvp.lua
+tools/qbox/platforms/apollo/apollo-si-cl1.lua
 ```
 
 ## 전체 SW Architecture
@@ -83,7 +83,7 @@ tools/qbox/platforms/apollo-fvp/si-cl1.lua
                                 v
 +---------------------------------------------------------------+
 | QBox Lua Platform                                              |
-|  tools/qbox/platforms/apollo-fvp/full.lua                      |
+|  tools/qbox/platforms/apollo/apollo-qvp.lua                      |
 |  - RD-Aspen RSE-first topology reuse                           |
 |  - Apollo AP logical view router                               |
 |  - live SI CL0 option                                          |
@@ -140,8 +140,10 @@ tools/qbox/platforms/apollo-fvp/si-cl1.lua
    해석한다.
 2. Runner가 QBox full-system platform을 빌드하거나 `--skip-build`일 때
    기존 빌드를 사용한다.
-3. `full.lua`가 RD-Aspen RSE-first topology를 불러온 뒤 Apollo 전용 AP
-   view router와 Safety Island live domain을 추가한다.
+3. `apollo-qvp.lua`가 `hw-block/rse.lua`를 불러오며 Apollo-owned RSE-first
+   topology를 직접 구성한 뒤 `ap_compute.lua`, `si_cl0.lua`, `si_cl1.lua`,
+   `ros.lua`로 Apollo 전용 AP view router, Safety Island live domain, RoS
+   routing을 추가한다.
 4. RSE Cortex-M55가 TF-M ROM/flash/OTP로 부팅한다.
 5. RSE가 provisioning bundle과 AP/SI image manifest를 처리한다.
 6. Safety Island CL0 SCP-firmware가 live mode에서 Cortex-R82로 실행된다.
@@ -170,9 +172,10 @@ tools/qbox/platforms/apollo-fvp/si-cl1.lua
 
 ### Apollo Full Platform
 
-`tools/qbox/platforms/apollo-fvp/full.lua`는 full-system entrypoint이다.
-기존 `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`의 RSE-first 구조를
-기반으로 하며, Apollo 전용 기능을 추가한다.
+`tools/qbox/platforms/apollo/apollo-qvp.lua`는 full-system entrypoint이다.
+`tools/qbox/platforms/apollo/hw-block/rse.lua`의 Apollo-owned RSE-first
+구조를 기반으로 하며, 나머지 Apollo 전용 기능도
+`tools/qbox/platforms/apollo/hw-block/` 아래 block module로 분리되어 있다.
 
 핵심 설계는 다음과 같다.
 
@@ -189,7 +192,7 @@ tools/qbox/platforms/apollo-fvp/si-cl1.lua
 
 ### Safety Island CL1 단독 Platform
 
-`tools/qbox/platforms/apollo-fvp/si-cl1.lua`는 CL1 Zephyr만 빠르게 실행해
+`tools/qbox/platforms/apollo/apollo-si-cl1.lua`는 CL1 Zephyr만 빠르게 실행해
 SMP, UART, PFDI agent, PFDI service, shell marker를 확인하는 단독
 milestone platform이다. 최종 완료 증거는 아니지만 Cortex-R82/Zephyr
 bring-up 회귀 검사에 유용하다.

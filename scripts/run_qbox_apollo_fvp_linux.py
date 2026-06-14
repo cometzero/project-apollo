@@ -482,13 +482,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox/platforms/apollo-fvp/conf.lua",
+        default=root / "tools/qbox/platforms/apollo/apollo-pc.lua",
     )
     parser.add_argument(
         "--dts",
         type=Path,
         default=root
-        / "tools/qbox/platforms/apollo-fvp/apollo-fvp-primary-compute.dts",
+        / "tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts",
     )
     parser.add_argument(
         "--dtb",

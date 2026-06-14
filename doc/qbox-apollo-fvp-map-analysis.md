@@ -27,7 +27,7 @@ behavior.
 - Current QBox RD-Aspen RSE topology:
   `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - Current QBox Apollo direct-boot AP device tree:
-  `tools/qbox/platforms/apollo-fvp/apollo-fvp-primary-compute.dts`
+  `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts`
 - Current QBox RD-Aspen AP device tree:
   `tools/qbox/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts`
 - Apollo-owned Safety Island CL0 firmware map and IRQ definitions:

@@ -60,14 +60,15 @@ completion gates and cannot authorize a full-system completion claim.
 
 The design is based on the current workspace state:
 
-- `tools/qbox/platforms/apollo-fvp/conf.lua` is the current Apollo
+- `tools/qbox/platforms/apollo/apollo-pc.lua` is the current Apollo
   primary-compute direct-boot platform.
 - `scripts/run_qbox_apollo_fvp_linux.py` boots local `Image` and
   `initramfs.cpio.gz` directly and bypasses RSE, TF-A, OP-TEE, and U-Boot.
-- `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` already contains the
-  RSE-first topology: RSE Cortex-M55, AP firmware chain, AP reset release,
-  AP/RSE/SI MHUv3 paths, AP-SI HIPC/RPMsg service-model hooks, PFDI monitor
-  plumbing, and file-backed multi-console logs.
+- `tools/qbox/platforms/apollo/hw-block/rse.lua` contains the Apollo-owned
+  RSE-first topology imported from the existing RD-Aspen RSE platform: RSE
+  Cortex-M55, AP firmware chain, AP reset release, AP/RSE/SI MHUv3 paths,
+  AP-SI HIPC/RPMsg service-model hooks, PFDI monitor plumbing, and
+  file-backed multi-console logs.
 - `scripts/run_qbox_fvp_rd_aspen_rse.py` already implements artifact
   preparation, per-run writable flash/OTP copies, flash decompression and
   padding, marker evaluation, post-login probes, FWU probes, and structured
@@ -112,7 +113,7 @@ Keep the existing fast direct-boot path unchanged:
 ```text
 scripts/run_qbox_apollo_fvp_linux.py
 scripts/build_qbox_apollo_fvp_linux.sh
-tools/qbox/platforms/apollo-fvp/conf.lua
+tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
 Add a separate full-system path:
@@ -123,7 +124,12 @@ scripts/build_qbox_apollo_fvp_full.sh
 scripts/validate_qbox_apollo_fvp_full_map.py
 scripts/audit_qbox_apollo_fvp_full_coverage.py
 scripts/verify_qbox_apollo_fvp_full_completion.py
-tools/qbox/platforms/apollo-fvp/full.lua
+tools/qbox/platforms/apollo/apollo-qvp.lua
+tools/qbox/platforms/apollo/hw-block/rse.lua
+tools/qbox/platforms/apollo/hw-block/ap_compute.lua
+tools/qbox/platforms/apollo/hw-block/si_cl0.lua
+tools/qbox/platforms/apollo/hw-block/si_cl1.lua
+tools/qbox/platforms/apollo/hw-block/ros.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
 

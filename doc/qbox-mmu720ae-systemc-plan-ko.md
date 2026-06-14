@@ -288,7 +288,7 @@ Files:
 
 - Modify: `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
 - Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- Modify: `tools/qbox/platforms/apollo-fvp/full.lua`
+- Modify: `tools/qbox/platforms/apollo/apollo-qvp.lua`
 - Modify: `scripts/validate_qbox_fvp_rd_aspen_map.py`
 - Modify: `scripts/run_qbox_fvp_rd_aspen_linux.py`
 - Modify: `scripts/run_qbox_fvp_rd_aspen_rse.py`

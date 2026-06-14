@@ -87,8 +87,8 @@ Default 전환 대상:
 - `tools/qbox/platforms/fvp-rd-aspen/conf.lua`: AP SCMI TX/RX.
 - `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`: RSE local MHU0/MHU2,
   AP/RSE secure mailbox, RSE/SI SCMI, AP/SI SCMI/CL1/PFDI paths.
-- `tools/qbox/platforms/apollo-fvp/full.lua`: live CL1 HIPC/PFDI override.
-- `tools/qbox/platforms/apollo-fvp/si-cl1.lua`: isolated CL1 HIPC/PFDI.
+- `tools/qbox/platforms/apollo/apollo-qvp.lua`: live CL1 HIPC/PFDI override.
+- `tools/qbox/platforms/apollo/apollo-si-cl1.lua`: isolated CL1 HIPC/PFDI.
 
 `mhuv3_rproc_stub`는 standalone primary-compute remoteproc path의 separate
 compatibility component로 남긴다.

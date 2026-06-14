@@ -28,7 +28,7 @@ Evidence:
   Arm MHU-320AE in the Safety Island block.
 - `tools/qbox/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts` exposes
   `arm,mhuv3` nodes at `0x40020000`, `0x40050000`, `0x400b0000`, `0x400e0000`.
-- `tools/qbox/platforms/apollo-fvp/full.lua` exposes live CL1 local MHU frames
+- `tools/qbox/platforms/apollo/apollo-qvp.lua` exposes live CL1 local MHU frames
   at `0x39000000`, `0x39040000`, and `0x39200000`.
 - `tools/qbox/systemc-components/mhuv3_stub/` contains the existing validated
   PBX/MBX frame model and service hooks.
@@ -87,8 +87,8 @@ Files:
 
 - `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
 - `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- `tools/qbox/platforms/apollo-fvp/full.lua`
-- `tools/qbox/platforms/apollo-fvp/si-cl1.lua`
+- `tools/qbox/platforms/apollo/apollo-qvp.lua`
+- `tools/qbox/platforms/apollo/apollo-si-cl1.lua`
 - `scripts/run_qbox_fvp_rd_aspen_linux.py`
 - `scripts/run_qbox_fvp_rd_aspen_rse.py`
 - `scripts/run_qbox_apollo_fvp_si_cl1.py`

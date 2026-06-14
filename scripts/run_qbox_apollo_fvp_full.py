@@ -1106,7 +1106,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox/platforms/apollo-fvp/full.lua",
+        default=root / "tools/qbox/platforms/apollo/apollo-qvp.lua",
     )
     parser.add_argument(
         "--local-build-dir",

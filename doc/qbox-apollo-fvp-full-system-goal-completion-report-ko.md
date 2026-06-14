@@ -203,7 +203,7 @@ G4는 Safety Island CL0 SCP-firmware와 CL1 Zephyr를 모두 live로 실행하�
 tree에 산출물이 없어서 발생한 문제였다. 반면 `reset_fanout`과 일부 Apollo
 full-system live module은 runner의 `REQUIRED_TARGETS`에 없었다.
 
-`tools/qbox/platforms/apollo-fvp/full.lua`의 `moduletype` 목록과
+`tools/qbox/platforms/apollo/apollo-qvp.lua`의 `moduletype` 목록과
 `scripts/run_qbox_fvp_rd_aspen_rse.py`의 `REQUIRED_TARGETS`를 대조했다.
 그 결과 live CL0/CL1에서 직접 로딩하는 다음 dynamic module들이 누락되어
 있음을 확인했다.

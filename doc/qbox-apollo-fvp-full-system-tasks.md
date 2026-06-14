@@ -445,7 +445,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 
 | ID | Task | Deliverable | Acceptance |
 | --- | --- | --- | --- |
-| QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox/platforms/apollo-fvp/full.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
+| QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox/platforms/apollo/apollo-qvp.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
 | QAP-FULL-011 | Add full-system runner. | `scripts/run_qbox_apollo_fvp_full.py`. | Supports `--check-only`, `--si-mode`, `--post-login-probe`, `--out-dir`, artifact overrides, per-run writable flash/OTP copies, and structured `result.json`. |
 | QAP-FULL-012 | Add build wrapper. | `scripts/build_qbox_apollo_fvp_full.sh`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
 | QAP-FULL-013 | Add static map validator. | `scripts/validate_qbox_apollo_fvp_full_map.py`. | Checks AP, RSE, SMD, SI CL0, SI CL1 memory views; AP GIC, RSE NVIC, SI CL0 GIC view, SI CL1 GIC view; ATU/ATW windows; AP-RSE/RSE-SI/AP-SI/CL1-CL0 MHU channels; UART, timers, watchdogs, HIPC, PFDI, FMU, SSU, and SMCF evidence. |
@@ -466,7 +466,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | QAP-FULL-025 | Add SystemC SI GIC multiview controller. | `tools/qbox/systemc-components/gicx00_multiview/`. | Dynamic module builds, exposes `view0_dist`, `view0_redist[]`, `spi_in[]`, `view1_spi_out[]`, and `view2_spi_out[]`, and does not patch the existing QEMU GICv3 wrapper. |
 | QAP-FULL-026 | Implement SI GIC multiview register model. | `GICD_CTLR`, `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR`, and `GICR_VIEWR` behavior. | SCP-firmware can read the view capability bit, program redistributor and SPI views, and poll `GICR_PWRR` without unsupported-access traps. |
 | QAP-FULL-027 | Wire SI CL0/CL1 QEMU GICv3 backends. | Apollo full Lua wiring with `si_cl0_gic`, `si_cl1_gic`, and `gicx00_multiview`. | View-0 MMIO reaches SystemC; CL0 view-1 MMIO reaches the CL0 QEMU GICv3 backend; CL1 view-2 MMIO reaches the CL1 QEMU GICv3 backend. |
-| QAP-FULL-028 | Route SI SPIs through the multiview controller. | MHU, UART, timer, FMU/SSU/SMCF, and other shared SI SPI bindings in `full.lua`. | CL0 and CL1 interrupts are delivered through the firmware-configured local view without collapsing CL1 Zephyr SPIs into CL0 SCP-firmware IRQ names. |
+| QAP-FULL-028 | Route SI SPIs through the multiview controller. | MHU, UART, timer, FMU/SSU/SMCF, and other shared SI SPI bindings in `apollo-qvp.lua`. | CL0 and CL1 interrupts are delivered through the firmware-configured local view without collapsing CL1 Zephyr SPIs into CL0 SCP-firmware IRQ names. |
 | QAP-FULL-029 | Validate SI GIC multiview routing. | Unit tests plus isolated and integrated runtime evidence. | `cmake --build tools/qbox/build --target gicx00_multiview --parallel 8`, `ctest --test-dir tools/qbox/build -R gicx00_multiview`, and `python3 scripts/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --post-login-probe --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1` pass or record a classified blocker. |
 
 ### Current Phase 2 Evidence
@@ -492,7 +492,7 @@ be proven by their own gates.
 | ID | Task | Deliverable | Acceptance |
 | --- | --- | --- | --- |
 | QAP-FULL-030 | Replace CL1 RPMsg name-service model with live Zephyr. | `--si-mode live-cl1` integrated with AP Linux. | Linux `arm_si_rproc`, `rpmsg_ns`, `virtio_rpmsg_bus`, `rpmsg_net`, and `ethsi1` markers pass using Zephyr-generated messages. |
-| QAP-FULL-031 | Wire AP-SI CL1 MHU doorbells to live CL1. | MHU routing in `full.lua` plus tests/log markers. | AP kicks reach CL1, CL1 kicks reach AP, and vring/shared-buffer ownership is visible in logs or trace. |
+| QAP-FULL-031 | Wire AP-SI CL1 MHU doorbells to live CL1. | MHU routing in `apollo-qvp.lua` plus tests/log markers. | AP kicks reach CL1, CL1 kicks reach AP, and vring/shared-buffer ownership is visible in logs or trace. |
 | QAP-FULL-032 | Validate CL1 PFDI local behavior. | CL1 log and Linux probe evidence. | No AP core PFDI monitor timeout is observed; PFDI agent/service markers match the FVP baseline where applicable. |
 | QAP-FULL-033 | Validate HIPC shared memory layout. | AP Linux and CL1 Zephyr traces for resource table, vrings, and RPMsg buffers. | The 512 KiB HIPC layout is shared by AP and CL1 without overlapping SCMI/PFDI monitor payloads. |
 
@@ -552,7 +552,7 @@ AP GIC multiview, AP/CL1 PPUs, AP cluster-control windows, FMU/SSU, and the
 CL0-visible ATW self-check windows.
 
 ```text
-tools/qbox/platforms/apollo-fvp/full.lua
+tools/qbox/platforms/apollo/apollo-qvp.lua
 tools/qbox/systemc-components/gicx00_multiview/
 tools/qbox/systemc-components/host_ni710ae_nci/
 tools/qbox/systemc-components/host_cmn_cyprus/
