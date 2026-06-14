@@ -406,6 +406,11 @@ SMD/SCMI/PFDI object construction은 `system_mgmt.lua`로 옮기는 것이 적�
 | Infrastructure | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file`, `char_backend_stdio`, `global_peripheral_initiator`, `reset_fanout`, `reset_gpio`, `keep_alive`, `QemuInstance`, `QemuInstanceManager` |
 | Placeholder/fidelity debt | SSU/FMU windows as `gs_memory`, broad fallback windows, selected AP/SI cluster control windows as `gs_memory`, secure watchdog placeholder |
 
+상세 placeholder 분류와 full-model 승격 gate는
+[`doc/apollo-qbox-full-model/coverage-ledger.md`](apollo-qbox-full-model/coverage-ledger.md)에
+정리했다. 구현 시 이 ledger를 기준으로 `memory-backing`은 유지하고,
+P0/P1 `full-model-required` 항목은 SystemC/TLM 모델로 교체한다.
+
 ## 최근 검증 상태
 
 최근 full-system 검증 결과

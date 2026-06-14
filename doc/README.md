@@ -22,6 +22,10 @@ separate.
 - [Apollo QBox Hardware KR](apollo-qbox-hardware-ko.md) - Korean mapping from
   Apollo FVP hardware blocks to current QBox/QEMU emulation paths, including
   Lua instances, SystemC modules, QEMU modules, and fidelity status.
+- [Apollo QBox Full Model Promotion](apollo-qbox-full-model/index.md) -
+  Korean PRD/spec/design/task/verification document set for promoting
+  safety, security, reset, power, access-control, and interrupt placeholders
+  from `gs_memory`/stub surfaces to full QBox models.
 - [QBox FVP Emulation Project](qbox-fvp-emulation-project.md) - project
   mission and workflow for implementing the Arm Zena CSS/RD-Aspen FVP behavior
   in QBox with SystemC/TLM/QEMU fidelity.

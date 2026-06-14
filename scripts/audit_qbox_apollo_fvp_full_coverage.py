@@ -137,6 +137,52 @@ def console_log_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
     return checks
 
 
+def lua_component_block(text: str, name: str) -> str:
+    marker = f"{name} = {{"
+    start = text.find(marker)
+    if start < 0:
+        return ""
+    next_start = text.find("\n    ", start + len(marker))
+    end = text.find("\n\n", start)
+    if end < 0:
+        end = len(text)
+    if next_start > start and next_start < end and "moduletype" not in text[start:end]:
+        end = next_start
+    return text[start:end]
+
+
+def lua_backend_checks(root: Path) -> list[dict[str, Any]]:
+    si_cl0 = read_text(root / "tools/qbox/platforms/apollo/hw-block/si_cl0.lua")
+    rse = read_text(root / "tools/qbox/platforms/apollo/hw-block/rse.lua")
+    expected = [
+        ("si_cl0_ssu", si_cl0, "zena_ssu"),
+        ("si_cl0_fmu", si_cl0, "zena_fmu"),
+        ("rse_nsacfg_regs", rse, "rse_protection_ctrl"),
+        ("rse_sacfg_regs", rse, "rse_protection_ctrl"),
+        ("rse_mpc_vm0_regs", rse, "rse_protection_ctrl"),
+        ("rse_mpc_vm1_regs", rse, "rse_protection_ctrl"),
+        ("rse_sic_regs", rse, "rse_protection_ctrl"),
+        ("rse_mpc_sic_regs", rse, "rse_protection_ctrl"),
+        ("rse_atu_regs", rse, "rse_atu"),
+        ("host_si_atu", rse, "rse_atu"),
+        ("host_ap_atu", rse, "rse_atu"),
+        ("host_smdexp2smd_atu", rse, "rse_atu"),
+    ]
+    checks = []
+    for name, text, backend in expected:
+        block = lua_component_block(text, name)
+        passed = f'moduletype = "{backend}"' in block
+        checks.append(
+            {
+                "name": f"backend:{name}",
+                "status": backend if passed else "missing_or_different",
+                "passed": passed,
+                "expected": backend,
+            }
+        )
+    return checks
+
+
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -155,14 +201,15 @@ def main() -> int:
     root = workspace_root()
     runtime_result = read_json(args.result_json)
     block_checks = static_block_checks(root)
+    backend_checks = lua_backend_checks(root)
     gate_checks = runtime_gate_checks(runtime_result) if runtime_result else []
     marker_checks = marker_group_checks(runtime_result) if runtime_result else []
     log_checks = console_log_checks(runtime_result) if runtime_result else []
-    checks = block_checks + gate_checks + marker_checks + log_checks
+    checks = block_checks + backend_checks + gate_checks + marker_checks + log_checks
     if runtime_result:
         passed = all(check["passed"] for check in checks)
     else:
-        passed = all(check["passed"] for check in block_checks)
+        passed = all(check["passed"] for check in block_checks + backend_checks)
     result = {
         "passed": passed,
         "check": args.check,
