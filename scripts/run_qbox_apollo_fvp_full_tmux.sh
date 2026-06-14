@@ -509,6 +509,8 @@ start_tmux()
     while IFS=: read -r domain file title; do
         start_log_pane "${domain}" "${file}" "${title}"
     done < <(known_logs)
+    tmux_cmd select-pane -t "${runner_pane_id}"
+    tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
 
     printf 'started tmux session: %s\n' "${TMUX_SESSION}"
     printf 'logs: %s\n' "${OUT_DIR}"

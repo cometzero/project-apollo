@@ -3713,8 +3713,14 @@ def write_result(
             "runner_argv": sys.argv,
         }
     )
-    result_path = out_dir / "result.json"
-    summary_path = out_dir / "summary.txt"
+    result_path = Path(
+        os.environ.get("QBOX_RDASPEN_RESULT_PATH", str(out_dir / "result.json"))
+    )
+    summary_path = Path(
+        os.environ.get("QBOX_RDASPEN_SUMMARY_PATH", str(out_dir / "summary.txt"))
+    )
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
     result_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     lines = [
