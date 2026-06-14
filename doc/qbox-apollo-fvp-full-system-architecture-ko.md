@@ -181,6 +181,9 @@ tools/qbox/platforms/apollo/apollo-si-cl1.lua
 
 - AP logical view router를 추가해 AP firmware와 Linux가 기대하는 view를
   `host_router`에 연결한다.
+- `system_mgmt.lua`가 live CL0 통합 전 AP/RoS broad decode priority,
+  AP logical view router, AP-RSE MHU alias 같은 cross-domain mutation을
+  담당한다.
 - `QBOX_APOLLO_FULL_SI_MODE` 환경 변수로 service/live mode를 선택한다.
 - live CL0 모드에서 SI CL0 SRAM, GIC view, UART, timers, SCR/PPU, NCI,
   SMCF, system PLL, CL0 CPU, PC trace를 구성한다.

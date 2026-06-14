@@ -130,6 +130,7 @@ tools/qbox/platforms/apollo/hw-block/ap_compute.lua
 tools/qbox/platforms/apollo/hw-block/si_cl0.lua
 tools/qbox/platforms/apollo/hw-block/si_cl1.lua
 tools/qbox/platforms/apollo/hw-block/ros.lua
+tools/qbox/platforms/apollo/hw-block/system_mgmt.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
 
