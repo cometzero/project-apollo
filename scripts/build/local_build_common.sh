@@ -958,6 +958,8 @@ build_zephyr()
 
     local board="fvp_rd_aspen_safety_island_c1"
     local zephyr_sdk
+    local zephyr_base="${ZEPHYRPROJECT_SRC}/zephyr"
+    local zephyr_dir="${zephyr_base}/share/zephyr-package/cmake"
     local python
     local pythonpath
     local modules
@@ -967,7 +969,11 @@ build_zephyr()
     local had_pythonpath=0
     [[ -v PYTHONPATH ]] && had_pythonpath=1
     local saved_pythonpath="${PYTHONPATH:-}"
+    local had_zephyr_base=0
+    [[ -v ZEPHYR_BASE ]] && had_zephyr_base=1
+    local saved_zephyr_base="${ZEPHYR_BASE:-}"
 
+    require_file "${zephyr_dir}/ZephyrConfig.cmake"
     zephyr_sdk="$(find_zephyr_sdk_dir)"
     python="$(yocto_native_python)"
     pythonpath="$(yocto_native_pythonpath)"
@@ -980,6 +986,7 @@ build_zephyr()
     fi
 
     export ZEPHYR_SDK_INSTALL_DIR="${zephyr_sdk}"
+    export ZEPHYR_BASE="${zephyr_base}"
     path_prepend "${zephyr_sdk}/aarch64-zephyr-elf/bin"
     path_prepend "${zephyr_sdk}/sysroots/x86_64-pokysdk-linux/usr/bin"
     if [[ -n "${pythonpath}" ]]; then
@@ -998,7 +1005,8 @@ build_zephyr()
         -DPython_EXECUTABLE:PATH="${python}" \
         -DPython3_EXECUTABLE:PATH="${python}" \
         -DCMAKE_TOOLCHAIN_FILE= \
-        -DZEPHYR_BASE="${ZEPHYRPROJECT_SRC}/zephyr" \
+        -DZephyr_DIR:PATH="${zephyr_dir}" \
+        -DZEPHYR_BASE:PATH="${zephyr_base}" \
         -DBOARD="${board}" \
         -DZEPHYR_TOOLCHAIN_VARIANT=zephyr \
         -DZEPHYR_MODULES="${modules}" \
@@ -1027,6 +1035,12 @@ build_zephyr()
         export PYTHONPATH
     else
         unset PYTHONPATH
+    fi
+    if [[ "${had_zephyr_base}" -eq 1 ]]; then
+        ZEPHYR_BASE="${saved_zephyr_base}"
+        export ZEPHYR_BASE
+    else
+        unset ZEPHYR_BASE
     fi
 }
 
