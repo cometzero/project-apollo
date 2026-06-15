@@ -48,7 +48,7 @@ JSON evidence로 확인되어야 한다.
 
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
-scripts/build/build_qbox_apollo_fvp_linux.sh
+./local-build.sh qbox
 tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
@@ -60,7 +60,7 @@ full-system 완료 증거로 사용할 수 없다.
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
-scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 scripts/run/run_qbox_apollo_fvp_si_cl1.py
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py

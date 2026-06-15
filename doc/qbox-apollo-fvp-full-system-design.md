@@ -112,7 +112,7 @@ Keep the existing fast direct-boot path unchanged:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
-scripts/build/build_qbox_apollo_fvp_linux.sh
+./local-build.sh qbox
 tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
@@ -120,7 +120,7 @@ Add a separate full-system path:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
-scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 scripts/test/verify_qbox_apollo_fvp_full_completion.py
@@ -505,7 +505,14 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 FVP comparison remains mandatory before claiming equivalence:
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \

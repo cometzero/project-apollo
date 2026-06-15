@@ -29,9 +29,10 @@ Per-run logs for agent review:
 - `uarts/tf_a.log`
 - `uarts/u_boot_linux.log`
 
-The older `scripts/run/runfvp_tmux.sh` remains a generic runfvp tmux wrapper for
-Yocto deploy configs. For agent-side validation, prefer a file-log workflow so
-the result can be checked without attaching to a terminal UI.
+Generic runfvp tmux wrapping was removed from `scripts/run/`. Use
+`scripts/run/run_local_fvp_tmux.sh` for Apollo local FVP interactive sessions.
+For agent-side validation, prefer a file-log workflow so the result can be
+checked without attaching to a terminal UI.
 
 The existing `runfvp` tool already supports headless launch with `-t none`, and
 the test automation guide documents per-run boot logs under `logs/`. This

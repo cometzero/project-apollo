@@ -67,7 +67,6 @@ CL1 boot, Apollo full-system live CL0/CL1 boot가 통과했다.
 python3 -m py_compile \
   scripts/run/run_qbox_apollo_fvp_full.py \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   scripts/run/run_qbox_apollo_fvp_si_cl1.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
 

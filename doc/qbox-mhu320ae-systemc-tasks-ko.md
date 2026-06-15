@@ -89,7 +89,6 @@ Files:
 - `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - `tools/qbox/platforms/apollo/apollo-qvp.lua`
 - `tools/qbox/platforms/apollo/apollo-si-cl1.lua`
-- `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
 - `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - `scripts/run/run_qbox_apollo_fvp_si_cl1.py`
 

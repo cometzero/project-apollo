@@ -125,15 +125,15 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ## Task 4: Wire Build And Run Entrypoints
 
 **Files:**
-- Create `scripts/build/build_qbox_apollo_fvp_full.sh`
+- Extend `local-build.sh`
 - Modify `scripts/run/run_qbox_apollo_fvp_full.py`
 
 - [ ] Reuse the required QBox target list from
   `scripts/run/run_qbox_fvp_rd_aspen_rse.py`.
 - [ ] Build `platforms-vp`, `remote_cpu`, and required SystemC/TLM component
   targets before runtime unless `--skip-build` is set.
-- [ ] Add a wrapper script that builds the full-platform dependencies and runs
-  `--check-only`.
+- [ ] Use `./local-build.sh qbox` to build the full-platform dependencies.
+- [ ] Keep `--check-only` on the Python runner for preflight validation.
 - [ ] Ensure per-run logs are file-backed:
   `qbox-platform.log`, `qbox-rse.log`, `qbox-scp.log`,
   `qbox-secure-console.log`, and `qbox-primary-console.log`.
@@ -143,7 +143,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 Commands:
 
 ```bash
-./scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ```
 
@@ -182,7 +182,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 - [ ] Build QBox full-platform dependencies:
 
 ```bash
-./scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 ```
 
 - [ ] Run a bounded full boot:

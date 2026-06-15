@@ -173,7 +173,14 @@ Pass criteria:
 Commands:
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-model-runtime \

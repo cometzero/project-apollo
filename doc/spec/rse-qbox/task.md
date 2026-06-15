@@ -1461,10 +1461,10 @@ richer fault status.
       `python3 scripts/analyze/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-v007-fvp-verbose-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1 --output build/qbox-fvp-rd-aspen/rse-v007-fvp-qbox-compare-20260525-v1/comparison.json`
       passed after aligning the ordered-marker check with the actual FVP/QBox
       RSE runtime sequence.
-- [x] V008 `timeout 420s python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 360 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/direct-v008-primary-compute-20260525-v1`
-      passed in 27.914 seconds, proving the direct primary-compute boot path
-      remains available with Linux login, root prompt, post-login probe
-      completion, and all tracked driver patterns true.
+- [x] V008 `timeout 420s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 360 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/direct-v008-primary-compute-20260525-v1`
+      passed in 27.914 seconds, proving the RSE-mediated AP boot path
+      reaches Linux login, root prompt, post-login probe completion, and all
+      tracked driver patterns true.
 - [x] V009 `python3 -m py_compile scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py`
       passed after adding the FWU bank/metadata/capsule inspection helper.
 - [x] V010 `python3 scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py --out-dir build/qbox-fvp-rd-aspen/fwu-inspect-20260525-v2`

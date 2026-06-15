@@ -89,6 +89,13 @@ To prebuild only the QBox targets used by the Apollo full-system runner:
 ./local-build.sh qbox
 ```
 
+To package existing local-build outputs into a QBox-runnable image set:
+
+```bash
+./local-build.sh package
+./run_qbox.sh --local-build-dir build/local-apollo-fvp/package/qbox/local-build
+```
+
 Repeated `local-build.sh build` runs check the QBox CMake cache and required
 Apollo QBox targets through the QBox runner's `--build-only` path. The runner
 builds QBox's `apollo_fvp_full_system` aggregate target by default, so Makefile

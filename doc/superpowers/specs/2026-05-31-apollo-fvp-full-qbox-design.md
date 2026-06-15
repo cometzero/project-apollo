@@ -83,7 +83,7 @@ Create a new full-firmware Apollo QBox platform and runner:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
-scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 tools/qbox/platforms/apollo-fvp/full.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
@@ -92,7 +92,7 @@ Keep the existing direct-boot path unchanged:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
-scripts/build/build_qbox_apollo_fvp_linux.sh
+./local-build.sh qbox
 tools/qbox/platforms/apollo-fvp/conf.lua
 ```
 

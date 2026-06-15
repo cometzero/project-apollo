@@ -419,7 +419,7 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --timeout 900 --out-dir build/q
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --pc-trace --pc-trace-interval 200 --pc-trace-limit 5000 --timeout 300 --out-dir build/qbox-fvp-rd-aspen/<run-id>
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py --fvp build/qbox-fvp-rd-aspen/<fvp-run> --qbox build/qbox-fvp-rd-aspen/<run-id>
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --timeout 600 --post-login-probe
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --timeout 600 --post-login-probe
 ./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
 ```
 

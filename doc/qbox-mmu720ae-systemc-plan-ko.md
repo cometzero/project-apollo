@@ -65,7 +65,7 @@ Commands:
 ```bash
 git status --short
 git -C tools/qbox status --short
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-baseline-qemu
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
@@ -290,7 +290,6 @@ Files:
 - Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - Modify: `tools/qbox/platforms/apollo/apollo-qvp.lua`
 - Modify: `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
-- Modify: `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
 - Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
 - Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
@@ -309,7 +308,6 @@ Commands:
 
 ```bash
 python3 -m py_compile \
-  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
@@ -330,7 +328,7 @@ Expected:
 Files:
 
 - Create: `scripts/analyze/compare_fvp_qbox_smmu.py`
-- Modify: `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
 - Modify: `doc/qbox-fvp-emulation-project.md`
 - Modify: `doc/apollo-qbox-hardware-ko.md`
@@ -340,7 +338,7 @@ Steps:
 - [ ] Add SMMU post-login probes for dmesg, sysfs IOMMU groups, interrupts,
   DMA/IOMMU debugfs when enabled, and fault injection output.
 - [ ] Add FVP/QBox SMMU comparison report generator.
-- [ ] Run direct Linux boot with QEMU backend and SystemC backend.
+- [ ] Run RSE-mediated Linux boot with QEMU backend and SystemC backend.
 - [ ] Run Apollo full boot with QEMU backend and SystemC backend.
 - [ ] Compare SMMU register trace, driver output, interrupt status, and
   synthetic DMA results.
@@ -350,7 +348,7 @@ Steps:
 Commands:
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-systemc-direct

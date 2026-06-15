@@ -30,9 +30,9 @@ and file-backed QBox UART logs.
 - Local initramfs: `build/local-apollo-fvp/deploy/boot/initramfs.cpio.gz`
 - Local FVP DTB: `build/local-apollo-fvp/deploy/boot/apollo-fvp.dtb`
 - QBox Apollo runner: `scripts/run/run_qbox_apollo_fvp_linux.py`
-- QBox Apollo wrappers:
-  - `scripts/build/build_qbox_apollo_fvp_linux.sh`
-  - `scripts/run/run_qbox_apollo_fvp_linux.sh`
+- QBox Apollo entrypoints:
+  - `./local-build.sh qbox`
+  - `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --interactive`
 - QBox Apollo platform:
   - `tools/qbox/platforms/apollo-fvp/conf.lua`
   - `tools/qbox/platforms/apollo-fvp/apollo-fvp-primary-compute.dts`
@@ -71,11 +71,11 @@ shows an overlap.
   - Keep the existing disk devices available, but do not require a rootfs disk
     for initramfs boot.
 
-- Modify `scripts/build/build_qbox_apollo_fvp_linux.sh`
+- Modify `local-build.sh`
   - Build QBox targets and generate the Apollo QBox DTB from the local-build
     contract.
 
-- Modify `scripts/run/run_qbox_apollo_fvp_linux.sh`
+- Update the interactive `run_qbox_apollo_fvp_linux.py` command
   - Keep interactive mode, but allow the runner to regenerate the DTB by
     default because initramfs size changes between builds.
 
@@ -577,44 +577,42 @@ git commit -s -m "feat(apollo): generate QBox local DTB"
 ## Task 4: Make Wrappers Use The Local-Build Contract
 
 **Files:**
-- Modify: `scripts/build/build_qbox_apollo_fvp_linux.sh`
-- Modify: `scripts/run/run_qbox_apollo_fvp_linux.sh`
+- Modify: `./local-build.sh qbox`
+- Update: interactive `run_qbox_apollo_fvp_linux.py` command
 
-- [ ] **Step 1: Update build wrapper**
+- [ ] **Step 1: Update the local-build qbox command**
 
-Change `scripts/build/build_qbox_apollo_fvp_linux.sh` to pass the local build
-directory explicitly:
+Change the `qbox` command in `local-build.sh` to pass the local build
+directory explicitly to the QBox runner:
 
 ```bash
 args=(--build-only --local-build-dir "${workspace_root}/build/local-apollo-fvp")
 ```
 
-Keep the existing `QBOX_APOLLO_JOBS` handling.
+Use the repository-wide `JOBS` handling from `local-build.sh`.
 
-- [ ] **Step 2: Update interactive run wrapper**
+- [ ] **Step 2: Use the interactive Python runner directly**
 
-Change `scripts/run/run_qbox_apollo_fvp_linux.sh` so it skips only the QBox build,
-not DTB generation:
+Use `scripts/run/run_qbox_apollo_fvp_linux.py` directly so it skips only the
+QBox build, not DTB generation:
 
 ```bash
-exec "${python_bin}" \
-    "${workspace_root}/scripts/run/run_qbox_apollo_fvp_linux.py" \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
     --skip-build \
     --interactive \
-    --timeout "${timeout}" \
-    --local-build-dir "${workspace_root}/build/local-apollo-fvp" \
-    "$@"
+    --timeout "${QBOX_APOLLO_TIMEOUT:-0}" \
+    --local-build-dir build/local-apollo-fvp
 ```
 
-This keeps the interactive script safe when `initramfs.cpio.gz` changes size.
+This keeps the interactive path safe when `initramfs.cpio.gz` changes size.
 
 - [ ] **Step 3: Verify shell syntax**
 
 Run:
 
 ```bash
-bash -n scripts/build/build_qbox_apollo_fvp_linux.sh
-bash -n scripts/run/run_qbox_apollo_fvp_linux.sh
+bash -n ./local-build.sh
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_linux.py
 ```
 
 Expected: no output and exit code 0.
@@ -622,7 +620,7 @@ Expected: no output and exit code 0.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build/build_qbox_apollo_fvp_linux.sh scripts/run/run_qbox_apollo_fvp_linux.sh
+git add local-build.sh scripts/run/run_qbox_apollo_fvp_linux.py
 git commit -s -m "build(apollo): use local QBox artifacts"
 ```
 
@@ -667,7 +665,7 @@ Add:
 
 - [ ] **Step 3: Send login and probe commands**
 
-Mirror the control flow from `scripts/run/run_qbox_fvp_rd_aspen_linux.py`, but use
+Mirror the control flow from `scripts/run/run_qbox_fvp_rd_aspen_rse.py`, but use
 Apollo login prompts:
 
 ```python
@@ -764,7 +762,7 @@ build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb
 ## Build QBox Targets
 
 ```bash
-./scripts/build/build_qbox_apollo_fvp_linux.sh
+./local-build.sh qbox
 ```
 
 ## Headless Boot
@@ -792,7 +790,11 @@ qbox-apollo-fvp.log
 ## Interactive Boot
 
 ```bash
-scripts/run/run_qbox_apollo_fvp_linux.sh
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
+  --skip-build \
+  --interactive \
+  --timeout "${QBOX_APOLLO_TIMEOUT:-0}" \
+  --local-build-dir build/local-apollo-fvp
 ```
 
 Set `QBOX_APOLLO_TIMEOUT=0` for an unbounded interactive session.
@@ -803,7 +805,7 @@ Set `QBOX_APOLLO_TIMEOUT=0` for an unbounded interactive session.
 In `AGENTS.md`, under "QBox helper scripts", add:
 
 ```markdown
-  `scripts/build/build_qbox_apollo_fvp_linux.sh`,
+  `./local-build.sh qbox`,
   `scripts/run/run_qbox_apollo_fvp_linux.py`,
 ```
 
@@ -858,7 +860,7 @@ Expected: both commands exit 0. If either file is missing, run:
 Run:
 
 ```bash
-./scripts/build/build_qbox_apollo_fvp_linux.sh
+./local-build.sh qbox
 ```
 
 Expected: command exits 0 and prints:
@@ -923,8 +925,7 @@ Run:
 ```bash
 python3 -m py_compile scripts/run/run_qbox_apollo_fvp_linux.py
 pytest tests/test_run_qbox_apollo_fvp_linux.py -q
-bash -n scripts/build/build_qbox_apollo_fvp_linux.sh
-bash -n scripts/run/run_qbox_apollo_fvp_linux.sh
+bash -n ./local-build.sh
 git diff --check
 ```
 

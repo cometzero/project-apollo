@@ -13,7 +13,7 @@ emulation을 실행하고, G0-G5 completion gate를 검증하는 절차를 설�
 
 ```bash
 ./local-build.sh build
-./scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
@@ -23,7 +23,14 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
 
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
@@ -412,7 +419,14 @@ cd /build/arm/arm-auto-solutions
 FVP 비교를 위해서는 FVP boot evidence도 필요하다.
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 ```
 
 이 command는 FVP 로그를 `build/local-apollo-fvp/fvp-boot/`에 저장한다.
@@ -422,7 +436,7 @@ FVP 비교를 위해서는 FVP boot evidence도 필요하다.
 full-system에 필요한 QBox target을 빌드한다.
 
 ```bash
-./scripts/build/build_qbox_apollo_fvp_full.sh
+./local-build.sh qbox
 ```
 
 target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
@@ -585,7 +599,14 @@ PY
 FVP와 QBox full live run을 비교하고, map/coverage sidecar를 생성한다.
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
@@ -781,7 +802,14 @@ sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/si-cl1-mhuv3-trace.log
 대응:
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \

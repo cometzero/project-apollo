@@ -66,9 +66,9 @@ model, upstream SystemC model, or local SystemC/TLM model based on the TRM.
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
 
-- `scripts/build/build_qbox_fvp_rd_aspen_linux.sh`
+- `./local-build.sh qbox`
 - `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
-- `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`
 
 The latest local coverage evidence reports 19 tracked primary-compute blocks
@@ -289,12 +289,12 @@ For each IP:
 Use these before claiming progress:
 
 ```bash
-python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_linux.py scripts/test/validate_qbox_fvp_rd_aspen_map.py scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
+python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/test/validate_qbox_fvp_rd_aspen_map.py scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
 git -C tools/qbox diff --check
 cmake --build tools/qbox/build --target <target> --parallel 8
 cmake --build tools/qbox/build --target platforms-vp --parallel 8
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 240 --netdev user --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
 ./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/<run-id>/result.json --runtime-log build/qbox-fvp-rd-aspen/<run-id>/qbox-fvp-rd-aspen.log --output build/qbox-fvp-rd-aspen/coverage-audit-<run-id>.json
 ```
 

@@ -25,11 +25,12 @@ over register-only stubs.
 - QBox platform under active development:
   `tools/qbox/platforms/fvp-rd-aspen/`
 - QBox helper scripts:
-  `scripts/build/build_qbox_fvp_rd_aspen_linux.sh`,
+  `./local-build.sh qbox`,
+  `scripts/build/build_qbox.sh`,
+  `scripts/package.sh`,
   `scripts/test/validate_qbox_fvp_rd_aspen_map.py`,
-  `scripts/run/run_qbox_fvp_rd_aspen_linux.py`,
+  `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
   `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`,
-  `scripts/build/build_qbox_apollo_fvp_linux.sh`,
   `scripts/run/run_qbox_apollo_fvp_linux.py`
 
 ## Source Boundaries
@@ -132,7 +133,18 @@ When setting breakpoints manually, use component names and symbols from
 
 Boot issue escalation path:
 
-1. Run normal log-backed boot validation with `./local-build.sh boot`.
+1. Build local images with `./local-build.sh build`, then run normal
+   log-backed boot validation with:
+   ```bash
+   python3 scripts/run/runfvp_log_boot.py \
+     --machine apollo-fvp \
+     --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+     --out-dir build/local-apollo-fvp/fvp-boot \
+     --timeout 900 \
+     --require all \
+     --min-runtime 70 \
+     --no-login
+   ```
 2. Inspect `build/local-apollo-fvp/fvp-boot/result.json`,
    `summary.txt`, `fvp_stdout.log`, and the per-UART logs for RSE,
    Safety Island CL0/CL1, TF-A, and U-Boot/Linux.
@@ -184,12 +196,16 @@ Use the narrowest meaningful command first, then broaden only when needed.
      <target> --parallel <n>`.
    - Build `platforms-vp` when Lua platform wiring changes.
 4. Runtime checks:
-   - Use `scripts/run/run_qbox_fvp_rd_aspen_linux.py` with file-backed output.
+   - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` with file-backed output.
    - Use `--post-login-probe` when driver evidence matters.
    - For Apollo local-build direct boot on QBox, use
      `python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600
      --post-login-probe` and inspect `build/qbox-apollo-fvp/<timestamp>/`.
-   - For Apollo FVP local boot, use `./local-build.sh boot` and inspect
+   - For Apollo FVP local boot, build with `./local-build.sh build`, then use
+     `python3 scripts/run/runfvp_log_boot.py --machine apollo-fvp --fvpconf
+     build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf --out-dir
+     build/local-apollo-fvp/fvp-boot --timeout 900 --require all
+     --min-runtime 70 --no-login` and inspect
      `build/local-apollo-fvp/fvp-boot/result.json` plus per-UART logs before
      using GDB/Iris.
 5. Coverage checks:

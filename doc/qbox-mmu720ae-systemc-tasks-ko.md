@@ -46,7 +46,7 @@ Commands:
 ```bash
 git status --short
 git -C tools/qbox status --short
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-baseline-qemu
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
@@ -291,7 +291,6 @@ Verification:
 
 ```bash
 python3 -m py_compile \
-  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
@@ -305,12 +304,12 @@ Review fail conditions:
 - Boot-regression default switch is presented as FVP-level parity.
 - `result.json` does not record backend selection.
 
-### MMU720-SYS-100: Direct Linux Runtime
+### MMU720-SYS-100: RSE-Mediated Linux Runtime
 
 Command:
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-systemc-direct
@@ -445,7 +444,7 @@ Pass criteria:
 | V2 Unit | `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` | Pass |
 | V3 Static | `git -C tools/qbox diff --check` | Pass |
 | V4 Map | `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py` | Pass for selected backend |
-| V5 Direct Runtime | `run_qbox_fvp_rd_aspen_linux.py --smmu-backend systemc-mmu720ae --post-login-probe` | Login, SMMU probe, no driver enable failure |
+| V5 RSE Runtime | `run_qbox_fvp_rd_aspen_rse.py --smmu-backend systemc-mmu720ae --post-login-probe` | Login, SMMU probe, no driver enable failure |
 | V6 DMA/Fault | Synthetic SystemC and Linux post-login tests | Translation and negative fault behavior pass |
 | V7 Full Runtime | `run_qbox_apollo_fvp_full.py --smmu-backend systemc-mmu720ae` | Existing full-system markers preserved |
 | V8 FVP Compare | `scripts/analyze/compare_fvp_qbox_smmu.py` | No mandatory mismatch |

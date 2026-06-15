@@ -232,7 +232,14 @@ python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
 Gate G5:
 
 ```bash
-./local-build.sh boot
+python3 scripts/run/runfvp_log_boot.py \
+  --machine apollo-fvp \
+  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
+  --out-dir build/local-apollo-fvp/fvp-boot \
+  --timeout 900 \
+  --require all \
+  --min-runtime 70 \
+  --no-login
 python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
@@ -447,7 +454,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | --- | --- | --- | --- |
 | QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox/platforms/apollo/apollo-qvp.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
 | QAP-FULL-011 | Add full-system runner. | `scripts/run/run_qbox_apollo_fvp_full.py`. | Supports `--check-only`, `--si-mode`, `--post-login-probe`, `--out-dir`, artifact overrides, per-run writable flash/OTP copies, and structured `result.json`. |
-| QAP-FULL-012 | Add build wrapper. | `scripts/build/build_qbox_apollo_fvp_full.sh`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
+| QAP-FULL-012 | Use local QBox build command. | `./local-build.sh qbox`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
 | QAP-FULL-013 | Add static map validator. | `scripts/test/validate_qbox_apollo_fvp_full_map.py`. | Checks AP, RSE, SMD, SI CL0, SI CL1 memory views; AP GIC, RSE NVIC, SI CL0 GIC view, SI CL1 GIC view; ATU/ATW windows; AP-RSE/RSE-SI/AP-SI/CL1-CL0 MHU channels; UART, timers, watchdogs, HIPC, PFDI, FMU, SSU, and SMCF evidence. |
 | QAP-FULL-014 | Run service-model full boot. | `build/qbox-apollo-fvp/full-service-model/`. | RSE boot, RSE/SI SCMI handoff, AP firmware, Linux login, and post-login probes pass; `result.json` states SI CL0/CL1 are service-modeled. |
 | QAP-FULL-015 | Compare service-model boot with FVP. | `comparison.json` in the same run directory. | Missing FVP markers are reported explicitly; service-model-only gaps are not counted as hidden passes. |
