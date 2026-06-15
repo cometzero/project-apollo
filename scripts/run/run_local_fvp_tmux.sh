@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCRIPT_PATH="${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")"
 
 MACHINE="${MACHINE:-apollo-fvp}"
@@ -29,7 +29,7 @@ DRY_RUN=0
 usage()
 {
     cat <<EOF
-Usage: scripts/run_local_fvp_tmux.sh [options] [-- extra FVP args]
+Usage: scripts/run/run_local_fvp_tmux.sh [options] [-- extra FVP args]
 
 Run the local Apollo FVP build in tmux and mirror subsystem UARTs to files.
 

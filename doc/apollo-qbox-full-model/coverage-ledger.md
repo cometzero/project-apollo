@@ -159,7 +159,7 @@ Source: `tools/qbox/platforms/apollo/hw-block/ros.lua`
 
 ## Coverage Audit Rule
 
-향후 `scripts/audit_qbox_apollo_fvp_full_coverage.py`는 다음 규칙을 적용해야
+향후 `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`는 다음 규칙을 적용해야
 한다.
 
 - P0/P1 `full-model-required` 항목이 `gs_memory`로 남아 있으면 fail.

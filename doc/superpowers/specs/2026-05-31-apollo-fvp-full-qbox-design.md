@@ -19,7 +19,7 @@ and file-backed logs for several subsystems.
 - Existing RSE-oriented RD-Aspen QBox platform:
   `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - Existing RSE runner and marker parser:
-  `scripts/run_qbox_fvp_rd_aspen_rse.py`
+  `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - Local Apollo artifacts:
   `build/local-apollo-fvp/deploy/`
 - Yocto Apollo machine and component overrides:
@@ -82,8 +82,8 @@ deploy the ELF as `build/local-apollo-fvp/deploy/firmware/bl2-apollo_fvp.elf`.
 Create a new full-firmware Apollo QBox platform and runner:
 
 ```text
-scripts/run_qbox_apollo_fvp_full.py
-scripts/build_qbox_apollo_fvp_full.sh
+scripts/run/run_qbox_apollo_fvp_full.py
+scripts/build/build_qbox_apollo_fvp_full.sh
 tools/qbox/platforms/apollo-fvp/full.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
@@ -91,8 +91,8 @@ build/qbox-apollo-fvp/full-<run-id>/
 Keep the existing direct-boot path unchanged:
 
 ```text
-scripts/run_qbox_apollo_fvp_linux.py
-scripts/build_qbox_apollo_fvp_linux.sh
+scripts/run/run_qbox_apollo_fvp_linux.py
+scripts/build/build_qbox_apollo_fvp_linux.sh
 tools/qbox/platforms/apollo-fvp/conf.lua
 ```
 
@@ -224,7 +224,7 @@ same MHU/SCMI/RPMsg/PFDI observable behavior already validated in Stage 1.
 ## Validation Markers
 
 The Apollo full runner should inherit the marker grouping style from
-`scripts/run_qbox_fvp_rd_aspen_rse.py`:
+`scripts/run/run_qbox_fvp_rd_aspen_rse.py`:
 
 - `rse_boot`: BL1_1, BL1_2, BL2, secure provisioning, TF-M runtime markers.
 - `rse_scp_handoff`: SI CL0 load, RSE-SCP SCMI init, AP BL2 load, AP reset
@@ -250,14 +250,14 @@ build/qbox-apollo-fvp/full-<run-id>/qbox-primary-console.log
 
 Stage 1 is complete when:
 
-- `scripts/run_qbox_apollo_fvp_full.py --check-only` verifies every required
+- `scripts/run/run_qbox_apollo_fvp_full.py --check-only` verifies every required
   artifact and writes the resolved artifact contract to `result.json`.
 - QBox builds all full-platform target dependencies without missing components.
 - A bounded RSE-first run reaches RSE boot, RSE-SCP handoff, measured boot,
   AP Linux login, and post-login service probes using Apollo artifacts.
 - The final report states the Safety Island service-model fidelity gap and the
   Cortex-R82 live-CPU dependency.
-- Direct Linux boot through `scripts/run_qbox_apollo_fvp_linux.py` remains
+- Direct Linux boot through `scripts/run/run_qbox_apollo_fvp_linux.py` remains
   available and unchanged.
 
 Stage 2 and Stage 3 are complete only when live SI CL1 and SI CL0 firmware

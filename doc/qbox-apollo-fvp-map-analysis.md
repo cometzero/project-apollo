@@ -141,7 +141,7 @@ ATU must be a first-class QBox feature for this platform.
 1. Add a generated or maintained normalized map ledger for AP, RSE, SMD, SI
    CL0, and SI CL1. A future implementation can use JSON or Python data, but
    it must preserve source evidence for each entry.
-2. Extend `scripts/validate_qbox_apollo_fvp_full_map.py` to check memory,
+2. Extend `scripts/test/validate_qbox_apollo_fvp_full_map.py` to check memory,
    interrupt, ATU, and hardware block coverage across Lua, DTS, SCP headers,
    Zephyr DTS, and FVP evidence.
 3. Record the active map/IRQ/ATU coverage in every full-system `result.json`.

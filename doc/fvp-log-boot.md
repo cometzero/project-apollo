@@ -2,16 +2,16 @@
 
 Generated: 2026-05-28
 
-`scripts/run_local_fvp_tmux.sh` is intended for interactive inspection of the
+`scripts/run/run_local_fvp_tmux.sh` is intended for interactive inspection of the
 locally built Apollo FVP image. It starts FVP in tmux, opens one pane per known
 subsystem UART, and mirrors those UARTs to log files under the selected run
 directory:
 
 ```bash
-scripts/run_local_fvp_tmux.sh
-scripts/run_local_fvp_tmux.sh --session apollo-demo
-scripts/run_local_fvp_tmux.sh --out-dir build/local-apollo-fvp/tmux-run/demo
-scripts/run_local_fvp_tmux.sh --no-attach
+scripts/run/run_local_fvp_tmux.sh
+scripts/run/run_local_fvp_tmux.sh --session apollo-demo
+scripts/run/run_local_fvp_tmux.sh --out-dir build/local-apollo-fvp/tmux-run/demo
+scripts/run/run_local_fvp_tmux.sh --no-attach
 ```
 
 Default local-build inputs:
@@ -29,7 +29,7 @@ Per-run logs for agent review:
 - `uarts/tf_a.log`
 - `uarts/u_boot_linux.log`
 
-The older `scripts/runfvp_tmux.sh` remains a generic runfvp tmux wrapper for
+The older `scripts/run/runfvp_tmux.sh` remains a generic runfvp tmux wrapper for
 Yocto deploy configs. For agent-side validation, prefer a file-log workflow so
 the result can be checked without attaching to a terminal UI.
 
@@ -38,7 +38,7 @@ the test automation guide documents per-run boot logs under `logs/`. This
 workspace also provides a thin wrapper for Codex-style runtime checks:
 
 ```bash
-scripts/runfvp_log_boot.py
+scripts/run/runfvp_log_boot.py
 ```
 
 By default it uses:
@@ -71,13 +71,13 @@ or `--require none` when only port discovery and log capture are needed.
 Examples:
 
 ```bash
-scripts/runfvp_log_boot.py
-scripts/runfvp_log_boot.py --timeout 1200
-scripts/runfvp_log_boot.py --runfvp-verbose --timeout 1200
-scripts/runfvp_log_boot.py --out-dir build/fvp-boot-logs/manual-check
-scripts/runfvp_log_boot.py --machine fvp-rd-aspen \
+scripts/run/runfvp_log_boot.py
+scripts/run/runfvp_log_boot.py --timeout 1200
+scripts/run/runfvp_log_boot.py --runfvp-verbose --timeout 1200
+scripts/run/runfvp_log_boot.py --out-dir build/fvp-boot-logs/manual-check
+scripts/run/runfvp_log_boot.py --machine fvp-rd-aspen \
   --fvpconf build/tmp_baremetal/deploy/images/fvp-rd-aspen/baremetal-image-fvp-rd-aspen.fvpconf
-scripts/runfvp_log_boot.py --runfvp-verbose \
+scripts/run/runfvp_log_boot.py --runfvp-verbose \
   --post-login-command 'timeout 8s psa-iat-api-test; echo fvp_iat_rc:$?' \
   --post-login-timeout 30
 ```

@@ -66,10 +66,10 @@ model, upstream SystemC model, or local SystemC/TLM model based on the TRM.
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
 
-- `scripts/build_qbox_fvp_rd_aspen_linux.sh`
-- `scripts/validate_qbox_fvp_rd_aspen_map.py`
-- `scripts/run_qbox_fvp_rd_aspen_linux.py`
-- `scripts/audit_qbox_fvp_rd_aspen_coverage.py`
+- `scripts/build/build_qbox_fvp_rd_aspen_linux.sh`
+- `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
+- `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`
 
 The latest local coverage evidence reports 19 tracked primary-compute blocks
 passing static or runtime checks, including CPU/PSCI, DRAM, timers, GICv3,
@@ -79,7 +79,7 @@ PMU, RAS FFH, SMMUv3, MHUv3 SCMI transport, and SI remoteproc/RPMsg.
 
 An RSE-oriented skeleton now exists at
 `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` with the runner
-`scripts/run_qbox_fvp_rd_aspen_rse.py`. It uses the existing QBox
+`scripts/run/run_qbox_fvp_rd_aspen_rse.py`. It uses the existing QBox
 `RemoteCPU` Cortex-M55 wrapper so the CPU-local NVIC/SCS window remains inside
 the M-profile CPU process, and it records file-backed per-console logs plus
 `result.json`. Limited CC3XX, DTCM/ITCM alias, DMA350, RSE system-control,
@@ -289,13 +289,13 @@ For each IP:
 Use these before claiming progress:
 
 ```bash
-python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_linux.py scripts/validate_qbox_fvp_rd_aspen_map.py scripts/audit_qbox_fvp_rd_aspen_coverage.py
+python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_linux.py scripts/test/validate_qbox_fvp_rd_aspen_map.py scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
 git -C tools/qbox diff --check
 cmake --build tools/qbox/build --target <target> --parallel 8
 cmake --build tools/qbox/build --target platforms-vp --parallel 8
-./scripts/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 240 --netdev user --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
-./scripts/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/<run-id>/result.json --runtime-log build/qbox-fvp-rd-aspen/<run-id>/qbox-fvp-rd-aspen.log --output build/qbox-fvp-rd-aspen/coverage-audit-<run-id>.json
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 240 --netdev user --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
+./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/<run-id>/result.json --runtime-log build/qbox-fvp-rd-aspen/<run-id>/qbox-fvp-rd-aspen.log --output build/qbox-fvp-rd-aspen/coverage-audit-<run-id>.json
 ```
 
 For Arm FVP comparison, use non-interactive, file-backed FVP logging rather

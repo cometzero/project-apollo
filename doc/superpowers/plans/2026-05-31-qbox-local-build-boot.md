@@ -29,10 +29,10 @@ and file-backed QBox UART logs.
 - Local Linux image: `build/local-apollo-fvp/deploy/boot/Image`
 - Local initramfs: `build/local-apollo-fvp/deploy/boot/initramfs.cpio.gz`
 - Local FVP DTB: `build/local-apollo-fvp/deploy/boot/apollo-fvp.dtb`
-- QBox Apollo runner: `scripts/run_qbox_apollo_fvp_linux.py`
+- QBox Apollo runner: `scripts/run/run_qbox_apollo_fvp_linux.py`
 - QBox Apollo wrappers:
-  - `scripts/build_qbox_apollo_fvp_linux.sh`
-  - `scripts/run_qbox_apollo_fvp_linux.sh`
+  - `scripts/build/build_qbox_apollo_fvp_linux.sh`
+  - `scripts/run/run_qbox_apollo_fvp_linux.sh`
 - QBox Apollo platform:
   - `tools/qbox/platforms/apollo-fvp/conf.lua`
   - `tools/qbox/platforms/apollo-fvp/apollo-fvp-primary-compute.dts`
@@ -58,7 +58,7 @@ shows an overlap.
 
 ## File Structure
 
-- Modify `scripts/run_qbox_apollo_fvp_linux.py`
+- Modify `scripts/run/run_qbox_apollo_fvp_linux.py`
   - Add a local-build artifact resolver.
   - Add `--local-build-dir`, `--initramfs`, `--bootargs`,
     `--initramfs-addr`, and `--post-login-probe`.
@@ -71,11 +71,11 @@ shows an overlap.
   - Keep the existing disk devices available, but do not require a rootfs disk
     for initramfs boot.
 
-- Modify `scripts/build_qbox_apollo_fvp_linux.sh`
+- Modify `scripts/build/build_qbox_apollo_fvp_linux.sh`
   - Build QBox targets and generate the Apollo QBox DTB from the local-build
     contract.
 
-- Modify `scripts/run_qbox_apollo_fvp_linux.sh`
+- Modify `scripts/run/run_qbox_apollo_fvp_linux.sh`
   - Keep interactive mode, but allow the runner to regenerate the DTB by
     default because initramfs size changes between builds.
 
@@ -91,7 +91,7 @@ shows an overlap.
 
 **Files:**
 - Create: `tests/test_run_qbox_apollo_fvp_linux.py`
-- Modify: `scripts/run_qbox_apollo_fvp_linux.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_linux.py`
 
 - [ ] **Step 1: Create tests for artifact defaults**
 
@@ -103,7 +103,7 @@ import importlib.util
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/run_qbox_apollo_fvp_linux.py"
+SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
 
 
 def load_runner():
@@ -152,7 +152,7 @@ Expected: failure because `resolve_local_build_artifacts` and
 
 - [ ] **Step 3: Add the minimal runner API**
 
-In `scripts/run_qbox_apollo_fvp_linux.py`, add near the constants:
+In `scripts/run/run_qbox_apollo_fvp_linux.py`, add near the constants:
 
 ```python
 from dataclasses import dataclass
@@ -194,7 +194,7 @@ Expected: `2 passed`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
+git add scripts/run/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
 git commit -s -m "test(apollo): cover QBox local artifacts"
 ```
 
@@ -251,7 +251,7 @@ Expected: failure because `qbox_env()` does not export
 
 - [ ] **Step 3: Export initramfs from the runner**
 
-In `qbox_env()` in `scripts/run_qbox_apollo_fvp_linux.py`, add:
+In `qbox_env()` in `scripts/run/run_qbox_apollo_fvp_linux.py`, add:
 
 ```python
     if getattr(args, "initramfs", None):
@@ -311,7 +311,7 @@ end
 Run:
 
 ```bash
-python3 -m py_compile scripts/run_qbox_apollo_fvp_linux.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_linux.py
 pytest tests/test_run_qbox_apollo_fvp_linux.py -q
 ```
 
@@ -320,7 +320,7 @@ Expected: Python compile succeeds and all tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/run_qbox_apollo_fvp_linux.py \
+git add scripts/run/run_qbox_apollo_fvp_linux.py \
   tools/qbox/platforms/apollo-fvp/conf.lua \
   tests/test_run_qbox_apollo_fvp_linux.py
 git commit -s -m "feat(apollo): load local initramfs in QBox"
@@ -329,7 +329,7 @@ git commit -s -m "feat(apollo): load local initramfs in QBox"
 ## Task 3: Generate A Local-Build QBox DTB
 
 **Files:**
-- Modify: `scripts/run_qbox_apollo_fvp_linux.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_linux.py`
 - Modify: `tests/test_run_qbox_apollo_fvp_linux.py`
 
 - [ ] **Step 1: Add tests for DTB patch commands**
@@ -397,7 +397,7 @@ Expected: failure because the helper functions do not exist.
 
 - [ ] **Step 3: Add DTB helper functions**
 
-In `scripts/run_qbox_apollo_fvp_linux.py`, add:
+In `scripts/run/run_qbox_apollo_fvp_linux.py`, add:
 
 ```python
 def initramfs_range(initramfs: Path, load_addr: int) -> tuple[int, int]:
@@ -554,7 +554,7 @@ topology:
 Run:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py --build-only --skip-build
+python3 scripts/run/run_qbox_apollo_fvp_linux.py --build-only --skip-build
 fdtdump build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb | \
   rg -n "bootargs|linux,initrd-start|linux,initrd-end"
 ```
@@ -570,19 +570,19 @@ linux,initrd-end is present and is greater than 0x94000000.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add scripts/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
+git add scripts/run/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
 git commit -s -m "feat(apollo): generate QBox local DTB"
 ```
 
 ## Task 4: Make Wrappers Use The Local-Build Contract
 
 **Files:**
-- Modify: `scripts/build_qbox_apollo_fvp_linux.sh`
-- Modify: `scripts/run_qbox_apollo_fvp_linux.sh`
+- Modify: `scripts/build/build_qbox_apollo_fvp_linux.sh`
+- Modify: `scripts/run/run_qbox_apollo_fvp_linux.sh`
 
 - [ ] **Step 1: Update build wrapper**
 
-Change `scripts/build_qbox_apollo_fvp_linux.sh` to pass the local build
+Change `scripts/build/build_qbox_apollo_fvp_linux.sh` to pass the local build
 directory explicitly:
 
 ```bash
@@ -593,12 +593,12 @@ Keep the existing `QBOX_APOLLO_JOBS` handling.
 
 - [ ] **Step 2: Update interactive run wrapper**
 
-Change `scripts/run_qbox_apollo_fvp_linux.sh` so it skips only the QBox build,
+Change `scripts/run/run_qbox_apollo_fvp_linux.sh` so it skips only the QBox build,
 not DTB generation:
 
 ```bash
 exec "${python_bin}" \
-    "${workspace_root}/scripts/run_qbox_apollo_fvp_linux.py" \
+    "${workspace_root}/scripts/run/run_qbox_apollo_fvp_linux.py" \
     --skip-build \
     --interactive \
     --timeout "${timeout}" \
@@ -613,8 +613,8 @@ This keeps the interactive script safe when `initramfs.cpio.gz` changes size.
 Run:
 
 ```bash
-bash -n scripts/build_qbox_apollo_fvp_linux.sh
-bash -n scripts/run_qbox_apollo_fvp_linux.sh
+bash -n scripts/build/build_qbox_apollo_fvp_linux.sh
+bash -n scripts/run/run_qbox_apollo_fvp_linux.sh
 ```
 
 Expected: no output and exit code 0.
@@ -622,19 +622,19 @@ Expected: no output and exit code 0.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add scripts/build_qbox_apollo_fvp_linux.sh scripts/run_qbox_apollo_fvp_linux.sh
+git add scripts/build/build_qbox_apollo_fvp_linux.sh scripts/run/run_qbox_apollo_fvp_linux.sh
 git commit -s -m "build(apollo): use local QBox artifacts"
 ```
 
 ## Task 5: Add Login Probe Evidence
 
 **Files:**
-- Modify: `scripts/run_qbox_apollo_fvp_linux.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_linux.py`
 - Modify: `tests/test_run_qbox_apollo_fvp_linux.py`
 
 - [ ] **Step 1: Add probe constants**
 
-Add to `scripts/run_qbox_apollo_fvp_linux.py`:
+Add to `scripts/run/run_qbox_apollo_fvp_linux.py`:
 
 ```python
 PROBE_DONE_MARKER = "__QBOX_APOLLO_PROBE_DONE__"
@@ -667,7 +667,7 @@ Add:
 
 - [ ] **Step 3: Send login and probe commands**
 
-Mirror the control flow from `scripts/run_qbox_fvp_rd_aspen_linux.py`, but use
+Mirror the control flow from `scripts/run/run_qbox_fvp_rd_aspen_linux.py`, but use
 Apollo login prompts:
 
 ```python
@@ -708,7 +708,7 @@ Add these fields to `status`:
 Run:
 
 ```bash
-python3 -m py_compile scripts/run_qbox_apollo_fvp_linux.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_linux.py
 pytest tests/test_run_qbox_apollo_fvp_linux.py -q
 ```
 
@@ -717,7 +717,7 @@ Expected: compile succeeds and tests pass.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add scripts/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
+git add scripts/run/run_qbox_apollo_fvp_linux.py tests/test_run_qbox_apollo_fvp_linux.py
 git commit -s -m "feat(apollo): probe QBox local boot"
 ```
 
@@ -764,13 +764,13 @@ build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb
 ## Build QBox Targets
 
 ```bash
-./scripts/build_qbox_apollo_fvp_linux.sh
+./scripts/build/build_qbox_apollo_fvp_linux.sh
 ```
 
 ## Headless Boot
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --timeout 600 \
   --post-login-probe
 ```
@@ -792,7 +792,7 @@ qbox-apollo-fvp.log
 ## Interactive Boot
 
 ```bash
-scripts/run_qbox_apollo_fvp_linux.sh
+scripts/run/run_qbox_apollo_fvp_linux.sh
 ```
 
 Set `QBOX_APOLLO_TIMEOUT=0` for an unbounded interactive session.
@@ -803,15 +803,15 @@ Set `QBOX_APOLLO_TIMEOUT=0` for an unbounded interactive session.
 In `AGENTS.md`, under "QBox helper scripts", add:
 
 ```markdown
-  `scripts/build_qbox_apollo_fvp_linux.sh`,
-  `scripts/run_qbox_apollo_fvp_linux.py`,
+  `scripts/build/build_qbox_apollo_fvp_linux.sh`,
+  `scripts/run/run_qbox_apollo_fvp_linux.py`,
 ```
 
 Under runtime checks, add:
 
 ```markdown
    - For Apollo local-build direct boot on QBox, use
-     `python3 scripts/run_qbox_apollo_fvp_linux.py --timeout 600
+     `python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600
      --post-login-probe` and inspect `build/qbox-apollo-fvp/<timestamp>/`.
 ```
 
@@ -858,7 +858,7 @@ Expected: both commands exit 0. If either file is missing, run:
 Run:
 
 ```bash
-./scripts/build_qbox_apollo_fvp_linux.sh
+./scripts/build/build_qbox_apollo_fvp_linux.sh
 ```
 
 Expected: command exits 0 and prints:
@@ -872,7 +872,7 @@ build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb
 Run:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --skip-build \
   --timeout 600 \
   --post-login-probe
@@ -921,10 +921,10 @@ Expected:
 Run:
 
 ```bash
-python3 -m py_compile scripts/run_qbox_apollo_fvp_linux.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_linux.py
 pytest tests/test_run_qbox_apollo_fvp_linux.py -q
-bash -n scripts/build_qbox_apollo_fvp_linux.sh
-bash -n scripts/run_qbox_apollo_fvp_linux.sh
+bash -n scripts/build/build_qbox_apollo_fvp_linux.sh
+bash -n scripts/run/run_qbox_apollo_fvp_linux.sh
 git diff --check
 ```
 

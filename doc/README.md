@@ -54,7 +54,7 @@ separate.
 - [QBox Apollo FVP Full-System Tasks](qbox-apollo-fvp-full-system-tasks.md) -
   review backlog for the full-system QBox implementation stages and acceptance
   criteria, including the final strict verifier command
-  `scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`.
+  `scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`.
 - [Yocto Build And Kas](yocto-build-and-kas.md) - kas include stack, build
   variants, targets, and reproducibility levers.
 - [Yocto Layer And Recipe Map](yocto-layer-and-recipe-map.md) - local layers,

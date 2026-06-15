@@ -89,14 +89,14 @@ Files:
 - `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - `tools/qbox/platforms/apollo/apollo-qvp.lua`
 - `tools/qbox/platforms/apollo/apollo-si-cl1.lua`
-- `scripts/run_qbox_fvp_rd_aspen_linux.py`
-- `scripts/run_qbox_fvp_rd_aspen_rse.py`
-- `scripts/run_qbox_apollo_fvp_si_cl1.py`
+- `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- `scripts/run/run_qbox_apollo_fvp_si_cl1.py`
 
 Verification:
 
 ```bash
-./scripts/validate_qbox_fvp_rd_aspen_map.py
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
 ### MHU320-SYS-060: Static/build validation
@@ -104,8 +104,8 @@ Verification:
 Commands:
 
 ```bash
-python3 -m py_compile scripts/*.py
-bash -n run_qbox.sh scripts/run_qbox_apollo_fvp_full_tmux.sh
+python3 -m py_compile scripts/*/*.py
+bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 git -C tools/qbox diff --check
 git diff --check
 cmake --build tools/qbox/build \
@@ -118,7 +118,7 @@ ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure
 Command:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/mhu320ae-live-verify-$(date +%Y%m%d-%H%M%S)
@@ -150,7 +150,7 @@ Use `$commit-atomic` rules:
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Shell syntax | pass | `bash -n run_qbox.sh scripts/run_qbox_apollo_fvp_full_tmux.sh` |
+| Shell syntax | pass | `bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh` |
 | Python syntax | pass | `python3 -m py_compile ...` for changed QBox runners and validators |
 | Diff whitespace | pass | `git diff --check`, `git -C tools/qbox diff --check` |
 | Map validation | pass | `build/qbox-fvp-rd-aspen/map-validation.json` |

@@ -11,7 +11,7 @@ script:
 ```bash
 git clone git@github.com:cometzero/project-apollo.git
 cd project-apollo
-scripts/bootstrap_project.sh --jobs 8
+scripts/setup/bootstrap_project.sh --jobs 8
 ```
 
 Do not use `git submodule update --init --recursive` as the default clean
@@ -25,7 +25,7 @@ If a checkout was already left in a partial state by a failed recursive
 submodule update, restore the pinned submodule worktrees with:
 
 ```bash
-scripts/bootstrap_project.sh --jobs 8 --force
+scripts/setup/bootstrap_project.sh --jobs 8 --force
 ```
 
 ## Yocto Build
@@ -116,7 +116,7 @@ options:
 For non-interactive validation with file-backed logs:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --post-login-probe \
   --qbox-performance-preset \
@@ -160,5 +160,5 @@ but normal clean-checkout validation should not need it. Disable the fallback
 only when a pre-provisioned OTP is required:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py --no-auto-provision-rse-otp
+python3 scripts/run/run_qbox_apollo_fvp_full.py --no-auto-provision-rse-otp
 ```

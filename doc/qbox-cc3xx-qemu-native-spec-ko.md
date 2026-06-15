@@ -149,7 +149,7 @@ TLM fallback은 QEMU iothread와 SystemC thread ownership을 명시적으로
 요구되는 사용자 인터페이스:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --cc3xx-qemu-native-backend
 ```
 

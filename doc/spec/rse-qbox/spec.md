@@ -304,7 +304,7 @@ The first implementation milestone is successful when:
 Before MVP acceptance, the first RSE skeleton milestone is considered useful
 only when:
 
-1. `scripts/run_qbox_fvp_rd_aspen_rse.py` records all input artifacts and
+1. `scripts/run/run_qbox_fvp_rd_aspen_rse.py` records all input artifacts and
    copied writable images in `result.json`.
 2. QBox either starts the RSE-oriented platform or reports a concrete blocker
    such as a missing Lua configuration, missing target, missing artifact, or

@@ -22,7 +22,7 @@ RSE TF-M
 
 ```text
                     +-----------------------+
-                    | scripts/run_qbox_*    |
+                    | scripts/run/run_qbox_* |
                     | result.json/coverage  |
                     +-----------+-----------+
                                 |

@@ -177,7 +177,7 @@ git -C tools/qbox diff --check
 Files:
 
 - Modify: `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
-- Modify: `scripts/audit_qbox_apollo_fvp_full_coverage.py`
+- Modify: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 - Modify: `doc/apollo-qbox-hardware-ko.md`
 
 Steps:
@@ -193,11 +193,11 @@ Verification:
 
 ```bash
 cmake --build tools/qbox/build --target platforms-vp --parallel 8
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/fmu-ssu-live-cl0-cl1
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/fmu-ssu-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/fmu-ssu-live-cl0-cl1/coverage-audit.json
 ```
@@ -231,7 +231,7 @@ Verification:
 cmake --build tools/qbox/build \
   --target rse_protection_ctrl rse_protection_ctrl-tests --parallel 8
 ctest --test-dir tools/qbox/build -R 'rse_protection_ctrl' --output-on-failure
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/rse-protection-live-cl0-cl1
@@ -243,7 +243,7 @@ Files:
 
 - Modify: `tools/qbox/platforms/apollo/hw-block/system_mgmt.lua`
 - Modify: `tools/qbox/platforms/apollo/hw-block/rse.lua`
-- Modify: `scripts/audit_qbox_apollo_fvp_full_coverage.py`
+- Modify: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 Required behavior:
 
@@ -261,9 +261,9 @@ Verification:
 cmake --build tools/qbox/build \
   --target rse_atu rse_atu-tests --parallel 8
 ctest --test-dir tools/qbox/build -R 'rse_atu' --output-on-failure
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --output build/qbox-apollo-fvp/full-model-first-wave-coverage.json
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/apu-filter-live-cl0-cl1
@@ -294,7 +294,7 @@ Verification:
 cmake --build tools/qbox/build \
   --target host_rgm host_pik host_rgm-tests host_pik-tests --parallel 8
 ctest --test-dir tools/qbox/build -R 'host_(rgm|pik)' --output-on-failure
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/rgm-pik-live-cl0-cl1
@@ -319,7 +319,7 @@ Verification:
 
 ```bash
 cmake --build tools/qbox/build --target platforms-vp --parallel 8
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/secure-watchdog-live-cl0-cl1
@@ -329,8 +329,8 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 
 Files:
 
-- Modify: `scripts/audit_qbox_apollo_fvp_full_coverage.py`
-- Modify: `scripts/verify_qbox_apollo_fvp_full_completion.py`
+- Modify: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
+- Modify: `scripts/test/verify_qbox_apollo_fvp_full_completion.py`
 - Modify: `doc/apollo-qbox-hardware-ko.md`
 - Modify: `doc/qbox-apollo-fvp-full-system-goal-verification.md`
 
@@ -345,9 +345,9 @@ Required behavior:
 Verification:
 
 ```bash
-python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py \
-  scripts/verify_qbox_apollo_fvp_full_completion.py
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
+  scripts/test/verify_qbox_apollo_fvp_full_completion.py
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-model-coverage-check/coverage-audit.json
 ```
@@ -361,14 +361,14 @@ Files:
 Commands:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 1200 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/full-model-final
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-model-final/result.json \
   --output build/qbox-apollo-fvp/full-model-final/coverage-audit.json
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --run-dir build/qbox-apollo-fvp/full-model-final
 ```
@@ -407,7 +407,7 @@ Verification:
 
 ```bash
 git diff --check
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-model-future-backlog/coverage-audit.json
 ```

@@ -12,7 +12,7 @@ implementation work against that contract.
 
 - Local Apollo artifacts under `build/local-apollo-fvp/deploy/` are the default
   inputs.
-- Existing direct boot through `scripts/run_qbox_apollo_fvp_linux.py` remains
+- Existing direct boot through `scripts/run/run_qbox_apollo_fvp_linux.py` remains
   unchanged and usable.
 - A new full-system path boots RSE first, releases AP through the modeled
   system-management path, and records per-subsystem logs.
@@ -83,7 +83,7 @@ allowed:
 | `comparison.json` | Compares required FVP boot markers against the full live QBox run. |
 | `map-comparison.json` | Checks AP, RSE, SMD, SI CL0, SI CL1 memory, interrupt, and ATU views. |
 | `coverage-audit.json` | Confirms boot-critical hardware blocks are live, service-modeled with accepted debt, or stubbed with rationale. |
-| `final-verification.json` | Machine-readable final verdict written by `scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`. |
+| `final-verification.json` | Machine-readable final verdict written by `scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`. |
 | Per-subsystem UART/log files | Provide raw evidence for RSE, SI CL0, SI CL1, secure AP firmware, U-Boot, and Linux marker decisions. |
 
 Completion can be claimed only when `final-verification.json` records
@@ -95,7 +95,7 @@ Completion can be claimed only when `final-verification.json` records
 | Level | Name | Objective | Exit Evidence |
 | --- | --- | --- | --- |
 | G0 | Contract readiness | Local artifacts, build targets, map ledger, and hardware coverage contract are available. | `--check-only`, source probes, map validator, and coverage audit all pass. |
-| G1 | Direct-boot guardrail | Existing AP Linux direct boot still works after full-system changes. | Existing `scripts/run_qbox_apollo_fvp_linux.py` pass result and logs. |
+| G1 | Direct-boot guardrail | Existing AP Linux direct boot still works after full-system changes. | Existing `scripts/run/run_qbox_apollo_fvp_linux.py` pass result and logs. |
 | G2 | Service-model full boot | RSE-first QBox boot reaches AP Linux with explicit SI service-model debt. | `full-service-model/result.json`, subsystem logs, and FVP comparison with service-model gaps classified. |
 | G3 | Live CL1 integration | Zephyr CL1 runs on Cortex-R82 and AP Linux HIPC/RPMsg probes use live CL1 behavior. | `full-live-cl1/result.json`, CL1 log markers, Linux probe markers, and no unclassified PFDI/IPC failure. |
 | G4 | Live CL0/CL1 integration | SCP-firmware CL0 and Zephyr CL1 both run live while AP reaches Linux. | `full-live-cl0-cl1/result.json` with RSE, CL0, CL1, AP firmware, U-Boot, Linux, and post-login marker groups passing. |
@@ -115,7 +115,7 @@ Review and completion decisions should use the following contract:
 4. `G5` is the final equivalence gate. It must close FVP log comparison,
    memory/interrupt/ATU map comparison, and hardware coverage audit gaps.
 5. The only accepted completion verdict is `completion_claim_allowed: true`
-   from `scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`.
+   from `scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`.
 6. Any missing sidecar artifact, missing subsystem log, `not_run` gate,
    unclassified marker failure, or absent boot-critical hardware block keeps
    the task incomplete.
@@ -136,7 +136,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/
 Only the strict final verifier can authorize a full-system completion claim.
 Intermediate runs are milestone evidence and must stay labeled as such:
 
-- `scripts/run_qbox_apollo_fvp_linux.py` is a direct-boot guardrail, not the
+- `scripts/run/run_qbox_apollo_fvp_linux.py` is a direct-boot guardrail, not the
   full-system target.
 - `service-model` proves the RSE-first AP boot path but keeps Safety Island
   CPU fidelity debt.
@@ -150,7 +150,7 @@ Intermediate runs are milestone evidence and must stay labeled as such:
 The authoritative final verdict is:
 
 ```bash
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -166,14 +166,14 @@ The output JSON must contain `goal_definition`, `completion_policy`,
 Gate G0:
 
 ```bash
-python3 scripts/probe_qemu_cortex_r82.py --source-root .
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --out-dir build/qbox-apollo-fvp/full-check-only
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-check-only/map-validation.json
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 cmake --build tools/qbox/build --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp --parallel 8
@@ -182,7 +182,7 @@ cmake --build tools/qbox/build --target cpu_arm_cortexR82 remote_cpu addrtr plat
 Gate G1:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --skip-build \
   --timeout 600 \
   --post-login-probe \
@@ -192,12 +192,12 @@ python3 scripts/run_qbox_apollo_fvp_linux.py \
 Gate G2:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model \
   --timeout 900 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-service-model
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-service-model \
   --output build/qbox-apollo-fvp/full-service-model/comparison.json
@@ -206,12 +206,12 @@ python3 scripts/compare_fvp_qbox_rse_logs.py \
 Gate G3:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --timeout 900 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl1
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl1/coverage-audit.json
 ```
@@ -219,12 +219,12 @@ python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
 Gate G4:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --timeout 1200 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
 ```
@@ -233,17 +233,17 @@ Gate G5:
 
 ```bash
 ./local-build.sh boot
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -315,7 +315,7 @@ boot shape as the Apollo FVP local build with file-backed evidence:
 7. Every generated `result.json` records `completion_gates`, `verdict`,
    `safety_island_mode`, `marker_groups`, `console_logs`, `blocker`, and the
    command used to create the evidence.
-8. `python3 scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`
+8. `python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`
    exits 0 and writes `completion_ready: true`.
 
 `G2` service-model full boot and `G3` live-CL1 boot are required milestones,
@@ -364,7 +364,7 @@ specific missing model, artifact, host dependency, or hardware fidelity gap.
 The current implementation can also be assessed without claiming completion:
 
 ```bash
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --si-cl1-isolated-dir \
     build/qbox-apollo-fvp/si-cl1-allcpus-20260603-125931 \
   --output build/qbox-apollo-fvp/full-completion-verification.json
@@ -381,7 +381,7 @@ in `milestone_evidence`; it never changes the G0-G5 completion gates.
 As of the current saved evidence, the full-system G0-G5 contract passes:
 
 ```bash
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -434,10 +434,10 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 
 | ID | Task | Deliverable | Acceptance |
 | --- | --- | --- | --- |
-| QAP-FULL-001 | Define Apollo full artifact resolver. | `scripts/run_qbox_apollo_fvp_full.py --check-only` records all local firmware, boot, rootfs, and symbol inputs. | Missing files fail with `missing_artifact:<name>`; present files record path and size in `result.json`. |
-| QAP-FULL-002 | Preserve direct Linux boot as a guardrail. | Existing `scripts/run_qbox_apollo_fvp_linux.py` remains untouched except shared helper extraction if reviewed. | `python3 scripts/run_qbox_apollo_fvp_linux.py --skip-build --timeout 600 --post-login-probe` still reaches the existing pass criteria. |
+| QAP-FULL-001 | Define Apollo full artifact resolver. | `scripts/run/run_qbox_apollo_fvp_full.py --check-only` records all local firmware, boot, rootfs, and symbol inputs. | Missing files fail with `missing_artifact:<name>`; present files record path and size in `result.json`. |
+| QAP-FULL-002 | Preserve direct Linux boot as a guardrail. | Existing `scripts/run/run_qbox_apollo_fvp_linux.py` remains untouched except shared helper extraction if reviewed. | `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --timeout 600 --post-login-probe` still reaches the existing pass criteria. |
 | QAP-FULL-003 | Capture fresh FVP baseline logs. | A local FVP run under `build/local-apollo-fvp/fvp-boot/` with RSE, SI CL0, SI CL1, TF-A, and U-Boot/Linux logs. | `result.json` passes and logs include subsystem markers used by QBox comparison. |
-| QAP-FULL-004 | Confirm Cortex-R82 source and build support. | Source probe and targeted QBox build evidence. | `python3 scripts/probe_qemu_cortex_r82.py --source-root .` passes; `cmake --build tools/qbox/build --target cpu_arm_cortexR82 --parallel 8` passes. |
+| QAP-FULL-004 | Confirm Cortex-R82 source and build support. | Source probe and targeted QBox build evidence. | `python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .` passes; `cmake --build tools/qbox/build --target cpu_arm_cortexR82 --parallel 8` passes. |
 | QAP-FULL-005 | Build normalized map and IRQ ledger. | Source-backed data file or script output consumed by the validator. | AP, RSE, SMD, SI CL0, and SI CL1 memory views and interrupt views include source references from programmer model, Lua, DTS, SCP headers, and Zephyr DTS. |
 | QAP-FULL-006 | Classify hardware block coverage. | Initial coverage report for CPU, GIC, MHU, ATU, PPU/SCR/RGM, FMU, SSU, SMCF, RAS, timers, watchdogs, UARTs, boot security blocks, and AP I/O. | Each block is marked `live`, `service-modeled`, `register-stub`, or `absent`; unknown ownership is treated as a blocker. |
 
@@ -446,13 +446,13 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | ID | Task | Deliverable | Acceptance |
 | --- | --- | --- | --- |
 | QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox/platforms/apollo/apollo-qvp.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
-| QAP-FULL-011 | Add full-system runner. | `scripts/run_qbox_apollo_fvp_full.py`. | Supports `--check-only`, `--si-mode`, `--post-login-probe`, `--out-dir`, artifact overrides, per-run writable flash/OTP copies, and structured `result.json`. |
-| QAP-FULL-012 | Add build wrapper. | `scripts/build_qbox_apollo_fvp_full.sh`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
-| QAP-FULL-013 | Add static map validator. | `scripts/validate_qbox_apollo_fvp_full_map.py`. | Checks AP, RSE, SMD, SI CL0, SI CL1 memory views; AP GIC, RSE NVIC, SI CL0 GIC view, SI CL1 GIC view; ATU/ATW windows; AP-RSE/RSE-SI/AP-SI/CL1-CL0 MHU channels; UART, timers, watchdogs, HIPC, PFDI, FMU, SSU, and SMCF evidence. |
+| QAP-FULL-011 | Add full-system runner. | `scripts/run/run_qbox_apollo_fvp_full.py`. | Supports `--check-only`, `--si-mode`, `--post-login-probe`, `--out-dir`, artifact overrides, per-run writable flash/OTP copies, and structured `result.json`. |
+| QAP-FULL-012 | Add build wrapper. | `scripts/build/build_qbox_apollo_fvp_full.sh`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
+| QAP-FULL-013 | Add static map validator. | `scripts/test/validate_qbox_apollo_fvp_full_map.py`. | Checks AP, RSE, SMD, SI CL0, SI CL1 memory views; AP GIC, RSE NVIC, SI CL0 GIC view, SI CL1 GIC view; ATU/ATW windows; AP-RSE/RSE-SI/AP-SI/CL1-CL0 MHU channels; UART, timers, watchdogs, HIPC, PFDI, FMU, SSU, and SMCF evidence. |
 | QAP-FULL-014 | Run service-model full boot. | `build/qbox-apollo-fvp/full-service-model/`. | RSE boot, RSE/SI SCMI handoff, AP firmware, Linux login, and post-login probes pass; `result.json` states SI CL0/CL1 are service-modeled. |
 | QAP-FULL-015 | Compare service-model boot with FVP. | `comparison.json` in the same run directory. | Missing FVP markers are reported explicitly; service-model-only gaps are not counted as hidden passes. |
 | QAP-FULL-016 | Add ATU trace and policy reporting. | Apollo full mode exposes ATU trace controls and writes ATU summary into `result.json`. | Translation hits, misses, seeded windows, firmware-programmed windows, and default-closed failures are visible in logs. |
-| QAP-FULL-017 | Add hardware coverage audit. | `scripts/audit_qbox_apollo_fvp_full_coverage.py`. | Coverage report fails if a boot-critical block is absent without an explicit service-model or stub rationale. |
+| QAP-FULL-017 | Add hardware coverage audit. | `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`. | Coverage report fails if a boot-critical block is absent without an explicit service-model or stub rationale. |
 
 ## Phase 2: Isolated Live Safety Island Bring-Up
 
@@ -467,7 +467,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | QAP-FULL-026 | Implement SI GIC multiview register model. | `GICD_CTLR`, `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR`, and `GICR_VIEWR` behavior. | SCP-firmware can read the view capability bit, program redistributor and SPI views, and poll `GICR_PWRR` without unsupported-access traps. |
 | QAP-FULL-027 | Wire SI CL0/CL1 QEMU GICv3 backends. | Apollo full Lua wiring with `si_cl0_gic`, `si_cl1_gic`, and `gicx00_multiview`. | View-0 MMIO reaches SystemC; CL0 view-1 MMIO reaches the CL0 QEMU GICv3 backend; CL1 view-2 MMIO reaches the CL1 QEMU GICv3 backend. |
 | QAP-FULL-028 | Route SI SPIs through the multiview controller. | MHU, UART, timer, FMU/SSU/SMCF, and other shared SI SPI bindings in `apollo-qvp.lua`. | CL0 and CL1 interrupts are delivered through the firmware-configured local view without collapsing CL1 Zephyr SPIs into CL0 SCP-firmware IRQ names. |
-| QAP-FULL-029 | Validate SI GIC multiview routing. | Unit tests plus isolated and integrated runtime evidence. | `cmake --build tools/qbox/build --target gicx00_multiview --parallel 8`, `ctest --test-dir tools/qbox/build -R gicx00_multiview`, and `python3 scripts/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --post-login-probe --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1` pass or record a classified blocker. |
+| QAP-FULL-029 | Validate SI GIC multiview routing. | Unit tests plus isolated and integrated runtime evidence. | `cmake --build tools/qbox/build --target gicx00_multiview --parallel 8`, `ctest --test-dir tools/qbox/build -R gicx00_multiview`, and `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --post-login-probe --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1` pass or record a classified blocker. |
 
 ### Current Phase 2 Evidence
 
@@ -601,7 +601,7 @@ blocker: none
 | QAP-FULL-053 | Document debug workflow. | README/AGENTS updates if workflow changes. | Logs remain first triage; GDB is used after the failing component or handoff is identified. |
 | QAP-FULL-054 | Retire or narrow service-model debt. | Updated docs and mode defaults. | Service model remains available for regression, but full live mode is the equivalence target once stable. |
 | QAP-FULL-055 | Compare normalized maps against FVP evidence. | `map-comparison.json` in the full live run directory. | QBox AP/RSE/SMD/SI maps and interrupts match FVP-derived logs, generated DTB/DTS, and local source evidence or list reviewed exceptions. |
-| QAP-FULL-056 | Add final completion verifier. | `scripts/verify_qbox_apollo_fvp_full_completion.py`. | Non-strict mode reports current progress without overclaiming; `--strict-final` fails until G0 through G5 are all proven by saved evidence. |
+| QAP-FULL-056 | Add final completion verifier. | `scripts/test/verify_qbox_apollo_fvp_full_completion.py`. | Non-strict mode reports current progress without overclaiming; `--strict-final` fails until G0 through G5 are all proven by saved evidence. |
 
 ### Current Phase 5 Evidence
 
@@ -634,7 +634,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
       requirements.
 - [x] Every runtime claim has file-backed logs and `result.json` evidence.
 - [x] FVP comparison is required before claiming equivalence.
-- [x] `scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`
+- [x] `scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`
       exits 0 before any final completion report.
 - [x] Remaining safety, PFDI, FMU, SSU, SMCF, RAS, reset, power, and diagnostic
       gaps are tracked as fidelity debt.

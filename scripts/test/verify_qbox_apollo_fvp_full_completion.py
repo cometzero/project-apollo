@@ -233,7 +233,7 @@ SI_CL1_ISOLATED_SECONDARIES = [
 
 
 def workspace_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def read_json(path: Path) -> dict[str, Any]:

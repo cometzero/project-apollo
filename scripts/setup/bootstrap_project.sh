@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 JOBS="${JOBS:-8}"
 WITH_QEMU_ROMS=0
 FORCE=0
@@ -18,7 +18,7 @@ FORCE=0
 usage()
 {
     cat <<EOF
-Usage: scripts/bootstrap_project.sh [options]
+Usage: scripts/setup/bootstrap_project.sh [options]
 
 Options:
   --root DIR          Workspace root to initialize (default: ${ROOT_DIR})

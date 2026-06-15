@@ -22,7 +22,7 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | QBox SystemC modules | `tools/qbox/systemc-components/` |
 | QBox QEMU modules | `tools/qbox/qemu-components/` |
 | QEMU backend source | `tools/qemu/` |
-| Apollo full-system runner | `scripts/run_qbox_apollo_fvp_full.py` |
+| Apollo full-system runner | `scripts/run/run_qbox_apollo_fvp_full.py` |
 | Full-system 설계/맵 | `doc/qbox-apollo-fvp-full-system-design.md`, `doc/qbox-apollo-fvp-map-analysis.md` |
 | 최근 검증 결과 | `build/qbox-apollo-fvp/full-model-debug-no-trace/result.json`, `build/qbox-apollo-fvp/full-model-debug-no-trace/coverage-audit.json` |
 
@@ -102,7 +102,7 @@ VSI 0/1, PL031 RTC, PL011 UART 0/1 등이 포함된다.
 `QBOX_RDASPEN_SMMU_BACKEND` 기본값은 `systemc-mmu720ae`이며,
 `qemu-arm-smmuv3`는 fallback/debug 선택지이다. MHU는 별도 backend switch가
 아니라 `mhu320ae` SystemC component가 RSE/AP/SI 경로에 직접 배치된다.
-`scripts/run_qbox_apollo_fvp_full.py`도 기본
+`scripts/run/run_qbox_apollo_fvp_full.py`도 기본
 `--smmu-backend systemc-mmu720ae`, 기본 performance preset enabled, 기본
 range-limited flash DMI enabled로 실행되도록 구성되어 있다.
 

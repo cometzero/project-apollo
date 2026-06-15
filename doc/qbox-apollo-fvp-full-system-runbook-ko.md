@@ -13,9 +13,9 @@ emulation을 실행하고, G0-G5 completion gate를 검증하는 절차를 설�
 
 ```bash
 ./local-build.sh build
-./scripts/build_qbox_apollo_fvp_full.sh
+./scripts/build/build_qbox_apollo_fvp_full.sh
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -25,20 +25,20 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 
 ./local-build.sh boot
 
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
 
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
 
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -56,7 +56,7 @@ Apollo full-system boot는 AP flash와 host memory의 regular TLM 병목을
 FWU fidelity를 확인할 때만 `--no-range-limited-flash-dmi`로 끈다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -79,14 +79,14 @@ build/qbox-apollo-fvp/<run>/result.json
 run 결과는 다음처럼 재분석할 수 있다.
 
 ```bash
-python3 scripts/analyze_qbox_rse_boot_timing.py --markdown \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py --markdown \
   build/qbox-apollo-fvp/full-live-cl0-cl1/result.json
 ```
 
 FVP 대비 상대 속도를 확인하려면 FVP도 같은 marker 방식으로 재실행한다.
 
 ```bash
-python3 scripts/runfvp_log_boot.py \
+python3 scripts/run/runfvp_log_boot.py \
   --machine apollo-fvp \
   --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
   --out-dir build/local-apollo-fvp/fvp-boot-timed-<run-id> \
@@ -103,7 +103,7 @@ RSE BL1_2 validation 내부의 CC3XX HASH/PKA 비중을 같이 보려면 다음 
 추가한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -116,14 +116,14 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 
 또는 tmux 화면 실행에서 `--cc3xx-stats --cc3xx-stats-interval 65536`을
 붙인다. 결과의 `rse-cc3xx-stats.json`은
-`scripts/analyze_qbox_rse_boot_timing.py`가 자동으로 읽는다.
+`scripts/analyze/analyze_qbox_rse_boot_timing.py`가 자동으로 읽는다.
 
 RSE CC3XX polling read 비용만 분리해서 확인하려면 opt-in status-read fast
 path를 추가한다. 이 옵션은 secure boot 검증을 skip하지 않고, side-effect 없는
 ready/busy status read만 QEMU initiator에서 바로 반환한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -144,7 +144,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 `0x50154000:0x2000`의 QEMU -> SystemC scheduler bridge만 우회한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -169,7 +169,7 @@ default는 여전히 SystemC backend이며, qemu-native backend는 secure boot
 `0x50154000:0x2000` direct MMIO fast path를 자동으로 켠다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -198,7 +198,7 @@ RSE boot time을 FVP에 가깝게 비교할 때는 RSE runner로 전달되는
 다음처럼 실행한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -223,7 +223,7 @@ RSE runner를 직접 쓰는 편이 빠르다. 2026-06-08 기준 가장 빠른 QB
 alias preset이다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -278,7 +278,7 @@ BL2 image-level accelerator 후보를 profiling하려면 다음 옵션을 추가
 성능 비교가 아니라 hook/counter 확인이 목적이다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -316,7 +316,7 @@ PKA traffic 제거 실험에는 `--rse-bl2-verify-sig-skip`을 추가할 수 있
 사용자에게 subsystem별 UART 출력을 보여주려면 tmux wrapper를 사용한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 ```
 
 기본 실행은 `live-cl0-cl1`, `--skip-build`, `--post-login-probe`,
@@ -329,7 +329,7 @@ probe가 끝나도 QBox target은
 qemu-native CC3XX backend를 화면 실행에 적용하려면 다음처럼 실행한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh \
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
   --cc3xx-qemu-native-backend
@@ -348,7 +348,7 @@ scripts/run_qbox_apollo_fvp_full_tmux.sh \
 세션 이름과 출력 위치를 지정하려면 다음처럼 실행한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh \
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh \
   --session apollo-qbox-demo \
   --out-dir build/qbox-apollo-fvp/full-demo
 ```
@@ -356,14 +356,14 @@ scripts/run_qbox_apollo_fvp_full_tmux.sh \
 빌드까지 포함하려면 `--build`를 사용한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh --build
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh --build
 ```
 
 검증용으로 pass 이후 자동 종료되는 bounded run이 필요하면
 `--exit-after-pass` 또는 `--timeout SECONDS`를 사용한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh \
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh \
   --exit-after-pass \
   --timeout 2400
 ```
@@ -371,7 +371,7 @@ scripts/run_qbox_apollo_fvp_full_tmux.sh \
 실행하지 않고 command와 로그 layout만 확인하려면 `--dry-run`을 사용한다.
 
 ```bash
-scripts/run_qbox_apollo_fvp_full_tmux.sh --dry-run
+scripts/run/run_qbox_apollo_fvp_full_tmux.sh --dry-run
 ```
 
 tmux 안에서 `F12`를 누르면 전체 session이 종료된다. `--no-attach`를
@@ -422,7 +422,7 @@ FVP 비교를 위해서는 FVP boot evidence도 필요하다.
 full-system에 필요한 QBox target을 빌드한다.
 
 ```bash
-./scripts/build_qbox_apollo_fvp_full.sh
+./scripts/build/build_qbox_apollo_fvp_full.sh
 ```
 
 target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
@@ -457,17 +457,17 @@ ctest --test-dir tools/qbox/build \
 G0는 artifact와 source contract가 준비되었는지 확인한다.
 
 ```bash
-python3 scripts/probe_qemu_cortex_r82.py --source-root .
+python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --out-dir build/qbox-apollo-fvp/full-check-only
 
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-check-only/map-validation.json
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 ```
@@ -485,7 +485,7 @@ build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 기존 AP Linux direct-boot 경로가 깨지지 않았는지 확인한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --skip-build \
   --timeout 600 \
   --post-login-probe \
@@ -505,7 +505,7 @@ Direct-boot guardrail은 RSE/Safety Island/TF-A/OP-TEE/U-Boot을 의도적으로
 RSE-first AP firmware boot가 동작하는지 확인한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model \
   --skip-build \
   --timeout 1200 \
@@ -513,7 +513,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-service-model
 
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-service-model \
   --output build/qbox-apollo-fvp/full-service-model/comparison.json
@@ -526,7 +526,7 @@ python3 scripts/compare_fvp_qbox_rse_logs.py \
 Safety Island CL1 Zephyr를 live Cortex-R82 domain으로 실행한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --skip-build \
   --timeout 1200 \
@@ -534,7 +534,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl1
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl1/coverage-audit.json
 ```
@@ -548,7 +548,7 @@ Safety Island CL0 SCP-firmware와 CL1 Zephyr를 모두 live domain으로
 실행한다. 최종 runtime completion candidate는 이 모드에서만 나온다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -556,7 +556,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
 ```
@@ -587,16 +587,16 @@ FVP와 QBox full live run을 비교하고, map/coverage sidecar를 생성한다.
 ```bash
 ./local-build.sh boot
 
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
 
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
 ```
@@ -606,7 +606,7 @@ python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
 최종 완료 판정은 strict verifier로만 한다.
 
 ```bash
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -682,7 +682,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/
 경로를 지정한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
@@ -705,7 +705,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 CL1 Zephyr만 빠르게 확인하려면 isolated mode를 사용한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --isolated \
   --skip-build \
@@ -741,7 +741,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 
 ```bash
 ./local-build.sh build
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --out-dir build/qbox-apollo-fvp/full-check-only
 ```
@@ -782,7 +782,7 @@ sed -n '1,260p' build/qbox-apollo-fvp/full-live-cl0-cl1/si-cl1-mhuv3-trace.log
 
 ```bash
 ./local-build.sh boot
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
@@ -795,7 +795,7 @@ python3 scripts/compare_fvp_qbox_rse_logs.py \
 대응:
 
 ```bash
-python3 scripts/probe_qemu_cortex_r82.py --source-root .
+python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
 git -C tools/qemu log -1 --oneline
 git -C tools/qbox log -1 --oneline
 ```
@@ -806,7 +806,7 @@ runner는 `result.json`, `summary.txt`, UART log, trace log를 실행 전에
 정리한다. 그래도 결과가 의심되면 새 output directory를 사용한다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \

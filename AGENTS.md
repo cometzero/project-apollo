@@ -25,12 +25,12 @@ over register-only stubs.
 - QBox platform under active development:
   `tools/qbox/platforms/fvp-rd-aspen/`
 - QBox helper scripts:
-  `scripts/build_qbox_fvp_rd_aspen_linux.sh`,
-  `scripts/validate_qbox_fvp_rd_aspen_map.py`,
-  `scripts/run_qbox_fvp_rd_aspen_linux.py`,
-  `scripts/audit_qbox_fvp_rd_aspen_coverage.py`,
-  `scripts/build_qbox_apollo_fvp_linux.sh`,
-  `scripts/run_qbox_apollo_fvp_linux.py`
+  `scripts/build/build_qbox_fvp_rd_aspen_linux.sh`,
+  `scripts/test/validate_qbox_fvp_rd_aspen_map.py`,
+  `scripts/run/run_qbox_fvp_rd_aspen_linux.py`,
+  `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`,
+  `scripts/build/build_qbox_apollo_fvp_linux.sh`,
+  `scripts/run/run_qbox_apollo_fvp_linux.py`
 
 ## Source Boundaries
 
@@ -92,7 +92,7 @@ symbols by default:
 Generate or refresh the debug manifest after a local build:
 
 ```bash
-scripts/setup_local_debug_env.py \
+scripts/setup/setup_local_debug_env.py \
   --local-build-dir build/local-apollo-fvp \
   --out-dir build/local-apollo-fvp/debug
 ```
@@ -121,7 +121,7 @@ stub. Use Iris or an Iris-capable debugger for live target control. For
 command-line breakpoint smoke tests:
 
 ```bash
-scripts/run_local_fvp_debug.sh --no-attach --iris-port 7100 \
+scripts/debug/run_local_fvp_debug.sh --no-attach --iris-port 7100 \
   --break tfm-bl1_1:Reset_Handler
 ```
 
@@ -138,7 +138,7 @@ Boot issue escalation path:
    Safety Island CL0/CL1, TF-A, and U-Boot/Linux.
 3. Identify the earliest failing domain or firmware handoff from those logs.
 4. Refresh `build/local-apollo-fvp/debug/symbols.json`.
-5. Reproduce with `scripts/run_local_fvp_debug.sh --break <component:symbol>`
+5. Reproduce with `scripts/debug/run_local_fvp_debug.sh --break <component:symbol>`
    or attach an Iris debugger to the reported Iris port.
 6. Use GDB command files to confirm symbol addresses, source paths, and
    expected breakpoint locations before changing code.
@@ -170,9 +170,9 @@ For each hardware block or IP:
 Use the narrowest meaningful command first, then broaden only when needed.
 
 1. Static checks:
-   - `python3 -m py_compile scripts/*.py` for changed Python helpers.
+   - `python3 -m py_compile scripts/*/*.py` for changed Python helpers.
    - `git -C tools/qbox diff --check` for QBox changes.
-   - `./scripts/validate_qbox_fvp_rd_aspen_map.py`
+   - `./scripts/test/validate_qbox_fvp_rd_aspen_map.py`
 2. Yocto build checks:
    - Initialize with `source layers/poky/oe-init-build-env build`.
    - Use `bitbake-layers show-layers` when layer order changes.
@@ -184,16 +184,16 @@ Use the narrowest meaningful command first, then broaden only when needed.
      <target> --parallel <n>`.
    - Build `platforms-vp` when Lua platform wiring changes.
 4. Runtime checks:
-   - Use `scripts/run_qbox_fvp_rd_aspen_linux.py` with file-backed output.
+   - Use `scripts/run/run_qbox_fvp_rd_aspen_linux.py` with file-backed output.
    - Use `--post-login-probe` when driver evidence matters.
    - For Apollo local-build direct boot on QBox, use
-     `python3 scripts/run_qbox_apollo_fvp_linux.py --timeout 600
+     `python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600
      --post-login-probe` and inspect `build/qbox-apollo-fvp/<timestamp>/`.
    - For Apollo FVP local boot, use `./local-build.sh boot` and inspect
      `build/local-apollo-fvp/fvp-boot/result.json` plus per-UART logs before
      using GDB/Iris.
 5. Coverage checks:
-   - Run `scripts/audit_qbox_fvp_rd_aspen_coverage.py` with the runtime
+   - Run `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py` with the runtime
      `result.json` and log path.
 6. FVP comparison:
    - Use non-interactive FVP log scripts and compare boot, memory-map, IRQ,

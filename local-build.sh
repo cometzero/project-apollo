@@ -627,12 +627,12 @@ setup_zephyr_build_environment()
 
 build_qbox()
 {
-    require_file "${ROOT_DIR}/scripts/run_qbox_fvp_rd_aspen_rse.py"
+    require_file "${ROOT_DIR}/scripts/run/run_qbox_fvp_rd_aspen_rse.py"
     require_dir "${ROOT_DIR}/tools/qbox"
     mkdir -p "${LOG_DIR}"
 
     run_logged qbox-build env PYTHONDONTWRITEBYTECODE=1 \
-        python3 "${ROOT_DIR}/scripts/run_qbox_fvp_rd_aspen_rse.py" \
+        python3 "${ROOT_DIR}/scripts/run/run_qbox_fvp_rd_aspen_rse.py" \
         --build-only \
         --jobs "${JOBS}"
 }
@@ -2164,7 +2164,7 @@ create_rse_otp_image()
     esac
 
     run_logged rse-otp-host-provision python3 \
-        "${ROOT_DIR}/scripts/provision_rse_otp_image.py" \
+        "${ROOT_DIR}/scripts/setup/provision_rse_otp_image.py" \
         --root "${ROOT_DIR}" \
         --tfm-build-dir "${TFM_BUILD_DIR}" \
         --output "${image}" \
@@ -2283,7 +2283,7 @@ package_flash_manifest()
     fingerprint_file_hash "${FW_DIR}/rom_dma_ics.bin" package-rom-dma-ics
     fingerprint_file_hash "${FW_DIR}/enc_key_s.b64" package-enc-key
     fingerprint_file_hash "${FW_DIR}/combined_provisioning_message.bin" package-provisioning-message
-    fingerprint_file_hash "${ROOT_DIR}/scripts/provision_rse_otp_image.py" package-rse-otp-tool
+    fingerprint_file_hash "${ROOT_DIR}/scripts/setup/provision_rse_otp_image.py" package-rse-otp-tool
     fingerprint_file_hash "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/images/files/fvp-rd-aspen/init_fwu_metadata.py" package-fwu-metadata-tool
     fingerprint_file_hash "${fw_work}/recipe-sysroot-native/usr/share/tfm/root-EC-P256.pem" package-root-key
 }
@@ -2502,7 +2502,7 @@ PY
 
 generate_debug_manifest()
 {
-    run_logged local-debug-manifest python3 "${ROOT_DIR}/scripts/setup_local_debug_env.py" \
+    run_logged local-debug-manifest python3 "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py" \
         --local-build-dir "${LOCAL_BUILD_DIR}" \
         --out-dir "${LOCAL_BUILD_DIR}/debug"
     require_file "${LOCAL_BUILD_DIR}/debug/symbols.json"
@@ -2543,7 +2543,7 @@ boot_fvp()
     local out_dir="${LOCAL_BUILD_DIR}/fvp-boot"
     rm -rf "${out_dir}"
 
-    run_logged fvp-boot python3 "${ROOT_DIR}/scripts/runfvp_log_boot.py" \
+    run_logged fvp-boot python3 "${ROOT_DIR}/scripts/run/runfvp_log_boot.py" \
         --machine "${MACHINE}" \
         --fvpconf "${fvpconf}" \
         --out-dir "${out_dir}" \

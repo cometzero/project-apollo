@@ -35,7 +35,7 @@ Lua platform config, CMake/CTest, Python QBox runners.
 git status --short
 git -C tools/qbox status --short
 ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure
-python3 scripts/analyze_qbox_rse_boot_timing.py \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py \
   build/qbox-apollo-fvp/rse-cc3xx-validation-complete-20260604/result.json \
   build/qbox-apollo-fvp/rse-cc3xx-histogram-local-mmio-20260604/result.json
 ```
@@ -149,9 +149,9 @@ ctest --test-dir tools/qbox/build -R 'cc3xx' --output-on-failure
 Files:
 
 - Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- Modify: `scripts/run_qbox_fvp_rd_aspen_rse.py`
-- Modify: `scripts/run_qbox_apollo_fvp_full.py`
-- Modify: `scripts/run_qbox_apollo_fvp_full_tmux.sh`
+- Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_full_tmux.sh`
 - Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
 
 Steps:
@@ -166,8 +166,8 @@ Steps:
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 cmake --build tools/qbox/build --target platforms-vp remote_cpu --parallel 8
 ```
 
@@ -179,24 +179,24 @@ Run bundle:
 RUN_ID=$(date +%Y%m%d-%H%M%S)
 E=build/qbox-apollo-fvp/cc3xx-qemu-backend-${RUN_ID}
 
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build --cc3xx-stats --cc3xx-stats-interval 65536 \
   --timeout 230 --ignore-fail-patterns \
   --out-dir ${E}/rse-systemc-baseline
 
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build --cc3xx-stats --cc3xx-stats-interval 65536 \
   --cc3xx-local-mmio-fastpath \
   --timeout 230 --ignore-fail-patterns \
   --out-dir ${E}/rse-local-mmio
 
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build --cc3xx-stats --cc3xx-stats-interval 65536 \
   --cc3xx-qemu-native-backend \
   --timeout 230 --ignore-fail-patterns \
   --out-dir ${E}/rse-qemu-native
 
-python3 scripts/analyze_qbox_rse_boot_timing.py --markdown \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py --markdown \
   ${E}/rse-systemc-baseline/result.json \
   ${E}/rse-local-mmio/result.json \
   ${E}/rse-qemu-native/result.json \
@@ -218,14 +218,14 @@ Pass 기준:
 RUN_ID=$(date +%Y%m%d-%H%M%S)
 E=build/qbox-apollo-fvp/cc3xx-qemu-backend-${RUN_ID}
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --skip-build --timeout 2400 \
   --rootfs-bootargs-profile none --post-login-probe \
   --cc3xx-stats --cc3xx-stats-interval 65536 \
   --cc3xx-qemu-native-backend \
   --out-dir ${E}/full-live-cl0-cl1
 
-python3 scripts/audit_qbox_fvp_rd_aspen_coverage.py \
+python3 scripts/test/audit_qbox_fvp_rd_aspen_coverage.py \
   --runtime-result ${E}/full-live-cl0-cl1/rd-aspen-result.json \
   --runtime-log ${E}/full-live-cl0-cl1/qbox-platform.log \
   --output ${E}/full-live-cl0-cl1/coverage-audit.json

@@ -52,7 +52,7 @@ FVP와 QBox를 같은 marker 기준으로 비교하기 위해 FVP 로그 수집�
 `progress_marker_first_hits` 기록을 추가하고, 로컬 FVP를 다시 실행했다.
 
 ```bash
-python3 scripts/runfvp_log_boot.py \
+python3 scripts/run/runfvp_log_boot.py \
   --machine apollo-fvp \
   --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
   --out-dir build/local-apollo-fvp/fvp-boot-timed-20260604 \
@@ -115,7 +115,7 @@ FVP도 SystemC 기반이지만, 현재 QBox보다 빠른 이유는 SystemC 사�
 재실행하지 않고 `result.json` 및 `rd-aspen-result.json`만 읽는다.
 
 ```bash
-python3 scripts/analyze_qbox_rse_boot_timing.py --markdown \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py --markdown \
   build/qbox-apollo-fvp/full-20260604-062846/result.json \
   build/qbox-apollo-fvp/full-20260604-062124/result.json
 ```
@@ -203,7 +203,7 @@ CC3XX aggregate stats를 추가해서 RSE validation 구간을 다시 실행했�
 파일로 기록한다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -246,7 +246,7 @@ BL1_2 validation 구간 분석 증거로 충분하다.
 저장된 결과는 다음처럼 다시 볼 수 있다.
 
 ```bash
-python3 scripts/analyze_qbox_rse_boot_timing.py \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py \
   build/qbox-apollo-fvp/rse-cc3xx-validation-complete-20260604/result.json
 ```
 
@@ -256,7 +256,7 @@ python3 scripts/analyze_qbox_rse_boot_timing.py \
 추가한 뒤, 현재 권장 option 3A인 local MMIO fast path와 함께 다시 측정했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -265,7 +265,7 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
   --ignore-fail-patterns \
   --out-dir build/qbox-apollo-fvp/rse-cc3xx-histogram-local-mmio-20260604
 
-python3 scripts/analyze_qbox_rse_boot_timing.py --markdown \
+python3 scripts/analyze/analyze_qbox_rse_boot_timing.py --markdown \
   build/qbox-apollo-fvp/rse-cc3xx-histogram-local-mmio-20260604/result.json
 ```
 
@@ -350,7 +350,7 @@ MMIO read/write가 모두 QEMU -> SystemC thread -> TLM target 경계를 통과�
 QBOX_RDASPEN_CC3XX_TRACE=true \
 QBOX_RDASPEN_CC3XX_TRACE_FILTER=crypto \
 QBOX_RDASPEN_CC3XX_TRACE_LIMIT=240 \
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --timeout 70 \
   --ignore-fail-patterns \
@@ -385,7 +385,7 @@ padding byte를 한 바이트씩 `sha256_update()`로 넣는 것을 내부 bulk 
 바로 반환하는 opt-in fast path를 시험했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -426,7 +426,7 @@ Option 3의 첫 구현으로 QEMU-local direct MMIO fast path를 추가했다. �
 기존 SystemC CC3XX model을 그대로 사용하고 `run_on_sysc()` bridge만 우회한다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -439,7 +439,7 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 `--cc3xx-status-read-fastpath`와 같이 켠 상한도 측정했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -610,7 +610,7 @@ handoff 전후의 flash/storage/CC3XX DMA traffic이다. 가장 빠른 관측 ru
 다음이다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -665,7 +665,7 @@ fast aliases + storage direct fast path로 둔다.
 `bootutil_verify_sig()` safe accelerator도 같은 조합에서 재확인했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -745,7 +745,7 @@ tuple 기준으로 바로 성공 처리하는 것이다. 하지만 이는 signat
 현 시점에서 바로 권장하는 RSE 부팅 시간 비교 command는 다음이다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -951,7 +951,7 @@ ctest --test-dir tools/qbox/build \
   -R 'cc3xx-tests' \
   --output-on-failure
 
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -977,7 +977,7 @@ FVP와 비슷한 RSE 부팅 시간을 목표로 QEMU-native CC3XX 이후의 남�
 `--qbox-perf-profile`을 켰을 때만 wall-clock counter를 기록한다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --qbox-perf-profile \
@@ -1083,7 +1083,7 @@ QEMU initiator와 RemotePass profile은 RSE CPU memory/peripheral path가 아직
    early boot marker가 유지되고 cache hit가 발생했다.
 
    ```bash
-   python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+   python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
      --skip-build \
      --cc3xx-qemu-native-backend \
      --remotepass-dmi-cache \
@@ -1106,7 +1106,7 @@ QEMU initiator와 RemotePass profile은 RSE CPU memory/peripheral path가 아직
    같은 option으로 230초 validation run도 수행했다.
 
    ```bash
-   python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+   python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
      --skip-build \
      --cc3xx-qemu-native-backend \
      --remotepass-dmi-cache \
@@ -1184,7 +1184,7 @@ CC3XX DMA DMI cache, RSE BL1_1 `memcpy/memset` semantic hotpath를 차례로
 검증했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --qbox-perf-profile \
@@ -1327,8 +1327,8 @@ PC를 LR로 갱신한다.
   `QemuCpu` LMS accelerator 연결
 - `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`: 현재 BL1_2 ELF의
   `pq_crypto_verify` entry인 `0x11009bad`를 기본 verify PC로 설정
-- `scripts/run_qbox_fvp_rd_aspen_rse.py`,
-  `scripts/run_qbox_apollo_fvp_full.py`: `--rse-lms-accel` 옵션의 기본
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+  `scripts/run/run_qbox_apollo_fvp_full.py`: `--rse-lms-accel` 옵션의 기본
   data limit을 image verification payload에 맞춰 16MiB로 상향
 
 검증 명령:
@@ -1337,8 +1337,8 @@ PC를 LR로 갱신한다.
 cmake --build build --target rse_lms_accel-tests remote_cpu cortex-m55-vp platforms-vp --parallel 8
 
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 
 QBOX_RSE_LMS_TEST_DATA=/build/arm/arm-auto-solutions/hsoc-stack/components/system_mgmt/zephyrproject/modules/crypto/mbedtls/tests/suites/test_suite_lms.data \
   tools/qbox/build/tests/components/cc3xx/rse_lms_accel-tests
@@ -1351,7 +1351,7 @@ ctest --test-dir tools/qbox/build \
 RSE smoke:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -1573,7 +1573,7 @@ RSE CPU address space에 좁은 alias를 명시적으로 추가한다.
 검증 run:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -1618,7 +1618,7 @@ SI SRAM direct file alias를 opt-in 성능 모드로 유지하는 것이다. 다
 이를 `--rse-direct-ap-bl2-alias`로 구현하고 검증했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -1664,7 +1664,7 @@ debt가 크므로, 다음 read-only alias만 opt-in으로 추가했다.
 검증 command:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -1705,7 +1705,7 @@ word만 기록하며, guest firmware 실행은 건드리지 않는다. RSE가 re
 ```bash
 cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
 cmake --build tools/qbox/build --target remote_cpu --parallel 8
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -1783,7 +1783,7 @@ cmake --build tools/qbox/build --target cc3xx_core-tests --parallel 8
 ctest --test-dir tools/qbox/build -R '^cc3xx_core-tests$' --output-on-failure
 cmake --build tools/qbox/build --target remote_cpu --parallel 8
 cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -2229,7 +2229,7 @@ resolved address, missing symbol 목록을 기록한다.
 검증 command:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -2256,7 +2256,7 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 `--rse-bl2-boot-enc-accel`도 같은 resolver로 재검증했다.
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -2295,7 +2295,7 @@ QBox CPU hook이 BL2 `boot_loader_state`와 MCUBoot header를 image별로 안정
 검증 command:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \

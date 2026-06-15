@@ -44,20 +44,20 @@
 - QA policy: every todo has agent-executed scenarios and must write evidence under `.omo/evidence/task-<N>-ap-ap-system-memory-map-qbox-gap.<ext>`.
 - Evidence: runtime and audit artifacts live under `build/qbox-apollo-fvp/ap-map-9-1-1/`; task-local summaries live under `.omo/evidence/`.
 - Required static commands:
-  - `python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py`
-  - `python3 -m py_compile scripts/audit_qbox_apollo_ap_memory_map.py`
+  - `python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
+  - `python3 -m py_compile scripts/test/audit_qbox_apollo_ap_memory_map.py`
   - `git -C tools/qbox diff --check`
 - Required QBox build/test commands:
   - `cmake --build tools/qbox/build --target host_scr-tests zena_fmu-tests host_gtimer-tests platforms-vp --parallel 8`
   - `ctest --test-dir tools/qbox/build -R '(host_scr|zena_fmu|host_gtimer)' --output-on-failure`
 - Required direct AP Linux command:
-  - `python3 scripts/run_qbox_apollo_fvp_linux.py --build-only --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-build`
-  - `python3 scripts/run_qbox_apollo_fvp_linux.py --skip-build --timeout 300 --post-login-probe --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime`
+  - `python3 scripts/run/run_qbox_apollo_fvp_linux.py --build-only --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-build`
+  - `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --timeout 300 --post-login-probe --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime`
 - Required full-system command:
-  - `env QBOX_RDASPEN_NETDEV=type=user python3 scripts/run_qbox_apollo_fvp_full.py --skip-build --timeout 180 --post-login-probe --si-mode live-cl0-cl1 --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime`
+  - `env QBOX_RDASPEN_NETDEV=type=user python3 scripts/run/run_qbox_apollo_fvp_full.py --skip-build --timeout 180 --post-login-probe --si-mode live-cl0-cl1 --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime`
 - Required coverage commands:
-  - `python3 scripts/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json`
-  - `python3 scripts/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/result.json --output build/qbox-apollo-fvp/ap-map-9-1-1/full-coverage-audit.json`
+  - `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json`
+  - `python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/result.json --output build/qbox-apollo-fvp/ap-map-9-1-1/full-coverage-audit.json`
 
 ## Execution strategy
 ### Parallel execution waves
@@ -92,12 +92,12 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
 
 - [x] T1. Add AP 9.1.1 map fixture and parser
   What to do / Must NOT do:
-  Create `scripts/audit_qbox_apollo_ap_memory_map.py` with a checked-in expected map table copied from `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:91`. Include every non-reserved 9.1.1 row, but initially classify only the approved scope rows as `required_now`: AP SID, AP secure timer frame, RGIC2LGIC_MESSREG, APP subsystem FMU, low/high DRAM, AP UART/watchdog/timer, AP GIC/SMMU/RoS currently covered rows. Mark NoC/CMN/PCIe/debug/memory-controller rows as `deferred_epic`, not failing.
+  Create `scripts/test/audit_qbox_apollo_ap_memory_map.py` with a checked-in expected map table copied from `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:91`. Include every non-reserved 9.1.1 row, but initially classify only the approved scope rows as `required_now`: AP SID, AP secure timer frame, RGIC2LGIC_MESSREG, APP subsystem FMU, low/high DRAM, AP UART/watchdog/timer, AP GIC/SMMU/RoS currently covered rows. Mark NoC/CMN/PCIe/debug/memory-controller rows as `deferred_epic`, not failing.
   Parallelization: Can parallel Y | Wave 1 | Blocks T2/T3/T6/T11
-  References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:91`, `scripts/audit_qbox_apollo_fvp_full_coverage.py:1`
-  Acceptance criteria (agent-executable): `python3 -m py_compile scripts/audit_qbox_apollo_ap_memory_map.py` passes and `.omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap.json` records the expected map row count, required-now row names, and deferred row names.
-  QA scenarios (name the exact tool + invocation): happy: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --list-expected --output .omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap.json`; failure: temporarily run the script with `--require-row DOES_NOT_EXIST` and capture non-zero exit in `.omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap-fail.txt`.
-  Commit: Y | test(qbox): add Apollo AP map audit fixture | Files `scripts/audit_qbox_apollo_ap_memory_map.py`
+  References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:91`, `scripts/test/audit_qbox_apollo_fvp_full_coverage.py:1`
+  Acceptance criteria (agent-executable): `python3 -m py_compile scripts/test/audit_qbox_apollo_ap_memory_map.py` passes and `.omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap.json` records the expected map row count, required-now row names, and deferred row names.
+  QA scenarios (name the exact tool + invocation): happy: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --list-expected --output .omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap.json`; failure: temporarily run the script with `--require-row DOES_NOT_EXIST` and capture non-zero exit in `.omo/evidence/task-1-ap-ap-system-memory-map-qbox-gap-fail.txt`.
+  Commit: Y | test(qbox): add Apollo AP map audit fixture | Files `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T2. Teach the audit to extract current QBox AP map coverage
   What to do / Must NOT do:
@@ -105,17 +105,17 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
   Parallelization: Can parallel Y | Wave 1 | Blocks T6/T11/T13
   References: `tools/qbox/platforms/apollo/hw-block/rse.lua:1127`, `tools/qbox/platforms/apollo/hw-block/rse.lua:1701`, `tools/qbox/platforms/apollo/hw-block/ros.lua:3`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua:63`
   Acceptance criteria (agent-executable): audit JSON contains `covered`, `partial`, `missing`, and `deferred_epic` classifications, and currently fails only the approved missing P1 rows before T6-T10.
-  QA scenarios: happy: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --output .omo/evidence/task-2-ap-ap-system-memory-map-qbox-gap.json || test $? -eq 2`; failure: use `--expect-current-host-ap-dram2 0x880000000` before migration and record expected mismatch in `.omo/evidence/task-2-ap-ap-system-memory-map-qbox-gap-fail.txt`.
-  Commit: Y | test(qbox): audit Apollo AP QBox coverage | Files `scripts/audit_qbox_apollo_ap_memory_map.py`
+  QA scenarios: happy: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output .omo/evidence/task-2-ap-ap-system-memory-map-qbox-gap.json || test $? -eq 2`; failure: use `--expect-current-host-ap-dram2 0x880000000` before migration and record expected mismatch in `.omo/evidence/task-2-ap-ap-system-memory-map-qbox-gap-fail.txt`.
+  Commit: Y | test(qbox): audit Apollo AP QBox coverage | Files `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T3. Add high DRAM migration inventory checks
   What to do / Must NOT do:
   Add audit checks for all high-DRAM source locations: full-system constant, direct-boot Lua, direct-boot DTS, and generated DTB build path. The audit must fail if any source still uses `0x200000000`, `0x20000000000`, or DTS high memory cells `<0x2 0x00000000 ...>` after migration. It must require `0x880000000` / DTS cells `<0x8 0x80000000 ...>`.
   Parallelization: Can parallel Y | Wave 1 | Blocks T6/T11
-  References: `tools/qbox/platforms/apollo/hw-block/rse.lua:446`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua:82`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts:69`, `scripts/run_qbox_apollo_fvp_linux.py`
+  References: `tools/qbox/platforms/apollo/hw-block/rse.lua:446`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua:82`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts:69`, `scripts/run/run_qbox_apollo_fvp_linux.py`
   Acceptance criteria (agent-executable): before migration, the check reports mismatches with exact file/line references; after T6 it passes.
-  QA scenarios: happy/failure combined: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --check high-dram --output .omo/evidence/task-3-ap-ap-system-memory-map-qbox-gap.json || test $? -eq 2`.
-  Commit: Y | test(qbox): gate Apollo high DRAM placement | Files `scripts/audit_qbox_apollo_ap_memory_map.py`
+  QA scenarios: happy/failure combined: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --check high-dram --output .omo/evidence/task-3-ap-ap-system-memory-map-qbox-gap.json || test $? -eq 2`.
+  Commit: Y | test(qbox): gate Apollo high DRAM placement | Files `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T4. Confirm AP SID reset profile and host_scr suitability
   What to do / Must NOT do:
@@ -132,24 +132,24 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
   Parallelization: Can parallel Y | Wave 1 | Blocks T10
   References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:123`, `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:316`, `arm-zena-css/documentation/design/fmu.rst:17`, `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/config_fmu.c:201`
   Acceptance criteria (agent-executable): `.omo/evidence/task-5-ap-ap-system-memory-map-qbox-gap.json` lists AP_CL0..AP_CL3 NI710AE FMUs, their firmware bases, parent indices, and target AP 9.1.1 coverage row.
-  QA scenarios: happy: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --collect-fmu-plan --output .omo/evidence/task-5-ap-ap-system-memory-map-qbox-gap.json`; failure: script exits non-zero if any AP_CLx_NI710AE_FMU entry lacks a base.
-  Commit: Y | test(qbox): record Apollo AP FMU coverage plan | Files `scripts/audit_qbox_apollo_ap_memory_map.py`
+  QA scenarios: happy: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --collect-fmu-plan --output .omo/evidence/task-5-ap-ap-system-memory-map-qbox-gap.json`; failure: script exits non-zero if any AP_CLx_NI710AE_FMU entry lacks a base.
+  Commit: Y | test(qbox): record Apollo AP FMU coverage plan | Files `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T6. Migrate high DRAM to the 9.1.1 range
   What to do / Must NOT do:
   Change full-system and direct AP QBox high DRAM base to `0x880000000`. Preserve current 2 GiB backing size unless direct/full artifacts already require more; if a larger size is chosen, update the audit and DTS together. Update DTS high memory cells to `<0x8 0x80000000 0x0 0x80000000>` for the current 2 GiB backing. Rebuild/regenerate direct boot DTB through the runner; do not hand-edit generated `build/` files.
   Parallelization: Can parallel Y | Wave 2 | Blocks T11/T13
   References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:143`, `tools/qbox/platforms/apollo/hw-block/rse.lua:446`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua:82`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts:69`
-  Acceptance criteria (agent-executable): `python3 scripts/audit_qbox_apollo_ap_memory_map.py --check high-dram --output .omo/evidence/task-6-ap-ap-system-memory-map-qbox-gap.json` passes and generated direct DTB is produced by `--build-only`.
-  QA scenarios: happy: `python3 scripts/run_qbox_apollo_fvp_linux.py --build-only --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-build`; failure: `fdtdump build/qbox-apollo-fvp/ap-map-9-1-1/direct-build/apollo-fvp-primary-compute.dtb | grep -E '08 80 00 00|880000000'` or equivalent `dtc -I dtb -O dts` check recorded in `.omo/evidence/task-6-ap-ap-system-memory-map-qbox-gap-dtb.txt`.
-  Commit: Y | fix(qbox): align Apollo high DRAM map | Files `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts`, `scripts/audit_qbox_apollo_ap_memory_map.py`
+  Acceptance criteria (agent-executable): `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --check high-dram --output .omo/evidence/task-6-ap-ap-system-memory-map-qbox-gap.json` passes and generated direct DTB is produced by `--build-only`.
+  QA scenarios: happy: `python3 scripts/run/run_qbox_apollo_fvp_linux.py --build-only --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-build`; failure: `fdtdump build/qbox-apollo-fvp/ap-map-9-1-1/direct-build/apollo-fvp-primary-compute.dtb | grep -E '08 80 00 00|880000000'` or equivalent `dtc -I dtb -O dts` check recorded in `.omo/evidence/task-6-ap-ap-system-memory-map-qbox-gap-dtb.txt`.
+  Commit: Y | fix(qbox): align Apollo high DRAM map | Files `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts`, `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T7. Wire AP SID into full-system and direct-visible AP view
   What to do / Must NOT do:
   Add `ap_sid` in the same owner Lua file as the AP UART/watchdog/timer objects, using the `host_scr` profile proven in T4. Bind it into `ap_compute.enable_ap_view_router()` with `bind_ap_socket(platform.ap_sid, "target_socket")`. Ensure the new object does not overlap existing secure watchdog/timer/UART windows.
   Parallelization: Can parallel Y | Wave 2 | Blocks T11/T13 | Blocked by T2/T4
   References: `tools/qbox/platforms/apollo/hw-block/rse.lua:1455`, `tools/qbox/platforms/apollo/hw-block/rse.lua:1479`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua:76`, `tools/qbox/systemc-components/host_scr/include/host_scr.h:215`
-  Acceptance criteria (agent-executable): `python3 scripts/audit_qbox_apollo_ap_memory_map.py --require-row SID --output .omo/evidence/task-7-ap-ap-system-memory-map-qbox-gap.json` reports `covered` by `ap_sid` and `ctest --test-dir tools/qbox/build -R 'host_scr' --output-on-failure` passes.
+  Acceptance criteria (agent-executable): `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --require-row SID --output .omo/evidence/task-7-ap-ap-system-memory-map-qbox-gap.json` reports `covered` by `ap_sid` and `ctest --test-dir tools/qbox/build -R 'host_scr' --output-on-failure` passes.
   QA scenarios: happy: `cmake --build tools/qbox/build --target host_scr-tests platforms-vp --parallel 8 && ctest --test-dir tools/qbox/build -R 'host_scr' --output-on-failure`; failure: audit with `--require-row SID --forbid-object ap_sid` exits non-zero and writes `.omo/evidence/task-7-ap-ap-system-memory-map-qbox-gap-fail.txt`.
   Commit: Y | feat(qbox): expose Apollo AP SID in QBox | Files `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua`
 
@@ -159,7 +159,7 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
   Parallelization: Can parallel Y | Wave 2 | Blocks T11/T13 | Blocked by T2
   References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:110`, `tools/qbox/platforms/apollo/hw-block/rse.lua:1479`, `tools/qbox/qemu-components/timer/qemu_hexagon_qtimer/include/qemu_hexagon_qtimer.h:25`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua:80`
   Acceptance criteria (agent-executable): AP map audit reports both `AP0_REFCLK_CNTCTL`, `AP0_REFCLK_S_CNTBase1`, and `AP0_REFCLK_NS_CNTBase0` as covered/explicit-placeholder; `ctest --test-dir tools/qbox/build -R 'host_gtimer|router' --output-on-failure` passes if relevant.
-  QA scenarios: happy: `cmake --build tools/qbox/build --target platforms-vp --parallel 8 && python3 scripts/audit_qbox_apollo_ap_memory_map.py --require-row AP0_REFCLK_S_CNTBase1 --output .omo/evidence/task-8-ap-ap-system-memory-map-qbox-gap.json`; failure: audit with the secure timer row removed from Lua must fail and be captured in `.omo/evidence/task-8-ap-ap-system-memory-map-qbox-gap-fail.txt`.
+  QA scenarios: happy: `cmake --build tools/qbox/build --target platforms-vp --parallel 8 && python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --require-row AP0_REFCLK_S_CNTBase1 --output .omo/evidence/task-8-ap-ap-system-memory-map-qbox-gap.json`; failure: audit with the secure timer row removed from Lua must fail and be captured in `.omo/evidence/task-8-ap-ap-system-memory-map-qbox-gap-fail.txt`.
   Commit: Y | feat(qbox): cover Apollo AP secure timer frame | Files `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua`, optional docs/audit
 
 - [x] T9. Add RGIC2LGIC_MESSREG AP window
@@ -168,7 +168,7 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
   Parallelization: Can parallel Y | Wave 2 | Blocks T11/T13 | Blocked by T2
   References: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:133`, `hsoc-stack/components/primary_compute/trusted-firmware-a/plat/arm/board/neoverse_rd/platform/rdv3/rdv3_bl31_setup.c:27`, `tools/qbox/systemc-components/gicx00_multiview/include/gicx00_multiview.h:20`
   Acceptance criteria (agent-executable): AP map audit reports `RGIC2LGIC_MESSREG` as `explicit_placeholder` with exact address/size and docs explain the missing message semantics.
-  QA scenarios: happy: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --require-row RGIC2LGIC_MESSREG --output .omo/evidence/task-9-ap-ap-system-memory-map-qbox-gap.json`; failure: audit rejects any broad placeholder larger than 64 KiB and records `.omo/evidence/task-9-ap-ap-system-memory-map-qbox-gap-fail.txt`.
+  QA scenarios: happy: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --require-row RGIC2LGIC_MESSREG --output .omo/evidence/task-9-ap-ap-system-memory-map-qbox-gap.json`; failure: audit rejects any broad placeholder larger than 64 KiB and records `.omo/evidence/task-9-ap-ap-system-memory-map-qbox-gap-fail.txt`.
   Commit: Y | feat(qbox): add Apollo RGIC2LGIC window | Files `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua`, docs/audit
 
 - [x] T10. Add APP subsystem FMU QBox coverage
@@ -182,12 +182,12 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
 
 - [x] T11. Integrate AP map audit with full coverage audit
   What to do / Must NOT do:
-  Add a callout or data merge path so `scripts/audit_qbox_apollo_fvp_full_coverage.py` can include AP 9.1.1 memory-map coverage summary when an AP-map audit JSON is available. Preserve its existing runtime gate checks; do not make full runtime success depend on deferred epics.
+  Add a callout or data merge path so `scripts/test/audit_qbox_apollo_fvp_full_coverage.py` can include AP 9.1.1 memory-map coverage summary when an AP-map audit JSON is available. Preserve its existing runtime gate checks; do not make full runtime success depend on deferred epics.
   Parallelization: Can parallel N | Wave 3 | Blocks T13/T14
-  References: `scripts/audit_qbox_apollo_fvp_full_coverage.py:1`, `scripts/audit_qbox_apollo_fvp_full_coverage.py:94`, `doc/apollo-qbox-full-model/coverage-ledger.md:1`
-  Acceptance criteria (agent-executable): `python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py scripts/audit_qbox_apollo_ap_memory_map.py` passes and combined coverage JSON includes an `ap_9_1_1_memory_map` section.
-  QA scenarios: happy: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json && python3 scripts/audit_qbox_apollo_fvp_full_coverage.py --output .omo/evidence/task-11-ap-ap-system-memory-map-qbox-gap.json`; failure: pass a malformed AP-map JSON and assert the full audit reports `invalid_ap_map_audit` without crashing.
-  Commit: Y | test(qbox): include AP map in full coverage audit | Files `scripts/audit_qbox_apollo_fvp_full_coverage.py`, `scripts/audit_qbox_apollo_ap_memory_map.py`
+  References: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py:1`, `scripts/test/audit_qbox_apollo_fvp_full_coverage.py:94`, `doc/apollo-qbox-full-model/coverage-ledger.md:1`
+  Acceptance criteria (agent-executable): `python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py scripts/test/audit_qbox_apollo_ap_memory_map.py` passes and combined coverage JSON includes an `ap_9_1_1_memory_map` section.
+  QA scenarios: happy: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json && python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --output .omo/evidence/task-11-ap-ap-system-memory-map-qbox-gap.json`; failure: pass a malformed AP-map JSON and assert the full audit reports `invalid_ap_map_audit` without crashing.
+  Commit: Y | test(qbox): include AP map in full coverage audit | Files `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`, `scripts/test/audit_qbox_apollo_ap_memory_map.py`
 
 - [x] T12. Update project documentation and coverage ledger
   What to do / Must NOT do:
@@ -195,25 +195,25 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
   Parallelization: Can parallel Y | Wave 3 | Blocks T13/T15
   References: `doc/apollo-qbox-hardware-ko.md`, `doc/qbox-apollo-fvp-map-analysis.md:61`, `doc/apollo-qbox-full-model/coverage-ledger.md:1`, `.omo/drafts/ap-ap-system-memory-map-qbox-gap.md`
   Acceptance criteria (agent-executable): docs mention `0x08_8000_0000`, `AP SID`, `RGIC2LGIC_MESSREG`, `APP subsystem FMU`, and deferred NoC/CMN/PCIe/debug/memory-controller epics.
-  QA scenarios: happy: `rg -n '0x08_8000_0000|AP SID|RGIC2LGIC|APP subsystem FMU|deferred' doc/apollo-qbox-hardware-ko.md doc/qbox-apollo-fvp-map-analysis.md doc/apollo-qbox-full-model/coverage-ledger.md > .omo/evidence/task-12-ap-ap-system-memory-map-qbox-gap.txt`; failure: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --check-docs --output .omo/evidence/task-12-ap-ap-system-memory-map-qbox-gap.json` exits non-zero if a required term is absent.
+  QA scenarios: happy: `rg -n '0x08_8000_0000|AP SID|RGIC2LGIC|APP subsystem FMU|deferred' doc/apollo-qbox-hardware-ko.md doc/qbox-apollo-fvp-map-analysis.md doc/apollo-qbox-full-model/coverage-ledger.md > .omo/evidence/task-12-ap-ap-system-memory-map-qbox-gap.txt`; failure: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --check-docs --output .omo/evidence/task-12-ap-ap-system-memory-map-qbox-gap.json` exits non-zero if a required term is absent.
   Commit: Y | docs(qbox): document Apollo AP map coverage | Files docs listed above
 
 - [x] T13. Run direct AP Linux regression
   What to do / Must NOT do:
   Run direct AP Linux with the migrated high DRAM and new AP windows. Confirm the generated DTB advertises the new high DRAM range and Linux reaches login/probe. Do not accept `--build-only` as runtime success.
   Parallelization: Can parallel N | Wave 3 | Blocks T14/T15
-  References: `scripts/run_qbox_apollo_fvp_linux.py --help`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts:69`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua:82`
+  References: `scripts/run/run_qbox_apollo_fvp_linux.py --help`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts:69`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua:82`
   Acceptance criteria (agent-executable): `build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime/result.json` exists, reports pass/login, and post-login probe log does not contain kernel panic, synchronous external abort, or memory node parse failure.
-  QA scenarios: happy: `python3 scripts/run_qbox_apollo_fvp_linux.py --skip-build --timeout 300 --post-login-probe --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime`; failure: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --check-runtime --result-json build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime/result.json --output .omo/evidence/task-13-ap-ap-system-memory-map-qbox-gap.json`.
+  QA scenarios: happy: `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --timeout 300 --post-login-probe --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime`; failure: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --check-runtime --result-json build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime/result.json --output .omo/evidence/task-13-ap-ap-system-memory-map-qbox-gap.json`.
   Commit: N | runtime evidence only | Files generated under `build/qbox-apollo-fvp/ap-map-9-1-1/direct-runtime`
 
 - [x] T14. Run Apollo full-system regression and coverage gate
   What to do / Must NOT do:
   Run the full-system QBox path with live SI CL0/CL1 and post-login probes. Then run the AP-map audit and full coverage audit against the result. Do not use service-model mode for final acceptance unless live mode is blocked and explicitly recorded as a blocker.
   Parallelization: Can parallel Y | Wave 4 | Blocks final verification
-  References: `scripts/run_qbox_apollo_fvp_full.py --help`, `scripts/audit_qbox_apollo_fvp_full_coverage.py:141`, `AGENTS.md` runtime validation ladder
+  References: `scripts/run/run_qbox_apollo_fvp_full.py --help`, `scripts/test/audit_qbox_apollo_fvp_full_coverage.py:141`, `AGENTS.md` runtime validation ladder
   Acceptance criteria (agent-executable): full runtime `result.json` reports pass, per-UART logs exist for RSE/SI CL0/SI CL1/secure console/primary console, AP map audit passes required-now rows, and full coverage audit passes runtime gates.
-  QA scenarios: happy: `env QBOX_RDASPEN_NETDEV=type=user python3 scripts/run_qbox_apollo_fvp_full.py --skip-build --timeout 180 --post-login-probe --si-mode live-cl0-cl1 --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime`; coverage: `python3 scripts/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json && python3 scripts/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/result.json --output build/qbox-apollo-fvp/ap-map-9-1-1/full-coverage-audit.json`.
+  QA scenarios: happy: `env QBOX_RDASPEN_NETDEV=type=user python3 scripts/run/run_qbox_apollo_fvp_full.py --skip-build --timeout 180 --post-login-probe --si-mode live-cl0-cl1 --out-dir build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime`; coverage: `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json && python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/result.json --output build/qbox-apollo-fvp/ap-map-9-1-1/full-coverage-audit.json`.
   Commit: N | runtime evidence only | Files generated under `build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime`
 
 - [x] T15. Produce implementation closeout report
@@ -228,9 +228,9 @@ Critical path: T1/T2/T3 -> T6, T4 -> T7, T5 -> T10, then T11 -> T13 -> T14/T15
 ## Final verification wave (after ALL todos)
 > Runs in parallel. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
 - [x] F1. Plan compliance audit
-  Run `python3 scripts/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json` and verify all `required_now` rows are `covered`, `partial_model`, or `explicit_placeholder` as permitted by the todo that introduced them.
+  Run `python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json` and verify all `required_now` rows are `covered`, `partial_model`, or `explicit_placeholder` as permitted by the todo that introduced them.
 - [x] F2. Code quality review
-  Run `git -C tools/qbox diff --check`, `python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py scripts/audit_qbox_apollo_ap_memory_map.py`, and the focused CTest command from the verification strategy.
+  Run `git -C tools/qbox diff --check`, `python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py scripts/test/audit_qbox_apollo_ap_memory_map.py`, and the focused CTest command from the verification strategy.
 - [x] F3. Real manual QA
   Agent-executed runtime QA only: run direct AP Linux and full-system commands from T13/T14. Inspect `result.json`, `summary.txt`, and UART logs; do not rely on terminal screen output.
 - [x] F4. Scope fidelity

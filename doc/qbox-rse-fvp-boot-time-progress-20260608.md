@@ -69,8 +69,8 @@ RSE 전체 stub이 아니라, FVP 대비 병목이 큰 BL2 image load/decrypt/ha
 
 파일:
 
-- `scripts/run_qbox_fvp_rd_aspen_rse.py`
-- `scripts/run_qbox_apollo_fvp_full.py`
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- `scripts/run/run_qbox_apollo_fvp_full.py`
 
 추가된 옵션:
 
@@ -89,8 +89,8 @@ wrapper도 동일 옵션을 child RSE runner로 전달하도록 했다.
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 ```
 
 결과: 통과
@@ -103,8 +103,8 @@ git -C tools/qbox diff --check -- \
   platforms/fvp-rd-aspen/README.md
 
 git diff --check -- \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py \
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py \
   doc/qbox-rse-boot-slow-path-analysis-ko.md
 ```
 
@@ -134,7 +134,7 @@ ctest --test-dir tools/qbox/build \
 명령:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -185,7 +185,7 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 명령:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -264,7 +264,7 @@ ctest --test-dir tools/qbox/build \
 명령:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -314,7 +314,7 @@ python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
 명령:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -352,7 +352,7 @@ partial output은 삭제했다.
 명령:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -444,12 +444,12 @@ RSE-only Yocto artifact에서는 LMS accelerator가 동작했지만, local full-
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 
 git diff --check -- \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 
 git -C tools/qbox diff --check
 git -C tools/qemu diff --check
@@ -458,7 +458,7 @@ git -C tools/qemu diff --check
 full-system perf run:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --si-mode service-model \
   --timeout 600 \
@@ -497,7 +497,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 RSE-only no-profile local artifact run:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --rse-rom build/local-apollo-fvp/deploy/firmware/rse-rom-image.img \
   --rse-flash build/local-apollo-fvp/deploy/firmware/rse-flash-image.img \
@@ -559,7 +559,7 @@ host memory가 DMI 가능한 경로를 사용한다. 같은 RSE acceleration 조
 이 옵션과 QEMU initiator address profile을 추가해서 재검증했다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --si-mode service-model \
   --timeout 600 \
@@ -623,7 +623,7 @@ AP initiator profile:
 기본값 적용 후 explicit `--range-limited-flash-dmi` 없이 재실행했다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --si-mode service-model \
   --timeout 180 \

@@ -71,7 +71,7 @@ INTERRUPTS = {
 
 
 def workspace_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def strip_ws(text: str) -> str:

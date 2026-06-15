@@ -31,7 +31,7 @@ AP secure watchdog control/refresh, AP secure timer frame, RGIC2LGIC_MESSREG는
 
 | 범위 | 파일 |
 | --- | --- |
-| AP map audit / full coverage audit | `scripts/audit_qbox_apollo_ap_memory_map.py`, `scripts/audit_qbox_apollo_fvp_full_coverage.py` |
+| AP map audit / full coverage audit | `scripts/test/audit_qbox_apollo_ap_memory_map.py`, `scripts/test/audit_qbox_apollo_fvp_full_coverage.py` |
 | QBox Apollo AP map wiring | `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts` |
 | Component regression | `tools/qbox/tests/components/host_scr/host_scr-tests.cc` |
 | Project documentation | `doc/apollo-qbox-hardware-ko.md`, `doc/qbox-apollo-fvp-map-analysis.md`, `doc/apollo-qbox-full-model/coverage-ledger.md` |
@@ -42,7 +42,7 @@ AP secure watchdog control/refresh, AP secure timer frame, RGIC2LGIC_MESSREG는
 ### Direct AP Linux runtime
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --skip-build \
   --timeout 300 \
   --post-login-probe \
@@ -60,7 +60,7 @@ python3 scripts/run_qbox_apollo_fvp_linux.py \
 
 ```bash
 env QBOX_RDASPEN_NETDEV=type=user \
-  python3 scripts/run_qbox_apollo_fvp_full.py \
+  python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --timeout 180 \
   --post-login-probe \
@@ -86,7 +86,7 @@ env QBOX_RDASPEN_NETDEV=type=user \
 ### AP map audit
 
 ```bash
-python3 scripts/audit_qbox_apollo_ap_memory_map.py \
+python3 scripts/test/audit_qbox_apollo_ap_memory_map.py \
   --output build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json
 ```
 
@@ -101,7 +101,7 @@ python3 scripts/audit_qbox_apollo_ap_memory_map.py \
 ### Full coverage audit
 
 ```bash
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/result.json \
   --output build/qbox-apollo-fvp/ap-map-9-1-1/full-coverage-audit.json
 ```
@@ -138,7 +138,7 @@ T14 최종 통과 전에 두 문제가 해결됐다. 둘 다 현재 blocker가 �
 - Linux external abort: full-system 경로가 stale handoff address
   `0x20000000000`을 계속 참조하면서 Linux synchronous external abort가
   발생했다. 현재 `host_ap_dram2` Lua map은 `0x880000000`에만 유지하며,
-  `scripts/run_qbox_apollo_fvp_full.py`가 boot artifacts, `HW_CONFIG`, `FIP`,
+  `scripts/run/run_qbox_apollo_fvp_full.py`가 boot artifacts, `HW_CONFIG`, `FIP`,
   AP flash의 high-DRAM handoff tuple을 `0x880000000`으로 patch/rebuild해서
   해결한다. 현재 full-runtime 로그에는 `synchronous external abort`,
   `Kernel panic`, `Internal error` marker가 없다.

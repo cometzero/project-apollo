@@ -3,7 +3,7 @@
 # Launch the Apollo FVP full-system QBox demo from the workspace top directory.
 #
 # The script keeps the user-facing tmux layout from
-# scripts/run_qbox_apollo_fvp_full_tmux.sh, selects a free SSH host-forward
+# scripts/run/run_qbox_apollo_fvp_full_tmux.sh, selects a free SSH host-forward
 # port, and applies the current default RSE/QBox performance options.
 
 set -euo pipefail
@@ -238,7 +238,7 @@ main()
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
 
-    exec "${ROOT_DIR}/scripts/run_qbox_apollo_fvp_full_tmux.sh" \
+    exec "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
         --session "${TMUX_SESSION}" \
         --out-dir "${OUT_DIR}" \
         --local-build-dir "${LOCAL_BUILD_DIR}" \

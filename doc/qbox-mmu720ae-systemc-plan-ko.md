@@ -65,10 +65,10 @@ Commands:
 ```bash
 git status --short
 git -C tools/qbox status --short
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-baseline-qemu
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 900 --out-dir build/qbox-apollo-fvp/mmu720ae-baseline-full
 ```
 
@@ -289,10 +289,10 @@ Files:
 - Modify: `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
 - Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - Modify: `tools/qbox/platforms/apollo/apollo-qvp.lua`
-- Modify: `scripts/validate_qbox_fvp_rd_aspen_map.py`
-- Modify: `scripts/run_qbox_fvp_rd_aspen_linux.py`
-- Modify: `scripts/run_qbox_fvp_rd_aspen_rse.py`
-- Modify: `scripts/run_qbox_apollo_fvp_full.py`
+- Modify: `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
+- Modify: `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
 - Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
 
 Steps:
@@ -309,12 +309,12 @@ Commands:
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_linux.py \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py \
-  scripts/validate_qbox_fvp_rd_aspen_map.py
+  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py \
+  scripts/test/validate_qbox_fvp_rd_aspen_map.py
 cmake --build tools/qbox/build --target platforms-vp mmu720ae --parallel 8
-python3 scripts/validate_qbox_fvp_rd_aspen_map.py
+python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
 Expected:
@@ -329,9 +329,9 @@ Expected:
 
 Files:
 
-- Create: `scripts/compare_fvp_qbox_smmu.py`
-- Modify: `scripts/run_qbox_fvp_rd_aspen_linux.py`
-- Modify: `scripts/run_qbox_apollo_fvp_full.py`
+- Create: `scripts/analyze/compare_fvp_qbox_smmu.py`
+- Modify: `scripts/run/run_qbox_fvp_rd_aspen_linux.py`
+- Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
 - Modify: `doc/qbox-fvp-emulation-project.md`
 - Modify: `doc/apollo-qbox-hardware-ko.md`
 
@@ -350,17 +350,17 @@ Steps:
 Commands:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-systemc-direct
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 900 \
   --out-dir build/qbox-apollo-fvp/mmu720ae-systemc-full
 
-python3 scripts/compare_fvp_qbox_smmu.py \
+python3 scripts/analyze/compare_fvp_qbox_smmu.py \
   --fvp build/local-apollo-fvp/fvp-boot/result.json \
   --qbox build/qbox-apollo-fvp/mmu720ae-systemc-full/result.json \
   --out build/qbox-apollo-fvp/mmu720ae-systemc-full/smmu-fvp-compare.json
@@ -376,7 +376,7 @@ Expected:
 Implementation is complete only when:
 
 - `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` passes.
-- `python3 scripts/validate_qbox_fvp_rd_aspen_map.py` passes.
+- `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py` passes.
 - Direct Linux boot with `--smmu-backend systemc-mmu720ae` passes.
 - Full Apollo boot with `--smmu-backend systemc-mmu720ae` passes or only shows
   blockers proven unrelated to SMMU.

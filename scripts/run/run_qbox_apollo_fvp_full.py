@@ -177,7 +177,7 @@ def primary_console_observations(out_dir: Path) -> dict[str, Any]:
 
 
 def workspace_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def timestamp() -> str:
@@ -1056,7 +1056,7 @@ def ensure_default_debug_manifest(
     if symbol_path != default_symbol_path:
         return None
 
-    setup_script = workspace_root() / "scripts/setup_local_debug_env.py"
+    setup_script = workspace_root() / "scripts/setup/setup_local_debug_env.py"
     if not setup_script.exists():
         return f"missing_artifact:rse_symbols:{symbol_path}"
 
@@ -1686,7 +1686,7 @@ def isolated_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> li
         raise ValueError("--isolated is currently implemented only for --si-mode live-cl1")
     cmd = [
         sys.executable,
-        str(root / "scripts/run_qbox_apollo_fvp_si_cl1.py"),
+        str(root / "scripts/run/run_qbox_apollo_fvp_si_cl1.py"),
         "--image",
         str(artifacts["si_cl1_image"]),
         "--symbols",
@@ -1771,7 +1771,7 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         scp_strategy = "real-si-scp"
     cmd = [
         sys.executable,
-        str(root / "scripts/run_qbox_fvp_rd_aspen_rse.py"),
+        str(root / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"),
         "--conf",
         str(args.conf),
         "--rse-rom",

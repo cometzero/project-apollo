@@ -12,11 +12,11 @@
 현재 checkout 기준으로 실행 준비 상태는 확인되어 있다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --out-dir build/qbox-apollo-fvp/full-ready-check
 
-QBOX_APOLLO_FULL_JOBS=8 ./scripts/build_qbox_apollo_fvp_full.sh \
+QBOX_APOLLO_FULL_JOBS=8 ./scripts/build/build_qbox_apollo_fvp_full.sh \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/full-ready-build
 ```
@@ -119,7 +119,7 @@ QBox module 또는 local boot artifact가 없다는 오류가 나오면 먼저 b
 검증을 다시 실행한다.
 
 ```bash
-QBOX_APOLLO_FULL_JOBS=8 ./scripts/build_qbox_apollo_fvp_full.sh \
+QBOX_APOLLO_FULL_JOBS=8 ./scripts/build/build_qbox_apollo_fvp_full.sh \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/full-ready-build
 ```

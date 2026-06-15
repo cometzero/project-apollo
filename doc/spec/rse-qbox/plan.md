@@ -21,7 +21,7 @@ regression aid; it is not the final fidelity target.
 
 1. Capture `.config.yaml` and generated deploy artifact paths.
 2. Run or collect file-backed FVP boot logs with:
-   `scripts/runfvp_log_boot.py`.
+   `scripts/run/runfvp_log_boot.py`.
 3. Record RSE console markers from:
    `sw-ref-stack/test_automation/tests/test_bsp_demos/test_00_rse.py`.
 4. Record FVP image injection parameters from:
@@ -415,12 +415,12 @@ cmake --build tools/qbox/build --target cpu_arm_cortexM55 nvic_armv7m --parallel
 ctest --test-dir tools/qbox/build -R cortex_m55 --output-on-failure
 cmake --build tools/qbox/build --target mhuv3_stub --parallel 8
 cmake --build tools/qbox/build --target platforms-vp char_backend_file uart-pl011 loader --parallel 8
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py --timeout 900 --out-dir build/qbox-fvp-rd-aspen/<run-id>
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --pc-trace --pc-trace-interval 200 --pc-trace-limit 5000 --timeout 300 --out-dir build/qbox-fvp-rd-aspen/<run-id>
-python3 scripts/compare_fvp_qbox_rse_logs.py --fvp build/qbox-fvp-rd-aspen/<fvp-run> --qbox build/qbox-fvp-rd-aspen/<run-id>
-./scripts/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py --timeout 600 --post-login-probe
-./scripts/audit_qbox_fvp_rd_aspen_coverage.py
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --timeout 900 --out-dir build/qbox-fvp-rd-aspen/<run-id>
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --pc-trace --pc-trace-interval 200 --pc-trace-limit 5000 --timeout 300 --out-dir build/qbox-fvp-rd-aspen/<run-id>
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py --fvp build/qbox-fvp-rd-aspen/<fvp-run> --qbox build/qbox-fvp-rd-aspen/<run-id>
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --timeout 600 --post-login-probe
+./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
 ```
 
 The RSE-specific helper and comparison script are the first validation

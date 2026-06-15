@@ -7,7 +7,7 @@ Created: 2026-05-20
 - [x] T001 Read `.config.yaml` and record current `MACHINE`,
       `RD_ASPEN_VARIANT`, and image paths in an evidence note.
 - [x] T002 Capture or locate FVP RSE boot logs with
-      `scripts/runfvp_log_boot.py`. The 2026-05-24 file-backed FVP run
+      `scripts/run/runfvp_log_boot.py`. The 2026-05-24 file-backed FVP run
       `build/fvp-boot-logs/rse-qbox-debug-telnet-20260524-v1/` completed in
       14.474 seconds and captured RSE, secure, primary, SI CL0, and SI CL1
       UART logs for QBox comparison.
@@ -425,7 +425,7 @@ Created: 2026-05-20
       `400b0000.mhu` spurious-PBX or mailbox queue warnings.
 - [x] T019AW Establish reusable GDB inspection for QBox host, TF-M/RSE,
       SCP-Firmware symbols, and Linux/AP state. Script
-      `scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py` creates per-run GDB
+      `scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py` creates per-run GDB
       scripts and source maps for QBox, TF-M, AP TF-A, AP OP-TEE, AP U-Boot,
       SCP-Firmware, Linux, and SI CL1 Zephyr. Runtime
       `build/qbox-fvp-rd-aspen/gdb-t019ay-host-all-20260524-v1/` proves the
@@ -1072,7 +1072,7 @@ richer fault status.
       `uefi-test` image content and deeper SMM Gateway validation beyond the
       U-Boot enrollment path.
 - [x] T065 Add QBox post-login probes for secure-service userspace tests.
-      `scripts/run_qbox_fvp_rd_aspen_rse.py --secure-service-probe` now extends
+      `scripts/run/run_qbox_fvp_rd_aspen_rse.py --secure-service-probe` now extends
       the FIFO-backed post-login probe with bounded Trusted Services userspace
       checks. It records binary presence, per-command return codes, completion
       markers, and SE-Proxy/SMM Gateway/UEFI-variable failure detection in
@@ -1081,7 +1081,7 @@ richer fault status.
 ## Milestone 7: Secure Firmware Update
 
 - [x] T070A Add a static FWU bank, metadata, and capsule-media inspection
-      helper. `scripts/inspect_qbox_fvp_rd_aspen_fwu.py` inspects the local
+      helper. `scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py` inspects the local
       RD-Aspen CFG2 deploy artifacts without mutating them and writes
       `fwu-inspection.json` plus `summary.md`.
 - [x] T071A Record the current initial RSE/AP A/B bank state. The FWU
@@ -1139,7 +1139,7 @@ richer fault status.
       parameter and writes byte-program/block-erase mutations back to that
       file; `platforms/fvp-rd-aspen-rse/conf.lua` binds RSE/AP flash
       `backing_file` only when `QBOX_RDASPEN_FLASH_WRITEBACK=true`, and
-      `scripts/run_qbox_fvp_rd_aspen_rse.py` enables that flag only for
+      `scripts/run/run_qbox_fvp_rd_aspen_rse.py` enables that flag only for
       per-run copied writable flash images. V038U additionally pads those
       per-run RSE/AP writable flash copies to the full QBox Strata model sizes
       with erased `0xff` bytes, preventing PS/FWU writeback beyond the short
@@ -1158,14 +1158,14 @@ richer fault status.
 
 ## Milestone 8: Automation And Reporting
 
-- [x] T080 Add `scripts/run_qbox_fvp_rd_aspen_rse.py` with file-backed
+- [x] T080 Add `scripts/run/run_qbox_fvp_rd_aspen_rse.py` with file-backed
       per-console logs.
 - [x] T081 Add `result.json` output for RSE-oriented boot, including boot mode,
       SCP strategy, fidelity labels, input artifacts, copied writable artifacts,
       pass/fail markers, and first failing register access.
-- [x] T082 Add `scripts/compare_fvp_qbox_rse_logs.py` with deterministic marker
+- [x] T082 Add `scripts/analyze/compare_fvp_qbox_rse_logs.py` with deterministic marker
       comparison and timestamp/path/port normalization.
-- [x] T083 Extend `scripts/audit_qbox_fvp_rd_aspen_coverage.py` with RSE
+- [x] T083 Extend `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py` with RSE
       fidelity labels. The audit now reads RSE-oriented `result.json`, checks
       the expected RSE fidelity label set, reports missing/unexpected labels,
       records explicit debt labels, and keeps primary-compute-only runs as a
@@ -1182,83 +1182,83 @@ richer fault status.
 - [x] V002 `cmake --build tools/qbox/build --target cpu_arm_cortexM55 nvic_armv7m --parallel 8`
 - [x] V003 `cmake --build tools/qbox/build --target platforms-vp --parallel 8`
 - [x] V003B `cmake --build tools/qbox/build --target platforms-vp keep_alive router gs_memory loader char_backend_file char_backend_stdio uart-pl011 cpu_arm_cortexM55 nvic_armv7m remote_cpu --parallel 8`
-- [x] V003C `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 5 --out-dir build/qbox-fvp-rd-aspen/rse-remote-cpu-trace-20260520-v3`
+- [x] V003C `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 5 --out-dir build/qbox-fvp-rd-aspen/rse-remote-cpu-trace-20260520-v3`
 - [x] V003D `cmake --build tools/qbox/build --target cc3xx dma350 platforms-vp --parallel 8`
-- [x] V003E `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 8 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-trace-20260521-v1`
-- [x] V003F `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-run-20260521-v1`
+- [x] V003E `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 8 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-trace-20260521-v1`
+- [x] V003F `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-run-20260521-v1`
 - [x] V003G `ctest --test-dir tools/qbox/build -R 'cc3xx-tests|dma350-tests' --output-on-failure`
-- [x] V003H `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=120 QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=240 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-trace-20260521-v2`
-- [x] V003I `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=80 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 12 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-qemu-trace-20260521-v2`
+- [x] V003H `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=120 QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=240 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-trace-20260521-v2`
+- [x] V003I `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=80 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 12 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-qemu-trace-20260521-v2`
 - [x] V003J `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003K `git -C tools/qbox diff --check`
 - [x] V003L `cmake --build tools/qbox/build --target dma350 dma350-tests --parallel 4`
 - [x] V003M `ctest --test-dir tools/qbox/build -R 'dma350-tests|cc3xx-tests' --output-on-failure`
 - [x] V003N `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003O `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=260 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-fill-20260521-v4`
-- [x] V003P `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --qemu-trace --out-dir build/qbox-fvp-rd-aspen/worker-1-task5-rse-smoke-20260520T162759Z`
-- [x] V003Q `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003O `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=260 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-dma350-fill-20260521-v4`
+- [x] V003P `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --qemu-trace --out-dir build/qbox-fvp-rd-aspen/worker-1-task5-rse-smoke-20260520T162759Z`
+- [x] V003Q `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003R `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003S `cmake --build tools/qbox/build --target rse_sysctrl rse_sysctrl-tests --parallel 4`
 - [x] V003T `ctest --test-dir tools/qbox/build -R 'rse_sysctrl-tests|dma350-tests|cc3xx-tests' --output-on-failure`
 - [x] V003U `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003V `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=260 QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=160 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-sysctrl-20260521-v1`
-- [x] V003W `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=220 QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=160 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-sysctrl-20260521-v2`
+- [x] V003V `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=260 QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=160 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 60 --out-dir build/qbox-fvp-rd-aspen/rse-sysctrl-20260521-v1`
+- [x] V003W `QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_LIMIT=220 QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=160 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-sysctrl-20260521-v2`
 - [x] V003X `cmake --preset gcc`
 - [x] V003Y `cmake --build tools/qbox/build --target rse_lcm rse_lcm-tests --parallel 4`
 - [x] V003Z `ctest --test-dir tools/qbox/build -R 'rse_lcm-tests' --output-on-failure`
 - [x] V003AA `cmake --build tools/qbox/build --target rse_atu rse_atu-tests --parallel 4`
 - [x] V003AB `ctest --test-dir tools/qbox/build -R 'rse_atu-tests|rse_lcm-tests' --output-on-failure`
-- [x] V003AC `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003AC `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003AD `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003AE `git -C tools/qbox diff --check`
-- [x] V003AF `QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=64 QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=128 QBOX_RDASPEN_LCM_TRACE=true QBOX_RDASPEN_LCM_TRACE_LIMIT=128 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-atu-trace-20260521-v1`
-- [x] V003AG `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --check-only --out-dir build/qbox-fvp-rd-aspen/rse-check-only-20260521-v1`
-- [x] V003AH `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003AF `QBOX_RDASPEN_SYSCTRL_TRACE=true QBOX_RDASPEN_SYSCTRL_TRACE_LIMIT=64 QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=128 QBOX_RDASPEN_LCM_TRACE=true QBOX_RDASPEN_LCM_TRACE_LIMIT=128 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-atu-trace-20260521-v1`
+- [x] V003AG `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --check-only --out-dir build/qbox-fvp-rd-aspen/rse-check-only-20260521-v1`
+- [x] V003AH `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003AI `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003AJ `git -C tools/qbox diff --check`
 - [x] V003AK `cmake --preset gcc`
 - [x] V003AL `cmake --build tools/qbox/build --target rse_integrity_checker rse_integrity_checker-tests rse_kmu rse_kmu-tests --parallel 4`
 - [x] V003AM `ctest --test-dir tools/qbox/build -R 'rse_(integrity_checker|kmu|atu|lcm)-tests' --output-on-failure`
 - [x] V003AN `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003AO `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=256 QBOX_RDASPEN_INTEGRITY_CHECKER_TRACE=true QBOX_RDASPEN_INTEGRITY_CHECKER_TRACE_LIMIT=256 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=160 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-integrity-kmu-trace-20260521-v1`
-- [x] V003AP `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=512 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=160 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-kmu-pc-trace-20260521-v1`
-- [x] V003AQ `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --check-only --out-dir build/qbox-fvp-rd-aspen/rse-fwu-metadata-check-20260521-v1`
+- [x] V003AO `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=256 QBOX_RDASPEN_INTEGRITY_CHECKER_TRACE=true QBOX_RDASPEN_INTEGRITY_CHECKER_TRACE_LIMIT=256 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=160 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-integrity-kmu-trace-20260521-v1`
+- [x] V003AP `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=512 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=160 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-kmu-pc-trace-20260521-v1`
+- [x] V003AQ `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --check-only --out-dir build/qbox-fvp-rd-aspen/rse-fwu-metadata-check-20260521-v1`
 - [x] V003AR `xxd -g 1 -l 16 -s 0x5000 build/qbox-fvp-rd-aspen/rse-fwu-metadata-check-20260521-v1/writable-images/rse-flash-image.img`
 - [x] V003AS `git -C tools/qbox diff --check`
 - [x] V003AT `cmake --build tools/qbox/build --target rse_atu-tests platforms-vp --parallel 4`
 - [x] V003AU `ctest --test-dir tools/qbox/build -R 'rse_atu-tests|dma350-tests|cc3xx-tests' --output-on-failure`
-- [x] V003AV `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-atu-dmi-20260521-v1`
-- [x] V003AW `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=512 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-after-atu-dmi-20260521-v1`
+- [x] V003AV `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-atu-dmi-20260521-v1`
+- [x] V003AW `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=512 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-after-atu-dmi-20260521-v1`
 - [x] V003AS `xxd -g 1 -l 16 -s 0x5000 build/tmp_baremetal/deploy/images/fvp-rd-aspen/rse-flash-image.img`
 - [x] V003AT `cmake --build tools/qbox/build --target cc3xx-tests --parallel 4`
 - [x] V003AU `ctest --test-dir tools/qbox/build -R cc3xx-tests --output-on-failure`
 - [x] V003AV `cmake --build tools/qbox/build --target cc3xx-tests platforms-vp --parallel 4`
 - [x] V003AW `ctest --test-dir tools/qbox/build -R 'cc3xx-tests|rse_sam-tests|rse_(integrity_checker|kmu|atu|lcm|sysctrl)-tests' --output-on-failure`
-- [x] V003AX `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-aes-20260521-v1`
-- [x] V003AY `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=2500 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-aes-trace-20260521-v2`
+- [x] V003AX `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-aes-20260521-v1`
+- [x] V003AY `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=2500 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-aes-trace-20260521-v2`
 - [x] V003AZ `cmake --build tools/qbox/build --target rse_kmu-tests cc3xx-tests --parallel 1`
 - [x] V003BA `ctest --test-dir tools/qbox/build -R 'cc3xx-tests|rse_kmu-tests' --output-on-failure`
 - [x] V003BB `cmake --build tools/qbox/build --target rse_kmu cc3xx platforms-vp --parallel 1`
-- [x] V003BC `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=1024 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=5000 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-cmac-20260521-v1`
+- [x] V003BC `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=1024 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=5000 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-cmac-20260521-v1`
 - [x] V003BD `cmake --build tools/qbox/build --target rse_kmu-tests --parallel 1`
 - [x] V003BE `ctest --test-dir tools/qbox/build -R rse_kmu-tests --output-on-failure`
 - [x] V003BF `cmake --build tools/qbox/build --target rse_kmu platforms-vp --parallel 1`
 - [x] V003BG `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- [x] V003BH `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
-- [x] V003BI `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=2048 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=5000 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-kce-cm-otp-20260521-v1`
-- [x] V003BJ `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-kce-cm-otp-notrace-20260521-v1`
-- [x] V003BK `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-flash-prepare-check-20260521-v1`
-- [x] V003BL `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-raw-flash-20260521-v1`
-- [x] V003BM `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 75 --out-dir build/qbox-fvp-rd-aspen/rse-raw-flash-qemu-trace-20260521-v1`
-- [x] V003BN `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-lmots-long-20260521-v1`
-- [x] V003BO `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-signature-fail-20260521-v1`
+- [x] V003BH `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003BI `QBOX_RDASPEN_KMU_TRACE=true QBOX_RDASPEN_KMU_TRACE_LIMIT=2048 QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_LIMIT=5000 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-kce-cm-otp-20260521-v1`
+- [x] V003BJ `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-kce-cm-otp-notrace-20260521-v1`
+- [x] V003BK `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-flash-prepare-check-20260521-v1`
+- [x] V003BL `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-raw-flash-20260521-v1`
+- [x] V003BM `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 75 --out-dir build/qbox-fvp-rd-aspen/rse-raw-flash-qemu-trace-20260521-v1`
+- [x] V003BN `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-lmots-long-20260521-v1`
+- [x] V003BO `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-signature-fail-20260521-v1`
 - [x] V003BP `git -C tools/qbox diff --check`
 - [x] V003BQ `cmake --build tools/qbox/build --target cc3xx-tests --parallel 4`
 - [x] V003BR `ctest --test-dir tools/qbox/build -R cc3xx-tests --output-on-failure`
-- [x] V003BS `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-sha-state-20260521-v1`
-- [x] V003BT `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-bl2-qemu-trace-20260521-v1`
-- [x] V003BU `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=512 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-atu-translation-20260521-v1`
-- [x] V003BV `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=4096 QBOX_RDASPEN_HOST_PPU_TRACE=true QBOX_RDASPEN_HOST_PPU_TRACE_LIMIT=128 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-host-ppu-20260521-v2`
+- [x] V003BS `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-sha-state-20260521-v1`
+- [x] V003BT `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --qemu-trace --timeout 180 --out-dir build/qbox-fvp-rd-aspen/rse-bl2-qemu-trace-20260521-v1`
+- [x] V003BU `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=512 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-atu-translation-20260521-v1`
+- [x] V003BV `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=4096 QBOX_RDASPEN_HOST_PPU_TRACE=true QBOX_RDASPEN_HOST_PPU_TRACE_LIMIT=128 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-host-ppu-20260521-v2`
 - [x] V003BW `cmake --build tools/qbox/build --target host_ppu-tests platforms-vp --parallel 4`
 - [x] V003BX `ctest --test-dir tools/qbox/build -R host_ppu-tests --output-on-failure`
 - [x] V003BY `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
@@ -1266,118 +1266,118 @@ richer fault status.
 - [x] V003CA `cmake --build tools/qbox/build --target cc3xx-tests --parallel 4`
 - [x] V003CB `ctest --test-dir tools/qbox/build -R cc3xx-tests --output-on-failure`
 - [x] V003CC `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003CD `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_FILTER=pka QBOX_RDASPEN_CC3XX_TRACE_LIMIT=200000 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-pka-filter-trace-20260521-v1`
-- [x] V003CE `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=20000 QBOX_RDASPEN_HOST_PPU_TRACE=true QBOX_RDASPEN_HOST_PPU_TRACE_LIMIT=512 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-interval 200 --pc-trace-limit 6000 --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-t019ac-atu-host-trace-20260521-v4`
-- [x] V003CF `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --out-dir build/qbox-fvp-rd-aspen/rse-t019w-atu-dmi-20260521-v1`
+- [x] V003CD `QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_FILTER=pka QBOX_RDASPEN_CC3XX_TRACE_LIMIT=200000 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-cc3xx-pka-filter-trace-20260521-v1`
+- [x] V003CE `QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=20000 QBOX_RDASPEN_HOST_PPU_TRACE=true QBOX_RDASPEN_HOST_PPU_TRACE_LIMIT=512 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-interval 200 --pc-trace-limit 6000 --timeout 240 --out-dir build/qbox-fvp-rd-aspen/rse-t019ac-atu-host-trace-20260521-v4`
+- [x] V003CF `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --out-dir build/qbox-fvp-rd-aspen/rse-t019w-atu-dmi-20260521-v1`
 - [x] V003CG `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003CH `git -C tools/qbox diff --check`
 - [x] V003CI `cmake --build tools/qbox/build --target dma350-tests platforms-vp --parallel 4`
 - [x] V003CJ `ctest --test-dir tools/qbox/build -R dma350-tests --output-on-failure`
-- [x] V003CK `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=20000 QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_FILTER=copy QBOX_RDASPEN_DMA350_TRACE_ADDRESS_MIN=1879048192 QBOX_RDASPEN_DMA350_TRACE_LIMIT=512 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --out-dir build/qbox-fvp-rd-aspen/rse-t019ae-dma350-copy-dmi-20260521-v1`
-- [x] V003CL `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003CK `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_ATU_TRACE=true QBOX_RDASPEN_ATU_TRACE_LIMIT=20000 QBOX_RDASPEN_DMA350_TRACE=true QBOX_RDASPEN_DMA350_TRACE_FILTER=copy QBOX_RDASPEN_DMA350_TRACE_ADDRESS_MIN=1879048192 QBOX_RDASPEN_DMA350_TRACE_LIMIT=512 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --out-dir build/qbox-fvp-rd-aspen/rse-t019ae-dma350-copy-dmi-20260521-v1`
+- [x] V003CL `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003CM `git -C tools/qbox diff --check`
-- [x] V003CN `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --boot-enc-trace --out-dir build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-check-20260523-v1`
-- [x] V003CO `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --boot-enc-trace --qemu-trace-events in_asm --out-dir build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2`
-- [x] V003CP `python3 scripts/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/result.json --runtime-log build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/qbox-rse.log --output build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/coverage-audit.json`
+- [x] V003CN `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --boot-enc-trace --out-dir build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-check-20260523-v1`
+- [x] V003CO `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 900 --boot-enc-trace --qemu-trace-events in_asm --out-dir build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2`
+- [x] V003CP `python3 scripts/test/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/result.json --runtime-log build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/qbox-rse.log --output build/qbox-fvp-rd-aspen/rse-t019ah-boot-enc-trace-20260523-v2/coverage-audit.json`
 - [x] V003CQ `cmake --build tools/qbox/build --target cc3xx-tests --parallel 8`
 - [x] V003CR `ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure`
 - [x] V003CS `cmake --build tools/qbox/build --target rse_kmu-tests rse_lcm-tests rse_atu-tests --parallel 8`
 - [x] V003CT `ctest --test-dir tools/qbox/build -R '^(rse_kmu-tests|rse_lcm-tests|rse_atu-tests)$' --output-on-failure`
 - [x] V003CU `cmake --build tools/qbox/build --target mhuv3_stub-tests strata_flash_j3-tests platforms-vp --parallel 8`
 - [x] V003CV `ctest --test-dir tools/qbox/build -R '^(mhuv3_stub-tests|strata_flash_j3-tests)$' --output-on-failure`
-- [x] V003CW `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-t019ak-mhuv3-scmi-20260523-v5`
-- [x] V003CX `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-t019al-dmi-mhuv3-scmi-20260523-v1`
-- [x] V003CY `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --pc-trace --pc-trace-limit 4096 --timeout 750 --out-dir build/qbox-fvp-rd-aspen/rse-t019aq-ap-rse-psa-reply-nodmi-20260523-v1`
+- [x] V003CW `QBOX_RDASPEN_ATU_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-t019ak-mhuv3-scmi-20260523-v5`
+- [x] V003CX `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 600 --out-dir build/qbox-fvp-rd-aspen/rse-t019al-dmi-mhuv3-scmi-20260523-v1`
+- [x] V003CY `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --pc-trace --pc-trace-limit 4096 --timeout 750 --out-dir build/qbox-fvp-rd-aspen/rse-t019aq-ap-rse-psa-reply-nodmi-20260523-v1`
 - [x] V003CZ `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003DA `git -C tools/qbox diff --check`
-- [x] V003DB `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-limit 192 --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-t019az-ap-timer-20260523-v1`
-- [x] V003DC `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-limit 224 --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-t019ba-ap-si-scmi-mhu-20260523-v1`
-- [x] V003DD `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py && luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+- [x] V003DB `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-limit 192 --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-t019az-ap-timer-20260523-v1`
+- [x] V003DC `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --exception-trace --pc-trace-limit 224 --timeout 420 --out-dir build/qbox-fvp-rd-aspen/rse-t019ba-ap-si-scmi-mhu-20260523-v1`
+- [x] V003DD `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py && luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003DE `cmake --build tools/qbox/build --target char_backend_file platforms-vp --parallel 8`
 - [x] V003DF Python import smoke for `drive_post_login_probe()` verifies
       `root`, `echo __QBOX_PROBE_START__`, `modprobe -v arm_si_rproc
       timeout=500`, and `__QBOX_PROBE_DONE__` are written after synthetic
       login/root prompts.
-- [x] V003DG `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --post-login-probe --timeout 45 --out-dir build/qbox-fvp-rd-aspen/rse-post-login-fifo-smoke-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DH `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --post-login-probe --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-post-login-fifo-smoke-20260524-v3 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DI `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-baseline-after-fifo-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DJ `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003DG `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --post-login-probe --timeout 45 --out-dir build/qbox-fvp-rd-aspen/rse-post-login-fifo-smoke-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DH `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --post-login-probe --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-post-login-fifo-smoke-20260524-v3 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DI `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 120 --out-dir build/qbox-fvp-rd-aspen/rse-baseline-after-fifo-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DJ `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - [x] V003DK `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003DL `git -C tools/qbox diff --check`
 - [x] V003DM `cmake --build tools/qbox/build --target host_scr host_scr-tests platforms-vp --parallel 8`
 - [x] V003DN `ctest --test-dir tools/qbox/build -R '^(host_scr-tests|host_ppu-tests|mhuv3_stub-tests)$' --output-on-failure`
-- [x] V003DO `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-t019av-cl1-sram-check-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DP `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-t019av-host-scr-cl1-sram-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DQ `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
-- [x] V003DR `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-all-targets-v3 --runner-timeout 45 --port-timeout 12 --gdb-timeout 10 --sample-delay 3 --host-sample --host-sample-seconds 8 --launch`
+- [x] V003DO `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-t019av-cl1-sram-check-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DP `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 300 --out-dir build/qbox-fvp-rd-aspen/rse-t019av-host-scr-cl1-sram-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DQ `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003DR `python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-all-targets-v3 --runner-timeout 45 --port-timeout 12 --gdb-timeout 10 --sample-delay 3 --host-sample --host-sample-seconds 8 --launch`
 - [x] V003DS `cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8`
 - [x] V003DT `ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure`
-- [x] V003DU `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
-- [x] V003DV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=4096 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 160 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/rse-t019aw-flash-dmi-map-query-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003DW `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --runner-timeout 170 --port-timeout 25 --gdb-timeout 15 --sample-delay 150 --out-dir build/qbox-fvp-rd-aspen/gdb-t019aw-sample-only-20260524-v1`
-- [x] V003DX `python3 scripts/runfvp_log_boot.py --timeout 12 --require none --runfvp-verbose --out-dir build/fvp-boot-logs/rse-qbox-debug-telnet-20260524-v1`
+- [x] V003DU `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003DV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=4096 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 160 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/rse-t019aw-flash-dmi-map-query-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003DW `python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --runner-timeout 170 --port-timeout 25 --gdb-timeout 15 --sample-delay 150 --out-dir build/qbox-fvp-rd-aspen/gdb-t019aw-sample-only-20260524-v1`
+- [x] V003DX `python3 scripts/run/runfvp_log_boot.py --timeout 12 --require none --runfvp-verbose --out-dir build/fvp-boot-logs/rse-qbox-debug-telnet-20260524-v1`
 - [x] V003DY `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- [x] V003DZ `python3 scripts/validate_qbox_fvp_rd_aspen_map.py`
+- [x] V003DZ `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py`
 - [x] V003EA `git -C tools/qbox diff --check -- platforms/fvp-rd-aspen-rse/conf.lua systemc-components/cc3xx/include/cc3xx.h tests/components/cc3xx/cc3xx-tests.cc platforms/fvp-rd-aspen/README.md`
 - [x] V003EB `cmake --build tools/qbox/build --target cc3xx-tests platforms-vp --parallel 8`
 - [x] V003EC `ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure`
-- [x] V003ED `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_FILTER=dma QBOX_RDASPEN_CC3XX_TRACE_LIMIT=2400 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-bl1-2-cc3xx-dma-trace-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003EE `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 25 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-dtcm-unified-default-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003EF `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-post-alias-v1 --launch --runner-timeout 30 --port-timeout 8 --gdb-timeout 8 --sample-delay 4 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003EG `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-disabled-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003EH `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 45 --port-timeout 8 --gdb-timeout 8 --sample-delay 28 --out-dir build/qbox-fvp-rd-aspen/gdb-current-post-decrypt-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
-- [x] V003EI `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003ED `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_CC3XX_TRACE=true QBOX_RDASPEN_CC3XX_TRACE_FILTER=dma QBOX_RDASPEN_CC3XX_TRACE_LIMIT=2400 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 20 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-bl1-2-cc3xx-dma-trace-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003EE `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 25 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-dtcm-unified-default-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003EF `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-post-alias-v1 --launch --runner-timeout 30 --port-timeout 8 --gdb-timeout 8 --sample-delay 4 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003EG `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-disabled-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003EH `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 45 --port-timeout 8 --gdb-timeout 8 --sample-delay 28 --out-dir build/qbox-fvp-rd-aspen/gdb-current-post-decrypt-20260524-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003EI `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - [x] V003EJ `cmake --build tools/qbox/build --target memory-tests aarch64-dmi-byte-store-test platforms-vp --parallel 8`
 - [x] V003EK `ctest --test-dir tools/qbox/build -R '^memory-tests$' --output-on-failure`
 - [x] V003EL `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-dmi-byte-store-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=false -p log_level=0`
 - [x] V003EM `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-dmi-byte-store-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=true -p log_level=0`
-- [x] V003EN `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-fd-fix-current-20260524-v1` expected failure at `BL2 image failed to decrypt`
-- [x] V003EO `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-off-fd-fix-current-20260524-v1` expected timeout after `BL2 image decrypted successfully`
+- [x] V003EN `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-fd-fix-current-20260524-v1` expected failure at `BL2 image failed to decrypt`
+- [x] V003EO `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=false python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 30 --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-off-fd-fix-current-20260524-v1` expected timeout after `BL2 image decrypted successfully`
 - [x] V003EP `cmake --build tools/qbox/build --target aarch64-shmem-dmi-byte-store-test --parallel 8`
 - [x] V003EQ `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-shmem-dmi-byte-store-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=true -p log_level=0`
 - [x] V003ER `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-shmem-dmi-byte-store-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=false -p log_level=0`
-- [x] V003ES `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
-- [x] V003ET `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 18 --port-timeout 8 --gdb-timeout 8 --sample-delay 10 --out-dir build/qbox-fvp-rd-aspen/gdb-vm-dmi-perm-fix-effective-env-20260524-v1`
+- [x] V003ES `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003ET `QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=false QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=false QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 18 --port-timeout 8 --gdb-timeout 8 --sample-delay 10 --out-dir build/qbox-fvp-rd-aspen/gdb-vm-dmi-perm-fix-effective-env-20260524-v1`
 - [x] V003EU `cmake --preset gcc`
 - [x] V003EV `cmake --build tools/qbox/build --target aarch64-shmem-dmi-external-write-test --parallel 8`
 - [x] V003EW `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-shmem-dmi-external-write-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=true -p log_level=0`
 - [x] V003EX `timeout 15s tools/qbox/build/tests/qbox/cpu/aarch64/aarch64-shmem-dmi-external-write-test -S tools/qbox/build/tests/qbox/cpu/aarch64 -B tools/qbox/build/tests/qbox/cpu/aarch64 -p test-bench.enable_dmi=false -p log_level=0`
 - [x] V003EY `cmake --build tools/qbox/build --target remote_cpu cortex-m55-vp cortex-m55-dmi-byte-store-test --parallel 8`
 - [x] V003EZ `timeout 45s ctest --test-dir tools/qbox/build -R 'cortex_m55_remote_dmi_byte_store_(on|off)' --output-on-failure`
-- [x] V003FA `QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 18 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-remote-fd-fix-20260524-v1` expected timeout after `BL2 image decrypted successfully`
+- [x] V003FA `QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 18 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-vm-dmi-remote-fd-fix-20260524-v1` expected timeout after `BL2 image decrypted successfully`
 - [x] V003FB `cmake --build tools/qbox/build --target arm_gicv3 arm_gicv3_its arm_smmuv3 cc3xx char_backend_file cpu_arm_cortexA720AE dma350 global_peripheral_initiator gs_memory host_ppu host_scr keep_alive mhuv3_stub pl031 qemu_gpex qemu_hexagon_qtimer router rse_atu rse_integrity_checker rse_kmu rse_lcm rse_sam rse_sysctrl sbsa_gwdt strata_flash_j3 virtio_mmio_blk virtio_mmio_net virtio_mmio_rng remote_cpu platforms-vp --parallel 8`
-- [x] V003FC `QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 20 --port-timeout 5 --gdb-timeout 6 --sample-delay 12 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-rse-vm-dmi-remote-fd-fix-20260524-v4`
-- [x] V003FD `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003FC `QBOX_RDASPEN_RSE_VM_DMI=true python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 20 --port-timeout 5 --gdb-timeout 6 --sample-delay 12 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-rse-vm-dmi-remote-fd-fix-20260524-v4`
+- [x] V003FD `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - [x] V003FE `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003FF `git -C tools/qbox diff --check`
 - [x] V003FG `git -C tools/qemu diff --check`
-- [x] V003FH `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 140 --post-login-probe --ignore-fail-patterns --rootfs-bootargs-profile quiet-console --out-dir build/qbox-fvp-rd-aspen/rse-current-quiet-console-login-20260524-v1 --rootfs build/tmp_baremetal/deploy/images/fvp-rd-aspen/baremetal-image-fvp-rd-aspen.wic` expected timeout before login; slim logs preserved in `build/qbox-fvp-rd-aspen/rse-current-quiet-console-login-20260524-v1-slim/`
-- [x] V003FI `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 190s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-ap-pfdi-snapshot-20260524-v1 --launch --sample-only --sample-delay 90 --runner-timeout 125 --port-timeout 18 --gdb-timeout 10 --ignore-fail-patterns`
-- [x] V003FJ `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 90s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-qbox-host-sample-20260524-v1 --launch --sample-only --sample-delay 1 --runner-timeout 20 --port-timeout 8 --gdb-timeout 8 --host-sample --host-sample-seconds 6 --ignore-fail-patterns`
-- [x] V003FK `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003FH `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 140 --post-login-probe --ignore-fail-patterns --rootfs-bootargs-profile quiet-console --out-dir build/qbox-fvp-rd-aspen/rse-current-quiet-console-login-20260524-v1 --rootfs build/tmp_baremetal/deploy/images/fvp-rd-aspen/baremetal-image-fvp-rd-aspen.wic` expected timeout before login; slim logs preserved in `build/qbox-fvp-rd-aspen/rse-current-quiet-console-login-20260524-v1-slim/`
+- [x] V003FI `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 190s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-ap-pfdi-snapshot-20260524-v1 --launch --sample-only --sample-delay 90 --runner-timeout 125 --port-timeout 18 --gdb-timeout 10 --ignore-fail-patterns`
+- [x] V003FJ `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 90s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-qbox-host-sample-20260524-v1 --launch --sample-only --sample-delay 1 --runner-timeout 20 --port-timeout 8 --gdb-timeout 8 --host-sample --host-sample-seconds 6 --ignore-fail-patterns`
+- [x] V003FK `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - [x] V003FL `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003FM `git -C tools/qbox diff --check -- systemc-components/backends/char_backend_file/include/char_backend_file.h platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003FN `timeout 120s cmake --build tools/qbox/build --target char_backend_file platforms-vp --parallel 8`
-- [x] V003FO `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 175s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 150 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-post-login-threaded-input-20260524-v3 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` login/root/probe complete; top-level result remains `passed=false` because required measured-boot/RSE runtime markers are still incomplete.
-- [x] V003FP `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 190s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-current-all-debug-20260524-v1 --launch --sample-only --sample-delay 112 --runner-timeout 130 --port-timeout 10 --gdb-timeout 6 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` captured QBox host, TF-M/RSE, SCP symbol state, and AP/Linux GDB evidence; Linux reaches systemd while RSE runtime measured-boot/SCMI-Comms markers remain absent.
-- [x] V003FQ `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003FO `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 175s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 150 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-post-login-threaded-input-20260524-v3 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` login/root/probe complete; top-level result remains `passed=false` because required measured-boot/RSE runtime markers are still incomplete.
+- [x] V003FP `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 190s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-current-all-debug-20260524-v1 --launch --sample-only --sample-delay 112 --runner-timeout 130 --port-timeout 10 --gdb-timeout 6 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` captured QBox host, TF-M/RSE, SCP symbol state, and AP/Linux GDB evidence; Linux reaches systemd while RSE runtime measured-boot/SCMI-Comms markers remain absent.
+- [x] V003FQ `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003FR `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003FS `git -C tools/qbox diff --check -- platforms/fvp-rd-aspen-rse/conf.lua`
-- [x] V003FT `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-regenerated-20260524-v3`
-- [x] V003FU `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-runtime-fast-after-cpu0secctrl-20260524-v1 --launch --sample-only --sample-delay 112 --runner-timeout 135 --port-timeout 10 --gdb-timeout 6 --ignore-fail-patterns` sampled TF-M runtime panic with clear fault registers and AP/Linux idle/systemd evidence; helper terminated QBox after probes.
-- [x] V003FV `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003FT `python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-regenerated-20260524-v3`
+- [x] V003FU `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-runtime-fast-after-cpu0secctrl-20260524-v1 --launch --sample-only --sample-delay 112 --runner-timeout 135 --port-timeout 10 --gdb-timeout 6 --ignore-fail-patterns` sampled TF-M runtime panic with clear fault registers and AP/Linux idle/systemd evidence; helper terminated QBox after probes.
+- [x] V003FV `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - [x] V003FW `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003FX `git -C tools/qbox diff --check -- platforms/fvp-rd-aspen-rse/conf.lua systemc-components/dma350/include/dma350.h tests/components/dma350/dma350-tests.cc`
-- [x] V003FY `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-static-boundary-success-after-mpc-load-fix-20260524-v1 --launch --sample-only --tfm-static-boundary-trace --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reached static-boundary success with VM0/VM1 MPC `PIDR0 = 0x65`.
+- [x] V003FY `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-static-boundary-success-after-mpc-load-fix-20260524-v1 --launch --sample-only --tfm-static-boundary-trace --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reached static-boundary success with VM0/VM1 MPC `PIDR0 = 0x65`.
 - [x] V003FZ `cmake --build tools/qbox/build --target dma350-tests --parallel 4`
 - [x] V003GA `ctest --test-dir tools/qbox/build -R '^dma350-tests$' --output-on-failure`
 - [x] V003GB `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003GC `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-core-init-trace-after-dma-iidr-fix-20260524-v1 --launch --sample-only --tfm-core-init-trace --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reached `SUCCESS tfm_core_init common-return pc=0x10000048`.
-- [x] V003GD `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-host-and-live-sample-after-dma-iidr-fix-20260524-v1 --launch --sample-only --host-sample --host-sample-seconds 3 --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --sample-delay 8 --ignore-fail-patterns` captured QBox host/SystemC/QEMU threads, TF-M/RSE and AP GDB probes, SCP-Firmware symbols, and SI CL1 symbols.
-- [x] V003GE `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
-- [x] V003GF `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-its-init-step-trace-strata-ff-compat-20260524-v5 --launch --sample-only --tfm-its-init-trace --runner-timeout 75 --trace-timeout 120 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reproduced ITS storage failure with boot-flash DMI enabled.
-- [x] V003GG `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=2000 timeout 120s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --scp-strategy service-model --no-copy-writable-flash --out-dir build/qbox-fvp-rd-aspen/rse-no-bootflash-dmi-its-probe-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --ignore-fail-patterns` progressed beyond ITS and reached PS partition failure.
-- [x] V003GH `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=2000 timeout 160s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-ps-init-trace-no-bootflash-dmi-20260524-v1 --launch --sample-only --tfm-ps-init-trace --runner-timeout 100 --trace-timeout 130 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` traced PS: `ps_system_wipe_all()` returned success, both `ps_system_prepare()` calls returned `PSA_ERROR_GENERIC_ERROR`, and the panic stack was `tfm_sp_ps_stack`.
+- [x] V003GC `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-core-init-trace-after-dma-iidr-fix-20260524-v1 --launch --sample-only --tfm-core-init-trace --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reached `SUCCESS tfm_core_init common-return pc=0x10000048`.
+- [x] V003GD `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-host-and-live-sample-after-dma-iidr-fix-20260524-v1 --launch --sample-only --host-sample --host-sample-seconds 3 --runner-timeout 75 --port-timeout 8 --gdb-timeout 6 --sample-delay 8 --ignore-fail-patterns` captured QBox host/SystemC/QEMU threads, TF-M/RSE and AP GDB probes, SCP-Firmware symbols, and SI CL1 symbols.
+- [x] V003GE `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003GF `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-its-init-step-trace-strata-ff-compat-20260524-v5 --launch --sample-only --tfm-its-init-trace --runner-timeout 75 --trace-timeout 120 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` reproduced ITS storage failure with boot-flash DMI enabled.
+- [x] V003GG `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=2000 timeout 120s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --scp-strategy service-model --no-copy-writable-flash --out-dir build/qbox-fvp-rd-aspen/rse-no-bootflash-dmi-its-probe-20260524-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --ignore-fail-patterns` progressed beyond ITS and reached PS partition failure.
+- [x] V003GH `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=2000 timeout 160s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-ps-init-trace-no-bootflash-dmi-20260524-v1 --launch --sample-only --tfm-ps-init-trace --runner-timeout 100 --trace-timeout 130 --port-timeout 8 --gdb-timeout 6 --ignore-fail-patterns` traced PS: `ps_system_wipe_all()` returned success, both `ps_system_prepare()` calls returned `PSA_ERROR_GENERIC_ERROR`, and the panic stack was `tfm_sp_ps_stack`.
 - [x] V003GI `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - [x] V003GJ `git -C tools/qbox diff --check`
 - [x] V003GK `cmake --build tools/qbox/build --target strata_flash_j3-tests platforms-vp --parallel 4`
@@ -1385,16 +1385,16 @@ richer fault status.
 - [x] V003GM `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 4`
 - [x] V003GN `ctest --test-dir tools/qbox/build -R mhuv3_stub --output-on-failure`
 - [x] V003GO `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
-- [x] V003GP `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 190s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 150 --post-login-probe --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --out-dir build/qbox-fvp-rd-aspen/rse-ap-scmi-subscribe-20260524-v1` reached Linux remoteproc attach and RSE measured boot through `RT_0`; timed out before login, and the RSE UART still lacked the subscription marker.
-- [x] V003GQ `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 240s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --host-sample --host-sample-seconds 5 --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 10 --sample-delay 95 --out-dir build/qbox-fvp-rd-aspen/gdb-all-targets-after-scmi-patch-20260524-v1` captured TF-M halted in `tfm_hal_system_halt`, AP/Linux target state, SCP-Firmware symbols, SI CL1 symbols, and a QBox host GDB backtrace.
-- [x] V003GR `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-partition-panic-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-partition-panic-after-scmi-notify-20260524-v2` attributed the post-subscribe TF-M BusFault to `TFM_NS_MAILBOX_AGENT` (`pid=0x106`, `entry=0x31045a0d`).
-- [x] V003GS `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-ns-mailbox-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-ns-mailbox-trace-20260524-v1` captured the first NS mailbox BusFault at `BFAR=0x50160fcc`, `mhu_v3_x_driver_init+16`, proving missing RSE-local MHU0 sender MMIO.
-- [x] V003GT `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua && python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py && git -C tools/qbox diff --check && cmake --build tools/qbox/build --target platforms-vp --parallel 4 && ./scripts/validate_qbox_fvp_rd_aspen_map.py` passed after adding RSE-local MHU0/MHU2 sender/receiver frames.
-- [x] V003GU `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-ns-mailbox-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-ns-mailbox-local-mhu-20260524-v1` no longer hits the NS mailbox BusFault; TF-M runtime samples in `psa_wait_thread_fn_call()`, AP/Linux resolves to `cpu_do_idle()`, and primary UART reaches `fvp-rd-aspen login:`.
-- [x] V003GV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 90s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --host-sample --ignore-fail-patterns --runner-timeout 20 --port-timeout 5 --gdb-timeout 5 --sample-delay 3 --host-sample-seconds 3 --out-dir build/qbox-fvp-rd-aspen/gdb-host-sample-20260524-v1` captured QBox host/SystemC/QEMU thread backtraces by launching `platforms-vp` under GDB, avoiding host ptrace attach restrictions.
-- [x] V003GW `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 90s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-current-short-all-targets-20260524-v1 --launch --sample-only --sample-delay 28 --runner-timeout 50 --port-timeout 8 --gdb-timeout 6 --host-sample --host-sample-seconds 2 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` verified the current GDB bundle with short timeouts: RSE/TF-M and AP GDB ports were reachable, TF-M/AP/Linux/TF-A/OP-TEE/U-Boot scripts attached, SCP-Firmware and SI CL1 symbols loaded, and QBox host/SystemC/QEMU backtraces were captured.
-- [x] V003GX `timeout 240s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-rse-ap-linux-20260524-v1 --launch --sample-only --sample-delay 150 --runner-timeout 190 --port-timeout 5 --gdb-timeout 8 --host-sample --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` generated the reusable GDB bundle and captured QBox/SystemC/QEMU host backtraces. With conservative debug DMI defaults, RSE/TF-M was still in BL2 flash-copy progress and AP was still at `0x82000`.
-- [x] V003GY `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 300s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-rse-ap-linux-20260524-v2 --launch --sample-only --sample-delay 190 --runner-timeout 235 --port-timeout 5 --gdb-timeout 8 --rse-port 12350 --ap-port 12351 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` verified live TF-M/RSE and AP/Linux GDB after Linux start: Linux CPU0 resolves to `cpu_do_idle()`, CPU2 to `change_protection_range()`, TF-M resolves to `__tfm_arch_thread_fn_call_veneer()` / `psa_wait_thread_fn_call()`, SCP-Firmware symbols load, and SI CL1 Zephyr symbols load.
+- [x] V003GP `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 190s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 150 --post-login-probe --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --out-dir build/qbox-fvp-rd-aspen/rse-ap-scmi-subscribe-20260524-v1` reached Linux remoteproc attach and RSE measured boot through `RT_0`; timed out before login, and the RSE UART still lacked the subscription marker.
+- [x] V003GQ `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 240s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --host-sample --host-sample-seconds 5 --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 10 --sample-delay 95 --out-dir build/qbox-fvp-rd-aspen/gdb-all-targets-after-scmi-patch-20260524-v1` captured TF-M halted in `tfm_hal_system_halt`, AP/Linux target state, SCP-Firmware symbols, SI CL1 symbols, and a QBox host GDB backtrace.
+- [x] V003GR `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-partition-panic-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-partition-panic-after-scmi-notify-20260524-v2` attributed the post-subscribe TF-M BusFault to `TFM_NS_MAILBOX_AGENT` (`pid=0x106`, `entry=0x31045a0d`).
+- [x] V003GS `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-ns-mailbox-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-ns-mailbox-trace-20260524-v1` captured the first NS mailbox BusFault at `BFAR=0x50160fcc`, `mhu_v3_x_driver_init+16`, proving missing RSE-local MHU0 sender MMIO.
+- [x] V003GT `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua && python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py && git -C tools/qbox diff --check && cmake --build tools/qbox/build --target platforms-vp --parallel 4 && ./scripts/test/validate_qbox_fvp_rd_aspen_map.py` passed after adding RSE-local MHU0/MHU2 sender/receiver frames.
+- [x] V003GU `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --tfm-ns-mailbox-trace --ignore-fail-patterns --runner-timeout 130 --port-timeout 10 --gdb-timeout 8 --trace-timeout 105 --sample-delay 5 --out-dir build/qbox-fvp-rd-aspen/gdb-tfm-ns-mailbox-local-mhu-20260524-v1` no longer hits the NS mailbox BusFault; TF-M runtime samples in `psa_wait_thread_fn_call()`, AP/Linux resolves to `cpu_do_idle()`, and primary UART reaches `fvp-rd-aspen login:`.
+- [x] V003GV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 90s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --host-sample --ignore-fail-patterns --runner-timeout 20 --port-timeout 5 --gdb-timeout 5 --sample-delay 3 --host-sample-seconds 3 --out-dir build/qbox-fvp-rd-aspen/gdb-host-sample-20260524-v1` captured QBox host/SystemC/QEMU thread backtraces by launching `platforms-vp` under GDB, avoiding host ptrace attach restrictions.
+- [x] V003GW `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 90s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-current-short-all-targets-20260524-v1 --launch --sample-only --sample-delay 28 --runner-timeout 50 --port-timeout 8 --gdb-timeout 6 --host-sample --host-sample-seconds 2 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` verified the current GDB bundle with short timeouts: RSE/TF-M and AP GDB ports were reachable, TF-M/AP/Linux/TF-A/OP-TEE/U-Boot scripts attached, SCP-Firmware and SI CL1 symbols loaded, and QBox host/SystemC/QEMU backtraces were captured.
+- [x] V003GX `timeout 240s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-rse-ap-linux-20260524-v1 --launch --sample-only --sample-delay 150 --runner-timeout 190 --port-timeout 5 --gdb-timeout 8 --host-sample --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` generated the reusable GDB bundle and captured QBox/SystemC/QEMU host backtraces. With conservative debug DMI defaults, RSE/TF-M was still in BL2 flash-copy progress and AP was still at `0x82000`.
+- [x] V003GY `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 300s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-rse-ap-linux-20260524-v2 --launch --sample-only --sample-delay 190 --runner-timeout 235 --port-timeout 5 --gdb-timeout 8 --rse-port 12350 --ap-port 12351 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` verified live TF-M/RSE and AP/Linux GDB after Linux start: Linux CPU0 resolves to `cpu_do_idle()`, CPU2 to `change_protection_range()`, TF-M resolves to `__tfm_arch_thread_fn_call_veneer()` / `psa_wait_thread_fn_call()`, SCP-Firmware symbols load, and SI CL1 Zephyr symbols load.
 - [x] V003GZ `git -C tools/qbox ls-files --others --exclude-standard -- systemc-components/rse_atu/include/rse_atu.h tests/components/rse_atu/rse_atu-tests.cc`
 - [x] V003HA `! rg -n "[ \t]+$" tools/qbox/systemc-components/rse_atu/include/rse_atu.h tools/qbox/tests/components/rse_atu/rse_atu-tests.cc doc/spec/rse-qbox/task.md doc/spec/rse-qbox/evidence.md doc/spec/rse-qbox/design.md doc/spec/rse-qbox/plan.md`
 - [x] V003HB `cmake --build build --target rse_atu-tests --parallel 4` from `tools/qbox`
@@ -1406,24 +1406,24 @@ richer fault status.
 - [x] V003HH `ctest --test-dir build -R '^rse_atu-tests$' --output-on-failure` from `tools/qbox`
 - [x] V003HI `git -C tools/qbox diff --check`
 - [x] V003HJ `cmake --build build --target platforms-vp --parallel 4` from `tools/qbox`
-- [x] V003HK `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 110s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 85 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-atu-si-load-verify-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` expected timeout, but records SI CL0/CL1 image load, SI ATU regions, RSE runtime measured boot through `BL_33`, and no first failing register access.
-- [x] V003HL `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 230s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 200 --port-timeout 8 --gdb-timeout 8 --sample-delay 155 --rse-port 12352 --ap-port 12353 --out-dir build/qbox-fvp-rd-aspen/gdb-debug-linux-sample-20260525-v1` captures live TF-M/RSE, AP firmware/Linux target, SCP-Firmware symbols, and SI CL1 Zephyr symbols; the sampled AP target is still in secure-world/U-Boot rather than Linux kernel execution.
-- [x] V003HM `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-env-current-20260525-v2 --runner-timeout 135 --sample-delay 105 --ignore-fail-patterns` regenerates the reusable GDB bundle, and `README.md` now reflects effective environment overrides.
-- [x] V003HN `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
-- [x] V003HO `! rg -n "[ \t]+$" scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003HK `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 110s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 85 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-atu-si-load-verify-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` expected timeout, but records SI CL0/CL1 image load, SI ATU regions, RSE runtime measured boot through `BL_33`, and no first failing register access.
+- [x] V003HL `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 230s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 200 --port-timeout 8 --gdb-timeout 8 --sample-delay 155 --rse-port 12352 --ap-port 12353 --out-dir build/qbox-fvp-rd-aspen/gdb-debug-linux-sample-20260525-v1` captures live TF-M/RSE, AP firmware/Linux target, SCP-Firmware symbols, and SI CL1 Zephyr symbols; the sampled AP target is still in secure-world/U-Boot rather than Linux kernel execution.
+- [x] V003HM `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-debug-env-current-20260525-v2 --runner-timeout 135 --sample-delay 105 --ignore-fail-patterns` regenerates the reusable GDB bundle, and `README.md` now reflects effective environment overrides.
+- [x] V003HN `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003HO `! rg -n "[ \t]+$" scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - [x] V003HP `build/qbox-fvp-rd-aspen/gdb-sp-symbol-sample-20260525-v1/ap-smmgw-symbol-probe.txt` loads SE-Proxy and SMM Gateway symbols into the AP GDB target and proves AP CPU0 is waiting in SE-Proxy `secure_storage_ipc_set(uid=8, data_length=156)` for an RSE Protected Storage response.
-- [x] V003HQ `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 225s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-rse-ap-secure-storage-hang-20260525-v1 --launch --sample-only --sample-delay 165 --runner-timeout 185 --port-timeout 12 --gdb-timeout 8 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` samples the RSE side in `CMU_MHU2_Receiver_Handler()` receiving AP transaction `0x80061501`, while the AP side is still in the SE-Proxy MHU receive path before Linux.
-- [x] V003HR `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
-- [x] V003HS `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-secure-sp-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` regenerates the GDB environment with TS SP symbols/source maps and README guidance for per-run SE-Proxy/SMM Gateway load-base resolution.
-- [x] V003HT `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
-- [x] V003HU `python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-login-keepalive-20260525-v1 --copy-writable-flash --post-login-probe --keep-running-after-pass --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` regenerates the GDB bundle with login keepalive and per-run writable-flash options.
-- [x] V003HV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 285s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 245 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-secure-storage-bounded-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` passes with Linux login, post-login probe completion, RSE measured boot through `BL_33`, and no blocker.
-- [x] V003HW `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 340s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-login-keepalive-all-targets-20260525-v1 --launch --sample-only --sample-delay 220 --runner-timeout 260 --port-timeout 8 --gdb-timeout 8 --host-sample --host-sample-seconds 2 --post-login-probe --keep-running-after-pass --copy-writable-flash --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` captures QBox host/SystemC/QEMU backtraces, live TF-M/RSE, AP/Linux, TS secure-partition symbol loading, SCP-Firmware symbols, and SI CL1 Zephyr symbols; main-run post-login probe completes.
-- [x] V003HX `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py && luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua && git -C tools/qbox diff --check` passed after adding OTP writeback and lock-after-provision controls.
+- [x] V003HQ `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 225s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-rse-ap-secure-storage-hang-20260525-v1 --launch --sample-only --sample-delay 165 --runner-timeout 185 --port-timeout 12 --gdb-timeout 8 --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` samples the RSE side in `CMU_MHU2_Receiver_Handler()` receiving AP transaction `0x80061501`, while the AP side is still in the SE-Proxy MHU receive path before Linux.
+- [x] V003HR `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003HS `python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-secure-sp-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` regenerates the GDB environment with TS SP symbols/source maps and README guidance for per-run SE-Proxy/SMM Gateway load-base resolution.
+- [x] V003HT `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+- [x] V003HU `python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-setup-login-keepalive-20260525-v1 --copy-writable-flash --post-login-probe --keep-running-after-pass --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` regenerates the GDB bundle with login keepalive and per-run writable-flash options.
+- [x] V003HV `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 285s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 245 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-secure-storage-bounded-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` passes with Linux login, post-login probe completion, RSE measured boot through `BL_33`, and no blocker.
+- [x] V003HW `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 340s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-login-keepalive-all-targets-20260525-v1 --launch --sample-only --sample-delay 220 --runner-timeout 260 --port-timeout 8 --gdb-timeout 8 --host-sample --host-sample-seconds 2 --post-login-probe --keep-running-after-pass --copy-writable-flash --ignore-fail-patterns --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` captures QBox host/SystemC/QEMU backtraces, live TF-M/RSE, AP/Linux, TS secure-partition symbol loading, SCP-Firmware symbols, and SI CL1 Zephyr symbols; main-run post-login probe completes.
+- [x] V003HX `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py && luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua && git -C tools/qbox diff --check` passed after adding OTP writeback and lock-after-provision controls.
 - [x] V003HY `cmake --build tools/qbox/build --target rse_lcm-tests platforms-vp --parallel 4` passed.
 - [x] V003HZ `ctest --test-dir tools/qbox/build -R '^rse_lcm-tests$' --output-on-failure` passed, including OTP writeback and lock-after-provision cases.
-- [x] V003IA `python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-t022-otp-check-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` prepared per-run writable RSE/AP flash and RSE OTP copies; it exits with the expected `check_only_no_runtime` blocker because QBox is not launched in check-only mode.
-- [x] V003IB `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t022-otp-runtime-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` hits the expected short timeout after RSE runtime chainload, SCMI subscription, and measured boot through `BL_33`; the copied OTP image differs from deploy at offsets `0x29a1`, `0x2a01`, and `0x2a61`, proving file-backed OTP writeback affected only the per-run copy.
+- [x] V003IA `python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --check-only --out-dir build/qbox-fvp-rd-aspen/rse-t022-otp-check-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` prepared per-run writable RSE/AP flash and RSE OTP copies; it exits with the expected `check_only_no_runtime` blocker because QBox is not launched in check-only mode.
+- [x] V003IB `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t022-otp-runtime-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic` hits the expected short timeout after RSE runtime chainload, SCMI subscription, and measured boot through `BL_33`; the copied OTP image differs from deploy at offsets `0x29a1`, `0x2a01`, and `0x2a61`, proving file-backed OTP writeback affected only the per-run copy.
 - [x] V003IC `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 4`
       passed after splitting the reusable MHUv3 frame model.
 - [x] V003ID `ctest --test-dir tools/qbox/build -R '^mhuv3_stub-tests$' --output-on-failure`
@@ -1431,22 +1431,22 @@ richer fault status.
       `Mhuv3FrameModelTest.PbxAndMbxDoorbellRegistersAreReusable`.
 - [x] V003IE `cmake --build tools/qbox/build --target platforms-vp --parallel 4`
       passed after the MHUv3 frame split.
-- [x] V003IF `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t040-mhu-frame-refactor-20260525-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003IF `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 90 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t040-mhu-frame-refactor-20260525-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
       hit the expected short timeout with no fail patterns, RSE boot and
       RSE/SCP handoff markers true, SCMI subscription reached, and measured
       boot through `BL_33`.
 - [x] V003IG `git -C tools/qbox diff --check`
       passed after the MHUv3 frame split and documentation updates.
-- [x] V003IH `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V003IH `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
       passed after adding the bounded secure-service post-login probe mode.
-- [x] V003II `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true timeout 420s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 340 --post-login-probe --secure-service-probe --secure-service-probe-timeout 12 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t065-secure-service-probe-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V003II `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true timeout 420s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 340 --post-login-probe --secure-service-probe --secure-service-probe-timeout 12 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t065-secure-service-probe-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
       passed the base RSE-oriented boot and post-login driver criteria, then
       completed the secure-service probe. It found `psa-iat-api-test`,
       `psa-its-api-test`, and `psa-ps-api-test`, but each timed out with rc
       124; `ts-service-test` and `uefi-test` were absent with rc 127 for
       attempted execution, and secure-console failure classification recorded
       SE-Proxy, SMM Gateway, and UEFI-variable errors.
-- [x] V004 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 960s python3 scripts/run_qbox_fvp_rd_aspen_rse.py --timeout 900 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V004 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 timeout 960s python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --timeout 900 --post-login-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
       rebuilt the required QBox targets, passed with blocker `none`, recorded
       all RSE boot/SCP handoff/measured-boot/Linux marker groups true, and
       completed the Linux post-login driver probe.
@@ -1456,43 +1456,43 @@ richer fault status.
       `build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1/` plus
       `build/qbox-fvp-rd-aspen/gdb-login-keepalive-all-targets-20260525-v1/`.
       This does not imply full MVP pass; V007 remains open.
-- [x] V007 `timeout 360s python3 scripts/runfvp_log_boot.py --timeout 300 --require critical --runfvp-verbose --out-dir build/fvp-boot-logs/rse-v007-fvp-verbose-20260525-v1`
+- [x] V007 `timeout 360s python3 scripts/run/runfvp_log_boot.py --timeout 300 --require critical --runfvp-verbose --out-dir build/fvp-boot-logs/rse-v007-fvp-verbose-20260525-v1`
       passed in 249.492 seconds, and
-      `python3 scripts/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-v007-fvp-verbose-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1 --output build/qbox-fvp-rd-aspen/rse-v007-fvp-qbox-compare-20260525-v1/comparison.json`
+      `python3 scripts/analyze/compare_fvp_qbox_rse_logs.py --fvp build/fvp-boot-logs/rse-v007-fvp-verbose-20260525-v1 --qbox build/qbox-fvp-rd-aspen/rse-v004-full-postlogin-20260525-v1 --output build/qbox-fvp-rd-aspen/rse-v007-fvp-qbox-compare-20260525-v1/comparison.json`
       passed after aligning the ordered-marker check with the actual FVP/QBox
       RSE runtime sequence.
-- [x] V008 `timeout 420s python3 scripts/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 360 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/direct-v008-primary-compute-20260525-v1`
+- [x] V008 `timeout 420s python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py --skip-build --skip-dtb --no-copy-disk --timeout 360 --post-login-probe --out-dir build/qbox-fvp-rd-aspen/direct-v008-primary-compute-20260525-v1`
       passed in 27.914 seconds, proving the direct primary-compute boot path
       remains available with Linux login, root prompt, post-login probe
       completion, and all tracked driver patterns true.
-- [x] V009 `python3 -m py_compile scripts/inspect_qbox_fvp_rd_aspen_fwu.py`
+- [x] V009 `python3 -m py_compile scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py`
       passed after adding the FWU bank/metadata/capsule inspection helper.
-- [x] V010 `python3 scripts/inspect_qbox_fvp_rd_aspen_fwu.py --out-dir build/qbox-fvp-rd-aspen/fwu-inspect-20260525-v2`
+- [x] V010 `python3 scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py --out-dir build/qbox-fvp-rd-aspen/fwu-inspect-20260525-v2`
       generated `fwu-inspection.json` and `summary.md`. The JSON checks record
       matching raw RSE/AP flash sizes, `fw.cap` present on the capsule disk,
       capsule size matching the manifest image, and five non-dummy CFG2 FWU
       components.
-- [x] V011 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 80 --port-timeout 5 --gdb-timeout 5 --sample-delay 65 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-all-layer-short-20260525-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V011 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 80 --port-timeout 5 --gdb-timeout 5 --sample-delay 65 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-all-layer-short-20260525-v2 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
       generated a fresh all-layer GDB bundle. RSE/TF-M and AP/Linux GDB ports
       opened, all short probe commands returned 0, QBox host backtrace capture
       completed, SCP-Firmware and SI CL1 Zephyr symbol scripts loaded, TF-M/RSE
       was sampled in BL2 image validation through the CC3XX ECDSA path, and AP
       was still at TF-A BL2 entry before Linux in this short sample.
-- [x] V012 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 80 --port-timeout 5 --gdb-timeout 5 --sample-delay 45 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-all-debug-short-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
+- [x] V012 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false timeout 120s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --ignore-fail-patterns --runner-timeout 80 --port-timeout 5 --gdb-timeout 5 --sample-delay 45 --host-sample --host-sample-seconds 2 --out-dir build/qbox-fvp-rd-aspen/gdb-all-debug-short-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic`
       regenerated and exercised the requested QBox/TF-M/SCP/Linux debug
       environment with shorter timing. RSE/TF-M and AP/Linux ports opened,
       all target probes returned 0, QBox host backtrace capture completed,
       TF-M/RSE sampled in BL2 `nor_cfi_reg_read()`, AP was still at TF-A BL2
       entry, and SCP-Firmware remained symbol/source-only under the current
       `scp-strategy=service-model` configuration.
-- [x] V013 `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`,
+- [x] V013 `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
       `git -C tools/qbox diff --check`,
       `cmake --build tools/qbox/build --target mhuv3_stub-tests --parallel 8`,
       and
       `ctest --test-dir tools/qbox/build -R '^mhuv3_stub-tests$' --output-on-failure`
       passed after adding the SFCP/FWU GDB trace detail and the MHU named-pair
       isolation fix.
-- [x] V014 `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=8000 timeout 210s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t061-after-mhu-pair-fix-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12382 --ap-port 12383 --runner-timeout 170 --port-timeout 12 --gdb-timeout 8 --sample-delay 120 --copy-writable-flash --ignore-fail-patterns`
+- [x] V014 `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=8000 timeout 210s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t061-after-mhu-pair-fix-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12382 --ap-port 12383 --runner-timeout 170 --port-timeout 12 --gdb-timeout 8 --sample-delay 120 --copy-writable-flash --ignore-fail-patterns`
       captured the current post-fix all-target state. RSE/TF-M and AP/Linux
       ports opened, AP TF-A/OP-TEE/U-Boot symbol views attached, SCP-Firmware
       and SI CL1 symbols loaded, TF-M/RSE sampled in `tfm_its_remove()` via
@@ -1500,21 +1500,21 @@ richer fault status.
       `secure_storage_ipc_set()` waiting on RSE, and the AP secure-service MHU
       trace paired 16 of 17 channel-1 requests with the single missing request
       being the timeout-truncated in-flight `0x80061101`.
-- [x] V015 `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/analyze_qbox_mhu_trace.py` and the inline `parse_sc_time()` unit smoke passed after adding marker-gated GDB sampling and sc_time unit parsing.
-- [x] V016 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=42000 timeout 400s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t061-db-enroll-marker-postdelay-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12390 --ap-port 12391 --runner-timeout 330 --port-timeout 10 --gdb-timeout 10 --sample-delay 300 --sample-marker 'Error: "db" not defined' --sample-marker-post-delay 25 --copy-writable-flash --ignore-fail-patterns`
+- [x] V015 `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/analyze/analyze_qbox_mhu_trace.py` and the inline `parse_sc_time()` unit smoke passed after adding marker-gated GDB sampling and sc_time unit parsing.
+- [x] V016 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=42000 timeout 400s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t061-db-enroll-marker-postdelay-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12390 --ap-port 12391 --runner-timeout 330 --port-timeout 10 --gdb-timeout 10 --sample-delay 300 --sample-marker 'Error: "db" not defined' --sample-marker-post-delay 25 --copy-writable-flash --ignore-fail-patterns`
       exercised the marker post-delay path. This bounded run did not reach the
       `db` marker before the 300.104-second cap, but AP secure-service, AP
       TF-A/OP-TEE/U-Boot, SCP-Firmware, and SI CL1 symbol probes attached at
       the earlier U-Boot FWU regular-state point, and MHU analysis paired 69
       of 70 AP secure-service channel-1 requests with the single missing
       request being the timeout-truncated in-flight `0x80064601`.
-- [x] V017 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=60000 QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=4096 timeout 420s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --tfm-ps-object-table-trace --out-dir build/qbox-fvp-rd-aspen/gdb-t064-ps-object-trace-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12394 --ap-port 12395 --runner-timeout 360 --port-timeout 12 --gdb-timeout 12 --trace-timeout 230 --sample-delay 0 --copy-writable-flash --ignore-fail-patterns`
+- [x] V017 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=60000 QBOX_RDASPEN_BOOT_FLASH_TRACE=true QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=4096 timeout 420s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --tfm-ps-object-table-trace --out-dir build/qbox-fvp-rd-aspen/gdb-t064-ps-object-trace-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12394 --ap-port 12395 --runner-timeout 360 --port-timeout 12 --gdb-timeout 12 --trace-timeout 230 --sample-delay 0 --copy-writable-flash --ignore-fail-patterns`
       captured PS object-table and RSE flash evidence. The trace intentionally
       timed out at the 230-second cap after hitting PS initialization,
       authentication, HUK/key-derivation, and multiple
       `Driver_FLASH0_EraseSector` calls. It did not reach the later `db`
       enrollment point, so it is PS/flash-init evidence, not a pass for T064.
-- [x] V018 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=60000 timeout 360s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t064-db-read-post30-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12400 --ap-port 12401 --runner-timeout 300 --port-timeout 10 --gdb-timeout 12 --sample-delay 260 --sample-marker '2023 bytes read' --sample-marker-post-delay 30 --copy-writable-flash --ignore-fail-patterns`
+- [x] V018 `QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_RSE_LOCAL_CRYPTO=true QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=60000 timeout 360s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --out-dir build/qbox-fvp-rd-aspen/gdb-t064-db-read-post30-20260525-v1 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --rse-port 12400 --ap-port 12401 --runner-timeout 300 --port-timeout 10 --gdb-timeout 12 --sample-delay 260 --sample-marker '2023 bytes read' --sample-marker-post-delay 30 --copy-writable-flash --ignore-fail-patterns`
       exercised the short marker wait requested by the user. The marker was
       not reached before the 260.085-second cap, but all GDB probes attached.
       AP SE-Proxy sampled a Protected Storage GET_INFO call (`type=1003`,
@@ -1522,25 +1522,25 @@ richer fault status.
       receive interrupt path, and MHU analysis paired 26 of 27 requests with
       only the bounded in-flight `0x80061b01` missing.
 - [x] V019 `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`,
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/analyze_qbox_mhu_trace.py scripts/inspect_qbox_fvp_rd_aspen_fwu.py`,
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/analyze/analyze_qbox_mhu_trace.py scripts/inspect/inspect_qbox_fvp_rd_aspen_fwu.py`,
       `git -C tools/qbox diff --check`,
-      `./scripts/validate_qbox_fvp_rd_aspen_map.py`,
+      `./scripts/test/validate_qbox_fvp_rd_aspen_map.py`,
       `timeout 120s cmake --build tools/qbox/build --target reset_gpio platforms-vp --parallel 4`, and
       `timeout 90s ctest --test-dir tools/qbox/build -R '^reset-test-system:sync-pol=multithread:num-cpu=4:icount=false:threading=MULTI:accel=tcg$' --output-on-failure`
       passed after adding the AP `reset_gpio` bridge.
-- [x] V020 `timeout 300s env QBOX_RDASPEN_ENABLE_AP_CPUS=true python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 260 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --post-login-probe --fwu-probe --out-dir build/qbox-fvp-rd-aspen/rse-t074-reset-gpio-fwu-short-20260525-v2`
+- [x] V020 `timeout 300s env QBOX_RDASPEN_ENABLE_AP_CPUS=true python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 260 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --post-login-probe --fwu-probe --out-dir build/qbox-fvp-rd-aspen/rse-t074-reset-gpio-fwu-short-20260525-v2`
       produced `blocker=qbox_fwu_probe_incomplete_timeout` after reaching RSE
       boot, RSE/SCP handoff, measured boot through `BL_33`, AP TF-A/OP-TEE,
       and U-Boot. Linux login was not reached, no FWU probe commands were
       sent, and T074-T076 remain open.
-- [x] V021 `timeout 480s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=12000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2223-:22 python3 scripts/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --post-login-probe --fwu-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t074-reset-gpio-fwu-probe-20260525-v3`
+- [x] V021 `timeout 480s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=12000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2223-:22 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 420 --rootfs build/qbox-fvp-rd-aspen/rse-t019da-bootargs-console-probe-20260524-v1/rootfs-console-probe.wic --post-login-probe --fwu-probe --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/rse-t074-reset-gpio-fwu-probe-20260525-v3`
       reached Linux login and root shell, proved the driver evidence patterns
       for `arm_si_rproc`, `hipc_ethsi1`, `pl011_uart`, `rpmsg`, `smmu_v3`,
       and `virtio`, copied `fw.cap` into `/boot/EFI/UpdateCapsule/`, and
       emitted `__QBOX_FWU_REBOOT_REQUESTED__`. The run timed out during or
       just after Linux shutdown with no `QEMU resetting`, image-1, or FIP_B
       marker, so T074-T076 remain open.
-- [x] V022 `timeout 260s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=4000 python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --sample-marker 'Filesystem: FAT16' --sample-marker-post-delay 5 --sample-delay 180 --runner-timeout 220 --port-timeout 20 --gdb-timeout 8 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-virtio-sample-20260525-v2`
+- [x] V022 `timeout 260s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=4000 python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --sample-marker 'Filesystem: FAT16' --sample-marker-post-delay 5 --sample-delay 180 --runner-timeout 220 --port-timeout 20 --gdb-timeout 8 --host-sample --host-sample-seconds 3 --ignore-fail-patterns --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-virtio-sample-20260525-v2`
       regenerated the GDB environment and attached to QBox host, TF-M/RSE,
       AP/Linux, AP firmware views, AP secure-service symbols, SCP-Firmware
       symbols, and SI CL1 symbols. The `Filesystem: FAT16` marker was not
@@ -1548,12 +1548,12 @@ richer fault status.
       `tfm_arch_thread_fn_call()` below `psa_wait_thread_fn_call()`, AP CPU0
       at pre-Linux secure-world PC `0xfef5b8a4`, and QBox host SystemC/QEMU
       threads in `SC_START`/QEMU wait paths.
-- [x] V023 `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V023 `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
       passed after adding `--fwu-probe` pass-through to the GDB helper. The
       option implies `--post-login-probe`, forwards the runner FWU capsule
       sequence, records `fwu_probe` in `debug-env.json`, and includes the
       option in generated README commands.
-- [x] V024 `timeout 560s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2224-:22 python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --fwu-probe --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 5 --sample-delay 420 --runner-timeout 480 --port-timeout 20 --gdb-timeout 8 --ignore-fail-patterns --rse-port 12410 --ap-port 12411 --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-sample-20260525-v1`
+- [x] V024 `timeout 560s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2224-:22 python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --fwu-probe --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 5 --sample-delay 420 --runner-timeout 480 --port-timeout 20 --gdb-timeout 8 --ignore-fail-patterns --rse-port 12410 --ap-port 12411 --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-sample-20260525-v1`
       reached Linux FWU reboot request and marker-gated GDB sampling. All live
       target probes returned 0. The sampled root cause is AP TF-A BL31
       `ASSERT: plat/common/plat_gicv3.c:279` in
@@ -1567,13 +1567,13 @@ richer fault status.
       GICv3 security extensions.
 - [x] V026 `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
       passed after setting `ap_gic.has_security_extensions = true`.
-- [x] V027 `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`
+- [x] V027 `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`
       passed.
-- [x] V028 `./scripts/validate_qbox_fvp_rd_aspen_map.py`
+- [x] V028 `./scripts/test/validate_qbox_fvp_rd_aspen_map.py`
       passed and wrote `build/qbox-fvp-rd-aspen/map-validation.json`.
 - [x] V029 `timeout 240s cmake --build tools/qbox/build --target platforms-vp --parallel 8`
       passed after the MemTxAttrs/GIC-security change.
-- [x] V030 `timeout 540s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=20000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2226-:22 python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --fwu-probe --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 8 --sample-delay 390 --runner-timeout 460 --port-timeout 20 --gdb-timeout 8 --ignore-fail-patterns --rse-port 12440 --ap-port 12441 --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-gic-secure-20260525-v3`
+- [x] V030 `timeout 540s env QBOX_RDASPEN_ENABLE_AP_CPUS=true QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_HOST_MEMORY_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=false QBOX_RDASPEN_RSE_DTCM_DMI=true QBOX_RDASPEN_RSE_ITCM_DMI=true QBOX_RDASPEN_RSE_VM_DMI=true QBOX_RDASPEN_MHU_TRACE=true QBOX_RDASPEN_MHU_TRACE_LIMIT=20000 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2226-:22 python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --launch --sample-only --fwu-probe --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 8 --sample-delay 390 --runner-timeout 460 --port-timeout 20 --gdb-timeout 8 --ignore-fail-patterns --rse-port 12440 --ap-port 12441 --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-gic-secure-20260525-v3`
       reached Linux login, copied the FWU capsule, requested reboot, found
       `systemd-shutdown[1]: Rebooting.` after 334.619 seconds, and sampled all
       GDB views successfully. The previous BL31 `plat_gicv3.c:279` assert did
@@ -1583,8 +1583,8 @@ richer fault status.
       `SystemC resetting` line in the 8-second post-marker window.
 - [x] V031 `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua tools/qbox/tests/components/loader/conf-test.lua`,
       `git -C tools/qbox diff --check`,
-      `python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      and `./scripts/validate_qbox_fvp_rd_aspen_map.py`
+      `python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      and `./scripts/test/validate_qbox_fvp_rd_aspen_map.py`
       passed after adding AP BL2 reset-state restoration and RSE KMU/CC3XX
       reset sockets.
 - [x] V032 `timeout 120s cmake --build tools/qbox/build --target rse_kmu-tests cc3xx-tests loader-test mhuv3_stub-tests platforms-vp --parallel 8`
@@ -1592,7 +1592,7 @@ richer fault status.
 - [x] V033 `timeout 100s ctest --test-dir tools/qbox/build -R '^(rse_kmu-tests|cc3xx-tests|loader-test|mhuv3_stub-tests)$' --output-on-failure`
       passed; reset regression coverage now includes loader reset-only load,
       RSE KMU register restoration, and CC3XX runtime-register restoration.
-- [x] V034 `QBOX_RDASPEN_MHU_TRACE=false QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2233-:22 timeout 720s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-system-reset-20260525-v7 --launch --sample-only --fwu-probe --keep-running-after-pass --ignore-fail-patterns --rse-port 12510 --ap-port 12511 --runner-timeout 650 --sample-delay 560 --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 90 --gdb-timeout 6 --port-timeout 8`
+- [x] V034 `QBOX_RDASPEN_MHU_TRACE=false QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2233-:22 timeout 720s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-shutdown-system-reset-20260525-v7 --launch --sample-only --fwu-probe --keep-running-after-pass --ignore-fail-patterns --rse-port 12510 --ap-port 12511 --runner-timeout 650 --sample-delay 560 --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 90 --gdb-timeout 6 --port-timeout 8`
       reached Linux login, driver probe evidence, FWU capsule copy,
       `__QBOX_FWU_REBOOT_REQUESTED__`, `systemd-shutdown[1]: Rebooting.`, and
       `reboot: Restarting system`. All GDB probes returned 0. The second AP
@@ -1615,7 +1615,7 @@ richer fault status.
       passed after removing the temporary RSE reset fanout and adding the AP
       SDS reset-syndrome `SYS_RESET_REQ` write to the reset-only AP BL2
       loader.
-- [x] V037 `QBOX_RDASPEN_MHU_TRACE=false QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2233-:22 timeout 700s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-warm-reset-sds-20260525-v8 --launch --sample-only --fwu-probe --keep-running-after-pass --ignore-fail-patterns --rse-port 12510 --ap-port 12511 --runner-timeout 620 --sample-delay 540 --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 70 --gdb-timeout 6 --port-timeout 8`
+- [x] V037 `QBOX_RDASPEN_MHU_TRACE=false QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2233-:22 timeout 700s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-warm-reset-sds-20260525-v8 --launch --sample-only --fwu-probe --keep-running-after-pass --ignore-fail-patterns --rse-port 12510 --ap-port 12511 --runner-timeout 620 --sample-delay 540 --sample-marker 'systemd-shutdown[1]: Rebooting.' --sample-marker-post-delay 70 --gdb-timeout 6 --port-timeout 8`
       reached Linux login, copied the FWU capsule, requested reboot, found
       `systemd-shutdown[1]: Rebooting.` after 520.166 seconds, and sampled all
       GDB views successfully. The second and third AP BL2 entries report
@@ -1658,10 +1658,10 @@ richer fault status.
 - [x] V038D Recheck the all-target GDB environment with short caps. `which
       gdb-multiarch`, `which gdb`, the Yocto `arm-none-eabi-gdb` executable
       check, and
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
       passed. `QBOX_RDASPEN_ATU_DMI=true QBOX_RDASPEN_BOOT_FLASH_DMI=true
       QBOX_RDASPEN_HOST_MEMORY_DMI=true timeout 190s python3
-      scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir
+      scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py --out-dir
       build/qbox-fvp-rd-aspen/gdb-fast-linux-current-20260525-v1 --launch
       --sample-only --sample-delay 112 --runner-timeout 130 --trace-timeout
       120 --gdb-timeout 6 --port-timeout 8 --host-sample
@@ -1892,7 +1892,7 @@ richer fault status.
       `secure_psa_iat_api_test_rc=124`,
       `secure_psa_its_api_test_rc=124`, and
       `secure_psa_ps_api_test_rc=124`. Added
-      `scripts/analyze_qbox_cc3xx_trace.py` and generated
+      `scripts/analyze/analyze_qbox_cc3xx_trace.py` and generated
       `cc3xx-pka-summary.txt` / `cc3xx-pka-summary.json`; the summary decodes
       `20000` CC3XX trace entries, reports `trace_limit_reached: True`, and
       counts `8063` PKA opcode writes before the limit is consumed. The
@@ -2010,7 +2010,7 @@ richer fault status.
       the modeled RSE flash device is 64 MiB. The runner now pads copied RSE
       flash to 67,108,864 bytes and copied AP flash to 134,217,728 bytes with
       erased `0xff` bytes before enabling writeback. Static validation passed
-      with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, a
+      with `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`, a
       helper-level import/padding smoke test, and `git diff --check --` for
       the runner. Runtime
       `build/qbox-fvp-rd-aspen/rse-secure-service-ps-only-padded-stats-20260527-v1/`
@@ -2040,7 +2040,7 @@ richer fault status.
       Architecture Test Suite entries such as `test_403;`, and emits
       `psa-ps-api-test -t 'test_403;'` only when the selected secure-service
       test is `ps`. Validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, help-output
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`, help-output
       inspection, command-generation checks, `git diff --check --`, and the
       focused Strata component build/test:
       `timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8`
@@ -2058,7 +2058,7 @@ richer fault status.
       sets `QBOX_RDASPEN_ENABLE_AP_CPUS=true` inside the QBox runtime
       environment whenever `--post-login-probe`, `--secure-service-probe`, or
       `--fwu-probe` is requested. Validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`, a
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`, a
       helper-level import smoke that checks `qbox_env()`, `git diff --check`,
       and a 20-second runtime smoke
       `build/qbox-fvp-rd-aspen/rse-ap-auto-enable-smoke-20260527-v1/` run
@@ -2077,8 +2077,8 @@ richer fault status.
       for check-only/preflight exits. This preserves the short-timeout
       workflow while making it possible to compare old and new probe artifacts
       without inferring host elapsed time from log mtimes. Validation passed
-      with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and a
+      with `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and a
       three-second smoke run
       `build/qbox-fvp-rd-aspen/rse-runner-elapsed-smoke-20260527-v1/` whose
       result records `timed_out=true`, `blocker=qbox_platform_timeout`,
@@ -2097,7 +2097,7 @@ richer fault status.
 - [x] V038AA Capture a fresh verbose FVP SMM Gateway reference for the same
       bounded comparison window. Runtime
       `build/fvp-boot-logs/rd-aspen-verbose-smmgw-20260527-v1/` was captured
-      with `scripts/runfvp_log_boot.py --timeout 180 --require critical
+      with `scripts/run/runfvp_log_boot.py --timeout 180 --require critical
       --no-login --runfvp-verbose`. The FVP summary reports `passed: False`
       only because `terminal_ns_uart0` did not reach the critical login/root
       marker in the bounded no-login run; the primary console still reaches
@@ -2122,8 +2122,8 @@ richer fault status.
       `progress_marker_first_hits` for key RSE, measured-boot, EFI, Linux,
       login/root, SMM Gateway, SE-Proxy, and PS test-403 markers in
       `result.json` and `summary.txt`. Validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and the
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and the
       three-second smoke
       `build/qbox-fvp-rd-aspen/rse-progress-markers-smoke-20260527-v1/`,
       which records `rse_bl1_1` first hit at 0.503 seconds. This improves
@@ -2146,8 +2146,8 @@ richer fault status.
       regular-state detection, and bootflow script handoff in addition to the
       existing RSE, EFI MM, EFI boot, Linux, SMM Gateway, SE-Proxy, and PS
       markers. Validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and
       `build/qbox-fvp-rd-aspen/rse-uefi-marker-smoke-20260527-v1/`, which
       still records marker timing in a three-second smoke window. This keeps
       future short SMM Gateway runs file-backed and avoids tmux-only progress
@@ -2156,8 +2156,8 @@ richer fault status.
       runner now accepts `--flash-stats` and `--flash-stats-interval`, wires
       the RSE/AP Strata stats environment variables, and records parsed
       `flash_stats` in `result.json` and `summary.txt`. Static validation
-      passed with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and help
+      passed with `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and help
       output inspection. The smoke
       `build/qbox-fvp-rd-aspen/rse-flash-stats-smoke-20260527-v1/` proves the
       result schema and configured paths even before flash command traffic.
@@ -2183,7 +2183,7 @@ richer fault status.
       reports missing secure-service and post-login done markers as explicit
       blockers instead of allowing Linux boot markers alone to pass a requested
       secure-service probe. Validation passed with `python3 -m py_compile`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and
       `build/qbox-fvp-rd-aspen/rse-uefi-persisted-secondboot-classify-20260527-v1/`,
       which returns `passed=false`, `timed_out=true`, and
       `blocker=qbox_secure_service_probe_incomplete_timeout` while still
@@ -2196,7 +2196,7 @@ richer fault status.
       completion evidence. The runner now reports
       `qbox_post_login_probe_not_reached_timeout` when `--post-login-probe`
       was requested but no probe command was sent. Validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py` and
       `build/qbox-fvp-rd-aspen/rse-post-login-not-reached-classify-smoke-20260527-v1/`,
       which returns `passed=false`, `timed_out=true`,
       `blocker=qbox_post_login_probe_not_reached_timeout`, and
@@ -2209,8 +2209,8 @@ richer fault status.
       in firmware-visible Strata byte-read traffic while loading SI images.
       The runner now maps PC trace tail addresses through `bl2.map` and reports
       `rse_bl2_cfi_flash_io_timeout:<symbol>` for such timeout runs. Validation
-      passed with `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`,
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`, and
+      passed with `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`, and
       `build/qbox-fvp-rd-aspen/rse-cfi-pc-classify-smoke-20260527-v1/`, which
       returns `blocker=rse_bl2_cfi_flash_io_timeout:nor_cfi_reg_read`.
 - [x] V038AI Add Strata DMI stats and classify boot-flash DMI as diagnostic
@@ -2258,8 +2258,8 @@ richer fault status.
       `ap_pc_trace` beside the existing `rse_pc_trace` in `result.json` and
       `summary.txt`, including per-component counts and each CPU's last
       sample. Static validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`. Runtime
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py` and
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`. Runtime
       `build/qbox-fvp-rd-aspen/rse-ap-pc-trace-empty-primary-20260527-v1/`
       timed out at `runtime_elapsed_s=115.0855377820044` before login and
       post-login probe injection, so it is not PS403 evidence. It did not
@@ -2277,8 +2277,8 @@ richer fault status.
       PS test 403 state such as `checks_seen`, `insufficient_space_uid`,
       `remove_all_registered_uids`, and the last observed PS test line.
       Static validation passed with
-      `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py` and
-      `git diff --check -- scripts/run_qbox_fvp_rd_aspen_rse.py`. Existing
+      `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py` and
+      `git diff --check -- scripts/run/run_qbox_fvp_rd_aspen_rse.py`. Existing
       artifact replay against
       `rse-secure-service-ps-only-padded-stats-20260527-v1` reports
       `checks_seen=[1]`, `insufficient_space_uid=20`, and cleanup started,
@@ -2299,13 +2299,13 @@ richer fault status.
       marker is reached. This keeps future short-timeout blocker strings tied
       to the actual PSA PS phase.
 - [x] V038AO Add secure-storage 403 comparison to the FVP/QBox log comparator.
-      `scripts/compare_fvp_qbox_rse_logs.py` now accepts
+      `scripts/analyze/compare_fvp_qbox_rse_logs.py` now accepts
       `--require-secure-storage` and emits a `storage_test_403` JSON payload
       with ITS/PS section progress, UID exhaustion, cleanup count, result, and
       FVP-vs-QBox stage delta. Existing boot marker comparison remains the
       default behavior unless the new option is requested. Validation passed
-      with `python3 -m py_compile scripts/compare_fvp_qbox_rse_logs.py` and
-      `git diff --check -- scripts/compare_fvp_qbox_rse_logs.py`. The
+      with `python3 -m py_compile scripts/analyze/compare_fvp_qbox_rse_logs.py` and
+      `git diff --check -- scripts/analyze/compare_fvp_qbox_rse_logs.py`. The
       FVP-vs-latest-QBox comparison intentionally exits 1 with
       `boot_passed=true`, `stage_delta.PS.fvp=completed`,
       `stage_delta.PS.qbox=check_1`, and
@@ -2457,7 +2457,7 @@ richer fault status.
       remains open, now specifically on faithful acceleration of the
       firmware-visible TF-M PS/ITS Strata byte-program and compaction workload.
 - [x] V038AY Recheck FVP PS403 login timing with file-backed logs.
-      `scripts/runfvp_log_boot.py` now starts bounded root-login retries once
+      `scripts/run/runfvp_log_boot.py` now starts bounded root-login retries once
       Linux/systemd output appears, keeps retrying through late getty/login
       target output, and records `login_sent` plus `login_attempts` in the
       post-login result. The syntax check passed. A short verbose FVP run
@@ -2477,12 +2477,12 @@ richer fault status.
       reaches Linux, root, all driver probes, secure-service diagnostics, and
       PS403 `[Check 1]` before timing out.
 - [x] V038AZ Add an RSE flash PS/ITS storage-state inspector and compare
-      FVP/QBox PS403 artifacts. `scripts/inspect_rse_flash_storage.py` reads
+      FVP/QBox PS403 artifacts. `scripts/inspect/inspect_rse_flash_storage.py` reads
       raw or gzip RSE flash images, normalizes them to the 64 MiB RD-Aspen RSE
       flash size, and reports dirty sector, dirty logical block, and baseline
       delta counts for the Protected Storage and Internal Trusted Storage
       partitions using the active TF-M layout constants. Validation passed with
-      `python3 -m py_compile scripts/inspect_rse_flash_storage.py`. The report
+      `python3 -m py_compile scripts/inspect/inspect_rse_flash_storage.py`. The report
       `build/qbox-fvp-rd-aspen/rse-storage-ps403-compare-20260528-v1/report.md`
       shows the FVP PS403-pass writable image has dirty state across all PS
       sectors (`256/256`) and ITS sectors (`64/64`), while the best QBox
@@ -2492,7 +2492,7 @@ richer fault status.
       TF-M PS/ITS compaction and Strata byte-program workload rather than
       failing in Linux, driver probing, or backing-file persistence.
 - [x] V038BA Count structured post-login driver evidence in the coverage
-      audit. `scripts/audit_qbox_fvp_rd_aspen_coverage.py` now treats selected
+      audit. `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py` now treats selected
       `post_login_probe.driver_patterns` keys from `result.json` as runtime
       evidence alongside console regexes. The latest best PS403 artifact
       `coverage-audit-v2.json` now passes `si_remoteproc_rpmsg` using

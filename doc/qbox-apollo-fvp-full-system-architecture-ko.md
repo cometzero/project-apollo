@@ -47,8 +47,8 @@ JSON evidence로 확인되어야 한다.
 기존 Apollo QBox 경로는 Primary Compute Linux를 직접 부팅한다.
 
 ```text
-scripts/run_qbox_apollo_fvp_linux.py
-scripts/build_qbox_apollo_fvp_linux.sh
+scripts/run/run_qbox_apollo_fvp_linux.py
+scripts/build/build_qbox_apollo_fvp_linux.sh
 tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
@@ -59,12 +59,12 @@ full-system 완료 증거로 사용할 수 없다.
 새 full-system 경로는 RSE-first firmware chain을 기준으로 한다.
 
 ```text
-scripts/run_qbox_apollo_fvp_full.py
-scripts/build_qbox_apollo_fvp_full.sh
-scripts/run_qbox_apollo_fvp_si_cl1.py
-scripts/validate_qbox_apollo_fvp_full_map.py
-scripts/audit_qbox_apollo_fvp_full_coverage.py
-scripts/verify_qbox_apollo_fvp_full_completion.py
+scripts/run/run_qbox_apollo_fvp_full.py
+scripts/build/build_qbox_apollo_fvp_full.sh
+scripts/run/run_qbox_apollo_fvp_si_cl1.py
+scripts/test/validate_qbox_apollo_fvp_full_map.py
+scripts/test/audit_qbox_apollo_fvp_full_coverage.py
+scripts/test/verify_qbox_apollo_fvp_full_completion.py
 tools/qbox/platforms/apollo/apollo-qvp.lua
 tools/qbox/platforms/apollo/apollo-si-cl1.lua
 ```
@@ -157,7 +157,7 @@ tools/qbox/platforms/apollo/apollo-si-cl1.lua
 
 ## Safety Island 실행 모드
 
-`scripts/run_qbox_apollo_fvp_full.py`는 세 가지 Safety Island 모드를
+`scripts/run/run_qbox_apollo_fvp_full.py`는 세 가지 Safety Island 모드를
 지원한다.
 
 | Mode | 목적 | 완료 판정에서의 의미 |
@@ -233,7 +233,7 @@ Safety Island CL0/CL1 firmware 실행을 위해 `tools/qemu`의 Cortex-R82
 - Cortex-R82 `ID_AA64ISAR0`에 LSE를 광고한다.
 - AArch32 ID register propagation을 보강한다.
 
-이 변경은 `scripts/probe_qemu_cortex_r82.py --source-root .`로 source
+이 변경은 `scripts/inspect/probe_qemu_cortex_r82.py --source-root .`로 source
 level probe가 가능하다.
 
 ## Memory, Interrupt, ATU 설계
@@ -254,7 +254,7 @@ full-system QBox 설계 원칙은 다음과 같다.
 
 정규화된 map/interrupt/ATU 근거는
 `doc/qbox-apollo-fvp-map-analysis.md`에 정리되어 있고,
-`scripts/validate_qbox_apollo_fvp_full_map.py`가 gate evidence를 만든다.
+`scripts/test/validate_qbox_apollo_fvp_full_map.py`가 gate evidence를 만든다.
 
 ## GIC Multiview 설계
 
@@ -339,7 +339,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/
 최종 판정은 strict verifier만 허용한다.
 
 ```bash
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```

@@ -56,7 +56,7 @@ QBox 산출물:
 - `tools/qbox/tests/components/rse_protection_ctrl/`
 - `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
 - `tools/qbox/platforms/apollo/hw-block/rse.lua`
-- `scripts/audit_qbox_apollo_fvp_full_coverage.py`
+- `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 ## 검증 Evidence
 
@@ -76,12 +76,12 @@ ctest --test-dir tools/qbox/build \
   -R 'rse_protection_ctrl-tests' --output-on-failure
 cmake --build tools/qbox/build --target rse_atu-tests --parallel 8
 ctest --test-dir tools/qbox/build -R 'rse_atu-tests' --output-on-failure
-python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py
+python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 git -C tools/qbox diff --check
 cmake --build tools/qbox/build \
   --target zena_fmu-tests zena_ssu-tests rse_protection_ctrl-tests platforms-vp \
   --parallel 8
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --output build/qbox-apollo-fvp/full-model-first-wave-coverage.json
 ```
 
@@ -112,7 +112,7 @@ Full-system runtime 검증은 완료했다.
 
 ```bash
 env QBOX_RDASPEN_NETDEV=type=user \
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 180 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/full-model-debug-no-trace
@@ -133,7 +133,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 Coverage audit:
 
 ```bash
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-model-debug-no-trace/result.json \
   --output build/qbox-apollo-fvp/full-model-debug-no-trace/coverage-audit.json
 ```

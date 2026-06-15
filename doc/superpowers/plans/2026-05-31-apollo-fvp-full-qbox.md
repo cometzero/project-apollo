@@ -26,9 +26,9 @@ fallbacks, and file-backed UART/platform logs.
 ## Success Criteria
 
 - Direct primary-compute boot remains available through
-  `scripts/run_qbox_apollo_fvp_linux.py`.
+  `scripts/run/run_qbox_apollo_fvp_linux.py`.
 - New full boot entrypoint exists:
-  `scripts/run_qbox_apollo_fvp_full.py`.
+  `scripts/run/run_qbox_apollo_fvp_full.py`.
 - New full platform config exists:
   `tools/qbox/platforms/apollo-fvp/full.lua`.
 - `--check-only` validates Apollo local-build firmware artifacts and writes a
@@ -48,9 +48,9 @@ tests, runner/platform implementation, validation docs, and project docs.
 
 **Files:**
 - Create `tests/test_run_qbox_apollo_fvp_full.py`
-- Create `scripts/run_qbox_apollo_fvp_full.py`
+- Create `scripts/run/run_qbox_apollo_fvp_full.py`
 
-- [ ] Create tests that import `scripts/run_qbox_apollo_fvp_full.py` through
+- [ ] Create tests that import `scripts/run/run_qbox_apollo_fvp_full.py` through
   `importlib.util.spec_from_file_location`.
 - [ ] Test default local-build artifact resolution from
   `build/local-apollo-fvp/deploy/firmware` and
@@ -73,7 +73,7 @@ pytest tests/test_run_qbox_apollo_fvp_full.py -q
 ## Task 2: Implement Apollo Full Artifact Resolver
 
 **Files:**
-- Modify `scripts/run_qbox_apollo_fvp_full.py`
+- Modify `scripts/run/run_qbox_apollo_fvp_full.py`
 
 - [ ] Add frozen dataclasses for firmware, boot, log, and result artifact
   contracts.
@@ -94,7 +94,7 @@ Commands:
 
 ```bash
 pytest tests/test_run_qbox_apollo_fvp_full.py -q
-python3 scripts/run_qbox_apollo_fvp_full.py --check-only
+python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ```
 
 ## Task 3: Add Apollo Full Lua Platform
@@ -119,17 +119,17 @@ Validation commands:
 
 ```bash
 git -C tools/qbox diff --check
-python3 scripts/run_qbox_apollo_fvp_full.py --check-only
+python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ```
 
 ## Task 4: Wire Build And Run Entrypoints
 
 **Files:**
-- Create `scripts/build_qbox_apollo_fvp_full.sh`
-- Modify `scripts/run_qbox_apollo_fvp_full.py`
+- Create `scripts/build/build_qbox_apollo_fvp_full.sh`
+- Modify `scripts/run/run_qbox_apollo_fvp_full.py`
 
 - [ ] Reuse the required QBox target list from
-  `scripts/run_qbox_fvp_rd_aspen_rse.py`.
+  `scripts/run/run_qbox_fvp_rd_aspen_rse.py`.
 - [ ] Build `platforms-vp`, `remote_cpu`, and required SystemC/TLM component
   targets before runtime unless `--skip-build` is set.
 - [ ] Add a wrapper script that builds the full-platform dependencies and runs
@@ -143,15 +143,15 @@ python3 scripts/run_qbox_apollo_fvp_full.py --check-only
 Commands:
 
 ```bash
-./scripts/build_qbox_apollo_fvp_full.sh
-python3 scripts/run_qbox_apollo_fvp_full.py --check-only
+./scripts/build/build_qbox_apollo_fvp_full.sh
+python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ```
 
 ## Task 5: Add Map And Artifact Preflight Validation
 
 **Files:**
-- Create `scripts/validate_qbox_apollo_fvp_full_map.py`
-- Modify `scripts/run_qbox_apollo_fvp_full.py`
+- Create `scripts/test/validate_qbox_apollo_fvp_full_map.py`
+- Modify `scripts/run/run_qbox_apollo_fvp_full.py`
 
 - [ ] Add static checks for the RSE local view, AP host view, SMD window,
   SI access window, AP-RSE MHU windows, AP-SI MHU windows, and CL1 HIPC shared
@@ -164,8 +164,8 @@ python3 scripts/run_qbox_apollo_fvp_full.py --check-only
 Commands:
 
 ```bash
-python3 scripts/validate_qbox_apollo_fvp_full_map.py
-python3 scripts/run_qbox_apollo_fvp_full.py --check-only
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
+python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 ```
 
 ## Task 6: Run Bounded Full Boot
@@ -182,13 +182,13 @@ python3 scripts/run_qbox_apollo_fvp_full.py --check-only
 - [ ] Build QBox full-platform dependencies:
 
 ```bash
-./scripts/build_qbox_apollo_fvp_full.sh
+./scripts/build/build_qbox_apollo_fvp_full.sh
 ```
 
 - [ ] Run a bounded full boot:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 900 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-initial
@@ -204,7 +204,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 ## Task 7: Compare Against FVP Evidence
 
 **Files:**
-- Modify `scripts/compare_fvp_qbox_rse_logs.py` only if the current comparison
+- Modify `scripts/analyze/compare_fvp_qbox_rse_logs.py` only if the current comparison
   script cannot accept Apollo log paths.
 
 - [ ] Run the Apollo FVP log capture script for the same local artifacts.
@@ -216,7 +216,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 Expected command shape:
 
 ```bash
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp-log-dir build/fvp-boot-logs/<apollo-run> \
   --qbox-log-dir build/qbox-apollo-fvp/full-initial \
   --out build/qbox-apollo-fvp/full-initial/comparison.json
@@ -242,7 +242,7 @@ Validation commands:
 
 ```bash
 git diff --check
-python3 -m py_compile scripts/run_qbox_apollo_fvp_full.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py
 pytest tests/test_run_qbox_apollo_fvp_full.py -q
 ```
 

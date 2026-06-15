@@ -54,7 +54,7 @@ T019E is complete. It added `rse_sysctrl` and removed the previous
 3. Verification/documentation lane:
    - Keep file-backed evidence under `build/qbox-fvp-rd-aspen/`.
    - Run focused checks only:
-     - `python3 -m py_compile scripts/run_qbox_fvp_rd_aspen_rse.py`
+     - `python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py`
      - `luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
      - `git -C tools/qbox diff --check`
      - relevant `cmake --build tools/qbox/build --target ...`

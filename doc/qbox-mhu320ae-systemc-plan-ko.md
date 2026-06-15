@@ -65,22 +65,22 @@ CL1 boot, Apollo full-system live CL0/CL1 boot가 통과했다.
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_apollo_fvp_full.py \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_fvp_rd_aspen_linux.py \
-  scripts/run_qbox_apollo_fvp_si_cl1.py \
-  scripts/validate_qbox_fvp_rd_aspen_map.py
+  scripts/run/run_qbox_apollo_fvp_full.py \
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+  scripts/run/run_qbox_apollo_fvp_si_cl1.py \
+  scripts/test/validate_qbox_fvp_rd_aspen_map.py
 
-bash -n run_qbox.sh scripts/run_qbox_apollo_fvp_full_tmux.sh
+bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 
-./scripts/validate_qbox_fvp_rd_aspen_map.py
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 
 cmake --build tools/qbox/build \
   --target mhu320ae mhu320ae-tests platforms-vp --parallel 8
 
 ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/mhu320ae-live-verify-$(date +%Y%m%d-%H%M%S)

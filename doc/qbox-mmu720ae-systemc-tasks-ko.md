@@ -46,10 +46,10 @@ Commands:
 ```bash
 git status --short
 git -C tools/qbox status --short
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-baseline-qemu
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 900 \
   --out-dir build/qbox-apollo-fvp/mmu720ae-baseline-full
 ```
@@ -291,13 +291,13 @@ Verification:
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_linux.py \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py \
-  scripts/validate_qbox_fvp_rd_aspen_map.py
+  scripts/run/run_qbox_fvp_rd_aspen_linux.py \
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py \
+  scripts/test/validate_qbox_fvp_rd_aspen_map.py
 cmake --build tools/qbox/build --target platforms-vp mmu720ae --parallel 8
 QBOX_RDASPEN_SMMU_BACKEND=systemc-mmu720ae \
-  python3 scripts/validate_qbox_fvp_rd_aspen_map.py
+  python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
 Review fail conditions:
@@ -310,7 +310,7 @@ Review fail conditions:
 Command:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_linux.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_linux.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 600 --post-login-probe \
   --out-dir build/qbox-fvp-rd-aspen/mmu720ae-systemc-direct
@@ -346,7 +346,7 @@ booted Linux post-login proof.
 Command:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --smmu-backend systemc-mmu720ae \
   --timeout 900 \
   --out-dir build/qbox-apollo-fvp/mmu720ae-systemc-full
@@ -387,12 +387,12 @@ Next debug target:
 
 Create:
 
-- `scripts/compare_fvp_qbox_smmu.py`
+- `scripts/analyze/compare_fvp_qbox_smmu.py`
 
 Command:
 
 ```bash
-python3 scripts/compare_fvp_qbox_smmu.py \
+python3 scripts/analyze/compare_fvp_qbox_smmu.py \
   --fvp build/local-apollo-fvp/fvp-boot/result.json \
   --qbox build/qbox-apollo-fvp/mmu720ae-systemc-full/result.json \
   --out build/qbox-apollo-fvp/mmu720ae-systemc-full/smmu-fvp-compare.json
@@ -444,11 +444,11 @@ Pass criteria:
 | V1 Build | `cmake --build tools/qbox/build --target mmu720ae --parallel 8` | Pass |
 | V2 Unit | `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` | Pass |
 | V3 Static | `git -C tools/qbox diff --check` | Pass |
-| V4 Map | `python3 scripts/validate_qbox_fvp_rd_aspen_map.py` | Pass for selected backend |
+| V4 Map | `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py` | Pass for selected backend |
 | V5 Direct Runtime | `run_qbox_fvp_rd_aspen_linux.py --smmu-backend systemc-mmu720ae --post-login-probe` | Login, SMMU probe, no driver enable failure |
 | V6 DMA/Fault | Synthetic SystemC and Linux post-login tests | Translation and negative fault behavior pass |
 | V7 Full Runtime | `run_qbox_apollo_fvp_full.py --smmu-backend systemc-mmu720ae` | Existing full-system markers preserved |
-| V8 FVP Compare | `scripts/compare_fvp_qbox_smmu.py` | No mandatory mismatch |
+| V8 FVP Compare | `scripts/analyze/compare_fvp_qbox_smmu.py` | No mandatory mismatch |
 | V9 Docs Closure | Updated roadmap/runbook/hardware docs | Backend status and gaps recorded |
 
 ## Implementation Review Checklist

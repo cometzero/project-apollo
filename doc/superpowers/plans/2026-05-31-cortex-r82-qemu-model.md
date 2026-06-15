@@ -23,7 +23,7 @@ separate integration step after the CPU model can be built and discovered.
 ## Implementation Steps
 
 1. Add a source probe and pytest coverage.
-   - Create `scripts/probe_qemu_cortex_r82.py`.
+   - Create `scripts/inspect/probe_qemu_cortex_r82.py`.
    - Verify QEMU CPU registration, EL2 MPU sysregs, 64-bit PMSAv8-R storage,
      and QBox wrapper registration.
    - Optionally verify `qemu-system-aarch64 -cpu help` when a binary path is
@@ -54,9 +54,9 @@ separate integration step after the CPU model can be built and discovered.
    - Register the new component in `cpu_arm/CMakeLists.txt`.
 
 6. Verify.
-   - Run `python3 -m py_compile scripts/probe_qemu_cortex_r82.py`.
+   - Run `python3 -m py_compile scripts/inspect/probe_qemu_cortex_r82.py`.
    - Run `pytest tests/test_probe_qemu_cortex_r82.py -q`.
-   - Run `scripts/probe_qemu_cortex_r82.py --source-root .`.
+   - Run `scripts/inspect/probe_qemu_cortex_r82.py --source-root .`.
    - Run `git -C tools/qemu diff --check` and
      `git -C tools/qbox diff --check`.
    - Build `cmake --build tools/qbox/build --target cpu_arm_cortexR82`.

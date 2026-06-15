@@ -38,7 +38,7 @@ prove Apollo FVP equivalence.
 
 Completion can be claimed only from the saved
 `build/qbox-apollo-fvp/full-live-cl0-cl1/` evidence directory after
-`scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final` writes a
+`scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final` writes a
 passing `final-verification.json`. The final JSON must show:
 
 - `completion_claim_allowed: true`
@@ -62,18 +62,18 @@ The design is based on the current workspace state:
 
 - `tools/qbox/platforms/apollo/apollo-pc.lua` is the current Apollo
   primary-compute direct-boot platform.
-- `scripts/run_qbox_apollo_fvp_linux.py` boots local `Image` and
+- `scripts/run/run_qbox_apollo_fvp_linux.py` boots local `Image` and
   `initramfs.cpio.gz` directly and bypasses RSE, TF-A, OP-TEE, and U-Boot.
 - `tools/qbox/platforms/apollo/hw-block/rse.lua` contains the Apollo-owned
   RSE-first topology imported from the existing RD-Aspen RSE platform: RSE
   Cortex-M55, AP firmware chain, AP reset release, AP/RSE/SI MHUv3 paths,
   AP-SI HIPC/RPMsg service-model hooks, PFDI monitor plumbing, and
   file-backed multi-console logs.
-- `scripts/run_qbox_fvp_rd_aspen_rse.py` already implements artifact
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py` already implements artifact
   preparation, per-run writable flash/OTP copies, flash decompression and
   padding, marker evaluation, post-login probes, FWU probes, and structured
   `result.json` output.
-- `scripts/probe_qemu_cortex_r82.py --source-root .` currently passes source
+- `scripts/inspect/probe_qemu_cortex_r82.py --source-root .` currently passes source
   probes for the QEMU Cortex-R82 CPU model, EL2 MPU sysregs, 64-bit PMSAv8
   storage, and the QBox `cpu_arm_cortexR82` wrapper.
 - `doc/arm_zena_css_dev_guide/`, `doc/arm-zena-css-hardware-blocks.md`, and
@@ -111,19 +111,19 @@ be compared without editing Lua.
 Keep the existing fast direct-boot path unchanged:
 
 ```text
-scripts/run_qbox_apollo_fvp_linux.py
-scripts/build_qbox_apollo_fvp_linux.sh
+scripts/run/run_qbox_apollo_fvp_linux.py
+scripts/build/build_qbox_apollo_fvp_linux.sh
 tools/qbox/platforms/apollo/apollo-pc.lua
 ```
 
 Add a separate full-system path:
 
 ```text
-scripts/run_qbox_apollo_fvp_full.py
-scripts/build_qbox_apollo_fvp_full.sh
-scripts/validate_qbox_apollo_fvp_full_map.py
-scripts/audit_qbox_apollo_fvp_full_coverage.py
-scripts/verify_qbox_apollo_fvp_full_completion.py
+scripts/run/run_qbox_apollo_fvp_full.py
+scripts/build/build_qbox_apollo_fvp_full.sh
+scripts/test/validate_qbox_apollo_fvp_full_map.py
+scripts/test/audit_qbox_apollo_fvp_full_coverage.py
+scripts/test/verify_qbox_apollo_fvp_full_completion.py
 tools/qbox/platforms/apollo/apollo-qvp.lua
 tools/qbox/platforms/apollo/hw-block/rse.lua
 tools/qbox/platforms/apollo/hw-block/ap_compute.lua
@@ -451,7 +451,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
   summary or references to sidecar JSON reports.
 
 `final-verification.json` is written by
-`scripts/verify_qbox_apollo_fvp_full_completion.py --strict-final`. It is the
+`scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`. It is the
 last gate before claiming completion and should record:
 
 - `goal_definition` and `completion_policy`, so the saved evidence states what
@@ -470,17 +470,17 @@ last gate before claiming completion and should record:
 Use narrow checks before full runtime:
 
 ```bash
-python3 scripts/probe_qemu_cortex_r82.py --source-root .
-python3 scripts/run_qbox_apollo_fvp_full.py --check-only
-python3 scripts/validate_qbox_apollo_fvp_full_map.py --check memory,irq,atu
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py --check hardware-blocks
+python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
+python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py --check memory,irq,atu
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --check hardware-blocks
 cmake --build tools/qbox/build --target cpu_arm_cortexR82 remote_cpu platforms-vp --parallel 8
 ```
 
 Runtime validation:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model \
   --timeout 900 \
   --post-login-probe \
@@ -490,12 +490,12 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 Live SI validation should start isolated, then integrate:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --timeout 600 \
   --out-dir build/qbox-apollo-fvp/full-live-cl1
 
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --timeout 1200 \
   --post-login-probe \
@@ -506,12 +506,12 @@ FVP comparison remains mandatory before claiming equivalence:
 
 ```bash
 ./local-build.sh boot
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
 
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```

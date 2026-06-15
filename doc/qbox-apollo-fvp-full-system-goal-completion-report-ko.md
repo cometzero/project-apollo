@@ -54,18 +54,18 @@ RSE TF-M
 실행한 주요 명령:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --skip-build \
   --out-dir build/qbox-apollo-fvp/full-check-only
 
-python3 scripts/probe_qemu_cortex_r82.py --source-root .
+python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
 
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-check-only/map-validation.json
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 
@@ -84,7 +84,7 @@ cmake --build tools/qbox/build \
 
 ### 2. G1 direct boot guardrail 재검증
 
-`scripts/run_qbox_apollo_fvp_linux.py` direct boot 경로가 여전히 Linux login과
+`scripts/run/run_qbox_apollo_fvp_linux.py` direct boot 경로가 여전히 Linux login과
 post-login probe를 통과하는지 확인했다. 첫 `--skip-build` 실행에서는 현재
 build tree에 `char_backend_stdio.so`가 없어서 platform load 전에 실패했다.
 이는 runtime 기능 문제가 아니라 필요한 QBox module 산출물이 없는 상태였다.
@@ -92,7 +92,7 @@ build tree에 `char_backend_stdio.so`가 없어서 platform load 전에 실패�
 이후 build를 포함해 다시 실행했다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --timeout 600 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/direct-guardrail
@@ -113,7 +113,7 @@ RSE-first AP boot path가 service-model Safety Island 구성에서 여전히 통
 확인했다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model \
   --skip-build \
   --timeout 1200 \
@@ -146,7 +146,7 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 FVP/QBox RSE log comparison도 통과했다.
 
 ```bash
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-service-model \
   --output build/qbox-apollo-fvp/full-service-model/comparison.json
@@ -158,7 +158,7 @@ CL0는 service-model로 유지하고, CL1 Zephyr를 live로 올리는 integratio
 milestone을 재확인했다.
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --skip-build \
   --timeout 1200 \
@@ -204,7 +204,7 @@ tree에 산출물이 없어서 발생한 문제였다. 반면 `reset_fanout`과 
 full-system live module은 runner의 `REQUIRED_TARGETS`에 없었다.
 
 `tools/qbox/platforms/apollo/apollo-qvp.lua`의 `moduletype` 목록과
-`scripts/run_qbox_fvp_rd_aspen_rse.py`의 `REQUIRED_TARGETS`를 대조했다.
+`scripts/run/run_qbox_fvp_rd_aspen_rse.py`의 `REQUIRED_TARGETS`를 대조했다.
 그 결과 live CL0/CL1에서 직접 로딩하는 다음 dynamic module들이 누락되어
 있음을 확인했다.
 
@@ -218,7 +218,7 @@ full-system live module은 runner의 `REQUIRED_TARGETS`에 없었다.
 수정 파일:
 
 ```text
-scripts/run_qbox_fvp_rd_aspen_rse.py
+scripts/run/run_qbox_fvp_rd_aspen_rse.py
 ```
 
 수정 내용:
@@ -232,8 +232,8 @@ scripts/run_qbox_fvp_rd_aspen_rse.py
 
 ```bash
 python3 -m py_compile \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/run_qbox_apollo_fvp_full.py
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/run_qbox_apollo_fvp_full.py
 
 cmake --build tools/qbox/build \
   --target gicx00_multiview host_cmn_cyprus \
@@ -244,7 +244,7 @@ cmake --build tools/qbox/build \
            host_system_pll reset_fanout \
   --parallel 8
 
-QBOX_APOLLO_FULL_JOBS=8 ./scripts/build_qbox_apollo_fvp_full.sh \
+QBOX_APOLLO_FULL_JOBS=8 ./scripts/build/build_qbox_apollo_fvp_full.sh \
   --si-mode live-cl0-cl1 \
   --out-dir build/qbox-apollo-fvp/full-build-only
 ```
@@ -252,7 +252,7 @@ QBOX_APOLLO_FULL_JOBS=8 ./scripts/build_qbox_apollo_fvp_full.sh \
 최종 G4 실행:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 1200 \
@@ -308,20 +308,20 @@ python3 scripts/run_qbox_apollo_fvp_full.py \
 G4 pass 후 canonical evidence directory에서 G5 산출물을 생성했다.
 
 ```bash
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-live-cl0-cl1 \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/comparison.json
 
-python3 scripts/validate_qbox_apollo_fvp_full_map.py \
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
   --check memory,irq,atu \
   --out build/qbox-apollo-fvp/full-live-cl0-cl1/map-comparison.json
 
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json build/qbox-apollo-fvp/full-live-cl0-cl1/result.json \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/coverage-audit.json
 
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --output build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
 ```
@@ -381,7 +381,7 @@ cef0fc00dd3f fix(qbox): build Apollo live modules
 
 커밋 내용:
 
-- `scripts/run_qbox_fvp_rd_aspen_rse.py`에 Apollo live full-system dynamic
+- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`에 Apollo live full-system dynamic
   module target 6개를 추가했다.
 - DCO sign-off 포함.
 - `origin/main`에 push 완료.

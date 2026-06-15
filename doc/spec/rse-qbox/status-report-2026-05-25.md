@@ -44,8 +44,8 @@ Implemented:
 - RSE-oriented platform configuration:
   `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
 - RSE runner and debug flow:
-  `scripts/run_qbox_fvp_rd_aspen_rse.py`
-  `scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py`
+  `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+  `scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`
 - File-backed per-console logs and `result.json` artifacts.
 - GDB bundle generation for QBox host, TF-M/RSE, AP TF-A/OP-TEE/U-Boot/Linux,
   Trusted Services SPs, SCP-Firmware symbols, and SI CL1 Zephyr symbols.
@@ -371,10 +371,10 @@ bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake t
 bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake trusted-firmware-m -c compile -f'
 bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake trusted-firmware-m -c deploy -f'
 bash -lc 'source layers/poky/oe-init-build-env build >/tmp/oe-env.log; bitbake firmware-fvp-rd-aspen -c deploy -f'
-timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-poll-fix-fvp-critical-20260526-v1
-timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-verify-fallback-fvp-critical-20260526-v1
-timeout 180s python3 scripts/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v1
-timeout 240s python3 scripts/runfvp_log_boot.py --timeout 150 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v2
+timeout 180s python3 scripts/run/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-poll-fix-fvp-critical-20260526-v1
+timeout 180s python3 scripts/run/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-verify-fallback-fvp-critical-20260526-v1
+timeout 180s python3 scripts/run/runfvp_log_boot.py --timeout 90 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v1
+timeout 240s python3 scripts/run/runfvp_log_boot.py --timeout 150 --require critical --no-login --runfvp-verbose --out-dir build/fvp-boot-logs/write-buffer-disabled-fvp-critical-20260526-v2
 ```
 
 ## Recommended Next Step

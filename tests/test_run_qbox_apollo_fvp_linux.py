@@ -4,7 +4,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/run_qbox_apollo_fvp_linux.py"
+SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
 
 
 def load_runner():

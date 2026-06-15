@@ -8,14 +8,14 @@ RD-Aspen RSE boot path with short, log-backed runs.
 Generate a debug bundle:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-YYYYMMDD-vN
 ```
 
 Generate the bundle and run short non-interactive probes:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-YYYYMMDD-vN \
   --launch \
   --host-sample
@@ -96,7 +96,7 @@ QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_AP_FLASH_DMI_RANGES='0x7000:0x240000' \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=6000 \
-timeout 280s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 280s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-ranged-dmi-efi-ps-trace-YYYYMMDD-vN \
   --launch \
   --sample-only \
@@ -146,7 +146,7 @@ QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_AP_FLASH_DMI_RANGES='0x7000:0x240000' \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=6000 \
-timeout 280s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 280s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-user-efi-current-20260525-v1 \
   --launch \
   --sample-only \
@@ -204,7 +204,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 120s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 120s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -244,7 +244,7 @@ QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-timeout 140s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 140s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 35 \
@@ -279,7 +279,7 @@ symbols in one bounded helper run:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-all-layer-short-20260525-v1 \
   --launch \
   --sample-only \
@@ -344,7 +344,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 360s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 360s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-marker '2023 bytes read' \
@@ -435,7 +435,7 @@ Command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 70s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 70s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-ap-firmware-probes-20260524-v1 \
   --launch \
   --sample-only \
@@ -467,7 +467,7 @@ Linux `ptrace_scope=1`, because the platform process is started by the runner.
 Use the runner-side host GDB wrapper instead:
 
 ```bash
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --timeout 900 \
   --out-dir build/qbox-fvp-rd-aspen/rse-host-gdb \
@@ -502,7 +502,7 @@ Artifact:
 Command:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-v8 \
   --launch \
   --runner-timeout 90 \
@@ -535,7 +535,7 @@ Artifact:
 Command:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-codex-final \
   --launch \
   --runner-timeout 60 \
@@ -567,7 +567,7 @@ Artifact:
 Command:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-short-codex-v3 \
   --runner-timeout 40 \
   --port-timeout 12 \
@@ -596,7 +596,7 @@ Artifact:
 Command:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-all-targets-v3 \
   --runner-timeout 45 \
   --port-timeout 12 \
@@ -646,7 +646,7 @@ QBOX_RDASPEN_RSE_LOCAL_BOOT_FLASH=true \
 QBOX_RDASPEN_ATU_DMI=false \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_HOST_MEMORY_DMI=false \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 4 \
@@ -707,7 +707,7 @@ QBOX_RDASPEN_HOST_MEMORY_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=false \
 QBOX_RDASPEN_LCM_TRACE=true \
 QBOX_RDASPEN_LCM_TRACE_LIMIT=140 \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -774,7 +774,7 @@ Artifact:
 Command:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-debug-20260524-user-short-v1 \
   --launch \
   --runner-timeout 35 \
@@ -900,7 +900,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_HOST_MEMORY_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=false \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -935,7 +935,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_HOST_MEMORY_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=false \
 QBOX_RDASPEN_RSE_VM_DMI=false \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -1016,7 +1016,7 @@ timeouts:
 
 ```bash
 QBOX_RDASPEN_RSE_VM_DMI=true \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -1076,7 +1076,7 @@ AP firmware snapshot command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 190s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 190s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-ap-pfdi-snapshot-20260524-v1 \
   --launch \
   --sample-only \
@@ -1128,7 +1128,7 @@ QBox host sample command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 90s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 90s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-qbox-host-sample-20260524-v1 \
   --launch \
   --sample-only \
@@ -1164,7 +1164,7 @@ Short all-target command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 135s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 135s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-all-target-short-20260524-v1 \
   --launch \
   --sample-only \
@@ -1211,7 +1211,7 @@ Linux tail command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 155s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 155s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-ap-linux-tail-20260524-v1 \
   --launch \
   --sample-only \
@@ -1255,7 +1255,7 @@ Command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 190s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 190s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-all-debug-20260524-v1 \
   --launch \
   --sample-only \
@@ -1355,7 +1355,7 @@ Fast post-fix probe command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-runtime-fast-after-cpu0secctrl-20260524-v1 \
   --launch \
   --sample-only \
@@ -1475,7 +1475,7 @@ Useful short commands:
 ```bash
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-core-init-trace-<run-id> \
   --launch \
   --sample-only \
@@ -1487,7 +1487,7 @@ timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
 
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-static-boundary-trace-<run-id> \
   --launch \
   --sample-only \
@@ -1545,7 +1545,7 @@ QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_TRACE=true \
 QBOX_RDASPEN_BOOT_FLASH_TRACE_LIMIT=2000 \
-timeout 160s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 160s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-ps-init-trace-no-bootflash-dmi-20260524-v1 \
   --launch \
   --sample-only \
@@ -1614,12 +1614,12 @@ erase while preserving the default NOR bit-clear behavior for other users.
 The focused component test and platform validation commands were:
 
 ```bash
-python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py
+python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py
 luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
 cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4
 ctest --test-dir tools/qbox/build -R strata_flash_j3 --output-on-failure
 git -C tools/qbox diff --check
-./scripts/validate_qbox_fvp_rd_aspen_map.py
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 cmake --build tools/qbox/build --target platforms-vp --parallel 4
 ```
 
@@ -1647,7 +1647,7 @@ SI CL1 symbols with short timeouts:
 ```bash
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 190s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 190s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-all-targets-linux-sample-20260524-v1 \
   --launch \
   --sample-only \
@@ -1757,10 +1757,10 @@ Validation:
 
 ```bash
 luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
-python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py
+python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py
 git -C tools/qbox diff --check
 cmake --build tools/qbox/build --target platforms-vp --parallel 4
-./scripts/validate_qbox_fvp_rd_aspen_map.py
+./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
 The post-fix GDB bundle no longer hits the NS mailbox fault handler. The
@@ -1827,7 +1827,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 120s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 120s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -1869,7 +1869,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 90s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 90s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --host-sample \
@@ -1924,7 +1924,7 @@ Storage-unsafe comparison command:
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
-timeout 160s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 160s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-all-debug-20260525-v1 \
   --launch \
   --sample-only \
@@ -1972,7 +1972,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 160s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 160s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-storage-safe-20260525-v1 \
   --launch \
   --sample-only \
@@ -2006,7 +2006,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 210s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 210s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-storage-safe-linux-tail-20260525-v1 \
   --launch \
   --sample-only \
@@ -2068,7 +2068,7 @@ QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=16000 \
-timeout 340s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 340s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-login-keepalive-all-targets-20260525-v1 \
   --launch \
   --sample-only \
@@ -2120,7 +2120,7 @@ QBOX_RDASPEN_ENABLE_AP_CPUS=true \
 QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
-timeout 120s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 120s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --ignore-fail-patterns \
@@ -2173,7 +2173,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-timeout 250s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 250s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --tfm-fwu-query-trace \
   --secure-service-probe \
@@ -2221,7 +2221,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 25 \
@@ -2278,7 +2278,7 @@ QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=8000 \
-timeout 210s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 210s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --out-dir build/qbox-fvp-rd-aspen/gdb-t061-after-mhu-pair-fix-20260525-v1 \
@@ -2338,7 +2338,7 @@ QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=36000 \
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --out-dir build/qbox-fvp-rd-aspen/gdb-t061-db-enroll-marker-20260525-v1 \
@@ -2384,7 +2384,7 @@ QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=42000 \
-timeout 400s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 400s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --out-dir build/qbox-fvp-rd-aspen/gdb-t061-db-enroll-marker-postdelay-20260525-v1 \
@@ -2439,7 +2439,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-python3 scripts/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --timeout 480 \
   --fwu-probe \
@@ -2466,7 +2466,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 80 \
@@ -2505,7 +2505,7 @@ The setup-only helper generated source-mapped scripts for QBox host, TF-M/RSE,
 AP TF-A/OP-TEE/U-Boot/Linux, SCP-Firmware, and SI CL1 Zephyr:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-current-setup-20260525-v1
 ```
 
@@ -2521,7 +2521,7 @@ QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2223-:22 \
-timeout 160s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 160s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 65 \
@@ -2564,7 +2564,7 @@ QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2223-:22 \
-timeout 330s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 330s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-marker 'Linux version' \
@@ -2617,7 +2617,7 @@ The FWU run used a bounded trace around the capsule-copy and reboot path:
 ```bash
 QBOX_RDASPEN_MHU_TRACE=false \
 QBOX_RDASPEN_NETDEV=type=user,hostfwd=tcp::2236-:22 \
-timeout 760s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 760s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-fwu-start-trace-20260525-v1 \
   --launch \
   --sample-only \
@@ -2660,7 +2660,7 @@ A separate short host-GDB sample was taken to prove QBox/SystemC host
 debugging without waiting for the full FWU flow:
 
 ```bash
-timeout 150s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 150s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-qbox-host-sample-20260525-v1 \
   --launch \
   --sample-only \
@@ -2704,7 +2704,7 @@ QBOX_RDASPEN_ATU_DMI=true \
 QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_HOST_MEMORY_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=false \
-timeout 300s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 300s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-marker "Booting bootflow 'virtio-blk#1.bootdev.part_1' with script" \
@@ -2779,7 +2779,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-timeout 105s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 105s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --launch \
   --sample-only \
   --sample-delay 35 \
@@ -2840,7 +2840,7 @@ QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
 QBOX_RDASPEN_MHU_TRACE=true \
 QBOX_RDASPEN_MHU_TRACE_LIMIT=6000 \
-timeout 280s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 280s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-efi-after-dmi-inval-20260525-v1 \
   --launch \
   --sample-only \
@@ -2990,7 +2990,7 @@ After rebuilding `platforms-vp` from the current QBox tree, the short
 file-backed GDB run used:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-efi-marker-current-rebuilt-20260525-v3 \
   --launch \
   --runner-timeout 140 \
@@ -3046,7 +3046,7 @@ Artifacts:
 The current rebuilt QBox binary was then rerun with the storage-safe fast path:
 
 ```bash
-python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-current-20260525-v1 \
   --launch \
   --runner-timeout 160 \
@@ -3142,9 +3142,9 @@ git -C tools/qbox diff --check -- \
   tests/components/strata_flash_j3/strata_flash_j3-tests.cc
 luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
 python3 -m py_compile \
-  scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
-  scripts/run_qbox_fvp_rd_aspen_rse.py \
-  scripts/analyze_qbox_mhu_trace.py
+  scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/analyze/analyze_qbox_mhu_trace.py
 timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8
 timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure
 timeout 180s cmake --build tools/qbox/build --target platforms-vp --parallel 8
@@ -3159,7 +3159,7 @@ program path no longer touches the backing file.
 The short runtime check used the reusable range-limited DMI GDB path:
 
 ```bash
-timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-noop-current-20260525-v1 \
   --launch \
   --runner-timeout 145 \
@@ -3201,7 +3201,7 @@ nor_byte_program()
 nor_send_cmd_byte()
 ```
 
-`scripts/analyze_qbox_mhu_trace.py` generated
+`scripts/analyze/analyze_qbox_mhu_trace.py` generated
 `mhu-summary.txt` and reported 21 AP-to-RSE channel-1 requests, 20 matched
 responses, and one in-flight request at the sample. The analyzer returns
 non-zero for this incomplete in-flight pair, but the latest matched responses
@@ -3231,13 +3231,13 @@ sector erases, and backing-file writeback.
 Focused validation:
 
 ```bash
-python3 -m py_compile scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run_qbox_fvp_rd_aspen_rse.py scripts/analyze_qbox_mhu_trace.py
+python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/analyze/analyze_qbox_mhu_trace.py
 luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
 rg -n '[ \t]+$' \
   tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h \
   tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc \
   tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua \
-  scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py
+  scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py
 git -C tools/qbox diff --check
 timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8
 timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure
@@ -3252,7 +3252,7 @@ for some platform knobs and exposes those settings as globals. The corrected
 Runtime command:
 
 ```bash
-timeout 180s python3 scripts/debug_qbox_fvp_rd_aspen_rse_gdb.py \
+timeout 180s python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   --out-dir build/qbox-fvp-rd-aspen/gdb-linux-marker-range-dmi-flash-stats-20260525-v1 \
   --launch \
   --runner-timeout 145 \
@@ -3315,7 +3315,7 @@ route.
 Fresh FVP reference command:
 
 ```bash
-timeout 240s scripts/runfvp_log_boot.py \
+timeout 240s scripts/run/runfvp_log_boot.py \
   --runfvp-verbose \
   --timeout 180 \
   --require critical \

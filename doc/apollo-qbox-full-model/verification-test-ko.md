@@ -26,7 +26,7 @@ build/qbox-apollo-fvp/<run-id>/
 | V0 Static | 문법, whitespace, markdown placeholder 검사 | `git diff --check`, `rg` |
 | V1 Component | SystemC model 단위 semantics 검증 | `ctest -R 'zena_fmu|zena_ssu'` |
 | V2 Platform | Lua wiring, map, coverage 검증 | map/coverage scripts |
-| V3 Runtime | Apollo full-system live boot regression | `scripts/run_qbox_apollo_fvp_full.py` |
+| V3 Runtime | Apollo full-system live boot regression | `scripts/run/run_qbox_apollo_fvp_full.py` |
 | V4 Negative | fault/access-control/error path 검증 | component tests + fault injection run |
 | V5 FVP Compare | FVP/QBox marker와 gap 비교 | compare/verifier scripts |
 
@@ -37,8 +37,8 @@ Commands:
 ```bash
 git diff --check
 git -C tools/qbox diff --check
-python3 -m py_compile scripts/audit_qbox_apollo_fvp_full_coverage.py \
-  scripts/verify_qbox_apollo_fvp_full_completion.py
+python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
+  scripts/test/verify_qbox_apollo_fvp_full_completion.py
 python3 - <<'PY'
 from pathlib import Path
 
@@ -99,8 +99,8 @@ Commands:
 
 ```bash
 cmake --build tools/qbox/build --target platforms-vp --parallel 8
-python3 scripts/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/audit_qbox_apollo_fvp_full_coverage.py \
+python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-model-platform/coverage-audit.json
 ```
@@ -118,7 +118,7 @@ Pass criteria:
 Command:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 1200 \
   --post-login-probe \
   --si-mode live-cl0-cl1 \
@@ -153,7 +153,7 @@ Negative tests must prove the new models are not passive RAM.
 Recommended command shape after test runner support is added:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --timeout 1200 \
   --post-login-probe \
   --si-mode live-cl0-cl1 \
@@ -174,11 +174,11 @@ Commands:
 
 ```bash
 ./local-build.sh boot
-python3 scripts/compare_fvp_qbox_rse_logs.py \
+python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
   --fvp build/local-apollo-fvp/fvp-boot \
   --qbox build/qbox-apollo-fvp/full-model-runtime \
   --output build/qbox-apollo-fvp/full-model-runtime/comparison.json
-python3 scripts/verify_qbox_apollo_fvp_full_completion.py \
+python3 scripts/test/verify_qbox_apollo_fvp_full_completion.py \
   --strict-final \
   --run-dir build/qbox-apollo-fvp/full-model-runtime
 ```
@@ -194,12 +194,12 @@ Pass criteria:
 Run these before commit:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_linux.py \
+python3 scripts/run/run_qbox_apollo_fvp_linux.py \
   --skip-build \
   --timeout 600 \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-model-direct-guardrail
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
   --timeout 1200 \
   --post-login-probe \

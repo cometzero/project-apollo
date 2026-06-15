@@ -317,7 +317,7 @@ After the CPU smoke tests pass, wire live Safety Island execution into:
 
 ```text
 tools/qbox/platforms/apollo-fvp/full.lua
-scripts/run_qbox_apollo_fvp_full.py
+scripts/run/run_qbox_apollo_fvp_full.py
 ```
 
 Start with SI CL0 SCP-Firmware before SI CL1 Zephyr:
@@ -394,13 +394,13 @@ CPU model probes:
 
 ```bash
 tools/qbox/build/_deps/libqemu-build/qemu-prefix/bin/qemu-system-aarch64 -cpu help
-python3 scripts/probe_qemu_cortex_r82.py
+python3 scripts/inspect/probe_qemu_cortex_r82.py
 ```
 
 Apollo integration:
 
 ```bash
-python3 scripts/run_qbox_apollo_fvp_full.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-r82 \
   --timeout 900 \
   --out-dir build/qbox-apollo-fvp/full-live-r82

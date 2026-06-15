@@ -9,7 +9,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCRIPT_PATH="${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")"
 
 PYTHON_BIN="${PYTHON:-python3}"
@@ -43,7 +43,7 @@ RUNNER_ARGS_FILE="${RUNNER_ARGS_FILE:-}"
 usage()
 {
     cat <<EOF
-Usage: scripts/run_qbox_apollo_fvp_full_tmux.sh [options] [-- runner args]
+Usage: scripts/run/run_qbox_apollo_fvp_full_tmux.sh [options] [-- runner args]
 
 Run the Apollo FVP full-system QBox path in tmux and tail subsystem logs.
 
@@ -180,7 +180,7 @@ runner_command()
 
     _out=(
         "${PYTHON_BIN}"
-        "${ROOT_DIR}/scripts/run_qbox_apollo_fvp_full.py"
+        "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
         --conf "${QBOX_CONF}"
         --local-build-dir "${LOCAL_BUILD_DIR}"
         --si-mode "${SI_MODE}"

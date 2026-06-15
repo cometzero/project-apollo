@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-PROBE_PATH = Path(__file__).resolve().parents[1] / "scripts/probe_qemu_cortex_r82.py"
+PROBE_PATH = Path(__file__).resolve().parents[1] / "scripts/inspect/probe_qemu_cortex_r82.py"
 spec = importlib.util.spec_from_file_location("probe_qemu_cortex_r82", PROBE_PATH)
 assert spec is not None
 assert spec.loader is not None
@@ -22,7 +22,11 @@ def make_source_tree(root: Path) -> None:
     write(
         root / "tools/qemu/target/arm/tcg/cpu64.c",
         """
-        static void aarch64_cortex_r82_initfn(Object *obj) {}
+        static void aarch64_cortex_r82_initfn(Object *obj) {
+            SET_IDREG(isar, ID_AA64PFR0, 0x0000001000000222ull);
+            SET_IDREG(isar, ID_AA64ISAR0, 0x00211120);
+            SET_IDREG(isar, ID_ISAR0, 0x02101110);
+        }
         static const ARMCPUInfo aarch64_cpus[] = {
             { .name = "cortex-r82", .initfn = aarch64_cortex_r82_initfn },
         };
@@ -31,6 +35,13 @@ def make_source_tree(root: Path) -> None:
     write(
         root / "tools/qemu/target/arm/helper.c",
         """
+        if (cpu_isar_feature(aa64_sel2, cpu)) {}
+        static bool arm_is_v8r_el2_sel2(CPUARMState *env) { return true; }
+        static const ARMCPRegInfo vmsa_pmsa_cp_reginfo[] = {
+            { .name = "ESR_EL1" },
+        };
+        static const ARMCPRegInfo vmsa_cp_reginfo[] = {};
+        CNTHPS_CTL_EL2
         MPUIR_EL2 PRSELR_EL2 PRBAR_EL2 PRLAR_EL2
         """,
     )
@@ -63,7 +74,10 @@ def make_source_tree(root: Path) -> None:
         """
         class cpu_arm_cortexR82 : public QemuCpuArm {
             cpu_arm_cortexR82(sc_core::sc_module_name name, QemuInstance& inst)
-                : QemuCpuArm(name, inst, "cortex-r82-arm") {}
+                : QemuCpuArm(name, inst, "cortex-r82-arm") {
+                cpu.set_aarch64_mode(true);
+                if (!p_mp_affinity.is_default_value()) {}
+            }
         };
         """,
     )

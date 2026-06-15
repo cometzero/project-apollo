@@ -98,7 +98,7 @@ def shell_env_block(
 
 
 def workspace_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def timestamp() -> str:
@@ -2154,7 +2154,7 @@ def write_ap_secure_services_probe_script(
 def runner_command(root: Path, args: argparse.Namespace, run_dir: Path) -> list[str]:
     cmd = [
         "python3",
-        str(root / "scripts/run_qbox_fvp_rd_aspen_rse.py"),
+        str(root / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"),
         "--skip-build",
         "--timeout",
         str(args.runner_timeout),
@@ -2286,7 +2286,7 @@ def write_readme(
 
         ```bash
         {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
-        python3 scripts/run_qbox_fvp_rd_aspen_rse.py \\
+        python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
           --scp-strategy {args.scp_strategy} \\
@@ -2300,7 +2300,7 @@ def write_readme(
 
         ```bash
         {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
-        python3 scripts/run_qbox_fvp_rd_aspen_rse.py \\
+        python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
           --scp-strategy {args.scp_strategy} \\

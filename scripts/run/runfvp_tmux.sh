@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 TMUX_BIN="${TMUX_BIN:-tmux}"
 TMUX_SESSION="${FVP_TMUX_SESSION:-arm-auto-solutions}"

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 MACHINE="${MACHINE:-apollo-fvp}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-${MACHINE}}"
@@ -21,7 +21,7 @@ BREAKPOINTS=()
 usage()
 {
     cat <<EOF
-Usage: scripts/run_local_fvp_debug.sh [options] [-- extra FVP args]
+Usage: scripts/debug/run_local_fvp_debug.sh [options] [-- extra FVP args]
 
 Start local Apollo FVP in tmux with Iris debugging enabled. By default the
 model starts halted so an Iris-capable debugger can attach before boot.
@@ -39,10 +39,10 @@ Options:
   -h, --help              show this help
 
 Examples:
-  scripts/run_local_fvp_debug.sh --no-attach --iris-port 7100
-  scripts/run_local_fvp_debug.sh --no-attach --iris-port 7100 \\
+  scripts/debug/run_local_fvp_debug.sh --no-attach --iris-port 7100
+  scripts/debug/run_local_fvp_debug.sh --no-attach --iris-port 7100 \\
       --break tfm-bl1_1:Reset_Handler
-  scripts/local_debug_iris.py --port 7100 --break u-boot:board_init_f \\
+  scripts/debug/local_debug_iris.py --port 7100 --break u-boot:board_init_f \\
       --run --timeout 120
 EOF
 }
@@ -135,7 +135,7 @@ if ((${#BREAKPOINTS[@]} > 0)) && ((RUN_IMMEDIATELY)); then
 fi
 
 mkdir -p "${DEBUG_DIR}"
-python3 "${SCRIPT_DIR}/setup_local_debug_env.py" \
+python3 "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py" \
     --local-build-dir "${LOCAL_BUILD_DIR}" \
     --out-dir "${DEBUG_DIR}"
 
@@ -148,7 +148,7 @@ if ((NO_ATTACH)); then
     TMUX_ARGS+=("--no-attach")
 fi
 
-"${SCRIPT_DIR}/run_local_fvp_tmux.sh" \
+"${ROOT_DIR}/scripts/run/run_local_fvp_tmux.sh" \
     "${TMUX_ARGS[@]}" \
     -- "${FVP_DEBUG_ARGS[@]}" "${EXTRA_FVP_ARGS[@]}"
 
@@ -166,4 +166,4 @@ for bp in "${BREAKPOINTS[@]}"; do
 done
 IRIS_ARGS+=(--run --timeout "${BREAK_TIMEOUT}")
 
-python3 "${SCRIPT_DIR}/local_debug_iris.py" "${IRIS_ARGS[@]}"
+python3 "${ROOT_DIR}/scripts/debug/local_debug_iris.py" "${IRIS_ARGS[@]}"
