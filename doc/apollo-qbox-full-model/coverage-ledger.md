@@ -36,13 +36,32 @@
 AP/SI cluster AE/control, RoS/I/O/debug placeholder는 first wave에서
 분류만 고정하고, 구현은 decision record에 따라 후속 epic으로 분리한다.
 
+## AP 9.1.1 Map Coverage After T6-T10
+
+Apollo AP programmer model 9.1.1 coverage is tracked as a coverage ledger, not
+as a full FVP-equivalent model claim. T6-T10 closed the selected P1 gaps and
+left larger parity areas as explicit follow-up epics.
+
+| AP 9.1.1 row | QBox instance | 현재 분류 | 근거 / 후속 |
+| --- | --- | --- | --- |
+| High DRAM | `ram_1`, `host_ap_dram2` | `memory-backing` / `partial` | base moved to `0x08_8000_0000` / `0x880000000`; current backing remains 2 GiB, so it does not cover the full programmer-model high DRAM span |
+| AP SID | `ap_sid` | `covered` | `host_scr` profile at `0x1a4a0000..0x1a4affff`, bound into AP logical view |
+| AP secure timer frame | `ap_secure_timer_frame` | `accepted-placeholder` | `0x1a820000..0x1a82ffff` explicit `gs_memory` placeholder; not a full secure generic timer model |
+| RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` | `accepted-placeholder` | `0x5fff0000..0x5fffffff` explicit `gs_memory` placeholder; remote/local GIC message semantics deferred |
+| APP subsystem FMU | `ap_cl0_ni710ae_fmu..ap_cl3_ni710ae_fmu` | `partial_model` | `zena_fmu` covers firmware-derived NI-710AE cluster subwindows under `0x1d000000..0x1defffff`; aggregate/reserved tails are not modeled as a broad memory blob |
+
+Deferred parity epics: System NoC GPV, CMN GPV, PCIe memory and PCIe
+CTRL/PHY, debug memory map, memory-controller control, AP Memory Expansion,
+STM, and cluster-management ranges. These rows remain outside the T6-T10
+coverage closure and must not be described as full models.
+
 ## Primary Compute Standalone
 
 Source: `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
-| `ram_0`, `ram_1` | `gs_memory` | `memory-backing` | AP DRAM backing |
+| `ram_0`, `ram_1` | `gs_memory` | `memory-backing` | AP DRAM backing; `ram_1` high DRAM base is `0x880000000` |
 | `sram_0` | `gs_memory` | `memory-backing` | AP boot/scratch SRAM |
 | `si_cl1_rproc_rsctbl_0` | `gs_memory` | `memory-backing` | SI CL1 remoteproc resource table |
 | `si_cl1_vdev0vring0_0`, `si_cl1_vdev0vring1_0` | `gs_memory` | `memory-backing` | virtio/rpmsg vring backing |
@@ -108,10 +127,14 @@ Source: `tools/qbox/platforms/apollo/hw-block/rse.lua`
 | `host_ap_mhu_ns_shared_sram` | `gs_memory` | `memory-backing` | AP MHU non-secure shared SRAM |
 | `host_ap_bl2_header_sram` | `gs_memory` | `memory-backing` | AP BL2 header SRAM backing |
 | `host_ap_trusted_nvctr` | `gs_memory` | `accepted-placeholder` | trusted nvCounter register parity follow-up |
-| `host_ap_dram1`, `host_ap_dram2` | `gs_memory` | `memory-backing` | AP DRAM backing |
+| `host_ap_dram1`, `host_ap_dram2` | `gs_memory` | `memory-backing` | AP DRAM backing; `host_ap_dram2` high DRAM base is `0x880000000` |
 | `host_ap_ffa_mm_comm_buffer` | `gs_memory` | `memory-backing` | FF-A MM communication buffer |
 | `host_ap_spmc_sdram` | `gs_memory` | `memory-backing` | SPMC SDRAM backing |
-| `ap_secure_wdog` | `gs_memory` | `full-model-required` | secure watchdog control/refresh side effect 필요. MODEL-080 follow-up |
+| `ap_secure_wdog`, `ap_secure_wdog_refresh` | `gs_memory` | `full-model-required` | AP view `0x1a460000..0x1a46ffff` control frame and `0x1a470000..0x1a47ffff` refresh frame decode는 명시 placeholder로 보존한다. secure watchdog side effect, interrupt/reset 동작, access-control fidelity 필요. MODEL-080 follow-up |
+| `ap_sid` / AP SID | `host_scr` | `covered` | AP view `0x1a4a0000..0x1a4affff` System ID register profile |
+| `ap_secure_timer_frame` / AP secure timer frame | `gs_memory` | `accepted-placeholder` | AP view `0x1a820000..0x1a82ffff` explicit placeholder. secure generic timer side effect와 PPI 동작은 full model이 아니다 |
+| `ap_rgic2lgic_messreg` / `RGIC2LGIC_MESSREG` | `gs_memory` | `accepted-placeholder` | AP view `0x5fff0000..0x5fffffff` 64 KiB explicit placeholder. 현재 QBox는 GIC-720AE remote/local message-register semantics 또는 message side effect를 모델링하지 않는다. Full model은 GIC-720AE multiview/multichip message semantics에 연결해야 한다 |
+| `ap_cl0_ni710ae_fmu..ap_cl3_ni710ae_fmu` / APP subsystem FMU | `zena_fmu` | `partial_model` | AP view `0x1d000000..0x1defffff` 중 firmware-derived NI-710AE cluster FMU subwindow만 모델링한다. 남은 aggregate/reserved 영역은 broad `gs_memory` full coverage로 처리하지 않는다 |
 | `host_si_cl0_sram`, `host_si_cl1_sram` | `gs_memory` | `memory-backing` | host-visible SI SRAM backing |
 | `host_si_cl0_cub`, `host_si_cl1_cub` | `gs_memory` | `accepted-placeholder` | SI cluster utility bus coverage window |
 | `host_rse_si_ssram` | `gs_memory` | `memory-backing` | RSE/SI shared SRAM backing |

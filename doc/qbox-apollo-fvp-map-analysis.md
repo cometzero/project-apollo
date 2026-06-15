@@ -60,7 +60,7 @@ The important implementation consequence is that QBox must model views:
 | AP shared SRAM | Programmer model reserves `0x00000000..0x07ffffff`; current QBox RSE topology actively uses a boot/SDS/SCMI subset near `0x00000000`, AP BL2 at `0x00082000`, and BL2 header SRAM at `0x00100000`. | Keep the full reserved range in the map ledger, but validate the modeled subset and all shared-memory offsets used by TF-M, TF-A, SCP-firmware, and Linux. |
 | AP peripherals | UART `0x1a400000`, secure UART `0x1a410000`, watchdog `0x1a420000/0x1a430000`, secure watchdog `0x1a460000/0x1a470000`, system timers `0x1a810000..0x1a830000`, SID `0x1a4a0000`, FMU AP region `0x1d000000..0x1defffff`. | Full-system AP boot must use the FVP/RD-Aspen device tree map, not only the smaller direct-boot Apollo DTS. |
 | AP interrupt controller | AP GIC at `0x20800000`, redist at `0x20880000`, legacy aliases at `0x20000000` and `0x200c0000`; ITS is present in the direct DTS at `0x20840000`. | QBox needs active redistributor regions for `PC_CPUS_COUNT_DEFAULT=4` and must preserve aliases used by firmware. |
-| AP DRAM | Low DRAM starts at `0x80000000`; high DRAM is described separately by the programmer model and current QBox/FVP DTS evidence. | Treat high-memory placement as an artifact-validated value instead of hard-coding from one Lua file. |
+| AP DRAM | Low DRAM starts at `0x80000000`; AP 9.1.1 high DRAM starts at `0x08_8000_0000` / `0x880000000`. | QBox direct AP and full-system paths now use `0x880000000` for high DRAM with the current 2 GiB backing; keep placement artifact-validated instead of hard-coding from one Lua file. |
 | AP SMD access window | Programmer model exposes an AP window at `0x40000000..0x4fffffff`; current QBox RSE topology has an AP logical ATU window at `0x40000000` and a host AP ATU register block at system address `0x20000d0080000`. | This must be an ATU-backed translation, not a static memory alias. |
 | RSE local memory | ROM `0x11000000`, ITCM/DTCM aliases around `0x00000000/0x10000000/0x20000000/0x30000000`, VM0/VM1, boot flash at `0xb0000000`. | Boot from TF-M BL1_1 and preserve secure/non-secure alias behavior. |
 | RSE secure peripherals | RSE ATU `0x50150000`, MHU0 `0x50160000/0x50170000`, MHU2 `0x501a0000/0x501b0000`, CC3XX, DMA350, KMU, SAM, LCM, MPC, OTP wrapper, system control, and integration layer. | TF-M secure boot needs enough behavior for image authentication, flash/OTP access, MHU signaling, and ATU programming. |
@@ -69,6 +69,25 @@ The important implementation consequence is that QBox must model views:
 | Safety Island CL0 | SRAM at `0x120000000`; GIC view0 around `0x30000000`; UART `0x2a400000`; SSU `0x2a500000`; FMU0..4 `0x2a510000..0x2a550000`; timers `0x2a6f0000/0x2a720000`; MHU window `0x38000000`; RSE shared SRAM `0x40000000`; shared bank1 `0x48000000`. | Live CL0 SCP-firmware needs the CL0 local view and its SI ATW windows before it can own AP release, SCMI, PFDI monitor, FMU, and SSU flows. |
 | Safety Island CL1 | Zephyr sees CL1 SRAM at `0x140000000`, GIC at `0x30200000`, UART `0x2a410000`, PFDI MHU TX at `0x39200000`, HIPC MHU TX/RX at `0x39000000/0x39040000`, and SCMI/PFDI shared memory at `0x48000000`. | Live CL1 needs a separate GIC view and four Cortex-R82 CPUs for the Zephyr SMP path. |
 | Safety Island ATW | SCP-firmware defines ATW IO at `0x80000000`, ATW memory at `0xe0000000`, and windows for CMN, cluster utility, SMD expansion, SYSTOP PIK, SID, CSS timers, NI-710AE FMUs, AP GIC, AP shared SRAM, SMCF, and SMD SRAM. | Model SI ATU/ATW programming and target routing; this is required for CL0 to inspect AP/SMD state and manage platform services. |
+
+## AP 9.1.1 Coverage Status
+
+After T6-T10, Apollo QBox has explicit AP 9.1.1 coverage for the selected P1
+map gaps, but this is not full FVP-equivalent AP memory-map parity.
+
+| AP 9.1.1 row | Current QBox coverage | Status |
+| --- | --- | --- |
+| High DRAM | Direct `ram_1`, full-system `host_ap_dram2`, and direct DTS high-memory cells are migrated to `0x08_8000_0000` / `0x880000000` with 2 GiB backing. | `partial`, because the programmer-model high DRAM row is larger than the current QBox backing. |
+| AP SID | `ap_sid` uses `host_scr` at `0x1a4a0000..0x1a4affff` and is bound into the AP logical view. | `covered` for the SID register profile exposed by `host_scr`. |
+| AP secure watchdog control/refresh | `ap_secure_wdog` and `ap_secure_wdog_refresh` are separate 64 KiB `gs_memory` windows at `0x1a460000..0x1a46ffff` and `0x1a470000..0x1a47ffff`, both bound into the AP logical view. | `explicit_placeholder`; decode is preserved, but watchdog side effects, interrupt/reset behavior, and access-control fidelity remain deferred. |
+| AP secure timer frame | `ap_secure_timer_frame` is a narrow `gs_memory` window at `0x1a820000..0x1a82ffff`. | `explicit_placeholder`; it does not implement full secure generic timer side effects or interrupt behavior. |
+| RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` is a 64 KiB `gs_memory` window at `0x5fff0000..0x5fffffff`. | `explicit_placeholder`; remote/local GIC message-register semantics remain deferred. |
+| APP subsystem FMU | `ap_cl0_ni710ae_fmu..ap_cl3_ni710ae_fmu` use `zena_fmu` for firmware-derived NI-710AE cluster FMU subwindows under `0x1d000000..0x1defffff`. | `partial_model`; unimplemented aggregate/reserved space is not claimed as a full model. |
+
+Deferred parity epics remain for System NoC GPV, CMN GPV, PCIe memory and
+PCIe CTRL/PHY, debug memory map, memory-controller control, AP Memory
+Expansion, STM, and cluster-management ranges. Do not report these placeholders
+or gaps as FVP-equivalent full models.
 
 ## Normalized Interrupt Map
 
