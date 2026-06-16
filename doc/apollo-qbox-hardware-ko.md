@@ -146,7 +146,7 @@ OFF 상태로 남아 AP BL2가 실행되지 않는 문제를 막기 위한 필�
 | FVP 영역 | QBox instance | Module | 비고 |
 | --- | --- | --- | --- |
 | Low DRAM `0x80000000` | direct: `ram_0`, full: `host_ap_dram1` | `gs_memory` | local Image/rootfs 또는 AP firmware runtime memory |
-| High DRAM `0x08_8000_0000` / `0x880000000` | direct: `ram_1`, full: `host_ap_dram2` | `gs_memory` | AP 9.1.1 high DRAM base로 이동, 현재 QBox backing은 2 GiB |
+| High DRAM bank1 `0x200_0000_0000` / `0x20000000000` | direct: `ram_1`, full: `host_ap_dram2` | `gs_memory` | 현재 Arm Zena CSS FVP boot artifact와 맞춘 2 GiB backing. AP 9.1.1의 `0x08_8000_0000` row는 deferred parity로 추적 |
 | AP shared SRAM | `host_ap_shared_sram` | `gs_memory` | SDS, SCMI payload, reset syndrome seed |
 | AP SCMI shared memory | direct: `sram_0`, full: `host_ap_mhu_ns_shared_sram` | `gs_memory` | `0x00180000` 4 KiB |
 | SI CL1 remoteproc carveouts | direct: `si_cl1_rproc_rsctbl_0`, `si_cl1_vdev0vring*_0`, `si_cl1_vdev0buffer_0` | `gs_memory` | AP-visible HIPC reserved memory |
@@ -188,7 +188,7 @@ P1 범위를 정적으로 추적한다. 이는 full FVP-equivalent AP memory-map
 
 | AP 9.1.1 row | QBox 상태 | 비고 |
 | --- | --- | --- |
-| High DRAM | `ram_1`, `host_ap_dram2` | base를 `0x08_8000_0000` / `0x880000000`로 이동했다. DTS high-memory cells도 `<0x8 0x80000000 0x0 0x80000000>`로 맞춘다. |
+| High DRAM | `ram_1`, `host_ap_dram2` | 현재 FVP handoff와 맞춰 bank1 base를 `0x200_0000_0000` / `0x20000000000`로 둔다. DTS high-memory cells도 `<0x200 0x00000000 0x0 0x80000000>`로 맞춘다. AP 9.1.1의 `0x08_8000_0000` row는 full programmer-model parity 항목으로 남긴다. |
 | AP SID | `ap_sid` / `host_scr` | `0x1a4a0000..0x1a4affff` AP System ID register window를 AP logical view에 노출한다. |
 | AP secure watchdog control/refresh | `ap_secure_wdog`, `ap_secure_wdog_refresh` / `gs_memory` | `0x1a460000..0x1a46ffff`와 `0x1a470000..0x1a47ffff`를 각각 좁은 명시 placeholder로 AP logical view에 노출한다. watchdog side effect, interrupt/reset 동작, access-control fidelity는 후속 full model debt다. |
 | AP secure timer frame | `ap_secure_timer_frame` / `gs_memory` | `0x1a820000..0x1a82ffff` 명시 placeholder이다. secure generic timer의 side effect나 PPI 동작을 FVP-equivalent로 모델링한 것은 아니다. |

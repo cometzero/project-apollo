@@ -9,7 +9,7 @@ T15 범위에서는 Apollo QBox AP programmer model 9.1.1 gap 작업의 최종
 coverage gate는 현재 통과 상태다.
 
 이 리포트는 새 구현을 full FVP-equivalent model로 선언하지 않는다. AP
-SID는 `host_scr` 모델로 노출됐고, high DRAM은 AP 9.1.1 base로 이동했다.
+SID는 `host_scr` 모델로 노출됐고, high DRAM은 현재 FVP boot bank1 base로 되돌렸다.
 AP secure watchdog control/refresh, AP secure timer frame, RGIC2LGIC_MESSREG는
 명시적 `placeholder`이고, APP subsystem FMU는 firmware-derived NI-710AE cluster subwindow만
 `zena_fmu` partial model로 다룬다.
@@ -120,7 +120,7 @@ python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
 
 | AP 9.1.1 row | QBox instance / backing | 상태 | 주의 |
 | --- | --- | --- | --- |
-| High DRAM | direct `ram_1`, `host_ap_dram2` @ `0x880000000` | `partial` | 현재 Lua map은 `host_ap_dram2`를 `0x880000000`에만 둔다. backing은 2 GiB이므로 programmer model high DRAM 전체를 덮는다고 쓰면 안 된다. |
+| High DRAM | direct `ram_1`, `host_ap_dram2` @ `0x20000000000` | `partial` | 현재 Arm Zena CSS FVP boot artifact와 맞춘 2 GiB bank1 backing이다. AP 9.1.1의 `0x880000000` high DRAM row는 full programmer-model parity 항목으로 남긴다. |
 | AP SID | `ap_sid` / `host_scr` | `covered` | `0x1a4a0000..0x1a4affff` AP System ID register window가 AP logical view에 노출된다. |
 | AP secure watchdog control/refresh | `ap_secure_wdog`, `ap_secure_wdog_refresh` / `gs_memory` | `explicit_placeholder` | `0x1a460000..0x1a46ffff` control frame과 `0x1a470000..0x1a47ffff` refresh frame decode만 보존한다. watchdog side effect, interrupt/reset 동작, access-control fidelity는 full model debt다. |
 | AP secure timer frame | `ap_secure_timer_frame` / `gs_memory` | `explicit_placeholder` | `0x1a820000..0x1a82ffff` decode window만 보존한다. secure generic timer side effect 또는 PPI 동작의 full model이 아니다. |
@@ -135,13 +135,12 @@ T14 최종 통과 전에 두 문제가 해결됐다. 둘 다 현재 blocker가 �
   limit 문제는 구조 조정 뒤 사라졌다. 현재
   `build/qbox-apollo-fvp/ap-map-9-1-1/full-runtime/qbox-platform.log`에는
   `too many local variables` 또는 `local variable` 실패 marker가 없다.
-- Linux external abort: full-system 경로가 stale handoff address
-  `0x20000000000`을 계속 참조하면서 Linux synchronous external abort가
-  발생했다. 현재 `host_ap_dram2` Lua map은 `0x880000000`에만 유지하며,
-  `scripts/run/run_qbox_apollo_fvp_full.py`가 boot artifacts, `HW_CONFIG`, `FIP`,
-  AP flash의 high-DRAM handoff tuple을 `0x880000000`으로 patch/rebuild해서
-  해결한다. 현재 full-runtime 로그에는 `synchronous external abort`,
-  `Kernel panic`, `Internal error` marker가 없다.
+- Linux external abort: 이전에는 full-system 경로가 `0x20000000000`
+  handoff를 쓰는데 QBox backing이 `0x880000000`에만 있어 Linux
+  synchronous external abort가 발생했다. 현재는 `host_ap_dram2`와
+  direct `ram_1`을 FVP 현재 bank1인 `0x20000000000`에 다시 두고,
+  `scripts/run/run_qbox_apollo_fvp_full.py`의 high-DRAM handoff
+  patch/rebuild tweak을 제거했다.
 
 ## Placeholder와 Deferred Epics
 
@@ -159,7 +158,8 @@ Partial model:
 
 - APP subsystem FMU: `zena_fmu` 기반 AP CL0..CL3 NI-710AE FMU subwindow만
   모델링한다.
-- High DRAM: AP 9.1.1 base는 맞췄지만 현재 2 GiB backing이다.
+- High DRAM: 현재 FVP boot bank1인 `0x20000000000`에 2 GiB backing을 둔다.
+  AP 9.1.1 base `0x880000000`은 deferred programmer-model parity다.
 
 Deferred epics:
 

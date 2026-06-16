@@ -27,11 +27,11 @@ SI0_MMAP_REL_PATH: Final = (
     "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/"
     "apollo-fvp/si0_ramfw/include/si0_mmap.h"
 )
-EXPECTED_HIGH_DRAM_BASE: Final = 0x880000000
+EXPECTED_HIGH_DRAM_BASE: Final = 0x20000000000
 EXPECTED_HIGH_DRAM_SIZE: Final = 0x80000000
-LEGACY_FULL_SYSTEM_HIGH_DRAM_BASE: Final = 0x20000000000
-EXPECTED_HIGH_DRAM_DTS_CELLS: Final = "<0x8 0x80000000 0x0 0x80000000>"
-LEGACY_HIGH_DRAM_DTS_CELLS: Final = "<0x2 0x00000000 0x0 0x80000000>"
+AP_PROGRAMMER_MODEL_HIGH_DRAM_BASE: Final = 0x880000000
+EXPECTED_HIGH_DRAM_DTS_CELLS: Final = "<0x200 0x00000000 0x0 0x80000000>"
+AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS: Final = "<0x8 0x80000000 0x0 0x80000000>"
 FINAL_REQUIRED_CLASSIFICATIONS: Final[set[str]] = {
     "covered",
     "partial_model",
@@ -90,7 +90,8 @@ AP_FMU_IMPLEMENTATION_PLAN: Final[tuple[dict[str, str | int], ...]] = (
     },
 )
 T12_DOC_REQUIRED_CONCEPTS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
-    ("high_dram_0x08_8000_0000", ("0x08_8000_0000", "0x880000000")),
+    ("ap_programmer_model_high_dram_0x08_8000_0000", ("0x08_8000_0000", "0x880000000")),
+    ("fvp_high_dram_bank1_0x200_0000_0000", ("0x200_0000_0000", "0x20000000000")),
     ("ap_sid", ("AP SID",)),
     ("rgic2lgic_messreg", ("RGIC2LGIC_MESSREG", "RGIC2LGIC")),
     ("app_subsystem_fmu", ("APP subsystem FMU",)),
@@ -168,7 +169,7 @@ EXPECTED_ROWS: Final[tuple[MapRow, ...]] = (
     MapRow("SMMU+NI-710AE GPV + PCIe CTRL+PHY", 0x1C0000000, 0x60000000, "required_now"),
     MapRow("AP Memory Expansion 2", 0x600000000, 0x200000000, "deferred_epic"),
     MapRow("Debug Memory Map", 0x800000000, 0x080000000, "deferred_epic"),
-    MapRow("DRAM high", 0x880000000, 0x580000000, "required_now"),
+    MapRow("DRAM high", 0x880000000, 0x580000000, "deferred_epic"),
 )
 FAIL_IF_MISSING: Final[set[str]] = {
     "SID",
@@ -184,7 +185,7 @@ PARTIAL_MODEL_ROWS: Final[dict[str, str]] = {
     "System Management Domain Access Region": "QBox models the AP ATU translation aperture used by the current full-system path.",
     "DRAM low": "QBox backs the current bootable low DRAM extent and leaves the top carveout unbacked.",
     "SMMU+NI-710AE GPV + PCIe CTRL+PHY": "QBox models the AP SMMU subwindow; NI-710AE GPV and PCIe CTRL/PHY remain deferred.",
-    "DRAM high": "QBox backs the current 2 GiB high DRAM bank at the migrated AP 9.1.1 base.",
+    "DRAM high": "QBox backs the current FVP-compatible 2 GiB high DRAM bank at the multichip DRAM aperture base.",
 }
 WATCHED_OBJECTS: Final[set[str]] = {
     "host_ap_shared_sram",
@@ -736,48 +737,27 @@ def dts_cell_address(cells: str) -> int | None:
 
 
 def high_dram_value_check(
-    name: str, path: str, line: int | None, actual: int | None, legacy: int
+    name: str, path: str, line: int | None, actual: int | None
 ) -> dict[str, str | int | bool | None]:
-    migrated = actual == EXPECTED_HIGH_DRAM_BASE
-    issue = None if migrated else "legacy_high_dram_base" if actual == legacy else "unexpected_high_dram_base"
+    fvp_compatible = actual == EXPECTED_HIGH_DRAM_BASE
+    issue = (
+        None
+        if fvp_compatible
+        else "ap_programmer_model_high_dram_base"
+        if actual == AP_PROGRAMMER_MODEL_HIGH_DRAM_BASE
+        else "unexpected_high_dram_base"
+    )
     return {
         "name": name,
         "path": path,
         "line": line,
-        "passed": migrated,
+        "passed": fvp_compatible,
         "issue": issue,
         "current_value": hex_or_missing(actual),
         "expected_value": f"0x{EXPECTED_HIGH_DRAM_BASE:x}",
-        "legacy_value": f"0x{legacy:x}",
-        "migrated": migrated,
+        "ap_programmer_model_value": f"0x{AP_PROGRAMMER_MODEL_HIGH_DRAM_BASE:x}",
+        "fvp_compatible": fvp_compatible,
     }
-
-
-def stale_legacy_high_dram_sources(root: Path) -> list[dict[str, str | int | bool | None]]:
-    sources: list[dict[str, str | int | bool | None]] = []
-    path = "tools/qbox/platforms/apollo/hw-block/rse.lua"
-    text = read_text(root / path)
-    patterns = (
-        ("legacy_full_system_base_literal", r"\b0x20000000000\b"),
-        ("legacy_full_system_base_symbol", r"\bHOST_AP_DRAM2_LEGACY_FULL_SYSTEM_BASE\b"),
-        ("legacy_full_system_alias_name", r"\bfull_system_stale_dtb\b"),
-    )
-    for name, pattern in patterns:
-        for match in re.finditer(pattern, text):
-            sources.append(
-                {
-                    "name": name,
-                    "path": path,
-                    "line": line_for_offset(text, match.start()),
-                    "passed": False,
-                    "issue": "active_legacy_high_dram_source",
-                    "current_value": match.group(0),
-                    "expected_value": "absent",
-                    "legacy_value": f"0x{LEGACY_FULL_SYSTEM_HIGH_DRAM_BASE:x}",
-                    "migrated": False,
-                }
-            )
-    return sources
 
 
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
@@ -799,30 +779,28 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
             rse_path,
             None if rse_match is None else line_for_offset(rse, rse_match.start(1)),
             None if rse_match is None else int(rse_match.group(1), 0),
-            LEGACY_FULL_SYSTEM_HIGH_DRAM_BASE,
         ),
         high_dram_value_check(
             "direct_boot_ram_1_base",
             primary_path,
             None if primary_match is None else line_for_offset(primary, primary_match.start(1)),
             None if primary_match is None else int(primary_match.group(1), 0),
-            0x200000000,
         ),
         {
             "name": "direct_boot_dts_high_memory_cells",
             "path": dts_path,
             "line": None if dts_node is None or len(dts_cells) <= 1 else line_for_offset(dts, dts.find(dts_cells[1], dts_node.start("body"))),
             "passed": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,
-            "issue": None if dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS else "legacy_high_dram_dts_cells" if dts_high == LEGACY_HIGH_DRAM_DTS_CELLS else "unexpected_high_dram_dts_cells",
+            "issue": None if dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS else "ap_programmer_model_high_dram_dts_cells" if dts_high == AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS else "unexpected_high_dram_dts_cells",
             "current_value": hex_or_missing(dts_base),
             "current_cells": dts_high,
             "expected_value": f"0x{EXPECTED_HIGH_DRAM_BASE:x}",
             "expected_size": f"0x{EXPECTED_HIGH_DRAM_SIZE:x}",
             "expected_cells": EXPECTED_HIGH_DRAM_DTS_CELLS,
-            "legacy_cells": LEGACY_HIGH_DRAM_DTS_CELLS,
-            "migrated": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,
+            "ap_programmer_model_cells": AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS,
+            "fvp_compatible": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,
         },
-    ] + stale_legacy_high_dram_sources(root)
+    ]
 
 
 def strip_c_comments(text: str) -> str:

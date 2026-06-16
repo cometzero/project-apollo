@@ -44,7 +44,7 @@ left larger parity areas as explicit follow-up epics.
 
 | AP 9.1.1 row | QBox instance | 현재 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
-| High DRAM | `ram_1`, `host_ap_dram2` | `memory-backing` / `partial` | base moved to `0x08_8000_0000` / `0x880000000`; current backing remains 2 GiB, so it does not cover the full programmer-model high DRAM span |
+| High DRAM | `ram_1`, `host_ap_dram2` | `memory-backing` / `partial` | current FVP-compatible bank1 base is `0x200_0000_0000` / `0x20000000000` with 2 GiB backing; AP 9.1.1 `0x08_8000_0000` programmer-model parity remains deferred |
 | AP SID | `ap_sid` | `covered` | `host_scr` profile at `0x1a4a0000..0x1a4affff`, bound into AP logical view |
 | AP secure timer frame | `ap_secure_timer_frame` | `accepted-placeholder` | `0x1a820000..0x1a82ffff` explicit `gs_memory` placeholder; not a full secure generic timer model |
 | RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` | `accepted-placeholder` | `0x5fff0000..0x5fffffff` explicit `gs_memory` placeholder; remote/local GIC message semantics deferred |
@@ -61,7 +61,7 @@ Source: `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
-| `ram_0`, `ram_1` | `gs_memory` | `memory-backing` | AP DRAM backing; `ram_1` high DRAM base is `0x880000000` |
+| `ram_0`, `ram_1` | `gs_memory` | `memory-backing` | AP DRAM backing; `ram_1` high DRAM bank1 base is `0x20000000000` |
 | `sram_0` | `gs_memory` | `memory-backing` | AP boot/scratch SRAM |
 | `si_cl1_rproc_rsctbl_0` | `gs_memory` | `memory-backing` | SI CL1 remoteproc resource table |
 | `si_cl1_vdev0vring0_0`, `si_cl1_vdev0vring1_0` | `gs_memory` | `memory-backing` | virtio/rpmsg vring backing |
@@ -127,7 +127,7 @@ Source: `tools/qbox/platforms/apollo/hw-block/rse.lua`
 | `host_ap_mhu_ns_shared_sram` | `gs_memory` | `memory-backing` | AP MHU non-secure shared SRAM |
 | `host_ap_bl2_header_sram` | `gs_memory` | `memory-backing` | AP BL2 header SRAM backing |
 | `host_ap_trusted_nvctr` | `gs_memory` | `accepted-placeholder` | trusted nvCounter register parity follow-up |
-| `host_ap_dram1`, `host_ap_dram2` | `gs_memory` | `memory-backing` | AP DRAM backing; `host_ap_dram2` high DRAM base is `0x880000000` |
+| `host_ap_dram1`, `host_ap_dram2` | `gs_memory` | `memory-backing` | AP DRAM backing; `host_ap_dram2` high DRAM bank1 base is `0x20000000000` |
 | `host_ap_ffa_mm_comm_buffer` | `gs_memory` | `memory-backing` | FF-A MM communication buffer |
 | `host_ap_spmc_sdram` | `gs_memory` | `memory-backing` | SPMC SDRAM backing |
 | `ap_secure_wdog`, `ap_secure_wdog_refresh` | `gs_memory` | `full-model-required` | AP view `0x1a460000..0x1a46ffff` control frame and `0x1a470000..0x1a47ffff` refresh frame decode는 명시 placeholder로 보존한다. secure watchdog side effect, interrupt/reset 동작, access-control fidelity 필요. MODEL-080 follow-up |
