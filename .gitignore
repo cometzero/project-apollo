@@ -4,6 +4,7 @@
 __pycache__/
 *.py[cod]
 
+/.omo/
 /.omx/logs/
 /.omx/state/
 /.omx/reports/
