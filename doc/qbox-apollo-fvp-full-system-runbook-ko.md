@@ -199,10 +199,13 @@ SI CL1 remoteproc/RPMsg, `ethsi1`, DSU PMU evidence를 남긴다. 기존 direct-
 guardrail은 `build/qbox-apollo-fvp/direct-guardrail-20260605-004025/`에서
 `passed: true`로 확인했다.
 
-RSE boot time을 FVP에 가깝게 비교할 때는 RSE runner로 전달되는
-`--rse-fast-boot-aliases`를 함께 사용할 수 있다. full-system wrapper는
-알 수 없는 인자를 RSE runner로 forward하므로 별도 wrapper option 없이
-다음처럼 실행한다.
+RSE boot time을 FVP에 가깝게 비교하는 기본 fast path는 file-backed SRAM
+alias가 아니라 shared-memory SRAM DMI이다. 이 경로는 RSE runner에
+`--rse-fast-boot-sram-dmi`를 전달하고
+`QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY=true`를 설정해 SI CL0/CL1 SRAM,
+AP shared SRAM, AP BL2 header SRAM을 transferable DMI backing으로 연결한다.
+T10/T11 runtime 전까지 이 절의 명령은 선택된 기본 mode와 검증 절차를
+문서화한다. 최종 runtime pass나 wall-time 개선은 아직 여기서 주장하지 않는다.
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
@@ -213,21 +216,41 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
-  --rse-fast-boot-aliases \
+  --rse-fast-boot-sram-dmi \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1-fast-rse
 ```
 
-이 preset은 SI SRAM, AP BL2, RSE boot flash read-only window, AP FIP
-read-only window, RSE PS/ITS storage direct-MMIO fast path를 켠다. RSE 전체
-stub이나 secure boot success stub은 아니다. 다만 일부 storage access가
-QEMU-local fast path를 타므로 FWU, PS/ITS persistence, negative secure-boot,
-flash command-state fidelity 검증에는 preset을 끄고 기존 flash path를
-사용한다.
+이 기본 mode는 range-limited flash DMI, RSE storage direct fast path,
+ATU/host-memory/SI-SRAM DMI, RemotePass DMI cache, shared-memory SRAM backing을
+켠다. SRAM/AP-BL2 direct-file alias는 켜지 않는다. 성공한 check-only 또는
+runtime 결과에서는 child `result.json`의
+`rse_fast_boot_sram_dmi.enabled`, `host_sram_shared_memory`,
+`range_limited_flash_dmi`, `remotepass_dmi_cache`가 `true`이고,
+`rse_direct_file_aliases_summary.enabled`는 `false`여야 한다.
+`host_sram_backing`의 네 SRAM entry는 `mode: "shared_memory"`,
+`shared_memory: true`, `file_created: false`로 해석한다. DMI/profile counter는
+해당 fast path가 선택됐는지 확인하는 용도이며, profile overhead가 들어간
+run을 최종 wall-time 비교로 사용하지 않는다.
 
-RSE 부팅 시간 자체를 FVP와 비교하는 짧은 smoke에서는 full-system wrapper보다
-RSE runner를 직접 쓰는 편이 빠르다. 2026-06-08 기준 가장 빠른 QBox-side
-성능 조합은 qemu-native CC3XX backend, LMS verifier accelerator, fast boot
-alias preset이다.
+기본 mode에서 host SRAM `.bin` 파일이 생기면 regression이다.
+
+```bash
+find build/qbox-apollo-fvp/full-live-cl0-cl1-fast-rse -type f \( \
+  -name 'host-si-cl*-sram.bin' -o \
+  -name 'host-ap-*-sram.bin' \
+\) -print -quit
+```
+
+위 command는 아무것도 출력하지 않아야 한다.
+
+legacy file-backed SRAM alias는 명시적 debug/compatibility rollback 경로로만
+사용한다. top-level wrapper를 쓸 때는 다음처럼 legacy mode를 요청한다.
+
+```bash
+./run_qbox.sh --legacy-file-backed-sram
+```
+
+RSE runner를 직접 디버그할 때만 legacy preset을 명시적으로 전달한다.
 
 ```bash
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
@@ -238,15 +261,42 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --qbox-perf-profile \
   --timeout 90 \
   --ignore-fail-patterns \
+  --out-dir build/qbox-apollo-fvp/rse-legacy-file-backed-sram
+```
+
+이 legacy preset은 compatibility/debug를 위해 SI SRAM, AP BL2, RSE boot
+flash read-only window, AP FIP read-only window, RSE PS/ITS storage direct-MMIO
+fast path를 direct-file alias로 켠다. RSE 전체 stub이나 secure boot success
+stub은 아니다. FWU, PS/ITS persistence, negative secure-boot,
+flash command-state fidelity 검증에는 legacy preset을 끄고 shared-memory SRAM
+DMI 또는 기존 flash path를 사용한다.
+
+RSE 부팅 시간 자체를 FVP와 비교하는 짧은 smoke에서는 full-system wrapper보다
+RSE runner를 직접 쓰는 편이 빠르다. T8 기준 기본 QBox-side 성능 조합은
+qemu-native CC3XX backend, LMS verifier accelerator, shared-memory SRAM DMI
+fast path이다.
+
+```bash
+python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  --skip-build \
+  --cc3xx-qemu-native-backend \
+  --rse-lms-accel \
+  --rse-fast-boot-sram-dmi \
+  --qbox-perf-profile \
+  --timeout 90 \
+  --ignore-fail-patterns \
   --out-dir build/qbox-apollo-fvp/rse-fast-boot-perf
 ```
 
-현재 best evidence는
-`build/qbox-apollo-fvp/rse-step1-storage-direct-fastpath-20260608-1/`이며,
-`rse_bl1_1` -> `rse_first_image_slot`은 22.668초였다. 같은 기준의 FVP timed
-run은 `build/local-apollo-fvp/fvp-boot-timed-20260604/`의 4.818초다. 따라서
-현재 QBox RSE는 FVP 대비 약 4.7배 느리고, 다음 개선 목표는 15초 이하, 최종
-목표는 10초 이하로 잡는다.
+`build/qbox-apollo-fvp/rse-step1-storage-direct-fastpath-20260608-1/`은
+shared-memory SRAM DMI 이전의 historical/pre-SRAM-DMI baseline이며, legacy
+file-backed alias timing bundle로만 해석한다. 해당 run의 `rse_bl1_1` ->
+`rse_first_image_slot`은 22.668초였고, 같은 기준의 FVP timed run은
+`build/local-apollo-fvp/fvp-boot-timed-20260604/`의 4.818초였다. 이 값은 새
+기본 mode의 성공 또는 최종 wall-time 개선 증거가 아니다. shared-memory SRAM
+DMI 기본 조합의 최종 runtime pass와 wall-time evidence는 T10/T11에서 별도로
+생성한다. 따라서 현재 historical baseline 기준 QBox RSE는 FVP 대비 약 4.7배
+느렸고, 다음 개선 목표는 15초 이하, 최종 목표는 10초 이하로 잡는다.
 
 성능 비교에서는 `--rse-bl2-load-profile`과 `--qbox-perf-profile`을 끈다.
 두 옵션은 BL2 함수 hit/counter를 확인하는 분석용 hook이며, 최단 wall-time
@@ -289,7 +339,7 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
-  --rse-fast-boot-aliases \
+  --rse-fast-boot-sram-dmi \
   --rse-bl2-load-profile \
   --rse-bl2-boot-enc-accel \
   --rse-bl2-img-hash-accel \
@@ -300,8 +350,9 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --out-dir build/qbox-apollo-fvp/rse-fast-boot-bl2-image-accel
 ```
 
-`bootutil_img_hash` accelerator는 분할된 direct-file alias window를 4KB
-chunk로 읽는 fallback이 필요하다. 해당 fallback이 동작하면
+`bootutil_img_hash` accelerator는 shared-memory SRAM DMI를 우선 사용하고,
+legacy/debug direct-file alias mode에서만 분할된 alias window를 4KB chunk로
+읽는 fallback을 사용한다. 해당 fallback 또는 DMI path가 동작하면
 `qbox-perf-profile/rse-hotpath-profile.json`에서
 `bl2_img_hash_accel.hits > 0`과 `dmi_failures = 0`을 확인할 수 있다. 이
 accelerator는 hash/signature/security-counter flow를 보존하지만, 아직 최단
@@ -328,10 +379,12 @@ scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 
 기본 실행은 `live-cl0-cl1`, `--skip-build`, `--post-login-probe`,
 `--keep-running-after-pass`, `--rootfs-bootargs-profile none`, `--timeout 0`,
-`--range-limited-flash-dmi`를 사용한다. 따라서 Linux boot와 post-login
-probe가 끝나도 QBox target은
-자동 종료되지 않는다. 종료하려면 tmux에서 `F12`를 눌러 session을
-끝낸다. 실행하면 tmux session 안에 다음 pane이 생성된다.
+`--range-limited-flash-dmi`, `--rse-fast-boot-sram-dmi`를 사용한다. 이 기본
+path는 `QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY=true`로 shared-memory SRAM DMI를
+선택하며, legacy file-backed SRAM alias는 사용하지 않는다. 따라서 Linux
+boot와 post-login probe가 끝나도 QBox target은 자동 종료되지 않는다.
+종료하려면 tmux에서 `F12`를 눌러 session을 끝낸다. 실행하면 tmux session
+안에 다음 pane이 생성된다.
 
 qemu-native CC3XX backend를 화면 실행에 적용하려면 다음처럼 실행한다.
 
@@ -340,6 +393,13 @@ scripts/run/run_qbox_apollo_fvp_full_tmux.sh \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
   --cc3xx-qemu-native-backend
+```
+
+tmux 화면 실행에서 legacy file-backed SRAM alias rollback이 필요하면
+top-level wrapper의 compatibility option을 사용한다.
+
+```bash
+./run_qbox.sh --legacy-file-backed-sram
 ```
 
 | Pane | 로그 |

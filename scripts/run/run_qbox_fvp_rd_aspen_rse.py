@@ -82,6 +82,16 @@ QEMU_INITIATOR_PROFILE_DIR = "qemu-initiator"
 REMOTEPASS_PROFILE_DIR = "remotepass"
 CC3XX_PROFILE = "qemu-cc3xx-profile.json"
 RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
+SRAM_DMI_FORBIDDEN_ENV = (
+    "QBOX_RDASPEN_HOST_SI_CL0_SRAM_MAP_FILE",
+    "QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE",
+    "QBOX_RDASPEN_HOST_AP_SHARED_SRAM_MAP_FILE",
+    "QBOX_RDASPEN_HOST_AP_BL2_HEADER_SRAM_MAP_FILE",
+    "QBOX_RDASPEN_RSE_DIRECT_FILE_ALIASES",
+    "QBOX_RDASPEN_RSE_DIRECT_SI_SRAM_ALIAS",
+    "QBOX_RDASPEN_RSE_DIRECT_SI_SRAM_CODE_ALIAS_SIZE",
+)
+SRAM_DMI_SHM_PREFIXES = ("ra-si0-", "ra-si1-", "ra-aps-", "ra-aph-")
 RSE_CC3XX_BASE_S = 0x50154000
 RSE_HOTPATH_MEMCPY_DEFAULT = 0x11000488
 RSE_HOTPATH_MEMSET_DEFAULT = 0x11000448
@@ -155,6 +165,7 @@ PROGRESS_MARKERS = {
     "rse_bl2_validated": "BL2 image validated successfully",
     "rse_jump_bl2": "Jumping to BL2",
     "rse_image_4_loaded": "Image 4 loaded from the primary slot",
+    "rse_si_mbist": "BL2: SI MBIST happens here",
     "rse_image_3_loaded": "Image 3 loaded from the primary slot",
     "rse_image_2_loaded": "Image 2 loaded from the primary slot",
     "rse_image_0_loaded": "Image 0 loaded from the primary slot",
@@ -1333,7 +1344,9 @@ def clean_text(text: str) -> str:
     return ANSI_RE.sub("", text).replace("\r", "")
 
 
-def evaluate(logs: dict[str, str]) -> dict[str, object]:
+def evaluate(
+    logs: dict[str, str], *, rse_sram_dmi_smoke: bool = False
+) -> dict[str, object]:
     combined = clean_text("\n".join(logs.values()))
     marker_hits = {
         group: {marker: marker in combined for marker in markers}
@@ -1347,9 +1360,22 @@ def evaluate(logs: dict[str, str]) -> dict[str, object]:
         if group != "linux_boot"
         for hit in hits.values()
     )
-    passed = all_non_linux and linux_hit and not any(fail_hits.values())
+    rse_sram_dmi_smoke_hit = (
+        "BL2 image validated successfully" in combined
+        and "Jumping to BL2" in combined
+        and "Image 4 loaded from the primary slot" in combined
+        and "BL2: SI MBIST happens here" in combined
+    )
+    pass_mode = "full_system"
+    passed = all_non_linux and linux_hit
+    if rse_sram_dmi_smoke and rse_sram_dmi_smoke_hit:
+        passed = True
+        pass_mode = "rse_sram_dmi_smoke"
+    passed = passed and not any(fail_hits.values())
     return {
         "passed": passed,
+        "pass_mode": pass_mode if passed else "none",
+        "rse_sram_dmi_smoke_pass": rse_sram_dmi_smoke_hit,
         "marker_hits": marker_hits,
         "fail_patterns": fail_hits,
         "log_bytes": sum(len(text.encode("utf-8", errors="replace")) for text in logs.values()),
@@ -2250,6 +2276,127 @@ def rse_direct_file_aliases_for_args(
     return ";".join(spec for spec in specs if spec)
 
 
+def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]:
+    dmi_env = {
+        "QBOX_RDASPEN_ATU_DMI": "true" if args.range_limited_flash_dmi else "",
+        "QBOX_RDASPEN_HOST_MEMORY_DMI": "true" if args.range_limited_flash_dmi else "",
+        "QBOX_RDASPEN_HOST_SI_SRAM_DMI": (
+            "true" if args.rse_fast_boot_sram_dmi else ""
+        ),
+        "QBOX_RDASPEN_REMOTEPASS_DMI_CACHE": (
+            "true" if args.remotepass_dmi_cache else ""
+        ),
+        "QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY": (
+            "true" if args.rse_fast_boot_sram_dmi else ""
+        ),
+    }
+    forbidden_effective_env = {name: "" for name in SRAM_DMI_FORBIDDEN_ENV}
+    return {
+        "enabled": bool(args.rse_fast_boot_sram_dmi),
+        "host_sram_shared_memory": bool(args.rse_fast_boot_sram_dmi),
+        "range_limited_flash_dmi": bool(args.range_limited_flash_dmi),
+        "remotepass_dmi_cache": bool(args.remotepass_dmi_cache),
+        "legacy_fast_boot_aliases_blocked": bool(args.rse_fast_boot_sram_dmi),
+        "env": dmi_env,
+        "forbidden_ambient_env": forbidden_effective_env,
+    }
+
+
+def ap_fip_logical_aperture_result(args: argparse.Namespace) -> dict[str, object]:
+    enabled = bool(args.rse_fast_boot_sram_dmi and not args.rse_direct_ap_fip_alias)
+    return {
+        "enabled": enabled,
+        "mode": "sram_dmi_scoped_model_aperture" if enabled else "disabled",
+        "direct_file_alias": False,
+        "scope_plan": ".omo/plans/qemu-hotpath-scope-fileless-sram-dmi.md",
+        "fidelity_note": (
+            "Temporary modeled read-only RSE logical AP FIP aperture used only "
+            "with the SRAM-DMI no-direct full-system path; replacement is the "
+            "real AP flash/ATU/SystemC route."
+        )
+        if enabled
+        else "",
+    }
+
+
+def rse_direct_file_aliases_summary(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "enabled": bool(
+            args.rse_direct_si_sram_alias
+            or args.rse_direct_ap_bl2_alias
+            or args.rse_direct_rse_flash_alias
+            or args.rse_direct_ap_fip_alias
+            or args.rse_direct_file_aliases
+        ),
+        "fast_boot_aliases_preset": bool(args.rse_fast_boot_aliases),
+        "si_sram": bool(args.rse_direct_si_sram_alias),
+        "ap_bl2": bool(args.rse_direct_ap_bl2_alias),
+        "rse_boot_flash": bool(args.rse_direct_rse_flash_alias),
+        "ap_fip": bool(args.rse_direct_ap_fip_alias),
+        "raw_spec_present": bool(args.rse_direct_file_aliases),
+    }
+
+
+def host_sram_backing_entry(
+    *,
+    path: Path | None,
+    shared_memory: bool,
+    dmi_allow: bool,
+    size: int,
+) -> dict[str, object]:
+    file_created = bool(path is not None and path.exists())
+    if path is not None:
+        mode = "map_file"
+    elif shared_memory:
+        mode = "shared_memory"
+    elif size > 0:
+        mode = "allocated"
+    else:
+        mode = "not_present"
+    return {
+        "mode": mode,
+        "map_file": str(path) if path is not None else None,
+        "shared_memory": shared_memory,
+        "dmi_allow": dmi_allow,
+        "file_created": file_created,
+        "size": size,
+    }
+
+
+def host_sram_backing_result(
+    args: argparse.Namespace, runtime_artifacts: dict[str, Path]
+) -> dict[str, object]:
+    shared_memory = bool(args.rse_fast_boot_sram_dmi)
+    host_memory_dmi = bool(args.range_limited_flash_dmi)
+    host_si_sram_dmi = bool(args.rse_fast_boot_sram_dmi)
+    return {
+        "host_si_cl0_sram": host_sram_backing_entry(
+            path=runtime_artifacts.get("host_si_cl0_sram"),
+            shared_memory=shared_memory,
+            dmi_allow=host_si_sram_dmi,
+            size=HOST_SI_CL0_SRAM_WINDOW_SIZE,
+        ),
+        "host_si_cl1_sram": host_sram_backing_entry(
+            path=runtime_artifacts.get("host_si_cl1_sram"),
+            shared_memory=shared_memory,
+            dmi_allow=host_si_sram_dmi,
+            size=HOST_SI_CL1_SRAM_WINDOW_SIZE,
+        ),
+        "host_ap_shared_sram": host_sram_backing_entry(
+            path=runtime_artifacts.get("host_ap_shared_sram"),
+            shared_memory=shared_memory,
+            dmi_allow=host_memory_dmi,
+            size=HOST_AP_SHARED_SRAM_SIZE,
+        ),
+        "host_ap_bl2_header_sram": host_sram_backing_entry(
+            path=runtime_artifacts.get("host_ap_bl2_header_sram"),
+            shared_memory=shared_memory,
+            dmi_allow=host_memory_dmi,
+            size=HOST_AP_BL2_HEADER_SRAM_SIZE,
+        ),
+    }
+
+
 def default_bl2_map(root: Path) -> Path:
     return (
         root
@@ -2794,6 +2941,9 @@ def apply_primary_console_profile(args: argparse.Namespace) -> None:
 
 def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -> dict[str, str]:
     env = os.environ.copy()
+    if args.rse_fast_boot_sram_dmi:
+        for name in SRAM_DMI_FORBIDDEN_ENV:
+            env.pop(name, None)
     lib_paths = [
         root / "tools/qbox/build",
         root / "tools/qbox/build/_deps/libqemu-build/qemu-prefix/lib",
@@ -2855,6 +3005,9 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
     if args.range_limited_flash_dmi:
         env.update(RANGE_LIMITED_FLASH_DMI_DEFAULTS)
+    if args.rse_fast_boot_sram_dmi:
+        env["QBOX_RDASPEN_HOST_SI_SRAM_DMI"] = "true"
+        env["QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY"] = "true"
     if args.flash_stats:
         env["QBOX_RDASPEN_RSE_BOOT_FLASH_STATS_FILE"] = str(
             args.out_dir / RSE_STRATA_STATS
@@ -2914,6 +3067,8 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_RSE_HOTPATH_MAX_BYTES"] = str(
             args.rse_hotpath_max_bytes
         )
+        if args.rse_hotpath_tlm_fallback:
+            env["QBOX_RDASPEN_RSE_HOTPATH_TLM_FALLBACK"] = "true"
         if args.rse_hotpath_memcpy_addr is not None:
             env["QBOX_RDASPEN_RSE_HOTPATH_MEMCPY_ADDR"] = str(
                 args.rse_hotpath_memcpy_addr
@@ -3111,6 +3266,75 @@ def stop_process(proc: subprocess.Popen[bytes]) -> None:
         proc.wait(timeout=5)
 
 
+def qbox_runtime_processes() -> list[dict[str, object]]:
+    processes: list[dict[str, object]] = []
+    proc_root = Path("/proc")
+    if not proc_root.exists():
+        return processes
+    for entry in proc_root.iterdir():
+        if not entry.name.isdigit():
+            continue
+        cmdline_path = entry / "cmdline"
+        try:
+            raw = cmdline_path.read_bytes()
+        except (FileNotFoundError, PermissionError, ProcessLookupError):
+            continue
+        if not raw:
+            continue
+        parts = [part.decode("utf-8", errors="replace") for part in raw.split(b"\0") if part]
+        if not parts:
+            continue
+        executable = Path(parts[0]).name
+        if executable in {"platforms-vp", "remote_cpu"} or any(
+            "tools/qbox/build/platforms-vp" in part
+            or "tools/qbox/build/remote_cpu" in part
+            for part in parts
+        ):
+            processes.append({"pid": int(entry.name), "cmdline": parts})
+    return processes
+
+
+def cleanup_sram_dmi_shared_memory(phase: str) -> dict[str, object]:
+    result: dict[str, object] = {
+        "phase": phase,
+        "prefixes": list(SRAM_DMI_SHM_PREFIXES),
+        "safe": False,
+        "removed": [],
+        "remaining": [],
+        "skipped_live_processes": [],
+        "errors": [],
+    }
+    shm_root = Path("/dev/shm")
+    if not shm_root.exists():
+        result["safe"] = True
+        return result
+
+    live_processes = qbox_runtime_processes()
+    if live_processes:
+        result["skipped_live_processes"] = live_processes
+        return result
+
+    result["safe"] = True
+    for prefix in SRAM_DMI_SHM_PREFIXES:
+        for path in sorted(shm_root.glob(prefix + "*")):
+            try:
+                path.unlink()
+                cast_removed = result["removed"]
+                assert isinstance(cast_removed, list)
+                cast_removed.append(str(path))
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                cast_errors = result["errors"]
+                assert isinstance(cast_errors, list)
+                cast_errors.append(f"{path}: {exc}")
+    remaining: list[str] = []
+    for prefix in SRAM_DMI_SHM_PREFIXES:
+        remaining.extend(str(path) for path in sorted(shm_root.glob(prefix + "*")))
+    result["remaining"] = remaining
+    return result
+
+
 def write_primary_uart(fd: int, text: str) -> None:
     os.write(fd, text.encode("utf-8"))
 
@@ -3134,6 +3358,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "sent_login": False,
         "sent_probe": False,
         "complete": False,
+        "passed": False,
         "input_path": None,
         "actions": [],
         "login_attempts": 0,
@@ -3196,6 +3421,7 @@ def run_platform(
     float,
     dict[str, object],
     dict[str, dict[str, object]],
+    list[dict[str, object]],
 ]:
     out_dir = args.out_dir
     cmd = [
@@ -3228,6 +3454,10 @@ def run_platform(
     progress_marker_first_hits: dict[str, dict[str, object]] = {}
     platform_log = out_dir / PLATFORM_STDOUT_LOG
     platform_stdout = ""
+    rse_sram_dmi_smoke_pass_at: float | None = None
+    shared_memory_cleanup: list[dict[str, object]] = []
+    if args.rse_fast_boot_sram_dmi:
+        shared_memory_cleanup.append(cleanup_sram_dmi_shared_memory("before_run"))
 
     print(f"log: {platform_log}", flush=True)
     print("+ " + " ".join(cmd), flush=True)
@@ -3262,7 +3492,10 @@ def run_platform(
                     progress_marker_first_hits,
                     time.monotonic() - start,
                 )
-                status = evaluate(live_logs)
+                status = evaluate(
+                    live_logs,
+                    rse_sram_dmi_smoke=args.rse_sram_dmi_smoke,
+                )
                 probe_complete = bool(post_login_probe.get("complete"))
                 if (
                     args.post_login_probe
@@ -3271,11 +3504,32 @@ def run_platform(
                 ):
                     stop_process(proc)
                     break
-                if (
+                pass_condition_hit = (
                     status["passed"]
                     and (not args.post_login_probe or probe_complete)
                     and not args.keep_running_after_pass
-                ) or (
+                )
+                if pass_condition_hit:
+                    now = time.monotonic()
+                    if (
+                        args.rse_sram_dmi_smoke
+                        and args.rse_sram_dmi_smoke_grace_s > 0.0
+                    ):
+                        if rse_sram_dmi_smoke_pass_at is None:
+                            rse_sram_dmi_smoke_pass_at = now
+                        if (
+                            now - rse_sram_dmi_smoke_pass_at
+                            < args.rse_sram_dmi_smoke_grace_s
+                        ):
+                            if chunk:
+                                continue
+                            if proc.poll() is not None:
+                                break
+                            time.sleep(0.1)
+                            continue
+                    stop_process(proc)
+                    break
+                if (
                     any(status["fail_patterns"].values())
                     and not args.ignore_fail_patterns
                 ):
@@ -3297,6 +3551,10 @@ def run_platform(
         stop_process(proc)
         if primary_uart_fd is not None:
             os.close(primary_uart_fd)
+        if args.rse_fast_boot_sram_dmi and not interrupted:
+            shared_memory_cleanup.append(
+                cleanup_sram_dmi_shared_memory("after_run")
+            )
 
     for role, filename in CONSOLE_LOGS.items():
         path = out_dir / filename
@@ -3329,6 +3587,11 @@ def run_platform(
     fwu_complete = bool(probe_eval.get("fwu_probe", {}).get("complete"))
     if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
         post_login_probe["complete"] = True
+    post_login_probe["passed"] = bool(
+        args.post_login_probe
+        and post_login_probe.get("sent_probe")
+        and post_login_probe.get("complete")
+    )
     if args.post_login_probe:
         action_log = out_dir / "post-login-probe-actions.log"
         action_lines = [
@@ -3339,6 +3602,7 @@ def run_platform(
             f"sent_login: {post_login_probe['sent_login']}",
             f"sent_probe: {post_login_probe['sent_probe']}",
             f"complete: {post_login_probe['complete']}",
+            f"passed: {post_login_probe['passed']}",
             "actions:",
             *[f"  - {action}" for action in post_login_probe.get("actions", [])],
         ]
@@ -3352,6 +3616,7 @@ def run_platform(
         elapsed_s,
         post_login_probe,
         progress_marker_first_hits,
+        shared_memory_cleanup,
     )
 
 
@@ -3381,14 +3646,14 @@ def write_result(
     boot_enc_trace: dict[str, object] | None = None,
     post_login_probe: dict[str, object] | None = None,
     progress_marker_first_hits: dict[str, dict[str, object]] | None = None,
+    shared_memory_cleanup: list[dict[str, object]] | None = None,
 ) -> int:
     out_dir = args.out_dir
     runtime_artifacts = artifacts if runtime_artifacts is None else runtime_artifacts
-    status = evaluate(logs)
+    status = evaluate(logs, rse_sram_dmi_smoke=args.rse_sram_dmi_smoke)
     if blocker:
         status["passed"] = False
     rse_boot_started = any(status["marker_hits"]["rse_boot"].values())
-    rse_boot_complete = all(status["marker_hits"]["rse_boot"].values())
     rse_scp_complete = all(status["marker_hits"]["rse_scp_handoff"].values())
     ap_boot_started = bool(logs.get("secure_console", "").strip())
     ap_boot_label = (
@@ -3438,6 +3703,8 @@ def write_result(
             "scp_strategy": args.scp_strategy,
             "smmu_backend": args.smmu_backend,
             "range_limited_flash_dmi": args.range_limited_flash_dmi,
+            "rse_fast_boot_sram_dmi": rse_fast_boot_sram_dmi_result(args),
+            "ap_fip_logical_aperture": ap_fip_logical_aperture_result(args),
             "cc3xx_status_read_fastpath": {
                 "enabled": args.cc3xx_status_read_fastpath,
                 "entries": len(CC3XX_STATUS_READ_FASTPATH_VALUES)
@@ -3491,6 +3758,11 @@ def write_result(
                     if os.environ.get("QBOX_RDASPEN_ATU_DMI") == "true"
                     else "translation-model"
                 ),
+                "rse_ap_fip_visibility": (
+                    "temporary-sram-dmi-scoped-logical-aperture"
+                    if args.rse_fast_boot_sram_dmi and not args.rse_direct_ap_fip_alias
+                    else "atu-systemc-route"
+                ),
                 "mhuv3": "systemc-mhu320ae",
                 "rse_scp_endpoint": rse_scp_endpoint_label,
                 "rse_oriented_ap_boot": ap_boot_label,
@@ -3505,6 +3777,7 @@ def write_result(
             "host_si_cl0_sram": host_si_cl0_sram,
             "host_si_cl1_sram": host_si_cl1_sram,
             "host_ap_bl2_header_sram": host_ap_bl2_header_sram,
+            "host_sram_backing": host_sram_backing_result(args, runtime_artifacts),
             "console_logs": {
                 role: str((out_dir / filename).resolve())
                 for role, filename in CONSOLE_LOGS.items()
@@ -3522,6 +3795,12 @@ def write_result(
             "rse_hotpath_accel": {
                 "enabled": bool(args.rse_hotpath_accel),
                 "bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
+                "tlm_fallback": bool(args.rse_hotpath_tlm_fallback),
+                "tlm_fallback_scope_plan": (
+                    ".omo/plans/qemu-hotpath-scope-fileless-sram-dmi.md"
+                    if args.rse_hotpath_tlm_fallback
+                    else None
+                ),
                 "memcpy_addr": hex(rse_hotpath_memcpy_addr),
                 "memset_addr": hex(rse_hotpath_memset_addr),
                 "max_bytes": args.rse_hotpath_max_bytes,
@@ -3685,6 +3964,7 @@ def write_result(
                     "routing only for selected RAM-load image ranges"
                 ),
             },
+            "rse_direct_file_aliases_summary": rse_direct_file_aliases_summary(args),
             "rse_pc_trace": rse_pc_trace,
             "ap_pc_trace": ap_pc_trace,
             "boot_enc_trace": boot_enc_trace,
@@ -3695,12 +3975,14 @@ def write_result(
                 "secure_service_requested": bool(args.secure_service_probe),
                 "fwu_requested": bool(args.fwu_probe),
                 "complete": False,
+                "passed": False,
                 **evaluate_post_login_probe(
                     logs.get("primary_console", ""),
                     logs.get("secure_console", ""),
                     logs.get("rse", ""),
                 ),
             },
+            "shared_memory_cleanup": shared_memory_cleanup or [],
             "first_failing_register_access": first_fault,
             "blocker": blocker,
             "timed_out": timed_out,
@@ -4104,6 +4386,16 @@ def parse_args() -> argparse.Namespace:
             "debug sessions that need the target to remain attachable."
         ),
     )
+    parser.add_argument(
+        "--rse-sram-dmi-smoke-grace-s",
+        type=float,
+        default=5.0,
+        help=(
+            "Seconds to keep the platform running after the RSE SRAM-DMI smoke "
+            "marker before stopping, so remote hotpath profiles capture the "
+            "completed BL2 load/hash accelerator work."
+        ),
+    )
     parser.add_argument("--login-user", default="root")
     parser.add_argument("--primary-login-prompt", default="fvp-rd-aspen login:")
     parser.add_argument("--primary-shell-marker", default="root@fvp-rd-aspen")
@@ -4256,6 +4548,14 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Maximum byte count accepted by --rse-hotpath-accel for one "
             "semantic memcpy/memset operation."
+        ),
+    )
+    parser.add_argument(
+        "--rse-hotpath-tlm-fallback",
+        action="store_true",
+        help=(
+            "Explicitly allow counted TLM fallback for hotpath byte transfers "
+            "when full-span and chunked DMI are unavailable."
         ),
     )
     parser.add_argument(
@@ -4616,6 +4916,26 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--rse-fast-boot-sram-dmi",
+        action="store_true",
+        help=(
+            "Enable the RSE fast-boot SRAM DMI/shared-memory preset. This sets "
+            "range-limited flash DMI, host SI SRAM DMI/shared memory, RSE "
+            "storage direct fastpath, and RemotePass DMI cache without enabling "
+            "direct file-backed SRAM/AP-BL2 aliases."
+        ),
+    )
+    parser.add_argument(
+        "--rse-sram-dmi-smoke",
+        action="store_true",
+        help=(
+            "Allow the RSE SRAM-DMI smoke marker to satisfy the runner pass "
+            "condition. This is only for bounded RSE-focused smoke runs; "
+            "post-login, secure-service, and FWU probes must complete through "
+            "their normal full-system criteria."
+        ),
+    )
+    parser.add_argument(
         "--rse-storage-direct-fastpath",
         action="store_true",
         help=(
@@ -4702,6 +5022,21 @@ def parse_args() -> argparse.Namespace:
         args.pc_trace = True
     if args.secure_service_probe or args.fwu_probe:
         args.post_login_probe = True
+    if args.rse_sram_dmi_smoke:
+        conflicts = [
+            name
+            for name, enabled in (
+                ("--post-login-probe", args.post_login_probe),
+                ("--secure-service-probe", args.secure_service_probe),
+                ("--fwu-probe", args.fwu_probe),
+            )
+            if enabled
+        ]
+        if conflicts:
+            parser.error(
+                "--rse-sram-dmi-smoke cannot be used with "
+                + ", ".join(conflicts)
+            )
     if args.qemu_trace_filter or args.boot_enc_trace:
         args.qemu_trace = True
     if args.flash_stats and args.flash_stats_interval <= 0:
@@ -4764,6 +5099,34 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-direct-si-sram-code-alias-size must be non-negative")
     if args.rse_direct_ap_bl2_code_alias_size < 0:
         parser.error("--rse-direct-ap-bl2-code-alias-size must be non-negative")
+    if args.rse_fast_boot_sram_dmi:
+        conflicts = [
+            name
+            for name, enabled in (
+                ("--rse-fast-boot-aliases", args.rse_fast_boot_aliases),
+                ("--rse-direct-si-sram-alias", args.rse_direct_si_sram_alias),
+                ("--rse-direct-ap-bl2-alias", args.rse_direct_ap_bl2_alias),
+                ("--rse-direct-file-aliases", bool(args.rse_direct_file_aliases)),
+            )
+            if enabled
+        ]
+        if conflicts:
+            parser.error(
+                "--rse-fast-boot-sram-dmi cannot be used with "
+                + ", ".join(conflicts)
+            )
+        ambient_conflicts = [
+            name for name in SRAM_DMI_FORBIDDEN_ENV if os.environ.get(name)
+        ]
+        if ambient_conflicts:
+            parser.error(
+                "--rse-fast-boot-sram-dmi forbids ambient direct-alias/map-file "
+                "environment overrides: "
+                + ", ".join(ambient_conflicts)
+            )
+        args.range_limited_flash_dmi = True
+        args.rse_storage_direct_fastpath = True
+        args.remotepass_dmi_cache = True
     if args.rse_fast_boot_aliases:
         args.rse_direct_si_sram_alias = True
         args.rse_direct_ap_bl2_alias = True
@@ -4902,16 +5265,17 @@ def main() -> int:
         run_artifacts["rse_cc3xx_stats"] = args.out_dir / RSE_CC3XX_STATS
     if args.qbox_perf_profile:
         run_artifacts["qbox_perf_profile"] = args.out_dir / QBOX_PERF_PROFILE_DIR
-    host_si_cl0_sram_path = prepare_sparse_file(
-        args.out_dir / "host-si-cl0-sram.bin",
-        HOST_SI_CL0_SRAM_WINDOW_SIZE,
-    )
-    run_artifacts["host_si_cl0_sram"] = host_si_cl0_sram_path
-    host_si_cl1_sram_path = prepare_sparse_file(
-        args.out_dir / "host-si-cl1-sram.bin",
-        HOST_SI_CL1_SRAM_WINDOW_SIZE,
-    )
-    run_artifacts["host_si_cl1_sram"] = host_si_cl1_sram_path
+    if args.rse_direct_si_sram_alias:
+        host_si_cl0_sram_path = prepare_sparse_file(
+            args.out_dir / "host-si-cl0-sram.bin",
+            HOST_SI_CL0_SRAM_WINDOW_SIZE,
+        )
+        run_artifacts["host_si_cl0_sram"] = host_si_cl0_sram_path
+        host_si_cl1_sram_path = prepare_sparse_file(
+            args.out_dir / "host-si-cl1-sram.bin",
+            HOST_SI_CL1_SRAM_WINDOW_SIZE,
+        )
+        run_artifacts["host_si_cl1_sram"] = host_si_cl1_sram_path
     if args.rse_direct_ap_bl2_alias:
         run_artifacts["host_ap_shared_sram"] = prepare_sparse_file(
             args.out_dir / "host-ap-shared-sram.bin",
@@ -5066,6 +5430,7 @@ def main() -> int:
         runtime_elapsed_s,
         post_login_probe,
         progress_marker_first_hits,
+        shared_memory_cleanup,
     ) = run_platform(
         root, args, run_artifacts
     )
@@ -5085,7 +5450,7 @@ def main() -> int:
     first_fault = parse_qemu_trace(args.out_dir, qemu_trace_enabled(args))
     if first_fault is None:
         first_fault = parse_platform_translation_error(args.out_dir)
-    current_status = evaluate(logs)
+    current_status = evaluate(logs, rse_sram_dmi_smoke=args.rse_sram_dmi_smoke)
     known_runtime_blocker = classify_known_runtime_blocker(logs)
     pc_trace_blocker = classify_pc_trace_blocker(root, rse_pc_trace, timed_out)
     boot_enc_trace_blocker = classify_boot_enc_trace_blocker(logs, boot_enc_trace)
@@ -5192,6 +5557,7 @@ def main() -> int:
         boot_enc_trace=boot_enc_trace,
         post_login_probe=post_login_probe,
         progress_marker_first_hits=progress_marker_first_hits,
+        shared_memory_cleanup=shared_memory_cleanup,
     )
 
 

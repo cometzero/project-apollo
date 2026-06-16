@@ -24,6 +24,7 @@ TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
 QBOX_PERFORMANCE_PRESET="${QBOX_PERFORMANCE_PRESET:-1}"
+LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-1}"
 CC3XX_STATS="${CC3XX_STATS:-0}"
 CC3XX_STATS_INTERVAL="${CC3XX_STATS_INTERVAL:-1024}"
@@ -66,9 +67,13 @@ Options:
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
   --qbox-performance-preset
-                       enable default QBox boot acceleration preset (default)
+                       enable default QBox boot acceleration preset (default;
+                       uses SRAM DMI/shared-memory fast boot)
   --no-qbox-performance-preset
                        disable default QBox boot acceleration preset
+  --legacy-file-backed-sram
+                       use legacy direct file-backed SRAM aliases instead of
+                       the default SRAM DMI/shared-memory fast boot preset
   --range-limited-flash-dmi
                        enable range-limited flash DMI fast path (default)
   --no-range-limited-flash-dmi
@@ -92,14 +97,16 @@ Options:
 
 The default performance preset is expanded by the Python runner into the
 RemotePass DMI cache, QEMU-native CC3XX backend, RSE hotpaths, BL2 semantic
-accelerators, and RSE fast-boot aliases.
+accelerators, and RSE fast-boot SRAM DMI/shared-memory mode. Use
+--legacy-file-backed-sram for the older direct file-backed SRAM alias mode.
 
 Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
-  ROOTFS_BOOTARGS_PROFILE RANGE_LIMITED_FLASH_DMI CC3XX_STATS
+  ROOTFS_BOOTARGS_PROFILE QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
+  RANGE_LIMITED_FLASH_DMI CC3XX_STATS
   CC3XX_STATS_INTERVAL CC3XX_STATUS_READ_FASTPATH CC3XX_QEMU_NATIVE_BACKEND
-  CC3XX_LOCAL_MMIO_FASTPATH QBOX_PERFORMANCE_PRESET REMOTEPASS_DMI_CACHE
+  CC3XX_LOCAL_MMIO_FASTPATH REMOTEPASS_DMI_CACHE
   NETDEV QBOX_RDASPEN_NETDEV QBOX_APOLLO_NETDEV
 
 Inside tmux:
@@ -197,6 +204,9 @@ runner_command()
         _out+=(--qbox-performance-preset)
     else
         _out+=(--no-qbox-performance-preset)
+    fi
+    if [[ "${LEGACY_FILE_BACKED_SRAM}" == "1" ]]; then
+        _out+=(--legacy-file-backed-sram)
     fi
     if [[ "${CC3XX_STATS}" == "1" ]]; then
         _out+=(--cc3xx-stats --cc3xx-stats-interval "${CC3XX_STATS_INTERVAL}")
@@ -364,6 +374,11 @@ print_dry_run()
     local effective_cc3xx_qemu_native_backend="${CC3XX_QEMU_NATIVE_BACKEND}"
     local effective_cc3xx_local_mmio_fastpath="${CC3XX_LOCAL_MMIO_FASTPATH}"
     local effective_remotepass_dmi_cache="${REMOTEPASS_DMI_CACHE}"
+    local explicit_sram_dmi=0
+    local explicit_legacy_file_backed_sram="${LEGACY_FILE_BACKED_SRAM}"
+    local rse_fast_boot_mode="disabled"
+    local rse_fast_boot_summary="disabled: no SRAM fast-boot mode selected"
+    local arg
 
     if [[ "${QBOX_PERFORMANCE_PRESET}" == "1" ]]; then
         effective_cc3xx_qemu_native_backend=1
@@ -373,11 +388,45 @@ print_dry_run()
         effective_cc3xx_local_mmio_fastpath=1
     fi
 
+    for arg in "${EXTRA_RUNNER_ARGS[@]}"; do
+        case "${arg}" in
+            --rse-fast-boot-sram-dmi)
+                explicit_sram_dmi=1
+                ;;
+            --legacy-file-backed-sram|--rse-fast-boot-aliases)
+                explicit_legacy_file_backed_sram=1
+                ;;
+            --rse-direct-si-sram-alias|--rse-direct-ap-bl2-alias)
+                explicit_legacy_file_backed_sram=1
+                ;;
+            --rse-direct-file-aliases|--rse-direct-file-aliases=*)
+                explicit_legacy_file_backed_sram=1
+                ;;
+        esac
+    done
+
+    if [[ "${explicit_sram_dmi}" == "1" &&
+          "${explicit_legacy_file_backed_sram}" == "1" ]]; then
+        rse_fast_boot_mode="conflict"
+        rse_fast_boot_summary="conflict: both SRAM DMI and legacy file-backed SRAM requested"
+    elif [[ "${explicit_legacy_file_backed_sram}" == "1" ]]; then
+        rse_fast_boot_mode="legacy_file_backed_sram"
+        rse_fast_boot_summary="legacy file-backed SRAM aliases active"
+    elif [[ "${QBOX_PERFORMANCE_PRESET}" == "1" ||
+            "${explicit_sram_dmi}" == "1" ]]; then
+        rse_fast_boot_mode="sram_dmi"
+        rse_fast_boot_summary="SRAM DMI/shared-memory fast boot active"
+    fi
+
     cat <<EOF
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   si_mode: ${SI_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
+  legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
+  explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
+  effective_rse_fast_boot_mode: ${rse_fast_boot_mode}
+  sram_fast_boot_summary: ${rse_fast_boot_summary}
   range_limited_flash_dmi: ${RANGE_LIMITED_FLASH_DMI}
   cc3xx_stats: ${CC3XX_STATS}
   cc3xx_status_read_fastpath: ${CC3XX_STATUS_READ_FASTPATH}
@@ -426,6 +475,7 @@ start_tmux()
     validate_tmux_name "${TMUX_SESSION}"
     validate_si_mode "${SI_MODE}"
     validate_bool "QBOX_PERFORMANCE_PRESET" "${QBOX_PERFORMANCE_PRESET}"
+    validate_bool "LEGACY_FILE_BACKED_SRAM" "${LEGACY_FILE_BACKED_SRAM}"
     validate_bool "RANGE_LIMITED_FLASH_DMI" "${RANGE_LIMITED_FLASH_DMI}"
     validate_bool "CC3XX_STATS" "${CC3XX_STATS}"
     validate_bool "CC3XX_STATUS_READ_FASTPATH" "${CC3XX_STATUS_READ_FASTPATH}"
@@ -477,6 +527,7 @@ start_tmux()
             "${LOCAL_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
+        printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
         printf 'RANGE_LIMITED_FLASH_DMI=%q CC3XX_STATS=%q ' \
             "${RANGE_LIMITED_FLASH_DMI}" "${CC3XX_STATS}"
         printf 'CC3XX_STATS_INTERVAL=%q CC3XX_STATUS_READ_FASTPATH=%q ' \
@@ -612,6 +663,10 @@ while (($# > 0)); do
             ;;
         --no-qbox-performance-preset)
             QBOX_PERFORMANCE_PRESET=0
+            shift
+            ;;
+        --legacy-file-backed-sram)
+            LEGACY_FILE_BACKED_SRAM=1
             shift
             ;;
         --range-limited-flash-dmi)

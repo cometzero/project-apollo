@@ -19,7 +19,9 @@ JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 )
 SSH_PORT_START="${SSH_PORT_START:-2222}"
 SSH_PORT_END="${SSH_PORT_END:-2299}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
+RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK="${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK:-0}"
 DRY_RUN=0
+LEGACY_FILE_BACKED_SRAM=0
 TMUX_RUNNER_ARGS=()
 
 die()
@@ -45,6 +47,8 @@ Common overrides:
   SSH_PORT=2225 ./run_qbox.sh
   ./run_qbox.sh --copy-disks
   ./run_qbox.sh --no-attach
+  ./run_qbox.sh --legacy-file-backed-sram
+  ./run_qbox.sh --rse-hotpath-tlm-fallback
   ./run_qbox.sh --dry-run
 
 Defaults:
@@ -57,6 +61,10 @@ Defaults:
 The selected SSH host-forward port is exposed as host port <port> -> guest :22.
 By default, the local rootfs and EFI capsule disks are used directly. Use
 --copy-disks to create per-run writable copies under <out_dir>/input-images.
+The default RSE fast-boot SRAM path uses DMI/shared memory. Use
+--legacy-file-backed-sram to select the older direct file-backed SRAM aliases.
+Counted RSE hotpath TLM fallback is diagnostic-only and off by default. Use
+--rse-hotpath-tlm-fallback or RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK=1 to opt in.
 EOF
 }
 
@@ -182,6 +190,18 @@ preparse_args()
                 TMUX_RUNNER_ARGS+=("${arg}")
                 i=$((i + 1))
                 ;;
+            --legacy-file-backed-sram)
+                LEGACY_FILE_BACKED_SRAM=1
+                i=$((i + 1))
+                ;;
+            --rse-hotpath-tlm-fallback)
+                RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK=1
+                i=$((i + 1))
+                ;;
+            --no-rse-hotpath-tlm-fallback)
+                RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK=0
+                i=$((i + 1))
+                ;;
             --)
                 while ((i < ${#args[@]})); do
                     TMUX_RUNNER_ARGS+=("${args[$i]}")
@@ -195,6 +215,20 @@ preparse_args()
                 ;;
         esac
     done
+}
+
+arg_present()
+{
+    local name="$1"
+    shift
+    local arg
+
+    for arg in "$@"; do
+        if [[ "${arg}" == "${name}" || "${arg}" == "${name}="* ]]; then
+            return 0
+        fi
+    done
+    return 1
 }
 
 copy_image()
@@ -240,6 +274,18 @@ main()
     esac
 
     preparse_args "$@"
+    case "${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK}" in
+        0|1) ;;
+        *) die "RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK must be 0 or 1: ${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK}" ;;
+    esac
+    if ((LEGACY_FILE_BACKED_SRAM)) &&
+        arg_present "--rse-fast-boot-sram-dmi" "$@"; then
+        die "--legacy-file-backed-sram conflicts with --rse-fast-boot-sram-dmi"
+    fi
+    if ((! LEGACY_FILE_BACKED_SRAM)) &&
+        arg_present "--rse-fast-boot-aliases" "$@"; then
+        die "--rse-fast-boot-aliases conflicts with the default --rse-fast-boot-sram-dmi; use --legacy-file-backed-sram"
+    fi
     OUT_DIR="$(abspath "${OUT_DIR}")"
     LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
 
@@ -261,6 +307,16 @@ main()
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
     printf '  copy_disks: %s\n' "${RUN_QBOX_COPY_DISKS}"
 
+    local rse_fast_boot_mode
+    rse_fast_boot_mode="--rse-fast-boot-sram-dmi"
+    if ((LEGACY_FILE_BACKED_SRAM)); then
+        rse_fast_boot_mode="--rse-fast-boot-aliases"
+    fi
+    local -a rse_diagnostic_args=()
+    if [[ "${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK}" == "1" ]]; then
+        rse_diagnostic_args+=(--rse-hotpath-tlm-fallback)
+    fi
+
     exec "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
         --session "${TMUX_SESSION}" \
         --out-dir "${OUT_DIR}" \
@@ -280,8 +336,9 @@ main()
         --rootfs "${RUN_ROOTFS}" \
         --efi-capsule-disk "${RUN_EFI_CAPSULE_DISK}" \
         --rse-hotpath-accel \
+        "${rse_diagnostic_args[@]}" \
         --rse-lms-accel \
-        --rse-fast-boot-aliases \
+        "${rse_fast_boot_mode}" \
         --rse-bl2-libc-hotpath \
         --rse-bl2-delay-accel \
         --rse-bl2-load-accel \

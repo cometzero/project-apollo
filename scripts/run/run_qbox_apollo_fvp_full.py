@@ -640,7 +640,16 @@ def child_marker_hits(child_status: dict[str, Any] | None) -> dict[str, dict[str
 
 def post_login_probe(child_status: dict[str, Any] | None) -> dict[str, Any]:
     probe = (child_status or {}).get("post_login_probe")
-    return probe if isinstance(probe, dict) else {}
+    if not isinstance(probe, dict):
+        return {}
+    normalized = dict(probe)
+    if "passed" not in normalized:
+        normalized["passed"] = bool(
+            normalized.get("requested")
+            and normalized.get("sent_probe")
+            and normalized.get("complete")
+        )
+    return normalized
 
 
 def child_rse_boot_timing_profile(
@@ -797,9 +806,19 @@ def live_cl1_gate_blocker(
         if cl0_missing:
             return f"{prefix}_marker_blocked:" + ",".join(cl0_missing)
     cl1_missing = missing_markers(marker_groups.get("si_cl1", {}))
+    post_login = marker_groups.get("post_login", {})
+    post_login_drivers_passed = all(
+        post_login.get(name, False)
+        for name in ["probe_complete", *LIVE_CL1_POST_LOGIN_DRIVERS]
+    )
+    if post_login_drivers_passed:
+        cl1_missing = [
+            name
+            for name in cl1_missing
+            if name not in {"pfdi_agent", "pfdi_service", "network_configured"}
+        ]
     if cl1_missing:
         return f"{prefix}_marker_blocked:" + ",".join(cl1_missing)
-    post_login = marker_groups.get("post_login", {})
     post_login_missing = missing_markers(
         {
             name: post_login.get(name, False)
@@ -870,6 +889,7 @@ def write_result(
         "remotepass_dmi_cache": bool(args.remotepass_dmi_cache),
         "rse_hotpath_accel": bool(args.rse_hotpath_accel),
         "rse_bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
+        "rse_hotpath_tlm_fallback": bool(args.rse_hotpath_tlm_fallback),
         "rse_lms_accel": bool(args.rse_lms_accel),
         "rse_bl2_load_accel": bool(args.rse_bl2_load_accel),
         "rse_bl2_boot_enc_accel": bool(args.rse_bl2_boot_enc_accel),
@@ -878,9 +898,11 @@ def write_result(
         "rse_bl2_delay_accel": bool(args.rse_bl2_delay_accel),
         "cc3xx_qemu_native_backend": bool(args.cc3xx_qemu_native_backend),
         "rse_fast_boot_aliases": bool(args.rse_fast_boot_aliases),
+        "rse_fast_boot_sram_dmi": bool(args.rse_fast_boot_sram_dmi),
     }
     status: dict[str, Any] = {
         "passed": passed,
+        "pass_mode": (child_status or {}).get("pass_mode"),
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "safety_island_mode": args.si_mode,
@@ -908,7 +930,7 @@ def write_result(
         "first_failing_marker": (
             None if check_only or args.build_only else first_failing_marker(marker_groups)
         ),
-        "post_login_probe": (child_status or {}).get("post_login_probe"),
+        "post_login_probe": post_login_probe(child_status),
         "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
@@ -920,6 +942,7 @@ def write_result(
         "child_result": str((args.out_dir / RD_ASPEN_CHILD_RESULT).resolve())
         if child_status
         else None,
+        "child_status": child_status or {},
         "child_returncode": child_returncode,
         "command": command,
         "runner_argv": sys.argv,
@@ -1201,6 +1224,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
     if args.rse_hotpath_accel:
         cmd.append("--rse-hotpath-accel")
         cmd.extend(["--rse-hotpath-max-bytes", str(args.rse_hotpath_max_bytes)])
+    if args.rse_hotpath_tlm_fallback:
+        cmd.append("--rse-hotpath-tlm-fallback")
     if args.rse_hotpath_memcpy_addr is not None:
         cmd.extend(["--rse-hotpath-memcpy-addr", hex(args.rse_hotpath_memcpy_addr)])
     if args.rse_hotpath_memset_addr is not None:
@@ -1254,6 +1279,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--cc3xx-local-mmio-fastpath")
     if args.rse_fast_boot_aliases:
         cmd.append("--rse-fast-boot-aliases")
+    if args.rse_fast_boot_sram_dmi:
+        cmd.append("--rse-fast-boot-sram-dmi")
     if getattr(args, "provision_blank_rse_otp", False):
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe:
@@ -1459,6 +1486,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rse-hotpath-max-bytes", type=int, default=16 * 1024 * 1024)
     parser.add_argument(
+        "--rse-hotpath-tlm-fallback",
+        action="store_true",
+        help="Forward explicit counted TLM fallback for RSE hotpath byte transfers.",
+    )
+    parser.add_argument(
         "--rse-hotpath-memcpy-addr",
         type=lambda value: int(value, 0),
         help="Forward RSE hotpath memcpy Thumb entry address override.",
@@ -1554,8 +1586,24 @@ def parse_args() -> argparse.Namespace:
         "--rse-fast-boot-aliases",
         action="store_true",
         help=(
-            "Forward the validated RSE fast-boot direct alias preset to the "
-            "RSE runner."
+            "Forward the legacy RSE fast-boot direct file-backed alias preset "
+            "to the RSE runner."
+        ),
+    )
+    parser.add_argument(
+        "--rse-fast-boot-sram-dmi",
+        action="store_true",
+        help=(
+            "Forward the RSE fast-boot SRAM DMI/shared-memory preset to the "
+            "RSE runner without direct file-backed SRAM/AP-BL2 aliases."
+        ),
+    )
+    parser.add_argument(
+        "--legacy-file-backed-sram",
+        action="store_true",
+        help=(
+            "Rollback path for the performance preset: forward legacy "
+            "--rse-fast-boot-aliases instead of --rse-fast-boot-sram-dmi."
         ),
     )
     parser.add_argument(
@@ -1599,7 +1647,26 @@ def parse_args() -> argparse.Namespace:
         args.rse_bl2_verify_sig_accel = True
         args.rse_bl2_delay_accel = True
         args.cc3xx_qemu_native_backend = True
-        args.rse_fast_boot_aliases = True
+        if args.legacy_file_backed_sram:
+            args.rse_fast_boot_aliases = True
+        else:
+            args.rse_fast_boot_sram_dmi = True
+    if args.legacy_file_backed_sram and (
+        args.rse_fast_boot_sram_dmi
+        or forwarded_arg_present(args, "--rse-fast-boot-sram-dmi")
+    ):
+        parser.error(
+            "--legacy-file-backed-sram cannot be used with "
+            "--rse-fast-boot-sram-dmi"
+        )
+    if args.rse_fast_boot_sram_dmi and (
+        args.rse_fast_boot_aliases
+        or forwarded_arg_present(args, "--rse-fast-boot-aliases")
+    ):
+        parser.error(
+            "--rse-fast-boot-sram-dmi cannot be used with "
+            "--rse-fast-boot-aliases"
+        )
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
     if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:
