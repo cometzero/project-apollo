@@ -41,7 +41,7 @@ workspace top directory인 `/build/arm/arm-auto-solutions`에서 실행한다.
 - `live-cl0-cl1` Safety Island mode 선택
 - QEMU-native CC3XX backend와 현재 RSE fast-path 옵션 적용
 - `2222`부터 빈 SSH host-forward port 자동 선택
-- rootfs와 EFI capsule disk를 `out-dir/input-images/` 아래 per-run copy로 생성
+- 기본으로 local build rootfs와 EFI capsule disk를 직접 사용
 - timestamp가 포함된 tmux session과 output directory 생성
 - QBox runner와 subsystem별 UART log tail pane으로 자동 attach
 
@@ -63,12 +63,12 @@ SSH_PORT=2225 ./run_qbox.sh
 ```
 
 기존 QBox 실행이 같은 disk image를 잡고 있으면 QEMU가 `Failed to get "write"
-lock`으로 시작에 실패할 수 있다. `run_qbox.sh`는 기본적으로 rootfs와 EFI
-capsule disk를 per-run copy로 만들어 이 충돌을 피한다. 이 복사를 끄고 원본
-local build disk를 직접 사용하려면 다음처럼 실행한다.
+lock`으로 시작에 실패할 수 있다. 기본값은 시작 시간을 줄이기 위해 원본
+local build disk를 직접 사용한다. 충돌 회피가 필요하면 rootfs와 EFI capsule
+disk를 per-run copy로 만들어 실행한다.
 
 ```bash
-RUN_QBOX_COPY_DISKS=0 ./run_qbox.sh
+./run_qbox.sh --copy-disks
 ```
 
 ## 백그라운드 실행
