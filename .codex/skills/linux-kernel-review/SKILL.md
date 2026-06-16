@@ -1,12 +1,12 @@
 ---
 name: linux-kernel-review
-description: Linux kernel review workflow for /build/arm/arm-auto-solutions. Use whenever a prompt mentions reviewing or changing Linux kernel source, kernel modules, drivers, patches, DTS/DTB/devicetree bindings, Kconfig, Kbuild, kernel Makefiles, defconfig/config fragments, PREEMPT_RT, platform drivers, IRQ/DMA/MMIO, sysfs/debugfs, dmesg kernel failures, HIPC, RPMsg, remoteproc, PFDI kernel code, 커널/드라이버/디바이스트리 리뷰, or when the linux-kernel-auto-review hook reports pending kernel review.
+description: Linux kernel review workflow for this project. Use whenever a prompt mentions reviewing or changing Linux kernel source, kernel modules, drivers, patches, DTS/DTB/devicetree bindings, Kconfig, Kbuild, kernel Makefiles, defconfig/config fragments, PREEMPT_RT, platform drivers, IRQ/DMA/MMIO, sysfs/debugfs, dmesg kernel failures, HIPC, RPMsg, remoteproc, PFDI kernel code, 커널/드라이버/디바이스트리 리뷰, or when the linux-kernel-auto-review hook reports pending kernel review.
 ---
 
 # Linux Kernel Review
 
-Use this skill for focused Linux kernel source and kernel metadata review in
-`/build/arm/arm-auto-solutions`.
+Use this skill for focused Linux kernel source and kernel metadata review from
+the current project top directory. Use relative paths in commands and reports.
 
 ## Intake
 

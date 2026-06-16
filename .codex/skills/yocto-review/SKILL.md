@@ -1,12 +1,12 @@
 ---
 name: yocto-review
-description: Yocto/OpenEmbedded metadata review workflow for /build/arm/arm-auto-solutions. Use whenever a prompt mentions Yocto, OpenEmbedded, BitBake, layers, recipes, .bb/.bbappend/.bbclass files, layer.conf, machine/distro/image configuration, bblayers.conf, local.conf, PACKAGECONFIG, SRC_URI, FILES, RDEPENDS/RRECOMMENDS, do_install, patches, bbmask, sstate, package QA, yocto-check-layer, 로컬 패치, 레이어/레시피 리뷰, or when the yocto-auto-review hook reports pending Yocto metadata review.
+description: Yocto/OpenEmbedded metadata review workflow for this project. Use whenever a prompt mentions Yocto, OpenEmbedded, BitBake, layers, recipes, .bb/.bbappend/.bbclass files, layer.conf, machine/distro/image configuration, bblayers.conf, local.conf, PACKAGECONFIG, SRC_URI, FILES, RDEPENDS/RRECOMMENDS, do_install, patches, bbmask, sstate, package QA, yocto-check-layer, 로컬 패치, 레이어/레시피 리뷰, or when the yocto-auto-review hook reports pending Yocto metadata review.
 ---
 
 # Yocto Review
 
-Use this skill for focused review of Yocto metadata in
-`/build/arm/arm-auto-solutions`.
+Use this skill for focused review of Yocto metadata from the current project
+top directory. Use relative paths in commands and reports.
 
 ## Intake
 

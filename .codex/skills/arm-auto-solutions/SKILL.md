@@ -1,11 +1,16 @@
 ---
 name: arm-auto-solutions
-description: Workspace workflow for /build/arm/arm-auto-solutions. Use whenever a prompt mentions Arm Auto Solutions, Arm Zena CSS, RD-Aspen/RD Aspen, Apollo FVP, Yocto or BitBake builds, FVP boot/runtime/logs, EWAOL images, Safety Island or Zephyr, RSE, TF-A, TF-M, OP-TEE, SCP, U-Boot, PFDI, HIPC, sw-ref-stack, arm-zena-css, layers, build/tmp_baremetal artifacts, boot/빌드/부팅/검증/log analysis, or project-local Codex automation in this workspace.
+description: Workspace workflow for this Arm Auto Solutions project. Use whenever a prompt mentions Arm Auto Solutions, Arm Zena CSS, RD-Aspen/RD Aspen, Apollo FVP, Yocto or BitBake builds, FVP boot/runtime/logs, EWAOL images, Safety Island or Zephyr, RSE, TF-A, TF-M, OP-TEE, SCP, U-Boot, PFDI, HIPC, sw-ref-stack, arm-zena-css, layers, build/tmp_baremetal artifacts, boot/빌드/부팅/검증/log analysis, or project-local Codex automation in this workspace.
 ---
 
 # Arm Auto Solutions Project Skill
 
-Use this skill for project work in `/build/arm/arm-auto-solutions`.
+Use this skill for project work from the current project top directory.
+
+All paths in commands, reports, and instructions are relative to the project
+top directory unless an external tool explicitly requires an absolute path. Do
+not hard-code machine-local roots or user home directories in project-local
+guidance.
 
 ## Core Rule
 

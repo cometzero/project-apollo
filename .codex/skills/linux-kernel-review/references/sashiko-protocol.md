@@ -1,8 +1,8 @@
 # Sashiko-Inspired Kernel Review Protocol
 
-This local protocol adapts the public Sashiko approach for Codex reviews in
-`/build/arm/arm-auto-solutions`. It does not require the Sashiko binary or any
-external LLM provider.
+This local protocol adapts the public Sashiko approach for Codex reviews from
+the current project top directory. It does not require the Sashiko binary or
+any external LLM provider.
 
 ## Principles
 

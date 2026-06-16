@@ -1,7 +1,7 @@
 # Yocto Layer And Recipe Review Reference
 
-Use this reference when a task adds or reviews Yocto metadata in
-`/build/arm/arm-auto-solutions`.
+Use this reference when a task adds or reviews Yocto metadata from the current
+project top directory. Use relative paths in commands and reports.
 
 ## First Choice Agent
 
