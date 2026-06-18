@@ -113,7 +113,7 @@ Environment overrides:
   NETDEV QBOX_RDASPEN_NETDEV QBOX_APOLLO_NETDEV
 
 Inside tmux:
-  F12                  kill the whole session
+  F12                  stop QBox and kill the whole session
   mouse                enabled
 
 Subsystem UART logs:
@@ -330,27 +330,22 @@ supervise_run()
     printf 'Logs: %s\n' "${OUT_DIR}"
     printf 'Runner log: %s\n' "${OUT_DIR}/qbox-runner.log"
     printf 'Command: %s\n\n' "$(quote_args "${cmd[@]}")"
-    printf 'F12 kills the tmux session.\n\n'
+    printf 'F12 stops QBox and kills the tmux session.\n\n'
 
     local status_file="${OUT_DIR}/qbox-run.status.tmp"
     rm -f "${status_file}"
 
     set +e
     if command -v stdbuf >/dev/null 2>&1; then
-        (
-            stdbuf -oL -eL "${cmd[@]}"
-            printf '%s\n' "$?" >"${status_file}"
-        ) 2>&1 | tee -a "${OUT_DIR}/qbox-runner.log" &
+        stdbuf -oL -eL "${cmd[@]}" > >(tee -a "${OUT_DIR}/qbox-runner.log") 2>&1 &
     else
-        (
-            "${cmd[@]}"
-            printf '%s\n' "$?" >"${status_file}"
-        ) 2>&1 | tee -a "${OUT_DIR}/qbox-runner.log" &
+        "${cmd[@]}" > >(tee -a "${OUT_DIR}/qbox-runner.log") 2>&1 &
     fi
     local run_pid=$!
     printf '%s\n' "${run_pid}" >"${OUT_DIR}/qbox-run.pid"
     wait "${run_pid}"
     local pipeline_status=$?
+    printf '%s\n' "${pipeline_status}" >"${status_file}"
     set -e
 
     local status="${pipeline_status}"
@@ -368,6 +363,187 @@ supervise_run()
     printf 'Press Enter to close this pane, or F12 to kill the session.\n'
     read -r _ || true
     return "${status}"
+}
+
+child_pids()
+{
+    local parent="$1"
+
+    if command -v pgrep >/dev/null 2>&1; then
+        pgrep -P "${parent}" 2>/dev/null || true
+        return 0
+    fi
+
+    ps -e -o pid= -o ppid= |
+        awk -v parent="${parent}" '$2 == parent {print $1}'
+}
+
+process_tree_pids()
+{
+    local parent="$1"
+    local child
+
+    while IFS= read -r child; do
+        [[ -n "${child}" ]] || continue
+        process_tree_pids "${child}"
+        printf '%s\n' "${child}"
+    done < <(child_pids "${parent}")
+}
+
+process_tree_snapshot()
+{
+    local root_pid="$1"
+
+    [[ "${root_pid}" =~ ^[0-9]+$ ]] || return 0
+    kill -0 "${root_pid}" 2>/dev/null || return 0
+    process_tree_pids "${root_pid}"
+    printf '%s\n' "${root_pid}"
+}
+
+signal_pids()
+{
+    local signal="$1"
+    shift
+    local pid
+
+    for pid in "$@"; do
+        [[ "${pid}" =~ ^[0-9]+$ ]] || continue
+        kill "-${signal}" "${pid}" 2>/dev/null || true
+    done
+}
+
+wait_pids_exit()
+{
+    local timeout_s="$1"
+    shift
+    local deadline=$((SECONDS + timeout_s))
+    local pid
+    local alive
+
+    while ((SECONDS < deadline)); do
+        alive=0
+        for pid in "$@"; do
+            if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+                alive=1
+                break
+            fi
+        done
+        ((alive)) || return 0
+        sleep 0.2
+    done
+    return 1
+}
+
+process_matches_out_dir()
+{
+    local pid="$1"
+    local cmdline=""
+    local env_lines=""
+    local line
+    local value
+
+    [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
+    [[ -r "/proc/${pid}/cmdline" && -r "/proc/${pid}/environ" ]] || return 1
+
+    cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
+    case "${cmdline}" in
+        *"/platforms-vp"*|*"platforms-vp"*|*"/remote_cpu"*|*"remote_cpu"*) ;;
+        *) return 1 ;;
+    esac
+
+    env_lines="$(tr '\0' '\n' <"/proc/${pid}/environ" 2>/dev/null || true)"
+    while IFS= read -r line; do
+        value="${line#*=}"
+        case "${line}" in
+            OUT_DIR=*)
+                [[ "${value}" == "${OUT_DIR}" ]] && return 0
+                ;;
+            QBOX_*=*|RUNNER_ARGS_FILE=*)
+                [[ "${value}" == "${OUT_DIR}" || "${value}" == "${OUT_DIR}/"* ]] &&
+                    return 0
+                ;;
+        esac
+    done <<<"${env_lines}"
+
+    return 1
+}
+
+qbox_runtime_pids_for_out_dir()
+{
+    local proc
+    local pid
+
+    for proc in /proc/[0-9]*; do
+        [[ -d "${proc}" ]] || continue
+        pid="${proc##*/}"
+        if process_matches_out_dir "${pid}"; then
+            printf '%s\n' "${pid}"
+        fi
+    done | sort -n -u
+}
+
+qbox_runtime_pgids_for_pids()
+{
+    local pid
+    local pgid
+
+    for pid in "$@"; do
+        [[ "${pid}" =~ ^[0-9]+$ ]] || continue
+        pgid="$(ps -o pgid= -p "${pid}" 2>/dev/null | tr -d '[:space:]')"
+        [[ "${pgid}" =~ ^[0-9]+$ ]] || continue
+        printf '%s\n' "${pgid}"
+    done | sort -n -u
+}
+
+signal_pgids()
+{
+    local signal="$1"
+    shift
+    local pgid
+
+    for pgid in "$@"; do
+        [[ "${pgid}" =~ ^[0-9]+$ ]] || continue
+        kill "-${signal}" -"${pgid}" 2>/dev/null || true
+    done
+}
+
+stop_session()
+{
+    (($# == 1)) || die "--stop-session requires SESSION"
+
+    local session="$1"
+    local pid_file="${OUT_DIR}/qbox-run.pid"
+    local done_file="${OUT_DIR}/.qbox-run.done"
+    local pid=""
+    local -a pids=()
+    local -a runtime_pids=()
+    local -a runtime_pgids=()
+
+    if [[ -s "${pid_file}" ]]; then
+        pid="$(<"${pid_file}")"
+    fi
+
+    if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+        mapfile -t pids < <(process_tree_snapshot "${pid}")
+    fi
+    mapfile -t runtime_pids < <(qbox_runtime_pids_for_out_dir)
+    mapfile -t runtime_pgids < <(qbox_runtime_pgids_for_pids "${runtime_pids[@]}")
+
+    signal_pids INT "${pids[@]}"
+    signal_pgids TERM "${runtime_pgids[@]}"
+    wait_pids_exit 5 "${pids[@]}" "${runtime_pids[@]}" || {
+        signal_pids TERM "${pids[@]}"
+        signal_pgids TERM "${runtime_pgids[@]}"
+    }
+    wait_pids_exit 2 "${pids[@]}" "${runtime_pids[@]}" || {
+        mapfile -t runtime_pids < <(qbox_runtime_pids_for_out_dir)
+        mapfile -t runtime_pgids < <(qbox_runtime_pgids_for_pids "${runtime_pids[@]}")
+        signal_pids KILL "${pids[@]}"
+        signal_pgids KILL "${runtime_pgids[@]}"
+    }
+
+    : >"${done_file}"
+    tmux_cmd kill-session -t "${session}" 2>/dev/null || true
 }
 
 print_dry_run()
@@ -455,6 +631,81 @@ EOF
     done < <(known_logs)
 }
 
+write_fifo_line()
+{
+    (($# == 2)) || die "write_fifo_line requires FIFO_PATH LINE"
+
+    local fifo_path="$1"
+    local line="$2"
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 1 bash -c 'printf "%s\n" "$1" >"$2"' _ "${line}" "${fifo_path}"
+    else
+        printf '%s\n' "${line}" >"${fifo_path}"
+    fi
+}
+
+interactive_primary_console()
+{
+    (($# == 3)) || die "--primary-console requires DOMAIN TITLE LOG_PATH"
+
+    local domain="$1"
+    local title="$2"
+    local log_path="$3"
+    local fifo_path="${OUT_DIR}/primary-uart-input.fifo"
+    local tail_pid=""
+    local line
+    local fifo_ready=0
+
+    cleanup_primary_console()
+    {
+        local status="${1:-0}"
+
+        trap - EXIT INT TERM HUP
+        if [[ -n "${tail_pid}" ]]; then
+            kill "${tail_pid}" 2>/dev/null || true
+            wait "${tail_pid}" 2>/dev/null || true
+        fi
+        exit "${status}"
+    }
+
+    mkdir -p "$(dirname "${log_path}")"
+    : >>"${log_path}"
+
+    printf 'Subsystem: %s\n' "${title}"
+    printf 'Domain: %s\n' "${domain}"
+    printf 'Log: %s\n' "${log_path}"
+    printf 'UART input FIFO: %s\n\n' "${fifo_path}"
+
+    tail -n +1 -F "${log_path}" &
+    tail_pid=$!
+    trap 'cleanup_primary_console $?' EXIT
+    trap 'cleanup_primary_console 130' INT
+    trap 'cleanup_primary_console 143' TERM HUP
+
+    printf '\nWaiting for primary UART input FIFO. F12 stops QBox.\n'
+    while true; do
+        if [[ -p "${fifo_path}" && "${fifo_ready}" == 0 ]]; then
+            printf '\nPrimary UART is interactive. Type commands here; F12 stops QBox.\n'
+            fifo_ready=1
+        elif [[ ! -p "${fifo_path}" && "${fifo_ready}" == 1 ]]; then
+            printf '\nPrimary UART input FIFO is unavailable; waiting for it to return.\n'
+            fifo_ready=0
+        fi
+
+        if IFS= read -r -t 0.2 line; then
+            if [[ ! -p "${fifo_path}" ]]; then
+                printf 'UART input FIFO is not ready; dropped input line.\n'
+                continue
+            fi
+            write_fifo_line "${fifo_path}" "${line}" ||
+                printf 'UART input FIFO write timed out; dropped input line.\n'
+        fi
+    done
+
+    cleanup_primary_console 0
+}
+
 start_log_pane()
 {
     local domain="$1"
@@ -464,11 +715,19 @@ start_log_pane()
     local pane_body
     local pane_id
 
-    pane_body=$(
-        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-        printf 'OUT_DIR=%q exec %q --tail-log %q %q %q' \
-            "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
-    )
+    if [[ "${domain}" == "primary_console" ]]; then
+        pane_body=$(
+            printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+            printf 'OUT_DIR=%q exec %q --primary-console %q %q %q' \
+                "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+        )
+    else
+        pane_body=$(
+            printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+            printf 'OUT_DIR=%q exec %q --tail-log %q %q %q' \
+                "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+        )
+    fi
 
     pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' -t "${TMUX_SESSION}:qbox" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
@@ -561,7 +820,12 @@ start_tmux()
     tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
     tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
     tmux_cmd select-pane -t "${runner_pane_id}" -T qbox-runner
-    tmux_cmd bind-key -n F12 kill-session -t "${TMUX_SESSION}"
+    local stop_body
+    stop_body=$(
+        printf 'OUT_DIR=%q TMUX_BIN=%q exec %q --stop-session %q' \
+            "${OUT_DIR}" "${TMUX_BIN}" "${SCRIPT_PATH}" "${TMUX_SESSION}"
+    )
+    tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
 
     local domain
     local file
@@ -575,7 +839,7 @@ start_tmux()
     printf 'started tmux session: %s\n' "${TMUX_SESSION}"
     printf 'logs: %s\n' "${OUT_DIR}"
     printf 'attach command: %s attach-session -t %s\n' "${TMUX_BIN}" "${TMUX_SESSION}"
-    printf 'F12 kills the session.\n'
+    printf 'F12 stops QBox and kills the session.\n'
 
     if ((NO_ATTACH)); then
         return 0
@@ -596,6 +860,18 @@ fi
 if [[ "${1:-}" == "--tail-log" ]]; then
     shift
     tail_log "$@"
+    exit $?
+fi
+
+if [[ "${1:-}" == "--primary-console" ]]; then
+    shift
+    interactive_primary_console "$@"
+    exit $?
+fi
+
+if [[ "${1:-}" == "--stop-session" ]]; then
+    shift
+    stop_session "$@"
     exit $?
 fi
 
