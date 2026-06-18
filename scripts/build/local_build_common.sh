@@ -22,6 +22,7 @@ SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/scp-firmware}"
 ZEPHYRPROJECT_SRC="${ZEPHYRPROJECT_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/zephyrproject}"
 ZEPHYR_SAFETY_ISLAND_SRC="${ZEPHYR_SAFETY_ISLAND_SRC:-${ZEPHYRPROJECT_SRC}/safety_island}"
 ZEPHYR_MODULES_LIST="${ZEPHYR_MODULES_LIST:-${ZEPHYRPROJECT_SRC}/apollo-modules.list}"
+ZEPHYR_DEPS_SRC="${ZEPHYR_DEPS_SRC:-}"
 TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/trusted-firmware-a}"
 OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/optee-os}"
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/u-boot}"
@@ -116,6 +117,7 @@ Commands:
 Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
+  ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../git ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="bridge virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc" ./local-build.sh build
   KERNEL_DEBUG_INFO=0 ./local-build.sh build
@@ -891,23 +893,103 @@ yocto_native_pythonpath()
         paste -sd:
 }
 
+bitbake_zephyr_getvar()
+{
+    local var="$1"
+
+    (
+        cd "${ROOT_DIR}"
+        set +u
+        source layers/poky/oe-init-build-env build >/dev/null
+        set -u
+        bitbake -e zephyr-demos-cl1
+    ) | sed -n "s/^${var}=\"\\(.*\\)\"$/\\1/p" | tail -n 1
+}
+
+zephyr_deps_root_valid()
+{
+    local root="$1"
+
+    [[ -d "${root}/modules/lib/open-amp" ]] &&
+        [[ -d "${root}/modules/crypto/mbedtls" ]] &&
+        [[ -d "${root}/bootloader/mcuboot" ]] &&
+        [[ -d "${root}/tools/net-tools" ]]
+}
+
+find_zephyr_yocto_deps_root()
+{
+    local root
+
+    if [[ -n "${ZEPHYR_DEPS_SRC}" ]]; then
+        zephyr_deps_root_valid "${ZEPHYR_DEPS_SRC}" ||
+            die "ZEPHYR_DEPS_SRC does not look like a Yocto Zephyr source root: ${ZEPHYR_DEPS_SRC}"
+        printf '%s\n' "${ZEPHYR_DEPS_SRC}"
+        return 0
+    fi
+
+    root="$(bitbake_zephyr_getvar S 2>/dev/null || true)"
+    if [[ -n "${root}" ]] && zephyr_deps_root_valid "${root}"; then
+        printf '%s\n' "${root}"
+        return 0
+    fi
+
+    root="$(bitbake_zephyr_getvar WORKDIR 2>/dev/null || true)"
+    if [[ -n "${root}" ]] && zephyr_deps_root_valid "${root}/git"; then
+        printf '%s\n' "${root}/git"
+        return 0
+    fi
+
+    return 1
+}
+
+prepare_yocto_zephyr_deps_root()
+{
+    local root
+
+    if root="$(find_zephyr_yocto_deps_root)"; then
+        printf '%s\n' "${root}"
+        return 0
+    fi
+
+    log "Preparing Yocto Zephyr dependency sources with bitbake zephyr-demos-cl1 -c unpack"
+    (
+        cd "${ROOT_DIR}"
+        set +u
+        source layers/poky/oe-init-build-env build >/dev/null
+        set -u
+        prepare_bitbake_extra_args
+        bitbake "${BITBAKE_EXTRA_ARGS[@]}" zephyr-demos-cl1 -c unpack
+    )
+
+    root="$(find_zephyr_yocto_deps_root)" ||
+        die "could not find Yocto Zephyr dependency source root after unpack"
+    printf '%s\n' "${root}"
+}
+
 zephyr_modules_arg()
 {
-    require_file "${ZEPHYR_MODULES_LIST}"
+    local deps_root="$1"
     local modules=()
     local rel
     local module_path
 
+    require_file "${ZEPHYR_MODULES_LIST}"
     while IFS= read -r rel; do
         case "${rel}" in
             ""|\#*) continue ;;
             tools/bsim|tools/bsim/*)
-                printf 'notice: skipping optional Zephyr BabbleSim module: %s\n' \
-                    "${rel}" >&2
-                continue
+                if [[ ! -d "${deps_root}/${rel}" ]]; then
+                    printf 'notice: skipping optional Zephyr BabbleSim module: %s\n' \
+                        "${rel}" >&2
+                    continue
+                fi
                 ;;
         esac
-        module_path="${ZEPHYRPROJECT_SRC}/${rel}"
+        if [[ "${rel}" == "safety_island" ]]; then
+            module_path="${ZEPHYR_SAFETY_ISLAND_SRC}"
+        else
+            module_path="${deps_root}/${rel}"
+        fi
         [[ -d "${module_path}" ]] ||
             die "missing Zephyr module directory listed in ${ZEPHYR_MODULES_LIST}: ${rel}"
         modules+=("${module_path}")
@@ -960,6 +1042,8 @@ build_zephyr()
     local zephyr_sdk
     local zephyr_base="${ZEPHYRPROJECT_SRC}/zephyr"
     local zephyr_dir="${zephyr_base}/share/zephyr-package/cmake"
+    local zephyr_deps_root
+    local imgtool
     local python
     local pythonpath
     local modules
@@ -975,9 +1059,12 @@ build_zephyr()
 
     require_file "${zephyr_dir}/ZephyrConfig.cmake"
     zephyr_sdk="$(find_zephyr_sdk_dir)"
+    zephyr_deps_root="$(prepare_yocto_zephyr_deps_root)"
+    imgtool="${zephyr_deps_root}/bootloader/mcuboot/scripts/imgtool.py"
+    require_file "${imgtool}"
     python="$(yocto_native_python)"
     pythonpath="$(yocto_native_pythonpath)"
-    modules="$(zephyr_modules_arg)"
+    modules="$(zephyr_modules_arg "${zephyr_deps_root}")"
     dtc_overlay="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.overlay"
     overlay_config="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/zperf/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi/${board}.conf"
     if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
@@ -1011,6 +1098,7 @@ build_zephyr()
         -DZEPHYR_TOOLCHAIN_VARIANT=zephyr \
         -DZEPHYR_MODULES="${modules}" \
         -DZEPHYR_EXTRA_MODULES= \
+        -DIMGTOOL:FILEPATH="${imgtool}" \
         -DUSER_CACHE_DIR="${ZEPHYR_BUILD_DIR}/.cache" \
         -DDTC_OVERLAY_FILE="${dtc_overlay}" \
         -DOVERLAY_CONFIG="${overlay_config}" \

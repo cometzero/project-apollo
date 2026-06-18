@@ -1340,7 +1340,9 @@ python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py
 
-QBOX_RSE_LMS_TEST_DATA=/build/arm/arm-auto-solutions/hsoc-stack/components/system_mgmt/zephyrproject/modules/crypto/mbedtls/tests/suites/test_suite_lms.data \
+QBOX_RSE_LMS_TEST_DATA="$(find build/tmp_baremetal/work \
+  -path '*/zephyr-demos-cl1/*/git/modules/crypto/mbedtls/tests/suites/test_suite_lms.data' \
+  -print -quit)" \
   tools/qbox/build/tests/components/cc3xx/rse_lms_accel-tests
 
 ctest --test-dir tools/qbox/build \

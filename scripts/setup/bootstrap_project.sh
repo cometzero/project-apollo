@@ -88,9 +88,7 @@ ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"
 required_recursive_paths=(
     "hsoc-stack/components/primary_compute/trusted-firmware-a"
     "hsoc-stack/components/system_mgmt/scp-firmware"
-    "hsoc-stack/components/system_mgmt/zephyrproject/bootloader/mcuboot"
-    "hsoc-stack/components/system_mgmt/zephyrproject/modules/crypto/mbedtls"
-    "hsoc-stack/components/system_mgmt/zephyrproject/modules/debug/mipi-sys-t"
+    "hsoc-stack/components/system_mgmt/zephyrproject/zephyr"
 )
 
 if ((WITH_QEMU_ROMS)); then
