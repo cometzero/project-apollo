@@ -31,7 +31,8 @@ JSON evidence로 확인되어야 한다.
 | Repository | 구현 내용 |
 | --- | --- |
 | Workspace root | full-system runner, map validator, coverage audit, strict verifier, 한국어/영어 설계 문서 |
-| `tools/qbox` | Apollo full-system Lua platform, Safety Island CL1 단독 platform, SystemC/TLM host models, Cortex-R82 wrapper 조정, component tests |
+| `tools/qbox` | upstream-friendly QBox core, reusable SystemC/TLM/QEMU integration, `platforms-vp` 실행 파일 |
+| `tools/qbox-platform` | Apollo full-system Lua platform, Safety Island CL1 단독 platform, Zena/RSE SystemC/TLM host models, Apollo-specific QEMU wrapper, component tests |
 | `tools/qemu` | Cortex-R82 architectural feature 보강 |
 
 주요 커밋은 다음과 같다.
@@ -39,7 +40,7 @@ JSON evidence로 확인되어야 한다.
 | 위치 | 커밋 | 요약 |
 | --- | --- | --- |
 | root | `366f9c544bdb` | `feat(qbox): verify Apollo full system` |
-| `tools/qbox` | `5840f3eaef90` | `feat(apollo): add full-system platform` |
+| `tools/qbox-platform` | `5840f3eaef90` | pre-split Apollo platform history seed |
 | `tools/qemu` | `9743cfc25f1e` | `feat(arm): complete Cortex-R82 features` |
 
 ## 기존 경로와 새 경로
@@ -49,7 +50,7 @@ JSON evidence로 확인되어야 한다.
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
 ./local-build.sh qbox
-tools/qbox/platforms/apollo/apollo-pc.lua
+tools/qbox-platform/platforms/apollo/apollo-pc.lua
 ```
 
 이 경로는 Linux kernel, initramfs, AP device model 검증에는 빠르다.
@@ -65,8 +66,8 @@ scripts/run/run_qbox_apollo_fvp_si_cl1.py
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 scripts/test/verify_qbox_apollo_fvp_full_completion.py
-tools/qbox/platforms/apollo/apollo-qvp.lua
-tools/qbox/platforms/apollo/apollo-si-cl1.lua
+tools/qbox-platform/platforms/apollo/apollo-qvp.lua
+tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua
 ```
 
 ## 전체 SW Architecture
@@ -83,7 +84,7 @@ tools/qbox/platforms/apollo/apollo-si-cl1.lua
                                 v
 +---------------------------------------------------------------+
 | QBox Lua Platform                                              |
-|  tools/qbox/platforms/apollo/apollo-qvp.lua                      |
+|  tools/qbox-platform/platforms/apollo/apollo-qvp.lua                      |
 |  - RD-Aspen RSE-first topology reuse                           |
 |  - Apollo AP logical view router                               |
 |  - live SI CL0 option                                          |
@@ -172,10 +173,10 @@ tools/qbox/platforms/apollo/apollo-si-cl1.lua
 
 ### Apollo Full Platform
 
-`tools/qbox/platforms/apollo/apollo-qvp.lua`는 full-system entrypoint이다.
-`tools/qbox/platforms/apollo/hw-block/rse.lua`의 Apollo-owned RSE-first
+`tools/qbox-platform/platforms/apollo/apollo-qvp.lua`는 full-system entrypoint이다.
+`tools/qbox-platform/platforms/apollo/hw-block/rse.lua`의 Apollo-owned RSE-first
 구조를 기반으로 하며, 나머지 Apollo 전용 기능도
-`tools/qbox/platforms/apollo/hw-block/` 아래 block module로 분리되어 있다.
+`tools/qbox-platform/platforms/apollo/hw-block/` 아래 block module로 분리되어 있다.
 
 핵심 설계는 다음과 같다.
 
@@ -195,7 +196,7 @@ tools/qbox/platforms/apollo/apollo-si-cl1.lua
 
 ### Safety Island CL1 단독 Platform
 
-`tools/qbox/platforms/apollo/apollo-si-cl1.lua`는 CL1 Zephyr만 빠르게 실행해
+`tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua`는 CL1 Zephyr만 빠르게 실행해
 SMP, UART, PFDI agent, PFDI service, shell marker를 확인하는 단독
 milestone platform이다. 최종 완료 증거는 아니지만 Cortex-R82/Zephyr
 bring-up 회귀 검사에 유용하다.

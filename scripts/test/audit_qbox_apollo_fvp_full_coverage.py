@@ -166,8 +166,8 @@ def lua_component_block(text: str, name: str) -> str:
 
 
 def lua_backend_checks(root: Path) -> list[dict[str, Any]]:
-    si_cl0 = read_text(root / "tools/qbox/platforms/apollo/hw-block/si_cl0.lua")
-    rse = read_text(root / "tools/qbox/platforms/apollo/hw-block/rse.lua")
+    si_cl0 = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua")
+    rse = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/rse.lua")
     expected = [
         ("si_cl0_ssu", si_cl0, "zena_ssu"),
         ("si_cl0_fmu", si_cl0, "zena_fmu"),

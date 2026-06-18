@@ -20,7 +20,8 @@ Main source areas:
 | `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer and dynamic-layer metadata. |
 | `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer for `apollo-fvp`, firmware recipes, kernel metadata, module signing, and OP-TEE integration. |
 | `layers/` | External Yocto layer submodules such as Poky, meta-arm, meta-openembedded, meta-ewaol, meta-cassini, security, Zephyr, and virtualization layers. |
-| `tools/qbox/` | QBox SystemC/TLM/QEMU virtual platform implementation, including `platforms/apollo/`, SystemC components, and QEMU-backed components. |
+| `tools/qbox/` | Upstream-friendly QBox core: `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, and examples. |
+| `tools/qbox-platform/` | Apollo/RD-Aspen platform overlay: Apollo and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target. |
 | `tools/qemu/` | Local QEMU/libqemu source used by QBox. |
 | `scripts/` | Categorized build, run, setup, debug, inspect, analyze, and test helpers. See `scripts/README.md`. |
 | `tests/` | Repository-local tests for helper scripts and QBox runner behavior. |
@@ -46,8 +47,9 @@ Do not use `git submodule update --init --recursive` as the default clean
 checkout command. Some Zephyr HAL repositories contain optional nested gitlinks
 without URL entries in their `.gitmodules` files, and a blanket recursive
 update fails before the Apollo build starts. The bootstrap script initializes
-all root submodules and only the nested dependencies required by the Apollo
-Yocto, local build, and QBox flows.
+all root submodules, including `tools/qbox`, `tools/qbox-platform`, and
+`tools/qemu`, and only the nested dependencies required by the Apollo Yocto,
+local build, and QBox flows.
 
 If a checkout was already left in a partial state by a failed recursive
 submodule update, restore the pinned submodule worktrees with:
@@ -117,6 +119,13 @@ To prebuild only the QBox targets used by the Apollo full-system runner:
 ./local-build.sh qbox
 ```
 
+This configures the Apollo overlay in
+`build/local-apollo-fvp/work/qbox-platform` by default. The overlay build uses
+`tools/qbox-platform` as the CMake source tree, `tools/qbox` as
+`QBOX_CORE_DIR`, and `tools/qemu` as the checkout-local libqemu source. The
+legacy `QBOX_BUILD_DIR` environment variable is still accepted as an alias for
+`QBOX_PLATFORM_BUILD_DIR`.
+
 To package existing local-build outputs into a QBox-runnable image set:
 
 ```bash
@@ -124,14 +133,15 @@ To package existing local-build outputs into a QBox-runnable image set:
 ./run_qbox.sh --local-build-dir build/local-apollo-fvp/package/qbox/local-build
 ```
 
-Repeated `local-build.sh build` runs check the QBox CMake cache and required
-Apollo QBox targets through the QBox runner's `--build-only` path. The runner
-builds QBox's `apollo_fvp_full_system` aggregate target by default, so Makefile
-generators evaluate the shared QBox/libqemu dependency graph once instead of
-once per dynamic module. libqemu uses CMake external-project stamps by default,
-so unchanged QEMU sources do not repeat the QEMU build/install step on every
-local build. Set `QBOX_LIBQEMU_BUILD_ALWAYS=ON` only when you explicitly need
-to force the QEMU external project build step.
+Repeated `local-build.sh build` runs check the qbox-platform CMake cache and
+required Apollo QBox targets through the QBox runner's `--build-only` path. The
+runner builds qbox-platform's `apollo_fvp_full_system` aggregate target by
+default, so Makefile generators evaluate the shared QBox/libqemu dependency
+graph once instead of once per dynamic module. libqemu uses CMake
+external-project stamps by default, so unchanged QEMU sources do not repeat the
+QEMU build/install step on every local build. Set
+`QBOX_LIBQEMU_BUILD_ALWAYS=ON` only when you explicitly need to force the QEMU
+external project build step.
 
 Main output directory:
 
@@ -165,16 +175,19 @@ Runtime evidence is written under `build/qbox-apollo-fvp/`. Inspect
 `result.json`, `summary.txt`, and the per-subsystem UART logs for RSE, Safety
 Island CL0/CL1, TF-A/U-Boot/Linux, and the QBox platform.
 
-If `tools/qbox/build/` has not been configured yet, the runner configures QBox
-with the checkout-local `tools/qemu` submodule as libqemu and
-`LIBQEMU_TARGETS=aarch64` before building the required Apollo platform targets.
-This avoids an ABI mismatch with upstream `qualcomm/qemu.git`. Set
-`QBOX_CMAKE_PRESET=<preset>`, `QBOX_LIBQEMU_TARGETS=<targets>`,
-`QBOX_LIBQEMU_GIT=<url>`, `QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU=<path>`,
-`QBOX_GIT_BRANCH=<ref>`, or `QBOX_APOLLO_BUILD_TARGET=<target>` to override
-those clean-configure defaults. Set `QBOX_APOLLO_BUILD_TARGET=` to use the
-legacy explicit target list, or `QBOX_LIBQEMU_BUILD_ALWAYS=ON` to restore
-libqemu's always-build behavior for QEMU development.
+If `build/local-apollo-fvp/work/qbox-platform/` has not been configured yet,
+the runner configures `tools/qbox-platform` with checkout-local
+`tools/qbox` as `QBOX_CORE_DIR` and checkout-local `tools/qemu` as libqemu
+before building the required Apollo platform targets. This avoids an ABI
+mismatch with upstream `qualcomm/qemu.git` while keeping Apollo/RD-Aspen code
+out of the QBox core source tree. Set `QBOX_CORE_DIR=<path>`,
+`QBOX_PLATFORM_DIR=<path>`, `QBOX_PLATFORM_BUILD_DIR=<path>`,
+`QBOX_LIBQEMU_TARGETS=<targets>`, `QBOX_LIBQEMU_GIT=<url>`,
+`QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU=<path>`, or
+`QBOX_APOLLO_BUILD_TARGET=<target>` to override those clean-configure defaults.
+Set `QBOX_APOLLO_BUILD_TARGET=` to use the legacy explicit target list, or
+`QBOX_LIBQEMU_BUILD_ALWAYS=ON` to restore libqemu's always-build behavior for
+QEMU development.
 
 `local-build.sh build` creates a provisioned RSE OTP image from the TF-M local
 build outputs so a clean checkout can boot directly in QBox without first

@@ -32,7 +32,7 @@ AP secure watchdog control/refresh, AP secure timer frame, RGIC2LGIC_MESSREG는
 | 범위 | 파일 |
 | --- | --- |
 | AP map audit / full coverage audit | `scripts/test/audit_qbox_apollo_ap_memory_map.py`, `scripts/test/audit_qbox_apollo_fvp_full_coverage.py` |
-| QBox Apollo AP map wiring | `tools/qbox/platforms/apollo/hw-block/rse.lua`, `tools/qbox/platforms/apollo/hw-block/ap_compute.lua`, `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`, `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts` |
+| QBox Apollo AP map wiring | `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`, `tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua`, `tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua`, `tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts` |
 | Component regression | `tools/qbox/tests/components/host_scr/host_scr-tests.cc` |
 | Project documentation | `doc/apollo-qbox-hardware-ko.md`, `doc/qbox-apollo-fvp-map-analysis.md`, `doc/apollo-qbox-full-model/coverage-ledger.md` |
 | T15 closeout | `doc/apollo-qbox-ap-map-9-1-1-closeout-ko.md` |

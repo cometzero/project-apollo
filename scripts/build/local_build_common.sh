@@ -17,7 +17,17 @@ LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${YOCTO_BUILD_DIR}/local-${MACHINE}}"
 WORK_DIR="${LOCAL_BUILD_DIR}/work"
 DEPLOY_DIR="${LOCAL_BUILD_DIR}/deploy"
 LOG_DIR="${LOCAL_BUILD_DIR}/logs"
-QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${WORK_DIR}/qbox}"
+QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/tools/qbox}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/tools/qbox-platform}"
+QBOX_QEMU_DIR="${QBOX_QEMU_DIR:-${ROOT_DIR}/tools/qemu}"
+if [[ -n "${QBOX_PLATFORM_BUILD_DIR:-}" ]]; then
+    QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
+elif [[ -n "${QBOX_BUILD_DIR:-}" ]]; then
+    QBOX_PLATFORM_BUILD_DIR="${QBOX_BUILD_DIR}"
+else
+    QBOX_PLATFORM_BUILD_DIR="${WORK_DIR}/qbox-platform"
+fi
+QBOX_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
 
 TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/trusted-firmware-m}"
 SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/scp-firmware}"
@@ -118,7 +128,9 @@ Commands:
   clean     Remove build/local-apollo-fvp.
 
 Useful overrides:
-  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_BUILD_DIR=/path/to/qbox-build JOBS=16 ./local-build.sh all
+  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_PLATFORM_BUILD_DIR=/path/to/qbox-platform-build JOBS=16 ./local-build.sh all
+  QBOX_BUILD_DIR=/path/to/qbox-platform-build ./local-build.sh qbox
+  QBOX_CORE_DIR=/path/to/qbox QBOX_PLATFORM_DIR=/path/to/qbox-platform ./local-build.sh qbox
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../git ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
@@ -646,15 +658,31 @@ setup_zephyr_build_environment()
 
 build_qbox()
 {
-    require_file "${ROOT_DIR}/scripts/run/run_qbox_fvp_rd_aspen_rse.py"
-    require_dir "${ROOT_DIR}/tools/qbox"
+    require_dir "${QBOX_CORE_DIR}"
+    require_dir "${QBOX_PLATFORM_DIR}"
+    require_dir "${QBOX_QEMU_DIR}"
     mkdir -p "${LOG_DIR}"
 
-    run_logged qbox-build env PYTHONDONTWRITEBYTECODE=1 \
-        QBOX_BUILD_DIR="${QBOX_BUILD_DIR}" \
-        python3 "${ROOT_DIR}/scripts/run/run_qbox_fvp_rd_aspen_rse.py" \
-        --build-only \
-        --jobs "${JOBS}"
+    reset_cmake_build_if_source_changed "${QBOX_PLATFORM_BUILD_DIR}" "${QBOX_PLATFORM_DIR}"
+
+    run_cmake_configure_if_needed qbox-configure "${QBOX_PLATFORM_BUILD_DIR}" \
+        cmake \
+        -S "${QBOX_PLATFORM_DIR}" \
+        -B "${QBOX_PLATFORM_BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE="${QBOX_CMAKE_BUILD_TYPE:-Release}" \
+        -DCMAKE_INSTALL_PREFIX="${QBOX_PLATFORM_BUILD_DIR}/install" \
+        -DQBOX_CORE_SOURCE_DIR="${QBOX_CORE_DIR}" \
+        -DQBOX_QEMU_SOURCE_DIR="${QBOX_QEMU_DIR}" \
+        -DLIBQEMU_GIT="file://${QBOX_QEMU_DIR}" \
+        -DFETCHCONTENT_SOURCE_DIR_LIBQEMU="${QBOX_QEMU_DIR}" \
+        -DLIBQEMU_BUILD_ALWAYS="${QBOX_LIBQEMU_BUILD_ALWAYS:-OFF}" \
+        -DQBOX_APOLLO_BUILD_TARGET="${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}"
+
+    run_logged qbox-build \
+        cmake \
+        --build "${QBOX_PLATFORM_BUILD_DIR}" \
+        --target "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}" \
+        --parallel "${JOBS}"
 }
 
 remove_tfm_signed_outputs()

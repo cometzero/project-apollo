@@ -841,9 +841,10 @@ def write_result(
     check_only: bool,
 ) -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    input_artifacts = {
-        name: artifact_record(path) for name, path in sorted(artifacts.items())
-    }
+    input_artifacts = {"conf": artifact_record(args.conf)}
+    input_artifacts.update(
+        {name: artifact_record(path) for name, path in sorted(artifacts.items())}
+    )
     marker_groups = build_marker_groups(args, child_status)
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
@@ -908,6 +909,9 @@ def write_result(
         "safety_island_mode": args.si_mode,
         "smmu_backend": args.smmu_backend,
         "mhu_backend": "systemc-mhu320ae",
+        "qbox_conf": str(args.conf),
+        "qbox_build_dir": str(args.qbox_build_dir),
+        "qbox_executable": str((args.qbox_build_dir / "platforms-vp").resolve()),
         "qbox_performance_preset": args.qbox_performance_preset,
         "qbox_performance_options": qbox_performance_options,
         "rse_otp_auto_provision": getattr(
@@ -970,6 +974,9 @@ def write_result(
         + json.dumps(status["rse_boot_timing_profile"], sort_keys=True),
         "completion_gates:",
         *[f"  - {gate}: {verdict}" for gate, verdict in gates.items()],
+        f"qbox_conf: {args.conf}",
+        f"qbox_build_dir: {args.qbox_build_dir}",
+        f"qbox_executable: {(args.qbox_build_dir / 'platforms-vp').resolve()}",
         "input_artifacts:",
         *[
             f"  - {name}: {record['path']} exists={record['exists']} size={record['size']}"
@@ -1304,6 +1311,7 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     print("+ " + " ".join(cmd), flush=True)
     env = os.environ.copy()
     env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
+    env["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_APOLLO_FULL_SI_MODE"] = args.si_mode
     if not args.build_only:
         # Full-system runtime evidence must include the AP firmware/Linux path.
@@ -1358,11 +1366,14 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
 
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
+    qbox_platform_dir = Path(
+        os.environ.get("QBOX_PLATFORM_DIR", str(root / "tools/qbox-platform"))
+    )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox/platforms/apollo/apollo-qvp.lua",
+        default=qbox_platform_dir / "platforms/apollo/apollo-qvp.lua",
     )
     parser.add_argument(
         "--local-build-dir",
@@ -1372,7 +1383,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--qbox-build-dir",
         type=Path,
-        help="QBox CMake build directory. Defaults to <local-build-dir>/work/qbox.",
+        help=(
+            "QBox CMake build directory. Defaults to "
+            "<local-build-dir>/work/qbox-platform."
+        ),
     )
     parser.add_argument(
         "--si-mode",
@@ -1646,8 +1660,16 @@ def parse_args() -> argparse.Namespace:
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     if args.qbox_build_dir is None:
-        args.qbox_build_dir = args.local_build_dir / "work/qbox"
+        qbox_build_dir_env = os.environ.get("QBOX_PLATFORM_BUILD_DIR") or os.environ.get(
+            "QBOX_BUILD_DIR"
+        )
+        if qbox_build_dir_env:
+            args.qbox_build_dir = Path(qbox_build_dir_env)
+        else:
+            args.qbox_build_dir = args.local_build_dir / "work/qbox-platform"
     args.qbox_build_dir = args.qbox_build_dir.resolve()
+    os.environ["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
+    os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     args.out_dir = args.out_dir.resolve()
     if args.qbox_performance_preset:
         args.remotepass_dmi_cache = True

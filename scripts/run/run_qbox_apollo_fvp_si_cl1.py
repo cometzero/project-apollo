@@ -58,8 +58,13 @@ def workspace_root() -> Path:
 
 
 def qbox_build_dir(root: Path) -> Path:
-    default_dir = root / "build/local-apollo-fvp/work/qbox"
-    return Path(os.environ.get("QBOX_BUILD_DIR", str(default_dir))).resolve()
+    default_dir = root / "build/local-apollo-fvp/work/qbox-platform"
+    return Path(
+        os.environ.get(
+            "QBOX_PLATFORM_BUILD_DIR",
+            os.environ.get("QBOX_BUILD_DIR", str(default_dir)),
+        )
+    ).resolve()
 
 
 def timestamp() -> str:
@@ -323,7 +328,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox/platforms/apollo/apollo-si-cl1.lua",
+        default=root / "tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua",
     )
     parser.add_argument("--image", type=Path, default=default_image(root))
     parser.add_argument("--symbols", type=Path, default=default_symbols(root))
@@ -337,7 +342,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--qbox-build-dir",
         type=Path,
-        help="QBox CMake build directory. Defaults to build/local-apollo-fvp/work/qbox.",
+        help=(
+            "QBox CMake build directory. Defaults to "
+            "build/local-apollo-fvp/work/qbox-platform."
+        ),
     )
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--skip-build", action="store_true")
@@ -350,7 +358,9 @@ def parse_args() -> argparse.Namespace:
     args.symbols = args.symbols.resolve()
     args.out_dir = args.out_dir.resolve()
     if args.qbox_build_dir is not None:
-        os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir.resolve())
+        resolved_qbox_build_dir = str(args.qbox_build_dir.resolve())
+        os.environ["QBOX_PLATFORM_BUILD_DIR"] = resolved_qbox_build_dir
+        os.environ["QBOX_BUILD_DIR"] = resolved_qbox_build_dir
     if args.uart_read_file:
         args.uart_read_file = args.uart_read_file.resolve()
     return args

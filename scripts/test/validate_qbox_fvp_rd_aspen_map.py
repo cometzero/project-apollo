@@ -488,13 +488,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--qbox-conf",
         type=Path,
-        default=root / "tools/qbox/platforms/fvp-rd-aspen/conf.lua",
+        default=root / "tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua",
     )
     parser.add_argument(
         "--qbox-dts",
         type=Path,
         default=root
-        / "tools/qbox/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts",
+        / "tools/qbox-platform/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts",
     )
     parser.add_argument(
         "--reference-dts",

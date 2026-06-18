@@ -25,11 +25,11 @@ behavior.
   `arm-zena-css/documentation/design/ras.rst`, and
   `arm-zena-css/documentation/design/platform_fault_detection_interface.rst`
 - Current QBox RD-Aspen RSE topology:
-  `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+  `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
 - Current QBox Apollo direct-boot AP device tree:
-  `tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts`
+  `tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts`
 - Current QBox RD-Aspen AP device tree:
-  `tools/qbox/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts`
+  `tools/qbox-platform/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts`
 - Apollo-owned Safety Island CL0 firmware map and IRQ definitions:
   `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_mmap.h`,
   `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h`

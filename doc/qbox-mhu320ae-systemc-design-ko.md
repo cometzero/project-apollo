@@ -84,11 +84,11 @@ Apollo full-system 부팅 검증에서는 MHU register model과 함께 원자적
 
 Default 전환 대상:
 
-- `tools/qbox/platforms/fvp-rd-aspen/conf.lua`: AP SCMI TX/RX.
-- `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`: RSE local MHU0/MHU2,
+- `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`: AP SCMI TX/RX.
+- `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`: RSE local MHU0/MHU2,
   AP/RSE secure mailbox, RSE/SI SCMI, AP/SI SCMI/CL1/PFDI paths.
-- `tools/qbox/platforms/apollo/apollo-qvp.lua`: live CL1 HIPC/PFDI override.
-- `tools/qbox/platforms/apollo/apollo-si-cl1.lua`: isolated CL1 HIPC/PFDI.
+- `tools/qbox-platform/platforms/apollo/apollo-qvp.lua`: live CL1 HIPC/PFDI override.
+- `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua`: isolated CL1 HIPC/PFDI.
 
 `mhuv3_rproc_stub`는 standalone primary-compute remoteproc path의 separate
 compatibility component로 남긴다.

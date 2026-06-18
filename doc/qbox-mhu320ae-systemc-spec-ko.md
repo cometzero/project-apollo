@@ -117,9 +117,9 @@ Trace file은 기존 `mhuv3-trace.log` 소비 도구와 호환되어야 한다. 
 
 ## 검증 기준
 
-- `cmake --build tools/qbox/build --target mhu320ae mhu320ae-tests platforms-vp`
+- `cmake --build build/local-apollo-fvp/work/qbox-platform --target mhu320ae mhu320ae-tests platforms-vp`
   성공.
-- `ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure` 성공.
+- `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mhu320ae' --output-on-failure` 성공.
 - `scripts/run/run_qbox_apollo_fvp_si_cl1.py --skip-build`에서 Zephyr shell,
   PFDI agent/service marker가 통과.
 - `scripts/run/run_qbox_apollo_fvp_full.py --skip-build --si-mode live-cl0-cl1

@@ -26,9 +26,9 @@ Evidence:
 
 - `doc/arm_zena_css_dev_guide/08-fixed-virtual-platform.md` lists
   Arm MHU-320AE in the Safety Island block.
-- `tools/qbox/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts` exposes
+- `tools/qbox-platform/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts` exposes
   `arm,mhuv3` nodes at `0x40020000`, `0x40050000`, `0x400b0000`, `0x400e0000`.
-- `tools/qbox/platforms/apollo/apollo-qvp.lua` exposes live CL1 local MHU frames
+- `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` exposes live CL1 local MHU frames
   at `0x39000000`, `0x39040000`, and `0x39200000`.
 - `tools/qbox/systemc-components/mhuv3_stub/` contains the existing validated
   PBX/MBX frame model and service hooks.
@@ -45,7 +45,7 @@ Files:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mhu320ae --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mhu320ae --parallel 8
 ```
 
 ### MHU320-SYS-030: Register frame model
@@ -66,7 +66,7 @@ Required tests:
 Verification:
 
 ```bash
-ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mhu320ae' --output-on-failure
 ```
 
 ### MHU320-SYS-040: SCMI/PFDI/doorbell hooks
@@ -85,10 +85,10 @@ Required tests:
 
 Files:
 
-- `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
-- `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- `tools/qbox/platforms/apollo/apollo-qvp.lua`
-- `tools/qbox/platforms/apollo/apollo-si-cl1.lua`
+- `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`
+- `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
+- `tools/qbox-platform/platforms/apollo/apollo-qvp.lua`
+- `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua`
 - `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - `scripts/run/run_qbox_apollo_fvp_si_cl1.py`
 
@@ -107,9 +107,9 @@ python3 -m py_compile scripts/*/*.py
 bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 git -C tools/qbox diff --check
 git diff --check
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target mhu320ae mhu320ae-tests platforms-vp --parallel 8
-ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mhu320ae' --output-on-failure
 ```
 
 ### MHU320-SYS-070: Runtime validation
@@ -153,8 +153,8 @@ Use `$commit-atomic` rules:
 | Python syntax | pass | `python3 -m py_compile ...` for changed QBox runners and validators |
 | Diff whitespace | pass | `git diff --check`, `git -C tools/qbox diff --check` |
 | Map validation | pass | `build/qbox-fvp-rd-aspen/map-validation.json` |
-| QBox build | pass | `cmake --build tools/qbox/build --target mhu320ae mhu320ae-tests platforms-vp --parallel 8` |
-| Component tests | pass | `ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure` |
+| QBox build | pass | `cmake --build build/local-apollo-fvp/work/qbox-platform --target mhu320ae mhu320ae-tests platforms-vp --parallel 8` |
+| Component tests | pass | `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mhu320ae' --output-on-failure` |
 | CL1 isolated boot | pass | `build/qbox-apollo-fvp/mhu320ae-si-cl1-20260609-063830/result.json` |
 | Apollo full-system boot | pass | `build/qbox-apollo-fvp/mhu320ae-live-verify-20260609-063846/result.json` |
 

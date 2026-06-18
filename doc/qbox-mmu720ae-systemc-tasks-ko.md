@@ -100,8 +100,8 @@ Files:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-register-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-register-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae' --output-on-failure
 ```
 
 Expected:
@@ -123,7 +123,7 @@ Files:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae --parallel 8
 git -C tools/qbox diff --check
 ```
 
@@ -146,8 +146,8 @@ Minimum tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-register-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-register-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-register-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-register-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -176,8 +176,8 @@ Current covered tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-queue-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-queue-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-queue-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-queue-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -200,8 +200,8 @@ Minimum tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-translation-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-translation-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-translation-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-translation-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -223,8 +223,8 @@ Minimum tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-tbu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-tbu-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-tbu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-tbu-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -253,8 +253,8 @@ Minimum tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-dmi-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-dmi-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-dmi-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-dmi-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -276,8 +276,8 @@ Minimum tests:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-ras-pmu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-ras-pmu-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-ras-pmu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-ras-pmu-tests' --output-on-failure
 ```
 
 Review fail conditions:
@@ -294,7 +294,7 @@ python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
-cmake --build tools/qbox/build --target platforms-vp mmu720ae --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp mmu720ae --parallel 8
 QBOX_RDASPEN_SMMU_BACKEND=systemc-mmu720ae \
   python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
@@ -413,7 +413,7 @@ Modify:
 
 - `doc/qbox-fvp-emulation-project.md`
 - `doc/apollo-qbox-hardware-ko.md`
-- `tools/qbox/platforms/fvp-rd-aspen/README.md`
+- `tools/qbox-platform/platforms/fvp-rd-aspen/README.md`
 - `doc/qbox-apollo-fvp-full-system-runbook-ko.md`
 
 Pass criteria:
@@ -440,8 +440,8 @@ Pass criteria:
 | Gate | Command or Artifact | Required Result |
 | --- | --- | --- |
 | V0 Docs | `rg -n "TO[D]O|TB[D]|[s]tub-only|[b]ypass-only" doc/qbox-mmu720ae-systemc-*.md` | No placeholder or register-bypass shortcut completion language |
-| V1 Build | `cmake --build tools/qbox/build --target mmu720ae --parallel 8` | Pass |
-| V2 Unit | `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` | Pass |
+| V1 Build | `cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae --parallel 8` | Pass |
+| V2 Unit | `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae' --output-on-failure` | Pass |
 | V3 Static | `git -C tools/qbox diff --check` | Pass |
 | V4 Map | `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py` | Pass for selected backend |
 | V5 RSE Runtime | `run_qbox_fvp_rd_aspen_rse.py --smmu-backend systemc-mmu720ae --post-login-probe` | Login, SMMU probe, no driver enable failure |

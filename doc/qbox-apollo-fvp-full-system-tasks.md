@@ -176,7 +176,7 @@ python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
-cmake --build tools/qbox/build --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp --parallel 8
 ```
 
 Gate G1:
@@ -444,7 +444,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | QAP-FULL-001 | Define Apollo full artifact resolver. | `scripts/run/run_qbox_apollo_fvp_full.py --check-only` records all local firmware, boot, rootfs, and symbol inputs. | Missing files fail with `missing_artifact:<name>`; present files record path and size in `result.json`. |
 | QAP-FULL-002 | Preserve direct Linux boot as a guardrail. | Existing `scripts/run/run_qbox_apollo_fvp_linux.py` remains untouched except shared helper extraction if reviewed. | `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --timeout 600 --post-login-probe` still reaches the existing pass criteria. |
 | QAP-FULL-003 | Capture fresh FVP baseline logs. | A local FVP run under `build/local-apollo-fvp/fvp-boot/` with RSE, SI CL0, SI CL1, TF-A, and U-Boot/Linux logs. | `result.json` passes and logs include subsystem markers used by QBox comparison. |
-| QAP-FULL-004 | Confirm Cortex-R82 source and build support. | Source probe and targeted QBox build evidence. | `python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .` passes; `cmake --build tools/qbox/build --target cpu_arm_cortexR82 --parallel 8` passes. |
+| QAP-FULL-004 | Confirm Cortex-R82 source and build support. | Source probe and targeted QBox build evidence. | `python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .` passes; `cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexR82 --parallel 8` passes. |
 | QAP-FULL-005 | Build normalized map and IRQ ledger. | Source-backed data file or script output consumed by the validator. | AP, RSE, SMD, SI CL0, and SI CL1 memory views and interrupt views include source references from programmer model, Lua, DTS, SCP headers, and Zephyr DTS. |
 | QAP-FULL-006 | Classify hardware block coverage. | Initial coverage report for CPU, GIC, MHU, ATU, PPU/SCR/RGM, FMU, SSU, SMCF, RAS, timers, watchdogs, UARTs, boot security blocks, and AP I/O. | Each block is marked `live`, `service-modeled`, `register-stub`, or `absent`; unknown ownership is treated as a blocker. |
 
@@ -452,7 +452,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 
 | ID | Task | Deliverable | Acceptance |
 | --- | --- | --- | --- |
-| QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox/platforms/apollo/apollo-qvp.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
+| QAP-FULL-010 | Add Apollo full Lua platform. | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua`. | Derived from `fvp-rd-aspen-rse/conf.lua`; uses Apollo artifact defaults and `QBOX_APOLLO_FULL_` variables; direct `conf.lua` is unchanged. |
 | QAP-FULL-011 | Add full-system runner. | `scripts/run/run_qbox_apollo_fvp_full.py`. | Supports `--check-only`, `--si-mode`, `--post-login-probe`, `--out-dir`, artifact overrides, per-run writable flash/OTP copies, and structured `result.json`. |
 | QAP-FULL-012 | Use local QBox build command. | `./local-build.sh qbox`. | Builds `platforms-vp`, `remote_cpu`, `cpu_arm_cortexM55`, `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, MHU, RSE, flash, UART, GIC, SMMU, and virtio targets needed by full boot. |
 | QAP-FULL-013 | Add static map validator. | `scripts/test/validate_qbox_apollo_fvp_full_map.py`. | Checks AP, RSE, SMD, SI CL0, SI CL1 memory views; AP GIC, RSE NVIC, SI CL0 GIC view, SI CL1 GIC view; ATU/ATW windows; AP-RSE/RSE-SI/AP-SI/CL1-CL0 MHU channels; UART, timers, watchdogs, HIPC, PFDI, FMU, SSU, and SMCF evidence. |
@@ -474,7 +474,7 @@ and the CL1 Zephyr log records `veth_rpmsg: RPMSG Endpoint: ATTACHED`.
 | QAP-FULL-026 | Implement SI GIC multiview register model. | `GICD_CTLR`, `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR`, and `GICR_VIEWR` behavior. | SCP-firmware can read the view capability bit, program redistributor and SPI views, and poll `GICR_PWRR` without unsupported-access traps. |
 | QAP-FULL-027 | Wire SI CL0/CL1 QEMU GICv3 backends. | Apollo full Lua wiring with `si_cl0_gic`, `si_cl1_gic`, and `gicx00_multiview`. | View-0 MMIO reaches SystemC; CL0 view-1 MMIO reaches the CL0 QEMU GICv3 backend; CL1 view-2 MMIO reaches the CL1 QEMU GICv3 backend. |
 | QAP-FULL-028 | Route SI SPIs through the multiview controller. | MHU, UART, timer, FMU/SSU/SMCF, and other shared SI SPI bindings in `apollo-qvp.lua`. | CL0 and CL1 interrupts are delivered through the firmware-configured local view without collapsing CL1 Zephyr SPIs into CL0 SCP-firmware IRQ names. |
-| QAP-FULL-029 | Validate SI GIC multiview routing. | Unit tests plus isolated and integrated runtime evidence. | `cmake --build tools/qbox/build --target gicx00_multiview --parallel 8`, `ctest --test-dir tools/qbox/build -R gicx00_multiview`, and `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --post-login-probe --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1` pass or record a classified blocker. |
+| QAP-FULL-029 | Validate SI GIC multiview routing. | Unit tests plus isolated and integrated runtime evidence. | `cmake --build build/local-apollo-fvp/work/qbox-platform --target gicx00_multiview --parallel 8`, `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R gicx00_multiview`, and `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --post-login-probe --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1` pass or record a classified blocker. |
 
 ### Current Phase 2 Evidence
 
@@ -559,7 +559,7 @@ AP GIC multiview, AP/CL1 PPUs, AP cluster-control windows, FMU/SSU, and the
 CL0-visible ATW self-check windows.
 
 ```text
-tools/qbox/platforms/apollo/apollo-qvp.lua
+tools/qbox-platform/platforms/apollo/apollo-qvp.lua
 tools/qbox/systemc-components/gicx00_multiview/
 tools/qbox/systemc-components/host_ni710ae_nci/
 tools/qbox/systemc-components/host_cmn_cyprus/

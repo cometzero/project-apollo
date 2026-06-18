@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -18,29 +19,29 @@ CHECKS = {
         ("map:smd", "doc/qbox-apollo-fvp-map-analysis.md", r"\| SMD(?:/system-wide view| system-wide map)? \|"),
         ("map:si-cl0", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL0 \|"),
         ("map:si-cl1", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL1 \|"),
-        ("platform:apollo-pc-entrypoint", "tools/qbox/platforms/apollo/apollo-pc.lua", r"hw-block/primary_compute\.lua"),
-        ("platform:pc-block", "tools/qbox/platforms/apollo/hw-block/primary_compute.lua", r"Apollo FVP QBox config running"),
-        ("platform:apollo-si-cl1-entrypoint", "tools/qbox/platforms/apollo/apollo-si-cl1.lua", r"hw-block/si_cl1_isolated\.lua"),
-        ("platform:si-cl1-isolated-block", "tools/qbox/platforms/apollo/hw-block/si_cl1_isolated.lua", r"Apollo FVP Safety Island CL1 isolated"),
-        ("platform:apollo-qvp-lua", "tools/qbox/platforms/apollo/apollo-qvp.lua", r"hw-block/rse\.lua"),
-        ("platform:apollo-qvp-system-mgmt", "tools/qbox/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
-        ("platform:rse-topology-inline", "tools/qbox/platforms/apollo/hw-block/rse.lua", r"RD-Aspen RSE QBox skeleton config running"),
-        ("platform:system-mgmt-helper", "tools/qbox/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.add_ap_logical_mhu_aliases"),
-        ("platform:system-mgmt-live-cl0-integration", "tools/qbox/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.prepare_live_cl0_integration"),
-        ("platform:system-mgmt-ownership", "tools/qbox/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
-        ("platform:ap-compute-helper", "tools/qbox/platforms/apollo/hw-block/ap_compute.lua", r"ap_view_router"),
-        ("platform:ap-atu-in-ap-view", "tools/qbox/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_view_router\.initiator_socket\""),
-        ("platform:ap-dram-in-ap-view", "tools/qbox/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
-        ("platform:ap-gic-in-ap-view", "tools/qbox/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
-        ("platform:ap-gpex-in-ap-view", "tools/qbox/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_target\(platform\.ap_gpex_0\.ecam_iface\)"),
-        ("platform:si-cl0-helper", "tools/qbox/platforms/apollo/hw-block/si_cl0.lua", r"si_cl0\.enable"),
-        ("platform:qvp-live-cl0-system-mgmt", "tools/qbox/platforms/apollo/apollo-qvp.lua", r"system_mgmt\.prepare_live_cl0_integration"),
-        ("platform:si-cl1-helper", "tools/qbox/platforms/apollo/hw-block/si_cl1.lua", r"si_cl1\.enable"),
-        ("platform:ros-helper", "tools/qbox/platforms/apollo/hw-block/ros.lua", r"ros\.peripherals"),
-        ("platform:ap-virtio-in-ros-view", "tools/qbox/platforms/apollo/hw-block/ros.lua", r"bind_target\(virtio\.mem"),
-        ("platform:ap-rtc-in-ros-view", "tools/qbox/platforms/apollo/hw-block/ros.lua", r"platform\.ap_rtc_0\.mem"),
-        ("platform:ap-rse-mhu-pbx-logical", "tools/qbox/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_PBX_LOGICAL_BASE\s*=\s*0x40680000"),
-        ("platform:ap-rse-mhu-mbx-logical", "tools/qbox/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_MBX_LOGICAL_BASE\s*=\s*0x406B0000"),
+        ("platform:apollo-pc-entrypoint", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-pc.lua", r"hw-block/primary_compute\.lua"),
+        ("platform:pc-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/primary_compute.lua", r"Apollo FVP QBox config running"),
+        ("platform:apollo-si-cl1-entrypoint", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-si-cl1.lua", r"hw-block/si_cl1_isolated\.lua"),
+        ("platform:si-cl1-isolated-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1_isolated.lua", r"Apollo FVP Safety Island CL1 isolated"),
+        ("platform:apollo-qvp-lua", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/rse\.lua"),
+        ("platform:apollo-qvp-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
+        ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"RD-Aspen RSE QBox skeleton config running"),
+        ("platform:system-mgmt-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.add_ap_logical_mhu_aliases"),
+        ("platform:system-mgmt-live-cl0-integration", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.prepare_live_cl0_integration"),
+        ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
+        ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"ap_view_router"),
+        ("platform:ap-atu-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_view_router\.initiator_socket\""),
+        ("platform:ap-dram-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
+        ("platform:ap-gic-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
+        ("platform:ap-gpex-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_target\(platform\.ap_gpex_0\.ecam_iface\)"),
+        ("platform:si-cl0-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"si_cl0\.enable"),
+        ("platform:qvp-live-cl0-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"system_mgmt\.prepare_live_cl0_integration"),
+        ("platform:si-cl1-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua", r"si_cl1\.enable"),
+        ("platform:ros-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"ros\.peripherals"),
+        ("platform:ap-virtio-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"bind_target\(virtio\.mem"),
+        ("platform:ap-rtc-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"platform\.ap_rtc_0\.mem"),
+        ("platform:ap-rse-mhu-pbx-logical", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_PBX_LOGICAL_BASE\s*=\s*0x40680000"),
+        ("platform:ap-rse-mhu-mbx-logical", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_MBX_LOGICAL_BASE\s*=\s*0x406B0000"),
         ("source:si0-mmap", "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_mmap.h", r"SI0_"),
     ],
     "irq": [
@@ -62,6 +63,20 @@ def workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def qbox_platform_dir(root: Path) -> Path:
+    value = os.environ.get("QBOX_PLATFORM_DIR")
+    if value:
+        return Path(value).expanduser().resolve()
+    return root / "tools/qbox-platform"
+
+
+def resolve_check_path(root: Path, rel_path: str) -> Path:
+    prefix = "QBOX_PLATFORM_DIR/"
+    if rel_path.startswith(prefix):
+        return qbox_platform_dir(root) / rel_path.removeprefix(prefix)
+    return root / rel_path
+
+
 def read_text(path: Path) -> str:
     if not path.exists():
         return ""
@@ -78,7 +93,7 @@ def parse_checks(value: str) -> list[str]:
 
 def run_check(root: Path, category: str, item: tuple[str, str, str]) -> dict[str, Any]:
     name, rel_path, pattern = item
-    path = root / rel_path
+    path = resolve_check_path(root, rel_path)
     text = read_text(path)
     return {
         "category": category,
@@ -113,6 +128,7 @@ def main() -> int:
     passed = all(bool(check["passed"]) for check in checks)
     result = {
         "passed": passed,
+        "qbox_platform_dir": str(qbox_platform_dir(root)),
         "selected": selected,
         "checks": checks,
     }

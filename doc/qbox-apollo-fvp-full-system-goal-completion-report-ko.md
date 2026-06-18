@@ -69,7 +69,7 @@ python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target cpu_arm_cortexR82 \
   --parallel 8
 ```
@@ -203,7 +203,7 @@ G4는 Safety Island CL0 SCP-firmware와 CL1 Zephyr를 모두 live로 실행하�
 tree에 산출물이 없어서 발생한 문제였다. 반면 `reset_fanout`과 일부 Apollo
 full-system live module은 runner의 `REQUIRED_TARGETS`에 없었다.
 
-`tools/qbox/platforms/apollo/apollo-qvp.lua`의 `moduletype` 목록과
+`tools/qbox-platform/platforms/apollo/apollo-qvp.lua`의 `moduletype` 목록과
 `scripts/run/run_qbox_fvp_rd_aspen_rse.py`의 `REQUIRED_TARGETS`를 대조했다.
 그 결과 live CL0/CL1에서 직접 로딩하는 다음 dynamic module들이 누락되어
 있음을 확인했다.
@@ -235,11 +235,11 @@ python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py
 
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target gicx00_multiview host_cmn_cyprus \
   --parallel 8
 
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target host_gtimer host_ni710ae_nci host_smcf_mgi \
            host_system_pll reset_fanout \
   --parallel 8

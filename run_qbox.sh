@@ -14,6 +14,9 @@ TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-user-demo-${RUN_STAMP}}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/tools/qbox-platform}"
+QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
@@ -45,7 +48,10 @@ Then launch QBox in tmux:
 Common overrides:
   TMUX_SESSION=apollo-demo ./run_qbox.sh
   OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox.sh
-  QBOX_BUILD_DIR=build/local-apollo-fvp/work/qbox ./run_qbox.sh
+  QBOX_PLATFORM_BUILD_DIR=build/local-apollo-fvp/work/qbox-platform ./run_qbox.sh
+  QBOX_BUILD_DIR=/path/to/qbox-platform-build ./run_qbox.sh
+  QBOX_PLATFORM_DIR=tools/qbox-platform ./run_qbox.sh
+  QBOX_CONF=tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox.sh
   SSH_PORT=2225 ./run_qbox.sh
   ./run_qbox.sh --copy-disks
   ./run_qbox.sh --no-attach
@@ -57,7 +63,9 @@ Defaults:
   session: ${TMUX_SESSION}
   out_dir: ${OUT_DIR}
   local_build_dir: ${LOCAL_BUILD_DIR}
-  qbox_build_dir: ${QBOX_BUILD_DIR:-<local-build-dir>/work/qbox}
+  qbox_platform_dir: ${QBOX_PLATFORM_DIR}
+  qbox_conf: ${QBOX_CONF}
+  qbox_build_dir: ${QBOX_PLATFORM_BUILD_DIR:-${QBOX_BUILD_DIR:-<local-build-dir>/work/qbox-platform}}
   si_mode: ${SI_MODE}
   timeout: ${TIMEOUT}
 
@@ -165,6 +173,7 @@ preparse_args()
             --qbox-build-dir)
                 ((i + 1 < ${#args[@]})) || die "--qbox-build-dir requires a value"
                 QBOX_BUILD_DIR="${args[$((i + 1))]}"
+                QBOX_PLATFORM_BUILD_DIR="${QBOX_BUILD_DIR}"
                 TMUX_RUNNER_ARGS+=("${arg}" "${args[$((i + 1))]}")
                 i=$((i + 2))
                 ;;
@@ -297,10 +306,17 @@ main()
     fi
     OUT_DIR="$(abspath "${OUT_DIR}")"
     LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
-    if [[ -z "${QBOX_BUILD_DIR}" ]]; then
-        QBOX_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox"
+    QBOX_PLATFORM_DIR="$(abspath "${QBOX_PLATFORM_DIR}")"
+    QBOX_CONF="$(abspath "${QBOX_CONF}")"
+    if [[ -z "${QBOX_PLATFORM_BUILD_DIR}" ]]; then
+        if [[ -n "${QBOX_BUILD_DIR}" ]]; then
+            QBOX_PLATFORM_BUILD_DIR="${QBOX_BUILD_DIR}"
+        else
+            QBOX_PLATFORM_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox-platform"
+        fi
     fi
-    QBOX_BUILD_DIR="$(abspath "${QBOX_BUILD_DIR}")"
+    QBOX_PLATFORM_BUILD_DIR="$(abspath "${QBOX_PLATFORM_BUILD_DIR}")"
+    QBOX_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
 
     [[ -d "${LOCAL_BUILD_DIR}" ]] ||
         die "missing local build directory: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
@@ -316,6 +332,8 @@ main()
     printf '  out_dir: %s\n' "${OUT_DIR}"
     printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"
     printf '  netdev: %s\n' "${netdev}"
+    printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
+    printf '  qbox_conf: %s\n' "${QBOX_CONF}"
     printf '  qbox_build_dir: %s\n' "${QBOX_BUILD_DIR}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
@@ -330,6 +348,7 @@ main()
     if [[ "${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK}" == "1" ]]; then
         rse_diagnostic_args+=(--rse-hotpath-tlm-fallback)
     fi
+    export QBOX_PLATFORM_DIR QBOX_CONF QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR
 
     exec "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
         --session "${TMUX_SESSION}" \

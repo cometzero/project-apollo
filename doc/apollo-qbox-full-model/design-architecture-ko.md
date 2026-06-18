@@ -66,11 +66,11 @@ RSE TF-M
 
 | Lua file | 변경 방향 |
 | --- | --- |
-| `tools/qbox/platforms/apollo/hw-block/si_cl0.lua` | `si_cl0_ssu`, `si_cl0_fmu`를 `zena_ssu`, `zena_fmu`로 교체 |
-| `tools/qbox/platforms/apollo/hw-block/rse.lua` | RSE SACFG/MPC/SIC, AP secure watchdog, host SYSTOP/COUNTER windows를 model로 교체 |
-| `tools/qbox/platforms/apollo/hw-block/system_mgmt.lua` | ownership ledger에 full/service/register/memory 분류 추가 |
-| `tools/qbox/platforms/apollo/hw-block/ros.lua` | RoS missing peripheral을 `absent`, `accepted-placeholder`, `full-model`로 명시 |
-| `tools/qbox/platforms/apollo/apollo-qvp.lua` | model backend/fidelity CCI parameters를 runner result로 노출 |
+| `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua` | `si_cl0_ssu`, `si_cl0_fmu`를 `zena_ssu`, `zena_fmu`로 교체 |
+| `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` | RSE SACFG/MPC/SIC, AP secure watchdog, host SYSTOP/COUNTER windows를 model로 교체 |
+| `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua` | ownership ledger에 full/service/register/memory 분류 추가 |
+| `tools/qbox-platform/platforms/apollo/hw-block/ros.lua` | RoS missing peripheral을 `absent`, `accepted-placeholder`, `full-model`로 명시 |
+| `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` | model backend/fidelity CCI parameters를 runner result로 노출 |
 
 ## Fault Flow
 

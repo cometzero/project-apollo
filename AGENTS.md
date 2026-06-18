@@ -24,8 +24,10 @@ hardware models over register-only stubs.
 - Current configured CPU count: `PC_CPUS_COUNT_DEFAULT = "4"`
 - Apollo Safety Island Zephyr workspace:
   `hsoc-stack/components/system_mgmt/zephyrproject/`
+- QBox core under active development:
+  `tools/qbox/`
 - QBox platform under active development:
-  `tools/qbox/platforms/apollo/`
+  `tools/qbox-platform/platforms/apollo/`
 - QBox helper scripts:
   `./local-build.sh qbox`,
   `scripts/build/build_qbox.sh`,
@@ -54,7 +56,12 @@ hardware models over register-only stubs.
   and OP-TEE integration.
 - `layers/`: pinned upstream/downstream Yocto layers. Treat as external unless
   explicitly asked to patch them.
-- `tools/qbox/`: QBox SystemC/TLM/QEMU platform implementation.
+- `tools/qbox/`: upstream-friendly QBox core, including `platforms-vp`,
+  libqbox/libqemu integration, reusable SystemC/TLM components, reusable
+  QEMU-backed components, tests, and examples.
+- `tools/qbox-platform/`: Apollo/RD-Aspen platform overlay, including Apollo
+  and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU
+  wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target.
 - `tools/qemu/`: local QEMU/libqemu source used by QBox.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
   `build.sh`, `local-build.sh`, and `run_qbox.sh` call into these helpers.
@@ -211,9 +218,12 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
    - Use `./build.sh` for the configured `baremetal-image` build.
 3. QBox build checks:
-   - Build targeted modules first with `cmake --build tools/qbox/build --target
+   - Prefer `./local-build.sh qbox` for the Apollo overlay build contract.
+   - Targeted overlay builds use
+     `cmake --build build/local-apollo-fvp/work/qbox-platform --target
      <target> --parallel <n>`.
-   - Build `platforms-vp` when Lua platform wiring changes.
+   - Build `platforms-vp` from the qbox-platform build directory when Lua
+     platform wiring changes.
 4. Runtime checks:
    - For Apollo full-system local-build boot on QBox, use
      `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode
@@ -247,7 +257,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
 When adding or replacing a hardware model, update project-local evidence:
 
 - `doc/qbox-fvp-emulation-project.md` for roadmap/status changes.
-- `tools/qbox/platforms/apollo/README.md` for Apollo platform runtime
+- `tools/qbox-platform/platforms/apollo/README.md` for Apollo platform runtime
   instructions.
 - `build/qbox-apollo-fvp/` only for generated verification reports.
 

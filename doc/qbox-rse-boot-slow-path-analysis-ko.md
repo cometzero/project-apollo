@@ -943,11 +943,11 @@ coalescing 또는 BL1_2 한정 hash-state optimization을 병행해야 한다.
 ### 검증 명령
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target cc3xx-tests platforms-vp remote_cpu \
   --parallel 8
 
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'cc3xx-tests' \
   --output-on-failure
 
@@ -1325,7 +1325,7 @@ PC를 LR로 갱신한다.
 - `tools/qemu/accel/tcg/cpu-exec.c`: TCG CPU loop의 TB lookup 전 PC-entry hook 호출
 - `tools/qbox/qemu-components/common/*`: C++ `Cpu::set_pc_entry_callback()`와
   `QemuCpu` LMS accelerator 연결
-- `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`: 현재 BL1_2 ELF의
+- `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`: 현재 BL1_2 ELF의
   `pq_crypto_verify` entry인 `0x11009bad`를 기본 verify PC로 설정
 - `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
   `scripts/run/run_qbox_apollo_fvp_full.py`: `--rse-lms-accel` 옵션의 기본
@@ -1343,9 +1343,9 @@ python3 -m py_compile \
 QBOX_RSE_LMS_TEST_DATA="$(find build/tmp_baremetal/work \
   -path '*/zephyr-demos-cl1/*/git/modules/crypto/mbedtls/tests/suites/test_suite_lms.data' \
   -print -quit)" \
-  tools/qbox/build/tests/components/cc3xx/rse_lms_accel-tests
+  build/local-apollo-fvp/work/qbox-platform/tests/components/cc3xx/rse_lms_accel-tests
 
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'rse_lms_accel|cc3xx|qemu_cc3xx|cortex_m55_remote_dmi_byte_store' \
   --output-on-failure
 ```
@@ -1705,8 +1705,8 @@ word만 기록하며, guest firmware 실행은 건드리지 않는다. RSE가 re
 검증 command:
 
 ```bash
-cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
-cmake --build tools/qbox/build --target remote_cpu --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexM55 --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu --parallel 8
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
@@ -1781,10 +1781,10 @@ buffer DMI/alias 조회 실패, unsupported argument는 guest path로 fallback�
 검증 command:
 
 ```bash
-cmake --build tools/qbox/build --target cc3xx_core-tests --parallel 8
-ctest --test-dir tools/qbox/build -R '^cc3xx_core-tests$' --output-on-failure
-cmake --build tools/qbox/build --target remote_cpu --parallel 8
-cmake --build tools/qbox/build --target cpu_arm_cortexM55 --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx_core-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx_core-tests$' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexM55 --parallel 8
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
@@ -1941,7 +1941,7 @@ hook/profile 코드를 바꾼 뒤 `remote_cpu`를 다시 빌드하지 않으면 
 동작으로 smoke가 실행될 수 있다.
 
 ```bash
-cmake --build tools/qbox/build --target remote_cpu cpu_arm_cortexM55 platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu cpu_arm_cortexM55 platforms-vp --parallel 8
 ```
 
 따라서 ECDSA host verifier와 positive skip은 유지하되, skip은 positive

@@ -34,7 +34,7 @@ Lua platform config, CMake/CTest, Python QBox runners.
 ```bash
 git status --short
 git -C tools/qbox status --short
-ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx-tests$' --output-on-failure
 python3 scripts/analyze/analyze_qbox_rse_boot_timing.py \
   build/qbox-apollo-fvp/rse-cc3xx-validation-complete-20260604/result.json \
   build/qbox-apollo-fvp/rse-cc3xx-histogram-local-mmio-20260604/result.json
@@ -63,8 +63,8 @@ Steps:
 검증:
 
 ```bash
-cmake --build tools/qbox/build --target cc3xx-tests --parallel 8
-ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx-tests$' --output-on-failure
 git -C tools/qbox diff --check
 ```
 
@@ -91,8 +91,8 @@ Test coverage:
 검증:
 
 ```bash
-cmake --build tools/qbox/build --target cc3xx_core-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'cc3xx_core-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx_core-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'cc3xx_core-tests' --output-on-failure
 ```
 
 ### Phase 3: QEMU-native Wrapper Skeleton
@@ -120,7 +120,7 @@ Steps:
 검증:
 
 ```bash
-cmake --build tools/qbox/build --target qemu_cc3xx --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target qemu_cc3xx --parallel 8
 ```
 
 ### Phase 4: QEMU DMA Adapter
@@ -140,19 +140,19 @@ Steps:
 검증:
 
 ```bash
-cmake --build tools/qbox/build --target qemu_cc3xx cc3xx-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'cc3xx' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target qemu_cc3xx cc3xx-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'cc3xx' --output-on-failure
 ```
 
 ### Phase 5: Platform/Runner Opt-In
 
 Files:
 
-- Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
 - Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
 - Modify: `scripts/run/run_qbox_apollo_fvp_full_tmux.sh`
-- Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen/README.md`
 
 Steps:
 
@@ -168,7 +168,7 @@ Steps:
 python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py
-cmake --build tools/qbox/build --target platforms-vp remote_cpu --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp remote_cpu --parallel 8
 ```
 
 ### Phase 6: RSE Runtime 성능 검증

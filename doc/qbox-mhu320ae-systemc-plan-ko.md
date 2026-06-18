@@ -74,10 +74,10 @@ bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target mhu320ae mhu320ae-tests platforms-vp --parallel 8
 
-ctest --test-dir tools/qbox/build -R 'mhu320ae' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mhu320ae' --output-on-failure
 
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \

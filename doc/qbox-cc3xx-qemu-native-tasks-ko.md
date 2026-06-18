@@ -59,7 +59,7 @@ Commands:
 ```bash
 git status --short
 git -C tools/qbox status --short
-ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx-tests$' --output-on-failure
 python3 scripts/analyze/analyze_qbox_rse_boot_timing.py \
   build/qbox-apollo-fvp/rse-cc3xx-validation-complete-20260604/result.json \
   build/qbox-apollo-fvp/rse-cc3xx-histogram-local-mmio-20260604/result.json
@@ -126,8 +126,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target cc3xx-tests --parallel 8
-ctest --test-dir tools/qbox/build -R '^cc3xx-tests$' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx-tests$' --output-on-failure
 ```
 
 ### CC3XX-QEMU-030: Core-only Tests
@@ -152,8 +152,8 @@ Minimum tests:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target cc3xx_core-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'cc3xx_core-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx_core-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'cc3xx_core-tests' --output-on-failure
 ```
 
 ### CC3XX-QEMU-040: `qemu_cc3xx` Skeleton
@@ -179,7 +179,7 @@ Implementation requirements:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target qemu_cc3xx --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target qemu_cc3xx --parallel 8
 ```
 
 ### CC3XX-QEMU-050: QEMU MemoryRegionOps Access
@@ -207,8 +207,8 @@ unit/integration test에서 직접 검증하는 작업은 별도 task로 남긴�
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target qemu_cc3xx-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'qemu_cc3xx-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target qemu_cc3xx-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'qemu_cc3xx-tests' --output-on-failure
 ```
 
 ### CC3XX-QEMU-060: DMA Adapter
@@ -229,7 +229,7 @@ Steps:
 
 Files:
 
-- Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
 
 Steps:
 
@@ -347,7 +347,7 @@ post_login_probe.complete: true
 Files:
 
 - Modify: `doc/qbox-rse-boot-slow-path-analysis-ko.md`
-- Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen/README.md`
 - Modify as needed: `doc/qbox-fvp-emulation-project.md`
 
 Steps:

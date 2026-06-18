@@ -98,3 +98,7 @@
 	path = hsoc-stack/components/system_mgmt/zephyrproject/zephyr
 	url = git@github.com:cometzero/zephyr.git
 	branch = apollo-fvp-zephyr-4.1
+[submodule "tools/qbox-platform"]
+	path = tools/qbox-platform
+	url = git@github.com:cometzero/qbox-platform.git
+	branch = feature/qbox-platform-dev

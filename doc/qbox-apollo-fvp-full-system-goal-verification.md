@@ -119,7 +119,7 @@ python3 scripts/test/validate_qbox_apollo_fvp_full_map.py \
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \
   --output build/qbox-apollo-fvp/full-check-only/coverage-audit.json
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp \
   --parallel 8
 ```

@@ -67,7 +67,7 @@ generic `arm,smmu-v3` 장치다.
 현재 QBox direct/full AP 경로는 `arm_smmuv3` QEMU-backed component를 사용한다.
 `tools/qbox/qemu-components/arm_smmuv3/include/arm-smmuv3.h`는 QEMU
 `arm-smmuv3` sysbus device를 만들고, `mem` target socket과 4개 IRQ output을
-SystemC에 노출한다. `tools/qbox/platforms/fvp-rd-aspen/conf.lua`는
+SystemC에 노출한다. `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`는
 `smmu_0`을 `arm_smmuv3`로 생성하고 `0x1c0000000/0x08000000`, SPI 65,
 `stage = "1"`로 연결한다.
 
@@ -237,7 +237,7 @@ acceptance fail이다.
 | AC1 | `mmu720ae` target이 QEMU dependency 없이 빌드된다. |
 | AC2 | MMU-720AE TRM/SMMUv3 spec traceability matrix가 구현 register, reset, side effect, test와 연결된다. |
 | AC3 | Unit tests가 ID/reset, CR0ACK, queue, table walk, STE/CD, TBU, fault, IRQ, DMI invalidation을 통과한다. |
-| AC4 | `tools/qbox/platforms/fvp-rd-aspen/conf.lua`와 `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`에서 opt-in으로 `arm_smmuv3` 대신 `mmu720ae`를 선택할 수 있다. |
+| AC4 | `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`와 `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`에서 opt-in으로 `arm_smmuv3` 대신 `mmu720ae`를 선택할 수 있다. |
 | AC5 | Apollo direct Linux boot에서 `arm-smmu-v3` driver probe, sysfs registration, no probe error가 확인된다. |
 | AC6 | Synthetic DMA requester test에서 bypass, translated, abort, permission fault, stale-DMI-negative cases가 모두 통과한다. |
 | AC7 | FVP와 QBox의 SMMU register trace, Linux dmesg, `/sys/kernel/iommu_groups`, `/proc/interrupts`, fault injection 결과가 comparison report로 비교된다. |

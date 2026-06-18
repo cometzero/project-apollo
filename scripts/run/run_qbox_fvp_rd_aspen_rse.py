@@ -558,8 +558,23 @@ def workspace_root() -> Path:
 
 
 def qbox_build_dir(root: Path) -> Path:
-    default_dir = root / "build/local-apollo-fvp/work/qbox"
-    return Path(os.environ.get("QBOX_BUILD_DIR", str(default_dir))).resolve()
+    default_dir = root / "build/local-apollo-fvp/work/qbox-platform"
+    return Path(
+        os.environ.get(
+            "QBOX_PLATFORM_BUILD_DIR",
+            os.environ.get("QBOX_BUILD_DIR", str(default_dir)),
+        )
+    ).resolve()
+
+
+def qbox_core_dir(root: Path) -> Path:
+    return Path(os.environ.get("QBOX_CORE_DIR", str(root / "tools/qbox"))).resolve()
+
+
+def qbox_platform_dir(root: Path) -> Path:
+    return Path(
+        os.environ.get("QBOX_PLATFORM_DIR", str(root / "tools/qbox-platform"))
+    ).resolve()
 
 
 def timestamp() -> str:
@@ -586,30 +601,34 @@ def cmake_cache_values(cache: Path) -> dict[str, str]:
 
 
 def ensure_qbox_targets(root: Path, jobs: int) -> None:
-    qbox_dir = root / "tools/qbox"
+    core_dir = qbox_core_dir(root)
+    platform_dir = qbox_platform_dir(root)
     build_dir = qbox_build_dir(root)
     cache = build_dir / "CMakeCache.txt"
-    preset = os.environ.get("QBOX_CMAKE_PRESET", "gcc")
-    libqemu_targets = os.environ.get("QBOX_LIBQEMU_TARGETS", "aarch64")
     local_qemu = (root / "tools/qemu").resolve()
     libqemu_git = os.environ.get("QBOX_LIBQEMU_GIT", f"file://{local_qemu}")
     libqemu_source = os.environ.get(
         "QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU", str(local_qemu)
     )
-    git_branch = os.environ.get("QBOX_GIT_BRANCH", "libqemu-v11.0-v0.5")
     libqemu_build_always = os.environ.get("QBOX_LIBQEMU_BUILD_ALWAYS", "OFF")
     apollo_build_target = os.environ.get(
         "QBOX_APOLLO_BUILD_TARGET", "apollo_fvp_full_system"
     )
     install_prefix = str((build_dir / "install").resolve())
 
-    configure_cmd = ["cmake", "--preset", preset, "-B", str(build_dir)]
+    configure_cmd = [
+        "cmake",
+        "-S",
+        str(platform_dir),
+        "-B",
+        str(build_dir),
+    ]
     expected_cache = {
+        "QBOX_CORE_SOURCE_DIR": str(core_dir),
+        "QBOX_QEMU_SOURCE_DIR": str(local_qemu),
         "CMAKE_INSTALL_PREFIX": install_prefix,
-        "LIBQEMU_TARGETS": libqemu_targets,
         "LIBQEMU_GIT": libqemu_git,
         "FETCHCONTENT_SOURCE_DIR_LIBQEMU": libqemu_source,
-        "GIT_BRANCH": git_branch,
         "LIBQEMU_BUILD_ALWAYS": libqemu_build_always,
         "QBOX_APOLLO_BUILD_TARGET": apollo_build_target,
     }
@@ -624,7 +643,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
             needs_configure = True
             break
     if needs_configure:
-        run(configure_cmd, cwd=qbox_dir)
+        run(configure_cmd, cwd=root)
 
     build_targets = [apollo_build_target] if apollo_build_target else REQUIRED_TARGETS
     cmd = [
@@ -4182,7 +4201,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua",
+        default=root / "tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua",
         help="RSE-oriented QBox Lua config. Missing config is reported as an implementation blocker.",
     )
     parser.add_argument("--rse-rom", type=Path, default=deploy / "rse-rom-image.img")
@@ -4252,7 +4271,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--qbox-build-dir",
         type=Path,
-        help="QBox CMake build directory. Defaults to build/local-apollo-fvp/work/qbox.",
+        help=(
+            "QBox CMake build directory. Defaults to "
+            "build/local-apollo-fvp/work/qbox-platform."
+        ),
     )
     parser.add_argument(
         "--scp-strategy",
@@ -5026,7 +5048,9 @@ def parse_args() -> argparse.Namespace:
     )
     args = parser.parse_args()
     if args.qbox_build_dir is not None:
-        os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir.resolve())
+        resolved_qbox_build_dir = str(args.qbox_build_dir.resolve())
+        os.environ["QBOX_PLATFORM_BUILD_DIR"] = resolved_qbox_build_dir
+        os.environ["QBOX_BUILD_DIR"] = resolved_qbox_build_dir
     try:
         args.secure_service_probe_tests = parse_secure_service_tests(
             args.secure_service_probe_tests

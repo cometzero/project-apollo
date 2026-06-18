@@ -502,12 +502,14 @@ full-system에 필요한 QBox target을 빌드한다.
 target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
 
 ```bash
-cmake --build tools/qbox/build \
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
+
+cmake --build "${QBOX_PLATFORM_BUILD_DIR}" \
   --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp \
   --parallel 8
 ```
 
-RSE CPU hook 또는 `tools/qbox/qemu-components/common/include/cpu.h`를 바꾼
+RSE CPU hook 또는 `tools/qbox-platform/qemu-components/common/include/cpu.h`를 바꾼
 뒤에는 반드시 `remote_cpu`를 포함해 다시 빌드한다. RSE `RemoteCPU`는
 `cpu_arm_cortexM55.so`를 직접 로드하지 않고 `remote_cpu` 실행 파일에 CPU
 header 구현을 링크하므로, `cpu_arm_cortexM55` 모듈만 빌드하면 RSE smoke가
@@ -516,12 +518,14 @@ header 구현을 링크하므로, `cpu_arm_cortexM55` 모듈만 빌드하면 RSE
 component 변경 이후에는 다음 검사를 권장한다.
 
 ```bash
-cmake --build tools/qbox/build \
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
+
+cmake --build "${QBOX_PLATFORM_BUILD_DIR}" \
   --target reset_fanout reset_fanout-tests mhu320ae mhu320ae-tests \
   platforms-vp \
   --parallel 8
 
-ctest --test-dir tools/qbox/build \
+ctest --test-dir "${QBOX_PLATFORM_BUILD_DIR}" \
   -R 'reset_fanout|mhu320ae' \
   --output-on-failure
 ```

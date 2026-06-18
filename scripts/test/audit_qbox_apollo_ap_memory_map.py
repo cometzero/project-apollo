@@ -488,8 +488,8 @@ def parse_ros_bindings(ap_compute_text: str, ros_text: str) -> list[ApViewBindin
 
 
 def current_ap_view_bindings(root: Path) -> list[ApViewBinding]:
-    ap_compute = read_text(root / "tools/qbox/platforms/apollo/hw-block/ap_compute.lua")
-    ros = read_text(root / "tools/qbox/platforms/apollo/hw-block/ros.lua")
+    ap_compute = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua")
+    ros = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/ros.lua")
     bindings = parse_ap_compute_bindings(ap_compute)
     bindings.extend(parse_ros_bindings(ap_compute, ros))
     return sorted(bindings, key=lambda item: (item.object_name, item.socket_name, item.lua_file))
@@ -565,7 +565,7 @@ def add_smmu_factory_socket(text: str, sockets: list[LuaSocket], constants: dict
 
 
 def current_coverage(root: Path) -> list[LuaSocket]:
-    rse = read_text(root / "tools/qbox/platforms/apollo/hw-block/rse.lua")
+    rse = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/rse.lua")
     constants, tables = parse_constants(rse)
     sockets = parse_object_sockets(rse, "rse.lua", constants, tables)
     add_gic_redists(sockets, constants)
@@ -761,9 +761,9 @@ def high_dram_value_check(
 
 
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
-    rse_path = "tools/qbox/platforms/apollo/hw-block/rse.lua"
-    primary_path = "tools/qbox/platforms/apollo/hw-block/primary_compute.lua"
-    dts_path = "tools/qbox/platforms/apollo/apollo-fvp-primary-compute.dts"
+    rse_path = "tools/qbox-platform/platforms/apollo/hw-block/rse.lua"
+    primary_path = "tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua"
+    dts_path = "tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts"
     rse = read_text(root / rse_path)
     primary = read_text(root / primary_path)
     dts = read_text(root / dts_path)
@@ -1318,9 +1318,9 @@ def main() -> int:
         "sources": [
             DOC_REL_PATH,
             PLAN_REL_PATH,
-            "tools/qbox/platforms/apollo/hw-block/rse.lua",
-            "tools/qbox/platforms/apollo/hw-block/ap_compute.lua",
-            "tools/qbox/platforms/apollo/hw-block/ros.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/rse.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/ros.lua",
         ],
     }
     if args.list_expected:

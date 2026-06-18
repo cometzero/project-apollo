@@ -78,7 +78,7 @@ shared memory, SI remoteproc reserved memory, armv7 memory-mapped timer, DSU
 PMU, RAS FFH, SMMUv3, MHUv3 SCMI transport, and SI remoteproc/RPMsg.
 
 An RSE-oriented skeleton now exists at
-`tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua` with the runner
+`tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua` with the runner
 `scripts/run/run_qbox_fvp_rd_aspen_rse.py`. It uses the existing QBox
 `RemoteCPU` Cortex-M55 wrapper so the CPU-local NVIC/SCS window remains inside
 the M-profile CPU process, and it records file-backed per-console logs plus
@@ -280,7 +280,7 @@ For each IP:
    - coverage audit
    - FVP-vs-QBox log comparison where relevant
 5. Update status:
-   - QBox README or implementation note
+   - QBox platform README or implementation note
    - this document's IP matrix
    - generated verification report under `build/qbox-fvp-rd-aspen/`
 
@@ -290,9 +290,11 @@ Use these before claiming progress:
 
 ```bash
 python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/test/validate_qbox_fvp_rd_aspen_map.py scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
+git -C tools/qbox-platform diff --check
 git -C tools/qbox diff --check
-cmake --build tools/qbox/build --target <target> --parallel 8
-cmake --build tools/qbox/build --target platforms-vp --parallel 8
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
+cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target <target> --parallel 8
+cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target platforms-vp --parallel 8
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
 ./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/<run-id>/result.json --runtime-log build/qbox-fvp-rd-aspen/<run-id>/qbox-fvp-rd-aspen.log --output build/qbox-fvp-rd-aspen/coverage-audit-<run-id>.json

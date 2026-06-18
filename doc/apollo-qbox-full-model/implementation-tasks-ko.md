@@ -61,7 +61,7 @@ Files:
 
 Steps:
 
-- [ ] Record every Apollo `gs_memory` instance from `tools/qbox/platforms/apollo/hw-block/`.
+- [ ] Record every Apollo `gs_memory` instance from `tools/qbox-platform/platforms/apollo/hw-block/`.
 - [ ] Classify each entry as `memory-backing`, `accepted-placeholder`, or
   `full-model-required`.
 - [ ] Add a source column with Zena CSS guide, Apollo QBox doc, or Lua path.
@@ -73,7 +73,7 @@ Commands:
 
 ```bash
 rg -n 'moduletype\\s*=\\s*"gs_memory"|modeled\\s*=\\s*false' \
-  tools/qbox/platforms/apollo
+  tools/qbox-platform/platforms/apollo
 git diff --check
 ```
 
@@ -107,9 +107,9 @@ Required test cases:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target zena_fmu-tests --parallel 8
-cmake --build tools/qbox/build --target zena_ssu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'zena_(fmu|ssu)' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target zena_fmu-tests --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target zena_ssu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'zena_(fmu|ssu)' --output-on-failure
 ```
 
 Expected:
@@ -141,8 +141,8 @@ Implementation requirements:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target zena_fmu zena_fmu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'zena_fmu' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target zena_fmu zena_fmu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'zena_fmu' --output-on-failure
 git -C tools/qbox diff --check
 ```
 
@@ -167,8 +167,8 @@ Implementation requirements:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target zena_ssu zena_ssu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'zena_ssu' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target zena_ssu zena_ssu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'zena_ssu' --output-on-failure
 git -C tools/qbox diff --check
 ```
 
@@ -176,7 +176,7 @@ git -C tools/qbox diff --check
 
 Files:
 
-- Modify: `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua`
 - Modify: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 - Modify: `doc/apollo-qbox-hardware-ko.md`
 
@@ -192,7 +192,7 @@ Steps:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 8
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
@@ -215,7 +215,7 @@ Files:
 - Create: `tools/qbox/systemc-components/rse_protection_ctrl/include/rse_protection_ctrl.h`
 - Create: `tools/qbox/systemc-components/rse_protection_ctrl/src/rse_protection_ctrl.cc`
 - Create: `tools/qbox/tests/components/rse_protection_ctrl/rse_protection_ctrl-tests.cc`
-- Modify: `tools/qbox/platforms/apollo/hw-block/rse.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
 
 Required behavior:
 
@@ -228,9 +228,9 @@ Required behavior:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target rse_protection_ctrl rse_protection_ctrl-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'rse_protection_ctrl' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'rse_protection_ctrl' --output-on-failure
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
@@ -241,8 +241,8 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 
 Files:
 
-- Modify: `tools/qbox/platforms/apollo/hw-block/system_mgmt.lua`
-- Modify: `tools/qbox/platforms/apollo/hw-block/rse.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
 - Modify: `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 Required behavior:
@@ -258,9 +258,9 @@ Required behavior:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target rse_atu rse_atu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'rse_atu' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'rse_atu' --output-on-failure
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --output build/qbox-apollo-fvp/full-model-first-wave-coverage.json
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
@@ -278,8 +278,8 @@ Files:
 - Extend: `tools/qbox/systemc-components/host_gtimer/`
 - Create: `tools/qbox/tests/components/host_rgm/host_rgm-tests.cc`
 - Create: `tools/qbox/tests/components/host_pik/host_pik-tests.cc`
-- Modify: `tools/qbox/platforms/apollo/hw-block/rse.lua`
-- Modify: `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua`
 
 Required behavior:
 
@@ -291,9 +291,9 @@ Required behavior:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target host_rgm host_pik host_rgm-tests host_pik-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'host_(rgm|pik)' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'host_(rgm|pik)' --output-on-failure
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \
@@ -306,7 +306,7 @@ Files:
 
 - Extend: `tools/qbox/qemu-components/sbsa_gwdt/`
 - Or create: `tools/qbox/systemc-components/host_secure_wdog/`
-- Modify: `tools/qbox/platforms/apollo/hw-block/rse.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
 
 Decision:
 
@@ -318,7 +318,7 @@ Decision:
 Verification:
 
 ```bash
-cmake --build tools/qbox/build --target platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 8
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build --timeout 900 --post-login-probe \
   --si-mode live-cl0-cl1 \

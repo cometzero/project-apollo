@@ -60,11 +60,11 @@ completion gates and cannot authorize a full-system completion claim.
 
 The design is based on the current workspace state:
 
-- `tools/qbox/platforms/apollo/apollo-pc.lua` is the current Apollo
+- `tools/qbox-platform/platforms/apollo/apollo-pc.lua` is the current Apollo
   primary-compute direct-boot platform.
 - `scripts/run/run_qbox_apollo_fvp_linux.py` boots local `Image` and
   `initramfs.cpio.gz` directly and bypasses RSE, TF-A, OP-TEE, and U-Boot.
-- `tools/qbox/platforms/apollo/hw-block/rse.lua` contains the Apollo-owned
+- `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` contains the Apollo-owned
   RSE-first topology imported from the existing RD-Aspen RSE platform: RSE
   Cortex-M55, AP firmware chain, AP reset release, AP/RSE/SI MHUv3 paths,
   AP-SI HIPC/RPMsg service-model hooks, PFDI monitor plumbing, and
@@ -113,7 +113,7 @@ Keep the existing fast direct-boot path unchanged:
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
 ./local-build.sh qbox
-tools/qbox/platforms/apollo/apollo-pc.lua
+tools/qbox-platform/platforms/apollo/apollo-pc.lua
 ```
 
 Add a separate full-system path:
@@ -124,13 +124,13 @@ scripts/run/run_qbox_apollo_fvp_full.py
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 scripts/test/verify_qbox_apollo_fvp_full_completion.py
-tools/qbox/platforms/apollo/apollo-qvp.lua
-tools/qbox/platforms/apollo/hw-block/rse.lua
-tools/qbox/platforms/apollo/hw-block/ap_compute.lua
-tools/qbox/platforms/apollo/hw-block/si_cl0.lua
-tools/qbox/platforms/apollo/hw-block/si_cl1.lua
-tools/qbox/platforms/apollo/hw-block/ros.lua
-tools/qbox/platforms/apollo/hw-block/system_mgmt.lua
+tools/qbox-platform/platforms/apollo/apollo-qvp.lua
+tools/qbox-platform/platforms/apollo/hw-block/rse.lua
+tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua
+tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua
+tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua
+tools/qbox-platform/platforms/apollo/hw-block/ros.lua
+tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
 
@@ -474,7 +474,8 @@ python3 scripts/inspect/probe_qemu_cortex_r82.py --source-root .
 python3 scripts/run/run_qbox_apollo_fvp_full.py --check-only
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py --check memory,irq,atu
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --check hardware-blocks
-cmake --build tools/qbox/build --target cpu_arm_cortexR82 remote_cpu platforms-vp --parallel 8
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
+cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target cpu_arm_cortexR82 remote_cpu platforms-vp --parallel 8
 ```
 
 Runtime validation:

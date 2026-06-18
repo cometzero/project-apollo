@@ -68,7 +68,7 @@ Apollo full-system boot regression을 검증한 단계다. FVP parity 완료 상
 
 | Evidence | Command | Result |
 | --- | --- | --- |
-| Unit tests | `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` | 3/3 pass; register, queue, TBU, EVTQ fault, SID extension/default fallback covered |
+| Unit tests | `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae' --output-on-failure` | 3/3 pass; register, queue, TBU, EVTQ fault, SID extension/default fallback covered |
 | Map validator | `./scripts/test/validate_qbox_fvp_rd_aspen_map.py` | pass, writes `build/qbox-fvp-rd-aspen/map-validation.json` |
 | Full Apollo SystemC previous pass | `QBOX_RDASPEN_NETDEV=type=user python3 scripts/run/run_qbox_apollo_fvp_full.py --skip-build --si-mode live-cl0-cl1 --timeout 180 --post-login-probe --out-dir build/qbox-apollo-fvp/default-accel-runtime-20260609-004435` | `passed=true`, `verdict=pass`, `smmu_backend=systemc-mmu720ae`, `qbox_performance_preset=true`; superseded by newer retry evidence below |
 | Full Apollo SystemC latest retries | same command shape with current `mmu720ae` build, out dirs `mmu720ae-sid-runtime-*` | 3/3 blocked at `si_cl1:cpu0_oor`; RSE reaches AP power-on, SI CL1/secure/AP UART logs are 0 bytes |

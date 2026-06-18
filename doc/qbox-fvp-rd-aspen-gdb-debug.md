@@ -489,7 +489,7 @@ gdb -p $(pgrep -n platforms-vp) \
   -x build/qbox-fvp-rd-aspen/gdb-debug-YYYYMMDD-vN/gdb/qbox-host.gdb
 ```
 
-The current `tools/qbox/build` tree is configured as `CMAKE_BUILD_TYPE=Release`.
+The current `build/local-apollo-fvp/work/qbox-platform` tree is configured as `CMAKE_BUILD_TYPE=Release`.
 `platforms-vp` is not stripped, so host GDB can still capture process/thread
 state and symbol-level backtraces, but source-line debugging requires a Debug or
 RelWithDebInfo QBox build.
@@ -988,11 +988,11 @@ private pointer mapping.
 Focused validation:
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target remote_cpu cortex-m55-vp cortex-m55-dmi-byte-store-test \
   --parallel 8
 
-timeout 45s ctest --test-dir tools/qbox/build \
+timeout 45s ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'cortex_m55_remote_dmi_byte_store_(on|off)' \
   --output-on-failure
 ```
@@ -1615,12 +1615,12 @@ The focused component test and platform validation commands were:
 
 ```bash
 python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py
-luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
-cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 4
-ctest --test-dir tools/qbox/build -R strata_flash_j3 --output-on-failure
+luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
+cmake --build build/local-apollo-fvp/work/qbox-platform --target strata_flash_j3-tests --parallel 4
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R strata_flash_j3 --output-on-failure
 git -C tools/qbox diff --check
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
-cmake --build tools/qbox/build --target platforms-vp --parallel 4
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 4
 ```
 
 After the change, the same PS object-table path reads the saved metadata back:
@@ -1756,10 +1756,10 @@ secure local MHU0/MHU2 sender and receiver frames at `0x50160000`,
 Validation:
 
 ```bash
-luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
+luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py
 git -C tools/qbox diff --check
-cmake --build tools/qbox/build --target platforms-vp --parallel 4
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 4
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
@@ -1815,9 +1815,9 @@ SI_CL0_RSE_CMU_MHU_Receiver_IRQn = 139
 Validation:
 
 ```bash
-luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
+luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 git -C tools/qbox diff --check
-cmake --build tools/qbox/build --target platforms-vp --parallel 4
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 4
 ```
 
 Runtime command:
@@ -1914,7 +1914,7 @@ The current reusable debug setup is still:
 Tooling and symbols were available in the current workspace:
 
 - `gdb` and `gdb-multiarch` are installed.
-- `tools/qbox/build/platforms-vp` is non-stripped.
+- `build/local-apollo-fvp/work/qbox-platform/platforms-vp` is non-stripped.
 - TF-M, SCP-Firmware, TF-A, OP-TEE, U-Boot, Linux `vmlinux`, and SI CL1 Zephyr
   symbol paths are recorded in each bundle's `progress-report.md`.
 
@@ -3015,7 +3015,7 @@ The generated GDB environment still covered every requested debug layer:
 
 - QBox host: `gdb/qbox-host-run.gdb`, `gdb/qbox-host.gdb`, and
   `gdb/qbox-host-sample.gdb` were generated. The rebuilt
-  `tools/qbox/build/platforms-vp` is not stripped, but `sc_main` has no line
+  `build/local-apollo-fvp/work/qbox-platform/platforms-vp` is not stripped, but `sc_main` has no line
   debug information in this build configuration.
 - TF-M/RSE: port `12340` was live. The sample stopped in
   `cfi_strataflashj3_read()` from TF-M BL2 while `boot_load_image_to_sram()`
@@ -3140,14 +3140,14 @@ The focused validation commands were:
 git -C tools/qbox diff --check -- \
   systemc-components/strata_flash_j3/include/strata_flash_j3.h \
   tests/components/strata_flash_j3/strata_flash_j3-tests.cc
-luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
+luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 python3 -m py_compile \
   scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/analyze/analyze_qbox_mhu_trace.py
-timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8
-timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure
-timeout 180s cmake --build tools/qbox/build --target platforms-vp --parallel 8
+timeout 120s cmake --build build/local-apollo-fvp/work/qbox-platform --target strata_flash_j3-tests --parallel 8
+timeout 60s ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^strata_flash_j3-tests$' --output-on-failure
+timeout 180s cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 8
 ```
 
 All commands passed. `strata_flash_j3-tests` includes
@@ -3232,16 +3232,16 @@ Focused validation:
 
 ```bash
 python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/analyze/analyze_qbox_mhu_trace.py
-luac -p tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua
+luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 rg -n '[ \t]+$' \
   tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h \
   tools/qbox/tests/components/strata_flash_j3/strata_flash_j3-tests.cc \
-  tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua \
+  tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua \
   scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py
 git -C tools/qbox diff --check
-timeout 120s cmake --build tools/qbox/build --target strata_flash_j3-tests --parallel 8
-timeout 60s ctest --test-dir tools/qbox/build -R '^strata_flash_j3-tests$' --output-on-failure
-timeout 180s cmake --build tools/qbox/build --target platforms-vp --parallel 8
+timeout 120s cmake --build build/local-apollo-fvp/work/qbox-platform --target strata_flash_j3-tests --parallel 8
+timeout 60s ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^strata_flash_j3-tests$' --output-on-failure
+timeout 180s cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 8
 ```
 
 The first `luac` pass briefly hit Lua's 200-local-variable limit after adding

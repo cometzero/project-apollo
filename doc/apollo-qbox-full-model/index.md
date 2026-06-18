@@ -67,5 +67,5 @@ component/backend 검증 통과 결과와 full-system runtime gate evidence를
 - `doc/arm_zena_css_dev_guide/05-functional-blocks-in-zena-css.md`
 - `doc/arm_zena_css_dev_guide/08-fixed-virtual-platform.md`
 - `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md`
-- `tools/qbox/platforms/apollo/hw-block/`
+- `tools/qbox-platform/platforms/apollo/hw-block/`
 - `tools/qbox/systemc-components/`

@@ -71,7 +71,7 @@ validation register에 집중되어 있다.
   나머지 register side effect와 crypto state machine은 QEMU wrapper와
   SystemC wrapper가 공유할 수 있다.
 - RSE secure peripheral map에서 CC3XX는
-  `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`의
+  `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`의
   `RSE_CC3XX_BASE_S = 0x50154000`이며 현재 window size는 `0x2000`이다.
 - RSE KMU는 hardware slot export fallback address로 `0x50154400`을 쓰므로,
   QEMU-native backend도 KMU의 SystemC/TLM cold-path write를 받을 수 있어야

@@ -47,8 +47,8 @@ Files:
 - Read: `doc/arm_zena_css_dev_guide/05-functional-blocks-in-zena-css.md`
 - Read: `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md`
 - Read: `tools/qbox/qemu-components/arm_smmuv3/include/arm-smmuv3.h`
-- Read: `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
-- Read: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+- Read: `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`
+- Read: `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
 - Read: `hsoc-stack/components/primary_compute/linux/drivers/iommu/arm/arm-smmu-v3/arm-smmu-v3.c`
 
 Steps:
@@ -103,8 +103,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-register-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-register-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae' --output-on-failure
 ```
 
 Expected:
@@ -139,9 +139,9 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae --parallel 8
-cmake --build tools/qbox/build --target mmu720ae-register-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-register-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-register-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-register-tests' --output-on-failure
 git -C tools/qbox diff --check
 ```
 
@@ -173,8 +173,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-queue-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-queue-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-queue-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-queue-tests' --output-on-failure
 ```
 
 Expected:
@@ -206,8 +206,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-translation-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-translation-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-translation-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-translation-tests' --output-on-failure
 ```
 
 Expected:
@@ -242,8 +242,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-tbu-tests mmu720ae-dmi-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-(tbu|dmi)-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-tbu-tests mmu720ae-dmi-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-(tbu|dmi)-tests' --output-on-failure
 ```
 
 Expected:
@@ -274,8 +274,8 @@ Steps:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target mmu720ae-ras-pmu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'mmu720ae-ras-pmu-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target mmu720ae-ras-pmu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae-ras-pmu-tests' --output-on-failure
 ```
 
 Expected:
@@ -286,13 +286,13 @@ Expected:
 
 Files:
 
-- Modify: `tools/qbox/platforms/fvp-rd-aspen/conf.lua`
-- Modify: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
-- Modify: `tools/qbox/platforms/apollo/apollo-qvp.lua`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen/conf.lua`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
+- Modify: `tools/qbox-platform/platforms/apollo/apollo-qvp.lua`
 - Modify: `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
 - Modify: `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - Modify: `scripts/run/run_qbox_apollo_fvp_full.py`
-- Modify: `tools/qbox/platforms/fvp-rd-aspen/README.md`
+- Modify: `tools/qbox-platform/platforms/fvp-rd-aspen/README.md`
 
 Steps:
 
@@ -311,7 +311,7 @@ python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
-cmake --build tools/qbox/build --target platforms-vp mmu720ae --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp mmu720ae --parallel 8
 python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
 ```
 
@@ -373,7 +373,7 @@ Expected:
 
 Implementation is complete only when:
 
-- `ctest --test-dir tools/qbox/build -R 'mmu720ae' --output-on-failure` passes.
+- `ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'mmu720ae' --output-on-failure` passes.
 - `python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py` passes.
 - Direct Linux boot with `--smmu-backend systemc-mmu720ae` passes.
 - Full Apollo boot with `--smmu-backend systemc-mmu720ae` passes or only shows

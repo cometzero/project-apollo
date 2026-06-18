@@ -57,7 +57,7 @@ RSE 전체 stub이 아니라, FVP 대비 병목이 큰 BL2 image load/decrypt/ha
 
 ### Lua platform wiring
 
-파일: `tools/qbox/platforms/fvp-rd-aspen-rse/conf.lua`
+파일: `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
 
 - `QBOX_RDASPEN_RSE_BL2_LOAD_ACCEL`
 - `QBOX_RDASPEN_RSE_BL2_LOAD_ACCEL_MAX_BYTES`
@@ -111,7 +111,7 @@ git diff --check -- \
 결과: 통과
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target remote_cpu cpu_arm_cortexM55 platforms-vp \
   --parallel 8
 ```
@@ -120,7 +120,7 @@ cmake --build tools/qbox/build \
 `ports/initiator.h` 경로에서 발생했으며 빌드 실패는 아니다.
 
 ```bash
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'rse_p256_ecdsa|rse_mcuboot_image|rse_lms_accel|cc3xx_core' \
   --output-on-failure
 ```
@@ -248,7 +248,7 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
 명령:
 
 ```bash
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'rse_p256_ecdsa|rse_mcuboot_image|rse_lms_accel|cc3xx_core' \
   --output-on-failure
 ```

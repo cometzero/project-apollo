@@ -73,18 +73,18 @@ Pass criteria:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target zena_fmu zena_fmu-tests zena_ssu zena_ssu-tests \
   --parallel 8
-ctest --test-dir tools/qbox/build -R 'zena_(fmu|ssu)' --output-on-failure
-cmake --build tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'zena_(fmu|ssu)' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target rse_protection_ctrl rse_protection_ctrl-tests \
   --parallel 8
-ctest --test-dir tools/qbox/build -R 'rse_protection_ctrl' --output-on-failure
-cmake --build tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'rse_protection_ctrl' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target rse_atu rse_atu-tests \
   --parallel 8
-ctest --test-dir tools/qbox/build -R 'rse_atu' --output-on-failure
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'rse_atu' --output-on-failure
 ```
 
 Pass criteria:
@@ -98,7 +98,7 @@ Pass criteria:
 Commands:
 
 ```bash
-cmake --build tools/qbox/build --target platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 8
 python3 scripts/test/validate_qbox_fvp_rd_aspen_map.py
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --check hardware-blocks \

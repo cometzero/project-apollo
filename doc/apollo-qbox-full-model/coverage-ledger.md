@@ -2,7 +2,7 @@
 
 작성일: 2026-06-14
 
-이 문서는 `tools/qbox/platforms/apollo/hw-block/`의 Apollo QVP
+이 문서는 `tools/qbox-platform/platforms/apollo/hw-block/`의 Apollo QVP
 `gs_memory`와 `modeled = false` placeholder를 승격 계획 관점에서 분류한다.
 분류 기준은 [Spec](spec-ko.md)의 `memory-backing`,
 `accepted-placeholder`, `full-model-required`, `unsupported-gap` 정의를
@@ -57,7 +57,7 @@ coverage closure and must not be described as full models.
 
 ## Primary Compute Standalone
 
-Source: `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`
+Source: `tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
@@ -71,7 +71,7 @@ Source: `tools/qbox/platforms/apollo/hw-block/primary_compute.lua`
 
 ## Safety Island CL0
 
-Source: `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
+Source: `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
@@ -95,8 +95,8 @@ Source: `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
 
 Sources:
 
-- `tools/qbox/platforms/apollo/hw-block/si_cl1.lua`
-- `tools/qbox/platforms/apollo/hw-block/si_cl1_isolated.lua`
+- `tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua`
+- `tools/qbox-platform/platforms/apollo/hw-block/si_cl1_isolated.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
@@ -107,7 +107,7 @@ Sources:
 
 ## RSE And Host Integration
 
-Source: `tools/qbox/platforms/apollo/hw-block/rse.lua`
+Source: `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |
@@ -147,7 +147,7 @@ Source: `tools/qbox/platforms/apollo/hw-block/rse.lua`
 
 ## RoS / I/O / Debug Gap
 
-Source: `tools/qbox/platforms/apollo/hw-block/ros.lua`
+Source: `tools/qbox-platform/platforms/apollo/hw-block/ros.lua`
 
 | Entry | 현재 모델 | 분류 | 근거 / 후속 |
 | --- | --- | --- | --- |

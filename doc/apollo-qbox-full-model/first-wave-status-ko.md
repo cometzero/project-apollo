@@ -54,8 +54,8 @@ QBox 산출물:
 - `tools/qbox/tests/components/zena_fmu/`
 - `tools/qbox/tests/components/zena_ssu/`
 - `tools/qbox/tests/components/rse_protection_ctrl/`
-- `tools/qbox/platforms/apollo/hw-block/si_cl0.lua`
-- `tools/qbox/platforms/apollo/hw-block/rse.lua`
+- `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua`
+- `tools/qbox-platform/platforms/apollo/hw-block/rse.lua`
 - `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 ## 검증 Evidence
@@ -63,22 +63,22 @@ QBox 산출물:
 통과한 정적/빌드/component 검증:
 
 ```bash
-cmake -S tools/qbox -B tools/qbox/build
-cmake --build tools/qbox/build \
+cmake -S tools/qbox -B build/local-apollo-fvp/work/qbox-platform
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target zena_fmu zena_ssu zena_fmu-tests zena_ssu-tests \
   --parallel 8
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'zena_(fmu|ssu)-tests' --output-on-failure
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target rse_protection_ctrl rse_protection_ctrl-tests \
   --parallel 8
-ctest --test-dir tools/qbox/build \
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'rse_protection_ctrl-tests' --output-on-failure
-cmake --build tools/qbox/build --target rse_atu-tests --parallel 8
-ctest --test-dir tools/qbox/build -R 'rse_atu-tests' --output-on-failure
+cmake --build build/local-apollo-fvp/work/qbox-platform --target rse_atu-tests --parallel 8
+ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R 'rse_atu-tests' --output-on-failure
 python3 -m py_compile scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 git -C tools/qbox diff --check
-cmake --build tools/qbox/build \
+cmake --build build/local-apollo-fvp/work/qbox-platform \
   --target zena_fmu-tests zena_ssu-tests rse_protection_ctrl-tests platforms-vp \
   --parallel 8
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
