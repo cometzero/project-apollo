@@ -6,6 +6,7 @@ ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 MACHINE="${MACHINE:-apollo-fvp}"
 VARIANT="${RD_ASPEN_VARIANT:-cfg2}"
 JOBS="${JOBS:-$(nproc)}"
+HOST_PATH="${HOST_PATH:-${PATH}}"
 
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
 YOCTO_TMP="${YOCTO_TMP:-${YOCTO_BUILD_DIR}/tmp_baremetal}"
@@ -476,6 +477,22 @@ except OSError:
 PY
 }
 
+clear_sdk_env_for_yocto()
+{
+    local var
+
+    export PATH="${HOST_PATH}"
+    for var in ${!OECORE_@}; do
+        unset "${var}"
+    done
+    for var in SDKTARGETSYSROOT SDKPATH CONFIG_SITE PKG_CONFIG_SYSROOT_DIR \
+        PKG_CONFIG_PATH PKG_CONFIG_LIBDIR OECORE_ACLOCAL_OPTS TARGET_PREFIX \
+        CONFIGURE_FLAGS CC CXX CPP LD AR AS STRIP OBJCOPY OBJDUMP READELF \
+        NM RANLIB CFLAGS CXXFLAGS CPPFLAGS LDFLAGS KCFLAGS; do
+        unset "${var}" 2>/dev/null || true
+    done
+}
+
 prepare_bitbake_extra_args()
 {
     BITBAKE_EXTRA_ARGS=()
@@ -533,6 +550,7 @@ build_sdk()
         log "Creating Yocto SDK with bitbake baremetal-image -c populate_sdk"
         (
             cd "${ROOT_DIR}"
+            clear_sdk_env_for_yocto
             set +u
             # shellcheck disable=SC1091
             source layers/poky/oe-init-build-env build >/dev/null
@@ -904,6 +922,7 @@ bitbake_zephyr_getvar()
 
     (
         cd "${ROOT_DIR}"
+        clear_sdk_env_for_yocto
         set +u
         source layers/poky/oe-init-build-env build >/dev/null
         set -u
@@ -959,6 +978,7 @@ prepare_yocto_zephyr_deps_root()
     log "Preparing Yocto Zephyr dependency sources with bitbake zephyr-demos-cl1 -c unpack"
     (
         cd "${ROOT_DIR}"
+        clear_sdk_env_for_yocto
         set +u
         source layers/poky/oe-init-build-env build >/dev/null
         set -u
