@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Push"
+  short_description: "Push owned repos to GitHub"
+  default_prompt: "Use $github-push to push this project and eligible submodules to my GitHub remotes."
