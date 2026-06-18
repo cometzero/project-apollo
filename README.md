@@ -3,6 +3,34 @@
 This repository builds the Apollo FVP/RD-Aspen software stack with traditional
 Yocto, a local shell-based build, and QBox full-system emulation.
 
+## Source Structure
+
+The top-level directory is a Git repository that pins the project sources with
+submodules. Most implementation ownership is still inside nested repositories;
+commit and push changes at the repository that owns the file.
+
+Main source areas:
+
+| Path | Role |
+| --- | --- |
+| `arm-zena-css/` | Arm Zena CSS BSP, RD-Aspen FVP documentation, Safety Island integration, and upstream Arm platform metadata. |
+| `sw-ref-stack/` | Arm Automotive Solutions reference stack with images, demos, CI fragments, test automation, HIPC/PFDI integration, and EWAOL metadata. |
+| `hsoc-stack/components/primary_compute/` | Local primary-compute source submodules: Linux, U-Boot, TF-A, OP-TEE, and Buildroot. |
+| `hsoc-stack/components/system_mgmt/` | Local system-management source submodules: TF-M, SCP-firmware, and the Apollo Zephyr workspace. |
+| `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer and dynamic-layer metadata. |
+| `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer for `apollo-fvp`, firmware recipes, kernel metadata, module signing, and OP-TEE integration. |
+| `layers/` | External Yocto layer submodules such as Poky, meta-arm, meta-openembedded, meta-ewaol, meta-cassini, security, Zephyr, and virtualization layers. |
+| `tools/qbox/` | QBox SystemC/TLM/QEMU virtual platform implementation, including `platforms/apollo/`, SystemC components, and QEMU-backed components. |
+| `tools/qemu/` | Local QEMU/libqemu source used by QBox. |
+| `scripts/` | Categorized build, run, setup, debug, inspect, analyze, and test helpers. See `scripts/README.md`. |
+| `tests/` | Repository-local tests for helper scripts and QBox runner behavior. |
+| `doc/` | Project architecture notes, hardware analysis, plans, runbooks, and verification reports. |
+
+Generated output lives under `build/`. Treat `build/conf/` as the active Yocto
+configuration and treat the rest of `build/` as generated evidence, not source.
+For a more detailed Korean ownership map, see
+[doc/source-structure-ko.md](doc/source-structure-ko.md).
+
 ## Clean Checkout
 
 Clone the repository and initialize submodules with the project bootstrap

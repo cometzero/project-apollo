@@ -1,14 +1,16 @@
 # Yocto Layer And Recipe Map
 
-Generated: 2026-05-15
+Updated: 2026-06-18
 
 ## Summary
 
-The workspace has three local solution layers that matter most for project
-changes: `meta-zena-css-bsp`, `meta-zena-css-safety-island`, and
-`meta-arm-auto-solutions`. They sit on top of upstream/pinned layers and are
-joined by kas. Image selection is feature-gated: baremetal and virtualization
-recipes conflict with each other and are selected by `EXTRA_IMAGE_FEATURES`.
+The active Apollo Yocto workspace has five local solution layers that matter
+most for project changes: `meta-zena-css-bsp`, `meta-zena-css-safety-island`,
+`meta-hsoc-auto-solutions`, `meta-hsoc-bsp`, and `meta-arm-auto-solutions`.
+They sit on top of upstream/pinned layers and are joined by the traditional
+`TEMPLATECONF` flow in `build/conf/`. Image selection is feature-gated:
+baremetal and virtualization recipes conflict with each other and are selected
+by `EXTRA_IMAGE_FEATURES`.
 
 ## Local Layers
 
@@ -16,6 +18,8 @@ recipes conflict with each other and are selected by `EXTRA_IMAGE_FEATURES`.
 | --- | --- | --- |
 | `meta-zena-css-bsp` | `arm-zena-css/yocto/meta-zena-css-bsp` | RD-Aspen machine, firmware, FVP, secure boot, UEFI capsule, TF-A/TF-M/U-Boot/OP-TEE/SCP integration. |
 | `meta-zena-css-safety-island` | `arm-zena-css/yocto/meta-zena-css-safety-island` | Zephyr Safety Island CL1 build integration and patches. |
+| `meta-hsoc-auto-solutions` | `hsoc-stack/yocto/meta-hsoc-auto-solutions` | Apollo distro/template layer, traditional `apollo-fvp` `TEMPLATECONF`, and dynamic-layer patches moved out of external layers. |
+| `meta-hsoc-bsp` | `hsoc-stack/yocto/meta-hsoc-bsp` | Apollo BSP layer, `apollo-fvp` machine, local externalsrc recipes, kernel metadata, module signing, firmware image recipes, and OP-TEE integration. |
 | `meta-arm-auto-solutions` | `sw-ref-stack/yocto/meta-arm-auto-solutions` | Automotive images, image features, demos, Xen integration, PFDI, HIPC, runtime tests. |
 
 ## Layer Dependencies
@@ -47,14 +51,25 @@ layers, `meta-ewaol`, and `bluechi-layer`
 `sw-ref-stack/yocto/meta-arm-auto-solutions/conf/layer.conf:22`,
 `sw-ref-stack/yocto/meta-arm-auto-solutions/conf/layer.conf:23`).
 
-All three local layers declare `walnascar` compatibility
+The upstream Arm solution layers declare `walnascar` compatibility
 (`arm-zena-css/yocto/meta-zena-css-bsp/conf/layer.conf:32`,
 `arm-zena-css/yocto/meta-zena-css-safety-island/conf/layer.conf:22`,
 `sw-ref-stack/yocto/meta-arm-auto-solutions/conf/layer.conf:25`).
 
 ## Machine Configuration
 
-The active machine is `fvp-rd-aspen`. The machine config:
+The active machine is `apollo-fvp`. Its machine metadata in
+`hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-fvp.conf` currently
+inherits the RD-Aspen FVP machine while keeping Apollo-specific override points:
+
+- Adds `MACHINEOVERRIDES =. "fvp-rd-aspen:"` and
+  `NATIVE_MACHINE = "fvp-rd-aspen"` for compatibility with existing BSP
+  recipes.
+- Requires `conf/machine/fvp-rd-aspen.conf` as the current hardware baseline.
+- Sets `KMACHINE = "apollo-fvp"` for kernel metadata.
+- Sets `ARM_SYSTEMREADY_FIRMWARE = "firmware-apollo-fvp:do_deploy"`.
+
+The inherited RD-Aspen machine config:
 
 - Tunes for Cortex-A720 (`arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:13`).
 - Includes variant-specific FVP and RTL fragments
@@ -72,8 +87,8 @@ The active machine is `fvp-rd-aspen`. The machine config:
   (`arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:71`,
   `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:72`).
 
-The current `.config.yaml` sets `RD_ASPEN_VARIANT = "cfg2"` and
-`PC_CPUS_COUNT_DEFAULT = "4"` (`.config.yaml:15`, `.config.yaml:17`).
+The active `build/conf/local.conf` sets `RD_ASPEN_VARIANT = "cfg2"` and
+`PC_CPUS_COUNT_DEFAULT = "4"`.
 
 ## Image Recipes
 
@@ -98,7 +113,9 @@ conflicts against `baremetal` and `domu`, and appends Xen EFI boot files
 
 ## Firmware And Boot Chain
 
-The machine config defines an image dependency on `firmware-fvp-rd-aspen:do_deploy`
+The Apollo machine config overrides the firmware dependency to
+`firmware-apollo-fvp:do_deploy`; the inherited RD-Aspen machine config still
+documents the original `firmware-fvp-rd-aspen:do_deploy` dependency
 (`arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:34`,
 `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:36`).
 UEFI capsule generation is controlled by `BUILD_UEFI_CAPSULE`, and when enabled
@@ -132,9 +149,17 @@ When changing image composition, inspect:
 ## Change Guidance
 
 - Put platform-specific firmware, machine, FVP, secure boot, or capsule changes
-  in `arm-zena-css/yocto/meta-zena-css-bsp`.
-- Put Zephyr Safety Island build integration changes in
-  `arm-zena-css/yocto/meta-zena-css-safety-island`.
+  for the Apollo port in `hsoc-stack/yocto/meta-hsoc-bsp` unless the task is
+  explicitly an upstream Arm Zena CSS change.
+- Put Apollo distro/template and dynamic-layer changes in
+  `hsoc-stack/yocto/meta-hsoc-auto-solutions`.
+- Put upstream RD-Aspen BSP changes in `arm-zena-css/yocto/meta-zena-css-bsp`
+  only when the intended owner is Arm Zena CSS rather than the Apollo port.
+- Put Apollo Safety Island CL1 source changes in
+  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/` and Apollo
+  Zephyr build metadata in `hsoc-stack/yocto/meta-hsoc-bsp`; use
+  `arm-zena-css/yocto/meta-zena-css-safety-island` only for upstream Zena CSS
+  layer changes.
 - Put shared images, demos, Xen, runtime package, and test integration changes
   in `sw-ref-stack/yocto/meta-arm-auto-solutions`.
 - Avoid editing `layers/*` directly unless the task explicitly asks for a local

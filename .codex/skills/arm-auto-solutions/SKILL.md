@@ -14,14 +14,27 @@ guidance.
 
 ## Core Rule
 
-Treat the root as a traditional Yocto/BitBake workspace, not a single Git
-repository. The source ownership boundaries are:
+Treat the root as a traditional Yocto/BitBake workspace and a top-level Git
+repository that pins nested source repositories with submodules. Most
+implementation ownership still lives in those nested repositories. The source
+ownership boundaries are:
 
 - `arm-zena-css/` - Arm Zena CSS BSP, Safety Island, firmware, and Zena
   documentation.
 - `sw-ref-stack/` - Arm Automotive Solutions shared images, EWAOL integration,
   test automation, and CI fragments.
+- `hsoc-stack/components/primary_compute/` - Apollo primary-compute local
+  sources: Linux, U-Boot, TF-A, OP-TEE, and Buildroot.
+- `hsoc-stack/components/system_mgmt/` - Apollo RSE, SCP-firmware, and Safety
+  Island Zephyr sources.
+- `hsoc-stack/yocto/meta-hsoc-auto-solutions/` - Apollo distro/template and
+  dynamic-layer metadata.
+- `hsoc-stack/yocto/meta-hsoc-bsp/` - Apollo BSP, machine, firmware, kernel,
+  signing, and secure-world metadata.
 - `layers/*` - external Yocto layers, usually pinned upstream/downstream.
+- `tools/qbox/` - QBox SystemC/TLM/QEMU platform implementation.
+- `tools/qemu/` - local QEMU/libqemu source used by QBox.
+- `scripts/` and `tests/` - project orchestration helpers and helper tests.
 - `build/conf/` - active local Yocto build configuration.
 - `build/` other than `build/conf/` - generated output, useful for evidence
   only.
@@ -33,9 +46,9 @@ repository. The source ownership boundaries are:
    `build/conf/templateconf.cfg` before build or runtime claims.
 2. Check local instructions with:
    `find . -path ./build -prune -o -path ./.omx -prune -o -name AGENTS.md -print`
-3. Use `git -C arm-zena-css status --short` and
-   `git -C sw-ref-stack status --short` for nested source repos. The workspace
-   root itself is not a Git repository.
+3. Use `git status --short --branch` at the root and
+   `git submodule foreach --recursive 'git status --short --branch'` when
+   nested repository state matters.
 4. Avoid broad recursive scans of `build/`. Use targeted deploy/log paths.
 5. Separate static analysis, BitBake build validation, and FVP runtime
    validation in status reports.
@@ -45,16 +58,21 @@ repository. The source ownership boundaries are:
 - Yocto build config:
   `build/conf/local.conf`, `build/conf/bblayers.conf`,
   `build/conf/templateconf.cfg`, `build.sh`, and
-  `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+  `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
 - RD-Aspen BSP and firmware:
   `arm-zena-css/yocto/meta-zena-css-bsp`
 - Safety Island Zephyr:
-  `arm-zena-css/components/safety_island/zephyr/src`,
-  `arm-zena-css/yocto/meta-zena-css-safety-island`
+  `hsoc-stack/components/system_mgmt/zephyrproject/zephyr`,
+  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island`,
+  `hsoc-stack/yocto/meta-hsoc-bsp`
 - Shared images, EWAOL features, Xen, HIPC/PFDI Linux integration:
   `sw-ref-stack/yocto/meta-arm-auto-solutions`
 - Test automation:
   `sw-ref-stack/test_automation`
+- QBox platform:
+  `tools/qbox/platforms/apollo`,
+  `tools/qbox/systemc-components`,
+  `tools/qbox/qemu-components`
 - Current generated evidence:
   `build/tmp_baremetal/deploy/images/apollo-fvp`,
   `build/tmp_baremetal/log/cooker/apollo-fvp`
@@ -135,7 +153,7 @@ Close with:
 - exact commands run,
 - validation status as static/build/runtime,
 - explicit blockers such as missing FVP, missing Artifactory credentials,
-  missing build artifacts, or root not being a Git repository.
+  missing build artifacts, or dirty/out-of-sync nested repositories.
 
 For more context, read `references/project-map.md` only when the task needs a
 compact project map or subsystem routing reminder.

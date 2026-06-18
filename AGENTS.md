@@ -1,16 +1,18 @@
 # AGENTS.md
 
 This workspace is an Arm Auto Solutions Yocto/BitBake tree and a QBox
-co-simulation development workspace. The top-level directory is not a single
-Git repository; source ownership is in nested repositories.
+co-simulation development workspace. The top-level directory is a Git
+repository that pins nested source repositories with Git submodules. Source
+ownership still lives mostly in those nested repositories, so check and commit
+changes at the owning repository boundary.
 
 ## Project Mission
 
-Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox with SystemC/TLM/QEMU
-so the QBox virtual platform is functionally equivalent to Arm FVP for the
-active `fvp-rd-aspen` configuration. The target is high-fidelity emulation, not
-driver-only shims: prefer real SystemC/TLM or libqemu-backed hardware models
-over register-only stubs.
+Implement the Arm Zena CSS RD-Aspen/Apollo FVP behavior in QBox with
+SystemC/TLM/QEMU so the QBox virtual platform is functionally equivalent to Arm
+FVP for the active `apollo-fvp` configuration. The target is high-fidelity
+emulation, not driver-only shims: prefer real SystemC/TLM or libqemu-backed
+hardware models over register-only stubs.
 
 ## Active Baseline
 
@@ -23,14 +25,15 @@ over register-only stubs.
 - Apollo Safety Island Zephyr workspace:
   `hsoc-stack/components/system_mgmt/zephyrproject/`
 - QBox platform under active development:
-  `tools/qbox/platforms/fvp-rd-aspen/`
+  `tools/qbox/platforms/apollo/`
 - QBox helper scripts:
   `./local-build.sh qbox`,
   `scripts/build/build_qbox.sh`,
   `scripts/package.sh`,
-  `scripts/test/validate_qbox_fvp_rd_aspen_map.py`,
+  `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
+  `scripts/run/run_qbox_apollo_fvp_full.py`,
   `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
-  `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`,
+  `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`,
   `scripts/run/run_qbox_apollo_fvp_linux.py`
 
 ## Source Boundaries
@@ -39,10 +42,23 @@ over register-only stubs.
   Island sources.
 - `sw-ref-stack/`: Arm Automotive Solutions images, demos, test automation,
   and CI fragments.
+- `hsoc-stack/components/primary_compute/`: Apollo primary-compute local
+  source submodules: Linux, U-Boot, TF-A, OP-TEE, and Buildroot.
+- `hsoc-stack/components/system_mgmt/`: Apollo system-management and safety
+  local source submodules: TF-M, SCP-firmware, and the Zephyr workspace
+  containing `zephyr/` plus `safety_island/`.
+- `hsoc-stack/yocto/meta-hsoc-auto-solutions/`: project-owned Apollo distro,
+  template, and dynamic-layer metadata.
+- `hsoc-stack/yocto/meta-hsoc-bsp/`: project-owned Apollo BSP metadata,
+  machine configuration, firmware recipes, kernel metadata, module signing,
+  and OP-TEE integration.
 - `layers/`: pinned upstream/downstream Yocto layers. Treat as external unless
   explicitly asked to patch them.
 - `tools/qbox/`: QBox SystemC/TLM/QEMU platform implementation.
 - `tools/qemu/`: local QEMU/libqemu source used by QBox.
+- `scripts/`: categorized project orchestration helpers; root entrypoints
+  `build.sh`, `local-build.sh`, and `run_qbox.sh` call into these helpers.
+- `tests/`: repository-local tests for Python tooling and QBox helper logic.
 - `build/conf/`: active local Yocto build configuration.
 - `build/` other than `build/conf/`: generated evidence only. Do not treat as
   source.
@@ -61,7 +77,10 @@ over register-only stubs.
    - `$yocto-dev` / `$yocto-review` for Yocto metadata work.
    - `$linux-kernel-review` for kernel, DTS, Kconfig, driver, HIPC, RPMsg,
      remoteproc, or PFDI Linux work.
-3. Keep changes scoped to the owning repository or project-local docs.
+3. Keep changes scoped to the owning repository or project-local docs. For
+   example, kernel source changes belong in
+   `hsoc-stack/components/primary_compute/linux`, QBox model changes belong in
+   `tools/qbox`, and top-level workflow docs belong in this repository.
 4. Preserve user changes. Do not reset nested repos or generated state unless
    explicitly requested.
 5. Prefer log and artifact based validation over tmux-only screen output.
@@ -184,7 +203,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
 1. Static checks:
    - `python3 -m py_compile scripts/*/*.py` for changed Python helpers.
    - `git -C tools/qbox diff --check` for QBox changes.
-   - `./scripts/test/validate_qbox_fvp_rd_aspen_map.py`
+   - `python3 scripts/test/validate_qbox_apollo_fvp_full_map.py`
 2. Yocto build checks:
    - Initialize with `source layers/poky/oe-init-build-env build`.
    - Use `bitbake-layers show-layers` when layer order changes.
@@ -196,11 +215,17 @@ Use the narrowest meaningful command first, then broaden only when needed.
      <target> --parallel <n>`.
    - Build `platforms-vp` when Lua platform wiring changes.
 4. Runtime checks:
-   - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` with file-backed output.
-   - Use `--post-login-probe` when driver evidence matters.
-   - For Apollo local-build direct boot on QBox, use
+   - For Apollo full-system local-build boot on QBox, use
+     `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode
+     live-cl0-cl1 --timeout 600 --post-login-probe` and inspect
+     `build/qbox-apollo-fvp/full-<timestamp>/`.
+   - Use `--keep-running-after-pass` only for interactive demos that should not
+     exit after the boot pass condition.
+   - For Apollo local-build Primary Compute direct boot on QBox, use
      `python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600
      --post-login-probe` and inspect `build/qbox-apollo-fvp/<timestamp>/`.
+   - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` only as the lower-level
+     RSE/RD-Aspen compatibility runner when focused RSE evidence is needed.
    - For Apollo FVP local boot, build with `./local-build.sh build`, then use
      `python3 scripts/run/runfvp_log_boot.py --machine apollo-fvp --fvpconf
      build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf --out-dir
@@ -209,8 +234,10 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `build/local-apollo-fvp/fvp-boot/result.json` plus per-UART logs before
      using GDB/Iris.
 5. Coverage checks:
-   - Run `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py` with the runtime
-     `result.json` and log path.
+   - Run `python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
+     --result-json <runtime-result.json>
+     --output build/qbox-apollo-fvp/full-coverage-audit.json` after Apollo
+     full-system runtime checks.
 6. FVP comparison:
    - Use non-interactive FVP log scripts and compare boot, memory-map, IRQ,
      device-tree, driver probe, and service evidence.
@@ -220,9 +247,9 @@ Use the narrowest meaningful command first, then broaden only when needed.
 When adding or replacing a hardware model, update project-local evidence:
 
 - `doc/qbox-fvp-emulation-project.md` for roadmap/status changes.
-- `tools/qbox/platforms/fvp-rd-aspen/README.md` for platform-specific runtime
+- `tools/qbox/platforms/apollo/README.md` for Apollo platform runtime
   instructions.
-- `build/qbox-fvp-rd-aspen/` only for generated verification reports.
+- `build/qbox-apollo-fvp/` only for generated verification reports.
 
 Final reports must include files changed, commands run, static/build/runtime
 validation, and explicit blockers or fidelity gaps.

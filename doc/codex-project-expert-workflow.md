@@ -1,6 +1,6 @@
 # Codex Project Expert Workflow
 
-Generated: 2026-05-15
+Updated: 2026-06-18
 
 ## Summary
 
@@ -36,13 +36,16 @@ repositories.
 The native agent is intended for grounded project analysis and implementation
 guidance in this workspace. It encodes the important boundaries:
 
-- Root is a kas workspace, not a single Git repository.
-- `arm-zena-css/`, `sw-ref-stack/`, and `layers/*` are separate source zones.
-- `build/` is generated output and should be inspected only for evidence.
+- Root is a Git repository that pins nested source repositories with
+  submodules.
+- `arm-zena-css/`, `sw-ref-stack/`, `hsoc-stack/components/*`, `hsoc-stack/yocto/*`,
+  `tools/qbox/`, `tools/qemu/`, and `layers/*` are separate source zones.
+- `build/conf/` is active local Yocto configuration; the rest of `build/` is
+  generated output and should be inspected only for evidence.
 - Default outputs should include exact paths, commands, and validation evidence.
 
-Use the agent when a future task needs Arm Auto Solutions, RD-Aspen, Yocto/kas,
-Safety Island, or FVP-aware project guidance.
+Use the agent when a future task needs Arm Auto Solutions, RD-Aspen/Apollo FVP,
+Yocto, QBox, Safety Island, or FVP-aware project guidance.
 
 ## Specialist Agents
 
@@ -66,7 +69,8 @@ or the Arm Automotive Solutions software reference stack.
 The skill's main job is to keep future Codex turns from making expensive or
 unsafe assumptions. It directs Codex to:
 
-- inspect `.config.yaml` first,
+- inspect `build/conf/local.conf`, `build/conf/bblayers.conf`, and
+  `build/conf/templateconf.cfg` before build/runtime claims,
 - preserve nested repo boundaries,
 - avoid broad `build/` scans,
 - choose source paths by subsystem,
@@ -113,33 +117,43 @@ into prompts or send tmux keys.
 For future Codex work in this workspace, start with:
 
 ```bash
-sed -n '1,120p' .config.yaml
+sed -n '1,160p' build/conf/local.conf
+sed -n '1,180p' build/conf/bblayers.conf
+cat build/conf/templateconf.cfg
 find . -path ./build -prune -o -path ./.omx -prune -o -name AGENTS.md -print
-git -C arm-zena-css status --short
-git -C sw-ref-stack status --short
+git status --short --branch
+git submodule status --recursive
 ```
 
 Then choose the narrow source area:
 
-- Build/kas config: `arm-zena-css/yocto/kas`,
-  `sw-ref-stack/yocto/kas`, `.config.yaml`
+- Yocto build config: `build/conf/`, `build.sh`,
+  `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
 - Yocto layer/recipe review:
   `doc/yocto-layer-recipe-review.md`,
   `.codex/skills/arm-auto-solutions/references/yocto-layer-recipe-review.md`
 - Linux kernel source review:
   `doc/linux-kernel-source-review.md`,
   `.codex/skills/linux-kernel-review/references/review-checklist.md`
-- RD-Aspen BSP and firmware:
+- RD-Aspen BSP and upstream firmware metadata:
   `arm-zena-css/yocto/meta-zena-css-bsp`
-- Safety Island Zephyr:
-  `arm-zena-css/components/safety_island/zephyr/src`,
-  `arm-zena-css/yocto/meta-zena-css-safety-island`
+- Apollo primary compute sources:
+  `hsoc-stack/components/primary_compute/`
+- Apollo system management and Safety Island sources:
+  `hsoc-stack/components/system_mgmt/`
+- Apollo Yocto metadata:
+  `hsoc-stack/yocto/meta-hsoc-auto-solutions/`,
+  `hsoc-stack/yocto/meta-hsoc-bsp/`
+- QBox/QEMU platform sources:
+  `tools/qbox/`, `tools/qemu/`
 - Automotive images/tests:
   `sw-ref-stack/yocto/meta-arm-auto-solutions`,
   `sw-ref-stack/test_automation`
 - Generated evidence:
-  `build/tmp_baremetal/deploy/images/fvp-rd-aspen`,
-  `build/tmp_baremetal/log/cooker/fvp-rd-aspen`
+  `build/local-apollo-fvp/`,
+  `build/qbox-apollo-fvp/`,
+  `build/tmp_baremetal/deploy/images/apollo-fvp`,
+  `build/tmp_baremetal/log/cooker/apollo-fvp`
 
 ## Evidence Policy
 
@@ -148,5 +162,5 @@ When closing work in this project, report:
 - exact files changed,
 - exact commands run,
 - whether evidence is build-time, runtime, or static-only,
-- explicit blockers such as missing FVP, missing Artifactory credentials, or
-  root not being a Git repository.
+- explicit blockers such as missing FVP, missing Artifactory credentials,
+  missing build artifacts, or dirty/out-of-sync nested repositories.

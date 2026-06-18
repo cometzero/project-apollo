@@ -1,15 +1,19 @@
 # Arm Auto Solutions Analysis
 
-Generated: 2026-05-15
+Updated: 2026-06-18
 
 This directory contains Codex-facing analysis notes for the current
-`/build/arm/arm-auto-solutions` workspace. The workspace is a kas-generated
-multi-repository Yocto tree rather than a single Git repository. The notes keep
+`/build/arm/arm-auto-solutions` workspace. The workspace is now a top-level Git
+repository that pins nested source repositories with submodules. The notes keep
 source repositories, generated build artifacts, and Codex automation surfaces
 separate.
 
 ## Documents
 
+- [Current Source Structure KR](source-structure-ko.md) - Korean source
+  ownership map for the top repository, `hsoc-stack`, primary compute,
+  system management, QBox/QEMU, Yocto layers, scripts, tests, generated build
+  outputs, and documentation update rules.
 - [Project Architecture](project-architecture.md) - workspace layout,
   subsystems, and current configuration.
 - [Arm Zena CSS Hardware Blocks](arm-zena-css-hardware-blocks.md) - RD-Aspen
@@ -55,8 +59,10 @@ separate.
   review backlog for the full-system QBox implementation stages and acceptance
   criteria, including the final strict verifier command
   `scripts/test/verify_qbox_apollo_fvp_full_completion.py --strict-final`.
-- [Yocto Build And Kas](yocto-build-and-kas.md) - kas include stack, build
-  variants, targets, and reproducibility levers.
+- [Yocto Build And Kas](yocto-build-and-kas.md) - historical kas include stack,
+  build variants, targets, and reproducibility levers. The active build path is
+  the traditional Yocto `TEMPLATECONF` flow documented in the top-level
+  `README.md`.
 - [Yocto Layer And Recipe Map](yocto-layer-and-recipe-map.md) - local layers,
   dependencies, image recipes, machine configuration, and firmware recipes.
 - [Yocto Layer And Recipe Review](yocto-layer-recipe-review.md) - review
@@ -71,8 +77,9 @@ separate.
   pytest-based automation, GitLab CI, and runtime test dependencies.
 - [Headless FVP Boot Logs](fvp-log-boot.md) - non-interactive FVP launch with
   file-based stdout and per-console boot logs.
-- [Generated Artifacts And Risks](generated-artifacts-and-risks.md) - current
-  deploy artifacts, generated directories, and operational risks.
+- [Generated Artifacts And Risks](generated-artifacts-and-risks.md) - active
+  generated-output boundaries, historical deploy evidence, and operational
+  risks.
 - [Codex Project Expert Workflow](codex-project-expert-workflow.md) - the
   project-specific Codex agent, skill, and hook added with this analysis.
 
