@@ -13,6 +13,7 @@ RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-user-demo-${RUN_STAMP}}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
@@ -44,6 +45,7 @@ Then launch QBox in tmux:
 Common overrides:
   TMUX_SESSION=apollo-demo ./run_qbox.sh
   OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox.sh
+  QBOX_BUILD_DIR=build/local-apollo-fvp/work/qbox ./run_qbox.sh
   SSH_PORT=2225 ./run_qbox.sh
   ./run_qbox.sh --copy-disks
   ./run_qbox.sh --no-attach
@@ -55,6 +57,7 @@ Defaults:
   session: ${TMUX_SESSION}
   out_dir: ${OUT_DIR}
   local_build_dir: ${LOCAL_BUILD_DIR}
+  qbox_build_dir: ${QBOX_BUILD_DIR:-<local-build-dir>/work/qbox}
   si_mode: ${SI_MODE}
   timeout: ${TIMEOUT}
 
@@ -156,6 +159,12 @@ preparse_args()
             --local-build-dir)
                 ((i + 1 < ${#args[@]})) || die "--local-build-dir requires a value"
                 LOCAL_BUILD_DIR="${args[$((i + 1))]}"
+                TMUX_RUNNER_ARGS+=("${arg}" "${args[$((i + 1))]}")
+                i=$((i + 2))
+                ;;
+            --qbox-build-dir)
+                ((i + 1 < ${#args[@]})) || die "--qbox-build-dir requires a value"
+                QBOX_BUILD_DIR="${args[$((i + 1))]}"
                 TMUX_RUNNER_ARGS+=("${arg}" "${args[$((i + 1))]}")
                 i=$((i + 2))
                 ;;
@@ -288,6 +297,10 @@ main()
     fi
     OUT_DIR="$(abspath "${OUT_DIR}")"
     LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+    if [[ -z "${QBOX_BUILD_DIR}" ]]; then
+        QBOX_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox"
+    fi
+    QBOX_BUILD_DIR="$(abspath "${QBOX_BUILD_DIR}")"
 
     [[ -d "${LOCAL_BUILD_DIR}" ]] ||
         die "missing local build directory: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
@@ -303,6 +316,7 @@ main()
     printf '  out_dir: %s\n' "${OUT_DIR}"
     printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"
     printf '  netdev: %s\n' "${netdev}"
+    printf '  qbox_build_dir: %s\n' "${QBOX_BUILD_DIR}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
     printf '  copy_disks: %s\n' "${RUN_QBOX_COPY_DISKS}"
@@ -321,6 +335,7 @@ main()
         --session "${TMUX_SESSION}" \
         --out-dir "${OUT_DIR}" \
         --local-build-dir "${LOCAL_BUILD_DIR}" \
+        --qbox-build-dir "${QBOX_BUILD_DIR}" \
         --si-mode "${SI_MODE}" \
         --timeout "${TIMEOUT}" \
         --jobs "${JOBS}" \

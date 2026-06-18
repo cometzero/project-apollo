@@ -27,7 +27,7 @@ Commands:
   clean     Remove build/local-apollo-fvp.
 
 Useful overrides:
-  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
+  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_BUILD_DIR=/path/to/qbox-build JOBS=16 ./local-build.sh all
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="bridge virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc" ./local-build.sh build

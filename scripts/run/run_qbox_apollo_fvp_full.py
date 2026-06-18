@@ -1088,6 +1088,8 @@ def isolated_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> li
         str(args.timeout),
         "--jobs",
         str(args.jobs),
+        "--qbox-build-dir",
+        str(args.qbox_build_dir),
     ]
     if args.skip_build:
         cmd.append("--skip-build")
@@ -1191,6 +1193,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         str(args.timeout),
         "--jobs",
         str(args.jobs),
+        "--qbox-build-dir",
+        str(args.qbox_build_dir),
         "--scp-strategy",
         scp_strategy,
         "--smmu-backend",
@@ -1299,6 +1303,7 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     clear_run_outputs(args.out_dir)
     print("+ " + " ".join(cmd), flush=True)
     env = os.environ.copy()
+    env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_APOLLO_FULL_SI_MODE"] = args.si_mode
     if not args.build_only:
         # Full-system runtime evidence must include the AP firmware/Linux path.
@@ -1363,6 +1368,11 @@ def parse_args() -> argparse.Namespace:
         "--local-build-dir",
         type=Path,
         default=root / "build/local-apollo-fvp",
+    )
+    parser.add_argument(
+        "--qbox-build-dir",
+        type=Path,
+        help="QBox CMake build directory. Defaults to <local-build-dir>/work/qbox.",
     )
     parser.add_argument(
         "--si-mode",
@@ -1635,6 +1645,9 @@ def parse_args() -> argparse.Namespace:
     args.forward_args = forward_args
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
+    if args.qbox_build_dir is None:
+        args.qbox_build_dir = args.local_build_dir / "work/qbox"
+    args.qbox_build_dir = args.qbox_build_dir.resolve()
     args.out_dir = args.out_dir.resolve()
     if args.qbox_performance_preset:
         args.remotepass_dmi_cache = True

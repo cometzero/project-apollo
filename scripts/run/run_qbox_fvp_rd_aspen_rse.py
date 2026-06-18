@@ -557,6 +557,11 @@ def workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def qbox_build_dir(root: Path) -> Path:
+    default_dir = root / "build/local-apollo-fvp/work/qbox"
+    return Path(os.environ.get("QBOX_BUILD_DIR", str(default_dir))).resolve()
+
+
 def timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -582,7 +587,7 @@ def cmake_cache_values(cache: Path) -> dict[str, str]:
 
 def ensure_qbox_targets(root: Path, jobs: int) -> None:
     qbox_dir = root / "tools/qbox"
-    build_dir = qbox_dir / "build"
+    build_dir = qbox_build_dir(root)
     cache = build_dir / "CMakeCache.txt"
     preset = os.environ.get("QBOX_CMAKE_PRESET", "gcc")
     libqemu_targets = os.environ.get("QBOX_LIBQEMU_TARGETS", "aarch64")
@@ -596,9 +601,11 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     apollo_build_target = os.environ.get(
         "QBOX_APOLLO_BUILD_TARGET", "apollo_fvp_full_system"
     )
+    install_prefix = str((build_dir / "install").resolve())
 
-    configure_cmd = ["cmake", "--preset", preset]
+    configure_cmd = ["cmake", "--preset", preset, "-B", str(build_dir)]
     expected_cache = {
+        "CMAKE_INSTALL_PREFIX": install_prefix,
         "LIBQEMU_TARGETS": libqemu_targets,
         "LIBQEMU_GIT": libqemu_git,
         "FETCHCONTENT_SOURCE_DIR_LIBQEMU": libqemu_source,
@@ -2944,9 +2951,10 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if args.rse_fast_boot_sram_dmi:
         for name in SRAM_DMI_FORBIDDEN_ENV:
             env.pop(name, None)
+    build_dir = qbox_build_dir(root)
     lib_paths = [
-        root / "tools/qbox/build",
-        root / "tools/qbox/build/_deps/libqemu-build/qemu-prefix/lib",
+        build_dir,
+        build_dir / "_deps/libqemu-build/qemu-prefix/lib",
     ]
     current = env.get("LD_LIBRARY_PATH")
     if current:
@@ -2999,7 +3007,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         args.out_dir / CONSOLE_LOGS["primary_console"]
     )
     env["QBOX_RDASPEN_UART_READ_FILE"] = os.devnull
-    env["QBOX_REMOTE_CPU_EXEC"] = str((root / "tools/qbox/build/remote_cpu").resolve())
+    env["QBOX_REMOTE_CPU_EXEC"] = str((build_dir / "remote_cpu").resolve())
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
@@ -3286,8 +3294,7 @@ def qbox_runtime_processes() -> list[dict[str, object]]:
             continue
         executable = Path(parts[0]).name
         if executable in {"platforms-vp", "remote_cpu"} or any(
-            "tools/qbox/build/platforms-vp" in part
-            or "tools/qbox/build/remote_cpu" in part
+            part.endswith("/platforms-vp") or part.endswith("/remote_cpu")
             for part in parts
         ):
             processes.append({"pid": int(entry.name), "cmdline": parts})
@@ -3424,8 +3431,9 @@ def run_platform(
     list[dict[str, object]],
 ]:
     out_dir = args.out_dir
+    build_dir = qbox_build_dir(root)
     cmd = [
-        str((root / "tools/qbox/build/platforms-vp").resolve()),
+        str((build_dir / "platforms-vp").resolve()),
         "-l",
         str(args.conf.resolve()),
     ]
@@ -4242,6 +4250,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     parser.add_argument(
+        "--qbox-build-dir",
+        type=Path,
+        help="QBox CMake build directory. Defaults to build/local-apollo-fvp/work/qbox.",
+    )
+    parser.add_argument(
         "--scp-strategy",
         choices=["service-model", "real-si-scp"],
         default="service-model",
@@ -5012,6 +5025,8 @@ def parse_args() -> argparse.Namespace:
         help="Include Arm M-profile RSE and AArch64 AP register state in PC samples.",
     )
     args = parser.parse_args()
+    if args.qbox_build_dir is not None:
+        os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir.resolve())
     try:
         args.secure_service_probe_tests = parse_secure_service_tests(
             args.secure_service_probe_tests
@@ -5372,7 +5387,7 @@ def main() -> int:
         )
 
     command = [
-        str((root / "tools/qbox/build/platforms-vp").resolve()),
+        str((qbox_build_dir(root) / "platforms-vp").resolve()),
         "-l",
         str(args.conf.resolve()),
     ]

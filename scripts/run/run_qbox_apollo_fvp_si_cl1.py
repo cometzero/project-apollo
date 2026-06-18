@@ -57,6 +57,11 @@ def workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def qbox_build_dir(root: Path) -> Path:
+    default_dir = root / "build/local-apollo-fvp/work/qbox"
+    return Path(os.environ.get("QBOX_BUILD_DIR", str(default_dir))).resolve()
+
+
 def timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -85,7 +90,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     cmd = [
         "cmake",
         "--build",
-        str(root / "tools/qbox/build"),
+        str(qbox_build_dir(root)),
         "--target",
         *REQUIRED_TARGETS,
         "--parallel",
@@ -257,7 +262,7 @@ def run_platform(args: argparse.Namespace) -> int:
     for log in [platform_log, si_log]:
         log.write_text("", encoding="utf-8")
     command = [
-        str((root / "tools/qbox/build/platforms-vp").resolve()),
+        str((qbox_build_dir(root) / "platforms-vp").resolve()),
         "-l",
         str(args.conf.resolve()),
     ]
@@ -329,6 +334,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
+    parser.add_argument(
+        "--qbox-build-dir",
+        type=Path,
+        help="QBox CMake build directory. Defaults to build/local-apollo-fvp/work/qbox.",
+    )
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--mhu-trace", action="store_true")
@@ -339,6 +349,8 @@ def parse_args() -> argparse.Namespace:
     args.image = args.image.resolve()
     args.symbols = args.symbols.resolve()
     args.out_dir = args.out_dir.resolve()
+    if args.qbox_build_dir is not None:
+        os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir.resolve())
     if args.uart_read_file:
         args.uart_read_file = args.uart_read_file.resolve()
     return args

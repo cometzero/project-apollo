@@ -16,6 +16,7 @@ LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${YOCTO_BUILD_DIR}/local-${MACHINE}}"
 WORK_DIR="${LOCAL_BUILD_DIR}/work"
 DEPLOY_DIR="${LOCAL_BUILD_DIR}/deploy"
 LOG_DIR="${LOCAL_BUILD_DIR}/logs"
+QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${WORK_DIR}/qbox}"
 
 TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/trusted-firmware-m}"
 SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/scp-firmware}"
@@ -115,7 +116,7 @@ Commands:
   clean     Remove build/local-apollo-fvp.
 
 Useful overrides:
-  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output JOBS=16 ./local-build.sh all
+  SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_BUILD_DIR=/path/to/qbox-build JOBS=16 ./local-build.sh all
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../git ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
@@ -629,6 +630,7 @@ build_qbox()
     mkdir -p "${LOG_DIR}"
 
     run_logged qbox-build env PYTHONDONTWRITEBYTECODE=1 \
+        QBOX_BUILD_DIR="${QBOX_BUILD_DIR}" \
         python3 "${ROOT_DIR}/scripts/run/run_qbox_fvp_rd_aspen_rse.py" \
         --build-only \
         --jobs "${JOBS}"

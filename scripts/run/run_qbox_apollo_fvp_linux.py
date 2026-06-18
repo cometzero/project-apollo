@@ -117,6 +117,11 @@ def workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def qbox_build_dir(root: Path) -> Path:
+    default_dir = root / "build/local-apollo-fvp/work/qbox"
+    return Path(os.environ.get("QBOX_BUILD_DIR", str(default_dir))).resolve()
+
+
 def timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -130,7 +135,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     cmd = [
         "cmake",
         "--build",
-        str(root / "tools/qbox/build"),
+        str(qbox_build_dir(root)),
         "--target",
         *REQUIRED_TARGETS,
         "--parallel",
@@ -259,9 +264,10 @@ def qbox_env(
     root: Path, args: argparse.Namespace, disk: Path | None, extra_disks: list[Path]
 ) -> dict[str, str]:
     env = os.environ.copy()
+    build_dir = qbox_build_dir(root)
     lib_paths = [
-        root / "tools/qbox/build",
-        root / "tools/qbox/build/_deps/libqemu-build/qemu-prefix/lib",
+        build_dir,
+        build_dir / "_deps/libqemu-build/qemu-prefix/lib",
     ]
     current = env.get("LD_LIBRARY_PATH")
     if current:
@@ -329,7 +335,7 @@ def run_qbox(
     summary_path = out_dir / "summary.txt"
     result_path = out_dir / "result.json"
     cmd = [
-        str((root / "tools/qbox/build/platforms-vp").resolve()),
+        str((qbox_build_dir(root) / "platforms-vp").resolve()),
         "-l",
         str(args.conf.resolve()),
     ]
@@ -502,6 +508,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=root / "build/local-apollo-fvp",
     )
+    parser.add_argument(
+        "--qbox-build-dir",
+        type=Path,
+        help="QBox CMake build directory. Defaults to <local-build-dir>/work/qbox.",
+    )
     parser.add_argument("--initramfs", type=Path)
     parser.add_argument("--bootargs", default=DEFAULT_LOCAL_BOOTARGS)
     parser.add_argument(
@@ -568,6 +579,12 @@ def main() -> int:
     args.dts = args.dts.resolve()
     args.dtb = args.dtb.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
+    if args.qbox_build_dir is not None:
+        os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir.resolve())
+    elif "QBOX_BUILD_DIR" not in os.environ:
+        os.environ["QBOX_BUILD_DIR"] = str(
+            (args.local_build_dir / "work/qbox").resolve()
+        )
     artifacts = resolve_local_build_artifacts(args.local_build_dir)
     if args.kernel is None:
         args.kernel = artifacts.kernel

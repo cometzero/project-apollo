@@ -18,6 +18,7 @@ RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-full-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-tmux-${RUN_STAMP}}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 QBOX_CONF="${QBOX_CONF:-${ROOT_DIR}/tools/qbox/platforms/apollo/apollo-qvp.lua}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
@@ -52,6 +53,8 @@ Options:
   --session NAME       tmux session name (default: ${TMUX_SESSION})
   --out-dir PATH       log/output directory (default: ${OUT_DIR})
   --local-build-dir P  local build directory (default: ${LOCAL_BUILD_DIR})
+  --qbox-build-dir P   QBox CMake build directory
+                       (default: <local-build-dir>/work/qbox)
   --conf PATH          QBox Lua config (default: ${QBOX_CONF})
   --si-mode MODE       service-model, live-cl1, or live-cl0-cl1
                        (default: ${SI_MODE})
@@ -101,7 +104,7 @@ accelerators, and RSE fast-boot SRAM DMI/shared-memory mode. Use
 --legacy-file-backed-sram for the older direct file-backed SRAM alias mode.
 
 Environment overrides:
-  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_CONF
+  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
   ROOTFS_BOOTARGS_PROFILE QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
   RANGE_LIMITED_FLASH_DMI CC3XX_STATS
@@ -190,6 +193,7 @@ runner_command()
         "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
         --conf "${QBOX_CONF}"
         --local-build-dir "${LOCAL_BUILD_DIR}"
+        --qbox-build-dir "${QBOX_BUILD_DIR}"
         --si-mode "${SI_MODE}"
         --out-dir "${OUT_DIR}"
         --timeout "${TIMEOUT}"
@@ -438,6 +442,7 @@ Apollo QBox full-system tmux run
   effective_remotepass_dmi_cache: ${effective_remotepass_dmi_cache}
   netdev: ${NETDEV:-default}
   out_dir: ${OUT_DIR}
+  qbox_build_dir: ${QBOX_BUILD_DIR}
   command: $(quote_args "${cmd[@]}")
 
 file-backed logs
@@ -496,6 +501,10 @@ start_tmux()
     SCRIPT_PATH="$(abspath "${SCRIPT_PATH}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"
     LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+    if [[ -z "${QBOX_BUILD_DIR}" ]]; then
+        QBOX_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox"
+    fi
+    QBOX_BUILD_DIR="$(abspath "${QBOX_BUILD_DIR}")"
     QBOX_CONF="$(abspath "${QBOX_CONF}")"
     mkdir -p "${OUT_DIR}"
 
@@ -523,8 +532,8 @@ start_tmux()
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
         printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
-        printf 'LOCAL_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
-            "${LOCAL_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
+        printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
+            "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
         printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
@@ -606,6 +615,11 @@ while (($# > 0)); do
         --local-build-dir)
             (($# >= 2)) || die "--local-build-dir requires a value"
             LOCAL_BUILD_DIR="$2"
+            shift 2
+            ;;
+        --qbox-build-dir)
+            (($# >= 2)) || die "--qbox-build-dir requires a value"
+            QBOX_BUILD_DIR="$2"
             shift 2
             ;;
         --conf)
