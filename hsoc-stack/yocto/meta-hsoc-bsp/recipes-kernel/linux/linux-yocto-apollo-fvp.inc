@@ -15,6 +15,8 @@ SRC_URI:append:apollo-fvp = " file://apollo-kmeta;type=kmeta;name=apollo-kmeta;d
 
 KMACHINE:pn-linux-yocto:apollo-fvp = "apollo-fvp"
 KMACHINE:pn-linux-yocto-rt:apollo-fvp = "apollo-fvp"
+KBUILD_DEFCONFIG:pn-linux-yocto:apollo-fvp = "apollo_fvp_defconfig"
+KBUILD_DEFCONFIG:pn-linux-yocto-rt:apollo-fvp = "apollo_fvp_defconfig"
 KERNEL_DEVICETREE:apollo-fvp = "arm/apollo-fvp.dtb"
 
 do_shared_workdir:append:apollo-fvp() {

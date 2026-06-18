@@ -28,6 +28,7 @@ TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/trusted-fi
 OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/optee-os}"
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/u-boot}"
 LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/linux}"
+LINUX_DEFCONFIG="${LINUX_DEFCONFIG:-apollo_fvp_defconfig}"
 BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/buildroot}"
 ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src}"
 RPMSG_NET_SRC="${RPMSG_NET_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src}"
@@ -120,6 +121,8 @@ Useful overrides:
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../git ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
+  LINUX_DEFCONFIG=apollo_fvp_defconfig ./local-build.sh build
+  LINUX_CONFIG=/path/to/.config ./local-build.sh build
   KERNEL_MODULES_AUTOLOAD="bridge virtio_rpmsg_bus rpmsg_net arm_si_rproc pfdi_misc" ./local-build.sh build
   KERNEL_DEBUG_INFO=0 ./local-build.sh build
   RSE_OTP_RESET=1 ./local-build.sh build
@@ -1346,8 +1349,7 @@ find_linux_config()
         printf '%s\n' "${LINUX_CONFIG}"
         return 0
     fi
-    find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
-        -path '*/build/.config' -type f -print -quit 2>/dev/null
+    printf '%s\n' "${LINUX_SRC}/arch/arm64/configs/${LINUX_DEFCONFIG}"
 }
 
 tfm_recipe_workdir()
@@ -1382,6 +1384,8 @@ build_linux()
     local config
     config="$(find_linux_config || true)"
     require_file "${config}"
+    local use_config_file=0
+    [[ -n "${LINUX_CONFIG:-}" ]] && use_config_file=1
 
     local modsign_key
     modsign_key="$(find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
@@ -1393,6 +1397,8 @@ build_linux()
         {
             printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
             printf 'KERNEL_DEBUG_INFO=%s\n' "${KERNEL_DEBUG_INFO}"
+            printf 'LINUX_DEFCONFIG=%s\n' "${LINUX_DEFCONFIG}"
+            printf 'LINUX_CONFIG=%s\n' "${LINUX_CONFIG:-}"
             fingerprint_file_hash "${config}" linux-input-config
             [[ -z "${modsign_key}" ]] || fingerprint_file_hash "${modsign_key}" linux-input-modsign-key
             find "${LINUX_SRC}" \( -name Kconfig -o -name 'Kconfig.*' \) \
@@ -1406,7 +1412,13 @@ build_linux()
         [[ "$(cat "${config_marker}")" == "${config_digest}" ]]; then
         log "Linux kernel config is up to date"
     else
-        write_file_if_changed "${LINUX_BUILD_DIR}/.config" < "${config}"
+        if [[ "${use_config_file}" == "1" ]]; then
+            write_file_if_changed "${LINUX_BUILD_DIR}/.config" < "${config}"
+        else
+            run_logged linux-defconfig make -C "${LINUX_SRC}" \
+                O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+                "${LINUX_DEFCONFIG}"
+        fi
 
         if [[ "${KERNEL_DEBUG_INFO}" == "1" ]]; then
             "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
