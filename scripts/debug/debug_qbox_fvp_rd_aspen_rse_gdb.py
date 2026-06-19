@@ -454,15 +454,18 @@ def elf_section_address(root: Path, elf: Path | None, section: str) -> str | Non
 
 def qbox_source_setup(root: Path) -> str:
     qbox = root / "tools/qbox"
+    qbox_platform = root / "tools/qbox-platform"
     paths = [
         qbox,
-        qbox / "platforms/fvp-rd-aspen-rse",
-        qbox / "platforms/fvp-rd-aspen",
         qbox / "systemc-components",
         qbox / "qemu-components",
         qbox / "libqbox",
         qbox / "libqemu-cxx",
         qbox / "build",
+        qbox_platform / "platforms/fvp-rd-aspen-rse",
+        qbox_platform / "platforms/fvp-rd-aspen",
+        qbox_platform / "systemc-components",
+        qbox_platform / "qemu-components",
     ]
     lines = ["set debuginfod enabled off"]
     lines.extend(f"directory {path}" for path in paths if path.exists())

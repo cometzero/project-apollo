@@ -119,6 +119,13 @@ To prebuild only the QBox targets used by the Apollo full-system runner:
 ./local-build.sh qbox
 ```
 
+To check that Apollo/RD-Aspen overlay files have not drifted back into the QBox
+core tree:
+
+```bash
+python3 scripts/test/audit_qbox_core_boundary.py
+```
+
 This configures the Apollo overlay in
 `build/local-apollo-fvp/work/qbox-platform` by default. The overlay build uses
 `tools/qbox-platform` as the CMake source tree, `tools/qbox` as

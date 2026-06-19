@@ -211,6 +211,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
    - `python3 -m py_compile scripts/*/*.py` for changed Python helpers.
    - `git -C tools/qbox diff --check` for QBox changes.
    - `python3 scripts/test/validate_qbox_apollo_fvp_full_map.py`
+   - `python3 scripts/test/audit_qbox_core_boundary.py`
 2. Yocto build checks:
    - Initialize with `source layers/poky/oe-init-build-env build`.
    - Use `bitbake-layers show-layers` when layer order changes.
