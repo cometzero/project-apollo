@@ -66,6 +66,28 @@ CHILD_LOG_ALIASES = {
     "secure_console": "qbox-secure-console.log",
     "primary_console": "qbox-primary-console.log",
 }
+KEEP_RUNNING_PROGRESS_MARKERS = [
+    ("rse_bl1_1", "TF-M BL1_1 start", "Starting TF-M BL1_1"),
+    ("rse_jump_bl1_2", "BL1_1 to BL1_2 handoff", "Jumping to BL1_2"),
+    ("rse_bl1_2", "TF-M BL1_2 start", "Starting TF-M BL1_2"),
+    ("rse_attempt_image_0", "BL1_2 image 0 selection", "Attempting to boot image 0"),
+    ("rse_bl2_decrypted", "BL2 decrypt complete", "BL2 image decrypted successfully"),
+    ("rse_bl2_validated", "BL2 validation complete", "BL2 image validated successfully"),
+    ("rse_jump_bl2", "BL1_2 to BL2 handoff", "Jumping to BL2"),
+    ("rse_image_4_loaded", "SI CL0 image loaded", "Image 4 loaded from the primary slot"),
+    ("rse_image_3_loaded", "SI CL1 image loaded", "Image 3 loaded from the primary slot"),
+    ("rse_image_2_loaded", "AP BL2 image loaded", "Image 2 loaded from the primary slot"),
+    ("rse_image_0_loaded", "RSE runtime image loaded", "Image 0 loaded from the primary slot"),
+    (
+        "rse_scp_power_on_ap",
+        "AP power-on SCMI complete",
+        "RSE to SCP SCMI power on AP succeeded",
+    ),
+    ("rse_first_image_slot", "RSE runtime handoff", "Jumping to the first image slot"),
+    ("measured_boot_bl33", "U-Boot measured boot marker", "BL_33"),
+    ("primary_linux_cpu", "Linux CPU boot marker", "Booting Linux on physical CPU"),
+    ("primary_login_prompt", "Linux login prompt", APOLLO_PRIMARY_LOGIN_PROMPT),
+]
 AP_CPU_COUNT_RE = re.compile(r"^ap cpus:\s*(?P<count>\d+)\s*$", re.MULTILINE)
 LIVE_CL1_REQUIRED_MARKERS = {
     "cpu0_oor": "Out of Reset (OoR) completed on CPU: 0",
@@ -224,6 +246,49 @@ def keep_running_probe_state(primary_console: str, *, requested: bool) -> dict[s
     }
 
 
+def keep_running_progress_marker_first_hits(
+    logs: dict[str, str],
+) -> dict[str, dict[str, Any]]:
+    combined = clean_console_text("\n".join(logs.values()))
+    return {
+        name: {
+            "elapsed_s": None,
+            "marker": marker,
+        }
+        for name, _label, marker in KEEP_RUNNING_PROGRESS_MARKERS
+        if marker in combined
+    }
+
+
+def keep_running_rse_boot_timing_profile(
+    logs: dict[str, str],
+) -> dict[str, Any]:
+    first_hits = keep_running_progress_marker_first_hits(logs)
+    markers = [
+        {
+            "name": name,
+            "label": label,
+            "marker": marker,
+            "seen": name in first_hits,
+            "elapsed_s": None,
+        }
+        for name, label, marker in KEEP_RUNNING_PROGRESS_MARKERS
+    ]
+    return {
+        "markers": markers,
+        "deltas": [],
+        "slowest_delta": None,
+        "summary": {
+            "bl1_1_to_bl2_s": None,
+            "bl2_to_rse_runtime_handoff_s": None,
+            "rse_start_to_ap_power_on_s": None,
+            "rse_start_to_linux_boot_s": None,
+            "rse_start_to_login_prompt_s": None,
+            "rse_start_to_runtime_handoff_s": None,
+        },
+    }
+
+
 def synthesize_keep_running_child_status(
     args: argparse.Namespace,
     command: list[str],
@@ -269,7 +334,8 @@ def synthesize_keep_running_child_status(
             "live_scp_cpu_gdb": scp_strategy == "real-si-scp",
         },
         "runtime_artifacts": {},
-        "rse_boot_timing_profile": {},
+        "progress_marker_first_hits": keep_running_progress_marker_first_hits(logs),
+        "rse_boot_timing_profile": keep_running_rse_boot_timing_profile(logs),
         "cc3xx_stats": None,
         "qbox_perf_profile": None,
         "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},

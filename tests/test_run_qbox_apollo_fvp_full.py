@@ -91,6 +91,18 @@ def test_keep_running_child_status_passes_after_probe_marker(tmp_path):
         "rpmsg": True,
         "hipc_ethsi1": True,
     }
+    profile = status["rse_boot_timing_profile"]
+    assert profile["markers"][-1] == {
+        "name": "primary_login_prompt",
+        "label": "Linux login prompt",
+        "marker": "apollo-fvp login:",
+        "seen": True,
+        "elapsed_s": None,
+    }
+    assert status["progress_marker_first_hits"]["primary_login_prompt"] == {
+        "elapsed_s": None,
+        "marker": "apollo-fvp login:",
+    }
     assert status["scp_service_model"]["strategy"] == "real-si-scp"
 
 

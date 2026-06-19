@@ -2909,6 +2909,18 @@ def env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+RUNNER_CONTROL_ENV = (
+    "QBOX_RDASPEN_RESULT_PATH",
+    "QBOX_RDASPEN_SUMMARY_PATH",
+)
+
+
+def strip_runner_control_env(env: dict[str, str]) -> dict[str, str]:
+    for name in RUNNER_CONTROL_ENV:
+        env.pop(name, None)
+    return env
+
+
 def parse_int_auto(value: str) -> int | None:
     try:
         return int(value, 0)
@@ -2966,7 +2978,7 @@ def apply_primary_console_profile(args: argparse.Namespace) -> None:
 
 
 def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -> dict[str, str]:
-    env = os.environ.copy()
+    env = strip_runner_control_env(os.environ.copy())
     if args.rse_fast_boot_sram_dmi:
         for name in SRAM_DMI_FORBIDDEN_ENV:
             env.pop(name, None)

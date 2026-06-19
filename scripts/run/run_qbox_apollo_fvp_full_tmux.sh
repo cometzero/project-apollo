@@ -302,7 +302,10 @@ tail_log()
         pid="$(<"${pid_file}")"
     fi
 
-    if [[ -n "${pid}" ]] && tail_supports_pid; then
+    if [[ "${KEEP_RUNNING_AFTER_PASS:-0}" == "1" ]]; then
+        printf 'Keep-running demo mode is active; this pane follows the log until F12 stops the session.\n\n'
+        tail -n +1 -F "${log_path}" || true
+    elif [[ -n "${pid}" ]] && tail_supports_pid; then
         tail --pid="${pid}" -n +1 -F "${log_path}" || true
     elif [[ ! -e "${done_file}" ]]; then
         tail -n +1 -F "${log_path}" || true
@@ -324,8 +327,8 @@ supervise_run()
 
     prepare_log_files
     : >"${OUT_DIR}/qbox-runner.log"
-    : >"${OUT_DIR}/qbox-run.status"
     rm -f "${OUT_DIR}/.qbox-run.done" "${OUT_DIR}/qbox-run.pid"
+    printf 'running\n' >"${OUT_DIR}/qbox-run.status"
     quote_args "${cmd[@]}" >"${OUT_DIR}/qbox-run.cmd"
 
     printf 'QBox Apollo full-system tmux run\n'
@@ -360,6 +363,12 @@ supervise_run()
 
     printf '\nQBox runner exited with status %s.\n' "${status}" |
         tee -a "${OUT_DIR}/qbox-runner.log"
+    if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" && "${status}" == "0" ]]; then
+        printf 'Boot pass condition was reached; QBox is still running for the interactive demo.\n' |
+            tee -a "${OUT_DIR}/qbox-runner.log"
+        printf 'Use F12 to stop QBox and kill the tmux session.\n' |
+            tee -a "${OUT_DIR}/qbox-runner.log"
+    fi
     printf 'Logs remain under: %s\n' "${OUT_DIR}" |
         tee -a "${OUT_DIR}/qbox-runner.log"
     printf 'Press Enter to close this pane, or F12 to kill the session.\n'
@@ -728,8 +737,9 @@ start_log_pane()
     else
         pane_body=$(
             printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-            printf 'OUT_DIR=%q exec %q --tail-log %q %q %q' \
-                "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+            printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
+                "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
+                "${domain}" "${title}" "${log_path}"
         )
     fi
 
