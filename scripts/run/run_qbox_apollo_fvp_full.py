@@ -74,8 +74,8 @@ KEEP_RUNNING_PROGRESS_MARKERS = [
     ("rse_bl2_decrypted", "BL2 decrypt complete", "BL2 image decrypted successfully"),
     ("rse_bl2_validated", "BL2 validation complete", "BL2 image validated successfully"),
     ("rse_jump_bl2", "BL1_2 to BL2 handoff", "Jumping to BL2"),
-    ("rse_image_4_loaded", "SI CL0 image loaded", "Image 4 loaded from the primary slot"),
-    ("rse_image_3_loaded", "SI CL1 image loaded", "Image 3 loaded from the primary slot"),
+    ("rse_image_4_loaded", "SI CL1 image loaded", "Image 4 loaded from the primary slot"),
+    ("rse_image_3_loaded", "SI CL0 image loaded", "Image 3 loaded from the primary slot"),
     ("rse_image_2_loaded", "AP BL2 image loaded", "Image 2 loaded from the primary slot"),
     ("rse_image_0_loaded", "RSE runtime image loaded", "Image 0 loaded from the primary slot"),
     (
