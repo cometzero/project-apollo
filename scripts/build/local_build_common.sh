@@ -132,7 +132,7 @@ Useful overrides:
   QBOX_BUILD_DIR=/path/to/qbox-platform-build ./local-build.sh qbox
   QBOX_CORE_DIR=/path/to/qbox QBOX_PLATFORM_DIR=/path/to/qbox-platform ./local-build.sh qbox
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
-  ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../git ./local-build.sh zephyr
+  ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../sources-unpack/git ./local-build.sh zephyr
   SAFETY_ISLAND_CL1_BIN=/path/to/zephyr-demos-cl1.bin ./local-build.sh build
   LINUX_DEFCONFIG=apollo_fvp_defconfig ./local-build.sh build
   LINUX_CONFIG=/path/to/.config ./local-build.sh build
@@ -961,16 +961,23 @@ bitbake_zephyr_getvar()
 zephyr_deps_root_valid()
 {
     local root="$1"
+    local rel
 
-    [[ -d "${root}/modules/lib/open-amp" ]] &&
-        [[ -d "${root}/modules/crypto/mbedtls" ]] &&
-        [[ -d "${root}/bootloader/mcuboot" ]] &&
-        [[ -d "${root}/tools/net-tools" ]]
+    [[ -d "${root}" ]] || return 1
+    [[ -f "${ZEPHYR_MODULES_LIST}" ]] || return 1
+
+    while IFS= read -r rel; do
+        case "${rel}" in
+            ""|\#*|safety_island) continue ;;
+        esac
+        [[ -d "${root}/${rel}" ]] || return 1
+    done < "${ZEPHYR_MODULES_LIST}"
 }
 
 find_zephyr_yocto_deps_root()
 {
     local root
+    local candidate
 
     if [[ -n "${ZEPHYR_DEPS_SRC}" ]]; then
         zephyr_deps_root_valid "${ZEPHYR_DEPS_SRC}" ||
@@ -979,6 +986,14 @@ find_zephyr_yocto_deps_root()
         return 0
     fi
 
+    root="$(bitbake_zephyr_getvar UNPACKDIR 2>/dev/null || true)"
+    for candidate in "${root}/git" "${root}"; do
+        if [[ -n "${root}" ]] && zephyr_deps_root_valid "${candidate}"; then
+            printf '%s\n' "${candidate}"
+            return 0
+        fi
+    done
+
     root="$(bitbake_zephyr_getvar S 2>/dev/null || true)"
     if [[ -n "${root}" ]] && zephyr_deps_root_valid "${root}"; then
         printf '%s\n' "${root}"
@@ -986,10 +1001,12 @@ find_zephyr_yocto_deps_root()
     fi
 
     root="$(bitbake_zephyr_getvar WORKDIR 2>/dev/null || true)"
-    if [[ -n "${root}" ]] && zephyr_deps_root_valid "${root}/git"; then
-        printf '%s\n' "${root}/git"
-        return 0
-    fi
+    for candidate in "${root}/sources-unpack/git" "${root}/git"; do
+        if [[ -n "${root}" ]] && zephyr_deps_root_valid "${candidate}"; then
+            printf '%s\n' "${candidate}"
+            return 0
+        fi
+    done
 
     return 1
 }
@@ -1017,6 +1034,22 @@ prepare_yocto_zephyr_deps_root()
     root="$(find_zephyr_yocto_deps_root)" ||
         die "could not find Yocto Zephyr dependency source root after unpack"
     printf '%s\n' "${root}"
+}
+
+find_yocto_native_imgtool()
+{
+    local root="${YOCTO_TMP}/work/x86_64-linux/python3-imgtool-tfm-native"
+    local candidate
+
+    [[ -d "${root}" ]] || return 1
+    candidate="$(
+        find "${root}" -path '*/scripts/imgtool.py' -type f -print |
+            sort |
+            tail -n 1
+    )"
+    if [[ -n "${candidate}" ]]; then
+        printf '%s\n' "${candidate}"
+    fi
 }
 
 zephyr_modules_arg()
@@ -1097,6 +1130,7 @@ build_zephyr()
     local zephyr_dir="${zephyr_base}/share/zephyr-package/cmake"
     local zephyr_deps_root
     local imgtool
+    local imgtool_args=()
     local python
     local pythonpath
     local modules
@@ -1114,7 +1148,13 @@ build_zephyr()
     zephyr_sdk="$(find_zephyr_sdk_dir)"
     zephyr_deps_root="$(prepare_yocto_zephyr_deps_root)"
     imgtool="${zephyr_deps_root}/bootloader/mcuboot/scripts/imgtool.py"
-    require_file "${imgtool}"
+    if [[ -f "${imgtool}" ]]; then
+        imgtool_args=(-DIMGTOOL:FILEPATH="${imgtool}")
+    elif imgtool="$(find_yocto_native_imgtool)"; then
+        imgtool_args=(-DIMGTOOL:FILEPATH="${imgtool}")
+    else
+        imgtool_args=(-DIMGTOOL:FILEPATH=IMGTOOL-NOTFOUND)
+    fi
     python="$(yocto_native_python)"
     pythonpath="$(yocto_native_pythonpath)"
     modules="$(zephyr_modules_arg "${zephyr_deps_root}")"
@@ -1151,7 +1191,7 @@ build_zephyr()
         -DZEPHYR_TOOLCHAIN_VARIANT=zephyr \
         -DZEPHYR_MODULES="${modules}" \
         -DZEPHYR_EXTRA_MODULES= \
-        -DIMGTOOL:FILEPATH="${imgtool}" \
+        "${imgtool_args[@]}" \
         -DUSER_CACHE_DIR="${ZEPHYR_BUILD_DIR}/.cache" \
         -DDTC_OVERLAY_FILE="${dtc_overlay}" \
         -DOVERLAY_CONFIG="${overlay_config}" \
