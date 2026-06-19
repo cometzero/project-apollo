@@ -14,6 +14,10 @@ FORBIDDEN_QBOX_PATHS = [
     "tools/qbox/platforms/fvp-rd-aspen",
     "tools/qbox/platforms/fvp-rd-aspen-rse",
     "tools/qbox/qemu-components/cc3xx_native",
+    "tools/qbox/qemu-components/common/include/cc3xx_core.h",
+    "tools/qbox/qemu-components/common/include/rse_lms_accel.h",
+    "tools/qbox/qemu-components/common/include/rse_mcuboot_image.h",
+    "tools/qbox/qemu-components/common/include/rse_p256_ecdsa.h",
 ]
 
 OVERLAY_ONLY_SYSTEMC_COMPONENTS = [
@@ -75,6 +79,14 @@ ACTIVE_TEXT_PATTERNS = [
     re.compile(r"qbox\s*/\s*[\"']platforms/(?:apollo|fvp-rd-aspen|fvp-rd-aspen-rse)[\"']"),
     re.compile(r"tools/qbox/(?:systemc-components/cc3xx|qemu-components/cc3xx_native)"),
     re.compile(r"systemc-components/cc3xx/include"),
+]
+
+QBOX_CORE_TEXT_PATTERNS = [
+    re.compile(r"rse_lms_accel|rse_mcuboot_image|rse_p256_ecdsa"),
+    re.compile(r"\bbl2_[A-Za-z0-9_]*accel\b"),
+    re.compile(r"QBOX_RDASPEN_RSE_.*ACCEL"),
+    re.compile(r"QBOX_MMIO_(?:READ_FASTPATH|DIRECT_FASTPATH_RANGES)"),
+    re.compile(r"cc3xx_core"),
 ]
 
 ACTIVE_TEXT_PATHS = [
@@ -145,6 +157,40 @@ def collect_text_violations(root: Path) -> list[dict[str, Any]]:
     return violations
 
 
+def iter_qbox_core_text_files(root: Path) -> list[Path]:
+    qbox = root / "tools/qbox"
+    if not qbox.is_dir():
+        return []
+    suffixes = {".c", ".cc", ".cpp", ".h", ".hpp", ".lua", ".py", ".sh", ".md", ".txt", ".cmake"}
+    return [
+        path
+        for path in qbox.rglob("*")
+        if path.is_file()
+        and "build" not in path.relative_to(qbox).parts
+        and path.suffix in suffixes
+    ]
+
+
+def collect_qbox_core_text_violations(root: Path) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    for path in iter_qbox_core_text_files(root):
+        rel_path = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for line_no, line in enumerate(text.splitlines(), start=1):
+            for pattern in QBOX_CORE_TEXT_PATTERNS:
+                if pattern.search(line):
+                    violations.append(
+                        {
+                            "kind": "text",
+                            "path": rel_path,
+                            "line": line_no,
+                            "pattern": pattern.pattern,
+                            "text": line.strip(),
+                        }
+                    )
+    return violations
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Audit that Apollo/RD-Aspen overlay code is not left in QBox core."
@@ -160,7 +206,11 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     root = workspace_root()
-    violations = collect_path_violations(root) + collect_text_violations(root)
+    violations = (
+        collect_path_violations(root)
+        + collect_text_violations(root)
+        + collect_qbox_core_text_violations(root)
+    )
     result = {
         "passed": not violations,
         "violations": violations,

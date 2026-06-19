@@ -47,7 +47,7 @@ REQUIRED_TARGETS = [
     "sbsa_gwdt",
     "cpu_arm_cortexM55",
     "nvic_armv7m",
-    "remote_cpu",
+    "apollo_rse_remote_cpu",
     "qemu_cc3xx",
     "qemu_hexagon_qtimer",
     "mhu320ae",
@@ -82,6 +82,11 @@ QEMU_INITIATOR_PROFILE_DIR = "qemu-initiator"
 REMOTEPASS_PROFILE_DIR = "remotepass"
 CC3XX_PROFILE = "qemu-cc3xx-profile.json"
 RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
+QBOX_RUNTIME_EXECUTABLES = {
+    "platforms-vp",
+    "remote_cpu",
+    "apollo_rse_remote_cpu",
+}
 SRAM_DMI_FORBIDDEN_ENV = (
     "QBOX_RDASPEN_HOST_SI_CL0_SRAM_MAP_FILE",
     "QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE",
@@ -3038,7 +3043,16 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         args.out_dir / CONSOLE_LOGS["primary_console"]
     )
     env["QBOX_RDASPEN_UART_READ_FILE"] = os.devnull
-    env["QBOX_REMOTE_CPU_EXEC"] = str((build_dir / "remote_cpu").resolve())
+    remote_cpu_candidates = [
+        build_dir / "apollo_rse_remote_cpu",
+        build_dir / "platforms" / "cortex-m55-remote" / "apollo_rse_remote_cpu",
+        build_dir / "remote_cpu",
+    ]
+    remote_cpu_exec = next(
+        (candidate for candidate in remote_cpu_candidates if candidate.exists()),
+        remote_cpu_candidates[0],
+    )
+    env["QBOX_REMOTE_CPU_EXEC"] = str(remote_cpu_exec.resolve())
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
@@ -3259,21 +3273,23 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_RDASPEN_CC3XX_BACKEND"] = "qemu-native"
         append_env_csv(
             env,
-            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            "QBOX_RDASPEN_RSE_MMIO_DIRECT_FASTPATH_RANGES",
             cc3xx_local_mmio_fastpath_spec(),
         )
     if args.rse_storage_direct_fastpath:
         append_env_csv(
             env,
-            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            "QBOX_RDASPEN_RSE_MMIO_DIRECT_FASTPATH_RANGES",
             rse_storage_direct_fastpath_spec(),
         )
     if args.cc3xx_status_read_fastpath:
-        env["QBOX_MMIO_READ_FASTPATH"] = cc3xx_status_read_fastpath_spec()
+        env["QBOX_RDASPEN_RSE_MMIO_READ_FASTPATH"] = (
+            cc3xx_status_read_fastpath_spec()
+        )
     if args.cc3xx_local_mmio_fastpath:
         append_env_csv(
             env,
-            "QBOX_MMIO_DIRECT_FASTPATH_RANGES",
+            "QBOX_RDASPEN_RSE_MMIO_DIRECT_FASTPATH_RANGES",
             cc3xx_local_mmio_fastpath_spec(),
         )
     if args.pc_trace:
@@ -3324,8 +3340,8 @@ def qbox_runtime_processes() -> list[dict[str, object]]:
         if not parts:
             continue
         executable = Path(parts[0]).name
-        if executable in {"platforms-vp", "remote_cpu"} or any(
-            part.endswith("/platforms-vp") or part.endswith("/remote_cpu")
+        if executable in QBOX_RUNTIME_EXECUTABLES or any(
+            any(part.endswith(f"/{name}") for name in QBOX_RUNTIME_EXECUTABLES)
             for part in parts
         ):
             processes.append({"pid": int(entry.name), "cmdline": parts})
