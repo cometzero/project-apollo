@@ -49,7 +49,7 @@ python () {
     import os
 
     source_root = d.getVar("S")
-    unpack_root = os.path.join(d.getVar("WORKDIR"), "git")
+    unpack_root = os.path.join(d.getVar("UNPACKDIR"), "git")
     safety_island = d.getVar("ZEPHYR_SAFETY_ISLAND_MODULE")
     required_suffixes = tuple(
         os.path.join(unpack_root, suffix)
