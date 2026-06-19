@@ -15,7 +15,7 @@ git -C tools/qbox diff --name-status 5a78034faf26
 현재 diff 규모는 다음과 같다.
 
 ```text
-46 files changed, 4625 insertions(+), 140 deletions(-)
+46 files changed, 4715 insertions(+), 139 deletions(-)
 ```
 
 분석 관점은 세 가지다.
@@ -50,9 +50,7 @@ semantic acceleration, MCUboot/LMS/P-256 helper, CC3XX core 의존성은
 | `.gitignore` | `.cache/` 무시 추가 | QBox build/dependency 도구 캐시가 Git 상태에 노출되지 않도록 사용 | Git hygiene 변경. QBox core 유지 |
 | `CMakeLists.txt` | `QEMU_SOURCE_DIR` cache option 추가, `FETCHCONTENT_SOURCE_DIR_QEMU`, `FETCHCONTENT_SOURCE_DIR_LIBQEMU`에 로컬 QEMU source override 연결 | `tools/qbox-platform/CMakeLists.txt`와 `scripts/build/local_build_common.sh`가 `QBOX_QEMU_SOURCE_DIR`/`QEMU_SOURCE_DIR`로 로컬 `tools/qemu`를 넘김 | 로컬 libqemu/QEMU 개발에 필요한 공통 build hook. QBox core 유지 |
 | `cmake/boilerplate.cmake` | SystemC CCI/SCP FetchContent `GIT_SHALLOW`을 `False`로 변경 | QBox dependency bootstrap에서 CCI/SCP checkout 시 적용 | 고정 revision checkout, patch/debug, submodule 상태 확인 안정화. QBox core 유지 |
-| `platforms/cortex-m55-remote/CMakeLists.txt` | EOF newline 정리 | `cortex-m55-vp`, `remote_cpu` example platform build file | 실질 동작 변경 없음. 장기적으로 `cortex-m55-remote` example 전체는 platform/example 분리 후보 |
-| `platforms/cortex-m55-remote/src/remote_cpu.cc` | `keep_alive` module 생성 및 `name_bind()` 추가 | `remote_cpu` executable 내부 RemotePlatform | remote-only CPU process가 조기 종료되지 않도록 유지. `cortex-m55-remote` platform 특화 성격이라 장기적으로 `qbox-platform` 후보 |
-| `platforms/src/main.cc` | `<remote.h>` include 추가 | `platforms-vp` 공통 entrypoint build | 직접 symbol 사용은 보이지 않아 remote 관련 전이 include/build 의존 보강으로 보임. 필요성 재확인 대상, 현상 유지 시 QBox core |
+| `platforms/src/main.cc` | `<remote.h>` include 추가 | `platforms-vp`가 Lua의 `RemotePass` module factory를 찾을 때 사용 | Apollo/RD-Aspen full-system boot에 필요. 제거 시 `Failed to load library RemotePass.so`로 QBox가 abort하므로 QBox core 유지 |
 | `qemu-components/common/include/cpu.h` | PC trace, PC-entry observer dispatch, reset power-on, Arm state 접근, guest memory read/write helper 추가 | generic CPU observer와 `tools/qbox-platform/qemu-components/rse_cpu_accel/`의 Apollo RSE wrapper | CPU 관측과 semantic context는 공통 hook으로 QBox core 유지. RSE/BL2 semantic acceleration 자체는 core에서 제거됨 |
 | `qemu-components/common/include/dmi-manager.h` | fd offset 기반 DMI region, read-only DMI region, read-only alias write callback, alias installed state clear 추가 | `ports/initiator.h`가 shared-memory/file DMI alias를 QEMU MemoryRegion으로 설치할 때 사용 | DMI 정합성 공통 기능. read-only flash-like DMI write side effect 보존. QBox core 유지 |
 | `qemu-components/common/include/internals.h` | bool-return callback dispatcher와 CPU PC-entry callback registry 추가 | `callbacks.cc`의 `generic_cpu_pc_entry_cb`, `cpu.cc`의 PC watch API, `cpu.h` observer dispatch | QEMU CPU PC watch를 C++ callback으로 연결하는 공통 wrapper. QBox core 유지 가능 |
@@ -118,9 +116,15 @@ remote DMI byte-store test는 `tools/qbox-platform/tests/platforms/cortex-m55-re
 
 | 우선순위 | 후보 | 이유 | 제안 |
 | --- | --- | --- | --- |
-| 1 | `platforms/cortex-m55-remote/*` | upstream example 성격과 Apollo RemotePass 검증 요구가 일부 섞여 있음 | generic example은 QBox core에 남기고 Apollo-specific executable/test는 `qbox-platform`에 유지 |
-| 2 | `ports/initiator.h`의 direct file alias API | RSE boot acceleration에서 주로 사용하지만 DMI/file-backed memory generic 기능과 맞닿아 있음 | core API는 유지하되 platform policy/env parsing은 계속 `qbox-platform`에 둠 |
-| 3 | `ports/target.h`의 aperture mirror mechanism | FVP-style wide aperture 대응이지만 모든 device에 기본 적용되면 위험함 | 현재처럼 default-off CCI parameter로 유지하고 platform Lua에서만 활성화 |
+| 1 | `ports/initiator.h`의 direct file alias API | RSE boot acceleration에서 주로 사용하지만 DMI/file-backed memory generic 기능과 맞닿아 있음 | core API는 유지하되 platform policy/env parsing은 계속 `qbox-platform`에 둠 |
+| 2 | `ports/target.h`의 aperture mirror mechanism | FVP-style wide aperture 대응이지만 모든 device에 기본 적용되면 위험함 | 현재처럼 default-off CCI parameter로 유지하고 platform Lua에서만 활성화 |
+
+`tools/qbox/platforms/cortex-m55-remote/` 변경은 Apollo 실행 경로에서
+필요하지 않다고 판단해 기준 커밋 상태로 되돌렸다. Apollo/RD-Aspen RSE는
+`tools/qbox-platform/platforms/cortex-m55-remote/apollo_rse_remote_cpu`를
+사용하고, QBox core의 generic `remote_cpu` sample은 upstream 기준 동작을
+유지한다. 단, `platforms/src/main.cc`의 `<remote.h>` include는
+`platforms-vp` 안에 `RemotePass` module factory를 등록하기 위해 필요하다.
 
 ## 구현 검증 결과
 
