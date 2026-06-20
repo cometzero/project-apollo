@@ -424,7 +424,7 @@ def module_type(block: str) -> str:
 
 def parse_object_sockets(text: str, lua_file: str, constants: dict[str, int], tables: dict[str, list[int]]) -> list[LuaSocket]:
     sockets: list[LuaSocket] = []
-    for match in re.finditer(r"(?m)^    ([A-Za-z0-9_]+)\s*=\s*(?:[^{\n]*and\s*)?\{", text):
+    for match in re.finditer(r"(?m)^    (?:platform\.)?([A-Za-z0-9_]+)\s*=\s*(?:[^{\n]*and\s*)?\{", text):
         object_name = match.group(1)
         if object_name not in WATCHED_OBJECTS:
             continue
@@ -545,17 +545,23 @@ def missing_ap_view_bindings(
     return failures
 
 
-def add_gic_redists(sockets: list[LuaSocket], constants: dict[str, int]) -> None:
+def add_gic_redists(sockets: list[LuaSocket], constants: dict[str, int], lua_file: str) -> None:
     base = constants.get("AP_GIC_REDIST_BASE")
     size = constants.get("AP_GIC_REDIST_SIZE")
     regions = constants.get("AP_GIC_ACTIVE_REDIST_REGIONS", 4)
     if base is None or size is None:
         return
     for index in range(regions):
-        sockets.append(LuaSocket("rse.lua", "ap_gic", "arm_gicv3", f"redist_iface_{index}", base + index * size, size))
+        sockets.append(LuaSocket(lua_file, "ap_gic", "arm_gicv3", f"redist_iface_{index}", base + index * size, size))
 
 
-def add_smmu_factory_socket(text: str, sockets: list[LuaSocket], constants: dict[str, int], tables: dict[str, list[int]]) -> None:
+def add_smmu_factory_socket(
+    text: str,
+    sockets: list[LuaSocket],
+    constants: dict[str, int],
+    tables: dict[str, list[int]],
+    lua_file: str,
+) -> None:
     match = re.search(r"function ap_smmu_component\(\).*?return \{", text, re.S)
     if not match:
         return
@@ -568,15 +574,29 @@ def add_smmu_factory_socket(text: str, sockets: list[LuaSocket], constants: dict
     address = eval_lua_int(address_match.group(1), constants, tables)
     size = eval_lua_int(size_match.group(1), constants, tables)
     if address is not None and size is not None:
-        sockets.append(LuaSocket("rse.lua", "ap_smmu_0", current_module, "mem", address, size))
+        sockets.append(LuaSocket(lua_file, "ap_smmu_0", current_module, "mem", address, size))
 
 
 def current_coverage(root: Path) -> list[LuaSocket]:
-    rse = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/rse.lua")
-    constants, tables = parse_constants(rse)
-    sockets = parse_object_sockets(rse, "rse.lua", constants, tables)
-    add_gic_redists(sockets, constants)
-    add_smmu_factory_socket(rse, sockets, constants, tables)
+    apollo = root / "tools/qbox-platform/platforms/apollo/hw-block"
+    lua_files = [
+        "config.lua",
+        "rse.lua",
+        "ap_compute.lua",
+        "ros.lua",
+        "system_mgmt.lua",
+        "si_cl0.lua",
+        "si_cl1.lua",
+    ]
+    texts = {lua_file: read_text(apollo / lua_file) for lua_file in lua_files}
+    constants, tables = parse_constants("\n".join(texts.values()))
+    sockets: list[LuaSocket] = []
+    for lua_file in lua_files:
+        if lua_file == "config.lua":
+            continue
+        sockets.extend(parse_object_sockets(texts[lua_file], lua_file, constants, tables))
+    add_gic_redists(sockets, constants, "ap_compute.lua")
+    add_smmu_factory_socket(texts["config.lua"], sockets, constants, tables, "ap_compute.lua")
     return sorted(sockets, key=lambda item: (item.address, item.object_name, item.socket_name))
 
 
@@ -768,16 +788,16 @@ def high_dram_value_check(
 
 
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
-    rse_path = "tools/qbox-platform/platforms/apollo/hw-block/rse.lua"
+    config_path = "tools/qbox-platform/platforms/apollo/hw-block/config.lua"
     primary_path = "tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua"
     dts_path = (
         "hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/"
         "apollo-fvp.dts"
     )
-    rse = read_text(root / rse_path)
+    config = read_text(root / config_path)
     primary = read_text(root / primary_path)
     dts = read_text(root / dts_path)
-    rse_match = re.search(r"\b(?:local\s+)?HOST_AP_DRAM2_BASE\s*=\s*(0x[0-9a-fA-F]+|\d+)", rse)
+    config_match = re.search(r"\b(?:local\s+)?HOST_AP_DRAM2_BASE\s*=\s*(0x[0-9a-fA-F]+|\d+)", config)
     primary_match = re.search(r"\bram_1\s*=\s*\{.*?\baddress\s*=\s*(0x[0-9a-fA-F]+|\d+)\s*;", primary, re.S)
     dts_node = re.search(r"memory@80000000\s*\{(?P<body>.*?)\n\s*\};", dts, re.S)
     dts_cells = re.findall(r"<[^>]+>", dts_node.group("body")) if dts_node else []
@@ -786,9 +806,9 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
     return [
         high_dram_value_check(
             "full_system_host_ap_dram2_base",
-            rse_path,
-            None if rse_match is None else line_for_offset(rse, rse_match.start(1)),
-            None if rse_match is None else int(rse_match.group(1), 0),
+            config_path,
+            None if config_match is None else line_for_offset(config, config_match.start(1)),
+            None if config_match is None else int(config_match.group(1), 0),
         ),
         high_dram_value_check(
             "direct_boot_ram_1_base",
@@ -1328,9 +1348,13 @@ def main() -> int:
         "sources": [
             DOC_REL_PATH,
             PLAN_REL_PATH,
-            "tools/qbox-platform/platforms/apollo/hw-block/rse.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/config.lua",
             "tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua",
             "tools/qbox-platform/platforms/apollo/hw-block/ros.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/rse.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua",
+            "tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua",
         ],
     }
     if args.list_expected:

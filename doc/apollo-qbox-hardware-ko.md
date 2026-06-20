@@ -18,7 +18,7 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | Apollo QBox full-system wrapper | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` |
 | Apollo QBox hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/` |
 | SI CL1 isolated boot | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` |
-| Apollo RSE-first base topology | `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` |
+| Apollo QBox full-system hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/{config,fabric,rse,ap_compute,ros,system_mgmt,si_cl0,si_cl1}.lua` |
 | QBox core modules | `tools/qbox/systemc-components/`, `tools/qbox/qemu-components/` |
 | Apollo/RD-Aspen overlay modules | `tools/qbox-platform/systemc-components/`, `tools/qbox-platform/qemu-components/` |
 | QEMU backend source | `tools/qemu/` |
@@ -37,17 +37,16 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | SI CL1 isolated | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` | Zephyr CL1 단독 부팅과 UART/MHU/PFDI bring-up | CL1 Cortex-R82 4개, CL1 GIC, UART, HIPC/PFDI MHU, SRAM |
 | Full-system | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` | RSE-first topology 위에 live CL0/CL1/AP를 통합 | RSE TF-M, AP firmware chain, SI CL0 SCP, SI CL1 Zephyr, service/live 혼합 모델 |
 
-`apollo-qvp.lua`는 `hw-block/rse.lua`를 로드하는 순간 Apollo-owned
-RSE-first topology를 직접 구성한 뒤 Apollo-specific AP view router, live
-SI CL0, live SI CL1 구성을 추가한다. `hw-block/rse.lua`는 기존 RD-Aspen
-RSE-first topology 내용을 Apollo 플랫폼으로 가져온 base이며, 더 이상
-`tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua` 또는 별도 RSE conf 파일을
-직접 로드하지 않는다.
+`apollo-qvp.lua`는 `hw-block/config.lua`에서 공통 실행 옵션과 artifact path를
+초기화하고, `hw-block/fabric.lua`에서 root container와 host router를 만든 뒤
+각 subsystem module의 `define()` 함수를 순서대로 호출한다. live SI CL0/CL1
+CPU/GIC/loader 경로는 `QBOX_APOLLO_FULL_SI_MODE`에 따라 각 subsystem의
+`enable()` 함수에서 추가된다.
 
 ## Lua 구성 분석
 
 현재 Apollo QBox Lua 구성은 단일 거대 플랫폼 파일이 아니라, 목적별 entry와
-공통 RD-Aspen RSE-first base topology를 조합하는 방식이다.
+공통 config/fabric과 subsystem-owned hardware block을 조합하는 방식이다.
 
 | Lua 파일 | 역할 | 주요 구성 |
 | --- | --- | --- |
@@ -55,13 +54,15 @@ RSE-first topology 내용을 Apollo 플랫폼으로 가져온 base이며, 더 �
 | `tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua` | Primary Compute direct boot block | AP Linux kernel, DTB, initramfs를 `loader`로 직접 적재하고 AP 4-core, GIC/ITS, UART, watchdog, RTC, virtio, reserved memory를 빠르게 구성 |
 | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` | SI CL1 isolated boot entrypoint | `hw-block/si_cl1_isolated.lua`를 로드해 CL1 단독 Zephyr platform을 구성 |
 | `tools/qbox-platform/platforms/apollo/hw-block/si_cl1_isolated.lua` | SI CL1 isolated boot block | CL1 Zephyr 단독 검증용. CL1 Cortex-R82 4-core, CL1 GIC, UART, HIPC/PFDI `mhu320ae`, SCMI shmem, CL1 SRAM만 독립 router에 연결 |
-| `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` | Apollo RSE-first base topology | RSE TF-M secure boot, AP firmware chain, AP I/O, AP/SI/RSE MHU, ATU, flash, CC3XX, DMA350, KMU/LCM/SAM, AP CPU loop를 정의 |
 | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` | Apollo full-system entrypoint | 실행 모드와 공통 context를 구성하고 `hw-block` 모듈을 호출 |
-| `tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua` | AP compute block | AP logical view router, AP GIC/SMMU/GPEX/DRAM/UART/watchdog/timer 재바인딩 |
-| `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua` | SI CL0 block | live SI CL0 CPU/GIC/UART/SRAM, GIC multiview, CL0 ATW/control windows 구성 |
-| `tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua` | SI CL1 block | live SI CL1 CPU/GIC/UART/SRAM, HIPC/PFDI MHU, SCMI shmem, reset fanout 구성 |
-| `tools/qbox-platform/platforms/apollo/hw-block/ros.lua` | RoS block | Arm Zena CSS FVP RoS peripheral table 기준으로 AP-visible virtio block/net/rng, PL031 RTC의 AP view routing과 live CL0 우선순위 조정을 담당 |
-| `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua` | System Management block | AP/RSE MHU logical alias, reset/power ownership, SMD shared memory, SCMI/PFDI messaging, ATU, safety/control ownership을 명시 |
+| `tools/qbox-platform/platforms/apollo/hw-block/config.lua` | Shared full-system config | `QBOX_*` environment, artifact path, trace/backend option, AP/RSE/SI 공통 address constant를 초기화 |
+| `tools/qbox-platform/platforms/apollo/hw-block/fabric.lua` | Root fabric block | `Container`, `host_router`, `keep_alive_0` 생성 |
+| `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` | RSE block | RSE TF-M secure boot, RSE ROM/TCM/VM/flash, RSE DMA350/CC3XX/KMU/LCM/SAM/ATU/MHU/UART, RSE CPU pass를 정의 |
+| `tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua` | AP compute block | AP QEMU instance, AP BL2 loader, AP flash/DRAM/SRAM, AP GIC/ITS/SMMU/GPEX, AP UART/watchdog/timer/SID/FMU, AP CPU loop, AP logical view router를 정의 |
+| `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua` | SI CL0 block | CL0 host-visible SRAM/PPU window와 live SI CL0 CPU/GIC/UART/SRAM, GIC multiview, CL0 ATW/control windows 구성 |
+| `tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua` | SI CL1 block | CL1 host-visible SRAM/PPU window와 live SI CL1 CPU/GIC/UART/SRAM, HIPC/PFDI MHU, SCMI shmem, reset fanout 구성 |
+| `tools/qbox-platform/platforms/apollo/hw-block/ros.lua` | RoS block | Arm Zena CSS FVP RoS peripheral table 기준으로 AP-visible virtio block/net/rng, PL031 RTC를 생성하고 AP view routing hook을 제공 |
+| `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua` | System Management block | AP/SI/RSE MHU, AP/RSE logical alias, reset/power ownership, SMD shared memory, SCMI/PFDI messaging, ATU, safety/control ownership을 정의 |
 
 `apollo-qvp.lua`의 동작은 `QBOX_APOLLO_FULL_SI_MODE`가 결정한다. 기본값은
 `service-model`이지만, Apollo full-system runner는 `live-cl0-cl1` 모드에서
@@ -73,6 +74,11 @@ Apollo QVP의 주요 block module은 다음과 같다.
 
 | Module/function | 추가/변경 내용 |
 | --- | --- |
+| `rse.define()` | RSE-local secure boot와 RSE-local security peripheral을 추가한다. |
+| `ap_compute.define()` | AP firmware chain, AP CPU, memory, interrupt, SMMU, PCIe, UART/watchdog/timer/SID/FMU object를 추가한다. |
+| `ros.define()` | AP-visible RoS virtio/RTC object를 추가한다. |
+| `system_mgmt.define()` | AP/SI/RSE cross-domain MHU, ATU, shared memory, reset/power/control window를 추가한다. |
+| `si_cl0.define()` / `si_cl1.define()` | service-model과 live mode 모두에서 필요한 SI host-visible SRAM/PPU window를 추가한다. |
 | `system_mgmt.prepare_live_cl0_integration()` | live CL0를 RSE-first topology에 붙이기 전에 broad AP/host/RoS decode priority를 낮추고 AP logical view router와 AP-RSE MHU alias를 구성한다. |
 | `system_mgmt.add_ap_logical_mhu_aliases()` | AP logical RSE MHU PBX/MBX alias를 base topology의 RSE MHU window에 추가한다. |
 | `ap_compute.enable_ap_view_router()` | `ap_view_router`와 `ap_view_passthrough`를 추가해 AP CPU/GPEX/global initiator access를 host merged bus와 분리한다. AP GIC, SMMU, watchdog, timer, UART, DRAM target을 AP view router 쪽으로 재바인딩하고, RoS virtio/RTC는 `hw-block/ros.lua`가 재바인딩한다. |
@@ -88,9 +94,10 @@ System Registers, Virtio P9, Virtio Block 0-3, Virtio Net, Virtio RNG,
 VSI 0/1, PL031 RTC, PL011 UART 0/1 등이 포함된다.
 
 현재 Apollo QBox에서 실제 모델로 배치된 RoS subset은
-`tools/qbox-platform/platforms/apollo/hw-block/rse.lua`의 `ap_virtioblk_0..3`,
-`ap_virtionet_0`, `ap_virtiorng_0`, `ap_rtc_0`이다. 이 장치들은
-`tools/qbox-platform/platforms/apollo/hw-block/ros.lua`에서 AP view router로
+`tools/qbox-platform/platforms/apollo/hw-block/ros.lua`의 `ap_virtioblk_0..3`,
+`ap_virtionet_0`, `ap_virtiorng_0`, `ap_rtc_0`이다. 장치별 backing image,
+netdev, trace 옵션은 `config.lua`의 `ap_virtio` 설정에서 초기화된다. 이
+장치들은 `ap_compute.enable_ap_view_router()`가 호출될 때 AP view router로
 재바인딩되고, live CL0 모드에서는 CL0 local GIC view가 RoS 주소 일부와
 겹치는 구간에서 우선하도록 decode priority가 낮춰진다.
 
@@ -98,7 +105,7 @@ VSI 0/1, PL031 RTC, PL011 UART 0/1 등이 포함된다.
 주소가 RoS table의 `0x300x_0000` peripheral 영역이 아니므로 RoS block으로
 이동하지 않고 AP compute/platform I/O 영역에 남긴다.
 
-`hw-block/rse.lua`의 backend 선택도 현재 동작에 중요하다.
+`hw-block/config.lua`의 backend 선택도 현재 동작에 중요하다.
 `QBOX_RDASPEN_SMMU_BACKEND` 기본값은 `systemc-mmu720ae`이며,
 `qemu-arm-smmuv3`는 fallback/debug 선택지이다. MHU는 별도 backend switch가
 아니라 `mhu320ae` SystemC component가 RSE/AP/SI 경로에 직접 배치된다.
@@ -391,9 +398,9 @@ System management은 현재 “모든 IP를 full semantic model로 구현”한 
 상태이다. 문서나 검증에서 이 영역은 `live`, `service-modeled`,
 `register-stub`, `memory-placeholder`를 구분해야 한다.
 
-Lua 구조에서는 `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua`가 이
-영역의 첫 번째 owner module이다. 현재 이 파일은 RSE-first base topology를
-새로 만들지는 않고, 다음 cross-domain mutation을 담당한다.
+Lua 구조에서는 `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua`가
+cross-domain System Management object를 직접 생성하고, live CL0 통합 시 AP
+logical view와 decode priority mutation을 담당한다.
 
 | 함수/데이터 | 역할 |
 | --- | --- |
@@ -401,16 +408,12 @@ Lua 구조에서는 `tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.l
 | `system_mgmt.prepare_live_cl0_integration()` | live CL0 추가 전에 AP flash/GPEX/DRAM/RoS broad decode priority를 낮추고 AP logical view router를 구성 |
 | `system_mgmt.add_ap_logical_mhu_aliases()` | AP logical view에서 RSE secure MHU PBX/MBX가 보이는 alias를 추가 |
 
-`hw-block/rse.lua`는 여전히 가장 큰 파일이지만, 현재 단계에서는 더 세분화하지
-않는다. 이 파일은 RSE local boot/security IP뿐 아니라 RSE BL2가 적재하고
-release하는 AP firmware chain, AP flash/DRAM/GIC/SMMU/CPU object, RoS device,
-host ATU/MHU windows를 같은 base topology 안에서 만든다. 이 object들은
-ownership 관점에서는 AP/RoS/System Management에 속하지만, Lua object name,
-socket bind, decode priority, environment variable, boot artifact loading이
-강하게 결합되어 있다. 따라서 이번 리팩토링은 observable object name을
-바꾸지 않는 cross-domain helper 분리로 제한하고, AP object construction은
-후속 migration에서 `ap_compute.lua`, RoS object construction은 `ros.lua`,
-SMD/SCMI/PFDI object construction은 `system_mgmt.lua`로 옮기는 것이 적절하다.
+현재 Lua ownership은 hardware block 기준으로 분리되어 있다. `rse.lua`는
+RSE-local boot/security IP만 생성하고, AP firmware chain과 AP hardware는
+`ap_compute.lua`, RoS virtio/RTC는 `ros.lua`, AP/SI/RSE MHU와 ATU/shared-memory
+windows는 `system_mgmt.lua`, SI host-visible SRAM/PPU window는 `si_cl0.lua`와
+`si_cl1.lua`가 생성한다. Observable QBox object name과 socket bind는 기존
+부팅 로그 및 validator가 같은 대상을 추적할 수 있도록 유지한다.
 
 ## Peripheral Block
 

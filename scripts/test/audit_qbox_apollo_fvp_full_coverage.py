@@ -218,6 +218,7 @@ def lua_component_block(text: str, name: str) -> str:
 def lua_backend_checks(root: Path) -> list[dict[str, Any]]:
     si_cl0 = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua")
     rse = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/rse.lua")
+    system_mgmt = read_text(root / "tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua")
     expected = [
         ("si_cl0_ssu", si_cl0, "zena_ssu"),
         ("si_cl0_fmu", si_cl0, "zena_fmu"),
@@ -228,9 +229,9 @@ def lua_backend_checks(root: Path) -> list[dict[str, Any]]:
         ("rse_sic_regs", rse, "rse_protection_ctrl"),
         ("rse_mpc_sic_regs", rse, "rse_protection_ctrl"),
         ("rse_atu_regs", rse, "rse_atu"),
-        ("host_si_atu", rse, "rse_atu"),
-        ("host_ap_atu", rse, "rse_atu"),
-        ("host_smdexp2smd_atu", rse, "rse_atu"),
+        ("host_si_atu", system_mgmt, "rse_atu"),
+        ("host_ap_atu", system_mgmt, "rse_atu"),
+        ("host_smdexp2smd_atu", system_mgmt, "rse_atu"),
     ]
     checks = []
     for name, text, backend in expected:

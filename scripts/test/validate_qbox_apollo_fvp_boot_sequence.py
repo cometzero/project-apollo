@@ -51,32 +51,30 @@ def require_contains(errors: list[str], path: Path, text: str, needle: str, labe
 def validate_static(root: Path) -> list[str]:
     errors: list[str] = []
     apollo = root / "tools/qbox-platform/platforms/apollo/hw-block"
-    rse = apollo / "rse.lua"
     si_cl0 = apollo / "si_cl0.lua"
     si_cl1 = apollo / "si_cl1.lua"
 
-    rse_text = read_text(rse)
     si_cl0_text = read_text(si_cl0)
     si_cl1_text = read_text(si_cl1)
 
     require_contains(
         errors,
-        rse,
-        rse_text,
+        si_cl0,
+        si_cl0_text,
         'power_on_load = apollo_live_cl0 and {bind = "&si_cl0_loader.reset"} or nil;',
         "RSE SI CL0 PPU-to-loader binding",
     )
     require_contains(
         errors,
-        rse,
-        rse_text,
+        si_cl0,
+        si_cl0_text,
         'power_on_reset = apollo_live_cl0 and {bind = "&si_cl0_cpu_0.reset"} or nil;',
         "RSE SI CL0 PPU-to-CPU reset binding",
     )
     require_contains(
         errors,
-        rse,
-        rse_text,
+        si_cl1,
+        si_cl1_text,
         'power_on_load = apollo_live_cl1 and {bind = "&si_cl1_loader.reset"} or nil;',
         "RSE SI CL1 cluster PPU-to-loader binding",
     )
