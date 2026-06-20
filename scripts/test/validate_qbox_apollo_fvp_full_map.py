@@ -25,7 +25,7 @@ CHECKS = {
         ("platform:si-cl1-isolated-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1_isolated.lua", r"Apollo FVP Safety Island CL1 isolated"),
         ("platform:apollo-qvp-lua", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/rse\.lua"),
         ("platform:apollo-qvp-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
-        ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"RD-Aspen RSE QBox skeleton config running"),
+        ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"Apollo RSE QBox skeleton config running"),
         ("platform:system-mgmt-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.add_ap_logical_mhu_aliases"),
         ("platform:system-mgmt-live-cl0-integration", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.prepare_live_cl0_integration"),
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),

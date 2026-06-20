@@ -20,7 +20,7 @@ and guides were migrated. Use the categorized paths directly, for example:
 
 ```bash
 scripts/run/run_qbox_apollo_fvp_full.py --help
-scripts/test/validate_qbox_fvp_rd_aspen_map.py
+scripts/test/validate_qbox_apollo_fvp_full_map.py
 ```
 
 The workspace still keeps user-facing root entrypoints such as `./build.sh`,
@@ -64,6 +64,11 @@ Removed compatibility wrappers:
 - `run_qbox_fvp_rd_aspen_linux.py`
 - `run_qbox_fvp_rd_aspen_linux.sh`
 - `runfvp_tmux.sh`
+
+Removed standalone RD-Aspen platform validators:
+
+- `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
+- `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`
 
 ## Cleanup Policy
 

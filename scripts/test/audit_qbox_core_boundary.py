@@ -11,8 +11,6 @@ from typing import Any
 
 FORBIDDEN_QBOX_PATHS = [
     "tools/qbox/platforms/apollo",
-    "tools/qbox/platforms/fvp-rd-aspen",
-    "tools/qbox/platforms/fvp-rd-aspen-rse",
     "tools/qbox/qemu-components/cc3xx_native",
     "tools/qbox/qemu-components/common/include/cc3xx_core.h",
     "tools/qbox/qemu-components/common/include/rse_lms_accel.h",
@@ -75,8 +73,8 @@ OVERLAY_ONLY_TEST_COMPONENTS = [
 ]
 
 ACTIVE_TEXT_PATTERNS = [
-    re.compile(r"tools/qbox/platforms/(?:apollo|fvp-rd-aspen|fvp-rd-aspen-rse)"),
-    re.compile(r"qbox\s*/\s*[\"']platforms/(?:apollo|fvp-rd-aspen|fvp-rd-aspen-rse)[\"']"),
+    re.compile(r"tools/qbox/platforms/apollo"),
+    re.compile(r"qbox\s*/\s*[\"']platforms/apollo[\"']"),
     re.compile(r"tools/qbox/(?:systemc-components/cc3xx|qemu-components/cc3xx_native)"),
     re.compile(r"systemc-components/cc3xx/include"),
 ]
@@ -193,7 +191,7 @@ def collect_qbox_core_text_violations(root: Path) -> list[dict[str, Any]]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Audit that Apollo/RD-Aspen overlay code is not left in QBox core."
+        description="Audit that Apollo overlay code is not left in QBox core."
     )
     parser.add_argument(
         "--json",

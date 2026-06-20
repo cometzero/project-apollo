@@ -1387,7 +1387,7 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     env["QBOX_APOLLO_FULL_SI_MODE"] = args.si_mode
     if not args.build_only:
         # Full-system runtime evidence must include the AP firmware/Linux path.
-        # The reused RD-Aspen runner only enables AP CPUs for probe-oriented
+        # The reused RSE child runner only enables AP CPUs for probe-oriented
         # runs by default, which is useful for RSE-only diagnostics but is not
         # a valid Apollo full-system runtime shape.
         env["QBOX_RDASPEN_ENABLE_AP_CPUS"] = "true"
@@ -1541,7 +1541,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Forward the storage-safe Strata flash DMI fast path to the "
-            "RD-Aspen runner. This is enabled by default for Apollo full-system "
+            "RSE child runner. This is enabled by default for Apollo full-system "
             "boot performance."
         ),
     )

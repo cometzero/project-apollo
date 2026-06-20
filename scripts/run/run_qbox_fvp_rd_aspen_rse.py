@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run or preflight the Apollo/RD-Aspen RSE-oriented QBox boot path."""
+"""Run or preflight the Apollo RSE-oriented QBox boot path."""
 
 from __future__ import annotations
 
@@ -2899,7 +2899,7 @@ def write_placeholder_logs(out_dir: Path, reason: str) -> dict[str, str]:
     for role, filename in CONSOLE_LOGS.items():
         path = out_dir / filename
         text = (
-            f"QBox RD-Aspen RSE-oriented boot did not start.\n"
+            f"QBox Apollo RSE-oriented boot did not start.\n"
             f"console: {role}\n"
             f"reason: {reason}\n"
         )
@@ -3654,7 +3654,7 @@ def run_platform(
             logs[role] = path.read_text(encoding="utf-8", errors="replace")
             continue
         text = (
-            "QBox RD-Aspen RSE-oriented boot did not create this console log.\n"
+            "QBox Apollo RSE-oriented boot did not create this console log.\n"
             f"console: {role}\n"
             f"platform_stdout_log: {platform_log}\n"
         )
@@ -4263,7 +4263,7 @@ def parse_args() -> argparse.Namespace:
     root = workspace_root()
     deploy = root / "build/tmp_baremetal/deploy/images/fvp-rd-aspen"
     parser = argparse.ArgumentParser(
-        description="Run or preflight the QBox Apollo/RD-Aspen RSE-oriented boot path."
+        description="Run or preflight the QBox Apollo RSE-oriented boot path."
     )
     parser.add_argument(
         "--conf",
@@ -4321,7 +4321,7 @@ def parse_args() -> argparse.Namespace:
         "--efi-capsule-disk",
         type=Path,
         default=deploy / "efi-capsule-update-disk-image-fvp-rd-aspen.img",
-        help="FVP ros.virtio_block1 image used by RD-Aspen U-Boot FWU flow.",
+        help="FVP ros.virtio_block1 image used by the Apollo U-Boot FWU flow.",
     )
     parser.add_argument(
         "--provisioning-bundle",
@@ -4331,7 +4331,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=root / "build/qbox-fvp-rd-aspen" / f"rse-{timestamp()}",
+        default=root / "build/qbox-apollo-fvp" / f"rse-{timestamp()}",
     )
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
@@ -4352,7 +4352,7 @@ def parse_args() -> argparse.Namespace:
         "--smmu-backend",
         choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
         default="systemc-mmu720ae",
-        help="SMMU backend used by the AP side of the RD-Aspen Lua platform.",
+        help="SMMU backend used by the AP side of the Apollo Lua platform.",
     )
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument(
@@ -4465,7 +4465,7 @@ def parse_args() -> argparse.Namespace:
         "--fwu-probe",
         action="store_true",
         help=(
-            "Extend --post-login-probe with the RD-Aspen capsule-on-disk FWU "
+            "Extend --post-login-probe with the Apollo capsule-on-disk FWU "
             "setup sequence, reboot, and log-marker evaluation for bank-1 "
             "RSE/TF-A/U-Boot progress."
         ),
