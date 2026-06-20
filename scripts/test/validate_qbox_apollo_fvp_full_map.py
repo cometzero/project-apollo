@@ -38,7 +38,7 @@ CHECKS = {
         ("platform:qvp-live-cl0-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"system_mgmt\.prepare_live_cl0_integration"),
         ("platform:si-cl1-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua", r"si_cl1\.enable"),
         ("platform:ros-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"ros\.peripherals"),
-        ("platform:ap-virtio-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"bind_target\(virtio\.mem"),
+        ("platform:ap-virtio-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"bind_ap_target\(virtio\.mem"),
         ("platform:ap-rtc-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"platform\.ap_rtc_0\.mem"),
         ("platform:ap-rse-mhu-pbx-logical", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_PBX_LOGICAL_BASE\s*=\s*0x40680000"),
         ("platform:ap-rse-mhu-mbx-logical", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"AP_RSE_SECURE_MHU_MBX_LOGICAL_BASE\s*=\s*0x406B0000"),

@@ -480,9 +480,16 @@ def parse_ros_bindings(ap_compute_text: str, ros_text: str) -> list[ApViewBindin
     bindings: list[ApViewBinding] = []
     clean_text = strip_lua_comments(ros_text)
     for index in range(4):
-        if re.search(r'platform\["ap_virtioblk_"\.\.i\].*?bind_target\(virtio\.mem', clean_text, re.S):
+        if re.search(
+            r'platform\["ap_virtioblk_"\.\.i\].*?bind_ap_target\(virtio\.mem',
+            clean_text,
+            re.S,
+        ):
             bindings.append(ApViewBinding("ros.lua", f"ap_virtioblk_{index}", "mem", "ros_bind_target_loop"))
-    for match in re.finditer(r"bind_target\(\s*platform\.([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\s*,", clean_text):
+    for match in re.finditer(
+        r"bind_ap_target\(\s*platform\.([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\s*\)",
+        clean_text,
+    ):
         bindings.append(ApViewBinding("ros.lua", match.group(1), match.group(2), "ros_bind_target"))
     return bindings
 
