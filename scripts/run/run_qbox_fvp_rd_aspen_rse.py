@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run or preflight the RD-Aspen RSE-oriented QBox boot path."""
+"""Run or preflight the Apollo/RD-Aspen RSE-oriented QBox boot path."""
 
 from __future__ import annotations
 
@@ -4263,12 +4263,12 @@ def parse_args() -> argparse.Namespace:
     root = workspace_root()
     deploy = root / "build/tmp_baremetal/deploy/images/fvp-rd-aspen"
     parser = argparse.ArgumentParser(
-        description="Run or preflight the QBox RD-Aspen RSE-oriented boot path."
+        description="Run or preflight the QBox Apollo/RD-Aspen RSE-oriented boot path."
     )
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua",
+        default=root / "tools/qbox-platform/platforms/apollo/apollo-qvp.lua",
         help="RSE-oriented QBox Lua config. Missing config is reported as an implementation blocker.",
     )
     parser.add_argument("--rse-rom", type=Path, default=deploy / "rse-rom-image.img")
