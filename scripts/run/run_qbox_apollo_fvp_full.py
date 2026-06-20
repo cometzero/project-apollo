@@ -338,6 +338,7 @@ def synthesize_keep_running_child_status(
         "rse_boot_timing_profile": keep_running_rse_boot_timing_profile(logs),
         "cc3xx_stats": None,
         "qbox_perf_profile": None,
+        "rse_cpu_mode": args.rse_cpu_mode,
         "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},
         "platform_returncode": child_returncode,
         "command": command,
@@ -966,6 +967,7 @@ def write_result(
         "cc3xx_qemu_native_backend": bool(args.cc3xx_qemu_native_backend),
         "rse_fast_boot_aliases": bool(args.rse_fast_boot_aliases),
         "rse_fast_boot_sram_dmi": bool(args.rse_fast_boot_sram_dmi),
+        "rse_cpu_mode": args.rse_cpu_mode,
     }
     status: dict[str, Any] = {
         "passed": passed,
@@ -980,6 +982,7 @@ def write_result(
         "qbox_executable": str((args.qbox_build_dir / "platforms-vp").resolve()),
         "qbox_performance_preset": args.qbox_performance_preset,
         "qbox_performance_options": qbox_performance_options,
+        "rse_cpu_mode": args.rse_cpu_mode,
         "rse_otp_auto_provision": getattr(
             args,
             "rse_otp_auto_provision",
@@ -1004,6 +1007,7 @@ def write_result(
         "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
+        "child_rse_cpu_mode": (child_status or {}).get("rse_cpu_mode"),
         "remotepass_dmi_cache": (child_status or {}).get("remotepass_dmi_cache"),
         "completion_gate_blocker": gate_blocker,
         "child_scp_service_model": (child_status or {}).get("scp_service_model"),
@@ -1274,6 +1278,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         args.smmu_backend,
         "--rootfs-bootargs-profile",
         args.rootfs_bootargs_profile,
+        "--rse-cpu-mode",
+        args.rse_cpu_mode,
         "--primary-login-prompt",
         "apollo-fvp login:",
         "--primary-shell-marker",
@@ -1568,6 +1574,15 @@ def parse_args() -> argparse.Namespace:
         "--remotepass-dmi-cache",
         action="store_true",
         help="Forward the RSE RemotePass shared-memory DMI cache option.",
+    )
+    parser.add_argument(
+        "--rse-cpu-mode",
+        choices=("remote", "inprocess"),
+        default="remote",
+        help=(
+            "Forward the RSE Cortex-M55 backend mode. Default 'remote' keeps "
+            "RemotePass; 'inprocess' runs the RSE CPU endpoint in platforms-vp."
+        ),
     )
     parser.add_argument(
         "--rse-hotpath-accel",

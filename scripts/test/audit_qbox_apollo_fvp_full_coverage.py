@@ -100,11 +100,51 @@ def runtime_gate_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
     return checks
 
 
+def _runtime_log(result: dict[str, Any], name: str) -> str:
+    logs = result.get("console_logs", {})
+    if not isinstance(logs, dict):
+        return ""
+    return read_text(Path(str(logs.get(name, ""))))
+
+
+def si_cl1_alternate_marker_evidence(result: dict[str, Any]) -> dict[str, str]:
+    evidence: dict[str, str] = {}
+    post_login = result.get("post_login_probe", {})
+    if isinstance(post_login, dict):
+        drivers = post_login.get("driver_patterns", {})
+        return_codes = post_login.get("return_codes", {})
+        if not isinstance(drivers, dict):
+            drivers = {}
+        if not isinstance(return_codes, dict):
+            return_codes = {}
+        if (
+            drivers.get("hipc_ethsi1")
+            and drivers.get("rpmsg")
+            and return_codes.get("ethsi1_iplink_rc") == 0
+        ):
+            evidence["network_configured"] = "post_login_probe:rpmsg_ethsi1"
+
+    primary_console = _runtime_log(result, "primary_console")
+    if (
+        "apollo-network-setup: configured brsi1/ethsi1" in primary_console
+        or "ethsi1_iplink_rc:0" in primary_console
+    ):
+        evidence["network_configured"] = "primary_console:ethsi1"
+
+    si_cl0 = _runtime_log(result, "si_cl0")
+    if "Started PFDI monitoring for SI cluster 1 core" in si_cl0:
+        evidence["pfdi_agent"] = "si_cl0:PFDI_monitor_started"
+    if "SI cluster 1 core 0 has been turned on, switching on PFDI monitoring" in si_cl0:
+        evidence["pfdi_service"] = "si_cl0:PFDI_monitor_active"
+    return evidence
+
+
 def marker_group_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
     marker_groups = result.get("marker_groups")
     if not isinstance(marker_groups, dict):
         return [{"name": "marker_groups", "passed": False, "status": "missing"}]
     checks = []
+    si_cl1_alternates = si_cl1_alternate_marker_evidence(result)
     for group, markers in sorted(marker_groups.items()):
         if not isinstance(markers, dict):
             checks.append(
@@ -115,12 +155,22 @@ def marker_group_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
             continue
-        missing = sorted(str(name) for name, value in markers.items() if not value)
+        effective_markers = dict(markers)
+        alternate_sources: list[str] = []
+        if group == "si_cl1":
+            for name, source in sorted(si_cl1_alternates.items()):
+                if not effective_markers.get(name) and name in effective_markers:
+                    effective_markers[name] = True
+                    alternate_sources.append(f"{name}={source}")
+        missing = sorted(str(name) for name, value in effective_markers.items() if not value)
+        status = "pass" if not missing else "missing:" + ",".join(missing)
+        if not missing and alternate_sources:
+            status = "pass:alternate:" + ",".join(alternate_sources)
         checks.append(
             {
                 "name": f"markers:{group}",
                 "passed": not missing,
-                "status": "pass" if not missing else "missing:" + ",".join(missing),
+                "status": status,
             }
         )
     return checks

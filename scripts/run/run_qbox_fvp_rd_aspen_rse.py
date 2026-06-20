@@ -47,6 +47,7 @@ REQUIRED_TARGETS = [
     "sbsa_gwdt",
     "cpu_arm_cortexM55",
     "nvic_armv7m",
+    "ApolloRseRemoteCPU",
     "apollo_rse_remote_cpu",
     "qemu_cc3xx",
     "qemu_hexagon_qtimer",
@@ -87,6 +88,7 @@ QBOX_RUNTIME_EXECUTABLES = {
     "remote_cpu",
     "apollo_rse_remote_cpu",
 }
+RSE_CPU_MODES = ("remote", "inprocess")
 SRAM_DMI_FORBIDDEN_ENV = (
     "QBOX_RDASPEN_HOST_SI_CL0_SRAM_MAP_FILE",
     "QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE",
@@ -2315,7 +2317,7 @@ def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]
             "true" if args.rse_fast_boot_sram_dmi else ""
         ),
         "QBOX_RDASPEN_REMOTEPASS_DMI_CACHE": (
-            "true" if args.remotepass_dmi_cache else ""
+            "true" if remotepass_dmi_cache_effective(args) else ""
         ),
         "QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY": (
             "true" if args.rse_fast_boot_sram_dmi else ""
@@ -2326,7 +2328,7 @@ def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]
         "enabled": bool(args.rse_fast_boot_sram_dmi),
         "host_sram_shared_memory": bool(args.rse_fast_boot_sram_dmi),
         "range_limited_flash_dmi": bool(args.range_limited_flash_dmi),
-        "remotepass_dmi_cache": bool(args.remotepass_dmi_cache),
+        "remotepass_dmi_cache": remotepass_dmi_cache_result(args),
         "legacy_fast_boot_aliases_blocked": bool(args.rse_fast_boot_sram_dmi),
         "env": dmi_env,
         "forbidden_ambient_env": forbidden_effective_env,
@@ -2926,6 +2928,49 @@ def strip_runner_control_env(env: dict[str, str]) -> dict[str, str]:
     return env
 
 
+def rse_cpu_mode(args: argparse.Namespace) -> str:
+    mode = getattr(args, "rse_cpu_mode", "remote")
+    if mode not in RSE_CPU_MODES:
+        raise ValueError("QBOX_RSE_CPU_MODE must be remote or inprocess")
+    return mode
+
+
+def rse_remote_cpu_exec(build_dir: Path) -> Path:
+    remote_cpu_candidates = [
+        build_dir / "apollo_rse_remote_cpu",
+        build_dir / "platforms" / "cortex-m55-remote" / "apollo_rse_remote_cpu",
+        build_dir / "remote_cpu",
+    ]
+    return next(
+        (candidate for candidate in remote_cpu_candidates if candidate.exists()),
+        remote_cpu_candidates[0],
+    )
+
+
+def apply_rse_cpu_backend_env(
+    env: dict[str, str], args: argparse.Namespace, build_dir: Path
+) -> dict[str, str]:
+    mode = rse_cpu_mode(args)
+    env["QBOX_RSE_CPU_MODE"] = mode
+    if mode == "remote":
+        env["QBOX_REMOTE_CPU_EXEC"] = str(rse_remote_cpu_exec(build_dir).resolve())
+    else:
+        env.pop("QBOX_REMOTE_CPU_EXEC", None)
+    return env
+
+
+def remotepass_dmi_cache_effective(args: argparse.Namespace) -> bool:
+    return bool(args.remotepass_dmi_cache and rse_cpu_mode(args) == "remote")
+
+
+def remotepass_dmi_cache_result(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "enabled": remotepass_dmi_cache_effective(args),
+        "requested": bool(args.remotepass_dmi_cache),
+        "rse_cpu_mode": rse_cpu_mode(args),
+    }
+
+
 def parse_int_auto(value: str) -> int | None:
     try:
         return int(value, 0)
@@ -3043,16 +3088,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         args.out_dir / CONSOLE_LOGS["primary_console"]
     )
     env["QBOX_RDASPEN_UART_READ_FILE"] = os.devnull
-    remote_cpu_candidates = [
-        build_dir / "apollo_rse_remote_cpu",
-        build_dir / "platforms" / "cortex-m55-remote" / "apollo_rse_remote_cpu",
-        build_dir / "remote_cpu",
-    ]
-    remote_cpu_exec = next(
-        (candidate for candidate in remote_cpu_candidates if candidate.exists()),
-        remote_cpu_candidates[0],
-    )
-    env["QBOX_REMOTE_CPU_EXEC"] = str(remote_cpu_exec.resolve())
+    apply_rse_cpu_backend_env(env, args, build_dir)
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
@@ -3081,11 +3117,12 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if args.qbox_perf_profile:
         profile_root = args.out_dir / QBOX_PERF_PROFILE_DIR
         qemu_initiator_dir = profile_root / QEMU_INITIATOR_PROFILE_DIR
-        remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
         qemu_initiator_dir.mkdir(parents=True, exist_ok=True)
-        remotepass_dir.mkdir(parents=True, exist_ok=True)
         env["QBOX_QEMU_INITIATOR_PROFILE_DIR"] = str(qemu_initiator_dir)
-        env["QBOX_REMOTEPASS_PROFILE_DIR"] = str(remotepass_dir)
+        if rse_cpu_mode(args) == "remote":
+            remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
+            remotepass_dir.mkdir(parents=True, exist_ok=True)
+            env["QBOX_REMOTEPASS_PROFILE_DIR"] = str(remotepass_dir)
         env["QBOX_CC3XX_PROFILE_FILE"] = str(profile_root / CC3XX_PROFILE)
         env["QBOX_CC3XX_TIMING_STATS"] = "1"
         env["QBOX_PROFILE_FLUSH_INTERVAL"] = str(args.qbox_perf_profile_interval)
@@ -3113,7 +3150,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
             env["QBOX_RDASPEN_RSE_HOTPATH_PROFILE_INTERVAL"] = str(
                 args.qbox_perf_profile_interval
             )
-    if args.remotepass_dmi_cache:
+    if remotepass_dmi_cache_effective(args):
         env["QBOX_RDASPEN_REMOTEPASS_DMI_CACHE"] = "true"
     if args.rse_hotpath_accel:
         env["QBOX_RDASPEN_RSE_HOTPATH_ACCEL"] = "true"
@@ -3843,10 +3880,11 @@ def write_result(
                 if qemu_trace_enabled(args)
                 else None
             ),
+            "rse_cpu_mode": rse_cpu_mode(args),
             "flash_stats": parse_flash_stats(args),
             "cc3xx_stats": parse_cc3xx_stats(args),
             "qbox_perf_profile": parse_qbox_perf_profile(args),
-            "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},
+            "remotepass_dmi_cache": remotepass_dmi_cache_result(args),
             "rse_hotpath_accel": {
                 "enabled": bool(args.rse_hotpath_accel),
                 "bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
@@ -4143,6 +4181,7 @@ def write_result(
             },
             sort_keys=True,
         ),
+        "rse_cpu_mode: " + str(status.get("rse_cpu_mode")),
         "remotepass_dmi_cache: "
         + json.dumps(status["remotepass_dmi_cache"], sort_keys=True),
         "rse_pc_trace: "
@@ -4573,6 +4612,16 @@ def parse_args() -> argparse.Namespace:
             "Enable the opt-in RemotePass shared-memory DMI cache in the RSE "
             "remote CPU process. This targets QEMU-to-SystemC RPC overhead "
             "for DMI-capable memory ranges."
+        ),
+    )
+    parser.add_argument(
+        "--rse-cpu-mode",
+        choices=RSE_CPU_MODES,
+        default="remote",
+        help=(
+            "Select the RSE Cortex-M55 backend. The default 'remote' keeps "
+            "the RemotePass child process; 'inprocess' runs the RSE QEMU "
+            "endpoint in platforms-vp and does not use QBOX_REMOTE_CPU_EXEC."
         ),
     )
     parser.add_argument(
