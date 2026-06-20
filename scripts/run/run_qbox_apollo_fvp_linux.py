@@ -54,7 +54,7 @@ PROBE_DONE_MARKER = "__QBOX_APOLLO_PROBE_DONE__"
 PROBE_DONE_OUTPUT_RE = re.compile(
     rf"(?:^|\n){re.escape(PROBE_DONE_MARKER)}:0(?:\r?\n|$)"
 )
-PRIMARY_VIRTIO_BLOCK_NODE = "/soc/virtio-block@30020000"
+PRIMARY_VIRTIO_BLOCK_NODE = "/soc/virtio@30020000"
 POST_LOGIN_PROBE_COMMANDS = [
     "uname -a",
     "cat /proc/cmdline",
@@ -80,6 +80,7 @@ class LocalBuildArtifacts:
     kernel: Path
     initramfs: Path
     disk: Path
+    dtb: Path
 
 
 class EvalStatus(TypedDict, total=False):
@@ -96,6 +97,8 @@ class EvalStatus(TypedDict, total=False):
     log_path: str
     kernel: str
     dtb: str
+    base_dtb: str
+    dt_overlay: str | None
     initramfs: str | None
     bootargs: str
     initramfs_addr: str
@@ -110,6 +113,7 @@ def resolve_local_build_artifacts(local_build_dir: Path) -> LocalBuildArtifacts:
         kernel=boot_dir / "Image",
         initramfs=boot_dir / "initramfs.cpio.gz",
         disk=boot_dir / "apollo-fvp-local-disk.img",
+        dtb=boot_dir / "apollo-fvp.dtb",
     )
 
 
@@ -162,83 +166,83 @@ def probe_complete_from_log(text: str) -> bool:
     return bool(PROBE_DONE_OUTPUT_RE.search(text))
 
 
-def fdt_patch_commands(
+def dts_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def direct_boot_overlay_dts(
     *,
-    dtb: Path,
     bootargs: str,
     initrd_start: int,
     initrd_end: int,
     primary_disk_enabled: bool = True,
-) -> list[list[str]]:
-    commands = [
-        ["fdtput", "-t", "s", str(dtb), "/chosen", "bootargs", bootargs],
-        [
-            "fdtput",
-            "-t",
-            "x",
-            str(dtb),
-            "/chosen",
-            "linux,initrd-start",
-            f"0x{initrd_start:x}",
-        ],
-        [
-            "fdtput",
-            "-t",
-            "x",
-            str(dtb),
-            "/chosen",
-            "linux,initrd-end",
-            f"0x{initrd_end:x}",
-        ],
+) -> str:
+    fragments = [
+        "/dts-v1/;",
+        "/plugin/;",
+        "",
+        "/ {",
+        "\tfragment@0 {",
+        '\t\ttarget-path = "/chosen";',
+        "\t\t__overlay__ {",
+        f'\t\t\tbootargs = "{dts_escape(bootargs)}";',
+        f"\t\t\tlinux,initrd-start = <0x{initrd_start:x}>;",
+        f"\t\t\tlinux,initrd-end = <0x{initrd_end:x}>;",
+        "\t\t};",
+        "\t};",
     ]
     if not primary_disk_enabled:
-        commands.append(
+        fragments.extend(
             [
-                "fdtput",
-                "-t",
-                "s",
-                str(dtb),
-                PRIMARY_VIRTIO_BLOCK_NODE,
-                "status",
-                "disabled",
+                "",
+                "\tfragment@1 {",
+                f'\t\ttarget-path = "{PRIMARY_VIRTIO_BLOCK_NODE}";',
+                "\t\t__overlay__ {",
+                '\t\t\tstatus = "disabled";',
+                "\t\t};",
+                "\t};",
             ]
         )
-    return commands
+    fragments.append("};")
+    return "\n".join(fragments) + "\n"
 
 
-def compile_dtb(
+def prepare_direct_boot_dtb(
     root: Path,
-    dts: Path,
+    base_dtb: Path,
     dtb: Path,
     *,
-    bootargs: str | None = None,
-    initramfs: Path | None = None,
-    initramfs_addr: int | None = None,
+    bootargs: str,
+    initramfs: Path,
+    initramfs_addr: int,
     primary_disk_enabled: bool = True,
-) -> None:
+) -> tuple[Path, Path]:
     dtc = shutil.which("dtc")
     if not dtc:
         raise RuntimeError("dtc not found; install device-tree-compiler")
+    fdtoverlay = shutil.which("fdtoverlay")
+    if not fdtoverlay:
+        raise RuntimeError("fdtoverlay not found; install device-tree-compiler")
+
     dtb.parent.mkdir(parents=True, exist_ok=True)
-    run([dtc, "-I", "dts", "-O", "dtb", "-o", str(dtb), str(dts)], cwd=root)
-
-    if bootargs is None and initramfs is None:
-        return
-
-    if not shutil.which("fdtput"):
-        raise RuntimeError("fdtput not found; install device-tree-compiler")
-    if bootargs is None or initramfs is None or initramfs_addr is None:
-        raise RuntimeError("bootargs, initramfs, and initramfs_addr must be set together")
-
+    overlay_dts = dtb.with_suffix(".overlay.dts")
+    overlay_dtbo = dtb.with_suffix(".overlay.dtbo")
     initrd_start, initrd_end = initramfs_range(initramfs, initramfs_addr)
-    for cmd in fdt_patch_commands(
-        dtb=dtb,
-        bootargs=bootargs,
-        initrd_start=initrd_start,
-        initrd_end=initrd_end,
-        primary_disk_enabled=primary_disk_enabled,
-    ):
-        run(cmd, cwd=root)
+    overlay_dts.write_text(
+        direct_boot_overlay_dts(
+            bootargs=bootargs,
+            initrd_start=initrd_start,
+            initrd_end=initrd_end,
+            primary_disk_enabled=primary_disk_enabled,
+        ),
+        encoding="utf-8",
+    )
+    run(
+        [dtc, "-@", "-I", "dts", "-O", "dtb", "-o", str(overlay_dtbo), str(overlay_dts)],
+        cwd=root,
+    )
+    run([fdtoverlay, "-i", str(base_dtb), "-o", str(dtb), str(overlay_dtbo)], cwd=root)
+    return overlay_dts, overlay_dtbo
 
 
 def copy_disk(src: Path, dst: Path) -> None:
@@ -439,6 +443,10 @@ def run_qbox(
     status["log_path"] = str(log_path)
     status["kernel"] = str(args.kernel.resolve())
     status["dtb"] = str(args.dtb.resolve())
+    status["base_dtb"] = str(args.base_dtb.resolve())
+    status["dt_overlay"] = (
+        str(args.dt_overlay.resolve()) if getattr(args, "dt_overlay", None) else None
+    )
     status["initramfs"] = str(args.initramfs.resolve()) if args.initramfs else None
     status["bootargs"] = args.bootargs
     status["initramfs_addr"] = f"0x{args.initramfs_addr:x}"
@@ -457,6 +465,8 @@ def run_qbox(
         f"log: {log_path}",
         f"kernel: {args.kernel.resolve()}",
         f"dtb: {args.dtb.resolve()}",
+        f"base_dtb: {args.base_dtb.resolve()}",
+        f"dt_overlay: {args.dt_overlay.resolve() if args.dt_overlay else None}",
         f"initramfs: {args.initramfs.resolve() if args.initramfs else None}",
         f"bootargs: {args.bootargs}",
         f"initramfs_addr: 0x{args.initramfs_addr:x}",
@@ -496,15 +506,14 @@ def parse_args() -> argparse.Namespace:
         default=root / "tools/qbox-platform/platforms/apollo/apollo-pc.lua",
     )
     parser.add_argument(
-        "--dts",
+        "--base-dtb",
         type=Path,
-        default=root
-        / "tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts",
+        help="Base Apollo DTB. Defaults to <local-build-dir>/deploy/boot/apollo-fvp.dtb.",
     )
     parser.add_argument(
         "--dtb",
         type=Path,
-        default=root / "build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb",
+        default=root / "build/qbox-apollo-fvp/apollo-fvp-direct.dtb",
     )
     parser.add_argument("--kernel", type=Path)
     parser.add_argument("--disk", type=Path)
@@ -551,12 +560,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-dtb",
         action="store_true",
-        help="Do not compile the Apollo QBox device tree before running.",
+        help="Do not prepare the Apollo direct-boot overlay DTB before running.",
     )
     parser.add_argument(
         "--build-only",
         action="store_true",
-        help="Build QBox targets and compile the DTB, then exit without running.",
+        help="Build QBox targets and prepare the DTB, then exit without running.",
     )
     parser.add_argument(
         "--interactive",
@@ -584,7 +593,6 @@ def main() -> int:
     )
     args = parse_args()
     args.conf = args.conf.resolve()
-    args.dts = args.dts.resolve()
     args.dtb = args.dtb.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     if args.qbox_build_dir is not None:
@@ -604,27 +612,38 @@ def main() -> int:
         args.initramfs = artifacts.initramfs
     if args.disk is None:
         args.disk = artifacts.disk
+    if args.base_dtb is None:
+        args.base_dtb = artifacts.dtb
     args.kernel = args.kernel.resolve()
     args.initramfs = args.initramfs.resolve() if args.initramfs else None
     args.disk = args.disk.resolve() if args.disk else None
+    args.base_dtb = args.base_dtb.resolve()
     args.out_dir = args.out_dir.resolve()
+    args.dt_overlay = None
     if args.extra_disk_size_mib <= 0:
         print("error: --extra-disk-size-mib must be positive", file=sys.stderr)
         return 2
 
     required_paths = [
         (args.conf, "QBox config"),
-        (args.dts, "device tree source"),
     ]
+    if args.skip_dtb:
+        required_paths.append((args.dtb, "prepared device tree blob"))
+    else:
+        required_paths.extend(
+            [
+                (args.base_dtb, "base device tree blob"),
+                (args.initramfs, "initramfs image"),
+            ]
+        )
     if not args.build_only:
         required_paths.extend(
             [
                 (args.kernel, "kernel image"),
-                (args.initramfs, "initramfs image"),
             ]
         )
-    elif not args.skip_dtb and args.initramfs is not None:
-        required_paths.append((args.initramfs, "initramfs image"))
+        if args.skip_dtb:
+            required_paths.append((args.initramfs, "initramfs image"))
 
     for path, label in required_paths:
         if path is None or not path.exists():
@@ -639,15 +658,16 @@ def main() -> int:
         if not args.skip_build:
             ensure_qbox_targets(root, args.jobs)
         if not args.skip_dtb:
-            compile_dtb(
+            overlay_dts, _overlay_dtbo = prepare_direct_boot_dtb(
                 root,
-                args.dts,
+                args.base_dtb,
                 args.dtb,
                 bootargs=args.bootargs,
                 initramfs=args.initramfs,
                 initramfs_addr=args.initramfs_addr,
                 primary_disk_enabled=disk_available,
             )
+            args.dt_overlay = overlay_dts
         if args.build_only:
             print(args.dtb)
             return 0

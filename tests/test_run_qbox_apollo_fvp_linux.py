@@ -21,7 +21,7 @@ def test_local_build_artifacts_are_resolved_from_deploy_root(tmp_path):
     local_build = tmp_path / "build/local-apollo-fvp"
     deploy_boot = local_build / "deploy/boot"
     deploy_boot.mkdir(parents=True)
-    for name in ("Image", "initramfs.cpio.gz"):
+    for name in ("Image", "initramfs.cpio.gz", "apollo-fvp.dtb"):
         (deploy_boot / name).write_bytes(b"x")
 
     artifacts = runner.resolve_local_build_artifacts(local_build)
@@ -29,6 +29,7 @@ def test_local_build_artifacts_are_resolved_from_deploy_root(tmp_path):
     assert artifacts.kernel == deploy_boot / "Image"
     assert artifacts.initramfs == deploy_boot / "initramfs.cpio.gz"
     assert artifacts.disk == deploy_boot / "apollo-fvp-local-disk.img"
+    assert artifacts.dtb == deploy_boot / "apollo-fvp.dtb"
 
 
 def test_default_bootargs_match_local_fvp_boot_script():
@@ -132,59 +133,32 @@ def test_initramfs_end_is_computed_from_size(tmp_path):
     )
 
 
-def test_fdtput_commands_include_bootargs_and_initrd(tmp_path):
+def test_direct_boot_overlay_includes_bootargs_and_initrd():
     runner = load_runner()
-    dtb = tmp_path / "apollo.dtb"
     bootargs = "console=ttyAMA0 root=/dev/ram0"
 
-    commands = runner.fdt_patch_commands(
-        dtb=dtb,
+    overlay = runner.direct_boot_overlay_dts(
         bootargs=bootargs,
         initrd_start=0x94000000,
         initrd_end=0x94001000,
     )
 
-    assert commands == [
-        ["fdtput", "-t", "s", str(dtb), "/chosen", "bootargs", bootargs],
-        [
-            "fdtput",
-            "-t",
-            "x",
-            str(dtb),
-            "/chosen",
-            "linux,initrd-start",
-            "0x94000000",
-        ],
-        [
-            "fdtput",
-            "-t",
-            "x",
-            str(dtb),
-            "/chosen",
-            "linux,initrd-end",
-            "0x94001000",
-        ],
-    ]
+    assert "/plugin/;" in overlay
+    assert 'target-path = "/chosen";' in overlay
+    assert 'bootargs = "console=ttyAMA0 root=/dev/ram0";' in overlay
+    assert "linux,initrd-start = <0x94000000>;" in overlay
+    assert "linux,initrd-end = <0x94001000>;" in overlay
 
 
-def test_fdtput_commands_disable_primary_disk_when_missing(tmp_path):
+def test_direct_boot_overlay_disables_primary_disk_when_missing():
     runner = load_runner()
-    dtb = tmp_path / "apollo.dtb"
 
-    commands = runner.fdt_patch_commands(
-        dtb=dtb,
+    overlay = runner.direct_boot_overlay_dts(
         bootargs="console=ttyAMA0",
         initrd_start=0x94000000,
         initrd_end=0x94001000,
         primary_disk_enabled=False,
     )
 
-    assert commands[-1] == [
-        "fdtput",
-        "-t",
-        "s",
-        str(dtb),
-        "/soc/virtio-block@30020000",
-        "status",
-        "disabled",
-    ]
+    assert 'target-path = "/soc/virtio@30020000";' in overlay
+    assert 'status = "disabled";' in overlay

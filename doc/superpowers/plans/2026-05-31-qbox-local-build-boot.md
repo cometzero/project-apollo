@@ -35,14 +35,14 @@ and file-backed QBox UART logs.
   - `python3 scripts/run/run_qbox_apollo_fvp_linux.py --skip-build --interactive`
 - QBox Apollo platform:
   - `tools/qbox/platforms/apollo-fvp/conf.lua`
-  - `tools/qbox/platforms/apollo-fvp/apollo-fvp-primary-compute.dts`
+  - local-build base DTB plus generated direct-boot overlay
 
 The local FVP DTB describes the full Apollo FVP hardware. The QBox
 primary-compute direct-boot platform models only the blocks wired in
-`tools/qbox/platforms/apollo-fvp/conf.lua`, so the runner must keep using a
-QBox-specific DTB generated from `apollo-fvp-primary-compute.dts`. The local
-build artifacts that should be reused are the kernel `Image` and
-`initramfs.cpio.gz`.
+`tools/qbox/platforms/apollo-fvp/conf.lua`, so the runner prepares a direct-boot
+DTB from the local-build `apollo-fvp.dtb` and a small `/chosen` overlay. The
+local build artifacts that should be reused are the kernel `Image`, the base
+DTB, and `initramfs.cpio.gz`.
 
 The FVP U-Boot boot script currently uses:
 
@@ -555,7 +555,7 @@ Run:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_linux.py --build-only --skip-build
-fdtdump build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb | \
+fdtdump build/qbox-apollo-fvp/apollo-fvp-direct.dtb | \
   rg -n "bootargs|linux,initrd-start|linux,initrd-end"
 ```
 
@@ -753,10 +753,10 @@ build/local-apollo-fvp/deploy/boot/Image
 build/local-apollo-fvp/deploy/boot/initramfs.cpio.gz
 ```
 
-The runner generates a QBox-specific DTB at:
+The runner generates a direct-boot overlayed DTB at:
 
 ```text
-build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb
+build/qbox-apollo-fvp/apollo-fvp-direct.dtb
 ```
 
 ## Build QBox Targets
@@ -866,7 +866,7 @@ Run:
 Expected: command exits 0 and prints:
 
 ```text
-build/qbox-apollo-fvp/apollo-fvp-primary-compute.dtb
+build/qbox-apollo-fvp/apollo-fvp-direct.dtb
 ```
 
 - [ ] **Step 3: Run headless QBox boot**

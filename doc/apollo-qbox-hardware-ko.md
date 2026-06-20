@@ -14,7 +14,7 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | 구분 | 파일 |
 | --- | --- |
 | FVP 하드웨어 기준 | `doc/apollo-fvp-hardware-analysis-ko.md` |
-| Apollo QBox direct boot | `tools/qbox-platform/platforms/apollo/apollo-pc.lua`, `tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts` |
+| Apollo QBox direct boot | `tools/qbox-platform/platforms/apollo/apollo-pc.lua`, `hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-fvp.dts`, generated `build/qbox-apollo-fvp/apollo-fvp-direct.overlay.dts` |
 | Apollo QBox full-system wrapper | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` |
 | Apollo QBox hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/` |
 | SI CL1 isolated boot | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` |

@@ -763,7 +763,10 @@ def high_dram_value_check(
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
     rse_path = "tools/qbox-platform/platforms/apollo/hw-block/rse.lua"
     primary_path = "tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua"
-    dts_path = "tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts"
+    dts_path = (
+        "hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/"
+        "apollo-fvp.dts"
+    )
     rse = read_text(root / rse_path)
     primary = read_text(root / primary_path)
     dts = read_text(root / dts_path)
@@ -787,7 +790,7 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
             None if primary_match is None else int(primary_match.group(1), 0),
         ),
         {
-            "name": "direct_boot_dts_high_memory_cells",
+            "name": "local_build_linux_dts_high_memory_cells",
             "path": dts_path,
             "line": None if dts_node is None or len(dts_cells) <= 1 else line_for_offset(dts, dts.find(dts_cells[1], dts_node.start("body"))),
             "passed": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,

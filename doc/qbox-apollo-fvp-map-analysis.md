@@ -26,8 +26,9 @@ behavior.
   `arm-zena-css/documentation/design/platform_fault_detection_interface.rst`
 - Current QBox RD-Aspen RSE topology:
   `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`
-- Current QBox Apollo direct-boot AP device tree:
-  `tools/qbox-platform/platforms/apollo/apollo-fvp-primary-compute.dts`
+- Current QBox Apollo direct-boot AP device tree base and overlay:
+  `hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-fvp.dts`
+  and generated `build/qbox-apollo-fvp/apollo-fvp-direct.overlay.dts`
 - Current QBox RD-Aspen AP device tree:
   `tools/qbox-platform/platforms/fvp-rd-aspen/fvp-rd-aspen-primary-compute.dts`
 - Apollo-owned Safety Island CL0 firmware map and IRQ definitions:
