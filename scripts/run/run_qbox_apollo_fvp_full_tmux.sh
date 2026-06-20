@@ -26,6 +26,7 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
+RSE_CPU_MODE="${RSE_CPU_MODE:-inprocess}"
 QBOX_PERFORMANCE_PRESET="${QBOX_PERFORMANCE_PRESET:-1}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-1}"
@@ -71,6 +72,8 @@ Options:
   --exit-after-pass    stop QBox when the normal pass condition is reached
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
+  --rse-cpu-mode MODE  RSE Cortex-M55 backend: inprocess or remote
+                       (default: ${RSE_CPU_MODE})
   --qbox-performance-preset
                        enable default QBox boot acceleration preset (default;
                        uses SRAM DMI/shared-memory fast boot)
@@ -109,7 +112,8 @@ Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_PLATFORM_DIR
   QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
-  ROOTFS_BOOTARGS_PROFILE QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
+  ROOTFS_BOOTARGS_PROFILE RSE_CPU_MODE
+  QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
   RANGE_LIMITED_FLASH_DMI CC3XX_STATS
   CC3XX_STATS_INTERVAL CC3XX_STATUS_READ_FASTPATH CC3XX_QEMU_NATIVE_BACKEND
   CC3XX_LOCAL_MMIO_FASTPATH REMOTEPASS_DMI_CACHE
@@ -180,6 +184,14 @@ validate_si_mode()
     esac
 }
 
+validate_rse_cpu_mode()
+{
+    case "$1" in
+        remote|inprocess) ;;
+        *) die "invalid --rse-cpu-mode: $1" ;;
+    esac
+}
+
 tmux_cmd()
 {
     env -u TMUX "${TMUX_BIN}" "$@"
@@ -202,6 +214,7 @@ runner_command()
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --rse-cpu-mode "${RSE_CPU_MODE}"
     )
 
     if [[ "${RANGE_LIMITED_FLASH_DMI}" == "1" ]]; then
@@ -614,6 +627,7 @@ Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   si_mode: ${SI_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
+  rse_cpu_mode: ${RSE_CPU_MODE}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
   explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
   effective_rse_fast_boot_mode: ${rse_fast_boot_mode}
@@ -752,6 +766,7 @@ start_tmux()
 {
     validate_tmux_name "${TMUX_SESSION}"
     validate_si_mode "${SI_MODE}"
+    validate_rse_cpu_mode "${RSE_CPU_MODE}"
     validate_bool "QBOX_PERFORMANCE_PRESET" "${QBOX_PERFORMANCE_PRESET}"
     validate_bool "LEGACY_FILE_BACKED_SRAM" "${LEGACY_FILE_BACKED_SRAM}"
     validate_bool "RANGE_LIMITED_FLASH_DMI" "${RANGE_LIMITED_FLASH_DMI}"
@@ -816,6 +831,7 @@ start_tmux()
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
+        printf 'RSE_CPU_MODE=%q ' "${RSE_CPU_MODE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
         printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
         printf 'RANGE_LIMITED_FLASH_DMI=%q CC3XX_STATS=%q ' \
@@ -968,6 +984,11 @@ while (($# > 0)); do
         --rootfs-bootargs-profile)
             (($# >= 2)) || die "--rootfs-bootargs-profile requires a value"
             ROOTFS_BOOTARGS_PROFILE="$2"
+            shift 2
+            ;;
+        --rse-cpu-mode)
+            (($# >= 2)) || die "--rse-cpu-mode requires a value"
+            RSE_CPU_MODE="$2"
             shift 2
             ;;
         --qbox-performance-preset)

@@ -20,6 +20,7 @@ QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
+RSE_CPU_MODE="${RSE_CPU_MODE:-inprocess}"
 SSH_PORT_START="${SSH_PORT_START:-2222}"
 SSH_PORT_END="${SSH_PORT_END:-2299}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
@@ -52,9 +53,11 @@ Common overrides:
   QBOX_BUILD_DIR=/path/to/qbox-platform-build ./run_qbox.sh
   QBOX_PLATFORM_DIR=tools/qbox-platform ./run_qbox.sh
   QBOX_CONF=tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox.sh
+  RSE_CPU_MODE=remote ./run_qbox.sh
   SSH_PORT=2225 ./run_qbox.sh
   ./run_qbox.sh --copy-disks
   ./run_qbox.sh --no-attach
+  ./run_qbox.sh --rse-cpu-mode remote
   ./run_qbox.sh --legacy-file-backed-sram
   ./run_qbox.sh --rse-hotpath-tlm-fallback
   ./run_qbox.sh --dry-run
@@ -67,6 +70,7 @@ Defaults:
   qbox_conf: ${QBOX_CONF}
   qbox_build_dir: ${QBOX_PLATFORM_BUILD_DIR:-${QBOX_BUILD_DIR:-<local-build-dir>/work/qbox-platform}}
   si_mode: ${SI_MODE}
+  rse_cpu_mode: ${RSE_CPU_MODE}
   timeout: ${TIMEOUT}
 
 The selected SSH host-forward port is exposed as host port <port> -> guest :22.
@@ -195,6 +199,11 @@ preparse_args()
                 TMUX_RUNNER_ARGS+=("${arg}" "${args[$((i + 1))]}")
                 i=$((i + 2))
                 ;;
+            --rse-cpu-mode)
+                ((i + 1 < ${#args[@]})) || die "--rse-cpu-mode requires a value"
+                RSE_CPU_MODE="${args[$((i + 1))]}"
+                i=$((i + 2))
+                ;;
             --copy-disks)
                 RUN_QBOX_COPY_DISKS=1
                 i=$((i + 1))
@@ -296,6 +305,10 @@ main()
         0|1) ;;
         *) die "RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK must be 0 or 1: ${RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK}" ;;
     esac
+    case "${RSE_CPU_MODE}" in
+        remote|inprocess) ;;
+        *) die "RSE_CPU_MODE must be remote or inprocess: ${RSE_CPU_MODE}" ;;
+    esac
     if ((LEGACY_FILE_BACKED_SRAM)) &&
         arg_present "--rse-fast-boot-sram-dmi" "$@"; then
         die "--legacy-file-backed-sram conflicts with --rse-fast-boot-sram-dmi"
@@ -335,6 +348,7 @@ main()
     printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
     printf '  qbox_conf: %s\n' "${QBOX_CONF}"
     printf '  qbox_build_dir: %s\n' "${QBOX_BUILD_DIR}"
+    printf '  rse_cpu_mode: %s\n' "${RSE_CPU_MODE}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
     printf '  copy_disks: %s\n' "${RUN_QBOX_COPY_DISKS}"
@@ -358,6 +372,7 @@ main()
         --si-mode "${SI_MODE}" \
         --timeout "${TIMEOUT}" \
         --jobs "${JOBS}" \
+        --rse-cpu-mode "${RSE_CPU_MODE}" \
         --skip-build \
         --post-login-probe \
         --keep-running-after-pass \
