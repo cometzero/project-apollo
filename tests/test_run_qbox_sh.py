@@ -4,12 +4,29 @@ import os
 from pathlib import Path
 import subprocess
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "run_qbox.sh"
 
 
-def run_dry_run(tmp_path: Path, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+REMOVED_SURFACES = (
+    "rse_cpu_mode",
+    "--rse-cpu-mode",
+    "--remotepass-dmi-cache",
+    "--rse-hotpath-tlm-fallback",
+    "RSE_CPU_MODE",
+    "RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK",
+    "REMOTEPASS_DMI_CACHE",
+)
+
+
+def run_dry_run(
+    tmp_path: Path,
+    extra_args: list[str] | None = None,
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     local_build_dir = tmp_path / "local-build"
     out_dir = tmp_path / "out"
     qbox_platform_dir = tmp_path / "qbox-platform"
@@ -33,8 +50,9 @@ def run_dry_run(tmp_path: Path, extra_env: dict[str, str] | None = None) -> subp
     if extra_env:
         env.update(extra_env)
 
+    command = [str(SCRIPT), "--dry-run", "--no-attach", *(extra_args or [])]
     return subprocess.run(
-        [str(SCRIPT), "--dry-run", "--no-attach"],
+        command,
         cwd=ROOT,
         env=env,
         check=False,
@@ -44,24 +62,64 @@ def run_dry_run(tmp_path: Path, extra_env: dict[str, str] | None = None) -> subp
     )
 
 
-def test_run_qbox_dry_run_defaults_to_inprocess(tmp_path: Path) -> None:
+def test_run_qbox_dry_run_omits_removed_remote_surfaces(tmp_path: Path) -> None:
     result = run_dry_run(tmp_path)
 
     assert result.returncode == 0, result.stderr
-    assert "rse_cpu_mode: inprocess" in result.stdout
-    assert "--rse-cpu-mode inprocess" in result.stdout
+    for surface in REMOVED_SURFACES:
+        assert surface not in result.stdout
+        assert surface not in result.stderr
 
 
-def test_run_qbox_dry_run_allows_remote_override(tmp_path: Path) -> None:
-    result = run_dry_run(tmp_path, {"RSE_CPU_MODE": "remote"})
-
-    assert result.returncode == 0, result.stderr
-    assert "rse_cpu_mode: remote" in result.stdout
-    assert "--rse-cpu-mode remote" in result.stdout
-
-
-def test_run_qbox_rejects_invalid_rse_cpu_mode(tmp_path: Path) -> None:
-    result = run_dry_run(tmp_path, {"RSE_CPU_MODE": "local"})
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (
+            ["--rse-cpu-mode", "remote"],
+            "unsupported removed option: --rse-cpu-mode",
+        ),
+        (
+            ["--rse-hotpath-tlm-fallback"],
+            "unsupported removed option: --rse-hotpath-tlm-fallback",
+        ),
+        (
+            ["--no-rse-hotpath-tlm-fallback"],
+            "unsupported removed option: --no-rse-hotpath-tlm-fallback",
+        ),
+        (
+            ["--remotepass-dmi-cache"],
+            "unsupported removed option: --remotepass-dmi-cache",
+        ),
+    ],
+)
+def test_run_qbox_rejects_removed_options(
+    tmp_path: Path,
+    args: list[str],
+    message: str,
+) -> None:
+    result = run_dry_run(tmp_path, extra_args=args)
 
     assert result.returncode != 0
-    assert "RSE_CPU_MODE must be remote or inprocess" in result.stderr
+    assert message in result.stderr
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "RSE_CPU_MODE",
+        "RUN_QBOX_RSE_HOTPATH_TLM_FALLBACK",
+        "REMOTEPASS_DMI_CACHE",
+    ],
+)
+def test_run_qbox_rejects_removed_environment_overrides(tmp_path: Path, name: str) -> None:
+    result = run_dry_run(tmp_path, extra_env={name: "1"})
+
+    assert result.returncode != 0
+    assert f"unsupported removed environment override: {name}" in result.stderr
+
+
+def test_run_qbox_rejects_unrelated_invalid_option(tmp_path: Path) -> None:
+    result = run_dry_run(tmp_path, extra_args=["--not-a-real-option"])
+
+    assert result.returncode != 0
+    assert "unknown argument: --not-a-real-option" in result.stderr

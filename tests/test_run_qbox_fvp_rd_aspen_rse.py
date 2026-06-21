@@ -33,56 +33,110 @@ def test_strip_runner_control_env_keeps_paths_out_of_qbox_env():
     assert stripped["QBOX_RDASPEN_RSE_ROM"] == "rse-rom-image.img"
 
 
-def test_apply_rse_cpu_backend_env_defaults_to_remote(tmp_path):
+def test_required_targets_use_local_rse_cpu_only():
     runner = load_runner()
-    args = SimpleNamespace(rse_cpu_mode="remote", remotepass_dmi_cache=True)
-    env = {}
 
-    runner.apply_rse_cpu_backend_env(env, args, tmp_path)
+    assert "cpu_arm_cortexM55" in runner.REQUIRED_TARGETS
+    assert all("remote" not in target.lower() for target in runner.REQUIRED_TARGETS)
 
-    assert env["QBOX_RSE_CPU_MODE"] == "remote"
-    assert env["QBOX_REMOTE_CPU_EXEC"] == str((tmp_path / "apollo_rse_remote_cpu").resolve())
-    assert runner.remotepass_dmi_cache_result(args) == {
-        "enabled": True,
-        "requested": True,
-        "rse_cpu_mode": "remote",
+
+def make_qbox_env_args(tmp_path):
+    return SimpleNamespace(
+        ap_bl2_elf=None,
+        boot_enc_trace=False,
+        cc3xx_local_mmio_fastpath=False,
+        cc3xx_qemu_native_backend=True,
+        cc3xx_stats=True,
+        cc3xx_stats_interval=1024,
+        cc3xx_status_read_fastpath=False,
+        exception_trace=False,
+        flash_stats=False,
+        flash_stats_interval=1024,
+        fwu_probe=False,
+        no_copy_writable_flash=False,
+        out_dir=tmp_path,
+        pc_trace=False,
+        pc_trace_interval=1024,
+        pc_trace_limit=0,
+        platform_param=[],
+        post_login_probe=False,
+        qbox_initiator_addr_profile=False,
+        qbox_initiator_addr_profile_limit=64,
+        qbox_initiator_addr_profile_shift=12,
+        qbox_perf_profile=True,
+        qbox_perf_profile_interval=1024,
+        qemu_trace=False,
+        qemu_trace_events="in_asm",
+        qemu_trace_filter=None,
+        range_limited_flash_dmi=False,
+        rootfs=None,
+        rse_bl2_boot_enc_accel=False,
+        rse_bl2_delay_accel=False,
+        rse_bl2_img_hash_accel=False,
+        rse_bl2_load_accel=False,
+        rse_bl2_load_profile=False,
+        rse_bl2_verify_sig_accel=False,
+        rse_bl2_verify_sig_skip=False,
+        rse_direct_ap_bl2_alias=False,
+        rse_direct_ap_bl2_code_alias_size=0,
+        rse_direct_ap_fip_alias=False,
+        rse_direct_file_aliases="",
+        rse_direct_rse_flash_alias=False,
+        rse_direct_si_sram_alias=False,
+        rse_direct_si_sram_code_alias_size=0,
+        rse_fast_boot_sram_dmi=False,
+        rse_hotpath_accel=True,
+        rse_hotpath_max_bytes=4096,
+        rse_hotpath_memcpy_addr=None,
+        rse_hotpath_memset_addr=None,
+        rse_lms_accel=True,
+        rse_lms_max_data_bytes=2048,
+        rse_lms_verify_addr=0x11009BAD,
+        rse_storage_direct_fastpath=False,
+        scp_strategy="service-model",
+        secure_service_probe=False,
+        smmu_backend="systemc-mmu720ae",
+    )
+
+
+def make_qbox_env_artifacts(tmp_path):
+    return {
+        "ap_flash": tmp_path / "ap-flash.img",
+        "provisioning_bundle": tmp_path / "bundle.zip",
+        "rootfs": tmp_path / "rootfs.ext4",
+        "rse_flash": tmp_path / "rse-flash.img",
+        "rse_otp": tmp_path / "rse-otp.img",
+        "rse_rom": tmp_path / "rse-rom.img",
     }
 
 
-def test_apply_rse_cpu_backend_env_inprocess_removes_remote_exec(tmp_path):
+def test_qbox_env_omits_removed_remote_fields_and_keeps_accelerators(
+    tmp_path, monkeypatch
+):
     runner = load_runner()
-    args = SimpleNamespace(rse_cpu_mode="inprocess", remotepass_dmi_cache=True)
-    env = {"QBOX_REMOTE_CPU_EXEC": "ambient-remote-cpu"}
+    removed_envs = (
+        "QBOX_RSE_CPU_MODE",
+        "QBOX_REMOTE_CPU_EXEC",
+        "QBOX_RDASPEN_REMOTEPASS_DMI_CACHE",
+        "QBOX_RDASPEN_RSE_HOTPATH_TLM_FALLBACK",
+    )
+    for name in removed_envs:
+        monkeypatch.setenv(name, "true")
 
-    runner.apply_rse_cpu_backend_env(env, args, tmp_path)
+    env = runner.qbox_env(Path("/repo"), make_qbox_env_args(tmp_path), make_qbox_env_artifacts(tmp_path))
 
-    assert env == {"QBOX_RSE_CPU_MODE": "inprocess"}
-    assert runner.remotepass_dmi_cache_result(args) == {
-        "enabled": False,
-        "requested": True,
-        "rse_cpu_mode": "inprocess",
-    }
+    for name in removed_envs:
+        assert name not in env
+    assert "QBOX_REMOTEPASS_PROFILE_DIR" not in env
+    assert env["QBOX_RDASPEN_RSE_HOTPATH_ACCEL"] == "true"
+    assert env["QBOX_RDASPEN_RSE_LMS_ACCEL"] == "true"
+    assert "QBOX_RDASPEN_RSE_HOTPATH_PROFILE_FILE" in env
 
 
-def test_apply_rse_cpu_backend_env_rejects_invalid_mode(tmp_path):
+def test_qbox_perf_profile_result_omits_remotepass_fields(tmp_path):
     runner = load_runner()
-    args = SimpleNamespace(rse_cpu_mode="bad", remotepass_dmi_cache=False)
+    result = runner.parse_qbox_perf_profile(make_qbox_env_args(tmp_path))
 
-    try:
-        runner.apply_rse_cpu_backend_env({}, args, tmp_path)
-    except ValueError as exc:
-        assert str(exc) == "QBOX_RSE_CPU_MODE must be remote or inprocess"
-    else:
-        raise AssertionError("invalid RSE CPU mode was accepted")
-
-
-def test_apply_rse_cpu_backend_env_rejects_internal_local_alias(tmp_path):
-    runner = load_runner()
-    args = SimpleNamespace(rse_cpu_mode="local", remotepass_dmi_cache=False)
-
-    try:
-        runner.apply_rse_cpu_backend_env({}, args, tmp_path)
-    except ValueError as exc:
-        assert str(exc) == "QBOX_RSE_CPU_MODE must be remote or inprocess"
-    else:
-        raise AssertionError("internal RSE CPU mode alias was accepted")
+    assert result["enabled"] is True
+    assert "remotepass_dir" not in result
+    assert "remotepass_profiles" not in result

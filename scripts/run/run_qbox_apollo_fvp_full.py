@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as _dt
+import io
 import json
 import os
 from pathlib import Path
@@ -14,6 +16,11 @@ import subprocess
 import sys
 import time
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+import run_qbox_fvp_rd_aspen_rse as rse_runner
 
 
 CONSOLE_LOGS = {
@@ -338,8 +345,6 @@ def synthesize_keep_running_child_status(
         "rse_boot_timing_profile": keep_running_rse_boot_timing_profile(logs),
         "cc3xx_stats": None,
         "qbox_perf_profile": None,
-        "rse_cpu_mode": args.rse_cpu_mode,
-        "remotepass_dmi_cache": {"enabled": bool(args.remotepass_dmi_cache)},
         "platform_returncode": child_returncode,
         "command": command,
     }
@@ -954,10 +959,8 @@ def write_result(
             "si_cl1": str((args.out_dir / "si-cl1-mhuv3-trace.log").resolve()),
         }
     qbox_performance_options = {
-        "remotepass_dmi_cache": bool(args.remotepass_dmi_cache),
         "rse_hotpath_accel": bool(args.rse_hotpath_accel),
         "rse_bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
-        "rse_hotpath_tlm_fallback": bool(args.rse_hotpath_tlm_fallback),
         "rse_lms_accel": bool(args.rse_lms_accel),
         "rse_bl2_load_accel": bool(args.rse_bl2_load_accel),
         "rse_bl2_boot_enc_accel": bool(args.rse_bl2_boot_enc_accel),
@@ -967,7 +970,6 @@ def write_result(
         "cc3xx_qemu_native_backend": bool(args.cc3xx_qemu_native_backend),
         "rse_fast_boot_aliases": bool(args.rse_fast_boot_aliases),
         "rse_fast_boot_sram_dmi": bool(args.rse_fast_boot_sram_dmi),
-        "rse_cpu_mode": args.rse_cpu_mode,
     }
     status: dict[str, Any] = {
         "passed": passed,
@@ -982,7 +984,6 @@ def write_result(
         "qbox_executable": str((args.qbox_build_dir / "platforms-vp").resolve()),
         "qbox_performance_preset": args.qbox_performance_preset,
         "qbox_performance_options": qbox_performance_options,
-        "rse_cpu_mode": args.rse_cpu_mode,
         "rse_otp_auto_provision": getattr(
             args,
             "rse_otp_auto_provision",
@@ -1007,8 +1008,6 @@ def write_result(
         "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
-        "child_rse_cpu_mode": (child_status or {}).get("rse_cpu_mode"),
-        "remotepass_dmi_cache": (child_status or {}).get("remotepass_dmi_cache"),
         "completion_gate_blocker": gate_blocker,
         "child_scp_service_model": (child_status or {}).get("scp_service_model"),
         "service_model_debt": service_model_debt,
@@ -1278,8 +1277,6 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         args.smmu_backend,
         "--rootfs-bootargs-profile",
         args.rootfs_bootargs_profile,
-        "--rse-cpu-mode",
-        args.rse_cpu_mode,
         "--primary-login-prompt",
         "apollo-fvp login:",
         "--primary-shell-marker",
@@ -1302,13 +1299,9 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
             "--qbox-perf-profile-interval",
             str(args.qbox_perf_profile_interval),
         ])
-    if args.remotepass_dmi_cache:
-        cmd.append("--remotepass-dmi-cache")
     if args.rse_hotpath_accel:
         cmd.append("--rse-hotpath-accel")
         cmd.extend(["--rse-hotpath-max-bytes", str(args.rse_hotpath_max_bytes)])
-    if args.rse_hotpath_tlm_fallback:
-        cmd.append("--rse-hotpath-tlm-fallback")
     if args.rse_hotpath_memcpy_addr is not None:
         cmd.extend(["--rse-hotpath-memcpy-addr", hex(args.rse_hotpath_memcpy_addr)])
     if args.rse_hotpath_memset_addr is not None:
@@ -1434,6 +1427,21 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
 
     proc = subprocess.run(cmd, cwd=workspace_root(), env=env, check=False)
     return proc.returncode, cmd
+
+
+def validate_child_forward_args(
+    parser: argparse.ArgumentParser,
+    forward_args: list[str],
+) -> None:
+    if not forward_args:
+        return
+    child_parser = rse_runner.build_parser()
+    try:
+        with contextlib.redirect_stderr(io.StringIO()):
+            child_parser.parse_args(forward_args)
+    except SystemExit as exc:
+        if exc.code:
+            parser.error("unrecognized arguments: " + " ".join(forward_args))
 
 
 def parse_args() -> argparse.Namespace:
@@ -1571,30 +1579,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--qbox-perf-profile-interval", type=int, default=1024)
     parser.add_argument(
-        "--remotepass-dmi-cache",
-        action="store_true",
-        help="Forward the RSE RemotePass shared-memory DMI cache option.",
-    )
-    parser.add_argument(
-        "--rse-cpu-mode",
-        choices=("remote", "inprocess"),
-        default="remote",
-        help=(
-            "Forward the RSE Cortex-M55 backend mode. Default 'remote' keeps "
-            "RemotePass; 'inprocess' runs the RSE CPU endpoint in platforms-vp."
-        ),
-    )
-    parser.add_argument(
         "--rse-hotpath-accel",
         action="store_true",
         help="Forward RSE BL1_1 memcpy/memset semantic hotpath acceleration.",
     )
     parser.add_argument("--rse-hotpath-max-bytes", type=int, default=16 * 1024 * 1024)
-    parser.add_argument(
-        "--rse-hotpath-tlm-fallback",
-        action="store_true",
-        help="Forward explicit counted TLM fallback for RSE hotpath byte transfers.",
-    )
     parser.add_argument(
         "--rse-hotpath-memcpy-addr",
         type=lambda value: int(value, 0),
@@ -1737,6 +1726,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args, forward_args = parser.parse_known_args()
+    validate_child_forward_args(parser, forward_args)
     args.forward_args = forward_args
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
@@ -1753,7 +1743,6 @@ def parse_args() -> argparse.Namespace:
     os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     args.out_dir = args.out_dir.resolve()
     if args.qbox_performance_preset:
-        args.remotepass_dmi_cache = True
         args.rse_hotpath_accel = True
         args.rse_bl2_libc_hotpath = True
         args.rse_lms_accel = True

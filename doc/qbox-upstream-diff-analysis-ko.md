@@ -102,13 +102,14 @@ platform opt-in 형태로 정리했다.
 | RSE/BL2 semantic acceleration | `qbox-platform/qemu-components/rse_cpu_accel/`로 이동. QBox core `cpu.h`는 `QemuCpuPcEntryObserver`와 `QemuCpuSemanticContext` hook만 제공 | `rg`로 QBox core의 `cc3xx_core`, `rse_lms_accel`, `rse_mcuboot_image`, `rse_p256_ecdsa`, BL2 accel 문자열 제거 확인 |
 | MCUboot/LMS/P-256 helper | `qbox-platform/qemu-components/rse_cpu_accel/include/`로 이동 | `ctest`의 `rse_lms_accel-tests`, `rse_mcuboot_image-tests`, `rse_p256_ecdsa-tests` 통과 |
 | CC3XX core | `qbox-platform/systemc-components/cc3xx/include/cc3xx_core.h` 소유로 정리 | `cc3xx_core-tests`와 Apollo full-system boot 통과 |
-| RSE remote CPU executable | `qbox-platform/platforms/cortex-m55-remote/apollo_rse_remote_cpu`로 분리 | runner가 `apollo_rse_remote_cpu`를 우선 선택하고 boot log에서 `ApolloRseRemoteCPU.so` load failure가 사라짐 |
+| RSE CPU 실행 경로 | 2026-06-21 정리 후 Apollo/RD-Aspen RSE는 local/in-process CPU topology만 사용하고 Apollo 전용 remote helper target은 제거됨 | current runner가 remote helper를 선택하거나 노출하지 않는지 absence audit로 확인 |
 | MMIO read/direct fastpath policy | QBox core의 env 직접 parsing 제거. `ports/initiator.h`는 explicit API만 제공하고 Apollo/RD-Aspen Lua가 `QBOX_RDASPEN_RSE_MMIO_*`를 읽어 opt-in | QBox core boundary audit와 full-system boot 통과 |
 | 4KiB aperture mirror와 PL011 ID mirror | core mechanism은 CCI parameter로 유지하고 기본값은 비활성. Apollo/RD-Aspen Lua에서만 `mirror_4k_aperture`, `id_register_mirror_mask`를 설정 | `pl011-aperture-tests`와 Apollo full-system boot 통과 |
 
-이미 `platforms/cortex-m55-remote/tests/*`에 있던 Apollo validation 성격의
-remote DMI byte-store test는 `tools/qbox-platform/tests/platforms/cortex-m55-remote/`
-로 이동되어, 현재 upstream diff에는 남아 있지 않다.
+Superseded/currently removed: 이전에는 Apollo validation 성격의 remote DMI
+byte-store test를 qbox-platform overlay로 분리했지만, 2026-06-21 정리 후
+Apollo 전용 remote helper source와 platform test는 제거됐다. Generic QBox
+remote sample과 core RemotePass transport만 보존한다.
 
 ## 잔여 후보
 
@@ -120,10 +121,10 @@ remote DMI byte-store test는 `tools/qbox-platform/tests/platforms/cortex-m55-re
 | 2 | `ports/target.h`의 aperture mirror mechanism | FVP-style wide aperture 대응이지만 모든 device에 기본 적용되면 위험함 | 현재처럼 default-off CCI parameter로 유지하고 platform Lua에서만 활성화 |
 
 `tools/qbox/platforms/cortex-m55-remote/` 변경은 Apollo 실행 경로에서
-필요하지 않다고 판단해 기준 커밋 상태로 되돌렸다. Apollo/RD-Aspen RSE는
-`tools/qbox-platform/platforms/cortex-m55-remote/apollo_rse_remote_cpu`를
-사용하고, QBox core의 generic `remote_cpu` sample은 upstream 기준 동작을
-유지한다. 단, `platforms/src/main.cc`의 `<remote.h>` include는
+필요하지 않다고 판단해 기준 커밋 상태로 되돌렸다. 2026-06-21 정리 후
+Apollo/RD-Aspen RSE는 Apollo 전용 remote helper를 사용하지 않고,
+QBox core의 generic `remote_cpu` sample은 upstream 기준 동작을 유지한다.
+단, `platforms/src/main.cc`의 `<remote.h>` include는
 `platforms-vp` 안에 `RemotePass` module factory를 등록하기 위해 필요하다.
 
 ## 구현 검증 결과

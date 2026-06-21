@@ -3,6 +3,8 @@ import importlib.util
 from types import SimpleNamespace
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
@@ -25,8 +27,6 @@ def make_args(tmp_path, *, post_login_probe=True):
             "out_dir": tmp_path,
             "post_login_probe": post_login_probe,
             "si_mode": "live-cl0-cl1",
-            "remotepass_dmi_cache": True,
-            "rse_cpu_mode": "remote",
         },
     )()
 
@@ -52,7 +52,6 @@ def make_child_command_args(tmp_path):
         qbox_perf_profile=False,
         qbox_perf_profile_interval=1024,
         range_limited_flash_dmi=False,
-        remotepass_dmi_cache=False,
         rootfs_bootargs_profile="shell",
         rse_bl2_boot_enc_accel=False,
         rse_bl2_delay_accel=False,
@@ -68,15 +67,13 @@ def make_child_command_args(tmp_path):
         rse_bl2_verify_sig_max_key_bytes=0,
         rse_bl2_verify_sig_max_sig_bytes=0,
         rse_bl2_verify_sig_skip=False,
-        rse_cpu_mode="inprocess",
         rse_fast_boot_aliases=False,
         rse_fast_boot_sram_dmi=False,
-        rse_hotpath_accel=False,
+        rse_hotpath_accel=True,
         rse_hotpath_max_bytes=0,
         rse_hotpath_memcpy_addr=None,
         rse_hotpath_memset_addr=None,
-        rse_hotpath_tlm_fallback=False,
-        rse_lms_accel=False,
+        rse_lms_accel=True,
         rse_lms_max_data_bytes=0,
         rse_lms_verify_addr=None,
         si_mode="live-cl0-cl1",
@@ -103,7 +100,7 @@ def make_child_artifacts(tmp_path):
     return {name: tmp_path / name for name in names}
 
 
-def test_child_command_forwards_rse_cpu_mode(tmp_path):
+def test_child_command_omits_removed_rse_remote_flags(tmp_path):
     runner = load_runner()
 
     cmd = runner.child_command(
@@ -111,8 +108,82 @@ def test_child_command_forwards_rse_cpu_mode(tmp_path):
         make_child_artifacts(tmp_path),
     )
 
-    assert "--rse-cpu-mode" in cmd
-    assert cmd[cmd.index("--rse-cpu-mode") + 1] == "inprocess"
+    removed_flags = (
+        "--rse-cpu-mode",
+        "--remotepass-dmi-cache",
+        "--rse-hotpath-tlm-fallback",
+    )
+    for flag in removed_flags:
+        assert flag not in cmd
+    assert "--rse-hotpath-accel" in cmd
+    assert "--rse-lms-accel" in cmd
+
+
+@pytest.mark.parametrize(
+    "child_args",
+    [
+        ["--allow-blank-rse-otp"],
+        ["--qemu-trace"],
+        ["--secure-service-probe"],
+        ["--rse-direct-file-aliases", "0x1000:0x10:0:ro:/tmp/qbox-alias.bin"],
+        ["--rse-bl2-load-profile"],
+    ],
+)
+def test_parse_args_forwards_supported_child_options(tmp_path, monkeypatch, child_args):
+    runner = load_runner()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_qbox_apollo_fvp_full.py",
+            "--check-only",
+            "--out-dir",
+            str(tmp_path / "out"),
+            *child_args,
+        ],
+    )
+
+    args = runner.parse_args()
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert args.forward_args == child_args
+    for item in child_args:
+        assert item in cmd
+
+
+@pytest.mark.parametrize(
+    "forward_args",
+    [
+        ["--rse-cpu-mode", "remote"],
+        ["--remotepass-dmi-cache"],
+        ["--rse-hotpath-tlm-fallback"],
+        ["--definitely-invalid-option"],
+    ],
+)
+def test_parse_args_rejects_removed_or_unknown_forwarded_options(
+    tmp_path,
+    monkeypatch,
+    forward_args,
+):
+    runner = load_runner()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_qbox_apollo_fvp_full.py",
+            "--check-only",
+            "--out-dir",
+            str(tmp_path / "out"),
+            *forward_args,
+        ],
+    )
+
+    try:
+        runner.parse_args()
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("unknown forwarded option was accepted")
 
 
 def write_passing_logs(tmp_path):
@@ -172,6 +243,8 @@ def test_keep_running_child_status_passes_after_probe_marker(tmp_path):
     assert status["passed"] is True
     assert status["marker_hits"]["linux_boot"]["apollo-fvp login:"] is True
     assert status["post_login_probe"]["complete"] is True
+    assert "rse_cpu_mode" not in status
+    assert "remotepass_dmi_cache" not in status
     assert status["post_login_probe"]["driver_patterns"] == {
         "arm_si_rproc": True,
         "rpmsg": True,

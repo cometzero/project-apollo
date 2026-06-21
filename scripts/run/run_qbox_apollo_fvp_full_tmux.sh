@@ -26,7 +26,6 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
-RSE_CPU_MODE="${RSE_CPU_MODE:-inprocess}"
 QBOX_PERFORMANCE_PRESET="${QBOX_PERFORMANCE_PRESET:-1}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-1}"
@@ -35,7 +34,6 @@ CC3XX_STATS_INTERVAL="${CC3XX_STATS_INTERVAL:-1024}"
 CC3XX_STATUS_READ_FASTPATH="${CC3XX_STATUS_READ_FASTPATH:-0}"
 CC3XX_QEMU_NATIVE_BACKEND="${CC3XX_QEMU_NATIVE_BACKEND:-0}"
 CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
-REMOTEPASS_DMI_CACHE="${REMOTEPASS_DMI_CACHE:-0}"
 NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
@@ -44,6 +42,15 @@ NO_ATTACH=0
 DRY_RUN=0
 
 RUNNER_ARGS_FILE="${RUNNER_ARGS_FILE:-}"
+REMOVED_ENV_OVERRIDES=()
+REMOVED_ENV_NAMES=(
+    "RSE_CPU_MODE"
+    "REMOTEPASS_DMI_CACHE"
+)
+
+for name in "${REMOVED_ENV_NAMES[@]}"; do
+    [[ -v ${name} ]] && REMOVED_ENV_OVERRIDES+=("${name}")
+done
 
 usage()
 {
@@ -72,8 +79,6 @@ Options:
   --exit-after-pass    stop QBox when the normal pass condition is reached
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
-  --rse-cpu-mode MODE  RSE Cortex-M55 backend: inprocess or remote
-                       (default: ${RSE_CPU_MODE})
   --qbox-performance-preset
                        enable default QBox boot acceleration preset (default;
                        uses SRAM DMI/shared-memory fast boot)
@@ -95,8 +100,6 @@ Options:
                        use QEMU-native CC3XX and direct MMIO fast path
   --cc3xx-local-mmio-fastpath
                        enable QEMU-local CC3XX direct MMIO fast path
-  --remotepass-dmi-cache
-                       enable RemotePass shared-memory DMI cache
   --netdev SPEC        QEMU user-net specification forwarded to the AP virtio
                        net device, for example type=user,hostfwd=tcp::2223-:22
   --no-attach          start tmux but do not attach
@@ -104,19 +107,19 @@ Options:
   -h, --help           show this help
 
 The default performance preset is expanded by the Python runner into the
-RemotePass DMI cache, QEMU-native CC3XX backend, RSE hotpaths, BL2 semantic
-accelerators, and RSE fast-boot SRAM DMI/shared-memory mode. Use
+QEMU-native CC3XX backend, RSE hotpaths, BL2 semantic accelerators, and RSE
+fast-boot SRAM DMI/shared-memory mode. Use
 --legacy-file-backed-sram for the older direct file-backed SRAM alias mode.
 
 Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_PLATFORM_DIR
   QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
-  ROOTFS_BOOTARGS_PROFILE RSE_CPU_MODE
+  ROOTFS_BOOTARGS_PROFILE
   QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
   RANGE_LIMITED_FLASH_DMI CC3XX_STATS
   CC3XX_STATS_INTERVAL CC3XX_STATUS_READ_FASTPATH CC3XX_QEMU_NATIVE_BACKEND
-  CC3XX_LOCAL_MMIO_FASTPATH REMOTEPASS_DMI_CACHE
+  CC3XX_LOCAL_MMIO_FASTPATH
   NETDEV QBOX_APOLLO_NETDEV
 
 Inside tmux:
@@ -136,6 +139,11 @@ die()
 {
     printf 'error: %s\n' "$*" >&2
     exit 1
+}
+
+reject_removed_option()
+{
+    die "unsupported removed option: --$1"
 }
 
 require_command()
@@ -184,12 +192,13 @@ validate_si_mode()
     esac
 }
 
-validate_rse_cpu_mode()
+reject_removed_environment_overrides()
 {
-    case "$1" in
-        remote|inprocess) ;;
-        *) die "invalid --rse-cpu-mode: $1" ;;
-    esac
+    local name
+
+    for name in "${REMOVED_ENV_OVERRIDES[@]}"; do
+        die "unsupported removed environment override: ${name}"
+    done
 }
 
 tmux_cmd()
@@ -214,7 +223,6 @@ runner_command()
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
-        --rse-cpu-mode "${RSE_CPU_MODE}"
     )
 
     if [[ "${RANGE_LIMITED_FLASH_DMI}" == "1" ]]; then
@@ -239,9 +247,6 @@ runner_command()
     fi
     if [[ "${CC3XX_LOCAL_MMIO_FASTPATH}" == "1" ]]; then
         _out+=(--cc3xx-local-mmio-fastpath)
-    fi
-    if [[ "${REMOTEPASS_DMI_CACHE}" == "1" ]]; then
-        _out+=(--remotepass-dmi-cache)
     fi
     if [[ "${SKIP_BUILD}" == "1" ]]; then
         _out+=(--skip-build)
@@ -471,7 +476,7 @@ process_matches_out_dir()
 
     cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
     case "${cmdline}" in
-        *"/platforms-vp"*|*"platforms-vp"*|*"/remote_cpu"*|*"remote_cpu"*) ;;
+        *"/platforms-vp"*|*"platforms-vp"*) ;;
         *) return 1 ;;
     esac
 
@@ -577,7 +582,6 @@ print_dry_run()
     runner_command cmd "${EXTRA_RUNNER_ARGS[@]}"
     local effective_cc3xx_qemu_native_backend="${CC3XX_QEMU_NATIVE_BACKEND}"
     local effective_cc3xx_local_mmio_fastpath="${CC3XX_LOCAL_MMIO_FASTPATH}"
-    local effective_remotepass_dmi_cache="${REMOTEPASS_DMI_CACHE}"
     local explicit_sram_dmi=0
     local explicit_legacy_file_backed_sram="${LEGACY_FILE_BACKED_SRAM}"
     local rse_fast_boot_mode="disabled"
@@ -587,7 +591,6 @@ print_dry_run()
     if [[ "${QBOX_PERFORMANCE_PRESET}" == "1" ]]; then
         effective_cc3xx_qemu_native_backend=1
         effective_cc3xx_local_mmio_fastpath=1
-        effective_remotepass_dmi_cache=1
     elif [[ "${CC3XX_QEMU_NATIVE_BACKEND}" == "1" ]]; then
         effective_cc3xx_local_mmio_fastpath=1
     fi
@@ -627,7 +630,6 @@ Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   si_mode: ${SI_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
-  rse_cpu_mode: ${RSE_CPU_MODE}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
   explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
   effective_rse_fast_boot_mode: ${rse_fast_boot_mode}
@@ -637,10 +639,8 @@ Apollo QBox full-system tmux run
   cc3xx_status_read_fastpath: ${CC3XX_STATUS_READ_FASTPATH}
   cc3xx_qemu_native_backend: ${CC3XX_QEMU_NATIVE_BACKEND}
   cc3xx_local_mmio_fastpath: ${CC3XX_LOCAL_MMIO_FASTPATH}
-  remotepass_dmi_cache: ${REMOTEPASS_DMI_CACHE}
   effective_cc3xx_qemu_native_backend: ${effective_cc3xx_qemu_native_backend}
   effective_cc3xx_local_mmio_fastpath: ${effective_cc3xx_local_mmio_fastpath}
-  effective_remotepass_dmi_cache: ${effective_remotepass_dmi_cache}
   netdev: ${NETDEV:-default}
   out_dir: ${OUT_DIR}
   qbox_platform_dir: ${QBOX_PLATFORM_DIR}
@@ -766,7 +766,6 @@ start_tmux()
 {
     validate_tmux_name "${TMUX_SESSION}"
     validate_si_mode "${SI_MODE}"
-    validate_rse_cpu_mode "${RSE_CPU_MODE}"
     validate_bool "QBOX_PERFORMANCE_PRESET" "${QBOX_PERFORMANCE_PRESET}"
     validate_bool "LEGACY_FILE_BACKED_SRAM" "${LEGACY_FILE_BACKED_SRAM}"
     validate_bool "RANGE_LIMITED_FLASH_DMI" "${RANGE_LIMITED_FLASH_DMI}"
@@ -774,7 +773,6 @@ start_tmux()
     validate_bool "CC3XX_STATUS_READ_FASTPATH" "${CC3XX_STATUS_READ_FASTPATH}"
     validate_bool "CC3XX_QEMU_NATIVE_BACKEND" "${CC3XX_QEMU_NATIVE_BACKEND}"
     validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
-    validate_bool "REMOTEPASS_DMI_CACHE" "${REMOTEPASS_DMI_CACHE}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "POST_LOGIN_PROBE" "${POST_LOGIN_PROBE}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
@@ -831,7 +829,6 @@ start_tmux()
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
-        printf 'RSE_CPU_MODE=%q ' "${RSE_CPU_MODE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
         printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
         printf 'RANGE_LIMITED_FLASH_DMI=%q CC3XX_STATS=%q ' \
@@ -840,7 +837,6 @@ start_tmux()
             "${CC3XX_STATS_INTERVAL}" "${CC3XX_STATUS_READ_FASTPATH}"
         printf 'CC3XX_QEMU_NATIVE_BACKEND=%q ' "${CC3XX_QEMU_NATIVE_BACKEND}"
         printf 'CC3XX_LOCAL_MMIO_FASTPATH=%q ' "${CC3XX_LOCAL_MMIO_FASTPATH}"
-        printf 'REMOTEPASS_DMI_CACHE=%q ' "${REMOTEPASS_DMI_CACHE}"
         if [[ -n "${NETDEV}" ]]; then
             printf 'NETDEV=%q QBOX_APOLLO_NETDEV=%q ' \
                 "${NETDEV}" "${NETDEV}"
@@ -889,6 +885,15 @@ start_tmux()
         tmux_cmd attach-session -t "${TMUX_SESSION}"
     fi
 }
+
+case "${1:-}" in
+    -h|--help)
+        usage
+        exit 0
+        ;;
+esac
+
+reject_removed_environment_overrides
 
 if [[ "${1:-}" == "--supervise" ]]; then
     supervise_run
@@ -986,10 +991,8 @@ while (($# > 0)); do
             ROOTFS_BOOTARGS_PROFILE="$2"
             shift 2
             ;;
-        --rse-cpu-mode)
-            (($# >= 2)) || die "--rse-cpu-mode requires a value"
-            RSE_CPU_MODE="$2"
-            shift 2
+        --rse-cpu-mode|--rse-cpu-mode=*)
+            reject_removed_option "rse-cpu-mode"
             ;;
         --qbox-performance-preset)
             QBOX_PERFORMANCE_PRESET=1
@@ -1032,9 +1035,8 @@ while (($# > 0)); do
             CC3XX_LOCAL_MMIO_FASTPATH=1
             shift
             ;;
-        --remotepass-dmi-cache)
-            REMOTEPASS_DMI_CACHE=1
-            shift
+        --remotepass-dmi-cache|--remotepass-dmi-cache=*)
+            reject_removed_option "remotepass-dmi-cache"
             ;;
         --netdev)
             (($# >= 2)) || die "--netdev requires a value"

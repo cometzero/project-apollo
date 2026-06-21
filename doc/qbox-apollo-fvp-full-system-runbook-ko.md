@@ -221,11 +221,10 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 ```
 
 이 기본 mode는 range-limited flash DMI, RSE storage direct fast path,
-ATU/host-memory/SI-SRAM DMI, RemotePass DMI cache, shared-memory SRAM backing을
-켠다. SRAM/AP-BL2 direct-file alias는 켜지 않는다. 성공한 check-only 또는
-runtime 결과에서는 child `result.json`의
-`rse_fast_boot_sram_dmi.enabled`, `host_sram_shared_memory`,
-`range_limited_flash_dmi`, `remotepass_dmi_cache`가 `true`이고,
+ATU/host-memory/SI-SRAM DMI, shared-memory SRAM backing을 켠다.
+SRAM/AP-BL2 direct-file alias는 켜지 않는다. 성공한 check-only 또는 runtime
+결과에서는 child `result.json`의 `rse_fast_boot_sram_dmi.enabled`,
+`host_sram_shared_memory`, `range_limited_flash_dmi`가 `true`이고,
 `rse_direct_file_aliases_summary.enabled`는 `false`여야 한다.
 `host_sram_backing`의 네 SRAM entry는 `mode: "shared_memory"`,
 `shared_memory: true`, `file_created: false`로 해석한다. DMI/profile counter는
@@ -505,15 +504,16 @@ target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
 
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" \
-  --target cpu_arm_cortexR82 remote_cpu addrtr platforms-vp \
+  --target cpu_arm_cortexR82 cpu_arm_cortexM55 addrtr platforms-vp apollo_fvp_full_system \
   --parallel 8
 ```
 
-RSE CPU hook 또는 `tools/qbox-platform/qemu-components/common/include/cpu.h`를 바꾼
-뒤에는 반드시 `remote_cpu`를 포함해 다시 빌드한다. RSE `RemoteCPU`는
-`cpu_arm_cortexM55.so`를 직접 로드하지 않고 `remote_cpu` 실행 파일에 CPU
-header 구현을 링크하므로, `cpu_arm_cortexM55` 모듈만 빌드하면 RSE smoke가
-이전 hook 코드로 실행될 수 있다.
+RSE CPU hook 또는 `tools/qbox/qemu-components/common/include/cpu.h`를 바꾼
+뒤에는 `cpu_arm_cortexM55`, `platforms-vp`, 그리고 Apollo aggregate target인
+`apollo_fvp_full_system`을 다시 빌드한다. 현재 Apollo RSE 경로는
+`platforms-vp` 안에서 in-process `cpu_arm_cortexM55` 모듈을 사용하므로,
+삭제된 Apollo remote helper target을 빌드 계약이나 실행 절차에
+포함하지 않는다.
 
 component 변경 이후에는 다음 검사를 권장한다.
 

@@ -47,8 +47,6 @@ REQUIRED_TARGETS = [
     "sbsa_gwdt",
     "cpu_arm_cortexM55",
     "nvic_armv7m",
-    "ApolloRseRemoteCPU",
-    "apollo_rse_remote_cpu",
     "qemu_cc3xx",
     "qemu_hexagon_qtimer",
     "mhu320ae",
@@ -80,15 +78,11 @@ AP_STRATA_STATS = "ap-strata-stats.json"
 RSE_CC3XX_STATS = "rse-cc3xx-stats.json"
 QBOX_PERF_PROFILE_DIR = "qbox-perf-profile"
 QEMU_INITIATOR_PROFILE_DIR = "qemu-initiator"
-REMOTEPASS_PROFILE_DIR = "remotepass"
 CC3XX_PROFILE = "qemu-cc3xx-profile.json"
 RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
 QBOX_RUNTIME_EXECUTABLES = {
     "platforms-vp",
-    "remote_cpu",
-    "apollo_rse_remote_cpu",
 }
-RSE_CPU_MODES = ("remote", "inprocess")
 SRAM_DMI_FORBIDDEN_ENV = (
     "QBOX_RDASPEN_HOST_SI_CL0_SRAM_MAP_FILE",
     "QBOX_RDASPEN_HOST_SI_CL1_SRAM_MAP_FILE",
@@ -1991,7 +1985,6 @@ def parse_qbox_perf_profile(args: argparse.Namespace) -> dict[str, object]:
 
     profile_root = args.out_dir / QBOX_PERF_PROFILE_DIR
     qemu_initiator_dir = profile_root / QEMU_INITIATOR_PROFILE_DIR
-    remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
     cc3xx_profile = profile_root / CC3XX_PROFILE
     hotpath_profile = profile_root / RSE_HOTPATH_PROFILE
 
@@ -2016,7 +2009,6 @@ def parse_qbox_perf_profile(args: argparse.Namespace) -> dict[str, object]:
         "enabled": True,
         "root": str(profile_root.resolve()),
         "qemu_initiator_dir": str(qemu_initiator_dir.resolve()),
-        "remotepass_dir": str(remotepass_dir.resolve()),
         "initiator_addr_profile": {
             "enabled": bool(args.qbox_initiator_addr_profile),
             "shift": args.qbox_initiator_addr_profile_shift,
@@ -2033,7 +2025,6 @@ def parse_qbox_perf_profile(args: argparse.Namespace) -> dict[str, object]:
             "stats": hotpath_parsed,
         },
         "qemu_initiator_profiles": parse_profile_dir(qemu_initiator_dir),
-        "remotepass_profiles": parse_profile_dir(remotepass_dir),
     }
 
 
@@ -2316,9 +2307,6 @@ def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]
         "QBOX_RDASPEN_HOST_SI_SRAM_DMI": (
             "true" if args.rse_fast_boot_sram_dmi else ""
         ),
-        "QBOX_RDASPEN_REMOTEPASS_DMI_CACHE": (
-            "true" if remotepass_dmi_cache_effective(args) else ""
-        ),
         "QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY": (
             "true" if args.rse_fast_boot_sram_dmi else ""
         ),
@@ -2328,7 +2316,6 @@ def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]
         "enabled": bool(args.rse_fast_boot_sram_dmi),
         "host_sram_shared_memory": bool(args.rse_fast_boot_sram_dmi),
         "range_limited_flash_dmi": bool(args.range_limited_flash_dmi),
-        "remotepass_dmi_cache": remotepass_dmi_cache_result(args),
         "legacy_fast_boot_aliases_blocked": bool(args.rse_fast_boot_sram_dmi),
         "env": dmi_env,
         "forbidden_ambient_env": forbidden_effective_env,
@@ -2920,55 +2907,18 @@ RUNNER_CONTROL_ENV = (
     "QBOX_RDASPEN_RESULT_PATH",
     "QBOX_RDASPEN_SUMMARY_PATH",
 )
+REMOVED_RUNNER_ENV = (
+    "QBOX_RSE_CPU_MODE",
+    "QBOX_REMOTE_CPU_EXEC",
+    "QBOX_RDASPEN_REMOTEPASS_DMI_CACHE",
+    "QBOX_RDASPEN_RSE_HOTPATH_TLM_FALLBACK",
+)
 
 
 def strip_runner_control_env(env: dict[str, str]) -> dict[str, str]:
-    for name in RUNNER_CONTROL_ENV:
+    for name in RUNNER_CONTROL_ENV + REMOVED_RUNNER_ENV:
         env.pop(name, None)
     return env
-
-
-def rse_cpu_mode(args: argparse.Namespace) -> str:
-    mode = getattr(args, "rse_cpu_mode", "remote")
-    if mode not in RSE_CPU_MODES:
-        raise ValueError("QBOX_RSE_CPU_MODE must be remote or inprocess")
-    return mode
-
-
-def rse_remote_cpu_exec(build_dir: Path) -> Path:
-    remote_cpu_candidates = [
-        build_dir / "apollo_rse_remote_cpu",
-        build_dir / "platforms" / "cortex-m55-remote" / "apollo_rse_remote_cpu",
-        build_dir / "remote_cpu",
-    ]
-    return next(
-        (candidate for candidate in remote_cpu_candidates if candidate.exists()),
-        remote_cpu_candidates[0],
-    )
-
-
-def apply_rse_cpu_backend_env(
-    env: dict[str, str], args: argparse.Namespace, build_dir: Path
-) -> dict[str, str]:
-    mode = rse_cpu_mode(args)
-    env["QBOX_RSE_CPU_MODE"] = mode
-    if mode == "remote":
-        env["QBOX_REMOTE_CPU_EXEC"] = str(rse_remote_cpu_exec(build_dir).resolve())
-    else:
-        env.pop("QBOX_REMOTE_CPU_EXEC", None)
-    return env
-
-
-def remotepass_dmi_cache_effective(args: argparse.Namespace) -> bool:
-    return bool(args.remotepass_dmi_cache and rse_cpu_mode(args) == "remote")
-
-
-def remotepass_dmi_cache_result(args: argparse.Namespace) -> dict[str, object]:
-    return {
-        "enabled": remotepass_dmi_cache_effective(args),
-        "requested": bool(args.remotepass_dmi_cache),
-        "rse_cpu_mode": rse_cpu_mode(args),
-    }
 
 
 def parse_int_auto(value: str) -> int | None:
@@ -3088,7 +3038,6 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         args.out_dir / CONSOLE_LOGS["primary_console"]
     )
     env["QBOX_RDASPEN_UART_READ_FILE"] = os.devnull
-    apply_rse_cpu_backend_env(env, args, build_dir)
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args
@@ -3119,10 +3068,6 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         qemu_initiator_dir = profile_root / QEMU_INITIATOR_PROFILE_DIR
         qemu_initiator_dir.mkdir(parents=True, exist_ok=True)
         env["QBOX_QEMU_INITIATOR_PROFILE_DIR"] = str(qemu_initiator_dir)
-        if rse_cpu_mode(args) == "remote":
-            remotepass_dir = profile_root / REMOTEPASS_PROFILE_DIR
-            remotepass_dir.mkdir(parents=True, exist_ok=True)
-            env["QBOX_REMOTEPASS_PROFILE_DIR"] = str(remotepass_dir)
         env["QBOX_CC3XX_PROFILE_FILE"] = str(profile_root / CC3XX_PROFILE)
         env["QBOX_CC3XX_TIMING_STATS"] = "1"
         env["QBOX_PROFILE_FLUSH_INTERVAL"] = str(args.qbox_perf_profile_interval)
@@ -3150,15 +3095,11 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
             env["QBOX_RDASPEN_RSE_HOTPATH_PROFILE_INTERVAL"] = str(
                 args.qbox_perf_profile_interval
             )
-    if remotepass_dmi_cache_effective(args):
-        env["QBOX_RDASPEN_REMOTEPASS_DMI_CACHE"] = "true"
     if args.rse_hotpath_accel:
         env["QBOX_RDASPEN_RSE_HOTPATH_ACCEL"] = "true"
         env["QBOX_RDASPEN_RSE_HOTPATH_MAX_BYTES"] = str(
             args.rse_hotpath_max_bytes
         )
-        if args.rse_hotpath_tlm_fallback:
-            env["QBOX_RDASPEN_RSE_HOTPATH_TLM_FALLBACK"] = "true"
         if args.rse_hotpath_memcpy_addr is not None:
             env["QBOX_RDASPEN_RSE_HOTPATH_MEMCPY_ADDR"] = str(
                 args.rse_hotpath_memcpy_addr
@@ -3880,20 +3821,12 @@ def write_result(
                 if qemu_trace_enabled(args)
                 else None
             ),
-            "rse_cpu_mode": rse_cpu_mode(args),
             "flash_stats": parse_flash_stats(args),
             "cc3xx_stats": parse_cc3xx_stats(args),
             "qbox_perf_profile": parse_qbox_perf_profile(args),
-            "remotepass_dmi_cache": remotepass_dmi_cache_result(args),
             "rse_hotpath_accel": {
                 "enabled": bool(args.rse_hotpath_accel),
                 "bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
-                "tlm_fallback": bool(args.rse_hotpath_tlm_fallback),
-                "tlm_fallback_scope_plan": (
-                    ".omo/plans/qemu-hotpath-scope-fileless-sram-dmi.md"
-                    if args.rse_hotpath_tlm_fallback
-                    else None
-                ),
                 "memcpy_addr": hex(rse_hotpath_memcpy_addr),
                 "memset_addr": hex(rse_hotpath_memset_addr),
                 "max_bytes": args.rse_hotpath_max_bytes,
@@ -4181,9 +4114,6 @@ def write_result(
             },
             sort_keys=True,
         ),
-        "rse_cpu_mode: " + str(status.get("rse_cpu_mode")),
-        "remotepass_dmi_cache: "
-        + json.dumps(status["remotepass_dmi_cache"], sort_keys=True),
         "rse_pc_trace: "
         + (
             json.dumps(rse_pc_trace, sort_keys=True)
@@ -4259,7 +4189,7 @@ def write_result(
     return 0 if status["passed"] else 1
 
 
-def parse_args() -> argparse.Namespace:
+def build_parser() -> argparse.ArgumentParser:
     root = workspace_root()
     deploy = root / "build/tmp_baremetal/deploy/images/fvp-rd-aspen"
     parser = argparse.ArgumentParser(
@@ -4494,7 +4424,7 @@ def parse_args() -> argparse.Namespace:
         default=5.0,
         help=(
             "Seconds to keep the platform running after the RSE SRAM-DMI smoke "
-            "marker before stopping, so remote hotpath profiles capture the "
+            "marker before stopping, so QBox hotpath profiles capture the "
             "completed BL2 load/hash accelerator work."
         ),
     )
@@ -4571,7 +4501,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Enable QBox-side performance profile artifacts for QEMU "
-            "initiator path, RemotePass RPC path, and QEMU-native CC3XX. "
+            "initiator path and QEMU-native CC3XX. "
             "This also enables CC3XX timing stats in rse-cc3xx-stats.json."
         ),
     )
@@ -4604,25 +4534,6 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=64,
         help="Maximum number of address buckets emitted per QEMU initiator profile.",
-    )
-    parser.add_argument(
-        "--remotepass-dmi-cache",
-        action="store_true",
-        help=(
-            "Enable the opt-in RemotePass shared-memory DMI cache in the RSE "
-            "remote CPU process. This targets QEMU-to-SystemC RPC overhead "
-            "for DMI-capable memory ranges."
-        ),
-    )
-    parser.add_argument(
-        "--rse-cpu-mode",
-        choices=RSE_CPU_MODES,
-        default="remote",
-        help=(
-            "Select the RSE Cortex-M55 backend. The default 'remote' keeps "
-            "the RemotePass child process; 'inprocess' runs the RSE QEMU "
-            "endpoint in platforms-vp and does not use QBOX_REMOTE_CPU_EXEC."
-        ),
     )
     parser.add_argument(
         "--rse-hotpath-accel",
@@ -4660,14 +4571,6 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Maximum byte count accepted by --rse-hotpath-accel for one "
             "semantic memcpy/memset operation."
-        ),
-    )
-    parser.add_argument(
-        "--rse-hotpath-tlm-fallback",
-        action="store_true",
-        help=(
-            "Explicitly allow counted TLM fallback for hotpath byte transfers "
-            "when full-span and chunked DMI are unavailable."
         ),
     )
     parser.add_argument(
@@ -4963,7 +4866,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Install opt-in QEMU direct file-backed aliases for the RSE view "
             "of SI CL0/CL1 image header and payload SRAM windows. This targets "
-            "RemotePass overhead during RSE BL2 SI image loading and bypasses "
+            "RSE BL2 SI image loading overhead and bypasses "
             "ATU/SystemC routing only for those narrow ranges."
         ),
     )
@@ -5033,8 +4936,8 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Enable the RSE fast-boot SRAM DMI/shared-memory preset. This sets "
             "range-limited flash DMI, host SI SRAM DMI/shared memory, RSE "
-            "storage direct fastpath, and RemotePass DMI cache without enabling "
-            "direct file-backed SRAM/AP-BL2 aliases."
+            "storage direct fastpath without enabling direct file-backed "
+            "SRAM/AP-BL2 aliases."
         ),
     )
     parser.add_argument(
@@ -5123,6 +5026,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Include Arm M-profile RSE and AArch64 AP register state in PC samples.",
     )
+    return parser
+
+
+def parse_args() -> argparse.Namespace:
+    root = workspace_root()
+    parser = build_parser()
     args = parser.parse_args()
     if args.qbox_build_dir is not None:
         resolved_qbox_build_dir = str(args.qbox_build_dir.resolve())
@@ -5242,7 +5151,6 @@ def parse_args() -> argparse.Namespace:
             )
         args.range_limited_flash_dmi = True
         args.rse_storage_direct_fastpath = True
-        args.remotepass_dmi_cache = True
     if args.rse_fast_boot_aliases:
         args.rse_direct_si_sram_alias = True
         args.rse_direct_ap_bl2_alias = True

@@ -173,7 +173,6 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --post-login-probe \
   --qbox-performance-preset \
   --cc3xx-qemu-native-backend \
-  --remotepass-dmi-cache \
   --si-mode live-cl0-cl1 \
   --timeout 900
 ```

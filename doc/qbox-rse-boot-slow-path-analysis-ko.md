@@ -381,7 +381,7 @@ padding byte를 한 바이트씩 `sha256_update()`로 넣는 것을 내부 bulk 
 `sha256_resets=32,239`, `write_accesses=1,107,380`,
 `read_accesses=531,020`이다.
 
-다음으로 QEMU/RemoteCPU bridge에서 side-effect 없는 ready/busy status read만
+다음으로 QEMU/in-process RSE CPU bridge에서 side-effect 없는 ready/busy status read만
 바로 반환하는 opt-in fast path를 시험했다.
 
 ```bash
@@ -480,7 +480,7 @@ python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
 | 후보 | 기대 효과 | 적용 판단 |
 | --- | --- | --- |
 | QEMU-side CC3XX MMIO backend | SystemC 왕복 없이 QEMU memory region callback 안에서 CC3XX register access 처리 | 가장 효과적인 QBox 구조 개선 후보. 기존 SystemC CC3XX와 동일 register side effect를 공유하거나 이식해야 하므로 작업량은 큼 |
-| RemoteCPU/QEMU bridge status-read fast path | 항상 ready인 `CRYPTO_BUSY`, `HASH_BUSY`, `HOST_CC_IS_IDLE`, DMA busy/interrupt read를 QEMU 측에서 바로 반환 | polling read 비용을 줄일 수 있음. 단, side-effect 없는 read-only ready register로 범위를 제한해야 함 |
+| QEMU/in-process RSE CPU bridge status-read fast path | 항상 ready인 `CRYPTO_BUSY`, `HASH_BUSY`, `HOST_CC_IS_IDLE`, DMA busy/interrupt read를 QEMU 측에서 바로 반환 | polling read 비용을 줄일 수 있음. 단, side-effect 없는 read-only ready register로 범위를 제한해야 함 |
 | CC3XX register access histogram | offset별 read/write hot spot을 stats에 추가 | 구현 우선순위 결정을 위한 저위험 계측. 먼저 적용 가능 |
 | CC3XX model 내부 micro-optimization | `load32/store32`, stats write, SHA padding 등 C++ 내부 비용 축소 | 안전하지만 이미 효과가 제한적임을 확인 |
 | CC3XX DMI | QEMU가 register window를 직접 읽고 씀 | 일반 적용 금지. side-effect register를 우회해 fidelity가 깨진다. read-only status alias 실험 정도만 가능 |
@@ -500,7 +500,7 @@ TF-M/mbedTLS가 작은 SHA operation을 덜 만들게 해야 한다.
 
 1. CC3XX stats에 register offset histogram을 추가해서 `CRYPTO_BUSY`,
    `HOST_RGF_IRR`, `HASH_H`, `PKA_DONE`, `DIN/DOUT_*`의 실제 비중을 분리한다.
-2. QEMU/RemoteCPU 쪽에서 read-only ready status fast path를 opt-in으로
+2. QEMU/in-process RSE CPU 쪽에서 read-only ready status fast path를 opt-in으로
    구현할 수 있는지 확인한다. 이 방식은 register model의 write side effect를
    유지하면서 polling read의 SystemC 왕복만 줄이는 방향이다.
 3. 장기적으로는 CC3XX를 QEMU-side MMIO backend로 옮기거나, QEMU callback에서
@@ -811,7 +811,7 @@ milestone은 현재 22.668초를 15초 이하로 낮추는 것이다.
 - [QEMU-native CC3XX Backend Implementation Plan](qbox-cc3xx-qemu-native-plan-ko.md)
 - [QEMU-native CC3XX Backend Tasks](qbox-cc3xx-qemu-native-tasks-ko.md)
 
-목표는 RSE CC3XX register window를 QEMU/RemoteCPU process 안에서 처리해
+목표는 RSE CC3XX register window를 QEMU/in-process RSE CPU 경로에서 처리해
 SystemC thread 왕복을 제거하는 것이다. 첫 단계인
 `--cc3xx-local-mmio-fastpath`와 두 번째 단계인
 `--cc3xx-qemu-native-backend`가 구현되어 있다. Firmware-visible register
@@ -944,7 +944,7 @@ coalescing 또는 BL1_2 한정 hash-state optimization을 병행해야 한다.
 
 ```bash
 cmake --build build/local-apollo-fvp/work/qbox-platform \
-  --target cc3xx-tests platforms-vp remote_cpu \
+  --target cc3xx-tests cpu_arm_cortexM55 platforms-vp apollo_fvp_full_system \
   --parallel 8
 
 ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
@@ -1078,9 +1078,13 @@ QEMU initiator와 RemotePass profile은 RSE CPU memory/peripheral path가 아직
    - DMI invalidation, shared memory write coherency, read-only alias write
      fallback이 깨지지 않는다.
 
-   1차 구현으로 `RemotePass`에 runtime opt-in `dmi_cache` CCI parameter와
-   RSE runner의 `--remotepass-dmi-cache` option을 추가했다. 35초 smoke에서는
-   early boot marker가 유지되고 cache hit가 발생했다.
+   Superseded/currently removed: 아래 RemotePass DMI cache option과
+   command는 2026-06-21 Apollo RSE local-only 정리 이전의 historical
+   comparison evidence다. 현재 Apollo QBox runner에서는 이 option을 제공하지
+   않으며, 기본 run guidance로 사용하지 않는다. 1차 구현 당시에는
+   `RemotePass`에 runtime opt-in `dmi_cache` CCI parameter와 RSE runner의
+   `--remotepass-dmi-cache` option을 추가했다. 35초 smoke에서는 early boot
+   marker가 유지되고 cache hit가 발생했다.
 
    ```bash
    python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
@@ -1334,7 +1338,9 @@ PC를 LR로 갱신한다.
 검증 명령:
 
 ```bash
-cmake --build build --target rse_lms_accel-tests remote_cpu cortex-m55-vp platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform \
+  --target rse_lms_accel-tests cpu_arm_cortexM55 platforms-vp apollo_fvp_full_system \
+  --parallel 8
 
 python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
@@ -1402,7 +1408,7 @@ PC-entry LMS accelerator 이후에도 90초 RSE smoke는 full RSE runtime handof
 - CC3XX AES CTR bytes: 403,573 bytes
 - CC3XX hash DMA bytes: 412,963 bytes
 
-`--remotepass-dmi-cache` 비교 run
+Superseded/currently removed: `--remotepass-dmi-cache` 비교 run
 `build/qbox-apollo-fvp/rse-lms-remotepass-dmi-smoke-20260608-004222`는
 `rse_image_4_loaded=47.741초`로 개선이 없었다. DMI cache hit가 6회뿐이라
 이 경로의 per-access overhead를 줄이지 못했다.
@@ -1698,15 +1704,17 @@ accelerator이다.
 
 이를 확인하기 위해 기본 off인 `--rse-bl2-load-profile`을 추가했다. 이
 옵션은 QEMU TCG PC-entry hook에서 RSE BL2 함수 진입 PC와 R0-R3/SP/LR/stack
-word만 기록하며, guest firmware 실행은 건드리지 않는다. RSE가 remote CPU
-프로세스에서 동작하므로 QBox 변경 검증 시에는 `cpu_arm_cortexM55`뿐 아니라
-`remote_cpu`도 함께 빌드해야 한다.
+word만 기록하며, guest firmware 실행은 건드리지 않는다. 현재 Apollo RSE는
+`platforms-vp` 안의 in-process `cpu_arm_cortexM55` 경로에서 동작하므로 QBox
+변경 검증 시에는 `cpu_arm_cortexM55`, `platforms-vp`, 그리고
+`apollo_fvp_full_system` aggregate target을 함께 빌드한다.
 
 검증 command:
 
 ```bash
-cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexM55 --parallel 8
-cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform \
+  --target cpu_arm_cortexM55 platforms-vp apollo_fvp_full_system \
+  --parallel 8
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
@@ -1783,8 +1791,9 @@ buffer DMI/alias 조회 실패, unsupported argument는 guest path로 fallback�
 ```bash
 cmake --build build/local-apollo-fvp/work/qbox-platform --target cc3xx_core-tests --parallel 8
 ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^cc3xx_core-tests$' --output-on-failure
-cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu --parallel 8
-cmake --build build/local-apollo-fvp/work/qbox-platform --target cpu_arm_cortexM55 --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform \
+  --target cpu_arm_cortexM55 platforms-vp apollo_fvp_full_system \
+  --parallel 8
 python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   --skip-build \
   --cc3xx-qemu-native-backend \
@@ -1913,7 +1922,7 @@ profile/helper를 추가했다. 구현은 `tools/qbox/qemu-components/common/inc
 | --- | --- | --- |
 | uncached safe profile | BL2에서 image 4 검증 중 90초 timeout | `verify_matches=3593`, `skip_hits=0` |
 | cached safe profile | RSE runtime handoff 도달, Linux login 전 90초 timeout | `verify_matches=9`, `cache_hits=6`, `cache_misses=3`, `skip_hits=0`, failure counter 0 |
-| positive skip after `remote_cpu` rebuild | RSE runtime handoff 도달, Linux login 전 90초 timeout | `verify_matches=1`, `skip_hits=1`, `last_fih_success=0x0`, failure counter 0 |
+| positive skip after historical `remote_cpu` rebuild | RSE runtime handoff 도달, Linux login 전 90초 timeout | `verify_matches=1`, `skip_hits=1`, `last_fih_success=0x0`, failure counter 0 |
 
 cached run의 evidence는
 `build/qbox-apollo-fvp/rse-bl2-verify-sig-profile-cache-smoke-20260608-1/`에
@@ -1935,13 +1944,15 @@ profile overhead를 뺀 evidence는
 있다. 이 run은 `[ERR]` 없이 `rse_first_image_slot=27.392초`,
 `rse_bl1_1 -> rse_first_image_slot=24.179초`를 기록했다.
 
-주의할 점은 RSE `RemoteCPU`가 `cpu_arm_cortexM55.so`를 직접 로드하지 않고
-`remote_cpu` 실행 파일에 CPU header 구현을 링크한다는 것이다. `cpu.h`의
-hook/profile 코드를 바꾼 뒤 `remote_cpu`를 다시 빌드하지 않으면 이전
-동작으로 smoke가 실행될 수 있다.
+주의할 점은 현재 Apollo RSE가 `platforms-vp` 안에서 in-process
+`cpu_arm_cortexM55` 모듈을 사용한다는 것이다. `cpu.h`의 hook/profile 코드를
+바꾼 뒤 `cpu_arm_cortexM55`, `platforms-vp`, `apollo_fvp_full_system`을 다시
+빌드하지 않으면 이전 동작으로 smoke가 실행될 수 있다.
 
 ```bash
-cmake --build build/local-apollo-fvp/work/qbox-platform --target remote_cpu cpu_arm_cortexM55 platforms-vp --parallel 8
+cmake --build build/local-apollo-fvp/work/qbox-platform \
+  --target cpu_arm_cortexM55 platforms-vp apollo_fvp_full_system \
+  --parallel 8
 ```
 
 따라서 ECDSA host verifier와 positive skip은 유지하되, skip은 positive
