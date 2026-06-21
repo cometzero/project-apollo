@@ -26,7 +26,7 @@ auto_build_threads() {
     mem_mib="$(host_mem_mib)"
 
     if [[ "${mem_mib}" -gt 0 ]]; then
-        mem_threads=$((mem_mib / 4096))
+        mem_threads=$((mem_mib / 2048))
         [[ "${mem_threads}" -lt 1 ]] && mem_threads=1
     else
         mem_threads="${cpus}"
@@ -34,7 +34,7 @@ auto_build_threads() {
 
     threads="${cpus}"
     [[ "${threads}" -gt "${mem_threads}" ]] && threads="${mem_threads}"
-    [[ "${threads}" -gt 16 ]] && threads=16
+    [[ "${threads}" -gt 6 ]] && threads=6
     [[ "${threads}" -lt 1 ]] && threads=1
 
     echo "${threads}"

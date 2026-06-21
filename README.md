@@ -70,8 +70,9 @@ The Yocto entrypoint uses the Apollo template under
 
 `build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
-LLVM/Rust native builds from overcommitting smaller machines. On a 16-core
-host with about 13 GiB RAM this selects `-j3`.
+LLVM/Rust native builds from overcommitting smaller machines while defaulting
+to at most 6 parallel jobs. On a 16-core host with about 13 GiB RAM this
+selects `-j6`.
 
 Useful resource overrides for larger hosts:
 
