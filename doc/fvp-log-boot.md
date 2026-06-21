@@ -2,10 +2,27 @@
 
 Generated: 2026-05-28
 
-`scripts/run/run_local_fvp_tmux.sh` is intended for interactive inspection of the
-locally built Apollo FVP image. It starts FVP in tmux, opens one pane per known
-subsystem UART, and mirrors those UARTs to log files under the selected run
-directory:
+`./run_fvp.sh` is the user-facing wrapper for interactive inspection of the
+Yocto-built Apollo FVP image. It resolves the active Yocto deploy artifact and
+then delegates tmux pane setup and UART log capture to
+`scripts/run/run_local_fvp_tmux.sh`:
+
+```bash
+./run_fvp.sh
+./run_fvp.sh --session apollo-yocto-demo
+./run_fvp.sh --out-dir build/fvp-tmux/manual-check
+./run_fvp.sh --no-attach
+./run_fvp.sh --dry-run
+```
+
+Default Yocto inputs:
+
+- `build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf`
+- `build/fvp-tmux/apollo-fvp-<timestamp>/`
+
+`scripts/run/run_local_fvp_tmux.sh` is the lower-level runner for local-build
+FVP artifacts. It starts FVP in tmux, opens one pane per known subsystem UART,
+and mirrors those UARTs to log files under the selected run directory:
 
 ```bash
 scripts/run/run_local_fvp_tmux.sh
@@ -30,6 +47,7 @@ Per-run logs for agent review:
 - `uarts/u_boot_linux.log`
 
 Generic runfvp tmux wrapping was removed from `scripts/run/`. Use
+`./run_fvp.sh` for Yocto Apollo FVP interactive sessions and
 `scripts/run/run_local_fvp_tmux.sh` for Apollo local FVP interactive sessions.
 For agent-side validation, prefer a file-log workflow so the result can be
 checked without attaching to a terminal UI.

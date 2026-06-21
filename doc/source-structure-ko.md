@@ -1,6 +1,6 @@
 # 현재 소스 구조
 
-Updated: 2026-06-19
+Updated: 2026-06-21
 
 이 문서는 현재 `project-apollo` 체크아웃의 소스 소유권과 생성물 경계를
 정리한다. 현재 루트 디렉터리는 Git 저장소이며, 구현 소스의 대부분은 루트
@@ -16,6 +16,7 @@ Updated: 2026-06-19
 | `.gitmodules` | 루트 저장소가 고정하는 submodule 목록과 기본 branch. |
 | `build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `baremetal-image` 빌드 진입점. |
 | `local-build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
+| `run_fvp.sh` | Yocto 빌드 산출물을 Apollo FVP tmux 세션에서 실행하는 사용자용 진입점. |
 | `run_qbox.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |
 
 ## Arm 제공 소스

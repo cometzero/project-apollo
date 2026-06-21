@@ -68,6 +68,17 @@ The Yocto entrypoint uses the Apollo template under
 ./build.sh
 ```
 
+After a Yocto build, run the generated Apollo FVP image in tmux with:
+
+```bash
+./run_fvp.sh
+```
+
+The wrapper uses
+`build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf`
+by default, starts an interactive tmux session, and mirrors subsystem UARTs to
+`build/fvp-tmux/apollo-fvp-<timestamp>/`.
+
 `build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
 LLVM/Rust native builds from overcommitting smaller machines while defaulting

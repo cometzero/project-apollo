@@ -24,7 +24,7 @@ scripts/test/validate_qbox_apollo_fvp_full_map.py
 ```
 
 The workspace still keeps user-facing root entrypoints such as `./build.sh`,
-`./local-build.sh`, and `./run_qbox.sh`.
+`./local-build.sh`, `./run_fvp.sh`, and `./run_qbox.sh`.
 
 Use `./local-build.sh qbox` for QBox target builds. The former dedicated build
 shortcut wrappers were replaced by stage entrypoints under `scripts/build/`.
@@ -55,7 +55,7 @@ contract.
 | `run_qbox_fvp_rd_aspen_rse.py` | keep | RSE-first child runner used by the full-system runner, build packaging checks, and debug helpers. |
 | `run_qbox_apollo_fvp_si_cl1.py` | keep | Isolated CL1 child runner used by `run_qbox_apollo_fvp_full.py --isolated --si-mode live-cl1`. |
 | `run_qbox_apollo_fvp_linux.py` | keep | Direct AP Linux guardrail still required by `scripts/test/verify_qbox_apollo_fvp_full_completion.py` and its pytest coverage. |
-| `run_local_fvp_tmux.sh` | keep | Interactive local FVP launcher used by `scripts/debug/run_local_fvp_debug.sh`. |
+| `run_local_fvp_tmux.sh` | keep | Interactive FVP tmux runner used by `./run_fvp.sh` and `scripts/debug/run_local_fvp_debug.sh`. |
 | `runfvp_log_boot.py` | keep | Headless FVP log-capture runner used for FVP baseline and QBox comparison. |
 
 Removed compatibility wrappers:
