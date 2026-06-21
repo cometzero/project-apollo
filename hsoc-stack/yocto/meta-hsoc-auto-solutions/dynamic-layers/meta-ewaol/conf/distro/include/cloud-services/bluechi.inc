@@ -6,5 +6,5 @@ VIRTUAL-RUNTIME_container_engine:${BASE_DISTRO} = "podman"
 
 DISTRO_FEATURES:append:${BASE_DISTRO} = " overlayfs"
 
-OVERLAYFS_MOUNT_POINT[data] = "/var/lib/containers/storage/overlay"
+OVERLAYFS_MOUNT_POINT[data] = "/var/volatile"
 OVERLAYFS_WRITABLE_PATHS[data] = "/var/lib/containers/storage/overlay"
