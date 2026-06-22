@@ -17,6 +17,7 @@ SRC_URI:remove:apollo-fvp = "file://apollo-kmeta;type=kmeta;name=apollo-kmeta;de
 SRC_URI:remove:apollo-fvp = "file://modsign.scc file://modsign.cfg"
 SRC_URI:remove:apollo-fvp = "file://extra-configs.cfg"
 SRC_URI:remove:apollo-fvp = "file://arm-ffa-transport.cfg"
+SRC_URI:append:apollo-fvp:auto-ad-nexios = " file://rd-gzip-initrd.cfg"
 
 APOLLO_FVP_KERNEL_FEATURES_REMOVE = "\
     cfg/efi.scc \

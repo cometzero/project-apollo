@@ -6,6 +6,11 @@ inherit externalsrc
 
 UBOOT_MACHINE:pn-u-boot:apollo-fvp = "apollo_fvp_defconfig"
 
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+SRC_URI:append:pn-u-boot:apollo-fvp:auto-ad-nexios = " \
+    file://apollo-fvp/auto-ad-nexios.cfg \
+"
+
 EXTERNALSRC:pn-u-boot:apollo-fvp = "${HSOC_APOLLO_UBOOT_SRC}"
 EXTERNALSRC_BUILD:pn-u-boot:apollo-fvp = "${WORKDIR}/build"
 EXTERNALSRC_SYMLINKS:pn-u-boot:apollo-fvp = ""
