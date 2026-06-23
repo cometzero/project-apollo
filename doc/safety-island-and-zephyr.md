@@ -112,8 +112,9 @@ MHUv3 mailbox:
 - `drivers/mbox/mbox_mhuv3.c`
 
 These paths were found under
-`arm-zena-css/components/safety_island/zephyr/src/`; the Apollo-owned copy now
-lives under `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/`.
+`arm-zena-css/components/safety_island/zephyr/src/`. Apollo-specific board,
+DTS, Kconfig, and overlay integration now lives under
+`hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/`.
 
 ## HIPC
 
@@ -206,12 +207,16 @@ Safety Island CL1 firmware image.
 
 ## Change Guidance
 
-- For Apollo Zephyr board, DTS, Kconfig, CMake, or driver changes, start under
-  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island`.
+- For Apollo Zephyr board, DTS, Kconfig, CMake, or overlay changes, start under
+  `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src`.
+- For common Safety Island Zephyr driver, library, subsystem, or sample app
+  changes, start under `arm-zena-css/components/safety_island/zephyr/src`.
 - For Zephyr RTOS core or module dependency changes, start under
   `hsoc-stack/components/system_mgmt/zephyrproject`.
-- For Yocto build integration of Zephyr CL1 images, start in
-  `arm-zena-css/yocto/meta-zena-css-safety-island/recipes-kernel/zephyr-kernel`.
+- For Apollo Yocto build integration of Zephyr CL1 images, start in
+  `hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel`. Use
+  `arm-zena-css/yocto/meta-zena-css-safety-island/recipes-kernel/zephyr-kernel`
+  for upstream/common Safety Island recipe changes.
 - For AP-side HIPC and Linux remoteproc/RPMsg integration, inspect
   `sw-ref-stack/yocto/meta-arm-auto-solutions/recipes-kernel`.
 - For PFDI behavior, separate AP-side SMCCC/SMC paths from Safety Island local

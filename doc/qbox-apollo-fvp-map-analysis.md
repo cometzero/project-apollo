@@ -35,7 +35,7 @@ behavior.
   `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_mmap.h`,
   `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h`
 - Apollo-owned Safety Island CL1 Zephyr board:
-  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/boards/arm/fvp_rd_aspen_safety_island/fvp_rd_aspen_safety_island_c1.dts`
+  `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts`
 
 ## Address-Space Model
 

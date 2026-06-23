@@ -23,7 +23,7 @@
 | RD-Aspen 설계 설명 | `arm-zena-css/documentation/design/components.rst`, `arm-zena-css/documentation/design/hipc.rst`, `arm-zena-css/documentation/design/platform_fault_detection_interface.rst`, `arm-zena-css/documentation/design/fmu.rst`, `arm-zena-css/documentation/design/ssu.rst` |
 | RSE/TF-M | `hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/partition/`, `hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/automotive_rd/apollo-fvp/` |
 | Safety Island CL0/SCP | `hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/` |
-| Safety Island CL1/Zephyr | `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/boards/arm/fvp_rd_aspen_safety_island/`, `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/overlays/` |
+| Safety Island CL1/Zephyr | `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/`, `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/overlays/`, `arm-zena-css/components/safety_island/zephyr/src/` |
 | Primary Compute DT | `hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-fvp.dts`, `hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-fvp.dtsi`, `hsoc-stack/components/primary_compute/trusted-firmware-a/fdts/apollo_fvp.dtsi`, `hsoc-stack/components/primary_compute/trusted-firmware-a/fdts/apollo_fvp-defs.dtsi` |
 | Linux 드라이버 | `sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src/arm_si_rproc.c`, `sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src/rpmsg_net.c`, `sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src/pfdi_misc.c`, `hsoc-stack/components/primary_compute/linux/drivers/mailbox/arm_mhuv3.c` |
 
@@ -298,9 +298,12 @@ SCMI protocol, 또는 해당 agent 서비스가 올라오지 않은 상태를 �
 ### 코어와 역할
 
 Safety Island CL1은 CFG2에서 활성화되는 4-core Cortex-R82AE SMP cluster이며
-Zephyr가 실행된다. 현재 Apollo FVP 소스는 Zephyr board/overlay 이름으로
-`fvp_rd_aspen_safety_island_c1`을 사용한다. 이 이름은 Apollo 전용 소스가
-아직 RD-Aspen CL1 구성을 재사용하고 있다는 의미이다.
+Zephyr가 실행된다. 현재 Apollo FVP 소스는 Apollo 전용 Zephyr board/overlay
+이름으로 `apollo_fvp_safety_island_c1`을 사용한다. 공통 Safety Island
+driver, library, subsystem, sample app source는
+`arm-zena-css/components/safety_island/zephyr/src/`에서 공유하고, Apollo
+board와 overlay는 `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/`
+에서 관리한다.
 
 CL1의 주요 기능은 다음과 같다.
 
@@ -698,5 +701,6 @@ test/control interface를 제공한다. 이 드라이버는 firmware PFDI versio
   I/O fidelity 목표가 올라가면 별도 register-level 분석이 필요하다.
 - FMU/SSU는 SCP config와 문서상 구조를 정리했지만, fault injection과
   interrupt propagation은 runtime 로그와 함께 추가 검증해야 한다.
-- Apollo 전용 포팅 레이어가 RD-Aspen과 달라지는 시점에는 이 문서의
-  `fvp_rd_aspen_safety_island` 재사용 가정을 갱신해야 한다.
+- Apollo 전용 포팅 레이어가 더 분리되면 이 문서의
+  `apollo_fvp_safety_island_c1` board/overlay 근거와 공통 Safety Island
+  source 근거를 함께 갱신해야 한다.

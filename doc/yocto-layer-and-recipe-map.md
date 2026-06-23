@@ -155,8 +155,10 @@ When changing image composition, inspect:
   `hsoc-stack/yocto/meta-hsoc-auto-solutions`.
 - Put upstream RD-Aspen BSP changes in `arm-zena-css/yocto/meta-zena-css-bsp`
   only when the intended owner is Arm Zena CSS rather than the Apollo port.
-- Put Apollo Safety Island CL1 source changes in
-  `hsoc-stack/components/system_mgmt/zephyrproject/safety_island/` and Apollo
+- Put Apollo Safety Island CL1 board, DTS, overlay, and HSOC integration
+  changes in `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/`;
+  put common Safety Island Zephyr driver, library, subsystem, and sample app
+  changes in `arm-zena-css/components/safety_island/zephyr/src/`; put Apollo
   Zephyr build metadata in `hsoc-stack/yocto/meta-hsoc-bsp`; use
   `arm-zena-css/yocto/meta-zena-css-safety-island` only for upstream Zena CSS
   layer changes.
