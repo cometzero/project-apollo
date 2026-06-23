@@ -135,6 +135,8 @@ LOGIN_RETRY_READY_PATTERNS = [
 ]
 LOGIN_MAX_ATTEMPTS = 80
 ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+")
+TERMINAL_STATUS_QUERY = "\x1b[6n"
+TERMINAL_STATUS_RESPONSE = "\x1b[32766;32766R"
 
 
 class ConsoleCapture:
@@ -156,6 +158,7 @@ class ConsoleCapture:
         self.proc: subprocess.Popen[str] | None = None
         self._file = None
         self._reader_thread: threading.Thread | None = None
+        self._answer_terminal_status = False
 
     def start(self) -> None:
         telnet = shutil.which("telnet")
@@ -187,6 +190,10 @@ class ConsoleCapture:
             return
         for line in self.proc.stdout:
             self._file.write(line)
+            if self.term == "terminal_ns_uart0" and login_ready(line):
+                self._answer_terminal_status = True
+            if self._answer_terminal_status and TERMINAL_STATUS_QUERY in line:
+                self._send(TERMINAL_STATUS_RESPONSE)
             self._record_markers(line)
 
     def _record_markers(self, line: str) -> None:
@@ -205,10 +212,13 @@ class ConsoleCapture:
                 }
 
     def sendline(self, line: str) -> None:
+        self._send(f"{line}\n")
+
+    def _send(self, text: str) -> None:
         if not self.proc or not self.proc.stdin:
             return
         try:
-            self.proc.stdin.write(f"{line}\n")
+            self.proc.stdin.write(text)
             self.proc.stdin.flush()
         except BrokenPipeError:
             return
