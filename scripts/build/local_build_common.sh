@@ -32,7 +32,8 @@ QBOX_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
 TFM_SRC="${TFM_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/trusted-firmware-m}"
 SCP_SRC="${SCP_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/scp-firmware}"
 ZEPHYRPROJECT_SRC="${ZEPHYRPROJECT_SRC:-${ROOT_DIR}/hsoc-stack/components/system_mgmt/zephyrproject}"
-ZEPHYR_SAFETY_ISLAND_SRC="${ZEPHYR_SAFETY_ISLAND_SRC:-${ZEPHYRPROJECT_SRC}/safety_island}"
+ZEPHYR_SAFETY_ISLAND_SRC="${ZEPHYR_SAFETY_ISLAND_SRC:-${ROOT_DIR}/arm-zena-css/components/safety_island/zephyr/src}"
+ZEPHYR_HSOC_SRC="${ZEPHYR_HSOC_SRC:-${ZEPHYRPROJECT_SRC}/zephyr_hsoc_src}"
 ZEPHYR_MODULES_LIST="${ZEPHYR_MODULES_LIST:-${ZEPHYRPROJECT_SRC}/apollo-modules.list}"
 ZEPHYR_DEPS_SRC="${ZEPHYR_DEPS_SRC:-}"
 TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/trusted-firmware-a}"
@@ -312,6 +313,34 @@ reset_zephyr_generated_links()
     rm -rf "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_links"
     rm -f "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_subdirs.trigger" \
         "${ZEPHYR_BUILD_DIR}/zephyr/misc/generated/syscalls_subdirs.txt"
+}
+
+reset_zephyr_build_if_hsoc_source_changed()
+{
+    local marker="${ZEPHYR_BUILD_DIR}/.apollo-zephyr-hsoc-src"
+    local expected
+    local recorded
+
+    expected="$(canonical_dir "${ZEPHYR_HSOC_SRC}")"
+    if [[ -f "${marker}" ]]; then
+        recorded="$(cat "${marker}")"
+    elif [[ -f "${ZEPHYR_BUILD_DIR}/CMakeCache.txt" ]]; then
+        recorded=""
+    else
+        mkdir -p "${ZEPHYR_BUILD_DIR}"
+        printf '%s\n' "${expected}" > "${marker}"
+        return 0
+    fi
+
+    if [[ "${recorded}" != "${expected}" ]]; then
+        log "Removing stale Zephyr build directory for ${ZEPHYR_BUILD_DIR}"
+        log "  previous HSOC source: ${recorded:-unknown}"
+        log "  current HSOC source:  ${expected}"
+        rm -rf "${ZEPHYR_BUILD_DIR}"
+    fi
+
+    mkdir -p "${ZEPHYR_BUILD_DIR}"
+    printf '%s\n' "${expected}" > "${marker}"
 }
 
 path_prepend()
@@ -968,7 +997,7 @@ zephyr_deps_root_valid()
 
     while IFS= read -r rel; do
         case "${rel}" in
-            ""|\#*|safety_island) continue ;;
+            ""|\#*|arm_zena_safety_island|zephyr_hsoc_src) continue ;;
         esac
         [[ -d "${root}/${rel}" ]] || return 1
     done < "${ZEPHYR_MODULES_LIST}"
@@ -1071,11 +1100,11 @@ zephyr_modules_arg()
                 fi
                 ;;
         esac
-        if [[ "${rel}" == "safety_island" ]]; then
-            module_path="${ZEPHYR_SAFETY_ISLAND_SRC}"
-        else
-            module_path="${deps_root}/${rel}"
-        fi
+        case "${rel}" in
+            arm_zena_safety_island) module_path="${ZEPHYR_SAFETY_ISLAND_SRC}" ;;
+            zephyr_hsoc_src) module_path="${ZEPHYR_HSOC_SRC}" ;;
+            *) module_path="${deps_root}/${rel}" ;;
+        esac
         [[ -d "${module_path}" ]] ||
             die "missing Zephyr module directory listed in ${ZEPHYR_MODULES_LIST}: ${rel}"
         modules+=("${module_path}")
@@ -1121,10 +1150,12 @@ build_zephyr()
     require_dir "${ZEPHYRPROJECT_SRC}"
     require_dir "${ZEPHYRPROJECT_SRC}/zephyr"
     require_dir "${ZEPHYR_SAFETY_ISLAND_SRC}"
+    require_dir "${ZEPHYR_HSOC_SRC}"
     reset_cmake_build_if_source_changed "${ZEPHYR_BUILD_DIR}" "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample"
+    reset_zephyr_build_if_hsoc_source_changed
     mkdir -p "${ZEPHYR_BUILD_DIR}" "${FW_DIR}"
 
-    local board="fvp_rd_aspen_safety_island_c1"
+    local board="apollo_fvp_safety_island_c1"
     local zephyr_sdk
     local zephyr_base="${ZEPHYRPROJECT_SRC}/zephyr"
     local zephyr_dir="${zephyr_base}/share/zephyr-package/cmake"
@@ -1158,11 +1189,11 @@ build_zephyr()
     python="$(yocto_native_python)"
     pythonpath="$(yocto_native_pythonpath)"
     modules="$(zephyr_modules_arg "${zephyr_deps_root}")"
-    dtc_overlay="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.overlay"
-    overlay_config="${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/hipc/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/zperf/${board}.conf;${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi/${board}.conf"
+    dtc_overlay="${ZEPHYR_HSOC_SRC}/overlays/hipc/${board}.overlay"
+    overlay_config="${ZEPHYR_HSOC_SRC}/overlays/hipc/${board}.conf;${ZEPHYR_HSOC_SRC}/overlays/zperf/${board}.conf;${ZEPHYR_HSOC_SRC}/overlays/pfdi/${board}.conf"
     if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
-        dtc_overlay="${dtc_overlay};${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi_agent/${board}.overlay"
-        overlay_config="${overlay_config};${ZEPHYR_SAFETY_ISLAND_SRC}/overlays/pfdi_agent/${board}.conf"
+        dtc_overlay="${dtc_overlay};${ZEPHYR_HSOC_SRC}/overlays/pfdi_agent/${board}.overlay"
+        overlay_config="${overlay_config};${ZEPHYR_HSOC_SRC}/overlays/pfdi_agent/${board}.conf"
     fi
 
     export ZEPHYR_SDK_INSTALL_DIR="${zephyr_sdk}"

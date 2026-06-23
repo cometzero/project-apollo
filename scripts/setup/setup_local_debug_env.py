@@ -85,7 +85,10 @@ COMPONENTS = (
             "deploy/firmware/zephyr-demos-cl1.elf",
         ),
         ("z_cstart", "main"),
-        ("hsoc-stack/components/system_mgmt/zephyrproject/safety_island",),
+        (
+            "arm-zena-css/components/safety_island/zephyr/src",
+            "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src",
+        ),
     ),
     Component(
         "tfa-bl2",

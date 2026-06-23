@@ -52,7 +52,7 @@ CHECKS = {
         ("irq:ledger", "doc/qbox-apollo-fvp-map-analysis.md", r"Interrupt Map"),
         ("irq:gic-multiview", "doc/qbox-apollo-fvp-full-system-design.md", r"Safety Island GIC Multiview Design"),
         ("irq:si0-header", "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h", r"IRQ"),
-        ("irq:cl1-dts", "hsoc-stack/components/system_mgmt/zephyrproject/safety_island/boards/arm/fvp_rd_aspen_safety_island/fvp_rd_aspen_safety_island_c1.dts", r"gic"),
+        ("irq:cl1-dts", "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts", r"gic"),
         ("irq:multiview-task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-029"),
     ],
     "atu": [
