@@ -642,6 +642,7 @@ add_yocto_native_paths()
     path_prepend "${native}/python3-native/usr/bin"
     path_prepend "${native}/fiptool-native/usr/bin"
     path_prepend "${native}/cot-dt2c-native/usr/bin"
+    path_prepend "${native}/efitools-native/usr/bin"
 
     local arm_none
     arm_none="$(find_first_file "${native}/gcc-arm-none-eabi-native" "arm-none-eabi-gcc" || true)"
@@ -665,6 +666,7 @@ setup_build_environment()
     require_command openssl
     require_command fiptool
     require_command mkimage
+    require_command cert-to-efi-sig-list
     require_command cpio
     require_command gzip
     require_command depmod
@@ -1286,6 +1288,8 @@ build_uboot()
             printf 'EFI_CAPSULE_CRT_FILE=%s\n' "${crt_rel}"
             fingerprint_file_hash "${key}" u-boot-capsule-key
             fingerprint_file_hash "${UBOOT_SRC}/configs/apollo_fvp_defconfig" u-boot-defconfig
+            find "${UBOOT_SRC}" \( -name Kconfig -o -name 'Kconfig.*' \) \
+                -type f -printf 'u-boot-kconfig/%P|%s|%T@\n' | LC_ALL=C sort
         } | sha256sum | awk '{print $1}'
     )"
     if [[ "${APOLLO_UBOOT_FORCE_CONFIG:-0}" != "1" ]] &&
@@ -1296,12 +1300,12 @@ build_uboot()
     else
         run_logged u-boot-defconfig make -C "${UBOOT_SRC}" \
             O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
-            apollo_fvp_defconfig
+            RD_ASPEN_VARIANT="${VARIANT}" apollo_fvp_defconfig
         "${UBOOT_SRC}/scripts/config" --file "${UBOOT_BUILD_DIR}/.config" \
             --set-str EFI_CAPSULE_CRT_FILE "${crt_rel}"
         run_logged u-boot-olddefconfig make -C "${UBOOT_SRC}" \
             O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
-            olddefconfig
+            RD_ASPEN_VARIANT="${VARIANT}" olddefconfig
         printf '%s\n' "${config_digest}" > "${config_marker}"
     fi
 
