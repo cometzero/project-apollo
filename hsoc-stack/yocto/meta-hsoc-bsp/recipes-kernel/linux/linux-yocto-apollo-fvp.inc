@@ -41,6 +41,44 @@ KBUILD_DEFCONFIG:pn-linux-yocto:apollo-fvp = "apollo_fvp_defconfig"
 KBUILD_DEFCONFIG:pn-linux-yocto-rt:apollo-fvp = "apollo_fvp_defconfig"
 KERNEL_DEVICETREE:apollo-fvp = "arm/apollo-fvp.dtb"
 
+APOLLO_FVP_KERNEL_DEFCONFIG ?= "apollo_fvp_defconfig"
+APOLLO_FVP_KERNEL_DEFCONFIG_PATH ?= "${S}/arch/${ARCH}/configs/${APOLLO_FVP_KERNEL_DEFCONFIG}"
+
+do_defconfig() {
+    bbplain "Applying ${APOLLO_FVP_KERNEL_DEFCONFIG} to ${B}/.config"
+    oe_runmake -C ${S} O=${B} ${APOLLO_FVP_KERNEL_DEFCONFIG}
+}
+do_defconfig[dirs] = "${B}"
+do_defconfig[nostamp] = "1"
+addtask defconfig after do_configure
+
+python apollo_fvp_kernel_menuconfig_prepare() {
+    import os
+
+    config = os.path.join(d.getVar("KCONFIG_CONFIG_ROOTDIR"), ".config")
+    if os.path.exists(config):
+        return
+
+    bb.note("No %s found; applying %s before menuconfig" %
+            (config, d.getVar("APOLLO_FVP_KERNEL_DEFCONFIG")))
+    bb.build.exec_func("do_defconfig", d)
+}
+do_menuconfig[prefuncs] += "apollo_fvp_kernel_menuconfig_prepare"
+
+do_savedefconfig() {
+    if [ ! -f "${B}/.config" ]; then
+        bbnote "No ${B}/.config found; applying ${APOLLO_FVP_KERNEL_DEFCONFIG}"
+        oe_runmake -C ${S} O=${B} ${APOLLO_FVP_KERNEL_DEFCONFIG}
+    fi
+
+    oe_runmake -C ${S} O=${B} savedefconfig
+    install -m 0644 "${B}/defconfig" "${APOLLO_FVP_KERNEL_DEFCONFIG_PATH}"
+    rm -f "${B}/defconfig"
+    bbplain "Saved ${APOLLO_FVP_KERNEL_DEFCONFIG_PATH}"
+}
+do_savedefconfig[dirs] = "${B}"
+do_savedefconfig[nostamp] = "1"
+
 do_shared_workdir:append:apollo-fvp() {
     if [ "${MODSIGN_ENABLED}" = "1" ]; then
         if [ ! -f "${B}/modsign_key.pem" ]; then
