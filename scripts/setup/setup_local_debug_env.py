@@ -112,7 +112,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/optee-os/core/tee.elf",),
         ("_start", "generic_boot_init_primary", "init_primary_helper"),
-        ("hsoc-stack/components/primary_compute/optee-os",),
+        ("hsoc-stack/components/primary_compute/optee_os",),
     ),
     Component(
         "u-boot",

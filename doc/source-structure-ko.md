@@ -39,7 +39,7 @@ Primary Compute 소스는 `hsoc-stack/components/primary_compute/` 아래에 있
 | `hsoc-stack/components/primary_compute/linux/` | Apollo FVP용 Linux kernel source, DTS, `apollo_fvp_defconfig`, PREEMPT_RT 기준. |
 | `hsoc-stack/components/primary_compute/u-boot/` | Apollo FVP용 U-Boot source와 local build 대상. |
 | `hsoc-stack/components/primary_compute/trusted-firmware-a/` | Apollo FVP용 TF-A source와 platform 포팅. |
-| `hsoc-stack/components/primary_compute/optee-os/` | Apollo FVP용 OP-TEE OS source. |
+| `hsoc-stack/components/primary_compute/optee_os/` | Apollo FVP용 OP-TEE OS source. |
 | `hsoc-stack/components/primary_compute/buildroot/` | 로컬 initramfs/rootfs 생성을 위한 Buildroot source. |
 
 System Management와 Safety Island 소스는

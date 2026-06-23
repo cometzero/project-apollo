@@ -86,8 +86,8 @@
 	path = hsoc-stack/components/system_mgmt/scp-firmware
 	url = git@github.com:cometzero/SCP-firmware.git
 	branch = apollo-fvp-scp-2.16
-[submodule "hsoc-stack/components/primary_compute/optee-os"]
-	path = hsoc-stack/components/primary_compute/optee-os
+[submodule "hsoc-stack/components/primary_compute/optee_os"]
+	path = hsoc-stack/components/primary_compute/optee_os
 	url = git@github.com:cometzero/optee_os.git
 	branch = apollo-fvp-optee-4.7
 [submodule "hsoc-stack/components/primary_compute/buildroot"]
