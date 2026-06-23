@@ -362,6 +362,7 @@ start_tmux()
     local fvp_pane_id
     fvp_pane_id="$(tmux_cmd new-session -d -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n fvp bash -lc "${supervisor_body}")"
     tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
+    tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" synchronize-panes off
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-status top
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-format '#{pane_index}: #{pane_title}'
     tmux_cmd select-pane -t "${fvp_pane_id}" -T fvp
