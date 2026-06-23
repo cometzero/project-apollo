@@ -92,8 +92,14 @@ The active `build/conf/local.conf` sets `RD_ASPEN_VARIANT = "cfg2"` and
 
 ## Image Recipes
 
-`baremetal-image.bb` is an EWAOL-based image with required image feature
-`baremetal` and conflicts against `virtualization` and `domu`
+`nexios-image.bb` is the active Apollo Auto AD Nexios image. It is copied from
+the EWAOL baremetal image shape, keeps required image feature `baremetal`,
+conflicts against `virtualization` and `domu`, and is the target selected by
+the project `build.sh` entrypoint
+(`hsoc-stack/yocto/meta-hsoc-auto-solutions/recipes-core/images/nexios-image.bb`).
+
+The upstream `baremetal-image.bb` remains the source reference for the original
+EWAOL-based image with required image feature `baremetal`
 (`sw-ref-stack/yocto/meta-arm-auto-solutions/recipes-core/images/baremetal-image.bb:14`,
 `sw-ref-stack/yocto/meta-arm-auto-solutions/recipes-core/images/baremetal-image.bb:18`,
 `sw-ref-stack/yocto/meta-arm-auto-solutions/recipes-core/images/baremetal-image.bb:19`,

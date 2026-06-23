@@ -29,7 +29,7 @@ Options:
   --deploy-dir PATH    image deploy directory
                        (default: <build-dir>/tmp_baremetal/deploy/images/<machine>)
   --fvpconf PATH       FVP config to run
-                       (default: <deploy-dir>/baremetal-image-<machine>.fvpconf)
+                       (default: <deploy-dir>/nexios-image-<machine>.fvpconf)
   --session NAME       tmux session name
                        (default: apollo-fvp-yocto-<timestamp>)
   --out-dir PATH       log/output directory
@@ -48,7 +48,7 @@ Examples:
   ./run_fvp.sh
   ./run_fvp.sh --no-attach
   ./run_fvp.sh --dry-run
-  ./run_fvp.sh --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf
+  ./run_fvp.sh --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf
 
 Inside tmux, F12 kills the whole session.
 EOF
@@ -81,7 +81,7 @@ resolve_deploy_dir()
 resolve_fvpconf()
 {
     local deploy_dir="$1"
-    local stable="${deploy_dir}/baremetal-image-${MACHINE}.fvpconf"
+    local stable="${deploy_dir}/nexios-image-${MACHINE}.fvpconf"
     local latest
 
     if [[ -n "${FVP_CONF}" ]]; then
@@ -96,7 +96,7 @@ resolve_fvpconf()
 
     latest="$(
         find "${deploy_dir}" -maxdepth 1 -type f \
-            -name "baremetal-image-${MACHINE}-*.fvpconf" \
+            -name "nexios-image-${MACHINE}-*.fvpconf" \
             -printf '%T@ %p\n' 2>/dev/null |
             sort -nr |
             sed -n '1s/^[^ ]* //p'

@@ -74,7 +74,7 @@ def run_dry_run(
 def test_run_fvp_uses_stable_yocto_fvpconf(tmp_path: Path) -> None:
     deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
     flash_image = deploy_dir / "ap-flash.img"
-    fvpconf = deploy_dir / "baremetal-image-apollo-fvp.fvpconf"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
     deploy_dir.mkdir(parents=True)
     flash_image.write_bytes(b"flash")
     write_fvpconf(fvpconf, flash_image)
@@ -91,8 +91,8 @@ def test_run_fvp_uses_stable_yocto_fvpconf(tmp_path: Path) -> None:
 def test_run_fvp_falls_back_to_latest_timestamped_fvpconf(tmp_path: Path) -> None:
     deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
     flash_image = deploy_dir / "ap-flash.img"
-    older = deploy_dir / "baremetal-image-apollo-fvp-20260101000000.fvpconf"
-    newer = deploy_dir / "baremetal-image-apollo-fvp-20260202000000.fvpconf"
+    older = deploy_dir / "nexios-image-apollo-fvp-20260101000000.fvpconf"
+    newer = deploy_dir / "nexios-image-apollo-fvp-20260202000000.fvpconf"
     deploy_dir.mkdir(parents=True)
     flash_image.write_bytes(b"flash")
     write_fvpconf(older, flash_image)
@@ -109,7 +109,7 @@ def test_run_fvp_falls_back_to_latest_timestamped_fvpconf(tmp_path: Path) -> Non
 def test_run_fvp_forwards_extra_fvp_args(tmp_path: Path) -> None:
     deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
     flash_image = deploy_dir / "ap-flash.img"
-    fvpconf = deploy_dir / "baremetal-image-apollo-fvp.fvpconf"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
     deploy_dir.mkdir(parents=True)
     flash_image.write_bytes(b"flash")
     write_fvpconf(fvpconf, flash_image)

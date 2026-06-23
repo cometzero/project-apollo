@@ -17,7 +17,7 @@ then delegates tmux pane setup and UART log capture to
 
 Default Yocto inputs:
 
-- `build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf`
+- `build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf`
 - `build/fvp-tmux/apollo-fvp-<timestamp>/`
 
 `scripts/run/run_local_fvp_tmux.sh` is the lower-level runner for local-build
@@ -63,7 +63,7 @@ scripts/run/runfvp_log_boot.py
 By default it uses:
 
 - `layers/meta-arm/scripts/runfvp`
-- `build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf`
+- `build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf`
 - `build/fvp-boot-logs/apollo-fvp-<timestamp>/`
 
 The script launches FVP without tmux or GUI terminals, captures FVP stdout, opens

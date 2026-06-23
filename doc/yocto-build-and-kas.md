@@ -7,8 +7,9 @@ Generated: 2026-05-15
 The build is driven by kas YAML fragments from both `arm-zena-css/yocto/kas`
 and `sw-ref-stack/yocto/kas`. The current generated `.config.yaml` composes the
 Zena BSP, UEFI capsule support, baremetal architecture, demos, and pinned
-release SHAs. The selected BitBake target is `baremetal-image` through the
-baremetal kas fragment.
+release SHAs. The upstream baremetal kas fragment selects `baremetal-image`;
+the active project entrypoint now builds the Apollo `nexios-image` target for
+the `auto-ad-nexios` distro.
 
 ## Current Include Stack
 
@@ -109,8 +110,8 @@ support, and selects `baremetal-image`
 `sw-ref-stack/yocto/kas/baremetal.yml:23`,
 `sw-ref-stack/yocto/kas/baremetal.yml:26`).
 
-The current generated build output confirms that the baremetal target completed:
-the cooker log reports all 6590 attempted tasks succeeded
+The historical generated build output confirms that the upstream baremetal
+target completed: the cooker log reports all 6590 attempted tasks succeeded
 (`build/tmp_baremetal/log/cooker/fvp-rd-aspen/20260510034323.log` tail).
 
 ## Virtualization Build Path

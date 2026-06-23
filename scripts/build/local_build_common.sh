@@ -588,7 +588,7 @@ build_sdk()
     local installer
     installer="$(find "${YOCTO_TMP}/deploy/sdk" -maxdepth 1 -type f -name '*.sh' 2>/dev/null | sort | tail -n 1 || true)"
     if [[ -z "${installer}" ]]; then
-        log "Creating Yocto SDK with bitbake baremetal-image -c populate_sdk"
+        log "Creating Yocto SDK with bitbake nexios-image -c populate_sdk"
         (
             cd "${ROOT_DIR}"
             clear_sdk_env_for_yocto
@@ -597,7 +597,7 @@ build_sdk()
             source layers/poky/oe-init-build-env build >/dev/null
             set -u
             prepare_bitbake_extra_args
-            bitbake "${BITBAKE_EXTRA_ARGS[@]}" baremetal-image -c populate_sdk
+            bitbake "${BITBAKE_EXTRA_ARGS[@]}" nexios-image -c populate_sdk
         ) 2>&1 | tee "${LOG_DIR}/yocto-populate-sdk.log"
         installer="$(find "${YOCTO_TMP}/deploy/sdk" -maxdepth 1 -type f -name '*.sh' | sort | tail -n 1)"
     fi
@@ -2705,7 +2705,7 @@ EOF
 
 create_fvpconf()
 {
-    local base="${YOCTO_DEPLOY_DIR}/baremetal-image-${MACHINE}.fvpconf"
+    local base="${YOCTO_DEPLOY_DIR}/nexios-image-${MACHINE}.fvpconf"
     require_file "${base}"
     local out="${DEPLOY_DIR}/${MACHINE}-local.fvpconf"
     mkdir -p "${DEPLOY_DIR}"

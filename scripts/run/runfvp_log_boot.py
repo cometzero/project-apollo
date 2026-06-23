@@ -634,7 +634,7 @@ def main() -> int:
             root
             / "build/tmp_baremetal/deploy/images"
             / args.machine
-            / f"baremetal-image-{args.machine}.fvpconf"
+            / f"nexios-image-{args.machine}.fvpconf"
         )
     if args.out_dir is None:
         args.out_dir = root / "build/fvp-boot-logs" / f"{args.machine}-{timestamp()}"

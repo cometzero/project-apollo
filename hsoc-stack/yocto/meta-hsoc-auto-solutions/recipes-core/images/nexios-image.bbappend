@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: MIT
 
-IMAGE_FEATURES:append:pn-baremetal-image:auto-ad-nexios = " read-only-rootfs overlayfs-etc"
-IMAGE_INSTALL:append:pn-baremetal-image:auto-ad-nexios = " auto-ad-nexios-storage"
+IMAGE_FEATURES:append:pn-nexios-image:auto-ad-nexios = " read-only-rootfs overlayfs-etc"
+IMAGE_INSTALL:append:pn-nexios-image:auto-ad-nexios = " auto-ad-nexios-storage"
 
-CONVERSION_CMD:verity:append:pn-baremetal-image:auto-ad-nexios = "; auto_ad_nexios_deploy_dm_verity_env ${type}"
+CONVERSION_CMD:verity:append:pn-nexios-image:auto-ad-nexios = "; auto_ad_nexios_deploy_dm_verity_env ${type}"
 
 inherit_defer ${@'auto-ad-nexios-uki-ab' if d.getVar("DISTRO") == "auto-ad-nexios" else ''}
 
-ROOTFS_POSTPROCESS_COMMAND:append:pn-baremetal-image:auto-ad-nexios = " auto_ad_nexios_check_overlay_storage; "
+ROOTFS_POSTPROCESS_COMMAND:append:pn-nexios-image:auto-ad-nexios = " auto_ad_nexios_check_overlay_storage; "
 
 auto_ad_nexios_deploy_dm_verity_env() {
     local type="$1"

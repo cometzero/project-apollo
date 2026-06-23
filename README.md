@@ -62,7 +62,7 @@ scripts/setup/bootstrap_project.sh --jobs 8 --force
 
 The Yocto entrypoint uses the Apollo template under
 `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/` and builds the
-`baremetal-image` target for `MACHINE = "apollo-fvp"`:
+`nexios-image` target for `MACHINE = "apollo-fvp"`:
 
 ```bash
 ./build.sh
@@ -75,7 +75,7 @@ After a Yocto build, run the generated Apollo FVP image in tmux with:
 ```
 
 The wrapper uses
-`build/tmp_baremetal/deploy/images/apollo-fvp/baremetal-image-apollo-fvp.fvpconf`
+`build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf`
 by default, starts an interactive tmux session, and mirrors subsystem UARTs to
 `build/fvp-tmux/apollo-fvp-<timestamp>/`.
 
@@ -113,7 +113,7 @@ sources:
 ```
 
 When the SDK is missing, `local-build.sh` creates it with
-`bitbake baremetal-image -c populate_sdk` and applies the same automatic
+`bitbake nexios-image -c populate_sdk` and applies the same automatic
 BitBake resource limits as `build.sh`. Use `APOLLO_BUILD_THREADS`,
 `APOLLO_PARALLEL_MAKE`, or `APOLLO_AUTO_RESOURCE_LIMITS=0` for the same
 overrides.

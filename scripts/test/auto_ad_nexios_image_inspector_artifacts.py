@@ -13,10 +13,10 @@ from auto_ad_nexios_image_inspector_lib import (
 
 
 def inspect_verity(deploy_dir, image_base):
-    names = [f"{image_base}.ext4.verity", "baremetal-image-apollo-fvp.ext4.verity"]
+    names = [f"{image_base}.ext4.verity", "nexios-image-apollo-fvp.ext4.verity"]
     env_names = [
         f"{image_base}.ext4.verity.env",
-        "baremetal-image-apollo-fvp.ext4.verity.env",
+        "nexios-image-apollo-fvp.ext4.verity.env",
     ]
     artifact = find_deploy_artifact(deploy_dir, names)
     env = find_deploy_artifact(deploy_dir, env_names)

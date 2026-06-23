@@ -116,4 +116,4 @@ EOF
     echo "notice: BitBake worker network sandbox is unsupported; using ${HOST_CONF}" >&2
 fi
 
-bitbake "${BITBAKE_ARGS[@]}" baremetal-image
+bitbake "${BITBAKE_ARGS[@]}" nexios-image
