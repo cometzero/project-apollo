@@ -49,6 +49,10 @@ auto_ad_nexios_check_overlay_storage() {
         bbfatal "auto-ad-nexios /data mount point is missing from rootfs"
     fi
 
+    if [ ! -d "${IMAGE_ROOTFS}/efi" ]; then
+        bbfatal "auto-ad-nexios /efi mount point is missing from rootfs"
+    fi
+
     if ! grep -q '^if false; then$' "${IMAGE_ROOTFS}/sbin/init"; then
         bbfatal "auto-ad-nexios overlayfs-etc preinit must not create mount dirs by remounting / rw"
     fi
@@ -67,5 +71,21 @@ auto_ad_nexios_check_overlay_storage() {
 
     if ! grep -q '^What=PARTLABEL=data$' "${IMAGE_ROOTFS}${systemd_system_unitdir}/data.mount"; then
         bbfatal "auto-ad-nexios data.mount must use PARTLABEL=data"
+    fi
+
+    for unit in systemd-resolved.service systemd-timesyncd.service; do
+        if ! grep -q '^After=var-volatile-lib.service$' \
+            "${IMAGE_ROOTFS}${systemd_system_unitdir}/${unit}.d/auto-ad-nexios-after-var-lib.conf"
+        then
+            bbfatal "auto-ad-nexios ${unit} must start after volatile /var/lib is mounted"
+        fi
+    done
+
+    if [ -L "${IMAGE_ROOTFS}${sysconfdir}/systemd/system/default.target.wants/podman.service" ]; then
+        bbfatal "auto-ad-nexios must not auto-start podman.service; use podman.socket activation"
+    fi
+
+    if [ ! -L "${IMAGE_ROOTFS}${sysconfdir}/systemd/system/sockets.target.wants/podman.socket" ]; then
+        bbfatal "auto-ad-nexios must enable podman.socket for socket activation"
     fi
 }
