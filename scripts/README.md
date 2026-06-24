@@ -6,7 +6,8 @@ automation and documentation should call the categorized paths directly.
 ## Directories
 
 - `analyze/`: log, trace, and boot timing analysis helpers.
-- `build/`: local Apollo FVP build stage entrypoints.
+- `build/`: local Apollo FVP build stage entrypoints and sourceable component
+  modules.
 - `debug/`: GDB, Iris, and debug-session helpers.
 - `inspect/`: source, image, firmware, and environment inspection helpers.
 - `run/`: FVP and QBox runtime launchers, including tmux wrappers.
@@ -37,6 +38,11 @@ scripts/build/build_qbox.sh
 scripts/build/build_images.sh
 scripts/build/build_zephyr.sh
 ```
+
+The `scripts/build/build_*.sh` files are executable stage entrypoints. The
+`scripts/build/modules/build_*.sh` files are sourceable implementation modules
+loaded by those entrypoints through `scripts/build/local_build_common.sh`; do
+not execute module files directly.
 
 Use `./local-build.sh package` or `scripts/package.sh` to package existing
 local build outputs into a QBox-runnable local-build tree under

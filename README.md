@@ -131,6 +131,12 @@ To prebuild only the QBox targets used by the Apollo full-system runner:
 ./local-build.sh qbox
 ```
 
+The user-facing `local-build.sh` and `scripts/build/build_*.sh` stage
+entrypoints are intentionally thin. Component implementation lives in
+sourceable modules under `scripts/build/modules/`, while
+`scripts/build/local_build_common.sh` owns shared defaults, logging, cached
+command helpers, SDK environment setup, and the module loader.
+
 To check that Apollo/RD-Aspen overlay files have not drifted back into the QBox
 core tree:
 
