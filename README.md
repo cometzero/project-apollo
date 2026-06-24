@@ -68,6 +68,20 @@ The Yocto entrypoint uses the Apollo template under
 ./build.sh
 ```
 
+To build explicit dm-verity variants, use the Apollo Yocto multiconfig
+wrappers:
+
+```bash
+./build.sh --dm-verity=on
+./build.sh --dm-verity=off
+```
+
+The `on` variant uses `mc:apollo-fvp-dm-verity:nexios-image` and deploys
+under `build/tmp_baremetal-apollo-fvp-dm-verity/`. The `off` variant uses
+`mc:apollo-fvp-no-dm-verity:nexios-image`, deploys under
+`build/tmp_baremetal-apollo-fvp-no-dm-verity/`, builds a plain ext4 root slot,
+and omits the UKI initramfs.
+
 After a Yocto build, run the generated Apollo FVP image in tmux with:
 
 ```bash
