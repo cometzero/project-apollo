@@ -25,6 +25,12 @@ MISC_SIZE = 4 * 1024 * 1024
 MISC_CRC_OFFSET, MISC_CRC_SIZE, MISC_RESERVED_OFFSET = 0x18, 4, 0x1C
 ESP_REQUIRED_FILES = ("::/EFI/BOOT/bootaa64.efi", "::/loader/loader.conf",
                       "::/boot.scr", "::/Image")
+ESP_SECURE_BOOT_AUTH_FILES = (
+    "::/uefi-sb-authenticated-variables/PK.auth",
+    "::/uefi-sb-authenticated-variables/KEK.auth",
+    "::/uefi-sb-authenticated-variables/DB.auth",
+    "::/uefi-sb-authenticated-variables/DBX.auth",
+)
 SLOT_UKI_FILES = {"boot_a": "::/EFI/Linux/auto-ad-nexios-a.efi",
                   "boot_b": "::/EFI/Linux/auto-ad-nexios-b.efi"}
 SLOT_UKI_CMDLINES = {"boot_a": b"rootwait root=PARTLABEL=rootro_a ro console=",
@@ -248,7 +254,10 @@ def inspect_esp_slots(wic, by_name, secure_boot, deploy_dir):
     with tempfile.TemporaryDirectory(prefix="aanx-esp-") as tmpdir:
         for name in ("boot_a", "boot_b"):
             files = {}
-            for index, fat_path in enumerate(ESP_REQUIRED_FILES):
+            required_files = ESP_REQUIRED_FILES
+            if secure_boot == "1":
+                required_files += ESP_SECURE_BOOT_AUTH_FILES
+            for index, fat_path in enumerate(required_files):
                 out_path = Path(tmpdir) / f"{name}-{index}"
                 copy_from_fat(wic, by_name[name], fat_path, out_path)
                 files[fat_path.replace("::", "")] = out_path.stat().st_size
