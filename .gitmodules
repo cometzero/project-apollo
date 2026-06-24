@@ -106,3 +106,11 @@
 	path = hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src
 	url = git@github.com:cometzero/zephyr_hsoc_src.git
 	branch = main
+[submodule "hsoc-stack/yocto/meta-hsoc-auto-solutions"]
+	path = hsoc-stack/yocto/meta-hsoc-auto-solutions
+	url = git@github.com:cometzero/meta-hsoc-auto-solutions.git
+	branch = main
+[submodule "hsoc-stack/yocto/meta-hsoc-bsp"]
+	path = hsoc-stack/yocto/meta-hsoc-bsp
+	url = git@github.com:cometzero/meta-hsoc-bsp.git
+	branch = main
