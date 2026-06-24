@@ -79,6 +79,18 @@ The wrapper uses
 by default, starts an interactive tmux session, and mirrors subsystem UARTs to
 `build/fvp-tmux/apollo-fvp-<timestamp>/`.
 
+To run the same Yocto deploy image on QBox instead of FVP:
+
+```bash
+./run_qbox_yocto.sh
+```
+
+The wrapper resolves the Apollo Yocto WIC image, RSE/AP firmware images,
+TF-A/TF-M ELFs, DTB, and Safety Island images from
+`build/tmp_baremetal/deploy/images/apollo-fvp/` plus the matching Yocto
+workdir, then launches the Apollo full-system QBox runner. QBox itself must
+already be built, for example with `./local-build.sh qbox`.
+
 `build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
 LLVM/Rust native builds from overcommitting smaller machines while defaulting
@@ -181,6 +193,12 @@ options:
 
 ```bash
 ./run_qbox.sh
+```
+
+For Apollo images produced by the Yocto build, use:
+
+```bash
+./run_qbox_yocto.sh
 ```
 
 For non-interactive validation with file-backed logs:
