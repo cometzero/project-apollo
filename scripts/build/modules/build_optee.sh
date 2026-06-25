@@ -8,9 +8,25 @@ if [[ -z "${APOLLO_LOCAL_BUILD_COMMON_SOURCED:-}" ]]; then
     exit 1
 fi
 
+resolve_optee_yocto_workdir()
+{
+    local root="${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os"
+    local candidate
+
+    [[ -d "${root}" ]] || return 1
+    candidate="$(
+        find "${root}" -mindepth 1 -maxdepth 1 -type d -print |
+            LC_ALL=C sort |
+            tail -n 1
+    )"
+    [[ -n "${candidate}" ]] || return 1
+    printf '%s\n' "${candidate}"
+}
+
 detect_optee_sp_paths()
 {
-    local sp_dir="${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os/4.7.0/recipe-sysroot/usr/opteesp/bin"
+    local optee_work="$1"
+    local sp_dir="${optee_work}/recipe-sysroot/usr/opteesp/bin"
     [[ -d "${sp_dir}" ]] || return 0
     find "${sp_dir}" -maxdepth 1 -type f -name '[0-9a-fA-F]*.stripped.elf' | sort | xargs -r printf '%s '
 }
@@ -19,13 +35,15 @@ build_optee()
 {
     require_dir "${OPTEE_SRC}"
     mkdir -p "${OPTEE_BUILD_DIR}" "${DEPLOY_DIR}/optee"
-    local optee_work="${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os/4.7.0"
+    local optee_work
+    optee_work="$(resolve_optee_yocto_workdir)" ||
+        die "could not find Yocto optee-os workdir under ${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os"
     local optee_sysroot="${optee_work}/recipe-sysroot"
     local optee_native_python="${optee_work}/recipe-sysroot-native/usr/bin/python3-native/python3"
     require_file "${optee_native_python}"
 
     local sp_paths
-    sp_paths="$(detect_optee_sp_paths || true)"
+    sp_paths="$(detect_optee_sp_paths "${optee_work}" || true)"
     local cmd=(
         make -C "${OPTEE_SRC}" -j "${JOBS}" V=1
         PYTHON3="${optee_native_python}"
@@ -35,7 +53,7 @@ build_optee()
         OPTEE_CLIENT_EXPORT="${optee_sysroot}/usr"
         TEEC_EXPORT="${optee_sysroot}/usr"
         COMPILER=gcc
-        PLATFORM=automotive_rd-rdaspen
+        PLATFORM="${OPTEE_PLATFORM}"
         CFG_ARM64_core=y
         CROSS_COMPILE_core="${AARCH64_PREFIX}"
         CROSS_COMPILE_ta_arm64="${AARCH64_PREFIX}"

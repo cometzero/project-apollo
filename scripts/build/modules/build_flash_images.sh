@@ -65,10 +65,6 @@ sign_host_image()
     require_file "${key}"
     require_file "${FW_DIR}/enc_key_s.b64"
 
-    export OPENSSL_MODULES="${native_sysroot}/usr/lib/ossl-modules"
-    export LD_LIBRARY_PATH="${native_sysroot}/usr/lib:${LD_LIBRARY_PATH:-}"
-    export CRYPTOGRAPHY_OPENSSL_NO_LEGACY=1
-
     mkdir -p "${SIGN_DIR}/layouts" "$(dirname "${output}")"
     local layout
     layout="${SIGN_DIR}/layouts/$(basename -s .bin "${input}")_ns"
@@ -79,7 +75,10 @@ enum image_attributes {
 };
 EOF
 
-    run_logged "sign-$(basename "${output}")" "${python}" "${wrapper}" \
+    OPENSSL_MODULES="${native_sysroot}/usr/lib/ossl-modules" \
+    LD_LIBRARY_PATH="${native_sysroot}/usr/lib:${LD_LIBRARY_PATH:-}" \
+    CRYPTOGRAPHY_OPENSSL_NO_LEGACY=1 \
+        run_logged "sign-$(basename "${output}")" "${python}" "${wrapper}" \
         -v "${version}" \
         -s 1 \
         --layout "${layout}" \
@@ -134,12 +133,41 @@ create_rse_otp_image()
             ;;
     esac
 
-    run_logged rse-otp-host-provision python3 \
+    local tfm_work
+    tfm_work="$(tfm_recipe_workdir)"
+    local native_python="${tfm_work}/recipe-sysroot-native/usr/bin/python3-native/python3"
+    local tfm_common_scripts="${TFM_SRC}/platform/ext/target/arm/rse/common/scripts"
+    local native_site
+    native_site="$(first_existing_glob "${tfm_work}/recipe-sysroot-native/usr/lib/python*/site-packages" || true)"
+    require_file "${native_python}"
+    require_dir "${tfm_common_scripts}"
+    [[ -n "${native_site}" ]] || \
+        die "could not find TF-M native Python site-packages under ${tfm_work}"
+
+    local had_pythonpath=0
+    [[ -v PYTHONPATH ]] && had_pythonpath=1
+    local saved_pythonpath="${PYTHONPATH:-}"
+    local status
+    PYTHONPATH="${native_site}:${tfm_common_scripts}${PYTHONPATH:+:${PYTHONPATH}}"
+    export PYTHONPATH
+
+    set +e
+    run_logged rse-otp-host-provision "${native_python}" \
         "${ROOT_DIR}/scripts/setup/provision_rse_otp_image.py" \
         --root "${ROOT_DIR}" \
         --tfm-build-dir "${TFM_BUILD_DIR}" \
         --output "${image}" \
         --size "${size}"
+    status="$?"
+    set -e
+
+    if [[ "${had_pythonpath}" -eq 1 ]]; then
+        PYTHONPATH="${saved_pythonpath}"
+        export PYTHONPATH
+    else
+        unset PYTHONPATH
+    fi
+    return "${status}"
 }
 
 rse_otp_fingerprint()

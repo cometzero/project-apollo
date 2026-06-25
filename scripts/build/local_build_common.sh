@@ -7,8 +7,133 @@ APOLLO_LOCAL_BUILD_COMMON_SOURCED=1
 LOCAL_BUILD_SCRIPT_DIR="${LOCAL_BUILD_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 LOCAL_BUILD_MODULE_DIR="${LOCAL_BUILD_MODULE_DIR:-${LOCAL_BUILD_SCRIPT_DIR}/modules}"
 ROOT_DIR="${ROOT_DIR:-$(cd "${LOCAL_BUILD_SCRIPT_DIR}/../.." && pwd)}"
+APOLLO_LOCAL_BUILD_USE_YOCTO_VARS="${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}"
+APOLLO_LOCAL_BUILD_YOCTO_VARS="${APOLLO_LOCAL_BUILD_YOCTO_VARS:-${ROOT_DIR}/build/local-apollo-fvp/yocto-local-build-vars.json}"
+if [[ "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" != /* ]]; then
+    APOLLO_LOCAL_BUILD_YOCTO_VARS="${ROOT_DIR}/${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
+fi
+
+apollo_local_build_help_requested()
+{
+    case "${1:-}" in
+        -h|--help|help) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+apollo_local_build_generate_yocto_vars()
+{
+    local output="$1"
+    local collector="${ROOT_DIR}/scripts/build/collect_yocto_local_build_vars.py"
+
+    [[ -f "${collector}" ]] ||
+        return 1
+    command -v python3 >/dev/null 2>&1 ||
+        return 1
+    python3 "${collector}" --output "${output}" >/dev/null
+}
+
+apollo_local_build_apply_default()
+{
+    local name="$1"
+    local value="$2"
+
+    case "${name}" in
+        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM) ;;
+        *) return 0 ;;
+    esac
+    if [[ -z "${!name+x}" ]]; then
+        printf -v "${name}" '%s' "${value}"
+    fi
+}
+
+apollo_local_build_load_yocto_vars()
+{
+    local cache="${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
+    local assignments line name value
+
+    [[ "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS}" != "0" ]] || return 0
+    apollo_local_build_help_requested "${1:-}" && return 0
+    if [[ ! -f "${cache}" ]]; then
+        apollo_local_build_generate_yocto_vars "${cache}" ||
+            return 1
+    fi
+
+    if ! assignments="$(
+        python3 - "${cache}" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Final
+
+
+SCHEMA_VERSION: Final = 1
+MAPPINGS: Final = (
+    ("MACHINE", "nexios-image", "MACHINE"),
+    ("RD_ASPEN_VARIANT", "nexios-image", "RD_ASPEN_VARIANT"),
+    ("PC_CPUS_COUNT", "nexios-image", "PC_CPUS_COUNT_DEFAULT"),
+    ("LINUX_DEFCONFIG", "linux-yocto-rt", "KBUILD_DEFCONFIG"),
+    ("BOOTLOADER_LINUX_APPEND", "nexios-image", "BOOTLOADER_LINUX_APPEND"),
+    ("OPTEE_PLATFORM", "optee-os", "PLATFORM"),
+)
+
+
+def fail(message: str) -> None:
+    print(f"error: {Path(sys.argv[1])}: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+try:
+    raw = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+except OSError as exc:
+    fail(str(exc))
+except json.JSONDecodeError as exc:
+    fail(f"invalid JSON: {exc.msg}")
+
+if not isinstance(raw, dict):
+    fail("top-level JSON value must be an object")
+if raw.get("schema_version") != SCHEMA_VERSION:
+    fail(f"schema_version must be {SCHEMA_VERSION}")
+recipes = raw.get("recipes")
+if not isinstance(recipes, dict):
+    fail("missing recipes object")
+
+for local_name, recipe, bitbake_name in MAPPINGS:
+    entry = recipes.get(recipe)
+    if entry is None:
+        continue
+    if not isinstance(entry, dict):
+        fail(f"{recipe}: recipe entry must be an object")
+    variables = entry.get("variables")
+    if not isinstance(variables, dict):
+        fail(f"{recipe}: missing variables object")
+    value = str(variables.get(bitbake_name, "")).strip()
+    if value:
+        print(f"{local_name}={value}")
+PY
+    )"; then
+        return 1
+    fi
+    [[ -n "${assignments}" ]] ||
+        return 0
+    while IFS= read -r line; do
+        name="${line%%=*}"
+        value="${line#*=}"
+        apollo_local_build_apply_default "${name}" "${value}"
+    done <<< "${assignments}"
+}
+
+if ! apollo_local_build_load_yocto_vars "${1:-}"; then
+    printf 'error: could not load Yocto local-build vars from %s with APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=1\n' \
+        "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" >&2
+    printf 'error: set APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=0 to use built-in local-build defaults intentionally\n' >&2
+    return 1 2>/dev/null || exit 1
+fi
 MACHINE="${MACHINE:-apollo-fvp}"
-VARIANT="${RD_ASPEN_VARIANT:-cfg2}"
+RD_ASPEN_VARIANT="${RD_ASPEN_VARIANT:-cfg2}"
+VARIANT="${VARIANT:-${RD_ASPEN_VARIANT}}"
 JOBS="${JOBS:-$(nproc)}"
 HOST_PATH="${HOST_PATH:-${PATH}}"
 
@@ -57,6 +182,10 @@ AARCH64_NONE_ELF_PREFIX="${AARCH64_NONE_ELF_PREFIX:-aarch64-none-elf-}"
 AARCH64_ZEPHYR_ELF_PREFIX="${AARCH64_ZEPHYR_ELF_PREFIX:-aarch64-zephyr-elf-}"
 
 PC_CPUS_COUNT="${PC_CPUS_COUNT:-4}"
+BOOTLOADER_LINUX_APPEND="${BOOTLOADER_LINUX_APPEND:-cpuidle.governor=menu maxcpus=${PC_CPUS_COUNT} mem=4064M}"
+LOCAL_BUILD_BOOTARGS_PREFIX="${LOCAL_BUILD_BOOTARGS_PREFIX:-console=ttyAMA0,115200 earlycon=pl011,0x1A400000 root=/dev/ram0 rw rdinit=/init loglevel=7}"
+LOCAL_BUILD_BOOTARGS="${LOCAL_BUILD_BOOTARGS:-${LOCAL_BUILD_BOOTARGS_PREFIX}${BOOTLOADER_LINUX_APPEND:+ ${BOOTLOADER_LINUX_APPEND}}}"
+OPTEE_PLATFORM="${OPTEE_PLATFORM:-automotive_rd-rdaspen}"
 NR_IMAGES_PER_FWU_BANK="${NR_IMAGES_PER_FWU_BANK:-5}"
 PFDI_SUPPORT="${PFDI_SUPPORT:-1}"
 PFDI_MONITOR_SUPPORT="${PFDI_MONITOR_SUPPORT:-1}"
@@ -260,6 +389,8 @@ run_cmake_configure_if_needed()
     local marker="${build_dir}/.apollo-${name}.sha256"
     local digest
 
+    reset_cmake_build_if_cache_paths_missing "${name}" "${build_dir}"
+
     digest="$(command_digest "$@")"
     if cmake_configure_current "${name}" "${build_dir}" "$@"; then
         log "${name} is up to date"
@@ -331,6 +462,84 @@ reset_cmake_build_if_source_changed()
     fi
 }
 
+cmake_cache_missing_tmp_paths()
+{
+    local cache="$1"
+    local name path
+
+    [[ -f "${cache}" ]] || return 0
+
+    while IFS=$'\t' read -r name path; do
+        [[ -n "${path}" ]] || continue
+        case "${path}" in
+            "${YOCTO_BUILD_DIR}"/tmp*|"${ROOT_DIR}"/build/tmp*) ;;
+            *) continue ;;
+        esac
+        [[ -e "${path}" ]] && continue
+        printf '%s\t%s\n' "${name}" "${path}"
+    done < <(
+        awk '
+            /^[#/]/ { next }
+            /^[^=]+:[^=]+=\// {
+                name = $0
+                sub(/:.*/, "", name)
+                value = $0
+                sub(/^[^=]*=/, "", value)
+                count = split(value, paths, ";")
+                for (i = 1; i <= count; i++) {
+                    if (paths[i] ~ /^\//) {
+                        print name "\t" paths[i]
+                    }
+                }
+            }
+        ' "${cache}"
+    )
+}
+
+reset_cmake_configure_state()
+{
+    local name="$1"
+    local build_dir="$2"
+    local marker="${build_dir}/.apollo-${name}.sha256"
+
+    rm -rf \
+        "${build_dir}/CMakeCache.txt" \
+        "${build_dir}/CMakeFiles" \
+        "${build_dir}/build.ninja" \
+        "${build_dir}/compile_commands.json" \
+        "${build_dir}/.ninja_deps" \
+        "${build_dir}/.ninja_log" \
+        "${marker}"
+    if [[ -d "${build_dir}" ]]; then
+        find "${build_dir}" -name cmake_install.cmake -type f -delete
+    fi
+}
+
+reset_cmake_build_if_cache_paths_missing()
+{
+    local name="$1"
+    local build_dir="$2"
+    local cache="${build_dir}/CMakeCache.txt"
+    local missing=()
+    local entry
+    local shown=0
+
+    [[ -f "${cache}" ]] || return 0
+    mapfile -t missing < <(cmake_cache_missing_tmp_paths "${cache}" | sort -u)
+    [[ "${#missing[@]}" -gt 0 ]] || return 0
+
+    log "Removing stale CMake configure state for ${name}: ${build_dir}"
+    for entry in "${missing[@]}"; do
+        [[ "${shown}" -lt 8 ]] || break
+        log "  missing cache path: ${entry}"
+        shown=$((shown + 1))
+    done
+    if [[ "${#missing[@]}" -gt "${shown}" ]]; then
+        log "  and $((${#missing[@]} - shown)) more missing cache paths"
+    fi
+    reset_cmake_configure_state "${name}" "${build_dir}"
+}
+
 
 path_prepend()
 {
@@ -362,6 +571,35 @@ find_first_file()
     local name="$2"
     [[ -d "${root}" ]] || return 1
     find "${root}" -name "${name}" -type f -print -quit
+}
+
+yocto_native_component_roots()
+{
+    local candidate
+    local canonical
+    local -A seen=()
+
+    for candidate in \
+        "${YOCTO_TMP}/sysroots-components/x86_64" \
+        "${YOCTO_BUILD_DIR}/tmp_baremetal-${MACHINE}-no-dm-verity/sysroots-components/x86_64" \
+        "${YOCTO_BUILD_DIR}/tmp_baremetal-${MACHINE}-dm-verity/sysroots-components/x86_64"
+    do
+        [[ -d "${candidate}" ]] || continue
+        canonical="$(canonical_dir "${candidate}")"
+        [[ -n "${seen[${canonical}]+x}" ]] && continue
+        seen["${canonical}"]=1
+        printf '%s\n' "${candidate}"
+    done
+
+    shopt -s nullglob
+    for candidate in "${YOCTO_BUILD_DIR}"/tmp_baremetal-*/sysroots-components/x86_64; do
+        [[ -d "${candidate}" ]] || continue
+        canonical="$(canonical_dir "${candidate}")"
+        [[ -n "${seen[${canonical}]+x}" ]] && continue
+        seen["${canonical}"]=1
+        printf '%s\n' "${candidate}"
+    done
+    shopt -u nullglob
 }
 
 install_artifact()
@@ -520,19 +758,31 @@ source_sdk()
 
 add_yocto_native_paths()
 {
-    local native="${YOCTO_TMP}/sysroots-components/x86_64"
-    path_prepend "${native}/python3-native/usr/bin"
-    path_prepend "${native}/fiptool-native/usr/bin"
-    path_prepend "${native}/cot-dt2c-native/usr/bin"
-    path_prepend "${native}/efitools-native/usr/bin"
-
+    local native
+    local native_roots=()
+    local index
     local arm_none
-    arm_none="$(find_first_file "${native}/gcc-arm-none-eabi-native" "arm-none-eabi-gcc" || true)"
-    [[ -n "${arm_none}" ]] && path_prepend "$(dirname "${arm_none}")"
-
     local aarch64_none
-    aarch64_none="$(find_first_file "${native}/gcc-aarch64-none-elf-native" "aarch64-none-elf-gcc" || true)"
-    [[ -n "${aarch64_none}" ]] && path_prepend "$(dirname "${aarch64_none}")"
+
+    while IFS= read -r native; do
+        native_roots+=("${native}")
+    done < <(yocto_native_component_roots)
+
+    for ((index = ${#native_roots[@]} - 1; index >= 0; index--)); do
+        native="${native_roots[${index}]}"
+        path_prepend "${native}/python3-native/usr/bin"
+        path_prepend "${native}/fiptool-native/usr/bin"
+        path_prepend "${native}/cot-dt2c-native/usr/bin"
+        path_prepend "${native}/efitools-native/usr/bin"
+
+        arm_none="$(find_first_file "${native}/gcc-arm-none-eabi-native" "arm-none-eabi-gcc" || true)"
+        [[ -n "${arm_none}" ]] && path_prepend "$(dirname "${arm_none}")"
+
+        aarch64_none="$(find_first_file "${native}/gcc-aarch64-none-elf-native" "aarch64-none-elf-gcc" || true)"
+        [[ -n "${aarch64_none}" ]] && path_prepend "$(dirname "${aarch64_none}")"
+    done
+
+    return 0
 }
 
 setup_build_environment()
