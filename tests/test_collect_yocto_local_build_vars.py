@@ -10,6 +10,19 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/build/collect_yocto_local_build_vars.py"
+REQUIRED_UKI_VARIABLES = {
+    "KERNEL_CONSOLE",
+    "INITRD_ARCHIVE",
+    "EFI_ARCH",
+    "AUTO_AD_NEXIOS_UKI_A",
+    "AUTO_AD_NEXIOS_UKI_B",
+    "AUTO_AD_NEXIOS_UKI_CMDLINE_A",
+    "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
+    "UKIFY_CMD",
+    "UEFI_SECURE_BOOT",
+    "UKI_SB_KEY",
+    "UKI_SB_CERT",
+}
 
 
 def load_module() -> ModuleType:
@@ -49,6 +62,48 @@ def test_parse_bitbake_env_keeps_allowlisted_values_when_extra_lines_present() -
         "PLATFORM": "automotive_rd-rdaspen",
         "TF_A_PLATFORM": "apollo_fvp",
         "UBOOT_MACHINE": "apollo_fvp_defconfig",
+    }
+
+
+def test_parse_bitbake_env_keeps_auto_ad_nexios_uki_package_values() -> None:
+    module = load_module()
+    raw = (
+        'MACHINE="apollo-fvp"\n'
+        'KERNEL_CONSOLE="ttyAMA0"\n'
+        'INITRD_ARCHIVE="nexios-image-apollo-fvp.rootfs.cpio.gz"\n'
+        'EFI_ARCH="aa64"\n'
+        'AUTO_AD_NEXIOS_UKI_A="auto-ad-nexios-a.efi"\n'
+        'AUTO_AD_NEXIOS_UKI_B="auto-ad-nexios-b.efi"\n'
+        'AUTO_AD_NEXIOS_UKI_CMDLINE_A="rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0"\n'
+        'AUTO_AD_NEXIOS_UKI_CMDLINE_B="rootwait root=PARTLABEL=rootro_b ro console=ttyAMA0"\n'
+        'UKIFY_CMD="/build/tmp/sysroots-components/x86_64/systemd/usr/lib/systemd/ukify"\n'
+        'UEFI_SECURE_BOOT="1"\n'
+        'UKI_SB_KEY="/secure/path/DB.key"\n'
+        'UKI_SB_CERT="/secure/path/DB.crt"\n'
+        'SECRET_TOKEN="do-not-capture"\n'
+        'AUTH_HEADER="Bearer do-not-capture"\n'
+        'COOKIE="session=do-not-capture"\n'
+    )
+
+    variables = module.parse_bitbake_env(raw)
+
+    assert variables == {
+        "AUTO_AD_NEXIOS_UKI_A": "auto-ad-nexios-a.efi",
+        "AUTO_AD_NEXIOS_UKI_B": "auto-ad-nexios-b.efi",
+        "AUTO_AD_NEXIOS_UKI_CMDLINE_A": (
+            "rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0"
+        ),
+        "AUTO_AD_NEXIOS_UKI_CMDLINE_B": (
+            "rootwait root=PARTLABEL=rootro_b ro console=ttyAMA0"
+        ),
+        "EFI_ARCH": "aa64",
+        "INITRD_ARCHIVE": "nexios-image-apollo-fvp.rootfs.cpio.gz",
+        "KERNEL_CONSOLE": "ttyAMA0",
+        "MACHINE": "apollo-fvp",
+        "UEFI_SECURE_BOOT": "1",
+        "UKIFY_CMD": "/build/tmp/sysroots-components/x86_64/systemd/usr/lib/systemd/ukify",
+        "UKI_SB_CERT": "/secure/path/DB.crt",
+        "UKI_SB_KEY": "/secure/path/DB.key",
     }
 
 
@@ -135,7 +190,17 @@ def test_allowlisted_variables_match_contract() -> None:
         "SCP_PLATFORM",
         "ZEPHYR_BOARD",
         "ZEPHYR_APPLICATION",
+        *REQUIRED_UKI_VARIABLES,
     }
+
+
+def test_allowlist_includes_only_explicit_auto_ad_nexios_uki_variables() -> None:
+    module = load_module()
+
+    assert REQUIRED_UKI_VARIABLES <= module.ALLOWLISTED_VARIABLES
+    assert "SECRET_TOKEN" not in module.ALLOWLISTED_VARIABLES
+    assert "AUTH_HEADER" not in module.ALLOWLISTED_VARIABLES
+    assert "COOKIE" not in module.ALLOWLISTED_VARIABLES
 
 
 def test_parse_recipe_list_rejects_malformed_recipe_name() -> None:

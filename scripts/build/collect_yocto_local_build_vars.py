@@ -55,6 +55,17 @@ ALLOWLISTED_VARIABLES: Final = frozenset(
         "SCP_PLATFORM",
         "ZEPHYR_BOARD",
         "ZEPHYR_APPLICATION",
+        "KERNEL_CONSOLE",
+        "INITRD_ARCHIVE",
+        "EFI_ARCH",
+        "AUTO_AD_NEXIOS_UKI_A",
+        "AUTO_AD_NEXIOS_UKI_B",
+        "AUTO_AD_NEXIOS_UKI_CMDLINE_A",
+        "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
+        "UKIFY_CMD",
+        "UEFI_SECURE_BOOT",
+        "UKI_SB_KEY",
+        "UKI_SB_CERT",
     }
 )
 BITBAKE_VARIABLE_ALIASES: Final = {

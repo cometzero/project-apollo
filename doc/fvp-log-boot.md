@@ -20,6 +20,7 @@ Default Yocto inputs:
 - `build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf`
 - `build/fvp-tmux/apollo-fvp-<timestamp>/`
 
+`./run_fvp.sh --local` is the current local-build interactive entrypoint;
 `scripts/run/run_local_fvp_tmux.sh` is the lower-level runner for local-build
 FVP artifacts. It starts FVP in tmux, opens one pane per known subsystem UART,
 and mirrors those UARTs to log files under the selected run directory:
@@ -48,7 +49,7 @@ Per-run logs for agent review:
 
 Generic runfvp tmux wrapping was removed from `scripts/run/`. Use
 `./run_fvp.sh` for Yocto Apollo FVP interactive sessions and
-`scripts/run/run_local_fvp_tmux.sh` for Apollo local FVP interactive sessions.
+`./run_fvp.sh --local` for Apollo local FVP interactive sessions.
 For agent-side validation, prefer a file-log workflow so the result can be
 checked without attaching to a terminal UI.
 

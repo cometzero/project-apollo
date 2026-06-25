@@ -71,6 +71,40 @@ def run_dry_run(
     )
 
 
+def run_help() -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        (str(SCRIPT), "--help"),
+        cwd=ROOT,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def test_help_documents_local_mode_and_recovery_command() -> None:
+    # Given: the FVP runner entrypoint.
+    # When: the user asks for CLI help.
+    result = run_help()
+
+    # Then: help shows how to run and recover the local FVP package workflow.
+    assert result.returncode == 0, result.stderr
+    output = f"{result.stdout}\n{result.stderr}"
+    assert "--local" in output
+    assert "./run_fvp.sh --local" in output
+    assert "./local_build.sh --package first" in output
+
+    example_lines = [
+        line.strip()
+        for line in output.splitlines()
+        if line.strip().startswith("./")
+    ]
+    assert example_lines
+    for line in example_lines:
+        script = line.split()[0]
+        assert (ROOT / script.removeprefix("./")).exists(), line
+
+
 def test_run_fvp_uses_stable_yocto_fvpconf(tmp_path: Path) -> None:
     deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
     flash_image = deploy_dir / "ap-flash.img"
@@ -83,7 +117,7 @@ def test_run_fvp_uses_stable_yocto_fvpconf(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert "Apollo FVP tmux run" in result.stdout
-    assert f"session: apollo-fvp-yocto-pytest" in result.stdout
+    assert "session: apollo-fvp-yocto-pytest" in result.stdout
     assert f"fvpconf: {fvpconf}" in result.stdout
     assert f"out_dir: {tmp_path}/build/fvp-tmux/apollo-fvp-pytest" in result.stdout
 
@@ -121,6 +155,73 @@ def test_run_fvp_forwards_extra_fvp_args(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert "--parameter css.test_parameter=1" in result.stdout
+
+
+def test_run_fvp_local_mode_uses_local_package_defaults(tmp_path: Path) -> None:
+    build_dir = tmp_path / "build"
+    deploy_dir = build_dir / "local-apollo-fvp/deploy"
+    flash_image = deploy_dir / "ap-flash.img"
+    fvpconf = deploy_dir / "apollo-fvp-local.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    flash_image.write_bytes(b"flash")
+    write_fvpconf(fvpconf, flash_image)
+
+    result = run_dry_run(tmp_path, extra_args=["--local"])
+
+    assert result.returncode == 0, result.stderr
+    assert "session: apollo-fvp-local-pytest" in result.stdout
+    assert f"fvpconf: {fvpconf}" in result.stdout
+    assert f"out_dir: {build_dir}/local-apollo-fvp/tmux-run/pytest" in result.stdout
+
+
+def test_run_fvp_local_mode_preserves_fvpconf_and_deploy_dir_overrides(
+    tmp_path: Path,
+) -> None:
+    deploy_dir = tmp_path / "custom-deploy"
+    flash_image = deploy_dir / "ap-flash.img"
+    fvpconf = deploy_dir / "custom.fvpconf"
+    deploy_dir.mkdir()
+    flash_image.write_bytes(b"flash")
+    write_fvpconf(fvpconf, flash_image)
+
+    result = run_dry_run(
+        tmp_path,
+        extra_args=[
+            "--local",
+            "--deploy-dir",
+            str(deploy_dir),
+            "--fvpconf",
+            str(fvpconf),
+        ],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "session: apollo-fvp-local-pytest" in result.stdout
+    assert f"fvpconf: {fvpconf}" in result.stdout
+
+
+def test_run_fvp_local_mode_missing_fvpconf_reports_local_package_command(
+    tmp_path: Path,
+) -> None:
+    deploy_dir = tmp_path / "build/local-apollo-fvp/deploy"
+    deploy_dir.mkdir(parents=True)
+
+    result = run_dry_run(tmp_path, extra_args=["--local"])
+
+    assert result.returncode != 0
+    assert "Run ./local_build.sh --package first" in result.stderr
+
+
+def test_run_fvp_missing_yocto_fvpconf_reports_yocto_build_command(
+    tmp_path: Path,
+) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    deploy_dir.mkdir(parents=True)
+
+    result = run_dry_run(tmp_path)
+
+    assert result.returncode != 0
+    assert "Run ./yocto_build.sh first" in result.stderr
 
 
 def test_run_fvp_is_not_dependent_on_tmux_runner_env(tmp_path: Path) -> None:

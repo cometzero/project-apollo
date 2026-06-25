@@ -69,6 +69,14 @@ build_linux()
                 --enable GDB_SCRIPTS \
                 --enable KALLSYMS_ALL
         fi
+        LOCAL_LINUX_DM_VERITY=y
+        "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
+            --enable BLK_DEV_DM \
+            --enable DM_BUFIO \
+            --enable DM_VERITY \
+            --enable CRYPTO_SHA256
+        make -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" ARCH=arm64 \
+            CROSS_COMPILE="${AARCH64_PREFIX}" LOCALVERSION= olddefconfig
 
         if [[ -n "${modsign_key}" ]]; then
             copy_file_if_changed "${modsign_key}" "${LINUX_BUILD_DIR}/modsign_key.pem" 0600

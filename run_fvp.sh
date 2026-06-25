@@ -19,17 +19,19 @@ OUT_DIR="${OUT_DIR:-}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 NO_ATTACH=0
 DRY_RUN=0
+LOCAL_MODE=0
 
 usage()
 {
     cat <<EOF
 Usage: ./run_fvp.sh [options] [-- extra FVP args]
 
-Run the Yocto-built Apollo FVP image in tmux and mirror subsystem UARTs to
-file-backed logs.
+Run the Yocto-built or local-packaged Apollo FVP image in tmux and mirror
+subsystem UARTs to file-backed logs.
 
 Options:
   --machine NAME       Yocto machine (default: ${MACHINE})
+  --local              run the local FVP package from build/local-apollo-fvp/deploy
   --build-dir PATH     Yocto build directory (default: ${YOCTO_BUILD_DIR})
   --deploy-dir PATH    image deploy directory
                        (default: <build-dir>/tmp_baremetal/deploy/images/<machine>)
@@ -50,7 +52,10 @@ Environment overrides:
 
 Examples:
   ./yocto_build.sh
+  ./local_build.sh --package
+  Missing local package recovery: ./local_build.sh --package first.
   ./run_fvp.sh
+  ./run_fvp.sh --local
   ./run_fvp.sh --no-attach
   ./run_fvp.sh --dry-run
   ./run_fvp.sh --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf
@@ -128,7 +133,11 @@ resolve_deploy_dir()
         return 0
     fi
 
-    printf '%s/tmp_baremetal/deploy/images/%s\n' "${YOCTO_BUILD_DIR}" "${MACHINE}"
+    if ((LOCAL_MODE)); then
+        printf '%s/local-apollo-fvp/deploy\n' "${YOCTO_BUILD_DIR}"
+    else
+        printf '%s/tmp_baremetal/deploy/images/%s\n' "${YOCTO_BUILD_DIR}" "${MACHINE}"
+    fi
 }
 
 resolve_fvpconf()
@@ -139,6 +148,13 @@ resolve_fvpconf()
 
     if [[ -n "${FVP_CONF}" ]]; then
         printf '%s\n' "${FVP_CONF}"
+        return 0
+    fi
+
+    if ((LOCAL_MODE)); then
+        stable="${deploy_dir}/apollo-fvp-local.fvpconf"
+        [[ -f "${stable}" ]] || return 1
+        printf '%s\n' "${stable}"
         return 0
     fi
 
@@ -644,6 +660,10 @@ while (($# > 0)); do
             MACHINE="$2"
             shift 2
             ;;
+        --local)
+            LOCAL_MODE=1
+            shift
+            ;;
         --build-dir)
             (($# >= 2)) || die "--build-dir requires a value"
             YOCTO_BUILD_DIR="$2"
@@ -712,16 +732,31 @@ else
 fi
 RUNFVP_BIN="$(abspath "${RUNFVP_BIN}")"
 
-[[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
-    die "Yocto deploy directory not found: ${DEPLOY_DIR}. Run ./yocto_build.sh first."
-[[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
-    die "FVP config not found under ${DEPLOY_DIR}. Run ./yocto_build.sh first or pass --fvpconf."
+if ((LOCAL_MODE)); then
+    [[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
+        die "local deploy directory not found: ${DEPLOY_DIR}. Run ./local_build.sh --package first."
+    [[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
+        die "FVP config not found under ${DEPLOY_DIR}. Run ./local_build.sh --package first or pass --fvpconf."
+else
+    [[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
+        die "Yocto deploy directory not found: ${DEPLOY_DIR}. Run ./yocto_build.sh first."
+    [[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
+        die "FVP config not found under ${DEPLOY_DIR}. Run ./yocto_build.sh first or pass --fvpconf."
+fi
 
 if [[ -z "${TMUX_SESSION}" ]]; then
-    TMUX_SESSION="apollo-fvp-yocto-${RUN_STAMP}"
+    if ((LOCAL_MODE)); then
+        TMUX_SESSION="apollo-fvp-local-${RUN_STAMP}"
+    else
+        TMUX_SESSION="apollo-fvp-yocto-${RUN_STAMP}"
+    fi
 fi
 if [[ -z "${OUT_DIR}" ]]; then
-    OUT_DIR="${YOCTO_BUILD_DIR}/fvp-tmux/${MACHINE}-${RUN_STAMP}"
+    if ((LOCAL_MODE)); then
+        OUT_DIR="${YOCTO_BUILD_DIR}/local-apollo-fvp/tmux-run/${RUN_STAMP}"
+    else
+        OUT_DIR="${YOCTO_BUILD_DIR}/fvp-tmux/${MACHINE}-${RUN_STAMP}"
+    fi
 fi
 OUT_DIR="$(abspath "${OUT_DIR}")"
 
