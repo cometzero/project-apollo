@@ -346,6 +346,7 @@ PY
 start_waiting_uart_pane()
 {
     local domain="$1"
+    shift
     local title
     local log_path
     local port_file
@@ -366,8 +367,20 @@ start_waiting_uart_pane()
         "${title}" "${log_path}" "${port_file}" "${port_file}" "${term_file}" \
         "${bridge_code}" "${log_path}"
 
-    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' -t "${FVP_ROOT_PANE}" bash -lc "${pane_body}")"
+    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
+    printf '%s\n' "${pane_id}"
+}
+
+start_shell_pane()
+{
+    local pane_body
+    local pane_id
+
+    pane_body='printf "Interactive shell\r\n\r\n"; exec "${SHELL:-bash}" -l'
+    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T shell
+    printf '%s\n' "${pane_id}"
 }
 
 start_uart_pane()
@@ -562,7 +575,6 @@ start_tmux()
 
     local supervisor_body
     local control_dir="${OUT_DIR}/control"
-    local domain
     UART_PORT_DIR="${control_dir}/ports"
     FVP_START_FILE="${control_dir}/start"
     supervisor_body=$(
@@ -586,12 +598,19 @@ start_tmux()
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-status top
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-format '#{pane_index}: #{pane_title}'
     tmux_cmd select-pane -t "${fvp_pane_id}" -T fvp
-    for domain in u_boot_linux tf_a safety_island_cl1 safety_island_cl0 rse; do
-        start_waiting_uart_pane "${domain}"
-        tmux_cmd select-layout -t "${TMUX_SESSION}:fvp" tiled >/dev/null
-        tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
-    done
-    tmux_cmd select-layout -t "${TMUX_SESSION}:fvp" tiled >/dev/null
+
+    local u_boot_pane_id
+    local rse_pane_id
+    local si0_pane_id
+    local si1_pane_id
+
+    u_boot_pane_id="$(start_waiting_uart_pane u_boot_linux -v -b -l 70% -t "${FVP_ROOT_PANE}")"
+    rse_pane_id="$(start_waiting_uart_pane rse -h -l 40% -t "${u_boot_pane_id}")"
+    si0_pane_id="$(start_waiting_uart_pane safety_island_cl0 -v -l 75% -t "${rse_pane_id}")"
+    si1_pane_id="$(start_waiting_uart_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}")"
+    start_waiting_uart_pane tf_a -v -l 50% -t "${si1_pane_id}" >/dev/null
+    start_shell_pane -h -l 50% -t "${FVP_ROOT_PANE}" >/dev/null
+
     tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
     : >"${FVP_START_FILE}"
     tmux_cmd bind-key -n F12 kill-session -t "${TMUX_SESSION}"

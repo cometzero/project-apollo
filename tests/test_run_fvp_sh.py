@@ -321,7 +321,14 @@ def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
         "case \"$1\" in\n"
         "  has-session) exit 1 ;;\n"
         "  new-session) printf '%%0\\n' ;;\n"
-        "  split-window) printf '%%uart\\n' ;;\n"
+        "  split-window)\n"
+        "    counter_file=\"${TMUX_LOG}.counter\"\n"
+        "    counter=0\n"
+        "    [[ -f \"$counter_file\" ]] && counter=\"$(<\"$counter_file\")\"\n"
+        "    counter=$((counter + 1))\n"
+        "    printf '%s\\n' \"$counter\" > \"$counter_file\"\n"
+        "    printf '%%%s\\n' \"$counter\"\n"
+        "    ;;\n"
         "esac\n",
         encoding="utf-8",
     )
@@ -357,12 +364,17 @@ def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
     tmux_text = tmux_log.read_text(encoding="utf-8")
     tmux_lines = tmux_text.splitlines()
     split_lines = [line for line in tmux_lines if line.startswith("split-window ")]
-    assert len(split_lines) == 5
-    assert all(" -t %0 " in f" {line} " for line in split_lines)
+    assert len(split_lines) == 6
+    assert any(" -v -b -l 70% -t %0 " in f" {line} " for line in split_lines)
+    assert any(" -h -l 40% -t %1 " in f" {line} " for line in split_lines)
+    assert any(" -v -l 75% -t %2 " in f" {line} " for line in split_lines)
+    assert any(" -v -l 67% -t %3 " in f" {line} " for line in split_lines)
+    assert any(" -v -l 50% -t %4 " in f" {line} " for line in split_lines)
+    assert any(" -h -l 50% -t %0 " in f" {line} " for line in split_lines)
     assert tmux_text.count("python3 -c") >= 5
     assert tmux_text.count("display.append(13)") >= 5
     assert "tee -a" not in tmux_text
-    assert sum(line.startswith("select-layout ") for line in tmux_lines) >= 5
+    assert not any(line.startswith("select-layout ") for line in tmux_lines)
 
     control_dir = build_dir / "fvp-tmux/apollo-fvp-pytest/control"
     assert (control_dir / "start").exists()
