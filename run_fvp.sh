@@ -241,6 +241,108 @@ tmux_cmd()
     env -u TMUX "${TMUX_BIN}" "$@"
 }
 
+uart_telnet_bridge_code()
+{
+    cat <<'PY'
+import errno
+import fcntl
+import os
+import pty
+import select
+import subprocess
+import sys
+import termios
+import tty
+
+log_path = sys.argv[1]
+port = sys.argv[2]
+stdin_fd = sys.stdin.fileno()
+stdout_fd = sys.stdout.fileno()
+previous = -1
+
+def display_bytes(data):
+    global previous
+    display = bytearray()
+    for byte in data:
+        if byte == 10 and previous != 13:
+            display.append(13)
+        display.append(byte)
+        previous = byte
+    os.write(stdout_fd, display)
+
+master_fd, slave_fd = pty.openpty()
+try:
+    size = fcntl.ioctl(stdout_fd, termios.TIOCGWINSZ, b"\0" * 8)
+    fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, size)
+except OSError:
+    pass
+
+proc = subprocess.Popen(
+    ["telnet", "127.0.0.1", port],
+    stdin=slave_fd,
+    stdout=slave_fd,
+    stderr=slave_fd,
+    close_fds=True,
+)
+os.close(slave_fd)
+old_termios = None
+stdin_open = True
+
+try:
+    if os.isatty(stdin_fd):
+        old_termios = termios.tcgetattr(stdin_fd)
+        tty.setraw(stdin_fd)
+
+    with open(log_path, "ab", buffering=0) as log:
+        while True:
+            read_fds = [master_fd]
+            if stdin_open:
+                read_fds.append(stdin_fd)
+
+            ready, _, _ = select.select(read_fds, [], [], 0.1)
+
+            if master_fd in ready:
+                try:
+                    data = os.read(master_fd, 4096)
+                except OSError as exc:
+                    if exc.errno == errno.EIO:
+                        break
+                    raise
+                if not data:
+                    break
+                log.write(data)
+                display_bytes(data)
+
+            if stdin_fd in ready:
+                data = os.read(stdin_fd, 4096)
+                if data:
+                    os.write(master_fd, data)
+                else:
+                    stdin_open = False
+
+            if proc.poll() is not None:
+                ready, _, _ = select.select([master_fd], [], [], 0)
+                if master_fd not in ready:
+                    break
+finally:
+    if old_termios is not None:
+        termios.tcsetattr(stdin_fd, termios.TCSADRAIN, old_termios)
+    try:
+        os.close(master_fd)
+    except OSError:
+        pass
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+
+sys.exit(proc.returncode or 0)
+PY
+}
+
 start_waiting_uart_pane()
 {
     local domain="$1"
@@ -250,17 +352,19 @@ start_waiting_uart_pane()
     local term_file
     local pane_body
     local pane_id
+    local bridge_code
 
     title="$(domain_title "${domain}")"
     log_path="${OUT_DIR}/uarts/${domain}.log"
     port_file="${UART_PORT_DIR}/${domain}.port"
     term_file="${UART_PORT_DIR}/${domain}.terminal"
     : >"${log_path}"
+    bridge_code="$(uart_telnet_bridge_code)"
 
     printf -v pane_body \
-        'printf "Subsystem: %%s\nLog: %%s\nWaiting for FVP UART port...\n\n" %q %q; while [[ ! -s %q ]]; do sleep 0.2; done; port="$(<%q)"; term="$(<%q 2>/dev/null || true)"; printf "UART: %%s\nPort: %%s\n\n" "${term:-unknown}" "${port}"; if command -v stdbuf >/dev/null 2>&1; then stdbuf -o0 -e0 telnet 127.0.0.1 "${port}" 2>&1 | tee -a %q; else telnet 127.0.0.1 "${port}" 2>&1 | tee -a %q; fi; printf "\nUART pane exited. Press Enter to close this pane.\n"; read -r _' \
+        'printf "Subsystem: %%s\r\nLog: %%s\r\nWaiting for FVP UART port...\r\n\r\n" %q %q; while [[ ! -s %q ]]; do sleep 0.2; done; port="$(<%q)"; term="$(<%q 2>/dev/null || true)"; printf "UART: %%s\r\nPort: %%s\r\n\r\n" "${term:-unknown}" "${port}"; python3 -c %q %q "${port}"; printf "\r\nUART pane exited. Press Enter to close this pane.\r\n"; read -r _' \
         "${title}" "${log_path}" "${port_file}" "${port_file}" "${term_file}" \
-        "${log_path}" "${log_path}"
+        "${bridge_code}" "${log_path}"
 
     pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' -t "${FVP_ROOT_PANE}" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
@@ -277,6 +381,7 @@ start_uart_pane()
     local pane_body
     local pane_id
     local split_target
+    local bridge_code
 
     if ! domain="$(terminal_domain "${term}")"; then
         printf 'Ignoring unmanaged FVP terminal %s on port %s\n' "${term}" "${port}" |
@@ -292,6 +397,7 @@ start_uart_pane()
     log_path="${OUT_DIR}/uarts/${domain}.log"
     mkdir -p "$(dirname "${log_path}")"
     : >"${log_path}"
+    bridge_code="$(uart_telnet_bridge_code)"
     printf '%s\t%s\t%s\t%s\n' "${domain}" "${term}" "${port}" "${log_path}" >>"${OUT_DIR}/ports.tsv"
 
     printf 'UART %s is listening on port %s; log: %s\n' "${domain}" "${port}" "${log_path}" |
@@ -306,8 +412,9 @@ start_uart_pane()
     fi
 
     printf -v pane_body \
-        'printf "Subsystem: %%s\nUART: %%s\nPort: %%s\nLog: %%s\n\n" %q %q %q %q; if command -v stdbuf >/dev/null 2>&1; then stdbuf -o0 -e0 telnet 127.0.0.1 %q 2>&1 | tee -a %q; else telnet 127.0.0.1 %q 2>&1 | tee -a %q; fi; printf "\nUART pane exited. Press Enter to close this pane.\n"; read -r _' \
-        "${title}" "${term}" "${port}" "${log_path}" "${port}" "${log_path}" "${port}" "${log_path}"
+        'printf "Subsystem: %%s\r\nUART: %%s\r\nPort: %%s\r\nLog: %%s\r\n\r\n" %q %q %q %q; python3 -c %q %q %q; printf "\r\nUART pane exited. Press Enter to close this pane.\r\n"; read -r _' \
+        "${title}" "${term}" "${port}" "${log_path}" \
+        "${bridge_code}" "${log_path}" "${port}"
 
     split_target="${FVP_ROOT_PANE:-${TMUX_SESSION}:fvp}"
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" synchronize-panes off >/dev/null
@@ -334,6 +441,7 @@ supervise_run()
 
     source_sdk_if_present
     require_command telnet
+    require_command python3
 
     mkdir -p "${OUT_DIR}/uarts"
     printf 'domain\tterminal\tport\tlog\n' >"${OUT_DIR}/ports.tsv"

@@ -230,6 +230,8 @@ def test_run_fvp_supervisor_ignores_extra_fvp_terminals(tmp_path: Path) -> None:
     assert "terminal_0" not in tmux_text
     assert "terminal_1" not in tmux_text
     assert "synchronize-panes off" in tmux_text
+    assert "python3 -c" in tmux_text
+    assert "tee -a" not in tmux_text
 
 
 def test_run_fvp_supervisor_splits_from_root_pane(tmp_path: Path) -> None:
@@ -352,10 +354,14 @@ def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    tmux_lines = tmux_log.read_text(encoding="utf-8").splitlines()
+    tmux_text = tmux_log.read_text(encoding="utf-8")
+    tmux_lines = tmux_text.splitlines()
     split_lines = [line for line in tmux_lines if line.startswith("split-window ")]
     assert len(split_lines) == 5
     assert all(" -t %0 " in f" {line} " for line in split_lines)
+    assert tmux_text.count("python3 -c") >= 5
+    assert tmux_text.count("display.append(13)") >= 5
+    assert "tee -a" not in tmux_text
     assert sum(line.startswith("select-layout ") for line in tmux_lines) >= 5
 
     control_dir = build_dir / "fvp-tmux/apollo-fvp-pytest/control"
