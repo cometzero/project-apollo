@@ -57,7 +57,7 @@ ownership boundaries are:
 
 - Yocto build config:
   `build/conf/local.conf`, `build/conf/bblayers.conf`,
-  `build/conf/templateconf.cfg`, `build.sh`, and
+  `build/conf/templateconf.cfg`, `yocto_build.sh`, and
   `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
 - RD-Aspen BSP and firmware:
   `arm-zena-css/yocto/meta-zena-css-bsp`
@@ -90,7 +90,7 @@ cat build/conf/templateconf.cfg
 Current configured build:
 
 ```bash
-./build.sh
+./yocto_build.sh
 ```
 
 Interactive BitBake shell:

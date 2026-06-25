@@ -14,7 +14,7 @@ Updated: 2026-06-21
 | `AGENTS.md` | Codex/agent 작업 규칙과 현재 Apollo FVP 기준. |
 | `README.md` | 사용자용 clean checkout, Yocto/local build, QBox boot 가이드. |
 | `.gitmodules` | 루트 저장소가 고정하는 submodule 목록과 기본 branch. |
-| `build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `nexios-image` 빌드 진입점. |
+| `yocto_build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `nexios-image` 빌드 진입점. |
 | `local-build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
 | `run_fvp.sh` | Yocto 빌드 산출물을 Apollo FVP tmux 세션에서 실행하는 사용자용 진입점. |
 | `run_qbox.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |

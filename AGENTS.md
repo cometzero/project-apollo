@@ -18,7 +18,7 @@ hardware models over register-only stubs.
 
 - Active Yocto build directory: `build/`
 - Active Yocto template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
-- Build entrypoint: `./build.sh`
+- Build entrypoint: `./yocto_build.sh`
 - Current machine: `apollo-fvp`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`
 - Current configured CPU count: `PC_CPUS_COUNT_DEFAULT = "4"`
@@ -64,7 +64,8 @@ hardware models over register-only stubs.
   wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target.
 - `tools/qemu/`: local QEMU/libqemu source used by QBox.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
-  `build.sh`, `local-build.sh`, and `run_qbox.sh` call into these helpers.
+  `yocto_build.sh`, `local-build.sh`, and `run_qbox.sh` call into these
+  helpers.
 - `tests/`: repository-local tests for Python tooling and QBox helper logic.
 - `build/conf/`: active local Yocto build configuration.
 - `build/` other than `build/conf/`: generated evidence only. Do not treat as
@@ -217,7 +218,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
    - Use `bitbake-layers show-layers` when layer order changes.
    - Use targeted tasks first, such as
      `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
-   - Use `./build.sh` for the configured `baremetal-image` build.
+   - Use `./yocto_build.sh` for the configured `baremetal-image` build.
 3. QBox build checks:
    - Prefer `./local-build.sh qbox` for the Apollo overlay build contract.
    - Targeted overlay builds use

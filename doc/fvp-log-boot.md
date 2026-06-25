@@ -3,9 +3,9 @@
 Generated: 2026-05-28
 
 `./run_fvp.sh` is the user-facing wrapper for interactive inspection of the
-Yocto-built Apollo FVP image. It resolves the active Yocto deploy artifact and
-then delegates tmux pane setup and UART log capture to
-`scripts/run/run_local_fvp_tmux.sh`:
+Yocto-built Apollo FVP image. It resolves the active Yocto deploy artifact,
+starts FVP with headless terminals, opens tmux panes for the known subsystem
+UARTs, and mirrors those UARTs to file-backed logs:
 
 ```bash
 ./run_fvp.sh

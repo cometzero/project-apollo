@@ -6,7 +6,7 @@ import subprocess
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "build.sh"
+SCRIPT = ROOT / "yocto_build.sh"
 
 
 def run_build_dry_run(
@@ -35,7 +35,7 @@ def run_build_dry_run(
     )
 
 
-def test_build_sh_keeps_legacy_target_without_dm_verity_option(
+def test_yocto_build_sh_keeps_legacy_target_without_dm_verity_option(
     tmp_path: Path,
 ) -> None:
     result = run_build_dry_run(tmp_path, [])
@@ -48,7 +48,7 @@ def test_build_sh_keeps_legacy_target_without_dm_verity_option(
     ).exists()
 
 
-def test_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None:
+def test_yocto_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, ["--dm-verity=off"])
 
     assert result.returncode == 0, result.stderr
@@ -61,7 +61,7 @@ def test_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None:
     )
 
 
-def test_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -> None:
+def test_yocto_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, [], {"APOLLO_DM_VERITY": "on"})
 
     assert result.returncode == 0, result.stderr
@@ -69,7 +69,7 @@ def test_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -> None
     assert "mode 'on' uses multiconfig apollo-fvp-dm-verity" in result.stderr
 
 
-def test_build_sh_rejects_invalid_dm_verity_mode(tmp_path: Path) -> None:
+def test_yocto_build_sh_rejects_invalid_dm_verity_mode(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, ["--dm-verity=maybe"])
 
     assert result.returncode == 2

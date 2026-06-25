@@ -127,7 +127,7 @@ git submodule status --recursive
 
 Then choose the narrow source area:
 
-- Yocto build config: `build/conf/`, `build.sh`,
+- Yocto build config: `build/conf/`, `yocto_build.sh`,
   `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
 - Yocto layer/recipe review:
   `doc/yocto-layer-recipe-review.md`,

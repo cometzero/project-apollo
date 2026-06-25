@@ -65,15 +65,15 @@ The Yocto entrypoint uses the Apollo template under
 `nexios-image` target for `MACHINE = "apollo-fvp"`:
 
 ```bash
-./build.sh
+./yocto_build.sh
 ```
 
 To build explicit dm-verity variants, use the Apollo Yocto multiconfig
 wrappers:
 
 ```bash
-./build.sh --dm-verity=on
-./build.sh --dm-verity=off
+./yocto_build.sh --dm-verity=on
+./yocto_build.sh --dm-verity=off
 ```
 
 The `on` variant uses `mc:apollo-fvp-dm-verity:nexios-image` and deploys
@@ -105,7 +105,7 @@ TF-A/TF-M ELFs, DTB, and Safety Island images from
 workdir, then launches the Apollo full-system QBox runner. QBox itself must
 already be built, for example with `./local-build.sh qbox`.
 
-`build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
+`yocto_build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
 LLVM/Rust native builds from overcommitting smaller machines while defaulting
 to at most 6 parallel jobs. On a 16-core host with about 13 GiB RAM this
@@ -114,13 +114,13 @@ selects `-j6`.
 Useful resource overrides for larger hosts:
 
 ```bash
-APOLLO_BUILD_THREADS=8 APOLLO_PARALLEL_MAKE="-j8" ./build.sh
+APOLLO_BUILD_THREADS=8 APOLLO_PARALLEL_MAKE="-j8" ./yocto_build.sh
 ```
 
 To use BitBake's own defaults instead:
 
 ```bash
-APOLLO_AUTO_RESOURCE_LIMITS=0 ./build.sh
+APOLLO_AUTO_RESOURCE_LIMITS=0 ./yocto_build.sh
 ```
 
 The active build directory is `build/`. Before changing Yocto metadata, inspect
@@ -140,7 +140,7 @@ sources:
 
 When the SDK is missing, `local-build.sh` creates it with
 `bitbake nexios-image -c populate_sdk` and applies the same automatic
-BitBake resource limits as `build.sh`. Use `APOLLO_BUILD_THREADS`,
+BitBake resource limits as `yocto_build.sh`. Use `APOLLO_BUILD_THREADS`,
 `APOLLO_PARALLEL_MAKE`, or `APOLLO_AUTO_RESOURCE_LIMITS=0` for the same
 overrides.
 
