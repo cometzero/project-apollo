@@ -296,3 +296,67 @@ def test_run_fvp_supervisor_splits_from_root_pane(tmp_path: Path) -> None:
     assert split_lines
     assert all(" -t %0 " in f" {line} " for line in split_lines)
     assert any(line == "select-pane -t %0" for line in tmux_lines)
+
+
+def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
+    build_dir = tmp_path / "build"
+    deploy_dir = build_dir / "tmp_baremetal/deploy/images/apollo-fvp"
+    fake_bin_dir = tmp_path / "bin"
+    tmux_log = tmp_path / "tmux.log"
+    deploy_dir.mkdir(parents=True)
+    fake_bin_dir.mkdir()
+
+    flash_image = deploy_dir / "ap-flash.img"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    flash_image.write_bytes(b"flash")
+    write_fvpconf(fvpconf, flash_image)
+    make_executable(fake_bin_dir / "runfvp")
+
+    fake_tmux = fake_bin_dir / "tmux"
+    fake_tmux.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"$TMUX_LOG\"\n"
+        "case \"$1\" in\n"
+        "  has-session) exit 1 ;;\n"
+        "  new-session) printf '%%0\\n' ;;\n"
+        "  split-window) printf '%%uart\\n' ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_tmux.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "RUN_STAMP": "pytest",
+            "TMUX_BIN": str(fake_tmux),
+            "TMUX_LOG": str(tmux_log),
+        }
+    )
+
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--no-attach",
+            "--build-dir",
+            str(build_dir),
+            "--runfvp-bin",
+            str(fake_bin_dir / "runfvp"),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0, result.stderr
+    tmux_lines = tmux_log.read_text(encoding="utf-8").splitlines()
+    split_lines = [line for line in tmux_lines if line.startswith("split-window ")]
+    assert len(split_lines) == 5
+    assert all(" -t %0 " in f" {line} " for line in split_lines)
+    assert sum(line.startswith("select-layout ") for line in tmux_lines) >= 5
+
+    control_dir = build_dir / "fvp-tmux/apollo-fvp-pytest/control"
+    assert (control_dir / "start").exists()

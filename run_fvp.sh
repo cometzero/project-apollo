@@ -13,6 +13,8 @@ FVP_CONF="${FVP_CONF:-}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
 TMUX_SESSION="${TMUX_SESSION:-}"
 FVP_ROOT_PANE="${FVP_ROOT_PANE:-}"
+UART_PORT_DIR="${UART_PORT_DIR:-}"
+FVP_START_FILE="${FVP_START_FILE:-}"
 OUT_DIR="${OUT_DIR:-}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 NO_ATTACH=0
@@ -222,9 +224,46 @@ terminal_title()
     esac
 }
 
+domain_title()
+{
+    case "$1" in
+        rse) printf 'RSE / TF-M\n' ;;
+        safety_island_cl0) printf 'Safety Island CL0 / SCP-firmware\n' ;;
+        safety_island_cl1) printf 'Safety Island CL1 / Zephyr\n' ;;
+        tf_a) printf 'TF-A / secure-world AP\n' ;;
+        u_boot_linux) printf 'U-Boot / Linux\n' ;;
+        *) return 1 ;;
+    esac
+}
+
 tmux_cmd()
 {
     env -u TMUX "${TMUX_BIN}" "$@"
+}
+
+start_waiting_uart_pane()
+{
+    local domain="$1"
+    local title
+    local log_path
+    local port_file
+    local term_file
+    local pane_body
+    local pane_id
+
+    title="$(domain_title "${domain}")"
+    log_path="${OUT_DIR}/uarts/${domain}.log"
+    port_file="${UART_PORT_DIR}/${domain}.port"
+    term_file="${UART_PORT_DIR}/${domain}.terminal"
+    : >"${log_path}"
+
+    printf -v pane_body \
+        'printf "Subsystem: %%s\nLog: %%s\nWaiting for FVP UART port...\n\n" %q %q; while [[ ! -s %q ]]; do sleep 0.2; done; port="$(<%q)"; term="$(<%q 2>/dev/null || true)"; printf "UART: %%s\nPort: %%s\n\n" "${term:-unknown}" "${port}"; if command -v stdbuf >/dev/null 2>&1; then stdbuf -o0 -e0 telnet 127.0.0.1 "${port}" 2>&1 | tee -a %q; else telnet 127.0.0.1 "${port}" 2>&1 | tee -a %q; fi; printf "\nUART pane exited. Press Enter to close this pane.\n"; read -r _' \
+        "${title}" "${log_path}" "${port_file}" "${port_file}" "${term_file}" \
+        "${log_path}" "${log_path}"
+
+    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' -t "${FVP_ROOT_PANE}" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
 }
 
 start_uart_pane()
@@ -258,6 +297,14 @@ start_uart_pane()
     printf 'UART %s is listening on port %s; log: %s\n' "${domain}" "${port}" "${log_path}" |
         tee -a "${OUT_DIR}/tmux-supervisor.log"
 
+    if [[ -n "${UART_PORT_DIR}" ]]; then
+        mkdir -p "${UART_PORT_DIR}"
+        printf '%s\n' "${term}" >"${UART_PORT_DIR}/${domain}.terminal"
+        printf '%s\n' "${port}" >"${UART_PORT_DIR}/${domain}.port.tmp"
+        mv "${UART_PORT_DIR}/${domain}.port.tmp" "${UART_PORT_DIR}/${domain}.port"
+        return 0
+    fi
+
     printf -v pane_body \
         'printf "Subsystem: %%s\nUART: %%s\nPort: %%s\nLog: %%s\n\n" %q %q %q %q; if command -v stdbuf >/dev/null 2>&1; then stdbuf -o0 -e0 telnet 127.0.0.1 %q 2>&1 | tee -a %q; else telnet 127.0.0.1 %q 2>&1 | tee -a %q; fi; printf "\nUART pane exited. Press Enter to close this pane.\n"; read -r _' \
         "${title}" "${term}" "${port}" "${log_path}" "${port}" "${log_path}" "${port}" "${log_path}"
@@ -276,6 +323,13 @@ supervise_run()
 {
     if [[ -z "${FVP_ROOT_PANE}" && -n "${TMUX_PANE:-}" ]]; then
         FVP_ROOT_PANE="${TMUX_PANE}"
+    fi
+
+    if [[ -n "${FVP_START_FILE}" ]]; then
+        printf 'Waiting for tmux UART panes...\n'
+        while [[ ! -e "${FVP_START_FILE}" ]]; do
+            sleep 0.1
+        done
     fi
 
     source_sdk_if_present
@@ -399,23 +453,39 @@ start_tmux()
     fi
 
     local supervisor_body
+    local control_dir="${OUT_DIR}/control"
+    local domain
+    UART_PORT_DIR="${control_dir}/ports"
+    FVP_START_FILE="${control_dir}/start"
     supervisor_body=$(
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
         printf 'ROOT_DIR=%q MACHINE=%q YOCTO_BUILD_DIR=%q DEPLOY_DIR=%q SDK_DIR=%q ' \
             "${ROOT_DIR}" "${MACHINE}" "${YOCTO_BUILD_DIR}" "${DEPLOY_DIR}" "${SDK_DIR}"
         printf 'RUNFVP_BIN=%q FVP_CONF=%q OUT_DIR=%q EXTRA_ARGS_FILE=%q ' \
             "${RUNFVP_BIN}" "${FVP_CONF}" "${OUT_DIR}" "${EXTRA_ARGS_FILE}"
+        printf 'UART_PORT_DIR=%q FVP_START_FILE=%q ' \
+            "${UART_PORT_DIR}" "${FVP_START_FILE}"
         printf 'TMUX_BIN=%q TMUX_SESSION=%q ' "${TMUX_BIN}" "${TMUX_SESSION}"
         printf 'exec %q --supervise' "${SCRIPT_PATH}"
     )
 
     local fvp_pane_id
-    fvp_pane_id="$(tmux_cmd new-session -d -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n fvp bash -lc "${supervisor_body}")"
+    mkdir -p "${UART_PORT_DIR}"
+    fvp_pane_id="$(tmux_cmd new-session -d -x 160 -y 48 -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n fvp bash -lc "${supervisor_body}")"
+    FVP_ROOT_PANE="${fvp_pane_id}"
     tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" synchronize-panes off
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-status top
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" pane-border-format '#{pane_index}: #{pane_title}'
     tmux_cmd select-pane -t "${fvp_pane_id}" -T fvp
+    for domain in u_boot_linux tf_a safety_island_cl1 safety_island_cl0 rse; do
+        start_waiting_uart_pane "${domain}"
+        tmux_cmd select-layout -t "${TMUX_SESSION}:fvp" tiled >/dev/null
+        tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
+    done
+    tmux_cmd select-layout -t "${TMUX_SESSION}:fvp" tiled >/dev/null
+    tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
+    : >"${FVP_START_FILE}"
     tmux_cmd bind-key -n F12 kill-session -t "${TMUX_SESSION}"
 
     printf 'started tmux session: %s\n' "${TMUX_SESSION}"
