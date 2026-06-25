@@ -230,3 +230,69 @@ def test_run_fvp_supervisor_ignores_extra_fvp_terminals(tmp_path: Path) -> None:
     assert "terminal_0" not in tmux_text
     assert "terminal_1" not in tmux_text
     assert "synchronize-panes off" in tmux_text
+
+
+def test_run_fvp_supervisor_splits_from_root_pane(tmp_path: Path) -> None:
+    out_dir = tmp_path / "out"
+    fake_bin_dir = tmp_path / "bin"
+    tmux_log = tmp_path / "tmux.log"
+    args_file = tmp_path / "extra-args.txt"
+    fvpconf = tmp_path / "apollo.fvpconf"
+    fake_bin_dir.mkdir()
+    out_dir.mkdir()
+    args_file.write_text("", encoding="utf-8")
+    write_fvpconf(fvpconf, tmp_path / "flash.img")
+
+    fake_runfvp = fake_bin_dir / "runfvp"
+    fake_runfvp.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' 'Info: RD_ASD: terminal_uart: Listening for serial connection on port 5000'\n"
+        "printf '%s\\n' 'Info: RD_ASD: terminal_uart_si_cluster0: Listening for serial connection on port 5001'\n",
+        encoding="utf-8",
+    )
+    fake_runfvp.chmod(0o755)
+    make_executable(fake_bin_dir / "telnet")
+
+    fake_tmux = fake_bin_dir / "tmux"
+    fake_tmux.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"$TMUX_LOG\"\n"
+        "if [[ \"$1\" == \"split-window\" ]]; then printf '%%new\\n'; fi\n",
+        encoding="utf-8",
+    )
+    fake_tmux.chmod(0o755)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "PATH": f"{fake_bin_dir}:{env['PATH']}",
+            "TMUX_BIN": str(fake_tmux),
+            "TMUX_LOG": str(tmux_log),
+            "MACHINE": "apollo-fvp",
+            "DEPLOY_DIR": str(tmp_path),
+            "RUNFVP_BIN": str(fake_runfvp),
+            "FVP_CONF": str(fvpconf),
+            "OUT_DIR": str(out_dir),
+            "EXTRA_ARGS_FILE": str(args_file),
+            "TMUX_SESSION": "apollo-test",
+            "TMUX_PANE": "%0",
+        }
+    )
+
+    result = subprocess.run(
+        [str(SCRIPT), "--supervise"],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        input="\n",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0, result.stderr
+    tmux_lines = tmux_log.read_text(encoding="utf-8").splitlines()
+    split_lines = [line for line in tmux_lines if line.startswith("split-window ")]
+    assert split_lines
+    assert all(" -t %0 " in f" {line} " for line in split_lines)
+    assert any(line == "select-pane -t %0" for line in tmux_lines)

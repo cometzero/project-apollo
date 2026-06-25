@@ -12,6 +12,7 @@ RUNFVP_BIN="${RUNFVP_BIN:-${ROOT_DIR}/layers/meta-arm/scripts/runfvp}"
 FVP_CONF="${FVP_CONF:-}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
 TMUX_SESSION="${TMUX_SESSION:-}"
+FVP_ROOT_PANE="${FVP_ROOT_PANE:-}"
 OUT_DIR="${OUT_DIR:-}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 NO_ATTACH=0
@@ -236,6 +237,7 @@ start_uart_pane()
     local log_path
     local pane_body
     local pane_id
+    local split_target
 
     if ! domain="$(terminal_domain "${term}")"; then
         printf 'Ignoring unmanaged FVP terminal %s on port %s\n' "${term}" "${port}" |
@@ -260,14 +262,22 @@ start_uart_pane()
         'printf "Subsystem: %%s\nUART: %%s\nPort: %%s\nLog: %%s\n\n" %q %q %q %q; if command -v stdbuf >/dev/null 2>&1; then stdbuf -o0 -e0 telnet 127.0.0.1 %q 2>&1 | tee -a %q; else telnet 127.0.0.1 %q 2>&1 | tee -a %q; fi; printf "\nUART pane exited. Press Enter to close this pane.\n"; read -r _' \
         "${title}" "${term}" "${port}" "${log_path}" "${port}" "${log_path}" "${port}" "${log_path}"
 
+    split_target="${FVP_ROOT_PANE:-${TMUX_SESSION}:fvp}"
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" synchronize-panes off >/dev/null
-    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' -t "${TMUX_SESSION}:fvp" bash -lc "${pane_body}")"
+    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' -t "${split_target}" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
+    if [[ -n "${FVP_ROOT_PANE}" ]]; then
+        tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
+    fi
     tmux_cmd select-layout -t "${TMUX_SESSION}:fvp" tiled >/dev/null
 }
 
 supervise_run()
 {
+    if [[ -z "${FVP_ROOT_PANE}" && -n "${TMUX_PANE:-}" ]]; then
+        FVP_ROOT_PANE="${TMUX_PANE}"
+    fi
+
     source_sdk_if_present
     require_command telnet
 
@@ -286,6 +296,9 @@ supervise_run()
     printf 'FVP stdout log: %s\n' "${OUT_DIR}/fvp_stdout.log"
     printf 'UART logs: %s/uarts\n' "${OUT_DIR}"
     printf 'Command: %s\n\n' "$(quote_args "${cmd[@]}")"
+    if [[ -n "${FVP_ROOT_PANE}" ]]; then
+        printf 'Supervisor pane: %s\n\n' "${FVP_ROOT_PANE}"
+    fi
     printf 'Waiting for FVP UART ports...\n\n'
 
     local line
