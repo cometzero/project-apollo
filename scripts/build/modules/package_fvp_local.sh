@@ -440,6 +440,39 @@ def refresh_vars_if_needed(variables: dict[str, str]) -> dict[str, str]:
     return variables
 
 
+def native_python_env(native_root: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    sites = sorted(native_root.glob("usr/lib/python*/site-packages"))
+    if sites:
+        env["PYTHONPATH"] = f"{sites[-1]}:{env.get('PYTHONPATH', '')}".rstrip(":")
+    return env
+
+
+def native_root_for_tool(tool: Path) -> Path | None:
+    if (
+        len(tool.parents) >= 3
+        and tool.parent.name == "bin"
+        and tool.parent.parent.name == "usr"
+    ):
+        root = tool.parents[2]
+        if list(root.glob("usr/lib/python*/site-packages")):
+            return root
+    return None
+
+
+def find_native_ukify() -> tuple[str, dict[str, str]] | None:
+    yocto_tmp = os.environ.get("YOCTO_TMP")
+    if not yocto_tmp:
+        return None
+    candidates = sorted(
+        Path(yocto_tmp).glob("work/*/nexios-image/*/recipe-sysroot-native/usr/bin/ukify")
+    )
+    if not candidates:
+        return None
+    tool = candidates[-1]
+    return str(tool), native_python_env(tool.parents[2])
+
+
 def resolve_ukify(raw_cmd: str) -> tuple[str, dict[str, str]]:
     argv = shlex.split(raw_cmd or "ukify")
     if not argv:
@@ -452,20 +485,16 @@ def resolve_ukify(raw_cmd: str) -> tuple[str, dict[str, str]]:
         path = Path(tool)
         if not path.is_file():
             fail(f"UKIFY_CMD not found: {tool}")
+        native_root = native_root_for_tool(path)
+        if native_root is not None:
+            return str(path), native_python_env(native_root)
         return str(path), os.environ.copy()
+    native = find_native_ukify()
+    if native is not None:
+        return native
     found = shutil.which("ukify")
     if found:
         return found, os.environ.copy()
-    yocto_tmp = os.environ.get("YOCTO_TMP")
-    if yocto_tmp:
-        candidates = sorted(Path(yocto_tmp).glob("work/*/nexios-image/*/recipe-sysroot-native/usr/bin/ukify"))
-        if candidates:
-            env = os.environ.copy()
-            native_root = candidates[-1].parents[2]
-            sites = list(native_root.glob("usr/lib/python*/site-packages"))
-            if sites:
-                env["PYTHONPATH"] = f"{sites[-1]}:{env.get('PYTHONPATH', '')}".rstrip(":")
-            return str(candidates[-1]), env
     fail("UKIFY_CMD not found: ukify")
 
 

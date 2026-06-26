@@ -1888,6 +1888,85 @@ def test_package_local_linux_refreshes_component_cache_and_uses_native_ukify(
     assert str(native_ukify) in ukify_lines[0]
 
 
+def test_package_local_linux_prefers_native_ukify_when_host_ukify_lacks_pefile(
+    tmp_path: Path,
+) -> None:
+    # Given: host PATH has a broken ukify, while Yocto native ukify has pefile.
+    yocto_deploy, local_build, env = make_package_fixture(tmp_path)
+    add_local_linux_fixture(local_build)
+    add_uki_source_fixture(yocto_deploy)
+    tools_dir, ukify_log, wic_log = add_stub_uki_tools(tmp_path)
+    native_ukify = (
+        tmp_path
+        / "yocto-tmp"
+        / "work"
+        / "apollo_fvp-poky-linux"
+        / "nexios-image"
+        / "1.0"
+        / "recipe-sysroot-native"
+        / "usr"
+        / "bin"
+        / "ukify"
+    )
+    native_site = (
+        native_ukify.parents[2]
+        / "usr"
+        / "lib"
+        / "python3.13"
+        / "site-packages"
+    )
+    write_file(native_site / "pefile.py", "VALUE = 'native-pefile'\n")
+    write_file(
+        native_ukify,
+        "#!/usr/bin/env python3\n"
+        "from pathlib import Path\n"
+        "import os\n"
+        "import sys\n"
+        "import pefile\n"
+        "log = Path(os.environ['UKIFY_LOG'])\n"
+        "log.parent.mkdir(parents=True, exist_ok=True)\n"
+        "output = ''\n"
+        "cmdline = ''\n"
+        "for arg in sys.argv[1:]:\n"
+        "    if arg.startswith('--output='):\n"
+        "        output = arg.removeprefix('--output=')\n"
+        "    if arg.startswith('--cmdline='):\n"
+        "        cmdline = arg.removeprefix('--cmdline=')\n"
+        "with log.open('a', encoding='utf-8') as stream:\n"
+        "    stream.write('ukify ' + sys.argv[0] + ' dep=' + pefile.VALUE + '\\n')\n"
+        "Path(output).parent.mkdir(parents=True, exist_ok=True)\n"
+        "Path(output).write_text('stub-uki\\ncmdline=' + cmdline + '\\n', encoding='utf-8')\n",
+    )
+    native_ukify.chmod(0o755)
+    write_file(
+        tools_dir / "ukify",
+        "#!/usr/bin/env python3\n"
+        "raise ModuleNotFoundError(\"No module named 'pefile'\")\n",
+    )
+    (tools_dir / "ukify").chmod(0o755)
+    vars_path = tmp_path / "yocto-vars.json"
+    write_yocto_vars(vars_path, default_uki_variables(Path("ukify")))
+
+    # When: local Linux packaging resolves UKIFY_CMD.
+    result = run_local_build(
+        "--package",
+        extra_env=with_fixture_flash_hook(
+            local_uki_env(env, vars_path, tools_dir, ukify_log, wic_log)
+            | {"YOCTO_TMP": str(tmp_path / "yocto-tmp")},
+            tmp_path / "package-flash-hook.log",
+        ),
+    )
+
+    # Then: native ukify is used, so host pefile packaging does not matter.
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "No module named 'pefile'" not in output
+    ukify_lines = ukify_log.read_text(encoding="utf-8").splitlines()
+    assert len(ukify_lines) == 2
+    assert str(native_ukify) in ukify_lines[0]
+    assert "dep=native-pefile" in ukify_lines[0]
+
+
 def test_package_local_linux_rejects_refreshed_vars_still_missing_initrd(
     tmp_path: Path,
 ) -> None:
