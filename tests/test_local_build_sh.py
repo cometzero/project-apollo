@@ -208,6 +208,25 @@ def test_no_package_removes_default_package_step() -> None:
     assert "package" not in output.lower()
 
 
+def test_component_stage_logs_start_and_completion(tmp_path: Path) -> None:
+    result = run_local_build(
+        "linux",
+        "clean",
+        "--no-package",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "LOCAL_BUILD_DIR": str(tmp_path / "local-build"),
+            "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "Starting linux-clean" in output
+    assert "Completed linux-clean in " in output
+    assert output.index("Starting linux-clean") < output.index("Completed linux-clean")
+
+
 def test_unknown_component_fails_with_actionable_error() -> None:
     # Given: a component owned by the old dashed workflow, not this entrypoint.
     # When: the component is requested.
@@ -883,6 +902,10 @@ def test_package_fixture_writes_local_fvpconf_and_manifest(tmp_path: Path) -> No
     )
 
     assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "Starting package" in output
+    assert "Completed package in " in output
+    assert output.index("Starting package") < output.index("Completed package")
     assert hook_log.read_text(encoding="utf-8").splitlines() == ["package_flash_images"]
     local_deploy = local_build / "deploy"
     local_fvpconf = local_deploy / "apollo-fvp-local.fvpconf"

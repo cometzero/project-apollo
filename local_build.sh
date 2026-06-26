@@ -435,9 +435,9 @@ if ((DRY_RUN)); then
 fi
 
 for component in "${SELECTED_COMPONENTS[@]}"; do
-    run_component "${component}" "${ACTION}"
+    run_step "${component}-${ACTION}" run_component "${component}" "${ACTION}"
 done
 
 if [[ "${PACKAGE_MODE}" == enabled ]]; then
-    package_local_fvp_outputs
+    run_step "package" package_local_fvp_outputs
 fi

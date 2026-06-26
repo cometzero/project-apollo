@@ -227,7 +227,7 @@ log()
 
 timer_now()
 {
-    date +%s
+    printf '%(%s)T\n' -1
 }
 
 format_elapsed()
