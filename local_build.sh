@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_tfm.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_scp.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_zephyr.sh"
@@ -278,7 +279,9 @@ ensure_sdk_available()
     shopt -u nullglob
 
     if ((${#env_files[@]} == 0)); then
-        die "Yocto SDK not found under ${SDK_DIR}. Run ./local-build.sh sdk or bitbake -c populate_sdk first."
+        log "WARNING: Yocto SDK not found under ${SDK_DIR}; local_build.sh will populate and install it automatically."
+        log "WARNING: Running bitbake nexios-image -c populate_sdk can take a long time."
+        build_sdk
     fi
 
     setup_build_environment

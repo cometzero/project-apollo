@@ -377,26 +377,104 @@ def test_zephyr_kconfig_missing_deps_fail_with_recovery_message(
     assert "Yocto" in output
 
 
-def test_missing_sdk_fails_with_recovery_text_not_unresolved_build_sdk(
+def test_missing_sdk_is_populated_and_installed_by_local_build(
     tmp_path: Path,
 ) -> None:
     # Given: the new entrypoint is run without a populated Yocto SDK.
+    tools_dir = tmp_path / "host-tools"
+    bitbake_log = tmp_path / "bitbake.log"
+    make_log = tmp_path / "make.log"
+    sdk_dir = tmp_path / "missing-sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    for command in (
+        "cmake",
+        "ninja",
+        "git",
+        "openssl",
+        "fiptool",
+        "mkimage",
+        "cert-to-efi-sig-list",
+        "cpio",
+        "gzip",
+        "depmod",
+        "sgdisk",
+        "mkfs.vfat",
+        "mcopy",
+        "arm-none-eabi-gcc",
+        "aarch64-none-elf-gcc",
+        "aarch64-poky-linux-gcc",
+    ):
+        write_file(tools_dir / command, "#!/usr/bin/env bash\nexit 0\n")
+        (tools_dir / command).chmod(0o755)
+    write_file(
+        tools_dir / "make",
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_MAKE_LOG}\"\n"
+        "exit 0\n",
+    )
+    (tools_dir / "make").chmod(0o755)
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
+        "sdk_deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
+        "mkdir -p \"${sdk_deploy}\"\n"
+        "installer=\"${sdk_deploy}/apollo-test-sdk.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "dest=\"\"\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in\n"
+        "        -d) dest=\"$2\"; shift 2 ;;\n"
+        "        *) shift ;;\n"
+        "    esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "cat > \"${dest}/environment-setup-apollo-test\" <<'ENV'\n"
+        "export PATH=\"${APOLLO_TEST_TOOLS_DIR}:${PATH}\"\n"
+        "export TARGET_PREFIX=\"aarch64-poky-linux-\"\n"
+        "export OECORE_NATIVE_SYSROOT=\"${APOLLO_TEST_NATIVE_SYSROOT}\"\n"
+        "export SDKTARGETSYSROOT=\"${APOLLO_TEST_TARGET_SYSROOT}\"\n"
+        "ENV\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
     env = {
         "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
-        "SDK_DIR": str(tmp_path / "missing-sdk"),
-        "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
-        "LOCAL_BUILD_DIR": str(tmp_path / "local-build"),
+        "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
+        "APOLLO_TEST_MAKE_LOG": str(make_log),
+        "APOLLO_TEST_NATIVE_SYSROOT": str(tmp_path / "native-sysroot"),
+        "APOLLO_TEST_TARGET_SYSROOT": str(tmp_path / "target-sysroot"),
+        "APOLLO_TEST_TOOLS_DIR": str(tools_dir),
+        "BITBAKE": str(tools_dir / "bitbake"),
+        "PATH": f"{tools_dir}:/usr/bin:/bin",
+        "SDK_DIR": str(sdk_dir),
+        "YOCTO_BUILD_DIR": str(yocto_build),
+        "LOCAL_BUILD_DIR": str(local_build),
     }
 
-    # When: a real component build reaches SDK setup.
-    result = run_local_build("linux", "--no-package", extra_env=env)
+    # When: a real Kconfig command reaches SDK setup.
+    result = run_local_build("linux", "defconfig", "--no-package", extra_env=env)
 
-    # Then: it fails with SDK recovery text, not an unresolved shell function.
-    assert result.returncode != 0
+    # Then: local_build.sh populates and installs the SDK before continuing.
+    assert result.returncode == 0, output_of(result)
     output = output_of(result)
     assert "build_sdk: command not found" not in output
-    assert "Yocto SDK" in output
-    assert "./local-build.sh sdk" in output or "populate_sdk" in output
+    assert "Yocto SDK not found" in output
+    assert "populate and install it automatically" in output
+    assert "can take a long time" in output
+    assert (sdk_dir / "environment-setup-apollo-test").is_file()
+    assert "nexios-image -c populate_sdk" in bitbake_log.read_text(
+        encoding="utf-8"
+    )
+    make_args = make_log.read_text(encoding="utf-8")
+    assert "ARCH=arm64" in make_args
+    assert "CROSS_COMPILE=aarch64-poky-linux-" in make_args
+    assert "defconfig" in make_args
 
 
 def test_linux_clean_dry_run_shows_only_linux_owned_outputs() -> None:
