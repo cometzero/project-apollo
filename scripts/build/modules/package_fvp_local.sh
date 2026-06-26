@@ -81,10 +81,29 @@ validate_local_fvp_deploy_root()
     validate_local_build_write_dir "signing dir" "${SIGN_DIR}"
 }
 
+preflight_local_fvp_package_tools()
+{
+    require_command python3
+
+    case "${APOLLO_LOCAL_BUILD_PACKAGE_FLASH_TEST_MODE:-}" in
+        fixture|record-only) ;;
+        *) require_command sgdisk ;;
+    esac
+
+    if [[ -f "${BOOT_DIR}/Image" && -f "${BOOT_DIR}/apollo-fvp.dtb" ]]; then
+        require_command sgdisk
+        require_command mdir
+        require_command mmd
+        require_command mcopy
+    fi
+}
+
 package_local_fvp_outputs()
 {
     validate_local_fvp_deploy_root
+    preflight_local_fvp_package_tools
     package_local_flash_images
+    export YOCTO_TMP
     python3 - "$YOCTO_DEPLOY_DIR" "$LOCAL_BUILD_DIR" "$MACHINE" \
         "$APOLLO_LOCAL_BUILD_YOCTO_VARS" <<'PY'
 from __future__ import annotations
@@ -92,6 +111,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -166,7 +186,7 @@ def safe_mkdir(path: Path) -> None:
 def digest(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+        for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
 
@@ -174,22 +194,58 @@ def digest(path: Path) -> str:
 artifacts: list[dict[str, object]] = []
 
 
+def copy_preserving_sparse(src: Path, dst: Path) -> None:
+    try:
+        subprocess.run(
+            [
+                "cp",
+                "--reflink=auto",
+                "--sparse=always",
+                "--preserve=mode,timestamps",
+                "--",
+                str(src),
+                str(dst),
+            ],
+            check=True,
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        shutil.copy2(src, dst)
+
+
+def ensure_mtools_dir(image: str, dirname: str) -> None:
+    existing = subprocess.run(
+        ["mdir", "-i", image, dirname],
+        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    if existing.returncode == 0:
+        return
+    subprocess.run(["mmd", "-i", image, dirname], check=True)
+
+
 def copy_artifact(src: Path, dst: Path, provenance: str, root: Path = yocto_deploy) -> None:
     ensure_existing_source(src, root, "Yocto deploy source")
-    source_before = digest(src)
     safe_write_path(dst)
     safe_mkdir(dst.parent)
-    shutil.copy2(src, dst)
-    source_after = digest(src)
+    same_file = dst.exists() and os.path.samefile(src, dst)
+    source_hash = digest(src)
+    if not same_file:
+        copy_preserving_sparse(src, dst)
+        if dst.stat().st_size != src.stat().st_size:
+            fail(f"copied artifact size mismatch: {src} -> {dst}")
     artifacts.append(
         {
             "source_path": str(src),
             "local_path": str(dst),
             "component_provenance": provenance,
             "size": dst.stat().st_size,
-            "sha256": digest(dst),
-            "source_sha256_before": source_before,
-            "source_sha256_after": source_after,
+            "sha256": source_hash,
+            "source_sha256_before": source_hash,
+            "source_sha256_after": source_hash,
             "source_preserved": True,
         }
     )
@@ -385,10 +441,17 @@ def refresh_vars_if_needed(variables: dict[str, str]) -> dict[str, str]:
 
 
 def resolve_ukify(raw_cmd: str) -> tuple[str, dict[str, str]]:
-    if raw_cmd and raw_cmd != "ukify":
-        path = Path(raw_cmd)
+    argv = shlex.split(raw_cmd or "ukify")
+    if not argv:
+        argv = ["ukify"]
+    tool = argv[0]
+    extra = argv[1:]
+    if extra and extra != ["build"]:
+        fail(f"unsupported UKIFY_CMD arguments: {raw_cmd}")
+    if tool != "ukify":
+        path = Path(tool)
         if not path.is_file():
-            fail(f"UKIFY_CMD not found: {raw_cmd}")
+            fail(f"UKIFY_CMD not found: {tool}")
         return str(path), os.environ.copy()
     found = shutil.which("ukify")
     if found:
@@ -471,7 +534,7 @@ if local_image.exists() and local_dtb.exists():
     try:
         subprocess.run(["sgdisk", "-p", str(wic)], check=True, stdout=subprocess.PIPE, text=True)
         for name, offset in ((uki_a, "1048576"), (uki_b, "135266304")):
-            subprocess.run(["mmd", "-i", f"{wic}@@{offset}", "::/EFI"], check=True)
+            ensure_mtools_dir(f"{wic}@@{offset}", "::/EFI")
             subprocess.run(["mcopy", "-o", "-i", f"{wic}@@{offset}", str(images / name), "::/EFI/BOOT/BOOTAA64.EFI"], check=True)
     except subprocess.CalledProcessError:
         wic.unlink(missing_ok=True)

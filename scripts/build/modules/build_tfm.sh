@@ -191,6 +191,10 @@ build_tfm()
     cmake_bin="$(command -v cmake)"
     local saved_path="${PATH}"
     local tfm_native_bin="${tfm_work}/recipe-sysroot-native/usr/bin"
+    local arm_none_eabi_gcc
+    local arm_none_eabi_gxx
+    local arm_none_eabi_objcopy
+    local tfm_cross_compile
 
     apply_git_patch_dirs_cached tfm-extras "${tfm_deps}/tfm-extras" \
         "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m-extras/fvp-rd-aspen" \
@@ -229,14 +233,20 @@ build_tfm()
         return 0
     fi
 
+    arm_none_eabi_gcc="$(command -v "${ARM_NONE_EABI_PREFIX}gcc")"
+    arm_none_eabi_gxx="$(command -v "${ARM_NONE_EABI_PREFIX}g++")"
+    arm_none_eabi_objcopy="$(command -v "${ARM_NONE_EABI_PREFIX}objcopy")"
+    tfm_cross_compile="${arm_none_eabi_gcc%-gcc}"
+
     run_cmake_configure_if_needed tfm-configure "${TFM_BUILD_DIR}" "${cmake_bin}" \
         -S "${TFM_SRC}" \
         -B "${TFM_BUILD_DIR}" \
         -G Ninja \
         -DCMAKE_BUILD_TYPE=Debug \
-        -DCMAKE_C_COMPILER="$(command -v "${ARM_NONE_EABI_PREFIX}gcc")" \
-        -DCMAKE_CXX_COMPILER="$(command -v "${ARM_NONE_EABI_PREFIX}g++")" \
-        -DCMAKE_OBJCOPY="$(command -v "${ARM_NONE_EABI_PREFIX}objcopy")" \
+        -DCMAKE_C_COMPILER="${arm_none_eabi_gcc}" \
+        -DCMAKE_CXX_COMPILER="${arm_none_eabi_gxx}" \
+        -DCMAKE_OBJCOPY="${arm_none_eabi_objcopy}" \
+        -DCROSS_COMPILE="${tfm_cross_compile}" \
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
         -DPython3_EXECUTABLE="${tfm_work}/recipe-sysroot-native/usr/bin/python3-native/python3" \
         -DTFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp \

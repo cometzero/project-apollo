@@ -162,6 +162,39 @@ def test_package_flag_is_package_only_when_no_components_are_selected() -> None:
     assert "buildroot" not in output.lower()
 
 
+def test_package_local_linux_preflights_missing_mtools(tmp_path: Path) -> None:
+    # Given: local Linux outputs require WIC ESP patching, but mtools are absent.
+    _yocto_deploy, local_build, env = make_package_fixture(tmp_path)
+    add_local_linux_fixture(local_build, modules=False)
+    tools_dir = tmp_path / "host-tools"
+    tools_dir.mkdir(parents=True)
+    for command in ("bash", "dirname", "python3", "realpath"):
+        (tools_dir / command).symlink_to(Path("/bin") / command)
+    write_file(
+        tools_dir / "sgdisk",
+        "#!/usr/bin/env bash\n"
+        "printf 'unexpected sgdisk execution\\n' >&2\n"
+        "exit 99\n",
+    )
+    (tools_dir / "sgdisk").chmod(0o755)
+    hook_log = tmp_path / "package-flash-hook.log"
+
+    result = run_local_build(
+        "--package",
+        extra_env=with_fixture_flash_hook(
+            env | {"JOBS": "1", "PATH": str(tools_dir)},
+            hook_log,
+        ),
+    )
+
+    # Then: the command fails before flash generation mutates the package tree.
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "missing required command: mdir" in output
+    assert "unexpected sgdisk execution" not in output
+    assert not hook_log.exists()
+
+
 def test_no_package_removes_default_package_step() -> None:
     # Given: the default all-component dry-run with package disabled.
     # When: dry-run resolves the command.
@@ -573,6 +606,7 @@ def test_tfm_build_dry_run_resolves_platform_from_yocto_vars(tmp_path: Path) -> 
     output = output_of(result)
     assert "tf-m: build" in output
     assert "-DTFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp" in output
+    assert "-DCROSS_COMPILE=arm-none-eabi" in output
 
 
 def test_stale_yocto_vars_cache_rejected_before_default_loading(
@@ -702,6 +736,13 @@ def add_stub_uki_tools(tmp_path: Path) -> tuple[Path, Path, Path]:
         "OUT\n",
     )
     write_file(
+        tools_dir / "mdir",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'mdir %s\\n' \"$*\" >> \"${WIC_TOOL_LOG}\"\n"
+        "exit \"${APOLLO_STUB_MDIR_RC:-1}\"\n",
+    )
+    write_file(
         tools_dir / "mmd",
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
@@ -726,7 +767,7 @@ def add_stub_uki_tools(tmp_path: Path) -> tuple[Path, Path, Path]:
         "done\n"
         "printf '\\npatched:%s\\n' \"$(basename \"$source\")\" >> \"$image\"\n",
     )
-    for tool in ("ukify", "sgdisk", "mmd", "mcopy"):
+    for tool in ("ukify", "sgdisk", "mdir", "mmd", "mcopy"):
         (tools_dir / tool).chmod(0o755)
     return tools_dir, ukify_log, wic_log
 
@@ -1786,6 +1827,7 @@ def test_package_local_linux_refreshes_component_cache_and_uses_native_ukify(
         },
     )
     refreshed_variables = default_uki_variables(Path("ukify"))
+    refreshed_variables["UKIFY_CMD"] = "ukify build"
     collector_log = add_fake_collector_python(
         tools_dir,
         tmp_path,

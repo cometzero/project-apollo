@@ -200,7 +200,9 @@ print_component_dry_run()
             printf '    function: %s\n' "$(component_function "${component}")"
             case "${component}" in
                 tf-m)
-                    printf '    cmake: -DTFM_PLATFORM=%s\n' "${TFM_PLATFORM:-arm/rse/automotive_rd/apollo-fvp}"
+                    printf '    cmake: -DTFM_PLATFORM=%s -DCROSS_COMPILE=%s\n' \
+                        "${TFM_PLATFORM:-arm/rse/automotive_rd/apollo-fvp}" \
+                        "${ARM_NONE_EABI_PREFIX%-}"
                     ;;
                 scp-firmware)
                     printf '    cmake: -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY\n'
@@ -271,17 +273,15 @@ EOF
 
 ensure_sdk_available()
 {
-    local env_file
     shopt -s nullglob
     local env_files=("${SDK_DIR}"/environment-setup-*)
     shopt -u nullglob
+
     if ((${#env_files[@]} == 0)); then
         die "Yocto SDK not found under ${SDK_DIR}. Run ./local-build.sh sdk or bitbake -c populate_sdk first."
     fi
-    env_file="${env_files[0]}"
-    set +u
-    source "${env_file}"
-    set -u
+
+    setup_build_environment
 }
 
 run_clean()
