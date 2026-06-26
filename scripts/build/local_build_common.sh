@@ -134,7 +134,7 @@ fi
 MACHINE="${MACHINE:-apollo-fvp}"
 RD_ASPEN_VARIANT="${RD_ASPEN_VARIANT:-cfg2}"
 VARIANT="${VARIANT:-${RD_ASPEN_VARIANT}}"
-JOBS="${JOBS:-$(nproc)}"
+JOBS="${JOBS:-}"
 HOST_PATH="${HOST_PATH:-${PATH}}"
 
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
@@ -611,35 +611,40 @@ install_artifact()
 
 host_cpus()
 {
+    if [[ -n "${APOLLO_HOST_CPUS:-}" ]]; then
+        printf '%s\n' "${APOLLO_HOST_CPUS}"
+        return 0
+    fi
     nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1
 }
 
 host_mem_mib()
 {
-    awk '/^MemTotal:/ { print int($2 / 1024); exit }' /proc/meminfo 2>/dev/null || echo 0
+    local meminfo="${APOLLO_MEMINFO_PATH:-/proc/meminfo}"
+    awk '/^MemTotal:/ { print int($2 / 1024); exit }' "${meminfo}" 2>/dev/null || echo 0
 }
 
 auto_build_threads()
 {
-    local cpus mem_mib mem_threads threads
+    local cpus mem_mib
 
     cpus="$(host_cpus)"
+    if [[ ! "${cpus}" =~ ^[1-9][0-9]*$ ]]; then
+        cpus=1
+    fi
     mem_mib="$(host_mem_mib)"
-
-    if [[ "${mem_mib}" -gt 0 ]]; then
-        mem_threads=$((mem_mib / 2048))
-        [[ "${mem_threads}" -lt 1 ]] && mem_threads=1
-    else
-        mem_threads="${cpus}"
+    if [[ ! "${mem_mib}" =~ ^[0-9]+$ ]]; then
+        mem_mib=0
     fi
 
-    threads="${cpus}"
-    [[ "${threads}" -gt "${mem_threads}" ]] && threads="${mem_threads}"
-    [[ "${threads}" -gt 6 ]] && threads=6
-    [[ "${threads}" -lt 1 ]] && threads=1
-
-    echo "${threads}"
+    if [[ "${mem_mib}" -gt 16384 ]]; then
+        echo "${cpus}"
+    else
+        echo 6
+    fi
 }
+
+JOBS="${JOBS:-$(auto_build_threads)}"
 
 bitbake_network_sandbox_supported()
 {
@@ -689,12 +694,17 @@ prepare_bitbake_extra_args()
     BITBAKE_EXTRA_ARGS=()
     mkdir -p "${YOCTO_BUILD_DIR}/conf"
 
-    if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" || -n "${APOLLO_BUILD_THREADS:-}" || -n "${APOLLO_PARALLEL_MAKE:-}" ]]; then
+    if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" ||
+        -n "${APOLLO_BUILD_THREADS:-}" ||
+        -n "${BB_NUMBER_THREADS:-}" ||
+        -n "${BB_NUM_THREADS:-}" ||
+        -n "${APOLLO_PARALLEL_MAKE:-}" ||
+        -n "${PARALLEL_MAKE:-}" ]]; then
         local auto_threads build_threads parallel_make resource_conf
 
         auto_threads="$(auto_build_threads)"
-        build_threads="${APOLLO_BUILD_THREADS:-${auto_threads}}"
-        parallel_make="${APOLLO_PARALLEL_MAKE:--j${auto_threads}}"
+        build_threads="${APOLLO_BUILD_THREADS:-${BB_NUMBER_THREADS:-${BB_NUM_THREADS:-${auto_threads}}}}"
+        parallel_make="${APOLLO_PARALLEL_MAKE:-${PARALLEL_MAKE:--j${auto_threads}}}"
         resource_conf="${YOCTO_BUILD_DIR}/conf/apollo-bitbake-resources.conf"
         {
             echo "#"

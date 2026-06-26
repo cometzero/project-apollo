@@ -94,32 +94,35 @@ done
 DM_VERITY_MODE="$(normalize_dm_verity_mode "${DM_VERITY_MODE}")"
 
 host_cpus() {
+    if [[ -n "${APOLLO_HOST_CPUS:-}" ]]; then
+        printf '%s\n' "${APOLLO_HOST_CPUS}"
+        return 0
+    fi
     nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1
 }
 
 host_mem_mib() {
-    awk '/^MemTotal:/ { print int($2 / 1024); exit }' /proc/meminfo 2>/dev/null || echo 0
+    local meminfo="${APOLLO_MEMINFO_PATH:-/proc/meminfo}"
+    awk '/^MemTotal:/ { print int($2 / 1024); exit }' "${meminfo}" 2>/dev/null || echo 0
 }
 
 auto_build_threads() {
-    local cpus mem_mib mem_threads threads
+    local cpus mem_mib
 
     cpus="$(host_cpus)"
+    if [[ ! "${cpus}" =~ ^[1-9][0-9]*$ ]]; then
+        cpus=1
+    fi
     mem_mib="$(host_mem_mib)"
-
-    if [[ "${mem_mib}" -gt 0 ]]; then
-        mem_threads=$((mem_mib / 2048))
-        [[ "${mem_threads}" -lt 1 ]] && mem_threads=1
-    else
-        mem_threads="${cpus}"
+    if [[ ! "${mem_mib}" =~ ^[0-9]+$ ]]; then
+        mem_mib=0
     fi
 
-    threads="${cpus}"
-    [[ "${threads}" -gt "${mem_threads}" ]] && threads="${mem_threads}"
-    [[ "${threads}" -gt 6 ]] && threads=6
-    [[ "${threads}" -lt 1 ]] && threads=1
-
-    echo "${threads}"
+    if [[ "${mem_mib}" -gt 16384 ]]; then
+        echo "${cpus}"
+    else
+        echo 6
+    fi
 }
 
 bitbake_network_sandbox_supported() {
@@ -194,10 +197,15 @@ if [[ -n "${DM_VERITY_MC}" ]]; then
     echo "notice: dm-verity mode '${DM_VERITY_MODE}' uses multiconfig ${DM_VERITY_MC}" >&2
 fi
 
-if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" || -n "${APOLLO_BUILD_THREADS:-}" || -n "${APOLLO_PARALLEL_MAKE:-}" ]]; then
+if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" ||
+    -n "${APOLLO_BUILD_THREADS:-}" ||
+    -n "${BB_NUMBER_THREADS:-}" ||
+    -n "${BB_NUM_THREADS:-}" ||
+    -n "${APOLLO_PARALLEL_MAKE:-}" ||
+    -n "${PARALLEL_MAKE:-}" ]]; then
     AUTO_THREADS="$(auto_build_threads)"
-    BUILD_THREADS="${APOLLO_BUILD_THREADS:-${AUTO_THREADS}}"
-    PARALLEL_MAKE_VALUE="${APOLLO_PARALLEL_MAKE:--j${AUTO_THREADS}}"
+    BUILD_THREADS="${APOLLO_BUILD_THREADS:-${BB_NUMBER_THREADS:-${BB_NUM_THREADS:-${AUTO_THREADS}}}}"
+    PARALLEL_MAKE_VALUE="${APOLLO_PARALLEL_MAKE:-${PARALLEL_MAKE:--j${AUTO_THREADS}}}"
     RESOURCE_CONF="${PWD}/conf/apollo-bitbake-resources.conf"
     {
         echo "#"

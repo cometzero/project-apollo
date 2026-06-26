@@ -35,6 +35,75 @@ def run_build_dry_run(
     )
 
 
+def write_meminfo(path: Path, mem_total_kib: int) -> None:
+    path.write_text(f"MemTotal:       {mem_total_kib} kB\n", encoding="utf-8")
+
+
+def test_yocto_build_sh_sets_six_threads_at_16gb_or_less(tmp_path: Path) -> None:
+    meminfo = tmp_path / "meminfo"
+    write_meminfo(meminfo, 16 * 1024 * 1024)
+
+    result = run_build_dry_run(
+        tmp_path,
+        [],
+        {
+            "APOLLO_AUTO_RESOURCE_LIMITS": "1",
+            "APOLLO_HOST_CPUS": "32",
+            "APOLLO_MEMINFO_PATH": str(meminfo),
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    resource_conf = tmp_path / "build/conf/apollo-bitbake-resources.conf"
+    resource_text = resource_conf.read_text(encoding="utf-8")
+    assert 'BB_NUMBER_THREADS = "6"' in resource_text
+    assert 'PARALLEL_MAKE = "-j6"' in resource_text
+
+
+def test_yocto_build_sh_uses_all_cpus_above_16gb(tmp_path: Path) -> None:
+    meminfo = tmp_path / "meminfo"
+    write_meminfo(meminfo, 32 * 1024 * 1024)
+
+    result = run_build_dry_run(
+        tmp_path,
+        [],
+        {
+            "APOLLO_AUTO_RESOURCE_LIMITS": "1",
+            "APOLLO_HOST_CPUS": "32",
+            "APOLLO_MEMINFO_PATH": str(meminfo),
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    resource_conf = tmp_path / "build/conf/apollo-bitbake-resources.conf"
+    resource_text = resource_conf.read_text(encoding="utf-8")
+    assert 'BB_NUMBER_THREADS = "32"' in resource_text
+    assert 'PARALLEL_MAKE = "-j32"' in resource_text
+
+
+def test_yocto_build_sh_accepts_bb_num_threads_alias(tmp_path: Path) -> None:
+    meminfo = tmp_path / "meminfo"
+    write_meminfo(meminfo, 32 * 1024 * 1024)
+
+    result = run_build_dry_run(
+        tmp_path,
+        [],
+        {
+            "APOLLO_AUTO_RESOURCE_LIMITS": "0",
+            "APOLLO_HOST_CPUS": "32",
+            "APOLLO_MEMINFO_PATH": str(meminfo),
+            "BB_NUM_THREADS": "9",
+            "PARALLEL_MAKE": "-j11",
+        },
+    )
+
+    assert result.returncode == 0, result.stderr
+    resource_conf = tmp_path / "build/conf/apollo-bitbake-resources.conf"
+    resource_text = resource_conf.read_text(encoding="utf-8")
+    assert 'BB_NUMBER_THREADS = "9"' in resource_text
+    assert 'PARALLEL_MAKE = "-j11"' in resource_text
+
+
 def test_yocto_build_sh_keeps_legacy_target_without_dm_verity_option(
     tmp_path: Path,
 ) -> None:

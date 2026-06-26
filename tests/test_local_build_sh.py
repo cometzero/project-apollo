@@ -61,6 +61,10 @@ def component_step_lines(output: str) -> list[str]:
     ]
 
 
+def write_meminfo(path: Path, mem_total_kib: int) -> None:
+    path.write_text(f"MemTotal:       {mem_total_kib} kB\n", encoding="utf-8")
+
+
 def test_help_documents_local_fvp_contract() -> None:
     # Given: the new underscore local build entrypoint.
     # When: the user asks for CLI help.
@@ -122,6 +126,40 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     assert "package" in output
     assert "qbox" not in output.lower()
     assert "buildroot" not in output.lower()
+
+
+def test_dry_run_defaults_to_six_jobs_at_16gb_or_less(tmp_path: Path) -> None:
+    meminfo = tmp_path / "meminfo"
+    write_meminfo(meminfo, 16 * 1024 * 1024)
+
+    result = run_local_build(
+        "--dry-run",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "APOLLO_HOST_CPUS": "32",
+            "APOLLO_MEMINFO_PATH": str(meminfo),
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    assert "jobs: 6" in output_of(result)
+
+
+def test_dry_run_defaults_to_all_cpus_above_16gb(tmp_path: Path) -> None:
+    meminfo = tmp_path / "meminfo"
+    write_meminfo(meminfo, 32 * 1024 * 1024)
+
+    result = run_local_build(
+        "--dry-run",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "APOLLO_HOST_CPUS": "32",
+            "APOLLO_MEMINFO_PATH": str(meminfo),
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    assert "jobs: 32" in output_of(result)
 
 
 def test_explicit_components_and_action_skip_package_when_requested() -> None:
