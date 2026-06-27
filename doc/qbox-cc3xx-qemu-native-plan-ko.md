@@ -220,7 +220,7 @@ E=build/qbox-apollo-fvp/cc3xx-qemu-backend-${RUN_ID}
 
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --skip-build --timeout 2400 \
-  --rootfs-bootargs-profile none --post-login-probe \
+  --rootfs-bootargs-profile quiet-console --post-login-probe \
   --cc3xx-stats --cc3xx-stats-interval 65536 \
   --cc3xx-qemu-native-backend \
   --out-dir ${E}/full-live-cl0-cl1

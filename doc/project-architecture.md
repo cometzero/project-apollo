@@ -94,7 +94,7 @@ old kas-generated entrypoint:
   `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp`.
 - `build/conf/local.conf` sets `MACHINE = "apollo-fvp"`.
 - `build/conf/local.conf` sets `RD_ASPEN_VARIANT = "cfg2"`.
-- `build/conf/local.conf` sets `PC_CPUS_COUNT_DEFAULT = "4"`.
+- `build/conf/local.conf` sets `PC_CPUS_COUNT_DEFAULT = "16"`.
 - `build/conf/local.conf` enables demos, Zephyr, module signing, capsule
   support, and `DISTRO ??= "ewaol"`.
 

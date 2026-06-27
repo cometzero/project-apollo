@@ -437,7 +437,7 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json
   `not_run`.
 - Marker groups for RSE boot, SI CL0, SI CL1, AP firmware, Linux boot, and
   post-login probes.
-- Platform observations, including `ap_cpus == 4` for full live runtime
+- Platform observations, including `ap_cpus == 16` for full live runtime
   evidence. AP CPU count 0 is valid only for RSE-only diagnostics and must not
   satisfy G4/G5.
 - Secure-console observations, including `ap_bl2_console == true`,

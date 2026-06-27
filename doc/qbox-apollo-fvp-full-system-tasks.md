@@ -288,7 +288,9 @@ The full-system task is not complete if any of these are true:
 - G4 live CL0/CL1 has not passed.
 - G5 FVP comparison has missing required markers.
 - AP firmware is only present as RSE measured-boot markers. Final G4/G5
-  evidence must also show `platform_observations.ap_cpus == 4`,
+  evidence must also show `platform_observations.ap_cpus == 16`, Linux-side
+  primary-console enumeration `online=0-15` and `cpuinfo_processors=16` without
+  stale `maxcpus=4`,
   `secure_console_observations.ap_bl2_console == true`,
   `secure_console_observations.bl31_console == true`,
   `secure_console_observations.optee_console == true`, and

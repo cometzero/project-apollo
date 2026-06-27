@@ -88,7 +88,7 @@ The inherited RD-Aspen machine config:
   `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:72`).
 
 The active `build/conf/local.conf` sets `RD_ASPEN_VARIANT = "cfg2"` and
-`PC_CPUS_COUNT_DEFAULT = "4"`.
+`PC_CPUS_COUNT_DEFAULT = "16"`.
 
 ## Image Recipes
 

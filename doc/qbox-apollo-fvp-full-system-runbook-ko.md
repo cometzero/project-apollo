@@ -19,7 +19,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
 
@@ -114,7 +114,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -134,7 +134,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -155,7 +155,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --cc3xx-stats \
   --cc3xx-stats-interval 65536 \
@@ -180,7 +180,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --range-limited-flash-dmi \
   --cc3xx-stats \
@@ -212,7 +212,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -377,7 +377,7 @@ scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 ```
 
 기본 실행은 `live-cl0-cl1`, `--skip-build`, `--post-login-probe`,
-`--keep-running-after-pass`, `--rootfs-bootargs-profile none`, `--timeout 0`,
+`--keep-running-after-pass`, `--rootfs-bootargs-profile quiet-console`, `--timeout 0`,
 `--range-limited-flash-dmi`, `--rse-fast-boot-sram-dmi`를 사용한다. 이 기본
 path는 `QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY=true`로 shared-memory SRAM DMI를
 선택하며, legacy file-backed SRAM alias는 사용하지 않는다. 따라서 Linux
@@ -587,7 +587,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model \
   --skip-build \
   --timeout 1200 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-service-model
 
@@ -608,7 +608,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl1 \
   --skip-build \
   --timeout 1200 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl1
 
@@ -630,7 +630,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --skip-build \
   --timeout 2400 \
-  --rootfs-bootargs-profile none \
+  --rootfs-bootargs-profile quiet-console \
   --post-login-probe \
   --out-dir build/qbox-apollo-fvp/full-live-cl0-cl1
 

@@ -6,12 +6,12 @@ Initialized: 2026-05-20
 
 Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox using
 SystemC/TLM/QEMU with a target of near-FVP functional equivalence for the active
-`fvp-rd-aspen` configuration. The project should model hardware behavior as
+`apollo-fvp` configuration. The project should model hardware behavior as
 closely as practical instead of accumulating compatibility-only stubs.
 
-The current workspace baseline is `MACHINE = "fvp-rd-aspen"`,
+The current workspace baseline is `MACHINE = "apollo-fvp"`,
 `RD_ASPEN_VARIANT = "cfg2"`, baremetal architecture, demos enabled, and
-`PC_CPUS_COUNT_DEFAULT = "4"` as recorded in `.config.yaml`.
+`PC_CPUS_COUNT_DEFAULT = "16"` as recorded in `.config.yaml`.
 
 ## Non-Goals
 

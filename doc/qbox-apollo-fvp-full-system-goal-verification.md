@@ -84,7 +84,9 @@ The bundle is complete only when:
   command used for the run, and the runtime gates required for the final live
   run: `completion_gates.G0 == "pass"` and
   `completion_gates.G4 == "pass"`.
-- `result.json` records `platform_observations.ap_cpus == 4`,
+- `result.json` records `platform_observations.ap_cpus == 16`, and the primary
+  console post-login probe records `online=0-15`, `cpuinfo_processors=16`, and
+  no stale `maxcpus=4`,
   `secure_console_observations.ap_bl2_console == true`,
   `secure_console_observations.bl31_console == true`,
   `secure_console_observations.optee_console == true`, and
@@ -262,7 +264,9 @@ Use this procedure when deciding whether the full-system task can be closed:
    `verdict` is `pass`, `completion_gates.G0 == "pass"`,
    `completion_gates.G4 == "pass"`, and `first_failing_marker` is `null`.
 3. Confirm AP execution was real, not inferred from RSE image loading:
-   `platform_observations.ap_cpus == 4`,
+   `platform_observations.ap_cpus == 16`, primary-console Linux enumeration
+   includes `online=0-15` and `cpuinfo_processors=16` without stale
+   `maxcpus=4`,
    `secure_console_observations.ap_bl2_console == true`,
    `secure_console_observations.bl31_console == true`,
    `secure_console_observations.optee_console == true`,
