@@ -2,6 +2,8 @@ from pathlib import Path
 import importlib.util
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
@@ -38,7 +40,7 @@ def test_default_bootargs_match_local_fvp_boot_script():
     assert runner.DEFAULT_LOCAL_BOOTARGS == (
         "console=ttyAMA0,115200 earlycon=pl011,0x1A400000 "
         "root=/dev/ram0 rw rdinit=/init loglevel=7 "
-        "cpuidle.governor=menu maxcpus=4 mem=4064M"
+        "cpuidle.governor=menu maxcpus=16 mem=4064M"
     )
 
 
@@ -69,7 +71,207 @@ def test_qbox_env_exports_initramfs_path_without_rootfs(tmp_path, monkeypatch):
     assert env["QBOX_APOLLO_KERNEL"] == str(kernel.resolve())
     assert env["QBOX_APOLLO_DTB"] == str(dtb.resolve())
     assert env["QBOX_APOLLO_INITRAMFS"] == str(initramfs.resolve())
+    assert env["QBOX_APOLLO_NUM_CPUS"] == "16"
     assert "QBOX_APOLLO_ROOTFS" not in env
+
+
+def test_qbox_env_leaves_direct_pc_trace_disabled_by_default(tmp_path, monkeypatch):
+    runner = load_runner()
+    kernel = tmp_path / "Image"
+    dtb = tmp_path / "apollo.dtb"
+    for path in (kernel, dtb):
+        path.write_bytes(b"x")
+    monkeypatch.delenv("QBOX_APOLLO_PC_TRACE", raising=False)
+    monkeypatch.delenv("QBOX_APOLLO_PC_TRACE_FILE", raising=False)
+
+    args = type(
+        "Args",
+        (),
+        {
+            "kernel": kernel,
+            "dtb": dtb,
+            "initramfs": None,
+            "accel": "tcg",
+            "netdev": "type=user",
+            "out_dir": tmp_path / "out",
+        },
+    )()
+
+    env = runner.qbox_env(tmp_path, args, None, [])
+
+    assert "QBOX_APOLLO_PC_TRACE" not in env
+    assert "QBOX_APOLLO_PC_TRACE_FILE" not in env
+
+
+def test_qbox_env_defaults_direct_pc_trace_file_to_out_dir(tmp_path, monkeypatch):
+    runner = load_runner()
+    kernel = tmp_path / "Image"
+    dtb = tmp_path / "apollo.dtb"
+    for path in (kernel, dtb):
+        path.write_bytes(b"x")
+    monkeypatch.setenv("QBOX_APOLLO_PC_TRACE", "true")
+    monkeypatch.delenv("QBOX_APOLLO_PC_TRACE_FILE", raising=False)
+
+    args = type(
+        "Args",
+        (),
+        {
+            "kernel": kernel,
+            "dtb": dtb,
+            "initramfs": None,
+            "accel": "tcg",
+            "netdev": "type=user",
+            "out_dir": tmp_path / "trace-run",
+        },
+    )()
+
+    env = runner.qbox_env(tmp_path, args, None, [])
+
+    assert env["QBOX_APOLLO_PC_TRACE"] == "true"
+    assert env["QBOX_APOLLO_PC_TRACE_FILE"] == str(
+        (tmp_path / "trace-run/cpu-pc-trace.log").resolve()
+    )
+
+
+def test_prepare_debug_outputs_rejects_external_trace_file_without_deleting(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    out_dir = tmp_path / "trace-run"
+    external = tmp_path / "outside-trace.log"
+    external.write_text("keep me\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    args = type("Args", (), {"out_dir": out_dir})()
+    env = {
+        "QBOX_APOLLO_PC_TRACE": "true",
+        "QBOX_APOLLO_PC_TRACE_FILE": str(external),
+    }
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_PC_TRACE_FILE"):
+        runner.prepare_debug_outputs(args, env)
+
+    assert external.read_text(encoding="utf-8") == "keep me\n"
+
+
+def test_prepare_debug_outputs_allows_trace_file_under_out_dir(tmp_path):
+    runner = load_runner()
+    out_dir = tmp_path / "trace-run"
+    trace_file = out_dir / "cpu-pc-trace.log"
+    trace_file.parent.mkdir(parents=True)
+    trace_file.write_text("stale\n", encoding="utf-8")
+    args = type("Args", (), {"out_dir": out_dir})()
+    env = {
+        "QBOX_APOLLO_PC_TRACE": "true",
+        "QBOX_APOLLO_PC_TRACE_FILE": str(trace_file),
+    }
+
+    runner.prepare_debug_outputs(args, env)
+
+    assert not trace_file.exists()
+
+
+def test_validate_debug_env_rejects_zero_cpu_direct_boot(tmp_path):
+    runner = load_runner()
+    args = type("Args", (), {"netdev": "type=user", "out_dir": tmp_path})()
+    env = {"QBOX_APOLLO_NUM_CPUS": "0"}
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_NUM_CPUS"):
+        runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_rejects_malformed_gdb_base(tmp_path):
+    runner = load_runner()
+    args = type("Args", (), {"netdev": "type=user", "out_dir": tmp_path})()
+    env = {
+        "QBOX_APOLLO_GDB_PORT_BASE": "not-a-port",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_PORT_BASE"):
+        runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_rejects_nonzero_gdb_base(tmp_path):
+    runner = load_runner()
+    args = type(
+        "Args",
+        (),
+        {
+            "netdev": "type=user,hostfwd=tcp::24316-:22",
+            "out_dir": tmp_path,
+        },
+    )()
+    env = {
+        "QBOX_APOLLO_GDB_PORT_BASE": "25000",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_PORT_BASE"):
+        runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_allows_selected_gdb_cpu(tmp_path):
+    runner = load_runner()
+    args = type(
+        "Args",
+        (),
+        {
+            "netdev": "type=user,hostfwd=tcp::24316-:22",
+            "out_dir": tmp_path,
+        },
+    )()
+    env = {
+        "QBOX_APOLLO_GDB_CPU_INDEX": "2",
+        "QBOX_APOLLO_GDB_PORT": "25002",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_rejects_selected_gdb_hostfwd_collision(tmp_path):
+    runner = load_runner()
+    args = type(
+        "Args",
+        (),
+        {
+            "netdev": "type=user,hostfwd=tcp::25002-:22",
+            "out_dir": tmp_path,
+        },
+    )()
+    env = {
+        "QBOX_APOLLO_GDB_CPU_INDEX": "2",
+        "QBOX_APOLLO_GDB_PORT": "25002",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    with pytest.raises(ValueError, match="hostfwd"):
+        runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_rejects_selected_gdb_cpu_out_of_range(tmp_path):
+    runner = load_runner()
+    args = type("Args", (), {"netdev": "type=user", "out_dir": tmp_path})()
+    env = {
+        "QBOX_APOLLO_GDB_CPU_INDEX": "16",
+        "QBOX_APOLLO_GDB_PORT": "25002",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_CPU_INDEX"):
+        runner.validate_debug_env(args, env)
+
+
+def test_validate_debug_env_rejects_selected_gdb_port_without_cpu(tmp_path):
+    runner = load_runner()
+    args = type("Args", (), {"netdev": "type=user", "out_dir": tmp_path})()
+    env = {
+        "QBOX_APOLLO_GDB_PORT": "25002",
+        "QBOX_APOLLO_NUM_CPUS": "16",
+    }
+
+    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_CPU_INDEX"):
+        runner.validate_debug_env(args, env)
 
 
 def test_qbox_env_removes_stale_rootfs_env(tmp_path, monkeypatch):

@@ -48,16 +48,22 @@ LOGIN_PATTERNS = [
 DEFAULT_LOCAL_BOOTARGS = (
     "console=ttyAMA0,115200 earlycon=pl011,0x1A400000 "
     "root=/dev/ram0 rw rdinit=/init loglevel=7 "
-    "cpuidle.governor=menu maxcpus=4 mem=4064M"
+    "cpuidle.governor=menu maxcpus=16 mem=4064M"
 )
 PROBE_DONE_MARKER = "__QBOX_APOLLO_PROBE_DONE__"
 PROBE_DONE_OUTPUT_RE = re.compile(
     rf"(?:^|\n){re.escape(PROBE_DONE_MARKER)}:0(?:\r?\n|$)"
 )
 PRIMARY_VIRTIO_BLOCK_NODE = "/soc/virtio@30020000"
+HOSTFWD_TCP_RE = re.compile(r"(?:^|,)hostfwd=tcp:[^:,]*:(\d+)-")
 POST_LOGIN_PROBE_COMMANDS = [
     "uname -a",
     "cat /proc/cmdline",
+    "printf 'possible='; cat /sys/devices/system/cpu/possible",
+    "printf 'present='; cat /sys/devices/system/cpu/present",
+    "printf 'online='; cat /sys/devices/system/cpu/online",
+    "printf 'cpuinfo_processors='; grep -c '^processor' /proc/cpuinfo",
+    "printf 'cpu_directories='; ls -d /sys/devices/system/cpu/cpu[0-9]* 2>/dev/null | wc -l",
     "cat /proc/meminfo | head -n 5",
     "ls -l /dev/vd* 2>/dev/null || true",
     "ip link show || true",
@@ -81,6 +87,10 @@ class LocalBuildArtifacts:
     initramfs: Path
     disk: Path
     dtb: Path
+
+
+class DebugEnvError(ValueError):
+    pass
 
 
 class EvalStatus(TypedDict, total=False):
@@ -254,6 +264,93 @@ def copy_disk(src: Path, dst: Path) -> None:
     shutil.copy2(src, dst)
 
 
+def env_enabled(value: str | None) -> bool:
+    return value is not None and value.lower() in {"1", "true", "yes", "on"}
+
+
+def parse_env_port(name: str, env: dict[str, str]) -> int:
+    raw = env.get(name, "0")
+    try:
+        port = int(raw, 10)
+    except ValueError as exc:
+        raise DebugEnvError(f"{name} must be an integer TCP port") from exc
+    if port < 0 or port > 65535:
+        raise DebugEnvError(f"{name} must be in range 0..65535")
+    return port
+
+
+def parse_env_int(name: str, env: dict[str, str], default: int) -> int:
+    raw = env.get(name, str(default))
+    try:
+        return int(raw, 10)
+    except ValueError as exc:
+        raise DebugEnvError(f"{name} must be an integer") from exc
+
+
+def netdev_hostfwd_tcp_ports(netdev: str) -> set[int]:
+    return {int(match) for match in HOSTFWD_TCP_RE.findall(netdev)}
+
+
+def path_is_under(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_debug_env(args: argparse.Namespace, env: dict[str, str]) -> None:
+    num_cpus = parse_env_int("QBOX_APOLLO_NUM_CPUS", env, 16)
+    if num_cpus < 1 or num_cpus > 16:
+        raise DebugEnvError("QBOX_APOLLO_NUM_CPUS must be in range 1..16")
+
+    gdb_base = parse_env_port("QBOX_APOLLO_GDB_PORT_BASE", env)
+    if gdb_base != 0:
+        raise DebugEnvError(
+            "QBOX_APOLLO_GDB_PORT_BASE is unsupported for Apollo direct boot; "
+            "use QBOX_APOLLO_GDB_CPU_INDEX with QBOX_APOLLO_GDB_PORT"
+        )
+
+    gdb_cpu_index = parse_env_int("QBOX_APOLLO_GDB_CPU_INDEX", env, -1)
+    if gdb_cpu_index < -1 or gdb_cpu_index >= num_cpus:
+        raise DebugEnvError("QBOX_APOLLO_GDB_CPU_INDEX must be -1 or in CPU range")
+
+    gdb_port = parse_env_port("QBOX_APOLLO_GDB_PORT", env)
+    if gdb_port == 0:
+        if gdb_cpu_index != -1:
+            raise DebugEnvError(
+                "QBOX_APOLLO_GDB_PORT must be nonzero when "
+                "QBOX_APOLLO_GDB_CPU_INDEX is set"
+            )
+        return
+    if gdb_cpu_index == -1:
+        raise DebugEnvError(
+            "QBOX_APOLLO_GDB_CPU_INDEX must be set when QBOX_APOLLO_GDB_PORT is nonzero"
+        )
+
+    gdb_ports = {gdb_port}
+    hostfwd_ports = netdev_hostfwd_tcp_ports(args.netdev)
+    collision = sorted(gdb_ports & hostfwd_ports)
+    if collision:
+        joined = ", ".join(str(port) for port in collision)
+        raise DebugEnvError(f"GDB port collides with --netdev hostfwd TCP port: {joined}")
+
+
+def prepare_debug_outputs(args: argparse.Namespace, env: dict[str, str]) -> None:
+    if not env_enabled(env.get("QBOX_APOLLO_PC_TRACE")):
+        return
+    trace_file = env.get("QBOX_APOLLO_PC_TRACE_FILE")
+    if not trace_file:
+        return
+    out_dir = args.out_dir.resolve()
+    path = Path(trace_file).resolve()
+    if not path_is_under(path, out_dir):
+        raise DebugEnvError("QBOX_APOLLO_PC_TRACE_FILE must resolve under --out-dir")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+
+
 def prepare_extra_disks(out_dir: Path, size_mib: int) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     size_bytes = size_mib * 1024 * 1024
@@ -296,6 +393,14 @@ def qbox_env(
         env[f"QBOX_APOLLO_EXTRA_BLK{index}"] = str(extra_disk.resolve())
     env["QBOX_APOLLO_ACCEL"] = args.accel
     env["QBOX_APOLLO_NETDEV"] = args.netdev
+    env.setdefault("QBOX_APOLLO_NUM_CPUS", "16")
+    if env_enabled(env.get("QBOX_APOLLO_PC_TRACE")):
+        env["QBOX_APOLLO_PC_TRACE"] = "true"
+        trace_out_dir = getattr(args, "out_dir", root / "build/qbox-apollo-fvp")
+        env.setdefault(
+            "QBOX_APOLLO_PC_TRACE_FILE",
+            str((trace_out_dir / "cpu-pc-trace.log").resolve()),
+        )
     return env
 
 
@@ -349,6 +454,8 @@ def run_qbox(
         str(args.conf.resolve()),
     ]
     env = qbox_env(root, args, disk, extra_disks)
+    validate_debug_env(args, env)
+    prepare_debug_outputs(args, env)
 
     print(f"log: {log_path}", flush=True)
     print("+ " + " ".join(cmd), flush=True)
@@ -682,6 +789,9 @@ def main() -> int:
         print(f"error: command failed with exit code {exc.returncode}", file=sys.stderr)
         return exc.returncode
     except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

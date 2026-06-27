@@ -1,5 +1,8 @@
 from pathlib import Path
 import importlib.util
+import os
+import shutil
+import subprocess
 from types import SimpleNamespace
 import sys
 
@@ -8,6 +11,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
+APOLLO_QVP_CONFIG = ROOT / "tools/qbox-platform/platforms/apollo/hw-block/config.lua"
 
 
 def load_runner():
@@ -117,6 +121,27 @@ def test_child_command_omits_removed_rse_remote_flags(tmp_path):
         assert flag not in cmd
     assert "--rse-hotpath-accel" in cmd
     assert "--rse-lms-accel" in cmd
+
+
+def test_apollo_qvp_config_rejects_enabled_zero_ap_cpus():
+    lua = shutil.which("lua")
+    if lua is None:
+        pytest.skip("lua is not installed")
+    env = os.environ.copy()
+    env["QBOX_RDASPEN_ENABLE_AP_CPUS"] = "true"
+    env["QBOX_APOLLO_NUM_CPUS"] = "0"
+
+    result = subprocess.run(
+        [lua, str(APOLLO_QVP_CONFIG)],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "QBOX_APOLLO_NUM_CPUS must be 1..16" in result.stderr
 
 
 @pytest.mark.parametrize(
