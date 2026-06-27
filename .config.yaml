@@ -14,14 +14,14 @@ local_conf_header:
   __menu_config_vars: |-
     RD_ASPEN_VARIANT = "cfg2"
     MACHINE = "fvp-rd-aspen"
-    PC_CPUS_COUNT_DEFAULT = "4"
+    PC_CPUS_COUNT_DEFAULT = "16"
     ARM_FVP_EULA_ACCEPT = "1"
 menu_configuration:
   ARCHITECTURE_BAREMETAL: true
   ARCHITECTURE_BSP: false
   ARCHITECTURE_VIRTUALIZATION: false
   ARM_FVP_EULA_ACCEPT_CHOICE: true
-  PC_CPUS_COUNT_DEFAULT: 4
+  PC_CPUS_COUNT_DEFAULT: 16
   RD_ASPEN_CFG1: false
   RD_ASPEN_CFG2: true
   RD_ASPEN_RTL: false
