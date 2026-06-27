@@ -36,7 +36,7 @@ RSE_LCS_CM = "0xcccc3c3c"
 RSE_LCS_SE = 0xEEEEA5A5
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-EXPECTED_AP_CPUS = 4
+EXPECTED_AP_CPUS = 16
 APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-fvp login:"
 APOLLO_PRIMARY_SHELL_MARKER = "~ #"
 CHILD_FAIL_PATTERNS = [
@@ -1522,7 +1522,7 @@ def parse_args() -> argparse.Namespace:
         help="Forwarded SMMU backend for the AP side of the QBox platform.",
     )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
-    parser.add_argument("--rootfs-bootargs-profile", default="none")
+    parser.add_argument("--rootfs-bootargs-profile", default="quiet-console")
     perf_group = parser.add_mutually_exclusive_group()
     perf_group.add_argument(
         "--qbox-performance-preset",

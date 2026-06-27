@@ -99,6 +99,7 @@ RSE_HOTPATH_MEMSET_DEFAULT = 0x11000448
 RSE_LMS_VERIFY_DEFAULT = 0x11009BAD
 WIC_BOOT_PARTITION_OFFSET = 2048 * 512
 WIC_BOOT_ENTRY = "::/loader/entries/boot.conf"
+WIC_UBOOT_SCRIPT = "::/boot.scr"
 
 CONSOLE_LOGS = {
     "rse": "qbox-rse.log",
@@ -235,6 +236,11 @@ LOGIN_READY_PATTERNS = [
 POST_LOGIN_PROBE_COMMANDS = [
     "echo __QBOX_PROBE_START__",
     "uname -a",
+    "printf 'possible='; cat /sys/devices/system/cpu/possible",
+    "printf 'present='; cat /sys/devices/system/cpu/present",
+    "printf 'online='; cat /sys/devices/system/cpu/online",
+    "printf 'cpuinfo_processors='; grep -c '^processor' /proc/cpuinfo",
+    "printf 'cpu_directories='; ls -d /sys/devices/system/cpu/cpu[0-9]* 2>/dev/null | wc -l",
     "modprobe -v arm_si_rproc timeout=500; echo arm_si_rproc_modprobe_rc:$?",
     "for d in /sys/class/remoteproc/remoteproc*; do [ -f $d/name ] && echo remoteproc_state:$(cat $d/name):$(cat $d/state); done",
     "for d in /sys/class/remoteproc/remoteproc*; do [ -f $d/state ] && [ \"$(cat $d/state)\" = detached ] && echo attach > $d/state 2>/dev/null || true; done",
@@ -724,6 +730,27 @@ def write_boot_entry(image: Path, text: str, tmp_dir: Path) -> None:
         raise RuntimeError("mcopy_boot_entry_failed:" + result.stderr.strip())
 
 
+def patched_bootargs(old_options: str, *, profile: str) -> str:
+    tokens = [
+        token
+        for token in old_options.split()
+        if token not in {"ignore_loglevel", "initcall_debug"}
+        and not token.startswith("earlycon=")
+        and not token.startswith("console=")
+        and not token.startswith("maxcpus=")
+    ]
+    tokens.append("console=ttyAMA0,115200")
+    if profile == "verbose-console":
+        tokens.extend(
+            [
+                "earlycon=pl011,mmio32,0x1a400000",
+                "ignore_loglevel",
+                "initcall_debug",
+            ]
+        )
+    return " ".join(tokens)
+
+
 def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]:
     old_options = ""
     new_lines: list[str] = []
@@ -731,23 +758,7 @@ def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]
     for line in text.splitlines():
         if not patched and line.startswith("options "):
             old_options = line[len("options ") :].strip()
-            tokens = [
-                token
-                for token in old_options.split()
-                if token not in {"ignore_loglevel", "initcall_debug"}
-                and not token.startswith("earlycon=")
-                and not token.startswith("console=")
-            ]
-            tokens.append("console=ttyAMA0,115200")
-            if profile == "verbose-console":
-                tokens.extend(
-                    [
-                        "earlycon=pl011,mmio32,0x1a400000",
-                        "ignore_loglevel",
-                        "initcall_debug",
-                    ]
-                )
-            new_options = " ".join(tokens)
+            new_options = patched_bootargs(old_options, profile=profile)
             new_lines.append("options " + new_options)
             patched = True
             continue
@@ -755,6 +766,103 @@ def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]
     if not patched:
         raise RuntimeError("boot_entry_missing_options_line")
     return "\n".join(new_lines) + "\n", old_options, new_options
+
+
+def extract_uboot_script_payload(data: bytes) -> bytes:
+    if len(data) >= 8 and int.from_bytes(data[:4], "big") == len(data) - 8:
+        return data[8:]
+    return data
+
+
+def patch_uboot_script_options(text: str, *, profile: str) -> tuple[str, str, str]:
+    old_options = ""
+    new_lines: list[str] = []
+    patched = False
+    for line in text.splitlines():
+        if not patched and line.startswith("setenv bootargs "):
+            prefix = "setenv bootargs "
+            old_options = line[len(prefix) :].strip()
+            quote = ""
+            if len(old_options) >= 2 and old_options[0] == old_options[-1] == '"':
+                old_options = old_options[1:-1]
+                quote = '"'
+            new_options = patched_bootargs(old_options, profile=profile)
+            new_lines.append(prefix + quote + new_options + quote)
+            patched = True
+            continue
+        new_lines.append(line)
+    if not patched:
+        raise RuntimeError("uboot_script_missing_bootargs_line")
+    return "\n".join(new_lines) + "\n", old_options, new_options
+
+
+def patch_uboot_script(image: Path, tmp_dir: Path, *, profile: str) -> tuple[str, str]:
+    ensure_mtools()
+    for tool in ["dumpimage", "mkimage"]:
+        if shutil.which(tool) is None:
+            raise RuntimeError(f"missing_tool:{tool}")
+
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    old_script = tmp_dir / "boot.scr.orig"
+    extracted = tmp_dir / "boot.scr.payload"
+    patched_text = tmp_dir / "boot.scr.txt"
+    new_script = tmp_dir / "boot.scr"
+    result = subprocess.run(
+        ["mcopy", "-o", "-i", mtools_image_arg(image), WIC_UBOOT_SCRIPT, str(old_script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("mcopy_uboot_script_failed:" + result.stderr.strip())
+    result = subprocess.run(
+        ["dumpimage", "-T", "script", "-p", "0", "-o", str(extracted), str(old_script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("dumpimage_uboot_script_failed:" + result.stderr.strip())
+
+    script = extract_uboot_script_payload(extracted.read_bytes()).decode("utf-8")
+    patched, old_options, new_options = patch_uboot_script_options(
+        script, profile=profile
+    )
+    patched_text.write_text(patched, encoding="utf-8")
+    result = subprocess.run(
+        [
+            "mkimage",
+            "-A",
+            "arm64",
+            "-T",
+            "script",
+            "-C",
+            "none",
+            "-n",
+            "Apollo FVP local boot",
+            "-d",
+            str(patched_text),
+            str(new_script),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("mkimage_uboot_script_failed:" + result.stderr.strip())
+    result = subprocess.run(
+        ["mcopy", "-o", "-i", mtools_image_arg(image), str(new_script), WIC_UBOOT_SCRIPT],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError("mcopy_patched_uboot_script_failed:" + result.stderr.strip())
+    return old_options, new_options
 
 
 def prepare_rootfs_for_qbox(
@@ -773,17 +881,26 @@ def prepare_rootfs_for_qbox(
     dst_dir.mkdir(parents=True, exist_ok=True)
     dst = dst_dir / f"{src.stem}-{profile}{src.suffix}"
     copy_sparse(src, dst)
-    boot_entry = read_boot_entry(dst)
-    patched, old_options, new_options = patch_boot_entry_options(
-        boot_entry, profile=profile
-    )
-    write_boot_entry(dst, patched, dst_dir)
+    try:
+        boot_entry = read_boot_entry(dst)
+        patched, old_options, new_options = patch_boot_entry_options(
+            boot_entry, profile=profile
+        )
+        write_boot_entry(dst, patched, dst_dir)
+        boot_entry_name = WIC_BOOT_ENTRY
+        state = "copied_and_patched_boot_entry"
+    except RuntimeError as exc:
+        if not str(exc).startswith("mtype_boot_entry_failed:"):
+            raise
+        old_options, new_options = patch_uboot_script(dst, dst_dir, profile=profile)
+        boot_entry_name = WIC_UBOOT_SCRIPT
+        state = "copied_and_patched_uboot_script"
     info.update(
         {
             "output": str(dst),
-            "state": "copied_and_patched_boot_entry",
+            "state": state,
             "changed": old_options != new_options,
-            "boot_entry": WIC_BOOT_ENTRY,
+            "boot_entry": boot_entry_name,
             "boot_partition_offset": WIC_BOOT_PARTITION_OFFSET,
             "old_options": old_options,
             "new_options": new_options,

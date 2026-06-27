@@ -12,8 +12,13 @@ from typing import Any
 
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-EXPECTED_AP_CPUS = 4
+EXPECTED_AP_CPUS = 16
 AP_CPU_COUNT_RE = re.compile(r"^ap cpus:\s*(?P<count>\d+)\s*$", re.MULTILINE)
+LINUX_CPU_ONLINE_RE = re.compile(r"^online=(?P<online>\S+)\s*$", re.MULTILINE)
+LINUX_CPUINFO_PROCESSORS_RE = re.compile(
+    r"^cpuinfo_processors=(?P<count>\d+)\s*$",
+    re.MULTILINE,
+)
 FINAL_OUTPUT_NAME = "final-verification.json"
 REQUIRED_FULL_LOGS = [
     "rse",
@@ -337,6 +342,26 @@ def ap_cpus_enabled(result: dict[str, Any]) -> bool:
     return ap_cpu_count(result) == EXPECTED_AP_CPUS
 
 
+def linux_cpu_enumeration(result: dict[str, Any]) -> tuple[bool, str]:
+    primary_text = read_log(primary_console_log_path(result))
+    online_match = LINUX_CPU_ONLINE_RE.search(primary_text)
+    cpuinfo_match = LINUX_CPUINFO_PROCESSORS_RE.search(primary_text)
+    online = online_match.group("online") if online_match else "missing"
+    processors = int(cpuinfo_match.group("count")) if cpuinfo_match else -1
+    stale_maxcpus_4 = "maxcpus=4" in primary_text
+    passed = (
+        online == "0-15"
+        and processors == EXPECTED_AP_CPUS
+        and not stale_maxcpus_4
+    )
+    status = (
+        f"online={online} "
+        f"cpuinfo_processors={processors if processors >= 0 else 'missing'} "
+        f"maxcpus_4={stale_maxcpus_4}"
+    )
+    return passed, status
+
+
 def secure_console_has_ap_bl2(result: dict[str, Any]) -> bool:
     observations = result.get("secure_console_observations")
     if isinstance(observations, dict) and observations.get("ap_bl2_console") is not None:
@@ -565,6 +590,7 @@ def verify_live_gate(
             path=result_path,
         )
         if gate == "G4":
+            linux_cpus_ok, linux_cpus_status = linux_cpu_enumeration(result)
             add_check(
                 checks,
                 gate,
@@ -572,6 +598,14 @@ def verify_live_gate(
                 ap_cpus_enabled(result),
                 path=console_log_path(result, "platform"),
                 status=f"ap_cpus={ap_cpu_count(result)}",
+            )
+            add_check(
+                checks,
+                gate,
+                "live-cl0-cl1 Linux enumerated 16 CPUs",
+                linux_cpus_ok,
+                path=primary_console_log_path(result),
+                status=linux_cpus_status,
             )
             add_check(
                 checks,
@@ -642,6 +676,7 @@ def verify_g5(
     comparison = read_json(comparison_path)
     map_result = read_json(map_path)
     coverage = read_json(coverage_path)
+    linux_cpus_ok, linux_cpus_status = linux_cpu_enumeration(result)
     runtime_gate_contract = (
         bool(result)
         and gate_value(result, "G0") == "pass"
@@ -672,6 +707,11 @@ def verify_g5(
         ),
         ("full live AP CPUs enabled", ap_cpus_enabled(result), console_log_path(result, "platform")),
         (
+            "full live Linux enumerated 16 CPUs",
+            linux_cpus_ok,
+            primary_console_log_path(result),
+        ),
+        (
             "full live AP BL2 ran on secure console",
             secure_console_has_ap_bl2(result),
             console_log_path(result, "secure_console"),
@@ -696,7 +736,8 @@ def verify_g5(
         ("full live coverage audit passed", bool(coverage.get("passed")), coverage_path),
     ]
     for name, passed, path in checks_to_add:
-        add_check(checks, "G5", name, passed, path=path)
+        status = linux_cpus_status if name == "full live Linux enumerated 16 CPUs" else None
+        add_check(checks, "G5", name, passed, path=path, status=status)
     gate_checks = [check for check in checks if check["gate"] == "G5"]
     if all(check["passed"] for check in gate_checks):
         return "pass"

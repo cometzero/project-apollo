@@ -60,6 +60,28 @@ CHECKS = {
         ("atu:design", "doc/qbox-apollo-fvp-full-system-design.md", r"ATU|ATW"),
         ("atu:task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-043"),
     ],
+    "reset": [
+        (
+            "reset:ap-cpu-count-default",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r'AP_NUM_CPUS\s*=\s*enable_ap_cpus\s+and\s+getenv_number_or\("QBOX_APOLLO_NUM_CPUS",\s*"16"\)',
+        ),
+        (
+            "reset:ap-cpu-count-limit",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"not\s+enable_ap_cpus\s+or\s+\(AP_NUM_CPUS\s*>=\s*1\s+and\s+AP_NUM_CPUS\s*<=\s*16\)",
+        ),
+        (
+            "reset:ap-power-domain-count",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"power_domain_reset_count\s*=\s*AP_NUM_CPUS",
+        ),
+        (
+            "reset:ap-power-domain-cpu1-through-last",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r'for\s+i=1,\(AP_NUM_CPUS-1\)\s+do[\s\S]*power_domain_reset_"\.\.i[\s\S]*"&ap_cpu_"\.\.i\.\."\.reset"',
+        ),
+    ],
 }
 
 
