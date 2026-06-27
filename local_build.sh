@@ -259,6 +259,9 @@ dry_run()
     cat <<EOF
 DRY-RUN: ./local_build.sh
 jobs: ${JOBS_ARG}
+pc cpus: ${PC_CPUS_COUNT}
+tfa linux dts: ${TFA_LINUX_DTS}
+bootargs tail: ${BOOTLOADER_LINUX_APPEND}
 order: ${SELECTED_COMPONENTS[*]}$([[ "${PACKAGE_MODE}" != disabled ]] && printf ' package')
 component steps:
 EOF

@@ -128,6 +128,20 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     assert "buildroot" not in output.lower()
 
 
+def test_dry_run_builtin_defaults_use_16_pc_cpus() -> None:
+    result = run_local_build(
+        "--dry-run",
+        extra_env={"APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0"},
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "pc cpus: 16" in output
+    assert "tfa linux dts: 1" in output
+    assert "maxcpus=16" in output
+    assert "maxcpus=4" not in output
+
+
 def test_dry_run_defaults_to_six_jobs_at_16gb_or_less(tmp_path: Path) -> None:
     meminfo = tmp_path / "meminfo"
     write_meminfo(meminfo, 16 * 1024 * 1024)
@@ -194,8 +208,7 @@ def test_package_flag_is_package_only_when_no_components_are_selected() -> None:
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
     assert "package" in output
-    for component in COMPONENTS:
-        assert component not in output
+    assert component_step_lines(output) == []
     assert "qbox" not in output.lower()
     assert "buildroot" not in output.lower()
 

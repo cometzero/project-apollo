@@ -29,6 +29,7 @@ build_tfa()
         {
             printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
             printf 'PC_CPUS_COUNT=%s\n' "${PC_CPUS_COUNT}"
+            printf 'LINUX_DTS=%s\n' "${TFA_LINUX_DTS}"
             printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
             printf 'PFDI_SUPPORT=%s\n' "${PFDI_SUPPORT}"
             printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
@@ -37,6 +38,7 @@ build_tfa()
             git -C "${TFA_SRC}" status --porcelain=v1 --untracked-files=no 2>/dev/null || true
             fingerprint_file_hash "${DEPLOY_DIR}/u-boot/u-boot.bin" tfa-bl33
             fingerprint_file_hash "${DEPLOY_DIR}/optee/tee-pager_v2.bin" tfa-bl32
+            fingerprint_file_hash "${BASH_SOURCE[0]}" tfa-build-module
         } | sha256sum | awk '{print $1}'
     )"
     if [[ "${APOLLO_TFA_REFRESH:-0}" != "1" ]] &&
@@ -49,6 +51,15 @@ build_tfa()
         install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" "${FW_DIR}/fip.bin"
         return 0
     fi
+    case "${TFA_BUILD_DIR}/apollo_fvp" in
+        "${LOCAL_BUILD_DIR}/work/trusted-firmware-a/apollo_fvp") ;;
+        *) die "refusing to reset TF-A build outside local build root: ${TFA_BUILD_DIR}/apollo_fvp" ;;
+    esac
+    [[ ! -L "${TFA_BUILD_DIR}" ]] ||
+        die "refusing to reset TF-A build through symlink: ${TFA_BUILD_DIR}"
+    [[ ! -L "${TFA_BUILD_DIR}/apollo_fvp" ]] ||
+        die "refusing to reset TF-A platform build symlink: ${TFA_BUILD_DIR}/apollo_fvp"
+    rm -rf "${TFA_BUILD_DIR}/apollo_fvp"
 
     local tfa_work
     tfa_work="$(tfa_recipe_workdir)"
@@ -74,7 +85,7 @@ build_tfa()
         HOSTCC=gcc \
         host-poetry= \
         PLATFORM_CORE_COUNT="${PC_CPUS_COUNT}" \
-        LINUX_DTS=0 \
+        LINUX_DTS="${TFA_LINUX_DTS}" \
         MEASURED_BOOT=1 \
         TRUSTED_BOARD_BOOT=1 \
         GENERATE_COT=1 \
