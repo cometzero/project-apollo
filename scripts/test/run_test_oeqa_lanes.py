@@ -8,9 +8,11 @@ from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
+import signal
 import shlex
 import subprocess
 import sys
+import time
 from time import monotonic
 
 from run_test_conf import ConfRequest, write_conf
@@ -29,6 +31,7 @@ class OeqaInputs:
     commands_file: Path
     timeout_oeqa: int
     dry_run: bool
+    host_python_bin: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,10 +93,7 @@ def _lane(inputs: OeqaInputs, kind: str, manifest: JsonObject) -> OeqaLane | Non
     if conf_path is None:
         return None
     lane_dir = inputs.run_dir / "oeqa" / kind
-    script = (
-        f"source layers/poky/oe-init-build-env {shlex.quote(str(inputs.build_dir))} >/dev/null && "
-        f"bitbake -R {shlex.quote(str(conf_path))} {shlex.quote(inputs.image)} -c testimage"
-    )
+    script = _bitbake_env_script(inputs, f"bitbake -R {shlex.quote(str(conf_path))} {shlex.quote(inputs.image)} -c testimage")
     argv = ["timeout", str(inputs.timeout_oeqa), "bash", "-lc", script]
     return OeqaLane(
         name=f"oeqa-{kind}",
@@ -105,6 +105,13 @@ def _lane(inputs: OeqaInputs, kind: str, manifest: JsonObject) -> OeqaLane | Non
         stderr_log=lane_dir / "bitbake.stderr.log",
         output_dir=lane_dir,
     )
+
+
+def _bitbake_env_script(inputs: OeqaInputs, command: str) -> str:
+    host_python_prefix = ""
+    if inputs.host_python_bin is not None:
+        host_python_prefix = f"export PATH={shlex.quote(str(inputs.host_python_bin.parent))}:$PATH && "
+    return f"{host_python_prefix}source layers/poky/oe-init-build-env {shlex.quote(str(inputs.build_dir))} >/dev/null && {command}"
 
 
 def build_lanes(inputs: OeqaInputs) -> list[OeqaLane]:
@@ -132,7 +139,61 @@ def _artifacts(inputs: OeqaInputs, lane: OeqaLane) -> list[JsonObject]:
 
 def _record_dry_run(inputs: OeqaInputs, lane: OeqaLane) -> None:
     now = _now()
+    print(f"[run_test] SKIP {lane.name} (dry-run)", flush=True)
     _append(inputs, {"name": lane.name, "argv": lane.argv, "required": True, "status": "skipped", "started_at": now, "finished_at": now, "duration_s": 0.0, "artifacts": _artifacts(inputs, lane)})
+
+
+def _cleanup_process_group(pid: int) -> None:
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(pid, sig)
+        except ProcessLookupError:
+            return
+        time.sleep(0.2)
+
+
+def _kill_bitbake_server(inputs: OeqaInputs, lane: OeqaLane) -> None:
+    cleanup_log = lane.output_dir / "logs" / "bitbake-kill-server.log"
+    cleanup_log.parent.mkdir(parents=True, exist_ok=True)
+    script = _bitbake_env_script(inputs, "bitbake -m")
+    print(f"[run_test] START {lane.name} bitbake-kill-server", flush=True)
+    with cleanup_log.open("a", encoding="utf-8") as stream:
+        stream.write(f"[run_test] START {lane.name} bitbake-kill-server\n")
+        stream.flush()
+        result = subprocess.run(
+            ["timeout", "60", "bash", "-lc", script],
+            cwd=inputs.root,
+            check=False,
+            text=True,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+        )
+        stream.write(f"[run_test] DONE {lane.name} bitbake-kill-server ({result.returncode})\n")
+    print(f"[run_test] DONE {lane.name} bitbake-kill-server ({result.returncode})", flush=True)
+
+
+def _run_command(inputs: OeqaInputs, lane: OeqaLane) -> int:
+    with lane.stdout_log.open("w", encoding="utf-8") as stdout, lane.stderr_log.open("w", encoding="utf-8") as stderr:
+        try:
+            process = subprocess.Popen(
+                lane.command,
+                cwd=inputs.root,
+                text=True,
+                stdout=stdout,
+                stderr=stderr,
+                start_new_session=True,
+            )
+        except OSError as exc:
+            stderr.write(f"{exc}\n")
+            return 127
+        returncode = 127
+        try:
+            returncode = process.wait()
+        finally:
+            _cleanup_process_group(process.pid)
+        if returncode == 124:
+            _kill_bitbake_server(inputs, lane)
+        return returncode
 
 
 def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
@@ -140,13 +201,8 @@ def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
     lane.stderr_log.parent.mkdir(parents=True, exist_ok=True)
     started_at = _now()
     started = monotonic()
-    with lane.stdout_log.open("w", encoding="utf-8") as stdout, lane.stderr_log.open("w", encoding="utf-8") as stderr:
-        try:
-            result = subprocess.run(lane.command, cwd=inputs.root, check=False, text=True, stdout=stdout, stderr=stderr)
-            returncode = result.returncode
-        except OSError as exc:
-            stderr.write(f"{exc}\n")
-            returncode = 127
+    print(f"[run_test] START {lane.name}", flush=True)
+    returncode = _run_command(inputs, lane)
     result_paths = _result_paths(lane)
     json_states = [(path, classify_oeqa_result_path(path).state) for path in result_paths]
     failed_json = any(state == OeqaResultState.FAIL for _, state in json_states)
@@ -166,6 +222,7 @@ def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
         record.update({"status": "pass", "exit_code": 0})
         state = "pass"
     _append(inputs, record)
+    print(f"[run_test] DONE {lane.name} ({state})", flush=True)
     return state
 
 
@@ -196,13 +253,25 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--commands-file", type=Path, required=True)
     parser.add_argument("--timeout-oeqa", default="10800")
+    parser.add_argument("--host-python-bin", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    return run_lanes(OeqaInputs(Path.cwd(), args.build_dir, args.image, args.run_dir, args.commands_file, _int_positive(args.timeout_oeqa), args.dry_run))
+    return run_lanes(
+        OeqaInputs(
+            Path.cwd(),
+            args.build_dir,
+            args.image,
+            args.run_dir,
+            args.commands_file,
+            _int_positive(args.timeout_oeqa),
+            args.dry_run,
+            args.host_python_bin,
+        )
+    )
 
 
 if __name__ == "__main__":

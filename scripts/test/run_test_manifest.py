@@ -175,11 +175,13 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
     if not fvpconf_path.is_file():
         return blocked_missing(inputs, fvpconf_path)
     testdata = read_json_object(testdata_path)
+    distro = local_conf.get("DISTRO", str_field(testdata, "DISTRO"))
+    distro_conf = parse_conf(inputs.root / "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/distro" / f"{distro}.conf")
     fvpconf = load_fvpconf(fvpconf_path)
     return {
         "status": "ok",
         "machine": local_conf.get("MACHINE", str_field(testdata, "MACHINE")),
-        "distro": local_conf.get("DISTRO", str_field(testdata, "DISTRO")),
+        "distro": distro,
         "rd_aspen_variant": local_conf.get("RD_ASPEN_VARIANT", str_field(testdata, "RD_ASPEN_VARIANT")),
         "pc_cpus_count_default": int(
             local_conf.get("PC_CPUS_COUNT_DEFAULT", "") or str_field(testdata, "PC_CPUS_COUNT_DEFAULT")
@@ -192,6 +194,9 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
             f"{local_conf.get('IMAGE_CLASSES', '')} {str_field(testdata, 'IMAGE_CLASSES')}"
         ),
         "test_suites": words(str_field(testdata, "TEST_SUITES")),
+        "hsoc_run_test_skip_suites": words(str_field(testdata, "HSOC_RUN_TEST_SKIP_SUITES") or distro_conf.get("HSOC_RUN_TEST_SKIP_SUITES", "")),
+        "hsoc_run_test_skip_extra_lanes": words(str_field(testdata, "HSOC_RUN_TEST_SKIP_EXTRA_LANES") or distro_conf.get("HSOC_RUN_TEST_SKIP_EXTRA_LANES", "")),
+        "hsoc_run_test_skip_reason": str_field(testdata, "HSOC_RUN_TEST_SKIP_REASON") or distro_conf.get("HSOC_RUN_TEST_SKIP_REASON", ""),
         "test_fvp_devices": words(str_field(testdata, "TEST_FVP_DEVICES")),
         "test_target": str_field(testdata, "TEST_TARGET"),
         "test_target_ip": str_field(testdata, "TEST_TARGET_IP"),

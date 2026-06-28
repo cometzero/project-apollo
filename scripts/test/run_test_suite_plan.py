@@ -68,6 +68,9 @@ EXCLUDED_TEST_NAMES: Final = {
     "test_40_virtualization",
     "test_41_rt_patch_presence",
 }
+HSOC_SKIP_REASON: Final = "excluded_by_hsoc_yocto_build_config"
+HSOC_SKIP_SUITE_SOURCE: Final = "HSOC_RUN_TEST_SKIP_SUITES"
+HSOC_SKIP_EXTRA_SOURCE: Final = "HSOC_RUN_TEST_SKIP_EXTRA_LANES"
 EXTRA_LANES: Final = [
     "extra-static-compileall",
     "extra-project-pytest",
@@ -115,14 +118,39 @@ def _pc16_entries(manifest: JsonObject) -> list[str]:
     return []
 
 
+def _hsoc_skip_suites(manifest: JsonObject) -> list[str]:
+    return _str_list(manifest.get("hsoc_run_test_skip_suites"))
+
+
+def _hsoc_skip_extra_lanes(manifest: JsonObject) -> list[str]:
+    return _str_list(manifest.get("hsoc_run_test_skip_extra_lanes"))
+
+
+def _hsoc_skip_reason(manifest: JsonObject) -> str:
+    return _str_value(manifest.get("hsoc_run_test_skip_reason")) or HSOC_SKIP_REASON
+
+
+def _filter_entries(entries: list[str], skip_entries: list[str]) -> list[str]:
+    skipped = set(skip_entries)
+    return [entry for entry in entries if entry not in skipped]
+
+
+def _hsoc_exclusions(names: list[str], reason: str, source: str) -> list[JsonObject]:
+    return [{"name": name, "reason": reason, "source_suite": source} for name in names]
+
+
 def _current_suite(manifest: JsonObject) -> list[str]:
-    return [test for test in _str_list(manifest.get("test_suites")) if test not in EXCLUDED_TEST_NAMES]
+    skipped = set(EXCLUDED_TEST_NAMES) | set(_hsoc_skip_suites(manifest))
+    return [test for test in _str_list(manifest.get("test_suites")) if test not in skipped]
 
 
 def resolve_plan(manifest: JsonObject) -> JsonObject:
     if manifest.get("status") == "blocked":
         return manifest
-    extended = DEMO_SUITE_BASE + _cfg2_entries(manifest) + _pc16_entries(manifest)
+    skip_suites = _hsoc_skip_suites(manifest)
+    skip_extra = _hsoc_skip_extra_lanes(manifest)
+    reason = _hsoc_skip_reason(manifest)
+    extended = _filter_entries(DEMO_SUITE_BASE + _cfg2_entries(manifest) + _pc16_entries(manifest), skip_suites)
     return {
         "status": "ok",
         "machine": _str_value(manifest.get("machine")),
@@ -130,7 +158,12 @@ def resolve_plan(manifest: JsonObject) -> JsonObject:
         "included": {
             "validation_current": _current_suite(manifest),
             "validation_extended": extended,
-            "extra": EXTRA_LANES.copy(),
+            "extra": _filter_entries(EXTRA_LANES, skip_extra),
         },
-        "excluded": [SYSTEMD_BOOT_EXCLUSION, *VIRTUALIZATION_EXCLUSIONS],
+        "excluded": [
+            SYSTEMD_BOOT_EXCLUSION,
+            *VIRTUALIZATION_EXCLUSIONS,
+            *_hsoc_exclusions(skip_suites, reason, HSOC_SKIP_SUITE_SOURCE),
+            *_hsoc_exclusions(skip_extra, reason, HSOC_SKIP_EXTRA_SOURCE),
+        ],
     }

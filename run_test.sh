@@ -12,6 +12,24 @@ TIMEOUT_OEQA=10800 TIMEOUT_FVP=600
 RUN_DIR="" SUMMARY_PATH="" COMMANDS_FILE=""
 FINAL_EXIT_CODE=70 FINALIZED=0 INTERNAL_ERROR=0
 INTERNAL_REASON="blocked_internal_runner_error"
+HOST_PYTHON_BIN="" HOST_PYTHON_SOURCE=""
+HOST_PYTHON_DIR="${TESTS_DIR}/.host-python"
+
+log() {
+    printf '[run_test] %s\n' "$*"
+}
+
+step_start() {
+    log "START $1"
+}
+
+step_done() {
+    log "DONE $1 ($2)"
+}
+
+step_progress() {
+    log "PROGRESS $1: $2"
+}
 
 usage() {
     python3 scripts/test/run_test_cli.py
@@ -94,6 +112,114 @@ append_record() {
     "${args[@]}" || mark_internal "blocked_command_record_write_failed"
 }
 
+mode_name() {
+    if ((LIST_MODE)); then
+        printf 'list'
+    elif ((DRY_RUN)); then
+        printf 'dry-run'
+    elif ((PREFLIGHT_ONLY)); then
+        printf 'preflight-only'
+    elif ((SKIP_RUNTIME)); then
+        printf 'skip-runtime'
+    else
+        printf 'runtime'
+    fi
+}
+
+print_environment() {
+    log "Environment"
+    log "  root: ${ROOT_DIR}"
+    log "  build_dir: ${BUILD_DIR}"
+    log "  machine: ${MACHINE}"
+    log "  image: ${IMAGE}"
+    log "  mode: $(mode_name)"
+    log "  run_dir: ${RUN_DIR}"
+    log "  timeout_oeqa: ${TIMEOUT_OEQA}"
+    log "  timeout_fvp: ${TIMEOUT_FVP}"
+    python3 - "${RUN_DIR}/manifest.json" <<'PY' || true
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+for key in ("distro", "rd_aspen_variant", "pc_cpus_count_default", "test_target", "test_target_ip", "fvp_exe"):
+    print(f"[run_test]   {key}: {data.get(key, '')}")
+fvpconf = data.get("fvpconf", {})
+if isinstance(fvpconf, dict):
+    print(f"[run_test]   fvpconf: {fvpconf.get('path', '')}")
+PY
+}
+
+python_has_pexpect() {
+    "$1" - <<'PY' >/dev/null 2>&1
+import pexpect
+import ptyprocess
+PY
+}
+
+select_host_python() {
+    local candidate found_python
+    local -a candidates=()
+    if [[ -n "${RUN_TEST_HOST_PYTHON_BIN:-}" ]]; then
+        candidates+=("${RUN_TEST_HOST_PYTHON_BIN}")
+    fi
+    found_python="$(command -v python3 2>/dev/null || true)"
+    if [[ -n "${found_python}" ]]; then
+        candidates+=("${found_python}")
+    fi
+    candidates+=("/usr/bin/python3" "/usr/local/bin/python3")
+    for candidate in "${candidates[@]}"; do
+        [[ -x "${candidate}" ]] || continue
+        if python_has_pexpect "${candidate}"; then
+            HOST_PYTHON_BIN="$(readlink -f "${candidate}")"
+            HOST_PYTHON_SOURCE="existing"
+            return 0
+        fi
+    done
+    return 1
+}
+
+ensure_host_python() {
+    local stdout_rel="logs/host-python.stdout.log" stderr_rel="logs/host-python.stderr.log"
+    local setup_rc=0 reason=""
+    step_start "host-python"
+    mkdir -p "${RUN_DIR}/logs"
+    {
+        printf 'PATH python3: %s\n' "$(command -v python3 2>/dev/null || true)"
+        python3 --version 2>&1 || true
+        if select_host_python; then
+            printf 'selected host python: %s\n' "${HOST_PYTHON_BIN}"
+        else
+            printf 'creating host python venv: %s\n' "${HOST_PYTHON_DIR}"
+            if ! python3 -m venv --system-site-packages "${HOST_PYTHON_DIR}"; then
+                setup_rc=1
+                reason="blocked_host_python_venv_failed"
+            elif ! "${HOST_PYTHON_DIR}/bin/python3" -m pip install --disable-pip-version-check --upgrade pexpect; then
+                setup_rc=1
+                reason="blocked_host_python_pexpect_install_failed"
+            elif ! python_has_pexpect "${HOST_PYTHON_DIR}/bin/python3"; then
+                setup_rc=1
+                reason="blocked_missing_host_python_pexpect"
+            else
+                HOST_PYTHON_BIN="$(readlink -f "${HOST_PYTHON_DIR}/bin/python3")"
+                HOST_PYTHON_SOURCE="venv"
+                printf 'selected host python: %s\n' "${HOST_PYTHON_BIN}"
+            fi
+        fi
+    } >"${RUN_DIR}/${stdout_rel}" 2>"${RUN_DIR}/${stderr_rel}"
+    if ((setup_rc == 0)); then
+        append_record "host-python" "pass" 0 "true" "${stdout_rel}" "${stderr_rel}" "" "" "" \
+            --argv="${HOST_PYTHON_BIN}" --argv="${HOST_PYTHON_SOURCE}" || return 70
+        step_done "host-python" "pass ${HOST_PYTHON_BIN}"
+        return 0
+    fi
+    append_record "host-python" "blocked" "" "true" "${stdout_rel}" "${stderr_rel}" "" "" \
+        "${reason:-blocked_missing_host_python_pexpect}" --argv=python3 --argv=-m --argv=venv || return 70
+    step_done "host-python" "blocked"
+    return 2
+}
+
 write_internal_summary() {
     python3 scripts/test/run_test_result_io.py internal-summary \
         --summary "${SUMMARY_PATH}" \
@@ -166,6 +292,7 @@ run_helper() {
     local stdout_rel="logs/${name}.stdout.log" stderr_rel="logs/${name}.stderr.log"
     local status="pass" rc=0
     local helper_build_dir="${BUILD_DIR}"
+    step_start "${name}"
     if ((DRY_RUN)) && [[ "${subcommand}" != "preflight" && ! -f "${BUILD_DIR}/conf/local.conf" ]]; then
         helper_build_dir="build"
     fi
@@ -188,33 +315,41 @@ run_helper() {
         append_record "${name}" "${status}" "${rc}" "true" "${stdout_rel}" "${stderr_rel}" \
             "${out_path}" "${out_path}" "" "${record_argv[@]}" || return 70
     fi
+    step_done "${name}" "${status}"
     return "${rc}"
 }
 
 prepare_run_dir() {
+    step_start "init"
     mkdir -p "${RUN_DIR}/logs" "${TESTS_DIR}"
     if ! python3 scripts/test/run_test_records.py init --commands-file "${COMMANDS_FILE}"; then
         mark_internal "blocked_command_record_init_failed"
+        step_done "init" "blocked"
         return 70
     fi
     ln -sfn "$(basename "${RUN_DIR}")" "${TESTS_DIR}/latest"
+    step_done "init" "pass"
 }
 
 acquire_lock() {
     local lock_path="${TESTS_DIR}/.run_test.lock"
+    step_start "lock"
     if ! command -v flock >/dev/null 2>&1; then
         append_record "lock" "blocked" "" "true" "" "" "" "" \
             "blocked_lock_unavailable" --argv=flock "--argv=${lock_path}" || return 70
+        step_done "lock" "blocked"
         return 2
     fi
     exec 9>"${lock_path}"
     if ! flock -n 9; then
         append_record "lock" "blocked" "" "true" "" "" "" "" \
             "blocked_lock_held" --argv=flock --argv=-n "--argv=${lock_path}" || return 70
+        step_done "lock" "blocked"
         return 2
     fi
     append_record "lock" "pass" 0 "true" "" "" "" "" "" \
         --argv=flock --argv=-n "--argv=${lock_path}" || return 70
+    step_done "lock" "pass"
 }
 
 main() {
@@ -222,21 +357,30 @@ main() {
     prepare_run_dir || return $?
     run_helper "manifest" "inspect" "${RUN_DIR}/manifest.json" || return $?
     run_helper "plan" "plan" "${RUN_DIR}/plan.json" || return $?
+    step_start "excluded"
     python3 scripts/test/run_test_plan_output.py write-excluded \
         --plan "${RUN_DIR}/plan.json" \
         --out "${RUN_DIR}/excluded.json" || return 70
+    step_done "excluded" "pass"
+    print_environment
 
     if ((LIST_MODE)); then
+        step_start "list"
         python3 scripts/test/run_test_plan_output.py print-list --plan "${RUN_DIR}/plan.json" || return 70
         append_record "list" "pass" 0 "false" "" "" "" "" "" \
             --argv=./run_test.sh --argv=--list --argv=--image "--argv=${IMAGE}" || return 70
+        step_done "list" "pass"
         return 0
     fi
     if ((DRY_RUN)); then
-        local -a extra_args=(python3 scripts/test/run_test_extra_lanes.py --run-dir "${RUN_DIR}" --stamp "${STAMP}" --commands-file "${COMMANDS_FILE}" --timeout-fvp "${TIMEOUT_FVP}" --dry-run)
+        local -a extra_args=(python3 scripts/test/run_test_extra_lanes.py --run-dir "${RUN_DIR}" --stamp "${STAMP}" --commands-file "${COMMANDS_FILE}" --plan "${RUN_DIR}/plan.json" --timeout-fvp "${TIMEOUT_FVP}" --dry-run)
         ((SKIP_RUNTIME)) && extra_args+=(--skip-runtime)
+        step_start "extra-lanes"
         "${extra_args[@]}" || return $?
+        step_done "extra-lanes" "pass"
+        step_start "oeqa-lanes"
         python3 scripts/test/run_test_oeqa_lanes.py --run-dir "${RUN_DIR}" --commands-file "${COMMANDS_FILE}" --build-dir "${BUILD_DIR}" --image "${IMAGE}" --timeout-oeqa "${TIMEOUT_OEQA}" --dry-run || return $?
+        step_done "oeqa-lanes" "pass"
         return 0
     fi
     if ((PREFLIGHT_ONLY)); then
@@ -244,11 +388,14 @@ main() {
         run_helper "preflight" "preflight" "${RUN_DIR}/preflight.json"
         return $?
     fi
-    local -a extra_args=(python3 scripts/test/run_test_extra_lanes.py --run-dir "${RUN_DIR}" --stamp "${STAMP}" --commands-file "${COMMANDS_FILE}" --timeout-fvp "${TIMEOUT_FVP}")
+    local -a extra_args=(python3 scripts/test/run_test_extra_lanes.py --run-dir "${RUN_DIR}" --stamp "${STAMP}" --commands-file "${COMMANDS_FILE}" --plan "${RUN_DIR}/plan.json" --timeout-fvp "${TIMEOUT_FVP}")
     ((SKIP_RUNTIME)) && extra_args+=(--skip-runtime)
+    step_start "extra-lanes"
+    step_progress "extra-lanes" "logs under ${RUN_DIR}/extra"
     "${extra_args[@]}"
     extra_rc=$?
     ((extra_rc == 70)) && return 70
+    step_done "extra-lanes" "$([[ "${extra_rc}" == 0 ]] && printf pass || printf fail)"
     if ((SKIP_RUNTIME)); then
         append_record "runtime-placeholder" "skipped" "" "false" "" "" "" "" "" \
             --argv=./run_test.sh --argv=--skip-runtime --argv=--image "--argv=${IMAGE}" || return 70
@@ -258,10 +405,17 @@ main() {
     run_helper "preflight" "preflight" "${RUN_DIR}/preflight.json"
     preflight_rc=$?
     ((preflight_rc == 70)) && return 70
-    ((preflight_rc != 0)) && return "${extra_rc:-${preflight_rc}}"
-    python3 scripts/test/run_test_oeqa_lanes.py --run-dir "${RUN_DIR}" --commands-file "${COMMANDS_FILE}" --build-dir "${BUILD_DIR}" --image "${IMAGE}" --timeout-oeqa "${TIMEOUT_OEQA}"
+    ((preflight_rc != 0)) && return "${preflight_rc}"
+    ensure_host_python
+    host_python_rc=$?
+    ((host_python_rc == 70)) && return 70
+    ((host_python_rc != 0)) && return "${host_python_rc}"
+    step_start "oeqa-lanes"
+    step_progress "oeqa-lanes" "logs under ${RUN_DIR}/oeqa"
+    python3 scripts/test/run_test_oeqa_lanes.py --run-dir "${RUN_DIR}" --commands-file "${COMMANDS_FILE}" --build-dir "${BUILD_DIR}" --image "${IMAGE}" --timeout-oeqa "${TIMEOUT_OEQA}" --host-python-bin "${HOST_PYTHON_BIN}"
     oeqa_rc=$?
     ((oeqa_rc == 70)) && return 70
+    step_done "oeqa-lanes" "$([[ "${oeqa_rc}" == 0 ]] && printf pass || printf fail)"
     return "$((extra_rc != 0 ? extra_rc : oeqa_rc))"
 }
 

@@ -15,7 +15,6 @@ from run_test_suite_plan import resolve_plan
 CURRENT_SUITE = [
     "ping",
     "ssh",
-    "test_00_aspen_boot",
     "test_00_rse",
     "test_00_secure_partition",
     "test_01_auto_ad_nexios_uki_boot",
@@ -74,7 +73,6 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
     assert {
         "extra-static-compileall",
         "extra-project-pytest",
-        "extra-sw-ref-stack-unittests",
         "qbox-static-full-map",
         "qbox-full-check-only",
         "qbox-full-live-cl0-cl1",
@@ -132,3 +130,40 @@ def test_plan_xen_exclusion_when_virtualization_test_is_requested() -> None:
     excluded = {item["name"]: item["reason"] for item in plan["excluded"]}
     assert excluded["test_40_virtualization"] == "excluded_baremetal_no_xen"
     assert excluded["domu-lifecycle"] == "excluded_baremetal_no_xen_domu"
+
+
+def test_plan_excludes_hsoc_yocto_skip_entries_when_declared() -> None:
+    # Given: hsoc-stack Yocto metadata marks tests unsupported by this build.
+    manifest = {
+        "status": "ok",
+        "machine": "apollo-fvp",
+        "distro": "auto-ad-nexios",
+        "rd_aspen_variant": "cfg2",
+        "pc_cpus_count_default": 16,
+        "test_suites": ["ping", "test_00_aspen_boot"],
+        "hsoc_run_test_skip_suites": [
+            "test_00_aspen_boot",
+            "test_70_mission_based_profiles",
+        ],
+        "hsoc_run_test_skip_extra_lanes": ["extra-sw-ref-stack-unittests"],
+        "hsoc_run_test_skip_reason": "excluded_by_hsoc_yocto_build_config",
+    }
+
+    # When: the resolver builds an executable plan.
+    plan = resolve_plan(manifest)
+
+    # Then: configured skips are removed from every executable lane.
+    included = (
+        plan["included"]["validation_current"]
+        + plan["included"]["validation_extended"]
+        + plan["included"]["extra"]
+    )
+    excluded = {item["name"]: item["reason"] for item in plan["excluded"]}
+    assert "test_00_aspen_boot" not in included
+    assert "test_70_mission_based_profiles" not in included
+    assert "extra-sw-ref-stack-unittests" not in included
+    assert excluded["test_00_aspen_boot"] == "excluded_by_hsoc_yocto_build_config"
+    assert (
+        excluded["extra-sw-ref-stack-unittests"]
+        == "excluded_by_hsoc_yocto_build_config"
+    )

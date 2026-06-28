@@ -212,7 +212,7 @@ def test_extra_static_lanes_are_planned() -> None:
     # Given: an explicit Todo 7 dry-run output directory.
     out_dir = Path("build/tests/task-7-pytest-dry")
 
-    # When: dry-run mode plans the extra static/project/sw-ref-stack lanes.
+    # When: dry-run mode plans the enabled extra static/project lanes.
     result = run_runner("--dry-run", "--stamp", "task-7-pytest-dry", "--out-dir", str(out_dir))
 
     # Then: all required extra commands are recorded but not executed.
@@ -229,14 +229,7 @@ def test_extra_static_lanes_are_planned() -> None:
         "--junitxml build/tests/task-7-pytest-dry/extra/project-pytest/junit.xml" in command
         for command in commands
     )
-    assert any(
-        "cd sw-ref-stack/test_automation && PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. "
-        "pytest unittests -o "
-        "cache_dir=../../build/tests/task-7-pytest-dry/extra/sw-ref-stack/unittests/cache "
-        "--junitxml ../../build/tests/task-7-pytest-dry/extra/sw-ref-stack/unittests/junit.xml"
-        in command
-        for command in commands
-    )
+    assert not any("pytest unittests" in command for command in commands)
     extra_records = [command for command in load_commands(run_dir) if command["name"].startswith("extra-")]
     assert extra_records
     assert all("stdout_log" not in command and "stderr_log" not in command for command in extra_records)

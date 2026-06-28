@@ -59,7 +59,7 @@ if [[ "$1" == "scripts/test/run_test_manifest.py" ]]; then
       printf '{"status":"ok","machine":"apollo-fvp","distro":"auto-ad-nexios","rd_aspen_variant":"cfg2","pc_cpus_count_default":16,"test_suites":"ping ssh","test_target_ip":"127.0.0.1:2222"}\\n' >"${out}"
       ;;
     plan)
-      printf '{"included":{"validation_current":["ping"],"validation_extended":["ssh"],"extra":[]},"excluded":[]}\\n' >"${out}"
+      printf '{"included":{"validation_current":["ping"],"validation_extended":["ssh"],"extra":["extra-static-compileall","extra-project-pytest"]},"excluded":[]}\\n' >"${out}"
       ;;
     preflight)
       printf '{"status":"ok","blockers":[]}\\n' >"${out}"

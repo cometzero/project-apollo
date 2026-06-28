@@ -37,6 +37,7 @@ class LaneInputs:
     run_dir: Path
     stamp: str
     commands_file: Path
+    plan: Path | None
     dry_run: bool
     include_qbox_runtime: bool
     skip_runtime: bool
@@ -134,6 +135,29 @@ def _append(commands_file: Path, record: JsonObject) -> None:
         stream.write(json.dumps(record, sort_keys=True) + "\n")
 
 
+def _included_extra(plan: Path | None) -> set[str] | None:
+    if plan is None:
+        return None
+    data = json.loads(plan.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return set()
+    included = data.get("included", {})
+    if not isinstance(included, dict):
+        return set()
+    extra = included.get("extra", [])
+    if not isinstance(extra, list):
+        return set()
+    return {item for item in extra if isinstance(item, str)}
+
+
+def _selected_local_lanes(inputs: LaneInputs) -> list[Lane]:
+    lanes = build_lanes(inputs)
+    included = _included_extra(inputs.plan)
+    if included is None:
+        return lanes
+    return [lane for lane in lanes if lane.name in included]
+
+
 def _record_dry_run(inputs: LaneInputs, lane: Lane) -> None:
     now = _now()
     _append(
@@ -195,7 +219,7 @@ def _run_lane(inputs: LaneInputs, lane: Lane) -> int:
 
 def run_lanes(inputs: LaneInputs) -> int:
     failed = False
-    for lane in build_lanes(inputs):
+    for lane in _selected_local_lanes(inputs):
         if inputs.dry_run:
             _record_dry_run(inputs, lane)
             continue
@@ -221,6 +245,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--stamp", required=True)
     parser.add_argument("--commands-file", type=Path, required=True)
+    parser.add_argument("--plan", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--include-qbox-runtime", action="store_true")
     parser.add_argument("--skip-runtime", action="store_true")
@@ -237,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
             run_dir=args.run_dir,
             stamp=args.stamp,
             commands_file=args.commands_file,
+            plan=args.plan,
             dry_run=args.dry_run,
             include_qbox_runtime=include_qbox_runtime,
             skip_runtime=args.skip_runtime,
