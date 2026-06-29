@@ -36,7 +36,7 @@ RSE_LCS_CM = "0xcccc3c3c"
 RSE_LCS_SE = 0xEEEEA5A5
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-EXPECTED_AP_CPUS = 16
+DEFAULT_EXPECTED_AP_CPUS = 16
 APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-fvp login:"
 APOLLO_PRIMARY_SHELL_MARKER = "~ #"
 CHILD_FAIL_PATTERNS = [
@@ -137,14 +137,28 @@ def has_unexpected_shadowed_range(platform_log: str) -> bool:
     return False
 
 
+def expected_ap_cpus() -> int:
+    value = os.environ.get("QBOX_APOLLO_NUM_CPUS", "").strip()
+    if not value:
+        return DEFAULT_EXPECTED_AP_CPUS
+    try:
+        parsed = int(value, 0)
+    except ValueError:
+        return DEFAULT_EXPECTED_AP_CPUS
+    if parsed < 1 or parsed > 16:
+        return DEFAULT_EXPECTED_AP_CPUS
+    return parsed
+
+
 def platform_observations(out_dir: Path) -> dict[str, Any]:
     platform_log = read_log(out_dir / CONSOLE_LOGS["platform"])
     ap_cpu_match = AP_CPU_COUNT_RE.search(platform_log)
     ap_cpus = int(ap_cpu_match.group("count")) if ap_cpu_match else None
+    expected = expected_ap_cpus()
     return {
         "ap_cpus": ap_cpus,
-        "expected_ap_cpus": EXPECTED_AP_CPUS,
-        "ap_cpus_enabled_for_full_system": ap_cpus == EXPECTED_AP_CPUS,
+        "expected_ap_cpus": expected,
+        "ap_cpus_enabled_for_full_system": ap_cpus == expected,
         "unexpected_shadowed_range": has_unexpected_shadowed_range(platform_log),
     }
 

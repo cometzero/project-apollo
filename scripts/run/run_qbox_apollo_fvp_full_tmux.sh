@@ -38,6 +38,7 @@ NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 NO_ATTACH=0
 DRY_RUN=0
 
@@ -102,6 +103,8 @@ Options:
                        enable QEMU-local CC3XX direct MMIO fast path
   --netdev SPEC        QEMU user-net specification forwarded to the AP virtio
                        net device, for example type=user,hostfwd=tcp::2223-:22
+  --tmux-layout MODE   pane layout: tiled or fvp-like
+                       (default: ${TMUX_LAYOUT})
   --no-attach          start tmux but do not attach
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -115,6 +118,7 @@ Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_PLATFORM_DIR
   QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
+  TMUX_LAYOUT
   ROOTFS_BOOTARGS_PROFILE
   QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
   RANGE_LIMITED_FLASH_DMI CC3XX_STATS
@@ -189,6 +193,14 @@ validate_si_mode()
     case "$1" in
         service-model|live-cl1|live-cl0-cl1) ;;
         *) die "invalid --si-mode: $1" ;;
+    esac
+}
+
+validate_tmux_layout()
+{
+    case "$1" in
+        tiled|fvp-like) ;;
+        *) die "invalid --tmux-layout: $1" ;;
     esac
 }
 
@@ -642,6 +654,7 @@ Apollo QBox full-system tmux run
   effective_cc3xx_qemu_native_backend: ${effective_cc3xx_qemu_native_backend}
   effective_cc3xx_local_mmio_fastpath: ${effective_cc3xx_local_mmio_fastpath}
   netdev: ${NETDEV:-default}
+  tmux_layout: ${TMUX_LAYOUT}
   out_dir: ${OUT_DIR}
   qbox_platform_dir: ${QBOX_PLATFORM_DIR}
   qbox_conf: ${QBOX_CONF}
@@ -656,6 +669,15 @@ EOF
     while IFS=: read -r domain file title; do
         printf '  %-18s %s/%s (%s)\n' "${domain}" "${OUT_DIR}" "${file}" "${title}"
     done < <(known_logs)
+}
+
+is_terminal_status_response_line()
+{
+    (($# == 1)) || die "is_terminal_status_response_line requires LINE"
+
+    local clean_line="${1//$'\033'/}"
+
+    [[ "${clean_line}" =~ ^\[[0-9]{1,5}\;[0-9]{1,5}R$ ]]
 }
 
 write_fifo_line()
@@ -725,6 +747,9 @@ interactive_primary_console()
                 printf 'UART input FIFO is not ready; dropped input line.\n'
                 continue
             fi
+            if is_terminal_status_response_line "${line}"; then
+                continue
+            fi
             write_fifo_line "${fifo_path}" "${line}" ||
                 printf 'UART input FIFO write timed out; dropped input line.\n'
         fi
@@ -738,9 +763,11 @@ start_log_pane()
     local domain="$1"
     local file="$2"
     local title="$3"
+    shift 3
     local log_path="${OUT_DIR}/${file}"
     local pane_body
     local pane_id
+    local -a split_args=("$@")
 
     if [[ "${domain}" == "primary_console" ]]; then
         pane_body=$(
@@ -757,9 +784,64 @@ start_log_pane()
         )
     fi
 
-    pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' -t "${TMUX_SESSION}:qbox" bash -lc "${pane_body}")"
+    if ((${#split_args[@]} == 0)); then
+        split_args=(-t "${TMUX_SESSION}:qbox")
+    fi
+
+    pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' "${split_args[@]}" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T "${domain}"
-    tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
+    if [[ "${TMUX_LAYOUT}" == "tiled" ]]; then
+        tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
+    fi
+    START_LOG_PANE_ID="${pane_id}"
+}
+
+start_domain_log_pane()
+{
+    local requested="$1"
+    shift
+    local domain
+    local file
+    local title
+
+    while IFS=: read -r domain file title; do
+        if [[ "${domain}" == "${requested}" ]]; then
+            start_log_pane "${domain}" "${file}" "${title}" "$@"
+            return 0
+        fi
+    done < <(known_logs)
+
+    die "unknown log domain: ${requested}"
+}
+
+start_tiled_log_panes()
+{
+    local domain
+    local file
+    local title
+
+    while IFS=: read -r domain file title; do
+        start_log_pane "${domain}" "${file}" "${title}"
+    done < <(known_logs)
+}
+
+start_fvp_like_log_panes()
+{
+    local primary_pane_id
+    local rse_pane_id
+    local si0_pane_id
+    local si1_pane_id
+
+    start_domain_log_pane primary_console -v -b -l 70% -t "${RUNNER_PANE_ID}"
+    primary_pane_id="${START_LOG_PANE_ID}"
+    start_domain_log_pane rse -h -l 40% -t "${primary_pane_id}"
+    rse_pane_id="${START_LOG_PANE_ID}"
+    start_domain_log_pane safety_island_cl0 -v -l 75% -t "${rse_pane_id}"
+    si0_pane_id="${START_LOG_PANE_ID}"
+    start_domain_log_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}"
+    si1_pane_id="${START_LOG_PANE_ID}"
+    start_domain_log_pane secure_console -v -l 50% -t "${si1_pane_id}"
+    start_domain_log_pane platform -h -l 50% -t "${RUNNER_PANE_ID}"
 }
 
 start_tmux()
@@ -776,6 +858,7 @@ start_tmux()
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "POST_LOGIN_PROBE" "${POST_LOGIN_PROBE}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
+    validate_tmux_layout "${TMUX_LAYOUT}"
     require_command "${TMUX_BIN}"
     require_command "${PYTHON_BIN}"
 
@@ -841,15 +924,20 @@ start_tmux()
             printf 'NETDEV=%q QBOX_APOLLO_NETDEV=%q ' \
                 "${NETDEV}" "${NETDEV}"
         fi
+        if [[ -n "${QBOX_APOLLO_NUM_CPUS:-}" ]]; then
+            printf 'QBOX_APOLLO_NUM_CPUS=%q ' "${QBOX_APOLLO_NUM_CPUS}"
+        fi
         printf 'SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
             "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
+        printf 'TMUX_LAYOUT=%q ' "${TMUX_LAYOUT}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
             "${RUNNER_ARGS_FILE}" "${SCRIPT_PATH}"
     )
 
     local runner_pane_id
     runner_pane_id="$(tmux_cmd new-session -d -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
+    RUNNER_PANE_ID="${runner_pane_id}"
     tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
     tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
     tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
@@ -861,14 +949,15 @@ start_tmux()
     )
     tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
 
-    local domain
-    local file
-    local title
-    while IFS=: read -r domain file title; do
-        start_log_pane "${domain}" "${file}" "${title}"
-    done < <(known_logs)
+    if [[ "${TMUX_LAYOUT}" == "fvp-like" ]]; then
+        start_fvp_like_log_panes
+    else
+        start_tiled_log_panes
+    fi
     tmux_cmd select-pane -t "${runner_pane_id}"
-    tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
+    if [[ "${TMUX_LAYOUT}" == "tiled" ]]; then
+        tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
+    fi
 
     printf 'started tmux session: %s\n' "${TMUX_SESSION}"
     printf 'logs: %s\n' "${OUT_DIR}"
@@ -1041,6 +1130,11 @@ while (($# > 0)); do
         --netdev)
             (($# >= 2)) || die "--netdev requires a value"
             NETDEV="$2"
+            shift 2
+            ;;
+        --tmux-layout)
+            (($# >= 2)) || die "--tmux-layout requires a value"
+            TMUX_LAYOUT="$2"
             shift 2
             ;;
         --no-attach)

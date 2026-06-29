@@ -15,6 +15,8 @@ usage() {
 Usage: ./run_qbox_yocto.sh [options] [-- extra-qbox-runner-options]
 
 Run the apollo-fvp Yocto image on QBox using the Apollo full-system runner.
+The tmux panes use the same primary-console-focused split pattern as
+run_fvp.sh.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-fvp)
@@ -170,6 +172,24 @@ reject_removed_env() {
             die "${name} is no longer supported; use the default production-capable QBox models"
         fi
     done
+}
+
+default_ap_cpu_count() {
+    local local_conf="${YOCTO_BUILD_DIR}/conf/local.conf"
+    [[ -f "${local_conf}" ]] || return 1
+
+    sed -nE \
+        's/^[[:space:]]*PC_CPUS?_COUNT_DEFAULT[[:space:]]*[?+:.]*=[[:space:]]*"([^"]+)".*/\1/p' \
+        "${local_conf}" | tail -n 1
+}
+
+validate_ap_cpu_count() {
+    local value="$1"
+
+    [[ "${value}" =~ ^[0-9]+$ ]] ||
+        die "QBOX_APOLLO_NUM_CPUS must be numeric: ${value}"
+    ((value >= 1 && value <= 16)) ||
+        die "QBOX_APOLLO_NUM_CPUS must be in range 1..16: ${value}"
 }
 
 RUN_STAMP="$(date +%Y%m%d-%H%M%S)"
@@ -411,6 +431,11 @@ YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/work/${WORK_P
 [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
 [[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local-build.sh qbox or set --qbox-build-dir."
 
+QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-$(default_ap_cpu_count || true)}"
+QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-4}"
+validate_ap_cpu_count "${QBOX_APOLLO_NUM_CPUS}"
+export QBOX_APOLLO_NUM_CPUS
+
 ROOTFS="$(resolve_file_with_glob \
     "Yocto rootfs WIC image" \
     "${ROOTFS_OVERRIDE:-${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.wic}" \
@@ -521,6 +546,7 @@ RUNNER_CMD=(
     --qbox-performance-preset
     --cc3xx-qemu-native-backend
     --netdev "${NETDEV}"
+    --tmux-layout fvp-like
 )
 
 if [[ "${NO_ATTACH}" == "1" ]]; then
@@ -559,6 +585,7 @@ Apollo QBox Yocto launch
   output dir:    ${OUT_DIR}
   session:       ${TMUX_SESSION}
   qbox conf:     ${QBOX_CONF}
+  ap cpus:       ${QBOX_APOLLO_NUM_CPUS}
   rootfs:        ${RUN_ROOTFS}
   efi disk:      ${RUN_EFI_CAPSULE_DISK}
   rse otp:       ${RUN_RSE_OTP}
