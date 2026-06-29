@@ -64,8 +64,14 @@ def make_preflight_tree(
             "parameters": {
                 "css.smb.rseil.rse.rom.raw_image": str(deploy_dir / "rse-rom-image.img"),
                 "css.smb.rseil.rse_flashloader.fname": str(deploy_dir / "rse-flash-image.img"),
+                "css.smb.rseil.rse_flashloader.fnameWrite": str(
+                    root / "build/tmp_baremetal/fvp-writable/rse-flash-image.img"
+                ),
                 "css.smb.rseil.rse.lcm_nvm.raw_image": str(deploy_dir / "rse-otp-image.img"),
                 "ros.flash_loader.fname": str(deploy_dir / "ap-flash-image.img"),
+                "ros.flash_loader.fnameWrite": str(
+                    root / "build/tmp_baremetal/fvp-writable/ap-flash-image.img"
+                ),
                 "ros.virtio_block0.image_path": str(deploy_dir / "nexios-image-apollo-fvp.wic"),
                 "ros.virtio_block1.image_path": str(
                     deploy_dir / "efi-capsule-update-disk-image-fvp-rd-aspen.img"
@@ -95,6 +101,18 @@ def test_fvpconf_preflight_resolves_bindir(tmp_path: Path) -> None:
     executable = next(check for check in result["checks"] if check["name"] == "fvp_executable")
     assert executable["path"].endswith("usr/bin/FVP_Zena_CSS_Cfg2")
     assert result["blockers"] == []
+
+
+def test_preflight_does_not_require_fvp_writeback_outputs(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    fvpconf = make_preflight_tree(root)
+
+    result = run_preflight(PreflightInputs(root, Path("build"), "apollo-fvp", fvpconf))
+
+    assert result["status"] == "ok"
+    checked_paths = {check["path"] for check in result["checks"]}
+    assert str(root / "build/tmp_baremetal/fvp-writable/rse-flash-image.img") not in checked_paths
+    assert str(root / "build/tmp_baremetal/fvp-writable/ap-flash-image.img") not in checked_paths
 
 
 def test_crypto_plugin_check_resolves_plugin_from_fvpconf_args(tmp_path: Path) -> None:

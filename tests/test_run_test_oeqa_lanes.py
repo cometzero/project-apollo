@@ -90,6 +90,12 @@ def test_dry_run_plans_current_and_extended_bitbake_commands(tmp_path: Path) -> 
     assert result.returncode == 0, result.stderr
     assert (run_dir / "conf/oeqa-current.conf").is_file()
     assert (run_dir / "conf/oeqa-extended.conf").is_file()
+    assert 'TEST_OVERALL_TIMEOUT = "42"' in (
+        run_dir / "conf/oeqa-current.conf"
+    ).read_text(encoding="utf-8")
+    assert 'TEST_OVERALL_TIMEOUT = "42"' in (
+        run_dir / "conf/oeqa-extended.conf"
+    ).read_text(encoding="utf-8")
     command_text = "\n".join(" ".join(record["argv"]) for record in load_commands(commands_file))
     assert "timeout 42 bash -lc source layers/poky/oe-init-build-env build >/dev/null && bitbake -R " in command_text
     assert "oeqa-current.conf nexios-image -c testimage" in command_text
@@ -242,6 +248,50 @@ def test_timeout_with_real_oeqa_failure_json_records_fail(tmp_path: Path) -> Non
     assert records[0]["status"] == "fail"
     assert records[0]["exit_code"] == 124
     assert any(artifact["kind"] == "oeqa_result" for artifact in records[0]["artifacts"])
+
+
+def test_oeqa_results_directory_artifacts_only_classify_json_as_result(tmp_path: Path) -> None:
+    # Given: a fake OEQA run that leaves both JSON results and text logs in results/.
+    run_dir = tmp_path / "mixed-result-artifacts"
+    commands_file = make_run_dir(run_dir)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    results_dir = run_dir / "oeqa/current/results/nexios-image"
+    result_json = results_dir / "testresults.json"
+    boot_log = results_dir / "qemu_boot_log.20260628"
+    oeqa_result = {
+        "nexios-image-apollo-fvp": {
+            "result": {
+                "oeqa.runtime.case.TestLinuxBoot.test_linux_boot": {"status": "PASSED"},
+            },
+        },
+    }
+    write_fake_timeout(
+        fake_bin / "timeout",
+        f"mkdir -p {results_dir}; "
+        f"cat > {result_json} <<'JSON'\n{json.dumps(oeqa_result)}\nJSON\n"
+        f"printf 'boot log\\n' > {boot_log}; exit 0",
+    )
+
+    # When: OEQA lane artifacts are recorded.
+    result = run_oeqa(
+        "--run-dir",
+        str(run_dir),
+        "--commands-file",
+        str(commands_file),
+        "--build-dir",
+        "build",
+        "--image",
+        "nexios-image",
+        extra_env={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+    )
+
+    # Then: only JSON files are marked as OEQA result evidence.
+    assert result.returncode == 0, result.stderr
+    records = load_commands(commands_file)
+    artifacts = records[0]["artifacts"]
+    assert {"kind": "oeqa_result", "path": "oeqa/current/results/nexios-image/testresults.json"} in artifacts
+    assert {"kind": "oeqa_result_artifact", "path": "oeqa/current/results/nexios-image/qemu_boot_log.20260628"} in artifacts
 
 
 @pytest.mark.parametrize("return_code", [0, 124])

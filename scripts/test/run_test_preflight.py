@@ -165,7 +165,9 @@ def _looks_like_artifact(value: str) -> bool:
 
 def _fvp_artifacts(fvpconf: JsonObject) -> list[Path]:
     artifacts: list[Path] = []
-    for value in _str_dict(fvpconf.get("parameters")).values():
+    for key, value in _str_dict(fvpconf.get("parameters")).items():
+        if key.endswith(".fnameWrite"):
+            continue
         if _looks_like_artifact(value):
             artifacts.append(Path(value))
     for entry in _str_list(fvpconf.get("data")):

@@ -125,6 +125,18 @@ def words(value: str) -> list[str]:
     return [part for part in value.split() if part]
 
 
+def merged_words(*values: str) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        for word in words(value):
+            if word in seen:
+                continue
+            merged.append(word)
+            seen.add(word)
+    return merged
+
+
 def selected_artifacts(inputs: ManifestInputs, tmpdir: str) -> tuple[Path, Path]:
     tmpdir_name = tmpdir.removeprefix("${TOPDIR}/")
     deploy_dir = inputs.root / inputs.build_dir / tmpdir_name / "deploy/images" / inputs.machine
@@ -194,10 +206,19 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
             f"{local_conf.get('IMAGE_CLASSES', '')} {str_field(testdata, 'IMAGE_CLASSES')}"
         ),
         "test_suites": words(str_field(testdata, "TEST_SUITES")),
-        "hsoc_run_test_skip_suites": words(str_field(testdata, "HSOC_RUN_TEST_SKIP_SUITES") or distro_conf.get("HSOC_RUN_TEST_SKIP_SUITES", "")),
-        "hsoc_run_test_skip_extra_lanes": words(str_field(testdata, "HSOC_RUN_TEST_SKIP_EXTRA_LANES") or distro_conf.get("HSOC_RUN_TEST_SKIP_EXTRA_LANES", "")),
+        "hsoc_run_test_skip_suites": merged_words(
+            str_field(testdata, "HSOC_RUN_TEST_SKIP_SUITES"),
+            distro_conf.get("HSOC_RUN_TEST_SKIP_SUITES", ""),
+        ),
+        "hsoc_run_test_skip_extra_lanes": merged_words(
+            str_field(testdata, "HSOC_RUN_TEST_SKIP_EXTRA_LANES"),
+            distro_conf.get("HSOC_RUN_TEST_SKIP_EXTRA_LANES", ""),
+        ),
         "hsoc_run_test_skip_reason": str_field(testdata, "HSOC_RUN_TEST_SKIP_REASON") or distro_conf.get("HSOC_RUN_TEST_SKIP_REASON", ""),
-        "test_fvp_devices": words(str_field(testdata, "TEST_FVP_DEVICES")),
+        "test_fvp_devices": words(
+            distro_conf.get("TEST_FVP_DEVICES", "")
+            or str_field(testdata, "TEST_FVP_DEVICES")
+        ),
         "test_target": str_field(testdata, "TEST_TARGET"),
         "test_target_ip": str_field(testdata, "TEST_TARGET_IP"),
         "fvp_exe": str_field(testdata, "FVP_EXE") or fvpconf.exe,
@@ -282,6 +303,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     write_conf.add_argument("--machine", default="apollo-fvp")
     write_conf.add_argument("--run-dir", type=Path, required=True)
     write_conf.add_argument("--kind", choices=("current", "extended", "extra"), required=True)
+    write_conf.add_argument("--test-overall-timeout", default="10800")
     write_conf.add_argument("--out", type=Path)
     write_conf.set_defaults(func=run_write_conf)
     return parser.parse_args(argv)

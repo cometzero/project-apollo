@@ -204,6 +204,22 @@ image_dir = out_dir / "writable-images"
 for key, value in sorted(cfg.get("parameters", {}).items()):
     if not key.endswith(".fnameWrite") or not value:
         continue
+    read_key = key[:-len("fnameWrite")] + "fname"
+    read_value = cfg.get("parameters", {}).get(read_key, "")
+    src = pathlib.Path(read_value) if read_value else pathlib.Path(value)
+    if not src.exists():
+        src = pathlib.Path(value)
+    if not src.exists():
+        continue
+    image_dir.mkdir(parents=True, exist_ok=True)
+    dst = image_dir / pathlib.Path(value).name
+    shutil.copy2(src, dst)
+    args.extend(["--parameter", f"{key}={dst}"])
+
+for key in ("css.smb.rseil.rse.lcm_nvm.raw_image",):
+    value = cfg.get("parameters", {}).get(key, "")
+    if not value:
+        continue
     src = pathlib.Path(value)
     if not src.exists():
         continue

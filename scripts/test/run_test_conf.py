@@ -19,6 +19,7 @@ class WriteConfArgs(Protocol):
     machine: str
     run_dir: Path
     kind: str
+    test_overall_timeout: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +29,7 @@ class ConfRequest:
     machine: str
     run_dir: Path
     kind: str
+    test_overall_timeout: str = DEFAULT_TEST_OVERALL_TIMEOUT
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,9 +124,37 @@ def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
             if not isinstance(suite, list):
                 return ""
             tests = [item for item in suite if isinstance(item, str)]
-            return f'TEST_SUITES = "{" ".join(tests)}"'
+            suite_value = " ".join(tests)
+            assignments = [f'TEST_SUITES = "{suite_value}"']
+            machine = manifest.get("machine", "")
+            distro = manifest.get("distro", "")
+            if isinstance(machine, str) and machine and isinstance(distro, str) and distro:
+                assignments.append(f'TEST_SUITES:{machine}:{distro} = "{suite_value}"')
+            return "\n".join(assignments)
         case unreachable:
             raise AssertionError(f"unreachable conf kind: {unreachable}")
+
+
+def _str_list(value: JsonValue) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
+
+
+def _scoped_assignments(key: str, value: str, manifest: JsonObject) -> list[str]:
+    assignments = [f'{key} = "{value}"']
+    machine = manifest.get("machine", "")
+    distro = manifest.get("distro", "")
+    if isinstance(machine, str) and machine and isinstance(distro, str) and distro:
+        assignments.append(f'{key}:{machine}:{distro} = "{value}"')
+    return assignments
+
+
+def _device_assignments(manifest: JsonObject) -> list[str]:
+    devices = " ".join(_str_list(manifest.get("test_fvp_devices")))
+    if not devices:
+        return []
+    return _scoped_assignments("TEST_FVP_DEVICES", devices, manifest)
 
 
 def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
@@ -135,8 +165,9 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
         f'TEST_LOG_DIR = "{oeqa_dir / "logs"}"',
         f'OEQA_JSON_RESULT_DIR = "{oeqa_dir / "results"}"',
         f'OEQA_ARTEFACT_DIR = "{oeqa_dir / "artifacts"}"',
-        f'TEST_OVERALL_TIMEOUT = "{DEFAULT_TEST_OVERALL_TIMEOUT}"',
+        f'TEST_OVERALL_TIMEOUT = "{request.test_overall_timeout}"',
     ]
+    lines.extend(_device_assignments(manifest))
     suite = _suite_assignment(request.kind, manifest)
     if suite is not None:
         lines.append(suite)
@@ -167,6 +198,7 @@ def run_write_conf(args: WriteConfArgs) -> int:
         machine=args.machine,
         run_dir=args.run_dir,
         kind=args.kind,
+        test_overall_timeout=args.test_overall_timeout,
     )
     rejected = _rejection_message(request)
     if rejected is not None:

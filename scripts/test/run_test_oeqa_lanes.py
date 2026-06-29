@@ -80,7 +80,14 @@ def _append(inputs: OeqaInputs, record: JsonObject) -> None:
 
 def _conf_path(inputs: OeqaInputs, kind: str, manifest: JsonObject) -> Path:
     result = write_conf(
-        ConfRequest(inputs.root, inputs.build_dir, "apollo-fvp", inputs.run_dir, kind),
+        ConfRequest(
+            inputs.root,
+            inputs.build_dir,
+            "apollo-fvp",
+            inputs.run_dir,
+            kind,
+            str(inputs.timeout_oeqa),
+        ),
         manifest,
     )
     if result.conf_path is None:
@@ -129,11 +136,15 @@ def _result_paths(lane: OeqaLane) -> list[Path]:
 
 def _artifacts(inputs: OeqaInputs, lane: OeqaLane) -> list[JsonObject]:
     artifacts: list[JsonObject] = [{"kind": "conf", "path": _rel(lane.conf_path, inputs.run_dir)}]
-    roots = ((lane.output_dir / "logs", "oeqa_log"), (lane.output_dir / "results", "oeqa_result"), (lane.output_dir / "artifacts", "oeqa_artifact"))
+    roots = ((lane.output_dir / "logs", "oeqa_log"), (lane.output_dir / "results", "oeqa_result_artifact"), (lane.output_dir / "artifacts", "oeqa_artifact"))
     for root, kind in roots:
         if not root.is_dir():
             continue
-        artifacts.extend({"kind": kind, "path": _rel(path, inputs.run_dir)} for path in sorted(root.rglob("*")) if path.is_file())
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            artifact_kind = "oeqa_result" if root == lane.output_dir / "results" and path.suffix == ".json" else kind
+            artifacts.append({"kind": artifact_kind, "path": _rel(path, inputs.run_dir)})
     return artifacts
 
 
@@ -189,6 +200,10 @@ def _run_command(inputs: OeqaInputs, lane: OeqaLane) -> int:
         returncode = 127
         try:
             returncode = process.wait()
+        except KeyboardInterrupt:
+            _cleanup_process_group(process.pid)
+            _kill_bitbake_server(inputs, lane)
+            raise
         finally:
             _cleanup_process_group(process.pid)
         if returncode == 124:

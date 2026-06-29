@@ -122,6 +122,8 @@ def _oeqa_evidence(run_dir: Path, artifacts: list[JsonObject]) -> tuple[list[str
         if _str_value(artifact.get("kind")) != "oeqa_result":
             continue
         path = _record_path(run_dir, _str_value(artifact.get("path")))
+        if path.suffix != ".json":
+            continue
         evidence = classify_oeqa_result_path(path)
         match evidence.state:
             case OeqaResultState.FAIL:

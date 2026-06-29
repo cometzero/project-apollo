@@ -51,7 +51,30 @@ def test_write_conf_current_when_run_dir_is_safe(tmp_path: Path) -> None:
     assert f'OEQA_JSON_RESULT_DIR = "{run_dir.resolve()}/oeqa/current/results"' in text
     assert f'OEQA_ARTEFACT_DIR = "{run_dir.resolve()}/oeqa/current/artifacts"' in text
     assert 'TEST_OVERALL_TIMEOUT = "' in text
+    assert 'TEST_FVP_DEVICES = "rtc watchdog networking virtiorng"' in text
+    assert (
+        'TEST_FVP_DEVICES:apollo-fvp:auto-ad-nexios = '
+        '"rtc watchdog networking virtiorng"'
+    ) in text
+    assert "cpu_hotplug" not in text
     assert "TEST_SUITES" not in text
+
+
+def test_auto_ad_nexios_updates_fvp_device_testdata_for_oeqa() -> None:
+    distro_conf = (
+        ROOT
+        / "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/distro/"
+        / "auto-ad-nexios.conf"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        'TEST_FVP_DEVICES:apollo-fvp:auto-ad-nexios = '
+        '"rtc watchdog networking virtiorng"'
+    ) in distro_conf
+    assert (
+        'TESTIMAGE_UPDATE_VARS:append:apollo-fvp:auto-ad-nexios = '
+        '" TEST_FVP_DEVICES"'
+    ) in distro_conf
 
 
 def test_write_conf_extended_when_run_dir_is_safe(tmp_path: Path) -> None:
@@ -74,10 +97,18 @@ def test_write_conf_extended_when_run_dir_is_safe(tmp_path: Path) -> None:
     # Then: it pins the non-Xen extended suite.
     assert result.returncode == 0, result.stderr
     text = (run_dir / "conf/oeqa-extended.conf").read_text(encoding="utf-8")
+    tokens = text.replace('"', " ").split()
     assert 'TEST_SUITES = "' in text
-    assert "test_10_pfdi" in text
-    assert "test_20_hipc_baremetal" in text
+    assert 'TEST_FVP_DEVICES = "rtc watchdog networking virtiorng"' in text
+    assert "cpu_hotplug" not in text
     assert "test_70_mission_based_profiles" in text
+    assert "test_10_pfdi" not in tokens
+    assert "test_10_ras_cpu" not in tokens
+    assert "test_10_sbistc_integration" not in tokens
+    assert "test_20_hipc_baremetal" not in tokens
+    assert "test_50_cryptographic_extension" not in tokens
+    assert "test_99_uefi_secure_boot" not in text
+    assert "test_100_fwu" not in text
     assert "test_40_virtualization" not in text
     assert "test_41_rt_patch_presence" not in text
     assert "domu" not in text.lower()

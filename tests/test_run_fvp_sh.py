@@ -157,6 +157,75 @@ def test_run_fvp_forwards_extra_fvp_args(tmp_path: Path) -> None:
     assert "--parameter css.test_parameter=1" in result.stdout
 
 
+def test_run_fvp_copies_writable_flash_from_read_image_when_write_path_is_missing(
+    tmp_path: Path,
+) -> None:
+    # Given: Yocto fvpconf points fnameWrite at a test-only path that does not
+    # exist until do_testimage prepares it.
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    read_image = deploy_dir / "rse-flash-image.img"
+    missing_write_image = tmp_path / "build/tmp_baremetal/fvp-writable/rse-flash-image.img"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    read_image.write_bytes(b"clean-read-flash")
+    fvpconf.write_text(
+        json.dumps(
+            {
+                "parameters": {
+                    "css.rse.flash_loader.fname": str(read_image),
+                    "css.rse.flash_loader.fnameWrite": str(missing_write_image),
+                },
+                "terminals": {
+                    "css.rse.terminal_uart": "RSE",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # When: run_fvp.sh prepares a dry run.
+    result = run_dry_run(tmp_path)
+
+    # Then: the generated command uses a per-run writable copy sourced from
+    # fname, not the missing fnameWrite path.
+    writable = tmp_path / "build/fvp-tmux/apollo-fvp-pytest/writable-images/rse-flash-image.img"
+    assert result.returncode == 0, result.stderr
+    assert writable.read_bytes() == b"clean-read-flash"
+    assert f"css.rse.flash_loader.fnameWrite={writable}" in result.stdout
+    assert str(missing_write_image) not in result.stdout
+
+
+def test_run_fvp_copies_rse_otp_nvm_to_writable_image(tmp_path: Path) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    flash_image = deploy_dir / "rse-flash-image.img"
+    otp_image = deploy_dir / "rse-otp-image.img"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    flash_image.write_bytes(b"flash")
+    otp_image.write_bytes(b"clean-otp")
+    fvpconf.write_text(
+        json.dumps(
+            {
+                "parameters": {
+                    "css.rse.flash_loader.fnameWrite": str(flash_image),
+                    "css.smb.rseil.rse.lcm_nvm.raw_image": str(otp_image),
+                },
+                "terminals": {
+                    "css.rse.terminal_uart": "RSE",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_dry_run(tmp_path)
+
+    writable = tmp_path / "build/fvp-tmux/apollo-fvp-pytest/writable-images/rse-otp-image.img"
+    assert result.returncode == 0, result.stderr
+    assert writable.read_bytes() == b"clean-otp"
+    assert f"css.smb.rseil.rse.lcm_nvm.raw_image={writable}" in result.stdout
+
+
 def test_run_fvp_local_mode_uses_local_package_defaults(tmp_path: Path) -> None:
     build_dir = tmp_path / "build"
     deploy_dir = build_dir / "local-apollo-fvp/deploy"

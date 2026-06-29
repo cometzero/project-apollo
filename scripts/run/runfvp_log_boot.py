@@ -55,6 +55,7 @@ CHECKS = {
         "any": [
             " login:",
             "root@",
+            "Multi-User System",
         ],
     },
     "terminal_sec_uart": {
@@ -278,8 +279,24 @@ def terminal_metadata(config: dict) -> tuple[set[str], dict[str, str], dict[str,
 def copy_writable_flash(config: dict, out_dir: Path) -> list[str]:
     extra_args: list[str] = []
     image_dir = out_dir / "writable-images"
-    for key, value in config.get("parameters", {}).items():
+    parameters = config.get("parameters", {})
+    for key, value in parameters.items():
         if not key.endswith(".fnameWrite") or not value:
+            continue
+        read_key = key[: -len("fnameWrite")] + "fname"
+        read_value = parameters.get(read_key, "")
+        src = Path(read_value) if read_value else Path(value)
+        if not src.exists():
+            src = Path(value)
+        if not src.exists():
+            continue
+        image_dir.mkdir(parents=True, exist_ok=True)
+        dst = image_dir / Path(value).name
+        shutil.copy2(src, dst)
+        extra_args.extend(["--parameter", f"{key}={dst}"])
+    for key in ("css.smb.rseil.rse.lcm_nvm.raw_image",):
+        value = parameters.get(key)
+        if not value:
             continue
         src = Path(value)
         if not src.exists():

@@ -26,12 +26,16 @@ CURRENT_SUITE = [
     "fvp_devices",
 ]
 EXTENDED_REQUIRED = {
-    "test_10_pfdi",
-    "test_10_ras_cpu",
-    "test_20_hipc_baremetal",
     "test_70_mission_based_profiles",
     "test_991_smcf",
     "test_992_safety_island_pfdi",
+}
+EXTENDED_SKIPPED = {
+    "test_10_pfdi",
+    "test_10_ras_cpu",
+    "test_10_sbistc_integration",
+    "test_20_hipc_baremetal",
+    "test_50_cryptographic_extension",
 }
 
 
@@ -70,6 +74,13 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
     plan = load_json(out)
     assert plan["included"]["validation_current"] == CURRENT_SUITE
     assert EXTENDED_REQUIRED.issubset(plan["included"]["validation_extended"])
+    assert EXTENDED_SKIPPED.isdisjoint(plan["included"]["validation_extended"])
+    assert "test_99_uefi_secure_boot" not in plan["included"]["validation_extended"]
+    assert "test_100_fwu" not in plan["included"]["validation_extended"]
+    assert "test_50_cryptographic_extension" not in plan["included"]["validation_extended"]
+    excluded = {item["name"]: item["reason"] for item in plan["excluded"]}
+    for name in EXTENDED_SKIPPED:
+        assert excluded[name] == "excluded_by_hsoc_yocto_build_config"
     assert {
         "extra-static-compileall",
         "extra-project-pytest",
