@@ -122,7 +122,7 @@ QBox 구현은 한 종류의 backend만 쓰지 않는다. 현재 Apollo FVP 하�
 | --- | --- | --- |
 | Lua platform wiring | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file` | 주소 decode, alias, image load, log backend |
 | QEMU-backed CPU/IP | `cpu_arm_cortexA720AE`, `cpu_arm_cortexR82`, `arm_gicv3`, `arm_gicv3_its`, `arm_smmuv3` fallback, `virtio_mmio_*`, `pl031`, `sbsa_gwdt` | QEMU/libqemu device model을 SystemC socket으로 노출 |
-| SystemC/TLM behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `rse_protection_ctrl`, `zena_fmu`, `zena_ssu`, `host_ppu`, `gicx00_multiview` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
+| SystemC/TLM behavioral model | `mmu720ae`, `rse_atu`, `mhu320ae`, `cc3xx`, `dma350`, `strata_flash_j3`, `rse_lcm`, `rse_protection_ctrl`, `zena_fmu`, `zena_ssu`, `host_ppu`, `gicx00_multiview`, `gic720ae_messreg` | FVP-visible register, translation, mailbox, flash, safety/control behavior |
 | QEMU-native fast backend | `qemu_cc3xx` | `cc3xx_core`를 QEMU MemoryRegionOps fast path로 실행 |
 | Remote CPU bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` | RSE Cortex-M55 실행과 SystemC host platform 연결 |
 | Placeholder/memory-backed model | `gs_memory` | 아직 full behavioral model이 없는 register window 보존 |
@@ -199,7 +199,7 @@ P1 범위를 정적으로 추적한다. 이는 full FVP-equivalent AP memory-map
 | AP SID | `ap_sid` / `host_scr` | `0x1a4a0000..0x1a4affff` AP System ID register window를 AP logical view에 노출한다. |
 | AP secure watchdog control/refresh | `ap_secure_wdog`, `ap_secure_wdog_refresh` / `gs_memory` | `0x1a460000..0x1a46ffff`와 `0x1a470000..0x1a47ffff`를 각각 좁은 명시 placeholder로 AP logical view에 노출한다. watchdog side effect, interrupt/reset 동작, access-control fidelity는 후속 full model debt다. |
 | AP secure timer frame | `ap_secure_timer_frame` / `gs_memory` | `0x1a820000..0x1a82ffff` 명시 placeholder이다. secure generic timer의 side effect나 PPI 동작을 FVP-equivalent로 모델링한 것은 아니다. |
-| RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` / `gs_memory` | `0x5fff0000..0x5fffffff` 64 KiB 명시 placeholder이다. GIC-720AE remote/local message semantics는 후속 구현 debt다. |
+| RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` / `gic720ae_messreg` | `0x5fff0000..0x5fffffff` 64 KiB named SystemC/TLM sideband model이다. deterministic storage, bounds/size errors, `transport_dbg`를 제공하며 AXI5-Stream timing과 full SPI Collator semantics는 후속 구현 debt다. |
 | APP subsystem FMU | `ap_cl0_ni710ae_fmu..ap_cl3_ni710ae_fmu` / `zena_fmu` | `0x1d000000..0x1defffff` aggregate row 중 firmware-derived NI-710AE cluster FMU subwindow만 partial model로 다룬다. 나머지 aggregate/reserved 영역을 broad memory blob으로 full coverage 처리하지 않는다. |
 
 NoC GPV, CMN GPV, PCIe memory/CTRL/PHY, debug memory map, memory-controller
@@ -362,7 +362,9 @@ surface를 표현한다.
 QBox는 현재 GIC-720AE를 하나의 monolithic model로 구현하지 않는다. QEMU
 GICv3 backend를 AP, SI CL0, SI CL1에 각각 두고, SystemC
 `gicx00_multiview`가 firmware-visible multiview register surface를 제공하는
-hybrid 구조를 사용한다.
+hybrid 구조를 사용한다. AP GIC/ITS는 opt-in QEMU GICv4.1/DirectLPI/RVPEID
+속성으로 FVP boot log와 동일한 GIC parity marker를 출력하며,
+`compare_qbox_fvp_gic_logs.py`가 `gic-parity.json`으로 검증한다.
 
 ## I/O Block
 
@@ -474,8 +476,8 @@ true로 확인되었다. Coverage audit은 `si_cl0_ssu=zena_ssu`,
 2. SI CL0 DCLS는 하나의 `cpu_arm_cortexR82` live CPU로 대표된다. lock-step
    비교 자체는 모델링하지 않는다.
 3. GIC-720AE multiview는 QEMU GICv3 backend와 SystemC
-   `gicx00_multiview` control surface 조합이다. FVP의 물리 GIC와 1:1
-   구조는 아니다.
+   `gicx00_multiview` control surface 조합이다. AP boot-visible GICv4.1
+   로그 parity는 구현/검증되었지만 FVP의 물리 GIC와 1:1 구조는 아니다.
 4. `mhu320ae`는 boot/service integration을 많이 수행한다. 단순 register
    sink로 오해하면 안 되지만, full MHU-320AE architectural model parity는
    아직 남아 있다.

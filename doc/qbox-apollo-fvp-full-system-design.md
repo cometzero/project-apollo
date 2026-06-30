@@ -309,6 +309,46 @@ closed:
 - LPI/vLPI behavior remains whatever the existing QEMU GICv3 backend supports.
 - Internal GIC-720AE safety and RAS error signaling is not modeled.
 
+## Apollo AP GIC-720AE Boot-Visible Parity
+
+The AP GIC/ITS path keeps QEMU responsible for the architected CPU interface,
+distributor, redistributor, ITS, PPI, SPI, LPI, and vLPI-facing behavior. The
+Apollo platform enables opt-in QEMU properties for the FVP-observed GICv4.1
+feature reporting only on the AP GIC and AP ITS:
+
+- `has_gicv4_1`, `has_direct_lpi`, `has_rvpeid`,
+  `has_vpend_valid_dirty`, and `vpeid_bits` on `arm_gicv3`.
+- `has_gicv4_1`, `gicv4_1_svpet`, and `gicv4_1_cte_size` on
+  `arm_gicv3_its`.
+
+`scripts/test/compare_qbox_fvp_gic_logs.py` is the GIC parity gate. Its
+`--expect-fvp-parity` mode compares the current QBox primary-console log with
+the Apollo FVP primary-console log and writes `gic-parity.json`. The required
+boot-visible AP markers are:
+
+| Marker | Required QBox evidence |
+| --- | --- |
+| SPI count | `GICv3: 960 SPIs implemented` |
+| GICv3 DirectLPI | `GICv3 features: 16 PPIs, DirectLPI` |
+| GICv4.1 DirectLPI/RVPEID | `GICv4 features: DirectLPI RVPEID Valid+Dirty` |
+| ITS mode | `Using GICv4.1 mode` |
+| ITS collections | `32768 Interrupt Collections` |
+| VPE invalidation | `Using DirectLPI for VPE invalidation` |
+
+These checks are based on the existing software contract only. QBox must not
+change AP `TFA_PLATFORM = "apollo_fvp"`, RSE
+`TFM_PLATFORM = "arm/rse/automotive_rd/apollo-fvp"`, SI CL1
+`apollo_fvp_safety_island_c1`, Linux, U-Boot, OP-TEE, TF-M/RSE, or
+SCP-firmware sources to hide a model gap. The SI multiview control path remains
+anchored to SCP-firmware `config_gicx00_multiview.c`.
+
+The AP `RGIC2LGIC_MESSREG` window is no longer a plain `gs_memory` block in the
+full-system AP view. It is represented by the named `gic720ae_messreg`
+SystemC/TLM sideband model, which preserves deterministic storage,
+out-of-bounds errors, access-size checks, and `transport_dbg`. AXI5-Stream
+timing, complete SPI Collator semantics, Wake Request, Q/P-channel, and FuSa
+injection behavior remain deferred GIC-720AE fidelity work.
+
 ## Proposed Topology
 
 ```text
