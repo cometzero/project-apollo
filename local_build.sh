@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_qbox.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_tfm.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_scp.sh"
@@ -14,7 +15,7 @@ source "${ROOT_DIR}/scripts/build/modules/build_linux.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_flash_images.sh"
 source "${ROOT_DIR}/scripts/build/modules/package_fvp_local.sh"
 
-COMPONENTS=(tf-m scp-firmware zephyr optee u-boot tf-a linux)
+COMPONENTS=(qbox tf-m scp-firmware zephyr optee u-boot tf-a linux)
 ACTIONS=(build clean clean-build defconfig menuconfig savedefconfig)
 KCONFIG_COMPONENTS=(u-boot linux zephyr)
 
@@ -51,7 +52,7 @@ Usage: ./local_build.sh [OPTIONS] [COMPONENT ...] [ACTION]
 Build and package the Apollo FVP local component set.
 
 Components:
-  tf-m scp-firmware zephyr optee u-boot tf-a linux
+  qbox tf-m scp-firmware zephyr optee u-boot tf-a linux
 
 Actions:
   build clean clean-build defconfig menuconfig savedefconfig
@@ -67,6 +68,7 @@ Options:
 
 Examples:
   ./local_build.sh
+  ./local_build.sh qbox
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
   ./local_build.sh --package
@@ -167,6 +169,7 @@ component_function()
 {
     case "$1" in
         tf-m) printf 'build_tfm\n' ;;
+        qbox) printf 'build_qbox\n' ;;
         scp-firmware) printf 'build_scp\n' ;;
         zephyr) printf 'build_zephyr\n' ;;
         optee) printf 'build_optee\n' ;;
@@ -181,6 +184,7 @@ component_work_dir()
 {
     case "$1" in
         tf-m) printf '%s\n' "${TFM_BUILD_DIR}" ;;
+        qbox) printf '%s\n' "${QBOX_PLATFORM_BUILD_DIR}" ;;
         scp-firmware) printf '%s\n' "${SCP_BUILD_DIR}" ;;
         zephyr) printf '%s\n' "${ZEPHYR_BUILD_DIR}" ;;
         optee) printf '%s\n' "${OPTEE_BUILD_DIR}" ;;
@@ -205,6 +209,12 @@ print_component_dry_run()
                         "${TFM_PLATFORM:-arm/rse/automotive_rd/apollo-fvp}" \
                         "${ARM_NONE_EABI_PREFIX%-}"
                     ;;
+                qbox)
+                    printf '    cmake: -S %s -B %s\n' \
+                        "${QBOX_PLATFORM_DIR#"${ROOT_DIR}"/}" \
+                        "${QBOX_PLATFORM_BUILD_DIR#"${ROOT_DIR}"/}"
+                    printf '    target: %s\n' "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}"
+                    ;;
                 scp-firmware)
                     printf '    cmake: -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY\n'
                     printf '    note: SCP cross-compile IPO executable probe is skipped; benign executable-link fallback is documented\n'
@@ -220,6 +230,10 @@ print_component_dry_run()
             case "${component}" in
                 linux)
                     printf '    remove deploy: %s %s\n' "${BOOT_DIR}/Image" "${BOOT_DIR}/apollo-fvp.dtb"
+                    ;;
+                qbox)
+                    printf '    remove qbox platform build only\n'
+                    return 0
                     ;;
                 tf-m|scp-firmware|zephyr|optee|u-boot|tf-a)
                     printf '    remove local deploy outputs for %s only\n' "${component}"
@@ -237,17 +251,17 @@ print_component_dry_run()
             case "${component}" in
                 u-boot)
                     printf '    command: make -C %s O=%s ARCH=arm CROSS_COMPILE=%s RD_ASPEN_VARIANT=%s apollo_fvp_defconfig %s\n' \
-                        "${UBOOT_SRC#${ROOT_DIR}/}" "${UBOOT_BUILD_DIR#${ROOT_DIR}/}" "${AARCH64_PREFIX}" "${RD_ASPEN_VARIANT}" "${action}"
+                        "${UBOOT_SRC#"${ROOT_DIR}"/}" "${UBOOT_BUILD_DIR#"${ROOT_DIR}"/}" "${AARCH64_PREFIX}" "${RD_ASPEN_VARIANT}" "${action}"
                     ;;
                 linux)
                     printf '    command: make -C %s O=%s ARCH=arm64 CROSS_COMPILE=%s %s\n' \
-                        "${LINUX_SRC#${ROOT_DIR}/}" "${LINUX_BUILD_DIR#${ROOT_DIR}/}" "${AARCH64_PREFIX}" "${action}"
+                        "${LINUX_SRC#"${ROOT_DIR}"/}" "${LINUX_BUILD_DIR#"${ROOT_DIR}"/}" "${AARCH64_PREFIX}" "${action}"
                     ;;
                 zephyr)
                     printf '    command: cmake -S %s -B %s && cmake --build %s --target %s\n' \
-                        "${ZEPHYR_SAFETY_ISLAND_SRC#${ROOT_DIR}/}/apps/sample" \
-                        "${ZEPHYR_BUILD_DIR#${ROOT_DIR}/}" "${ZEPHYR_BUILD_DIR#${ROOT_DIR}/}" "${action}"
-                    printf '    generated defconfig: %s/zephyr/defconfig\n' "${ZEPHYR_BUILD_DIR#${ROOT_DIR}/}"
+                        "${ZEPHYR_SAFETY_ISLAND_SRC#"${ROOT_DIR}"/}/apps/sample" \
+                        "${ZEPHYR_BUILD_DIR#"${ROOT_DIR}"/}" "${ZEPHYR_BUILD_DIR#"${ROOT_DIR}"/}" "${action}"
+                    printf '    generated defconfig: %s/zephyr/defconfig\n' "${ZEPHYR_BUILD_DIR#"${ROOT_DIR}"/}"
                     ;;
             esac
             ;;
@@ -275,8 +289,15 @@ EOF
     fi
 }
 
-ensure_sdk_available()
+SDK_INSTALL_CHECKED=0
+SDK_ENV_READY=0
+
+ensure_yocto_sdk_installed()
 {
+    if [[ "${SDK_INSTALL_CHECKED}" == 1 ]]; then
+        return 0
+    fi
+
     shopt -s nullglob
     local env_files=("${SDK_DIR}"/environment-setup-*)
     shopt -u nullglob
@@ -285,9 +306,37 @@ ensure_sdk_available()
         log "WARNING: Yocto SDK not found under ${SDK_DIR}; local_build.sh will populate and install it automatically."
         log "WARNING: Running bitbake nexios-image -c populate_sdk can take a long time."
         build_sdk
+    else
+        log "Yocto SDK already installed at ${SDK_DIR}"
     fi
+    SDK_INSTALL_CHECKED=1
+}
 
+ensure_sdk_available()
+{
+    if [[ "${SDK_ENV_READY}" == 1 ]]; then
+        return 0
+    fi
+    ensure_yocto_sdk_installed
     setup_build_environment
+    SDK_ENV_READY=1
+}
+
+needs_initial_sdk_check()
+{
+    ((${#SELECTED_COMPONENTS[@]} > 0)) || return 1
+
+    case "${ACTION}" in
+        build|clean-build) return 0 ;;
+        defconfig|menuconfig|savedefconfig)
+            local component
+            for component in "${SELECTED_COMPONENTS[@]}"; do
+                [[ "${component}" == zephyr ]] && continue
+                return 0
+            done
+            ;;
+    esac
+    return 1
 }
 
 run_clean()
@@ -302,6 +351,23 @@ run_clean()
         die "refusing to clean through work root symlink: ${WORK_DIR}"
     [[ ! -L "${work_dir}" ]] ||
         die "refusing to clean component work symlink: ${work_dir}"
+    if [[ "${component}" == qbox ]]; then
+        local work_root_real
+        local work_dir_parent_real
+        case "${work_dir}" in
+            "${WORK_DIR}"/*) ;;
+            *) die "refusing to clean qbox build outside work root: ${work_dir}" ;;
+        esac
+        mkdir -p "${WORK_DIR}" "$(dirname "${work_dir}")"
+        work_root_real="$(canonical_dir "${WORK_DIR}")"
+        work_dir_parent_real="$(canonical_dir "$(dirname "${work_dir}")")"
+        case "${work_dir_parent_real}/$(basename "${work_dir}")" in
+            "${work_root_real}"/*) ;;
+            *) die "refusing to clean qbox build outside work root: ${work_dir}" ;;
+        esac
+        rm -rf "${work_dir}"
+        return 0
+    fi
     if [[ -d "${WORK_DIR}" && -d "${work_dir}" ]]; then
         local work_root_real
         local work_dir_real
@@ -365,8 +431,10 @@ run_component()
     local fn
     case "${action}" in
         build)
-            ensure_sdk_available
             fn="$(component_function "${component}")"
+            if [[ "${component}" != qbox ]]; then
+                ensure_sdk_available
+            fi
             "${fn}"
             ;;
         clean)
@@ -374,8 +442,10 @@ run_component()
             ;;
         clean-build)
             run_clean "${component}"
-            ensure_sdk_available
             fn="$(component_function "${component}")"
+            if [[ "${component}" != qbox ]]; then
+                ensure_sdk_available
+            fi
             "${fn}"
             ;;
         defconfig|menuconfig|savedefconfig)
@@ -423,7 +493,12 @@ if [[ "${COMPONENT_SET}" == 0 ]]; then
 fi
 
 if [[ "${PACKAGE_MODE}" == auto ]]; then
-    PACKAGE_MODE=enabled
+    if [[ "${COMPONENT_SET}" == 1 && "${#SELECTED_COMPONENTS[@]}" == 1 &&
+        "${SELECTED_COMPONENTS[0]}" == qbox ]]; then
+        PACKAGE_MODE=disabled
+    else
+        PACKAGE_MODE=enabled
+    fi
 fi
 
 for component in "${SELECTED_COMPONENTS[@]}"; do
@@ -438,6 +513,10 @@ fi
 if ((DRY_RUN)); then
     dry_run
     exit 0
+fi
+
+if needs_initial_sdk_check; then
+    ensure_yocto_sdk_installed
 fi
 
 for component in "${SELECTED_COMPONENTS[@]}"; do

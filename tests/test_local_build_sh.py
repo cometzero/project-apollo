@@ -10,6 +10,7 @@ from typing import Final
 
 ROOT: Final = Path(__file__).resolve().parents[1]
 COMPONENTS: Final[tuple[str, ...]] = (
+    "qbox",
     "tf-m",
     "scp-firmware",
     "zephyr",
@@ -29,6 +30,7 @@ def run_local_build(
     *argv: str, extra_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = {
+        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
         "PATH": "/usr/bin:/bin",
         "RUN_STAMP": "pytest",
         "HOME": "/nonexistent",
@@ -70,7 +72,7 @@ def test_help_documents_local_fvp_contract() -> None:
     # When: the user asks for CLI help.
     result = run_local_build("--help")
 
-    # Then: help exposes the FVP-only local build contract.
+    # Then: help exposes the local build contract.
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
     assert "Usage: ./local_build.sh" in output
@@ -81,7 +83,6 @@ def test_help_documents_local_fvp_contract() -> None:
         assert component in output
     for action in ("build", "clean", "clean-build", *KCONFIG_ACTIONS):
         assert action in output
-    assert "qbox" not in output.lower()
     assert "buildroot" not in output.lower()
 
 
@@ -95,6 +96,7 @@ def test_help_includes_operational_examples_with_existing_script_paths() -> None
     output = output_of(result)
     for example in (
         "./local_build.sh",
+        "./local_build.sh qbox",
         "./local_build.sh linux clean-build --no-package",
         "./local_build.sh linux menuconfig --no-package",
         "./local_build.sh --package",
@@ -124,7 +126,6 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
         f"{component}: build" for component in COMPONENTS
     ]
     assert "package" in output
-    assert "qbox" not in output.lower()
     assert "buildroot" not in output.lower()
 
 
@@ -195,7 +196,7 @@ def test_explicit_components_and_action_skip_package_when_requested() -> None:
     assert "linux" in output
     assert "clean-build" in output
     assert "package: local FVP deploy" not in output
-    for component in ("tf-m", "scp-firmware", "zephyr", "optee", "tf-a"):
+    for component in ("qbox", "tf-m", "scp-firmware", "zephyr", "optee", "tf-a"):
         assert component not in output
 
 
@@ -278,16 +279,18 @@ def test_component_stage_logs_start_and_completion(tmp_path: Path) -> None:
     assert output.index("Starting linux-clean") < output.index("Completed linux-clean")
 
 
-def test_unknown_component_fails_with_actionable_error() -> None:
-    # Given: a component owned by the old dashed workflow, not this entrypoint.
-    # When: the component is requested.
+def test_qbox_build_dry_run_resolves_qbox_target() -> None:
+    # Given: QBox is selected as an underscore local build component.
+    # When: dry-run resolves the command.
     result = run_local_build("qbox", "--dry-run")
 
-    # Then: the command rejects it instead of silently building QBox.
-    assert result.returncode != 0
-    output = output_of(result).lower()
-    assert "unknown component" in output or "unsupported component" in output
-    assert "qbox" in output
+    # Then: the command plans only the QBox platform build by default.
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert component_step_lines(output) == ["qbox: build"]
+    assert "function: build_qbox" in output
+    assert "apollo_fvp_full_system" in output
+    assert "package: local FVP deploy" not in output
 
 
 def test_unknown_action_fails_with_actionable_error() -> None:
@@ -480,6 +483,7 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
     assert "Yocto SDK not found" in output
     assert "populate and install it automatically" in output
     assert "can take a long time" in output
+    assert output.index("Yocto SDK not found") < output.index("Starting linux-defconfig")
     assert (sdk_dir / "environment-setup-apollo-test").is_file()
     assert "nexios-image -c populate_sdk" in bitbake_log.read_text(
         encoding="utf-8"
@@ -488,6 +492,99 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
     assert "ARCH=arm64" in make_args
     assert "CROSS_COMPILE=aarch64-poky-linux-" in make_args
     assert "defconfig" in make_args
+
+
+def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
+    # Given: QBox is requested and the Yocto SDK is not installed yet.
+    tools_dir = tmp_path / "host-tools"
+    bitbake_log = tmp_path / "bitbake.log"
+    cmake_log = tmp_path / "cmake.log"
+    sdk_dir = tmp_path / "missing-sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    qbox_core = tmp_path / "qbox"
+    qbox_platform = tmp_path / "qbox-platform"
+    qbox_qemu = tmp_path / "qemu"
+    for path in (tools_dir, qbox_core, qbox_platform, qbox_qemu):
+        path.mkdir(parents=True)
+    write_file(
+        tools_dir / "cmake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_CMAKE_LOG}\"\n"
+        "build_dir=\"\"\n"
+        "prev=\"\"\n"
+        "for arg in \"$@\"; do\n"
+        "    if [[ \"${prev}\" == \"-B\" ]]; then\n"
+        "        build_dir=\"${arg}\"\n"
+        "    fi\n"
+        "    prev=\"${arg}\"\n"
+        "done\n"
+        "if [[ -n \"${build_dir}\" ]]; then\n"
+        "    mkdir -p \"${build_dir}\"\n"
+        "    printf 'CMAKE_HOME_DIRECTORY:INTERNAL=%s\\n' "
+        "\"${QBOX_PLATFORM_DIR}\" > \"${build_dir}/CMakeCache.txt\"\n"
+        "    : > \"${build_dir}/build.ninja\"\n"
+        "fi\n",
+    )
+    (tools_dir / "cmake").chmod(0o755)
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
+        "sdk_deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
+        "mkdir -p \"${sdk_deploy}\"\n"
+        "installer=\"${sdk_deploy}/apollo-test-sdk.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "dest=\"\"\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in\n"
+        "        -d) dest=\"$2\"; shift 2 ;;\n"
+        "        *) shift ;;\n"
+        "    esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "cat > \"${dest}/environment-setup-apollo-test\" <<'ENV'\n"
+        "export PATH=\"${APOLLO_TEST_TOOLS_DIR}:${PATH}\"\n"
+        "export TARGET_PREFIX=\"aarch64-poky-linux-\"\n"
+        "ENV\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
+    env = {
+        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+        "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
+        "APOLLO_TEST_CMAKE_LOG": str(cmake_log),
+        "APOLLO_TEST_TOOLS_DIR": str(tools_dir),
+        "BITBAKE": str(tools_dir / "bitbake"),
+        "PATH": f"{tools_dir}:/usr/bin:/bin",
+        "SDK_DIR": str(sdk_dir),
+        "YOCTO_BUILD_DIR": str(yocto_build),
+        "LOCAL_BUILD_DIR": str(local_build),
+        "QBOX_CORE_DIR": str(qbox_core),
+        "QBOX_PLATFORM_DIR": str(qbox_platform),
+        "QBOX_QEMU_DIR": str(qbox_qemu),
+    }
+
+    # When: QBox is built through local_build.sh.
+    result = run_local_build("qbox", extra_env=env)
+
+    # Then: SDK installation is checked before the QBox CMake build starts.
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert output.index("Yocto SDK not found") < output.index("Starting qbox-build")
+    assert "Starting package" not in output
+    assert (sdk_dir / "environment-setup-apollo-test").is_file()
+    assert "nexios-image -c populate_sdk" in bitbake_log.read_text(
+        encoding="utf-8"
+    )
+    cmake_args = cmake_log.read_text(encoding="utf-8")
+    assert f"-S {qbox_platform}" in cmake_args
+    assert "--target apollo_fvp_full_system" in cmake_args
 
 
 def test_linux_clean_dry_run_shows_only_linux_owned_outputs() -> None:
