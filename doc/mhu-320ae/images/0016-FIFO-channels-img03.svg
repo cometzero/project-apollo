@@ -1,0 +1,51 @@
+<svg xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" height="284" width="817" viewBox="0 0 817 284" version="1.1" id="svg11">
+
+  <defs id="defs1"/>
+  <g id="page1" transform="translate(5.5,5.5)">
+    <rect height="274" x="0" y="0" width="807" fill="none" id="rect1"/>
+    <path stroke-width="2.666670083999634" stroke="#333e49" id="shape1" fill="none" d="M.0,.0L231.0,.0" transform="matrix(0.000000,1.000000,-1.000000,0.000000,54.000000,34.000000)"/>
+    <g id="shape2" transform="translate(8.000000,8.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt;font-weight:bold" id="text1"><tspan x="4.8" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan1">Sender agent</tspan></text>
+    </g>
+    <path stroke-width="2.666670083999634" stroke="#333e49" id="shape3" fill="none" d="M.0,.0L231.0,.0" transform="matrix(0.004328,0.999991,-0.999991,0.004328,280.000065,34.000082)"/>
+    <g id="shape4" transform="translate(229.000000,8.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt;font-weight:bold" id="text2"><tspan x="28.0" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan2">MHU</tspan></text>
+    </g>
+    <path stroke-width="2.666670083999634" stroke="#333e49" id="shape5" fill="none" d="M.0,.0L231.0,.0" transform="matrix(0.000000,1.000000,-1.000000,0.000000,508.000000,34.000000)"/>
+    <g id="shape6" transform="translate(449.000000,8.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt;font-weight:bold" id="text3"><tspan x="4.2" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan3">Shared memory</tspan></text>
+    </g>
+    <path stroke-width="2.666670083999634" stroke="#333e49" id="shape7" fill="none" d="M.0,.0L231.0,.0" transform="matrix(0.000138,1.000000,-1.000000,0.000138,734.968076,34.020001)"/>
+    <g id="shape8" transform="translate(675.500000,8.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt;font-weight:bold" id="text4"><tspan x="7.5" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan4">Receiver agent</tspan></text>
+    </g>
+    <g id="shape9" transform="translate(734.000000,84.000000)">
+      <path stroke-width="1.333330035209656" stroke="#333e49" fill="none" d="M.0,.0L-448.1,.0" id="path4"/>
+      <path stroke-width="1" stroke="#333e49" stroke-linecap="round" fill="#333e49" d="M-448.1,3.5L-455.0,.0L-448.1,-3.5L-448.1,3.5" id="path5"/>
+    </g>
+    <g id="shape10" transform="translate(735.000000,160.000000)">
+      <path stroke-width="1.333330035209656" stroke="#333e49" fill="none" d="M.0,.0L-448.1,.0" id="path6"/>
+      <path stroke-width="1" stroke="#333e49" stroke-linecap="round" fill="#333e49" d="M-448.1,3.5L-455.0,.0L-448.1,-3.5L-448.1,3.5" id="path7"/>
+    </g>
+    <g id="shape11" transform="translate(333.000000,56.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt" id="text7"><tspan x="67.5" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan7">Read data from the MFFCW&lt;n&gt;_PAY</tspan></text>
+    </g>
+    <g id="shape12" transform="translate(335.000000,132.000000)">
+      <text xml:space="preserve" style="font-size:16px;font-family:Lato, 'PingFang SC', 'Mircrosoft YaHei', Arial;fill:#333e49" id="text8"><tspan x="70.199997" y="18.700001" style="font-family:Lato, 'PingFang SC', 'Mircrosoft YaHei', Arial" id="tspan8">Read flag from the MFFCW&lt;n&gt;_FLG</tspan></text>
+    </g>
+    <g id="shape13" transform="translate(734.000000,236.000000)">
+      <path stroke-width="1.333330035209656" stroke="#333e49" fill="none" d="M.0,.0L-447.1,.0" id="path8"/>
+      <path stroke-width="1" stroke="#333e49" stroke-linecap="round" fill="#333e49" d="M-447.1,3.5L-454.0,.0L-447.1,-3.5L-447.1,3.5" id="path9"/>
+    </g>
+    <g id="shape14" transform="translate(348.000000,198.000000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt" id="text9"><tspan x="23.5" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan9">Write to the MFFCW&lt;n&gt;_POP register</tspan></text>
+    </g>
+    <g id="shape15" transform="translate(8.000000,197.642000)">
+      <text xml:space="preserve" style="fill:#333e49;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:12.00pt" id="text10"><tspan x="128.2" y="18.7" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" id="tspan10">Interrupt</tspan></text>
+    </g>
+    <g id="shape16" transform="translate(274.000000,235.642000)">
+      <path stroke-width="1.333330035209656" stroke="#333e49" fill="none" d="M.0,.0L-212.1,.0" id="path10"/>
+      <path stroke-width="1" stroke="#333e49" stroke-linecap="round" fill="#333e49" d="M-212.1,3.5L-219.0,.0L-212.1,-3.5L-212.1,3.5" id="path11"/>
+    </g>
+  </g>
+</svg>
