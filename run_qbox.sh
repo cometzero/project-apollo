@@ -381,6 +381,7 @@ main()
         --qbox-performance-preset \
         --cc3xx-qemu-native-backend \
         --netdev "${netdev}" \
+        --tmux-layout fvp-like \
         "${TMUX_RUNNER_ARGS[@]}" \
         -- \
         --rootfs "${RUN_ROOTFS}" \

@@ -829,25 +829,11 @@ start_log_pane()
     local file="$2"
     local title="$3"
     shift 3
-    local log_path="${OUT_DIR}/${file}"
     local pane_body
     local pane_id
     local -a split_args=("$@")
 
-    if [[ "${domain}" == "primary_console" ]]; then
-        pane_body=$(
-            printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-            printf 'OUT_DIR=%q exec %q --primary-console %q %q %q' \
-                "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
-        )
-    else
-        pane_body=$(
-            printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-            printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
-                "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
-                "${domain}" "${title}" "${log_path}"
-        )
-    fi
+    pane_body="$(log_pane_body "${domain}" "${file}" "${title}")"
 
     if ((${#split_args[@]} == 0)); then
         split_args=(-t "${TMUX_SESSION}:qbox")
@@ -859,6 +845,25 @@ start_log_pane()
         tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
     fi
     START_LOG_PANE_ID="${pane_id}"
+}
+
+log_pane_body()
+{
+    local domain="$1"
+    local file="$2"
+    local title="$3"
+    local log_path="${OUT_DIR}/${file}"
+
+    if [[ "${domain}" == "primary_console" ]]; then
+        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+        printf 'OUT_DIR=%q exec %q --primary-console %q %q %q' \
+            "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+    else
+        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+        printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
+            "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
+            "${domain}" "${title}" "${log_path}"
+    fi
 }
 
 start_domain_log_pane()
@@ -890,15 +895,27 @@ start_tiled_log_panes()
     done < <(known_logs)
 }
 
+start_shell_pane()
+{
+    local pane_body
+    local pane_id
+
+    pane_body="printf \"Interactive shell\r\n\r\n\"; exec \"\${SHELL:-bash}\" -l"
+    pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T shell
+    START_LOG_PANE_ID="${pane_id}"
+}
+
 start_fvp_like_log_panes()
 {
+    local platform_pane_id="$1"
     local primary_pane_id
     local rse_pane_id
     local si0_pane_id
     local si1_pane_id
     local secure_pane_id
 
-    start_domain_log_pane primary_console -v -b -l 70% -t "${RUNNER_PANE_ID}"
+    start_domain_log_pane primary_console -v -b -l 70% -t "${platform_pane_id}"
     primary_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane rse -h -l 40% -t "${primary_pane_id}"
     rse_pane_id="${START_LOG_PANE_ID}"
@@ -908,7 +925,7 @@ start_fvp_like_log_panes()
     si1_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane secure_console -v -l 50% -t "${si1_pane_id}"
     secure_pane_id="${START_LOG_PANE_ID}"
-    start_domain_log_pane platform -h -l 50% -t "${RUNNER_PANE_ID}"
+    start_shell_pane -h -l 50% -t "${platform_pane_id}"
     rebalance_fvp_like_log_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
     install_fvp_like_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
 }
@@ -1007,27 +1024,38 @@ start_tmux()
     local -a new_session_size_args=()
     detect_tmux_window_size_args new_session_size_args
 
-    local runner_pane_id
-    runner_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
-    RUNNER_PANE_ID="${runner_pane_id}"
-    tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
-    tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
-    tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
-    tmux_cmd select-pane -t "${runner_pane_id}" -T qbox-runner
     local stop_body
     stop_body=$(
         printf 'OUT_DIR=%q TMUX_BIN=%q exec %q --stop-session %q' \
             "${OUT_DIR}" "${TMUX_BIN}" "${SCRIPT_PATH}" "${TMUX_SESSION}"
     )
-    tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
 
     if [[ "${TMUX_LAYOUT}" == "fvp-like" ]]; then
-        start_fvp_like_log_panes
+        local platform_pane_body
+        local platform_pane_id
+        platform_pane_body="$(log_pane_body platform qbox-platform.log "QBox platform stdout")"
+        platform_pane_id="$(
+            tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' \
+                -s "${TMUX_SESSION}" -n qbox bash -lc "${platform_pane_body}"
+        )"
+        tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
+        tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
+        tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
+        tmux_cmd select-pane -t "${platform_pane_id}" -T platform
+        tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
+        start_fvp_like_log_panes "${platform_pane_id}"
+        tmux_cmd run-shell -b "${supervisor_body}"
+        tmux_cmd select-pane -t "${platform_pane_id}"
     else
+        local runner_pane_id
+        runner_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
+        tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
+        tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
+        tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
+        tmux_cmd select-pane -t "${runner_pane_id}" -T qbox-runner
+        tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
         start_tiled_log_panes
-    fi
-    tmux_cmd select-pane -t "${runner_pane_id}"
-    if [[ "${TMUX_LAYOUT}" == "tiled" ]]; then
+        tmux_cmd select-pane -t "${runner_pane_id}"
         tmux_cmd select-layout -t "${TMUX_SESSION}:qbox" tiled >/dev/null
     fi
 
