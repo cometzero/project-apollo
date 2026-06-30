@@ -35,4 +35,18 @@ build_qbox()
         --build "${QBOX_PLATFORM_BUILD_DIR}" \
         --target "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}" \
         --parallel "${JOBS}"
+
+    if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+        run_logged qbox-systemc-component-test-build \
+            cmake \
+            --build "${QBOX_PLATFORM_BUILD_DIR}" \
+            --target qbox_platform_systemc_component_tests \
+            --parallel "${JOBS}"
+
+        run_logged qbox-systemc-component-tests \
+            ctest \
+            --test-dir "${QBOX_PLATFORM_BUILD_DIR}" \
+            -L qbox-platform-systemc-components \
+            --output-on-failure
+    fi
 }

@@ -60,6 +60,7 @@ Actions:
 Options:
   --component NAME     select a component; may be repeated
   --action ACTION      action for selected components (default: build)
+  --qbox-systemc-tests run qbox-platform SystemC component CTests after qbox build
   --package           package local FVP deploy output; package-only if no component is selected
   --no-package        skip the default package step
   --jobs N            parallel build jobs (default: ${JOBS})
@@ -69,6 +70,8 @@ Options:
 Examples:
   ./local_build.sh
   ./local_build.sh qbox
+  ./local_build.sh qbox --qbox-systemc-tests
+  ./local_build.sh --qbox-systemc-tests
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
   ./local_build.sh --package
@@ -107,6 +110,13 @@ parse_args()
                 (($# >= 2)) || die "--action requires a value"
                 set_action "$2"
                 shift 2
+                ;;
+            --qbox-systemc-tests)
+                QBOX_RUN_SYSTEMC_COMPONENT_TESTS=1
+                if [[ "${COMPONENT_SET}" == 0 ]]; then
+                    add_component qbox
+                fi
+                shift
                 ;;
             --package)
                 [[ "${PACKAGE_MODE}" != "disabled" ]] ||
@@ -214,6 +224,10 @@ print_component_dry_run()
                         "${QBOX_PLATFORM_DIR#"${ROOT_DIR}"/}" \
                         "${QBOX_PLATFORM_BUILD_DIR#"${ROOT_DIR}"/}"
                     printf '    target: %s\n' "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}"
+                    if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+                        printf '    test target: qbox_platform_systemc_component_tests\n'
+                        printf '    ctest: -L qbox-platform-systemc-components\n'
+                    fi
                     ;;
                 scp-firmware)
                     printf '    cmake: -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY\n'
@@ -504,6 +518,13 @@ fi
 for component in "${SELECTED_COMPONENTS[@]}"; do
     validate_action_component "${component}" "${ACTION}"
 done
+
+if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+    contains_word qbox "${SELECTED_COMPONENTS[@]}" ||
+        die "--qbox-systemc-tests requires the qbox component"
+    [[ "${ACTION}" == build || "${ACTION}" == clean-build ]] ||
+        die "--qbox-systemc-tests requires qbox build or clean-build"
+fi
 
 if [[ "${ACTION}" == build && "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}" == 0 &&
     "${TFM_PLATFORM:-}" == missing/* ]]; then

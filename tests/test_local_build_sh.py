@@ -79,6 +79,7 @@ def test_help_documents_local_fvp_contract() -> None:
     assert "--dry-run" in output
     assert "--package" in output
     assert "--no-package" in output
+    assert "--qbox-systemc-tests" in output
     for component in COMPONENTS:
         assert component in output
     for action in ("build", "clean", "clean-build", *KCONFIG_ACTIONS):
@@ -97,6 +98,8 @@ def test_help_includes_operational_examples_with_existing_script_paths() -> None
     for example in (
         "./local_build.sh",
         "./local_build.sh qbox",
+        "./local_build.sh qbox --qbox-systemc-tests",
+        "./local_build.sh --qbox-systemc-tests",
         "./local_build.sh linux clean-build --no-package",
         "./local_build.sh linux menuconfig --no-package",
         "./local_build.sh --package",
@@ -290,6 +293,16 @@ def test_qbox_build_dry_run_resolves_qbox_target() -> None:
     assert component_step_lines(output) == ["qbox: build"]
     assert "function: build_qbox" in output
     assert "apollo_fvp_full_system" in output
+    assert "package: local FVP deploy" not in output
+
+
+def test_qbox_systemc_tests_dry_run_selects_qbox_only() -> None:
+    result = run_local_build("--qbox-systemc-tests", "--dry-run")
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert component_step_lines(output) == ["qbox: build"]
+    assert "ctest: -L qbox-platform-systemc-components" in output
     assert "package: local FVP deploy" not in output
 
 
@@ -585,6 +598,67 @@ def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
     cmake_args = cmake_log.read_text(encoding="utf-8")
     assert f"-S {qbox_platform}" in cmake_args
     assert "--target apollo_fvp_full_system" in cmake_args
+
+
+def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "host-tools"
+    call_log = tmp_path / "calls.log"
+    sdk_dir = tmp_path / "sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    qbox_core = tmp_path / "qbox"
+    qbox_platform = tmp_path / "qbox-platform"
+    qbox_qemu = tmp_path / "qemu"
+    for path in (tools_dir, sdk_dir, qbox_core, qbox_platform, qbox_qemu):
+        path.mkdir(parents=True)
+    write_file(sdk_dir / "environment-setup-apollo-test", "export TARGET_PREFIX=aarch64-test-\n")
+    write_file(
+        tools_dir / "cmake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'cmake %s\\n' \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n"
+        "build_dir=''\n"
+        "prev=''\n"
+        "for arg in \"$@\"; do\n"
+        "    if [[ \"${prev}\" == '-B' ]]; then build_dir=\"${arg}\"; fi\n"
+        "    prev=\"${arg}\"\n"
+        "done\n"
+        "if [[ -n \"${build_dir}\" ]]; then\n"
+        "    mkdir -p \"${build_dir}\"\n"
+        "    printf 'CMAKE_HOME_DIRECTORY:INTERNAL=%s\\n' \"${QBOX_PLATFORM_DIR}\" > \"${build_dir}/CMakeCache.txt\"\n"
+        "    : > \"${build_dir}/build.ninja\"\n"
+        "fi\n",
+    )
+    write_file(
+        tools_dir / "ctest",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf 'ctest %s\\n' \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n",
+    )
+    (tools_dir / "cmake").chmod(0o755)
+    (tools_dir / "ctest").chmod(0o755)
+
+    result = run_local_build(
+        "qbox",
+        "--qbox-systemc-tests",
+        extra_env={
+            "APOLLO_TEST_CALL_LOG": str(call_log),
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+            "SDK_DIR": str(sdk_dir),
+            "YOCTO_BUILD_DIR": str(yocto_build),
+            "LOCAL_BUILD_DIR": str(local_build),
+            "QBOX_CORE_DIR": str(qbox_core),
+            "QBOX_PLATFORM_DIR": str(qbox_platform),
+            "QBOX_QEMU_DIR": str(qbox_qemu),
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    calls = call_log.read_text(encoding="utf-8")
+    assert "--target apollo_fvp_full_system" in calls
+    assert "--test-dir" in calls
+    assert "-L qbox-platform-systemc-components" in calls
+    assert calls.index("--target apollo_fvp_full_system") < calls.index("ctest ")
 
 
 def test_linux_clean_dry_run_shows_only_linux_owned_outputs() -> None:

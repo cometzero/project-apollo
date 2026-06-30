@@ -257,6 +257,7 @@ Commands:
   all       Build/install SDK if needed and build local images.
   sdk       Build and install the Yocto SDK under build/local-sdk.
   qbox      Build the QBox targets required by Apollo full-system boot.
+            Pass --systemc-component-tests to run qbox-platform SystemC component CTests.
   build     Build local TF-M/SCP/Zephyr/OP-TEE/U-Boot/TF-A/Linux/Buildroot images.
   zephyr    Build only the local Safety Island CL1 Zephyr image.
   package   Package built local images for QBox execution.
@@ -265,6 +266,7 @@ Commands:
 Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_PLATFORM_BUILD_DIR=/path/to/qbox-platform-build JOBS=16 ./local-build.sh all
   QBOX_BUILD_DIR=/path/to/qbox-platform-build ./local-build.sh qbox
+  ./local-build.sh qbox --systemc-component-tests
   QBOX_CORE_DIR=/path/to/qbox QBOX_PLATFORM_DIR=/path/to/qbox-platform ./local-build.sh qbox
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local-build.sh zephyr
   ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../sources-unpack/git ./local-build.sh zephyr

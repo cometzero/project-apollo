@@ -11,7 +11,13 @@ source_local_build_modules build_qbox.sh
 case "${1:-}" in
     -h|--help|help)
         usage
+        printf '\nQBox options:\n'
+        printf '  --systemc-component-tests  run qbox-platform SystemC component CTests after build\n'
         exit 0
+        ;;
+    --systemc-component-tests)
+        QBOX_RUN_SYSTEMC_COMPONENT_TESTS=1
+        shift
         ;;
 esac
 
