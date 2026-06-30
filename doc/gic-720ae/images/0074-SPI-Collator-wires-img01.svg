@@ -1,0 +1,93 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" height="336" viewBox="0 0 449 336" width="449">
+    <defs/>
+    <g transform="translate(-13.00,-257.00)">
+        <g transform="translate(287.24,347.72)" id="shape1">
+            <path fill="#fc5407" fill-opacity="0.30" d="M.0,83.1L113.4,83.1L113.4,.0L.0,.0L.0,83.1z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="66.2" x="31.3">path when </tspan>
+                <tspan y="77.1" style="font-family:Courier New" x="13.8">SPI_SYNC[0]=0</tspan>
+            </text>
+        </g>
+        <g transform="translate(139.84,347.72)" id="shape2">
+            <path fill="#16b5d6" fill-opacity="0.30" d="M.0,68.0L113.4,68.0L113.4,.0L.0,.0L.0,68.0z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="51.1" x="31.3">path when </tspan>
+                <tspan y="62.0" style="font-family:Courier New" x="17.1">SPI_INV[0]=0</tspan>
+            </text>
+        </g>
+        <g transform="translate(287.24,260.79)" id="shape3">
+            <path fill="#fc5407" fill-opacity="0.60" d="M.0,79.4L113.4,79.4L113.4,.0L.0,.0L.0,79.4z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="12.0" x="31.3">path when </tspan>
+                <tspan y="22.9" style="font-family:Courier New" x="13.8">SPI_SYNC[0]=1</tspan>
+            </text>
+        </g>
+        <g transform="translate(139.84,260.79)" id="shape4">
+            <path fill="#16b5d6" fill-opacity="0.60" d="M.0,79.4L113.4,79.4L113.4,.0L.0,.0L.0,79.4z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="12.0" x="31.3">path when </tspan>
+                <tspan y="22.9" style="font-family:Courier New" x="17.1">SPI_INV[0]=1</tspan>
+            </text>
+        </g>
+        <path stroke="#000000" transform="translate(181.42,298.58)" fill="none" d="M.0,.0L.0,30.2L29.9,15.1L.0,.0zM34.0,15.1C34.0,16.2,33.2,17.0,32.1,17.0C31.1,17.0,30.3,16.2,30.3,15.1C30.3,14.1,31.1,13.2,32.1,13.2C33.2,13.2,34.0,14.1,34.0,15.1z" id="shape5" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(306.14,291.02)" fill="none" d="M.0,.0L.0,45.4L30.2,45.4L30.2,.0L.0,.0zM.0,37.8L7.6,34.0L.0,30.2L.0,37.8z" id="shape6" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(355.28,291.02)" fill="none" d="M.0,.0L.0,45.4L30.2,45.4L30.2,.0L.0,.0zM.0,37.8L7.6,34.0L.0,30.2L.0,37.8z" id="shape7" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(215.43,313.70)" fill="none" d="M.0,.0L34.0,.0L34.0,28.3" id="shape8" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(247.56,342.05)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape9" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(270.24,342.05)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape10" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(251.34,343.94)" fill="none" d="M.0,.0L18.9,.0" id="shape11" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(272.13,342.05)" fill="none" d="M.0,.0L.0,-39.7L34.0,-39.7" id="shape12" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(336.38,302.36)" fill="none" d="M.0,.0L18.9,.0" id="shape13" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(413.86,342.05)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape14" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(415.75,342.05)" fill="none" d="M.0,.0L.0,-39.7L-30.2,-39.7" id="shape15" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(145.51,342.05)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape16" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(181.42,313.70)" fill="none" d="M.0,.0L-34.0,.0L-34.0,28.3" id="shape17" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(332.60,351.50)" fill="none" d="M.0,.0L.0,45.4L30.2,45.4L30.2,.0L.0,.0zM.0,37.8L7.6,34.0L.0,30.2L.0,37.8z" id="shape18" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(272.13,345.83)" fill="none" d="M.0,.0L.0,17.0L60.5,17.0" id="shape19" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(362.83,374.17)" fill="none" d="M.0,.0L52.9,.0L52.9,-32.1" id="shape20" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(436.54,436.54)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape21" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(417.64,343.94)" fill="none" d="M.0,.0L20.8,.0L20.8,92.6" id="shape22" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(147.40,345.83)" fill="none" d="M.0,.0L.0,35.9L102.0,35.9L102.0,.0" id="shape23" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(126.61,343.94)" fill="none" d="M.0,.0L18.9,.0" id="shape24" stroke-width="0.6666666865348816"/>
+        <g transform="translate(100.16,343.94)" id="shape25">
+            <path stroke="#000000" fill="none" d="M.0,.0L18.7,.0" stroke-width="0.6666666865348816"/>
+            <path stroke="#000000" fill="#000000" stroke-linecap="round" d="M18.7,-2.0L22.7,.0L18.7,2.0L18.7,-2.0" stroke-width="1"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="5.5" x="-31.1">spi[0]</tspan>
+            </text>
+        </g>
+        <path stroke="#000000" transform="translate(122.83,342.05)" fill="none" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape26" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(311.81,521.57)" fill="none" d="M.0,.0L126.6,.0L126.6,-81.3" id="shape27" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(122.83,519.69)" fill="none" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape28" stroke-width="0.6666666865348816"/>
+        <g transform="matrix(-1.00,0.00,0.00,1.00,122.8,521.6)" id="shape29">
+            <path stroke="#000000" fill="none" d="M.0,.0L18.7,.0" stroke-width="0.6666666865348816"/>
+            <path stroke="#000000" fill="#000000" stroke-linecap="round" d="M18.7,-2.0L22.7,.0L18.7,2.0L18.7,-2.0" stroke-width="1"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold" transform="matrix(-1.00,-0.00,0.00,1.00,95.3,0.0)" xml:space="preserve">
+                <tspan y="5.5" x="31.3">spi_r[0]</tspan>
+            </text>
+        </g>
+        <path stroke="#000000" transform="translate(457.32,438.43)" fill="none" d="M.0,.0L-17.0,.0" id="shape30" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="matrix(-1.00,0.00,0.00,1.00,461.1,436.5)" fill="none" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape31" stroke-width="0.6666666865348816"/>
+        <g transform="translate(166.30,525.35)" id="shape32">
+            <path fill="#febd09" fill-opacity="0.30" d="M.0,68.0L181.4,68.0L181.4,.0L.0,.0L.0,68.0z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="51.1" x="65.3">path when</tspan>
+                <tspan y="62.0" style="font-family:Courier New" x="5.0">SPI_INV[0]=0 | SPI_R_INV=0</tspan>
+            </text>
+        </g>
+        <g transform="translate(166.30,438.43)" id="shape33">
+            <path fill="#febd09" fill-opacity="0.60" d="M.0,79.4L181.4,79.4L181.4,.0L.0,.0L.0,79.4z" fill-rule="evenodd"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="16.0" x="65.3">path when</tspan>
+                <tspan y="26.9" style="font-family:Courier New" x="5.0">SPI_INV[0]=1 &amp; SPI_R_INV=1</tspan>
+            </text>
+        </g>
+        <path stroke="#000000" transform="matrix(-1.00,0.00,0.00,1.00,272.1,476.2)" fill="none" d="M.0,.0L.0,30.2L29.9,15.1L.0,.0zM34.0,15.1C34.0,16.2,33.2,17.0,32.1,17.0C31.1,17.0,30.3,16.2,30.3,15.1C30.3,14.1,31.1,13.2,32.1,13.2C33.2,13.2,34.0,14.1,34.0,15.1z" id="shape34" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(272.13,491.34)" fill="none" d="M.0,.0L37.8,.0L37.8,28.3" id="shape35" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(308.03,519.69)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape36" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(205.98,519.69)" fill="#000000" d="M3.8,1.9C3.8,2.9,2.9,3.8,1.9,3.8C.8,3.8,-0.0,2.9,-0.0,1.9C-0.0,.8,.8,-0.0,1.9,-0.0C2.9,-0.0,3.8,.8,3.8,1.9z" id="shape37" fill-rule="evenodd" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(238.11,491.34)" fill="none" d="M.0,.0L-30.2,.0L-30.2,28.3" id="shape38" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(207.87,523.46)" fill="none" d="M.0,.0L.0,35.9L102.0,35.9L102.0,.0" id="shape39" stroke-width="0.6666666865348816"/>
+        <path stroke="#000000" transform="translate(205.98,521.57)" fill="none" d="M.0,.0L-79.4,.0" id="shape40" stroke-width="0.6666666865348816"/>
+    </g>
+</svg>

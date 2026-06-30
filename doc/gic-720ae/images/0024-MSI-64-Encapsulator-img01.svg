@@ -1,0 +1,59 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="306" viewBox="0 0 306 206" height="206">
+    <defs/>
+    <g transform="translate(1.00,-289.98)">
+        <g transform="translate(151.18,340.16)" id="shape1">
+            <path stroke="#000000" fill="#16b5d6" d="M.0,105.8L151.2,105.8L151.2,.0L.0,.0L.0,105.8z" fill-opacity="0.60" fill-rule="evenodd" stroke-width="0.6666669845581055"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="57.2" x="25.1">MSI-64 Encapsulator</tspan>
+            </text>
+        </g>
+        <g transform="translate(177.64,423.31)" id="shape2">
+            <path stroke="#000000" fill="none" d="M.0,15.1L98.3,15.1L98.3,.0L.0,.0L.0,15.1z" stroke-width="0.6666669845581055"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="12.6" x="15.4">Register slices</tspan>
+            </text>
+        </g>
+        <g transform="matrix(0.00,-1.00,1.00,0.00,226.8,340.2)" id="shape3">
+            <path stroke="#000000" fill="none" d="M5.7,.0L45.4,.0" stroke-width="2"/>
+            <path stroke="#000000" fill="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-14.0" width="52.2" height="14.0" transform="matrix(0.00,1.00,-1.00,0.00,22.7,-22.7)" x="-2.0"/>
+            <rect fill="#ffffff" y="-0.0" width="57.0" height="14.0" transform="matrix(0.00,1.00,-1.00,0.00,22.7,-22.7)" x="-5.8"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" transform="matrix(0.00,1.00,-1.00,0.00,22.7,-22.7)">
+                <tspan y="-2.0" x="-2.0">ACE5-Lite </tspan>
+                <tspan y="12.0" x="-5.8">subordinate</tspan>
+            </text>
+        </g>
+        <g transform="matrix(-0.00,-1.00,1.00,-0.00,166.3,340.2)" id="shape4">
+            <path stroke="#000000" fill="none" d="M5.7,.0L45.4,.0" stroke-width="2"/>
+            <path stroke="#000000" fill="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.0" width="57.5" height="14.0" transform="matrix(0.00,1.00,-1.00,0.00,23.2,-23.2)" x="-5.5"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve" transform="matrix(0.00,1.00,-1.00,0.00,23.2,-23.2)">
+                <tspan y="5.0" x="-5.5">awdeviceid </tspan>
+            </text>
+        </g>
+        <g transform="matrix(0.00,-1.00,1.00,0.00,226.8,491.3)" id="shape5">
+            <path stroke="#000000" fill="none" d="M5.7,.0L45.4,.0" stroke-width="2"/>
+            <path stroke="#000000" fill="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-14.0" width="52.2" height="14.0" transform="matrix(0.00,1.00,-1.00,0.00,25.9,-25.9)" x="1.2"/>
+            <rect fill="#ffffff" y="0.0" width="41.5" height="14.0" transform="matrix(0.00,1.00,-1.00,0.00,25.9,-25.9)" x="5.1"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" transform="matrix(0.00,1.00,-1.00,0.00,25.9,-25.9)">
+                <tspan y="-2.0" x="1.2">ACE5-Lite </tspan>
+                <tspan y="12.0" x="5.1">manager</tspan>
+            </text>
+        </g>
+        <g transform="matrix(1.00,-0.00,0.00,1.00,120.9,408.2)" id="shape6">
+            <path stroke="#000000" fill="none" d="M.0,.0L24.6,.0" stroke-width="2"/>
+            <path stroke="#000000" fill="#000000" d="M24.6,-2.8L30.2,.0L24.6,2.8L24.6,-2.8" stroke-linecap="round" stroke-width="1"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve" transform="matrix(1.00,0.00,-0.00,1.00,0.0,0.0)">
+                <tspan y="4.8" x="-113.8">msi64_translator_page</tspan>
+            </text>
+        </g>
+        <g transform="matrix(1.00,0.00,-0.00,1.00,120.9,377.9)" id="shape7">
+            <path stroke="#000000" fill="none" d="M.0,.0L24.6,.0" stroke-width="2"/>
+            <path stroke="#000000" fill="#000000" d="M24.6,-2.8L30.2,.0L24.6,2.8L24.6,-2.8" stroke-linecap="round" stroke-width="1"/>
+            <text style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve" transform="matrix(1.00,-0.00,0.00,1.00,-0.0,-0.1)">
+                <tspan y="4.3" x="-101.5">msi_translator_page</tspan>
+            </text>
+        </g>
+    </g>
+</svg>

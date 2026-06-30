@@ -1,0 +1,71 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="455" viewBox="0 0 455 100" height="100">
+    <defs/>
+    <g transform="translate(-150.18,-229.55)">
+        <g transform="translate(332.60,230.55)" id="shape1">
+            <path stroke="#323232" fill="#16b5d6" d="M.0,.0L151.2,.0L151.2,98.3L.0,98.3L.0,.0z" fill-opacity="0.60" fill-rule="nonzero" stroke-width="1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="54.1" x="41.0">Wake Request</tspan>
+            </text>
+        </g>
+        <g transform="translate(151.18,257.01)" id="shape2">
+            <path stroke="#323232" fill="none" d="M.0,.0L75.6,.0L75.6,45.4L.0,45.4L.0,.0z" stroke-width="1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt" xml:space="preserve">
+                <tspan y="27.7" x="11.5">Distributor</tspan>
+            </text>
+        </g>
+        <g transform="translate(484.00,249.45)" id="shape3">
+            <path stroke="#191919" fill="none" d="M.0,.0L41.4,.0" stroke-width="0.6666669845581055"/>
+            <path stroke="#191919" fill="#191919" d="M41.4,-2.0L45.4,.0L41.4,2.0L41.4,-2.0" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.4" width="67.9" height="14.0" x="50.1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="4.6" x="50.1">wake_request</tspan>
+            </text>
+        </g>
+        <g transform="translate(483.65,264.57)" id="shape4">
+            <path stroke="#191919" fill="none" d="M.0,.0L41.4,.0" stroke-width="0.6666669845581055"/>
+            <path stroke="#191919" fill="#191919" d="M41.4,-2.0L45.4,.0L41.4,2.0L41.4,-2.0" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.4" width="67.9" height="14.0" x="50.1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="4.6" x="50.1">wake_request</tspan>
+            </text>
+        </g>
+        <g transform="translate(483.78,279.69)" id="shape5">
+            <path stroke="#191919" fill="none" d="M.0,.0L41.4,.0" stroke-width="0.6666669845581055"/>
+            <path stroke="#191919" fill="#191919" d="M41.4,-2.0L45.4,.0L41.4,2.0L41.4,-2.0" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.4" width="67.9" height="14.0" x="50.1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="4.6" x="50.1">wake_request</tspan>
+            </text>
+        </g>
+        <g transform="translate(483.65,294.80)" id="shape6">
+            <path stroke="#191919" fill="none" d="M.0,.0L41.4,.0" stroke-width="0.6666669845581055"/>
+            <path stroke="#191919" fill="#191919" d="M41.4,-2.0L45.4,.0L41.4,2.0L41.4,-2.0" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.4" width="67.9" height="14.0" x="50.1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="4.6" x="50.1">wake_request</tspan>
+            </text>
+        </g>
+        <g transform="translate(483.78,310.00)" id="shape7">
+            <path stroke="#191919" fill="none" d="M.0,.0L41.4,.0" stroke-width="0.6666669845581055"/>
+            <path stroke="#191919" fill="#191919" d="M41.4,-2.0L45.4,.0L41.4,2.0L41.4,-2.0" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-7.4" width="67.9" height="14.0" x="50.1"/>
+            <text style="fill:#191919;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan y="4.6" x="50.1">wake_request</tspan>
+            </text>
+        </g>
+        <g transform="translate(226.77,279.69)" id="shape8">
+            <path stroke="#fc5407" fill="none" d="M.0,.0L100.2,.0" stroke-width="2"/>
+            <path stroke="#fc5407" fill="#fc5407" d="M100.2,-2.8L105.8,.0L100.2,2.8L100.2,-2.8" stroke-linecap="round" stroke-width="1"/>
+            <rect fill="#ffffff" y="-21.0" width="2.8" height="14.0" x="38.7"/>
+            <rect fill="#ffffff" y="-21.0" width="27.7" height="14.0" x="41.5"/>
+            <rect fill="#ffffff" y="-7.0" width="67.1" height="14.0" x="20.4"/>
+            <rect fill="#ffffff" y="7.0" width="48.2" height="14.0" x="29.8"/>
+            <text style="fill:#262f37;font-family:Lato;font-size:8.00pt;font-weight:bold" xml:space="preserve">
+                <tspan style="font-weight:normal" y="-9.0" x="38.7"> </tspan>
+                <tspan y="-9.0" x="41.5">icdw*</tspan>
+                <tspan style="font-weight:normal" y="5.0" x="20.4"> AXI5-Stream </tspan>
+                <tspan style="font-weight:normal" y="19.0" x="29.8"> interface </tspan>
+            </text>
+        </g>
+    </g>
+</svg>

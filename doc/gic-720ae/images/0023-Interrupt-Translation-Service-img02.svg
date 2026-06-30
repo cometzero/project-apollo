@@ -1,0 +1,41 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="123" height="191" viewBox="0 0 123 191">
+    <defs/>
+    <g transform="translate(-316.48,-29.24)">
+        <g id="shape1" transform="translate(317.48,30.24)">
+            <path stroke="#323232" d="M.0,.0L120.9,.0L120.9,30.2L.0,30.2L.0,.0z" stroke-width="1" fill="none"/>
+            <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:8.00pt">
+                <tspan y="20.1" x="16.1">PCIe root complex</tspan>
+            </text>
+        </g>
+        <g id="shape2" transform="translate(317.48,83.15)">
+            <path stroke="#323232" d="M.0,.0L120.9,.0L120.9,30.2L.0,30.2L.0,.0z" stroke-width="1" fill="none"/>
+            <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:8.00pt">
+                <tspan y="20.1" x="43.3">SMMU</tspan>
+            </text>
+        </g>
+        <g id="shape3" transform="translate(377.95,60.47)">
+            <path stroke="#262f37" d="M.0,.0L.0,17.0" stroke-width="2" fill="none"/>
+            <path stroke-linecap="round" stroke="#262f37" d="M2.8,17.0L.0,22.7L-2.8,17.0L2.8,17.0" stroke-width="1" fill="#262f37"/>
+        </g>
+        <g id="shape4" transform="translate(317.48,136.06)">
+            <path fill-rule="nonzero" d="M.0,.0L120.9,.0L120.9,30.2L.0,30.2L.0,.0z" stroke="#323232" fill-opacity="0.60" stroke-width="1" fill="#16b5d6"/>
+            <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:8.00pt">
+                <tspan y="20.1" x="52.7">ITS</tspan>
+            </text>
+        </g>
+        <g id="shape5" transform="translate(377.95,113.39)">
+            <path stroke="#262f37" d="M.0,.0L-0.0,17.0" stroke-width="2" fill="none"/>
+            <path stroke-linecap="round" stroke="#262f37" d="M2.8,17.0L-0.0,22.7L-2.8,17.0L2.8,17.0" stroke-width="1" fill="#262f37"/>
+        </g>
+        <g id="shape6" transform="translate(317.48,188.98)">
+            <path stroke="#323232" d="M.0,.0L120.9,.0L120.9,30.2L.0,30.2L.0,.0z" stroke-width="1" fill="none"/>
+            <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:8.00pt">
+                <tspan y="20.1" x="29.9">Interconnect</tspan>
+            </text>
+        </g>
+        <g id="shape7" transform="translate(377.95,166.30)">
+            <path stroke="#262f37" d="M.0,.0L.0,17.0" stroke-width="2" fill="none"/>
+            <path stroke-linecap="round" stroke="#262f37" d="M2.8,17.0L.0,22.7L-2.8,17.0L2.8,17.0" stroke-width="1" fill="#262f37"/>
+        </g>
+    </g>
+</svg>
