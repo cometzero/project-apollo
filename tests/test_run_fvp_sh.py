@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -541,6 +544,18 @@ def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
     assert any(" -v -l 67% -t %3 " in f" {line} " for line in split_lines)
     assert any(" -v -l 50% -t %4 " in f" {line} " for line in split_lines)
     assert any(" -h -l 50% -t %0 " in f" {line} " for line in split_lines)
+    assert any(
+        line.startswith("set-hook ")
+        and "client-attached" in line
+        and "--rebalance-fvp-uart-panes" in line
+        for line in tmux_lines
+    )
+    assert any(
+        line.startswith("set-hook ")
+        and "client-resized" in line
+        and "--rebalance-fvp-uart-panes" in line
+        for line in tmux_lines
+    )
     assert tmux_text.count("python3 -c") >= 5
     assert tmux_text.count("display.append(13)") >= 5
     assert "tee -a" not in tmux_text
@@ -548,3 +563,151 @@ def test_run_fvp_precreates_uart_panes_before_fvp_start(tmp_path: Path) -> None:
 
     control_dir = build_dir / "fvp-tmux/apollo-fvp-pytest/control"
     assert (control_dir / "start").exists()
+
+
+def test_run_fvp_rebalance_keeps_uart_stack_even_after_resize() -> None:
+    tmux_bin = shutil.which("tmux")
+    if tmux_bin is None:
+        pytest.skip("tmux is not installed")
+
+    session = f"pytest-fvp-layout-{os.getpid()}"
+
+    def tmux(*args: str) -> str:
+        result = subprocess.run(
+            [tmux_bin, *args],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return result.stdout.strip()
+
+    try:
+        subprocess.run(
+            [
+                tmux_bin,
+                "new-session",
+                "-d",
+                "-x",
+                "80",
+                "-y",
+                "24",
+                "-s",
+                session,
+                "-n",
+                "fvp",
+                "sleep",
+                "600",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        root_pane = tmux("display-message", "-p", "-t", f"{session}:fvp", "#{pane_id}")
+        u_boot = tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-b",
+            "-l",
+            "70%",
+            "-t",
+            root_pane,
+            "sleep",
+            "600",
+        )
+        rse = tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-h",
+            "-l",
+            "40%",
+            "-t",
+            u_boot,
+            "sleep",
+            "600",
+        )
+        si0 = tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "75%",
+            "-t",
+            rse,
+            "sleep",
+            "600",
+        )
+        si1 = tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "67%",
+            "-t",
+            si0,
+            "sleep",
+            "600",
+        )
+        tf_a = tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "50%",
+            "-t",
+            si1,
+            "sleep",
+            "600",
+        )
+        tmux(
+            "split-window",
+            "-d",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-h",
+            "-l",
+            "50%",
+            "-t",
+            root_pane,
+            "sleep",
+            "600",
+        )
+        tmux("resize-window", "-t", f"{session}:fvp", "-x", "240", "-y", "80")
+
+        subprocess.run(
+            [str(SCRIPT), "--rebalance-fvp-uart-panes", rse, si0, si1, tf_a],
+            check=True,
+            env={**os.environ, "TMUX_BIN": tmux_bin},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        heights = [
+            int(tmux("display-message", "-p", "-t", pane, "#{pane_height}"))
+            for pane in (rse, si0, si1, tf_a)
+        ]
+        assert max(heights) - min(heights) <= 1
+    finally:
+        subprocess.run(
+            [tmux_bin, "kill-session", "-t", session],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )

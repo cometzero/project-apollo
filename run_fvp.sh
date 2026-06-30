@@ -122,6 +122,7 @@ source_sdk_if_present()
 
     printf 'Sourcing SDK environment: %s\n' "${env_file}"
     set +u
+    # shellcheck source=/dev/null
     source "${env_file}"
     set -u
 }
@@ -273,6 +274,70 @@ tmux_cmd()
     env -u TMUX "${TMUX_BIN}" "$@"
 }
 
+is_positive_int()
+{
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && (($1 > 0))
+}
+
+detect_tmux_window_size_args()
+{
+    local -n _size_args="$1"
+    _size_args=(-x 160 -y 48)
+
+    local rows="${LINES:-}"
+    local cols="${COLUMNS:-}"
+    if ! is_positive_int "${rows}" || ! is_positive_int "${cols}"; then
+        rows=""
+        cols=""
+        if [[ -t 0 ]]; then
+            read -r rows cols < <(stty size 2>/dev/null || true)
+        fi
+    fi
+
+    is_positive_int "${rows}" || return 0
+    is_positive_int "${cols}" || return 0
+    ((rows >= 24 && cols >= 80)) || return 0
+    _size_args=(-x "${cols}" -y "${rows}")
+}
+
+rebalance_fvp_uart_panes()
+{
+    (($# == 4)) || return 0
+
+    local -a panes=("$@")
+    local total_height=0
+    local pane
+    local height
+    for pane in "${panes[@]}"; do
+        height="$(tmux_cmd display-message -p -t "${pane}" '#{pane_height}' 2>/dev/null || true)"
+        is_positive_int "${height}" || return 0
+        total_height=$((total_height + height))
+    done
+
+    local target_height=$((total_height / ${#panes[@]}))
+    is_positive_int "${target_height}" || return 0
+
+    local i
+    for ((i = 0; i < ${#panes[@]} - 1; i++)); do
+        tmux_cmd resize-pane -t "${panes[$i]}" -y "${target_height}" >/dev/null 2>&1 || return 0
+    done
+}
+
+install_fvp_uart_rebalance_hooks()
+{
+    local hook_body
+    hook_body="$(
+        printf 'TMUX_BIN=%q exec %q --rebalance-fvp-uart-panes' \
+            "${TMUX_BIN}" "${SCRIPT_PATH}"
+        printf ' %q' "$@"
+    )"
+
+    local hook_command
+    hook_command="$(printf 'run-shell -b %q' "${hook_body}")"
+    tmux_cmd set-hook -t "${TMUX_SESSION}" client-attached "${hook_command}" >/dev/null
+    tmux_cmd set-hook -t "${TMUX_SESSION}" client-resized "${hook_command}" >/dev/null
+}
+
 uart_telnet_bridge_code()
 {
     cat <<'PY'
@@ -395,7 +460,7 @@ start_waiting_uart_pane()
     bridge_code="$(uart_telnet_bridge_code)"
 
     printf -v pane_body \
-        'printf "Subsystem: %%s\r\nLog: %%s\r\nWaiting for FVP UART port...\r\n\r\n" %q %q; while [[ ! -s %q ]]; do sleep 0.2; done; port="$(<%q)"; term="$(<%q 2>/dev/null || true)"; printf "UART: %%s\r\nPort: %%s\r\n\r\n" "${term:-unknown}" "${port}"; python3 -c %q %q "${port}"; printf "\r\nUART pane exited. Press Enter to close this pane.\r\n"; read -r _' \
+        "printf \"Subsystem: %%s\r\nLog: %%s\r\nWaiting for FVP UART port...\r\n\r\n\" %q %q; while [[ ! -s %q ]]; do sleep 0.2; done; port=\"\$(<%q)\"; term=\"\$(<%q 2>/dev/null || true)\"; printf \"UART: %%s\r\nPort: %%s\r\n\r\n\" \"\${term:-unknown}\" \"\${port}\"; python3 -c %q %q \"\${port}\"; printf \"\r\nUART pane exited. Press Enter to close this pane.\r\n\"; read -r _" \
         "${title}" "${log_path}" "${port_file}" "${port_file}" "${term_file}" \
         "${bridge_code}" "${log_path}"
 
@@ -409,7 +474,7 @@ start_shell_pane()
     local pane_body
     local pane_id
 
-    pane_body='printf "Interactive shell\r\n\r\n"; exec "${SHELL:-bash}" -l'
+    pane_body="printf \"Interactive shell\r\n\r\n\"; exec \"\${SHELL:-bash}\" -l"
     pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T shell
     printf '%s\n' "${pane_id}"
@@ -621,9 +686,12 @@ start_tmux()
         printf 'exec %q --supervise' "${SCRIPT_PATH}"
     )
 
+    local -a new_session_size_args=()
+    detect_tmux_window_size_args new_session_size_args
+
     local fvp_pane_id
     mkdir -p "${UART_PORT_DIR}"
-    fvp_pane_id="$(tmux_cmd new-session -d -x 160 -y 48 -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n fvp bash -lc "${supervisor_body}")"
+    fvp_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n fvp bash -lc "${supervisor_body}")"
     FVP_ROOT_PANE="${fvp_pane_id}"
     tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
     tmux_cmd set-window-option -t "${TMUX_SESSION}:fvp" synchronize-panes off
@@ -635,13 +703,16 @@ start_tmux()
     local rse_pane_id
     local si0_pane_id
     local si1_pane_id
+    local tf_a_pane_id
 
     u_boot_pane_id="$(start_waiting_uart_pane u_boot_linux -v -b -l 70% -t "${FVP_ROOT_PANE}")"
     rse_pane_id="$(start_waiting_uart_pane rse -h -l 40% -t "${u_boot_pane_id}")"
     si0_pane_id="$(start_waiting_uart_pane safety_island_cl0 -v -l 75% -t "${rse_pane_id}")"
     si1_pane_id="$(start_waiting_uart_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}")"
-    start_waiting_uart_pane tf_a -v -l 50% -t "${si1_pane_id}" >/dev/null
+    tf_a_pane_id="$(start_waiting_uart_pane tf_a -v -l 50% -t "${si1_pane_id}")"
     start_shell_pane -h -l 50% -t "${FVP_ROOT_PANE}" >/dev/null
+    rebalance_fvp_uart_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${tf_a_pane_id}"
+    install_fvp_uart_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${tf_a_pane_id}"
 
     tmux_cmd select-pane -t "${FVP_ROOT_PANE}"
     : >"${FVP_START_FILE}"
@@ -666,6 +737,12 @@ start_tmux()
 if [[ "${1:-}" == "--supervise" ]]; then
     supervise_run
     exit $?
+fi
+
+if [[ "${1:-}" == "--rebalance-fvp-uart-panes" ]]; then
+    shift
+    rebalance_fvp_uart_panes "$@"
+    exit 0
 fi
 
 EXTRA_FVP_ARGS=()
