@@ -218,6 +218,70 @@ tmux_cmd()
     env -u TMUX "${TMUX_BIN}" "$@"
 }
 
+is_positive_int()
+{
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && (($1 > 0))
+}
+
+detect_tmux_window_size_args()
+{
+    local -n _size_args="$1"
+    _size_args=()
+
+    local rows="${LINES:-}"
+    local cols="${COLUMNS:-}"
+    if ! is_positive_int "${rows}" || ! is_positive_int "${cols}"; then
+        rows=""
+        cols=""
+        if [[ -t 0 ]]; then
+            read -r rows cols < <(stty size 2>/dev/null || true)
+        fi
+    fi
+
+    is_positive_int "${rows}" || return 0
+    is_positive_int "${cols}" || return 0
+    ((rows >= 24 && cols >= 80)) || return 0
+    _size_args=(-x "${cols}" -y "${rows}")
+}
+
+rebalance_fvp_like_log_panes()
+{
+    (($# == 4)) || return 0
+
+    local -a panes=("$@")
+    local total_height=0
+    local pane
+    local height
+    for pane in "${panes[@]}"; do
+        height="$(tmux_cmd display-message -p -t "${pane}" '#{pane_height}' 2>/dev/null || true)"
+        is_positive_int "${height}" || return 0
+        total_height=$((total_height + height))
+    done
+
+    local target_height=$((total_height / ${#panes[@]}))
+    is_positive_int "${target_height}" || return 0
+
+    local i
+    for ((i = 0; i < ${#panes[@]} - 1; i++)); do
+        tmux_cmd resize-pane -t "${panes[$i]}" -y "${target_height}" >/dev/null 2>&1 || return 0
+    done
+}
+
+install_fvp_like_rebalance_hooks()
+{
+    local hook_body
+    hook_body="$(
+        printf 'TMUX_BIN=%q exec %q --rebalance-fvp-like-log-panes' \
+            "${TMUX_BIN}" "${SCRIPT_PATH}"
+        printf ' %q' "$@"
+    )"
+
+    local hook_command
+    hook_command="$(printf 'run-shell -b %q' "${hook_body}")"
+    tmux_cmd set-hook -t "${TMUX_SESSION}" client-attached "${hook_command}" >/dev/null
+    tmux_cmd set-hook -t "${TMUX_SESSION}" client-resized "${hook_command}" >/dev/null
+}
+
 runner_command()
 {
     local -n _out="$1"
@@ -688,6 +752,7 @@ write_fifo_line()
     local line="$2"
 
     if command -v timeout >/dev/null 2>&1; then
+        # shellcheck disable=SC2016
         timeout 1 bash -c 'printf "%s\n" "$1" >"$2"' _ "${line}" "${fifo_path}"
     else
         printf '%s\n' "${line}" >"${fifo_path}"
@@ -831,6 +896,7 @@ start_fvp_like_log_panes()
     local rse_pane_id
     local si0_pane_id
     local si1_pane_id
+    local secure_pane_id
 
     start_domain_log_pane primary_console -v -b -l 70% -t "${RUNNER_PANE_ID}"
     primary_pane_id="${START_LOG_PANE_ID}"
@@ -841,7 +907,10 @@ start_fvp_like_log_panes()
     start_domain_log_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}"
     si1_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane secure_console -v -l 50% -t "${si1_pane_id}"
+    secure_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane platform -h -l 50% -t "${RUNNER_PANE_ID}"
+    rebalance_fvp_like_log_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
+    install_fvp_like_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
 }
 
 start_tmux()
@@ -935,8 +1004,11 @@ start_tmux()
             "${RUNNER_ARGS_FILE}" "${SCRIPT_PATH}"
     )
 
+    local -a new_session_size_args=()
+    detect_tmux_window_size_args new_session_size_args
+
     local runner_pane_id
-    runner_pane_id="$(tmux_cmd new-session -d -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
+    runner_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
     RUNNER_PANE_ID="${runner_pane_id}"
     tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
     tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
@@ -998,6 +1070,7 @@ fi
 if [[ "${1:-}" == "--primary-console" ]]; then
     shift
     interactive_primary_console "$@"
+    # shellcheck disable=SC2317
     exit $?
 fi
 
@@ -1005,6 +1078,12 @@ if [[ "${1:-}" == "--stop-session" ]]; then
     shift
     stop_session "$@"
     exit $?
+fi
+
+if [[ "${1:-}" == "--rebalance-fvp-like-log-panes" ]]; then
+    shift
+    rebalance_fvp_like_log_panes "$@"
+    exit 0
 fi
 
 EXTRA_RUNNER_ARGS=()

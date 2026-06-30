@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "run_qbox_yocto.sh"
+TMUX_SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
 
 
 def touch_file(path: Path, content: str = "x\n") -> None:
@@ -185,8 +187,155 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert any(line == "select-pane -t %4 -T safety_island_cl1" for line in tmux_lines)
     assert any(line == "select-pane -t %5 -T secure_console" for line in tmux_lines)
     assert any(line == "select-pane -t %6 -T platform" for line in tmux_lines)
+    assert any(
+        line.startswith("set-hook ")
+        and "client-attached" in line
+        and "--rebalance-fvp-like-log-panes" in line
+        for line in tmux_lines
+    )
+    assert any(
+        line.startswith("set-hook ")
+        and "client-resized" in line
+        and "--rebalance-fvp-like-log-panes" in line
+        for line in tmux_lines
+    )
     assert not any(line.startswith("select-layout ") for line in tmux_lines)
     assert any("QBOX_APOLLO_NUM_CPUS=4" in line for line in tmux_lines)
+
+
+def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
+    tmux_bin = shutil.which("tmux")
+    if tmux_bin is None:
+        pytest.skip("tmux is not installed")
+
+    session = f"pytest-qbox-layout-{os.getpid()}"
+
+    def tmux(*args: str) -> str:
+        result = subprocess.run(
+            [tmux_bin, *args],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        return result.stdout.strip()
+
+    try:
+        subprocess.run(
+            [tmux_bin, "new-session", "-d", "-x", "80", "-y", "24", "-s", session, "-n", "qbox", "sleep", "600"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        runner = tmux("display-message", "-p", "-t", f"{session}:qbox", "#{pane_id}")
+        primary = tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-b",
+            "-l",
+            "70%",
+            "-t",
+            runner,
+            "sleep",
+            "600",
+        )
+        rse = tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-h",
+            "-l",
+            "40%",
+            "-t",
+            primary,
+            "sleep",
+            "600",
+        )
+        si0 = tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "75%",
+            "-t",
+            rse,
+            "sleep",
+            "600",
+        )
+        si1 = tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "67%",
+            "-t",
+            si0,
+            "sleep",
+            "600",
+        )
+        secure = tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-v",
+            "-l",
+            "50%",
+            "-t",
+            si1,
+            "sleep",
+            "600",
+        )
+        tmux(
+            "split-window",
+            "-P",
+            "-F",
+            "#{pane_id}",
+            "-h",
+            "-l",
+            "50%",
+            "-t",
+            runner,
+            "sleep",
+            "600",
+        )
+        tmux("resize-window", "-t", f"{session}:qbox", "-x", "240", "-y", "80")
+
+        subprocess.run(
+            [
+                str(TMUX_SCRIPT),
+                "--rebalance-fvp-like-log-panes",
+                rse,
+                si0,
+                si1,
+                secure,
+            ],
+            check=True,
+            env={**os.environ, "TMUX_BIN": tmux_bin},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        heights = [
+            int(tmux("display-message", "-p", "-t", pane, "#{pane_height}"))
+            for pane in (rse, si0, si1, secure)
+        ]
+        assert max(heights) - min(heights) <= 1
+    finally:
+        subprocess.run(
+            [tmux_bin, "kill-session", "-t", session],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
 
 def test_tmux_primary_console_filters_terminal_status_response() -> None:
