@@ -19,7 +19,7 @@ CL1 boot, Apollo full-system live CL0/CL1 boot가 통과했다.
 ## 단계
 
 1. Baseline 확인
-   - 기존 `mhuv3_stub` register/service behavior와 tests를 확인한다.
+   - 기존 MHUv3 compatibility register/service behavior와 tests를 확인한다.
    - Zena CSS guide, AP DTS, CL1 DTS, QBox Lua memory/IRQ map을 대조한다.
 
 2. Component 생성
@@ -56,8 +56,8 @@ CL1 boot, Apollo full-system live CL0/CL1 boot가 통과했다.
 - 기존 통과 경로의 behavior를 refactor 중 변경하지 않는다.
 - Register model과 service-model hook은 문서에서 구분하지만, runtime 전환은
   한 component에서 먼저 검증한다.
-- `mhuv3_rproc_stub`는 이번 전환에서 유지한다. 해당 path는 별도 regression과
-  통합 계획이 필요하다.
+- standalone rproc-only compatibility path는 `mhu320ae` 통합 후 별도 legacy
+  stub 없이 유지한다.
 - `mhuv3-trace.log` 파일명과 trace event format은 기존 analyzer 호환성을 위해
   유지한다.
 
@@ -88,7 +88,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 ## Review criteria
 
 - Platform Lua에서 boot-critical MHU instance가 `mhu320ae`를 사용한다.
-- Component tests가 기존 `mhuv3_stub-tests`의 핵심 behavior를 모두 보존한다.
+- Component tests가 기존 MHUv3 compatibility 핵심 behavior를 모두 보존한다.
 - Full-system result JSON이 pass이고 marker group `rse`, `si_cl0`, `si_cl1`,
   `ap_firmware`, `linux`, `post_login_probe`가 통과한다.
 - Fidelity label과 문서가 temporary stub이 아닌 `systemc-mhu320ae` 상태를

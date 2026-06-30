@@ -30,7 +30,7 @@ PFDI monitor, AP-SI/RSE doorbell bridge를 QEMU 없이 SystemC component에서
 
 - Lua-visible component `mhu320ae`가 `tools/qbox/systemc-components/mhu320ae/`
   아래에 생성되고 dynamic module로 빌드된다.
-- 기존 `mhuv3_stub`에 있던 reusable PBX/MBX register frame behavior와
+- 기존 MHUv3 compatibility path에 있던 reusable PBX/MBX register frame behavior와
   Apollo/RD-Aspen boot에 필요한 service hooks가 `mhu320ae`로 이동된다.
 - AP SCMI MHU, RSE/AP secure doorbell, RSE/SI SCMI, AP/SI CL1 HIPC, CL1 PFDI
   경로의 default module type이 `mhu320ae`로 전환된다.
@@ -81,9 +81,6 @@ local HIPC and PFDI MHU nodes with the same compatible string.
 ## 비범위
 
 - Full MHU-320AE TRM parity for every optional register and safety/RAS feature.
-- Replacing `mhuv3_rproc_stub` in the standalone primary-compute rproc-only
-  path. That path remains separate compatibility debt until its behavior can be
-  merged without changing the remoteproc regression surface.
 - Linux, Zephyr, TF-M, SCP-firmware driver workaround patches.
 - Modeling analog timing or interconnect arbitration delay.
 

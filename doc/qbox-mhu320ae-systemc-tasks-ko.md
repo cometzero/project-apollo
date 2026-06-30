@@ -30,8 +30,7 @@ Evidence:
   `arm,mhuv3` nodes at `0x40020000`, `0x40050000`, `0x400b0000`, `0x400e0000`.
 - `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` exposes live CL1 local MHU frames
   at `0x39000000`, `0x39040000`, and `0x39200000`.
-- `tools/qbox/systemc-components/mhuv3_stub/` contains the existing validated
-  PBX/MBX frame model and service hooks.
+- `mhu320ae` preserves the validated PBX/MBX frame model and service hooks.
 
 ### MHU320-SYS-020: Component scaffold
 
