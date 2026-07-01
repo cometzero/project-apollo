@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_qbox.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
