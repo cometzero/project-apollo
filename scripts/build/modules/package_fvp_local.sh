@@ -87,7 +87,10 @@ preflight_local_fvp_package_tools()
 
     case "${APOLLO_LOCAL_BUILD_PACKAGE_FLASH_TEST_MODE:-}" in
         fixture|record-only) ;;
-        *) require_command sgdisk ;;
+        *)
+            add_yocto_native_paths
+            require_command sgdisk
+            ;;
     esac
 
     if [[ -f "${BOOT_DIR}/Image" && -f "${BOOT_DIR}/apollo-fvp.dtb" ]]; then
@@ -96,6 +99,11 @@ preflight_local_fvp_package_tools()
         require_command mmd
         require_command mcopy
     fi
+
+    case "${APOLLO_LOCAL_BUILD_PACKAGE_FLASH_TEST_MODE:-}" in
+        fixture|record-only) ;;
+        *) require_command fiptool ;;
+    esac
 }
 
 package_local_fvp_outputs()
@@ -125,6 +133,20 @@ vars_path = Path(sys.argv[4])
 deploy = local_build / "deploy"
 images = deploy / "images"
 firmware = deploy / "firmware"
+digest_cache_path = deploy / ".apollo-package-digests.json"
+
+try:
+    loaded_digest_cache = json.loads(digest_cache_path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError):
+    loaded_digest_cache = {}
+if not isinstance(loaded_digest_cache, dict):
+    loaded_digest_cache = {}
+digest_cache: dict[str, str] = {
+    str(key): str(value)
+    for key, value in loaded_digest_cache.items()
+    if isinstance(key, str) and isinstance(value, str)
+}
+copied_artifact_keys: set[tuple[str, str, str]] = set()
 
 
 def fail(message: str) -> None:
@@ -183,15 +205,54 @@ def safe_mkdir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
+def digest_cache_key(path: Path) -> tuple[Path, str]:
+    resolved = path.resolve(strict=True)
+    stat = resolved.stat()
+    return resolved, f"{resolved}\0{stat.st_size}\0{stat.st_mtime_ns}"
+
+
 def digest(path: Path) -> str:
+    resolved, key = digest_cache_key(path)
+    cached = digest_cache.get(key)
+    if cached is not None:
+        return cached
     h = hashlib.sha256()
-    with path.open("rb") as stream:
+    with resolved.open("rb") as stream:
         for chunk in iter(lambda: stream.read(16 * 1024 * 1024), b""):
             h.update(chunk)
-    return h.hexdigest()
+    value = h.hexdigest()
+    digest_cache[key] = value
+    return value
 
 
 artifacts: list[dict[str, object]] = []
+
+
+def forget_artifact_path(dst: Path) -> None:
+    dst_str = str(dst)
+    artifacts[:] = [
+        artifact
+        for artifact in artifacts
+        if artifact.get("local_path") != dst_str
+    ]
+    copied_artifact_keys.difference_update(
+        [key for key in copied_artifact_keys if key[1] == dst_str]
+    )
+
+
+def append_artifact(src: Path, dst: Path, provenance: str, source_hash: str) -> None:
+    artifacts.append(
+        {
+            "source_path": str(src),
+            "local_path": str(dst),
+            "component_provenance": provenance,
+            "size": dst.stat().st_size,
+            "sha256": source_hash,
+            "source_sha256_before": source_hash,
+            "source_sha256_after": source_hash,
+            "source_preserved": True,
+        }
+    )
 
 
 def copy_preserving_sparse(src: Path, dst: Path) -> None:
@@ -228,27 +289,38 @@ def ensure_mtools_dir(image: str, dirname: str) -> None:
 
 
 def copy_artifact(src: Path, dst: Path, provenance: str, root: Path = yocto_deploy) -> None:
-    ensure_existing_source(src, root, "Yocto deploy source")
+    resolved_src = ensure_existing_source(src, root, "Yocto deploy source")
     safe_write_path(dst)
     safe_mkdir(dst.parent)
+    artifact_key = (str(resolved_src), str(dst), provenance)
+    if artifact_key in copied_artifact_keys:
+        return
     same_file = dst.exists() and os.path.samefile(src, dst)
-    source_hash = digest(src)
+    source_hash = digest(resolved_src)
     if not same_file:
-        copy_preserving_sparse(src, dst)
+        copy_preserving_sparse(resolved_src, dst)
         if dst.stat().st_size != src.stat().st_size:
             fail(f"copied artifact size mismatch: {src} -> {dst}")
-    artifacts.append(
-        {
-            "source_path": str(src),
-            "local_path": str(dst),
-            "component_provenance": provenance,
-            "size": dst.stat().st_size,
-            "sha256": source_hash,
-            "source_sha256_before": source_hash,
-            "source_sha256_after": source_hash,
-            "source_preserved": True,
-        }
-    )
+    append_artifact(src, dst, provenance, source_hash)
+    copied_artifact_keys.add(artifact_key)
+
+
+def record_copied_artifact(
+    src: Path,
+    dst: Path,
+    provenance: str,
+    root: Path = yocto_deploy,
+) -> None:
+    resolved_src = ensure_existing_source(src, root, "Yocto deploy source")
+    safe_write_path(dst)
+    artifact_key = (str(resolved_src), str(dst), provenance)
+    if artifact_key in copied_artifact_keys:
+        return
+    if not dst.exists():
+        fail(f"missing local artifact: {dst}")
+    source_hash = digest(resolved_src)
+    append_artifact(src, dst, provenance, source_hash)
+    copied_artifact_keys.add(artifact_key)
 
 
 def copy_local(src: Path, dst: Path, provenance: str, label: str | None = None) -> None:
@@ -257,6 +329,7 @@ def copy_local(src: Path, dst: Path, provenance: str, label: str | None = None) 
     safe_mkdir(dst.parent)
     if not dst.exists() or src.resolve(strict=True) != dst.resolve(strict=True):
         shutil.copy2(src, dst)
+    forget_artifact_path(dst)
     artifacts.append(
         {
             "source_path": str(src),
@@ -314,6 +387,65 @@ def skip_image_path_placeholder(value: str) -> bool:
     return value in ("", "<default>")
 
 
+def same_existing_file(left: Path, right: Path) -> bool:
+    try:
+        return left.resolve(strict=True) == right.resolve(strict=True)
+    except OSError:
+        return False
+
+
+def wic_patch_marker(wic: Path) -> Path:
+    return wic.with_name(f".{wic.name}.local-uki-patch.json")
+
+
+def file_fingerprint(path: Path) -> dict[str, object]:
+    resolved = path.resolve(strict=True)
+    stat = resolved.stat()
+    return {
+        "path": str(resolved),
+        "size": stat.st_size,
+        "mtime_ns": stat.st_mtime_ns,
+    }
+
+
+def wic_patch_payload(
+    wic_src: Path,
+    slots: tuple[tuple[str, str], ...],
+) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "source": file_fingerprint(wic_src),
+        "slots": [
+            {
+                "name": name,
+                "offset": offset,
+                "sha256": digest(images / name),
+            }
+            for name, offset in slots
+        ],
+    }
+
+
+def wic_patch_current(wic: Path, payload: dict[str, object]) -> bool:
+    marker = wic_patch_marker(wic)
+    if not wic.exists() or not marker.is_file():
+        return False
+    try:
+        current = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return current == payload
+
+
+def write_wic_patch_marker(wic: Path, payload: dict[str, object]) -> None:
+    marker = wic_patch_marker(wic)
+    pending = marker.with_suffix(marker.suffix + ".tmp")
+    safe_write_path(marker)
+    safe_write_path(pending)
+    pending.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    pending.replace(marker)
+
+
 if deploy.is_symlink():
     fail(f"refusing to use deploy root symlink: {deploy}")
 
@@ -325,7 +457,12 @@ wic_src = latest_or_stable(
 )
 
 cfg = json.loads(fvpconf_src.read_text(encoding="utf-8"))
-copy_artifact(wic_src, images / f"nexios-image-{machine}.wic", "yocto-copied")
+wic = images / f"nexios-image-{machine}.wic"
+local_image = deploy / "boot" / "Image"
+local_dtb = deploy / "boot" / "apollo-fvp.dtb"
+local_linux_inputs_present = local_image.exists() and local_dtb.exists()
+if not local_linux_inputs_present:
+    copy_artifact(wic_src, wic, "yocto-copied")
 
 side_names = [
     f"nexios-image-{machine}.manifest",
@@ -358,6 +495,9 @@ for key, value in list(cfg.get("parameters", {}).items()):
         if skip_image_path_placeholder(value):
             continue
         src = Path(value)
+        if local_linux_inputs_present and same_existing_file(src, wic_src):
+            local_map[str(src)] = str(wic)
+            continue
         copy_artifact(src, local_image_path(src), "yocto-copied")
         local_map[str(src)] = str(local_image_path(src))
 
@@ -402,7 +542,8 @@ for entry in cfg.get("data", []):
         dst = firmware / src.name
     else:
         dst = local_image_path(src, firmware_side=True)
-        copy_artifact(src, dst, "yocto-copied")
+        if not (local_linux_inputs_present and same_existing_file(src, wic_src)):
+            copy_artifact(src, dst, "yocto-copied")
     rewritten_data.append(f"{prefix}={dst}@{suffix}")
 cfg["data"] = rewritten_data
 
@@ -499,9 +640,7 @@ def resolve_ukify(raw_cmd: str) -> tuple[str, dict[str, str]]:
 
 
 linux_source = "yocto-copied"
-local_image = deploy / "boot" / "Image"
-local_dtb = deploy / "boot" / "apollo-fvp.dtb"
-if local_image.exists() and local_dtb.exists():
+if local_linux_inputs_present:
     variables = refresh_vars_if_needed(recipe_vars("nexios-image"))
     uki_a = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_A", "auto-ad-nexios-a.efi"), "AUTO_AD_NEXIOS_UKI_A")
     uki_b = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_B", "auto-ad-nexios-b.efi"), "AUTO_AD_NEXIOS_UKI_B")
@@ -549,6 +688,7 @@ if local_image.exists() and local_dtb.exists():
             check=True,
             env=ukify_env,
         )
+        forget_artifact_path(out)
         artifacts.append(
             {
                 "source_path": str(local_image),
@@ -559,14 +699,21 @@ if local_image.exists() and local_dtb.exists():
                 "source_preserved": True,
             }
         )
-    wic = images / f"nexios-image-{machine}.wic"
+    wic_slots = ((uki_a, "1048576"), (uki_b, "135266304"))
+    wic_payload = wic_patch_payload(wic_src, wic_slots)
     try:
-        subprocess.run(["sgdisk", "-p", str(wic)], check=True, stdout=subprocess.PIPE, text=True)
-        for name, offset in ((uki_a, "1048576"), (uki_b, "135266304")):
-            ensure_mtools_dir(f"{wic}@@{offset}", "::/EFI")
-            subprocess.run(["mcopy", "-o", "-i", f"{wic}@@{offset}", str(images / name), "::/EFI/BOOT/BOOTAA64.EFI"], check=True)
+        if wic_patch_current(wic, wic_payload):
+            record_copied_artifact(wic_src, wic, "yocto-copied")
+        else:
+            copy_artifact(wic_src, wic, "yocto-copied")
+            subprocess.run(["sgdisk", "-p", str(wic)], check=True, stdout=subprocess.PIPE, text=True)
+            for name, offset in wic_slots:
+                ensure_mtools_dir(f"{wic}@@{offset}", "::/EFI")
+                subprocess.run(["mcopy", "-o", "-i", f"{wic}@@{offset}", str(images / name), "::/EFI/BOOT/BOOTAA64.EFI"], check=True)
+            write_wic_patch_marker(wic, wic_payload)
     except subprocess.CalledProcessError:
         wic.unlink(missing_ok=True)
+        wic_patch_marker(wic).unlink(missing_ok=True)
         (deploy / "apollo-fvp-local.fvpconf").unlink(missing_ok=True)
         raise
     modules_order = local_build / "work" / "linux" / "modules.order"
@@ -606,7 +753,15 @@ local_fvpconf = deploy / "apollo-fvp-local.fvpconf"
 manifest_path = deploy / "local-package-manifest.json"
 pending_fvpconf = deploy / "apollo-fvp-local.fvpconf.tmp"
 pending_manifest = deploy / "local-package-manifest.json.tmp"
-for path in (local_fvpconf, manifest_path, pending_fvpconf, pending_manifest):
+pending_digest_cache = deploy / ".apollo-package-digests.json.tmp"
+for path in (
+    local_fvpconf,
+    manifest_path,
+    digest_cache_path,
+    pending_fvpconf,
+    pending_manifest,
+    pending_digest_cache,
+):
     safe_write_path(path)
 
 safe_mkdir(deploy)
@@ -623,8 +778,13 @@ if local_linux is not None:
 if local_linux_modules is not None:
     manifest["local_linux_modules"] = local_linux_modules
 pending_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+pending_digest_cache.write_text(
+    json.dumps(digest_cache, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
 pending_fvpconf.replace(local_fvpconf)
 pending_manifest.replace(manifest_path)
+pending_digest_cache.replace(digest_cache_path)
 print(f"local FVP package: {local_fvpconf}")
 PY
 }

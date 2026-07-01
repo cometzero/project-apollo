@@ -120,6 +120,37 @@ zephyr_deps_root_valid()
     done < "${ZEPHYR_MODULES_LIST}"
 }
 
+zephyr_deps_root_marker()
+{
+    printf '%s\n' "${ZEPHYR_BUILD_DIR}/.apollo-zephyr-deps-root"
+}
+
+cached_zephyr_deps_root()
+{
+    local marker
+    local root
+
+    marker="$(zephyr_deps_root_marker)"
+    [[ -f "${marker}" ]] || return 1
+    root="$(cat "${marker}")"
+    if zephyr_deps_root_valid "${root}"; then
+        printf '%s\n' "${root}"
+        return 0
+    fi
+    rm -f "${marker}"
+    return 1
+}
+
+record_zephyr_deps_root()
+{
+    local root="$1"
+    local marker
+
+    marker="$(zephyr_deps_root_marker)"
+    mkdir -p "$(dirname "${marker}")"
+    printf '%s\n' "${root}" > "${marker}"
+}
+
 find_zephyr_yocto_deps_root()
 {
     local root
@@ -129,6 +160,12 @@ find_zephyr_yocto_deps_root()
         zephyr_deps_root_valid "${ZEPHYR_DEPS_SRC}" ||
             die "ZEPHYR_DEPS_SRC does not look like a Yocto Zephyr source root: ${ZEPHYR_DEPS_SRC}"
         printf '%s\n' "${ZEPHYR_DEPS_SRC}"
+        record_zephyr_deps_root "${ZEPHYR_DEPS_SRC}"
+        return 0
+    fi
+
+    if root="$(cached_zephyr_deps_root)"; then
+        printf '%s\n' "${root}"
         return 0
     fi
 
@@ -136,6 +173,7 @@ find_zephyr_yocto_deps_root()
     for candidate in "${root}/git" "${root}"; do
         if [[ -n "${root}" ]] && zephyr_deps_root_valid "${candidate}"; then
             printf '%s\n' "${candidate}"
+            record_zephyr_deps_root "${candidate}"
             return 0
         fi
     done
@@ -143,6 +181,7 @@ find_zephyr_yocto_deps_root()
     root="$(bitbake_zephyr_getvar S 2>/dev/null || true)"
     if [[ -n "${root}" ]] && zephyr_deps_root_valid "${root}"; then
         printf '%s\n' "${root}"
+        record_zephyr_deps_root "${root}"
         return 0
     fi
 
@@ -150,6 +189,7 @@ find_zephyr_yocto_deps_root()
     for candidate in "${root}/sources-unpack/git" "${root}/git"; do
         if [[ -n "${root}" ]] && zephyr_deps_root_valid "${candidate}"; then
             printf '%s\n' "${candidate}"
+            record_zephyr_deps_root "${candidate}"
             return 0
         fi
     done

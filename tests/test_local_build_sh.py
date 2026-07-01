@@ -482,6 +482,79 @@ def test_zephyr_kconfig_missing_deps_fail_with_recovery_message(
     assert "Yocto" in output
 
 
+def test_zephyr_deps_root_cache_skips_bitbake_env_on_warm_lookup(
+    tmp_path: Path,
+) -> None:
+    # Given: Yocto dependency sources were discovered once for Zephyr.
+    deps_root = tmp_path / "sources-unpack" / "git"
+    for module in (
+        "modules/hal/cmsis",
+        "modules/hal/libmetal",
+        "modules/lib/open-amp",
+    ):
+        (deps_root / module).mkdir(parents=True)
+    modules_list = tmp_path / "apollo-modules.list"
+    write_file(
+        modules_list,
+        "\n".join(
+            (
+                "modules/hal/cmsis",
+                "modules/hal/libmetal",
+                "modules/lib/open-amp",
+                "arm_zena_safety_island",
+                "zephyr_hsoc_src",
+                "",
+            )
+        ),
+    )
+    lookup_log = tmp_path / "bitbake-getvar.log"
+    local_build = tmp_path / "local-build"
+
+    # When: the dependency root is requested twice in one local build tree.
+    result = subprocess.run(
+        (
+            "bash",
+            "-c",
+            "\n".join(
+                (
+                    "set -euo pipefail",
+                    'source "${ROOT_DIR}/scripts/build/local_build_common.sh"',
+                    'source "${ROOT_DIR}/scripts/build/modules/build_zephyr.sh"',
+                    "bitbake_zephyr_getvar() {",
+                    '    printf "%s\\n" "$1" >> "${APOLLO_TEST_LOOKUP_LOG}"',
+                    '    [[ "$1" == "UNPACKDIR" ]]',
+                    '    printf "%s\\n" "${APOLLO_TEST_DEPS_ROOT%/git}"',
+                    "}",
+                    'first="$(prepare_yocto_zephyr_deps_root)"',
+                    'second="$(prepare_yocto_zephyr_deps_root)"',
+                    '[[ "${first}" == "${APOLLO_TEST_DEPS_ROOT}" ]]',
+                    '[[ "${second}" == "${APOLLO_TEST_DEPS_ROOT}" ]]',
+                )
+            ),
+        ),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "ROOT_DIR": str(ROOT),
+            "LOCAL_BUILD_DIR": str(local_build),
+            "ZEPHYR_MODULES_LIST": str(modules_list),
+            "APOLLO_TEST_DEPS_ROOT": str(deps_root),
+            "APOLLO_TEST_LOOKUP_LOG": str(lookup_log),
+            "PATH": "/usr/bin:/bin",
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the warm lookup uses the cached root instead of bitbake -e.
+    assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
+    assert lookup_log.read_text(encoding="utf-8").splitlines() == ["UNPACKDIR"]
+    marker = local_build / "work" / "zephyr-demos-cl1" / ".apollo-zephyr-deps-root"
+    assert marker.read_text(encoding="utf-8").strip() == str(deps_root)
+
+
 def test_missing_sdk_is_populated_and_installed_by_local_build(
     tmp_path: Path,
 ) -> None:
@@ -1332,6 +1405,33 @@ def test_package_fixture_writes_local_fvpconf_and_manifest(tmp_path: Path) -> No
     assert fw_entry["source_preserved"] is True
 
 
+def test_package_deduplicates_repeated_copied_artifacts_in_manifest(
+    tmp_path: Path,
+) -> None:
+    # Given: the default FVP config references artifacts also copied as side files.
+    _yocto_deploy, local_build, env = make_package_fixture(tmp_path)
+
+    # When: the local FVP package is generated.
+    result = run_local_build(
+        "--package",
+        extra_env=with_fixture_flash_hook(env, tmp_path / "package-flash-hook.log"),
+    )
+
+    # Then: repeated source/destination copies are recorded once.
+    assert result.returncode == 0, output_of(result)
+    local_deploy = local_build / "deploy"
+    manifest = json.loads(
+        (local_deploy / "local-package-manifest.json").read_text(encoding="utf-8")
+    )
+    artifact_paths = [entry["local_path"] for entry in manifest["artifacts"]]
+    for name in (
+        "nexios-image-apollo-fvp.wic",
+        "efi-capsule-update-disk-image-fvp-rd-aspen.img",
+        "nexios-initramfs-image-apollo-fvp.cpio.gz",
+    ):
+        assert artifact_paths.count(str(local_deploy / "images" / name)) == 1
+
+
 def test_package_copies_every_fvp_image_path_reference(tmp_path: Path) -> None:
     # Given: Yocto fvpconf references an extra image_path outside the old allowlist.
     yocto_deploy, local_build, env = make_package_fixture(tmp_path)
@@ -2024,6 +2124,9 @@ def test_package_local_linux_generates_slot_ukis_and_manifest(tmp_path: Path) ->
         (local_deploy / "local-package-manifest.json").read_text(encoding="utf-8")
     )
     assert manifest["linux_source"] == "local-uki"
+    local_paths = [artifact["local_path"] for artifact in manifest["artifacts"]]
+    assert local_paths.count(str(local_deploy / "images" / "auto-ad-nexios-a.efi")) == 1
+    assert local_paths.count(str(local_deploy / "images" / "auto-ad-nexios-b.efi")) == 1
     ukify_lines = ukify_log.read_text(encoding="utf-8").splitlines()
     assert len(ukify_lines) == 2
     assert "--linux=" + str(local_deploy / "boot" / "Image") in ukify_lines[0]
@@ -2422,6 +2525,36 @@ def test_package_local_linux_patches_only_local_wic_copy(tmp_path: Path) -> None
     assert wic_entry["source_path"] == str(source_wic)
     assert wic_entry["source_sha256_before"] == wic_entry["source_sha256_after"]
     assert wic_entry["source_preserved"] is True
+
+
+def test_package_local_linux_reuses_current_wic_patch_stamp(
+    tmp_path: Path,
+) -> None:
+    # Given: local Linux packaging already patched the WIC with current UKIs.
+    yocto_deploy, local_build, env = make_package_fixture(tmp_path)
+    add_local_linux_fixture(local_build)
+    add_uki_source_fixture(yocto_deploy)
+    tools_dir, ukify_log, wic_log = add_stub_uki_tools(tmp_path)
+    vars_path = tmp_path / "yocto-vars.json"
+    write_yocto_vars(vars_path, default_uki_variables(tools_dir / "ukify"))
+    package_env = with_fixture_flash_hook(
+        local_uki_env(env, vars_path, tools_dir, ukify_log, wic_log),
+        tmp_path / "package-flash-hook.log",
+    )
+    first = run_local_build("--package", extra_env=package_env)
+    assert first.returncode == 0, output_of(first)
+    local_wic = local_build / "deploy" / "images" / "nexios-image-apollo-fvp.wic"
+    first_wic = local_wic.read_bytes()
+    assert "mcopy" in wic_log.read_text(encoding="utf-8")
+    wic_log.unlink()
+
+    # When: packaging runs again with the same WIC and UKI inputs.
+    second = run_local_build("--package", extra_env=package_env)
+
+    # Then: it preserves the patched WIC and skips WIC mutation tools.
+    assert second.returncode == 0, output_of(second)
+    assert local_wic.read_bytes() == first_wic
+    assert not wic_log.exists()
 
 
 def test_package_rejects_wic_side_artifact_source_symlink_escape(
