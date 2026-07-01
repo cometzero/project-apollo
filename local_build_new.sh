@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_qbox.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
@@ -48,7 +50,7 @@ contains_word()
 usage()
 {
     cat <<EOF
-Usage: ./local_build.sh [OPTIONS] [COMPONENT ...] [ACTION]
+Usage: ./local_build_new.sh [OPTIONS] [COMPONENT ...] [ACTION]
 
 Build and package the Apollo FVP local component set.
 
@@ -71,14 +73,14 @@ Options:
   -h, --help          show this help
 
 Examples:
-  ./local_build.sh
-  ./local_build.sh qbox
-  ./local_build.sh qbox --qbox-systemc-tests
-  ./local_build.sh --qbox-systemc-tests
-  ./local_build.sh linux clean-build --no-package
-  ./local_build.sh linux menuconfig --no-package
-  ./local_build.sh --package
-  ./local_build.sh --dry-run
+  ./local_build_new.sh
+  ./local_build_new.sh qbox
+  ./local_build_new.sh qbox --qbox-systemc-tests
+  ./local_build_new.sh --qbox-systemc-tests
+  ./local_build_new.sh linux clean-build --no-package
+  ./local_build_new.sh linux menuconfig --no-package
+  ./local_build_new.sh --package
+  ./local_build_new.sh --dry-run
 EOF
 }
 
@@ -86,7 +88,7 @@ add_component()
 {
     local component="$1"
     contains_word "${component}" "${COMPONENTS[@]}" ||
-        die "unsupported component for ./local_build.sh: ${component}"
+        die "unsupported component for ./local_build_new.sh: ${component}"
     SELECTED_COMPONENTS+=("${component}")
     COMPONENT_SET=1
 }
@@ -95,7 +97,7 @@ set_action()
 {
     local action="$1"
     contains_word "${action}" "${ACTIONS[@]}" ||
-        die "unsupported action for ./local_build.sh: ${action}"
+        die "unsupported action for ./local_build_new.sh: ${action}"
     ACTION="${action}"
     ACTION_SET=1
 }
@@ -162,9 +164,9 @@ parse_args()
                     [[ "${ACTION_SET}" == 0 ]] || die "multiple actions requested"
                     set_action "$1"
                 elif [[ "${COMPONENT_SET}" == 1 ]]; then
-                    die "unsupported action for ./local_build.sh: $1"
+                    die "unsupported action for ./local_build_new.sh: $1"
                 else
-                    die "unsupported component for ./local_build.sh: $1"
+                    die "unsupported component for ./local_build_new.sh: $1"
                 fi
                 shift
                 ;;
@@ -340,7 +342,7 @@ print_component_dry_run()
 dry_run()
 {
     cat <<EOF
-DRY-RUN: ./local_build.sh
+DRY-RUN: ./local_build_new.sh
 jobs: ${JOBS_ARG}
 pc cpus: ${PC_CPUS_COUNT}
 tfa linux dts: ${TFA_LINUX_DTS}
@@ -372,7 +374,7 @@ ensure_yocto_sdk_installed()
     shopt -u nullglob
 
     if ((${#env_files[@]} == 0)); then
-        log "WARNING: Yocto SDK not found under ${SDK_DIR}; local_build.sh will populate and install it automatically."
+        log "WARNING: Yocto SDK not found under ${SDK_DIR}; local_build_new.sh will populate and install it automatically."
         log "WARNING: Running bitbake nexios-image -c populate_sdk can take a long time."
         build_sdk
     else
