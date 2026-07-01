@@ -114,3 +114,11 @@
 	path = hsoc-stack/yocto/meta-hsoc-bsp
 	url = git@github.com:cometzero/meta-hsoc-bsp.git
 	branch = main
+[submodule "hsoc-stack/tools/qbox"]
+	path = hsoc-stack/tools/qbox
+	url = git@github.com:cometzero/qbox.git
+	branch = feature/qbox-rebase
+[submodule "hsoc-stack/tools/qbox-platform"]
+	path = hsoc-stack/tools/qbox-platform
+	url = git@github.com:cometzero/qbox-platform.git
+	branch = feature/qbox-rebase
