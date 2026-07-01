@@ -10,12 +10,12 @@ from typing import Any
 
 
 FORBIDDEN_QBOX_PATHS = [
-    "tools/qbox/platforms/apollo",
-    "tools/qbox/qemu-components/cc3xx_native",
-    "tools/qbox/qemu-components/common/include/cc3xx_core.h",
-    "tools/qbox/qemu-components/common/include/rse_lms_accel.h",
-    "tools/qbox/qemu-components/common/include/rse_mcuboot_image.h",
-    "tools/qbox/qemu-components/common/include/rse_p256_ecdsa.h",
+    "hsoc-stack/tools/qbox/platforms/apollo",
+    "hsoc-stack/tools/qbox/qemu-components/cc3xx_native",
+    "hsoc-stack/tools/qbox/qemu-components/common/include/cc3xx_core.h",
+    "hsoc-stack/tools/qbox/qemu-components/common/include/rse_lms_accel.h",
+    "hsoc-stack/tools/qbox/qemu-components/common/include/rse_mcuboot_image.h",
+    "hsoc-stack/tools/qbox/qemu-components/common/include/rse_p256_ecdsa.h",
 ]
 
 OVERLAY_ONLY_SYSTEMC_COMPONENTS = [
@@ -70,9 +70,9 @@ OVERLAY_ONLY_TEST_COMPONENTS = [
 ]
 
 ACTIVE_TEXT_PATTERNS = [
-    re.compile(r"tools/qbox/platforms/apollo"),
+    re.compile(r"hsoc-stack/tools/qbox/platforms/apollo"),
     re.compile(r"qbox\s*/\s*[\"']platforms/apollo[\"']"),
-    re.compile(r"tools/qbox/(?:systemc-components/cc3xx|qemu-components/cc3xx_native)"),
+    re.compile(r"hsoc-stack/tools/qbox/(?:systemc-components/cc3xx|qemu-components/cc3xx_native)"),
     re.compile(r"systemc-components/cc3xx/include"),
 ]
 
@@ -99,11 +99,11 @@ def collect_path_violations(root: Path) -> list[dict[str, str]]:
     violations: list[dict[str, str]] = []
     candidates = list(FORBIDDEN_QBOX_PATHS)
     candidates.extend(
-        f"tools/qbox/systemc-components/{component}"
+        f"hsoc-stack/tools/qbox/systemc-components/{component}"
         for component in OVERLAY_ONLY_SYSTEMC_COMPONENTS
     )
     candidates.extend(
-        f"tools/qbox/tests/components/{component}"
+        f"hsoc-stack/tools/qbox/tests/components/{component}"
         for component in OVERLAY_ONLY_TEST_COMPONENTS
     )
     for rel_path in candidates:
@@ -153,7 +153,7 @@ def collect_text_violations(root: Path) -> list[dict[str, Any]]:
 
 
 def iter_qbox_core_text_files(root: Path) -> list[Path]:
-    qbox = root / "tools/qbox"
+    qbox = root / "hsoc-stack/tools/qbox"
     if not qbox.is_dir():
         return []
     suffixes = {".c", ".cc", ".cpp", ".h", ".hpp", ".lua", ".py", ".sh", ".md", ".txt", ".cmake"}
