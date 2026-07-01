@@ -20,6 +20,7 @@ ACTIONS=(build clean clean-build defconfig menuconfig savedefconfig)
 KCONFIG_COMPONENTS=(u-boot linux zephyr)
 
 DRY_RUN=0
+CCACHE_REPORT_ONLY=0
 PACKAGE_MODE=auto
 ACTION=build
 JOBS_ARG="${JOBS}"
@@ -65,6 +66,8 @@ Options:
   --no-package        skip the default package step
   --jobs N            parallel build jobs (default: ${JOBS})
   --dry-run           print resolved actions without changing files
+  --ccache-report     print ccache status for every component and exit
+  APOLLO_LOCAL_BUILD_CCACHE=0 disables ccache; default is auto-detect
   -h, --help          show this help
 
 Examples:
@@ -141,6 +144,10 @@ parse_args()
                 DRY_RUN=1
                 shift
                 ;;
+            --ccache-report)
+                CCACHE_REPORT_ONLY=1
+                shift
+                ;;
             -h|--help|help)
                 usage
                 exit 0
@@ -203,6 +210,54 @@ component_work_dir()
         linux) printf '%s\n' "${LINUX_BUILD_DIR}" ;;
         *) return 1 ;;
     esac
+}
+
+component_ccache_method()
+{
+    case "$1" in
+        qbox) printf 'CMake C/CXX compiler launcher\n' ;;
+        tf-m) printf 'CMake C/CXX compiler launcher\n' ;;
+        scp-firmware) printf 'CMake C/CXX compiler launcher\n' ;;
+        zephyr) printf 'CMake C/CXX compiler launcher\n' ;;
+        optee) printf 'OP-TEE CCcore/CCldelf/CCta_arm64 overrides\n' ;;
+        u-boot) printf 'Kbuild CC and HOSTCC overrides\n' ;;
+        tf-a) printf 'TF-A CC and HOSTCC overrides\n' ;;
+        linux) printf 'Kbuild CC and HOSTCC overrides\n' ;;
+        *) return 1 ;;
+    esac
+}
+
+print_ccache_report()
+{
+    local ccache_bin=""
+    local status="disabled"
+    local detail
+    local component
+
+    if local_build_ccache_disabled; then
+        detail="APOLLO_LOCAL_BUILD_CCACHE=${APOLLO_LOCAL_BUILD_CCACHE:-auto}"
+    elif local_build_ccache_resolve ccache_bin; then
+        status="enabled"
+        detail="${ccache_bin}"
+    else
+        detail="ccache not found; build continues without compiler cache"
+    fi
+
+    printf 'ccache\n'
+    printf '  mode %s\n' "${APOLLO_LOCAL_BUILD_CCACHE:-auto}"
+    printf '  status %s\n' "${status}"
+    printf '  detail %s\n' "${detail}"
+    printf 'ccache component usage\n'
+    for component in "${COMPONENTS[@]}"; do
+        if [[ "${status}" == enabled ]]; then
+            printf '  %-13s yes  %s\n' "${component}" "$(component_ccache_method "${component}")"
+        else
+            printf '  %-13s no   %s\n' "${component}" "${detail}"
+        fi
+    done
+    if [[ -n "${CCACHE_DIR:-}" ]]; then
+        printf '  %-13s %s\n' "cache-dir" "${CCACHE_DIR}"
+    fi
 }
 
 print_component_dry_run()
@@ -422,13 +477,19 @@ run_kconfig()
     case "${component}" in
         u-boot)
             mkdir -p "${UBOOT_BUILD_DIR}"
+            local uboot_ccache_args=()
+            local_build_kbuild_ccache_args uboot_ccache_args "${AARCH64_PREFIX}"
             make -C "${UBOOT_SRC}" O="${UBOOT_BUILD_DIR}" ARCH=arm \
-                CROSS_COMPILE="${AARCH64_PREFIX}" "${action}"
+                CROSS_COMPILE="${AARCH64_PREFIX}" "${uboot_ccache_args[@]}" \
+                "${action}"
             ;;
         linux)
             mkdir -p "${LINUX_BUILD_DIR}"
+            local linux_ccache_args=()
+            local_build_kbuild_ccache_args linux_ccache_args "${AARCH64_PREFIX}"
             make -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" ARCH=arm64 \
-                CROSS_COMPILE="${AARCH64_PREFIX}" "${action}"
+                CROSS_COMPILE="${AARCH64_PREFIX}" "${linux_ccache_args[@]}" \
+                "${action}"
             ;;
         zephyr)
             cmake --build "${ZEPHYR_BUILD_DIR}" --target "${action}"
@@ -531,14 +592,21 @@ if [[ "${ACTION}" == build && "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}" == 0 &&
     die "TFM_PLATFORM ${TFM_PLATFORM} is unresolved; refresh trusted-firmware-m Yocto variables."
 fi
 
+if ((CCACHE_REPORT_ONLY)); then
+    print_ccache_report
+    exit 0
+fi
+
 if ((DRY_RUN)); then
     dry_run
     exit 0
 fi
 
 if needs_initial_sdk_check; then
-    ensure_yocto_sdk_installed
+    run_step "sdk-check" ensure_yocto_sdk_installed
 fi
+
+print_ccache_report
 
 for component in "${SELECTED_COMPONENTS[@]}"; do
     run_step "${component}-${ACTION}" run_component "${component}" "${ACTION}"
@@ -547,3 +615,5 @@ done
 if [[ "${PACKAGE_MODE}" == enabled ]]; then
     run_step "package" package_local_fvp_outputs
 fi
+
+print_local_build_timing_summary

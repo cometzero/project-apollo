@@ -14,11 +14,14 @@ build_scp()
     reset_cmake_build_if_source_changed "${SCP_BUILD_DIR}" "${SCP_SRC}"
     local toolchain="${SCP_SRC}/product/automotive-rd/apollo-fvp/si0_ramfw/Toolchain-GNU.cmake"
     require_file "${toolchain}"
+    local cmake_ccache_args=()
+    local_build_cmake_ccache_args cmake_ccache_args
 
     run_cmake_configure_if_needed scp-configure "${SCP_BUILD_DIR}" cmake \
         -S "${SCP_SRC}" \
         -B "${SCP_BUILD_DIR}" \
         -G Ninja \
+        "${cmake_ccache_args[@]}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_TOOLCHAIN_FILE="${toolchain}" \
         -DCMAKE_C_COMPILER="$(command -v "${AARCH64_NONE_ELF_PREFIX}gcc")" \

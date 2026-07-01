@@ -44,8 +44,11 @@ build_optee()
 
     local sp_paths
     sp_paths="$(detect_optee_sp_paths "${optee_work}" || true)"
+    local optee_ccache_args=()
+    local_build_optee_ccache_args optee_ccache_args
     local cmd=(
         make -C "${OPTEE_SRC}" -j "${JOBS}" V=1
+        "${optee_ccache_args[@]}"
         PYTHON3="${optee_native_python}"
         LIBGCC_LOCATE_CFLAGS="--sysroot=${optee_sysroot}"
         CFLAGS64="--sysroot=${optee_sysroot}"

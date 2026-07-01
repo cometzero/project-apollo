@@ -291,6 +291,7 @@ build_zephyr()
     local had_zephyr_base=0
     [[ -v ZEPHYR_BASE ]] && had_zephyr_base=1
     local saved_zephyr_base="${ZEPHYR_BASE:-}"
+    local cmake_ccache_args=()
 
     require_file "${zephyr_dir}/ZephyrConfig.cmake"
     zephyr_sdk="$(find_zephyr_sdk_dir)"
@@ -322,12 +323,14 @@ build_zephyr()
         export PYTHONPATH
     fi
     require_command "${AARCH64_ZEPHYR_ELF_PREFIX}gcc"
+    local_build_cmake_ccache_args cmake_ccache_args
 
     local zephyr_configure_cmd=(
         cmake
         -S "${ZEPHYR_SAFETY_ISLAND_SRC}/apps/sample" \
         -B "${ZEPHYR_BUILD_DIR}" \
         -G Ninja \
+        "${cmake_ccache_args[@]}" \
         -DCMAKE_MAKE_PROGRAM=ninja \
         -DPYTHON_EXECUTABLE:PATH="${python}" \
         -DPython_EXECUTABLE:PATH="${python}" \

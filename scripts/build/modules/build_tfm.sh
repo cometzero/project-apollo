@@ -148,6 +148,7 @@ tfm_build_manifest()
     printf 'TFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp\n'
     printf 'TFM_PLATFORM_VARIANT=fvp\n'
     printf 'TFM_RTL_VARIANT=emu\n'
+    local_build_ccache_manifest
     git_tree_manifest "${TFM_SRC}" tfm-src
     for dep in tfm-extras qcbor mbedtls t_cose mcuboot cmsis tf-m-tests; do
         git_tree_manifest "${tfm_deps}/${dep}" "tfm-dep-${dep}"
@@ -195,6 +196,7 @@ build_tfm()
     local arm_none_eabi_gxx
     local arm_none_eabi_objcopy
     local tfm_cross_compile
+    local cmake_ccache_args=()
 
     apply_git_patch_dirs_cached tfm-extras "${tfm_deps}/tfm-extras" \
         "${ROOT_DIR}/arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/trusted-firmware-m/files/tf-m-extras/fvp-rd-aspen" \
@@ -237,11 +239,13 @@ build_tfm()
     arm_none_eabi_gxx="$(command -v "${ARM_NONE_EABI_PREFIX}g++")"
     arm_none_eabi_objcopy="$(command -v "${ARM_NONE_EABI_PREFIX}objcopy")"
     tfm_cross_compile="${arm_none_eabi_gcc%-gcc}"
+    local_build_cmake_ccache_args cmake_ccache_args
 
     run_cmake_configure_if_needed tfm-configure "${TFM_BUILD_DIR}" "${cmake_bin}" \
         -S "${TFM_SRC}" \
         -B "${TFM_BUILD_DIR}" \
         -G Ninja \
+        "${cmake_ccache_args[@]}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_C_COMPILER="${arm_none_eabi_gcc}" \
         -DCMAKE_CXX_COMPILER="${arm_none_eabi_gxx}" \

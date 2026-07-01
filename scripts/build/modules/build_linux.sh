@@ -27,6 +27,8 @@ build_linux()
     require_file "${config}"
     local use_config_file=0
     [[ -n "${LINUX_CONFIG:-}" ]] && use_config_file=1
+    local kbuild_ccache_args=()
+    local_build_kbuild_ccache_args kbuild_ccache_args "${AARCH64_PREFIX}"
 
     local modsign_key
     modsign_key="$(find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
@@ -58,6 +60,7 @@ build_linux()
         else
             run_logged linux-defconfig make -C "${LINUX_SRC}" \
                 O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+                "${kbuild_ccache_args[@]}" \
                 "${LINUX_DEFCONFIG}"
         fi
 
@@ -76,7 +79,8 @@ build_linux()
             --enable DM_VERITY \
             --enable CRYPTO_SHA256
         make -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" ARCH=arm64 \
-            CROSS_COMPILE="${AARCH64_PREFIX}" LOCALVERSION= olddefconfig
+            CROSS_COMPILE="${AARCH64_PREFIX}" "${kbuild_ccache_args[@]}" \
+            LOCALVERSION= olddefconfig
 
         if [[ -n "${modsign_key}" ]]; then
             copy_file_if_changed "${modsign_key}" "${LINUX_BUILD_DIR}/modsign_key.pem" 0600
@@ -93,6 +97,7 @@ build_linux()
 
         run_logged linux-olddefconfig make -C "${LINUX_SRC}" \
             O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+            "${kbuild_ccache_args[@]}" \
             olddefconfig
         printf '%s\n' "${config_digest}" > "${config_marker}"
     fi
@@ -102,6 +107,7 @@ build_linux()
         KBUILD_BUILD_VERSION="${APOLLO_KBUILD_BUILD_VERSION:-1}" \
         make -C "${LINUX_SRC}" \
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        "${kbuild_ccache_args[@]}" \
         Image dtbs modules -j "${JOBS}"
 
     local image="${LINUX_BUILD_DIR}/arch/arm64/boot/Image"

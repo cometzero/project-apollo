@@ -80,6 +80,7 @@ def test_help_documents_local_fvp_contract() -> None:
     assert "--package" in output
     assert "--no-package" in output
     assert "--qbox-systemc-tests" in output
+    assert "--ccache-report" in output
     for component in COMPONENTS:
         assert component in output
     for action in ("build", "clean", "clean-build", *KCONFIG_ACTIONS):
@@ -130,6 +131,81 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     ]
     assert "package" in output
     assert "buildroot" not in output.lower()
+
+
+def test_ccache_report_covers_every_component_when_available(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "tools"
+    write_file(
+        tools_dir / "ccache",
+        "#!/usr/bin/env bash\n"
+        "printf 'ccache fixture\\n'\n",
+    )
+    (tools_dir / "ccache").chmod(0o755)
+
+    result = run_local_build(
+        "--ccache-report",
+        extra_env={"PATH": f"{tools_dir}:/usr/bin:/bin"},
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "status enabled" in output
+    assert f"detail {tools_dir / 'ccache'}" in output
+    lines = output.splitlines()
+    for component in COMPONENTS:
+        assert any(
+            line.split()[:2] == [component, "yes"] for line in lines
+        ), component
+    assert "CMake C/CXX compiler launcher" in output
+    assert "Kbuild CC and HOSTCC overrides" in output
+    assert "TF-A CC and HOSTCC overrides" in output
+
+
+def test_ccache_report_can_be_disabled(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "tools"
+    write_file(
+        tools_dir / "ccache",
+        "#!/usr/bin/env bash\n"
+        "printf 'ccache fixture\\n'\n",
+    )
+    (tools_dir / "ccache").chmod(0o755)
+
+    result = run_local_build(
+        "--ccache-report",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_CCACHE": "0",
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "status disabled" in output
+    lines = output.splitlines()
+    for component in COMPONENTS:
+        assert any(
+            line.split()[:2] == [component, "no"] for line in lines
+        ), component
+
+
+def test_ccache_required_fails_when_missing(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir(parents=True)
+    for command in ("bash", "dirname"):
+        (tools_dir / command).symlink_to(Path("/bin") / command)
+
+    result = run_local_build(
+        "--ccache-report",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_CCACHE": "required",
+            "PATH": str(tools_dir),
+        },
+    )
+
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "ccache was not found" in output
+    assert "APOLLO_LOCAL_BUILD_CCACHE=required" in output
 
 
 def test_dry_run_builtin_defaults_use_16_pc_cpus() -> None:
@@ -635,8 +711,14 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
         "set -euo pipefail\n"
         "printf 'ctest %s\\n' \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n",
     )
+    write_file(
+        tools_dir / "ccache",
+        "#!/usr/bin/env bash\n"
+        "exec \"$@\"\n",
+    )
     (tools_dir / "cmake").chmod(0o755)
     (tools_dir / "ctest").chmod(0o755)
+    (tools_dir / "ccache").chmod(0o755)
 
     result = run_local_build(
         "qbox",
@@ -655,10 +737,19 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
 
     assert result.returncode == 0, output_of(result)
     calls = call_log.read_text(encoding="utf-8")
+    assert f"-DCMAKE_C_COMPILER_LAUNCHER={tools_dir / 'ccache'}" in calls
+    assert f"-DCMAKE_CXX_COMPILER_LAUNCHER={tools_dir / 'ccache'}" in calls
     assert "--target apollo_fvp_full_system" in calls
     assert "--test-dir" in calls
     assert "-L qbox-platform-systemc-components" in calls
     assert calls.index("--target apollo_fvp_full_system") < calls.index("ctest ")
+    timing = (local_build / "logs" / "local-build-timings.tsv").read_text(
+        encoding="utf-8"
+    )
+    assert "kind\tname\tstatus\tseconds\telapsed\tlog" in timing
+    rows = [line.split("\t") for line in timing.splitlines()[1:]]
+    assert ["command", "qbox-build", "0"] in [row[:3] for row in rows]
+    assert ["step", "qbox-build", "0"] in [row[:3] for row in rows]
 
 
 def test_linux_clean_dry_run_shows_only_linux_owned_outputs() -> None:

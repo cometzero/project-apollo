@@ -17,10 +17,14 @@ build_qbox()
 
     reset_cmake_build_if_source_changed "${QBOX_PLATFORM_BUILD_DIR}" "${QBOX_PLATFORM_DIR}"
 
+    local cmake_ccache_args=()
+    local_build_cmake_ccache_args cmake_ccache_args
+
     run_cmake_configure_if_needed qbox-configure "${QBOX_PLATFORM_BUILD_DIR}" \
         cmake \
         -S "${QBOX_PLATFORM_DIR}" \
         -B "${QBOX_PLATFORM_BUILD_DIR}" \
+        "${cmake_ccache_args[@]}" \
         -DCMAKE_BUILD_TYPE="${QBOX_CMAKE_BUILD_TYPE:-Release}" \
         -DCMAKE_INSTALL_PREFIX="${QBOX_PLATFORM_BUILD_DIR}/install" \
         -DQBOX_CORE_SOURCE_DIR="${QBOX_CORE_DIR}" \

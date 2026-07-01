@@ -29,6 +29,8 @@ build_uboot()
 
     local crt_rel
     crt_rel="$(realpath --relative-to="${UBOOT_SRC}" "${UBOOT_BUILD_DIR}/CRT.crt")"
+    local kbuild_ccache_args=()
+    local_build_kbuild_ccache_args kbuild_ccache_args "${AARCH64_PREFIX}"
     local config_marker="${UBOOT_BUILD_DIR}/.apollo-config.sha256"
     local config_digest
     config_digest="$(
@@ -50,11 +52,13 @@ build_uboot()
     else
         run_logged u-boot-defconfig make -C "${UBOOT_SRC}" \
             O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
+            "${kbuild_ccache_args[@]}" \
             RD_ASPEN_VARIANT="${VARIANT}" apollo_fvp_defconfig
         "${UBOOT_SRC}/scripts/config" --file "${UBOOT_BUILD_DIR}/.config" \
             --set-str EFI_CAPSULE_CRT_FILE "${crt_rel}"
         run_logged u-boot-olddefconfig make -C "${UBOOT_SRC}" \
             O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
+            "${kbuild_ccache_args[@]}" \
             RD_ASPEN_VARIANT="${VARIANT}" olddefconfig
         printf '%s\n' "${config_digest}" > "${config_marker}"
     fi
@@ -63,6 +67,7 @@ build_uboot()
         SOURCE_DATE_EPOCH="${APOLLO_SOURCE_DATE_EPOCH:-${SOURCE_DATE_EPOCH:-0}}" \
         make -C "${UBOOT_SRC}" \
         O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
+        "${kbuild_ccache_args[@]}" \
         RD_ASPEN_VARIANT="${VARIANT}" -j "${JOBS}"
 
     install_artifact "${UBOOT_BUILD_DIR}/u-boot.bin" "${DEPLOY_DIR}/u-boot/u-boot.bin"

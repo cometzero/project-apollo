@@ -34,6 +34,7 @@ build_tfa()
             printf 'PFDI_SUPPORT=%s\n' "${PFDI_SUPPORT}"
             printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
             printf 'VARIANT=%s\n' "${VARIANT}"
+            local_build_ccache_manifest
             git -C "${TFA_SRC}" rev-parse HEAD 2>/dev/null || true
             git -C "${TFA_SRC}" status --porcelain=v1 --untracked-files=no 2>/dev/null || true
             fingerprint_file_hash "${DEPLOY_DIR}/u-boot/u-boot.bin" tfa-bl33
@@ -67,13 +68,15 @@ build_tfa()
     local had_pythonpath=0
     [[ -v PYTHONPATH ]] && had_pythonpath=1
     local saved_pythonpath="${PYTHONPATH:-}"
+    local tfa_ccache_args=()
+    local_build_tfa_ccache_args tfa_ccache_args
     path_prepend "${tfa_work}/recipe-sysroot-native/usr/bin"
     PYTHONPATH="${tfa_work}/recipe-sysroot-native/usr/lib/python3.13/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
     export PYTHONPATH
 
     run_logged tfa-build make -C "${TFA_SRC}" -j1 \
         LD="${AARCH64_PREFIX}ld" \
-        CC="${AARCH64_PREFIX}gcc" \
+        "${tfa_ccache_args[@]}" \
         BUILD_BASE="${TFA_BUILD_DIR}" \
         PLAT=apollo_fvp \
         SPD=spmd \
@@ -82,7 +85,6 @@ build_tfa()
         MBEDTLS_DIR=mbedtls \
         BL33="${DEPLOY_DIR}/u-boot/u-boot.bin" \
         BL32="${DEPLOY_DIR}/optee/tee-pager_v2.bin" \
-        HOSTCC=gcc \
         host-poetry= \
         PLATFORM_CORE_COUNT="${PC_CPUS_COUNT}" \
         LINUX_DTS="${TFA_LINUX_DTS}" \

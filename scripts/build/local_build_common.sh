@@ -240,6 +240,193 @@ format_elapsed()
         $((elapsed % 60))
 }
 
+local_build_ccache_disabled()
+{
+    case "${APOLLO_LOCAL_BUILD_CCACHE:-auto}" in
+        0|false|FALSE|no|NO|off|OFF|disable|disabled|DISABLED)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+local_build_ccache_required()
+{
+    case "${APOLLO_LOCAL_BUILD_CCACHE:-auto}" in
+        1|true|TRUE|yes|YES|on|ON|enable|enabled|ENABLED|required|REQUIRED)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+local_build_ccache_bin()
+{
+    local resolved
+
+    local_build_ccache_resolve resolved || return 1
+    printf '%s\n' "${resolved}"
+}
+
+local_build_ccache_resolve()
+{
+    local -n out="$1"
+    local tool="${APOLLO_LOCAL_BUILD_CCACHE_BIN:-ccache}"
+    local resolved
+
+    out=""
+    local_build_ccache_disabled && return 1
+    if resolved="$(command -v "${tool}" 2>/dev/null)"; then
+        out="${resolved}"
+        return 0
+    fi
+    if local_build_ccache_required; then
+        die "APOLLO_LOCAL_BUILD_CCACHE=${APOLLO_LOCAL_BUILD_CCACHE} but ccache was not found: ${tool}"
+    fi
+    return 1
+}
+
+local_build_ccache_manifest()
+{
+    local tool="${APOLLO_LOCAL_BUILD_CCACHE_BIN:-ccache}"
+    local resolved
+
+    printf 'APOLLO_LOCAL_BUILD_CCACHE=%s\n' "${APOLLO_LOCAL_BUILD_CCACHE:-auto}"
+    printf 'APOLLO_LOCAL_BUILD_CCACHE_BIN=%s\n' "${tool}"
+    if local_build_ccache_disabled; then
+        printf 'CCACHE_STATUS=disabled\n'
+    elif resolved="$(command -v "${tool}" 2>/dev/null)"; then
+        printf 'CCACHE_STATUS=enabled\n'
+        printf 'CCACHE_RESOLVED=%s\n' "${resolved}"
+    else
+        if local_build_ccache_required; then
+            die "APOLLO_LOCAL_BUILD_CCACHE=${APOLLO_LOCAL_BUILD_CCACHE} but ccache was not found: ${tool}"
+        fi
+        printf 'CCACHE_STATUS=missing\n'
+    fi
+}
+
+local_build_ccache_wrap()
+{
+    local compiler="$1"
+    local ccache_bin
+
+    if local_build_ccache_resolve ccache_bin; then
+        printf '%s %s\n' "${ccache_bin}" "${compiler}"
+    else
+        printf '%s\n' "${compiler}"
+    fi
+}
+
+local_build_cmake_ccache_args()
+{
+    local -n out="$1"
+    local ccache_bin
+
+    out=()
+    local_build_ccache_resolve ccache_bin || return 0
+    out+=(
+        "-DCMAKE_C_COMPILER_LAUNCHER=${ccache_bin}"
+        "-DCMAKE_CXX_COMPILER_LAUNCHER=${ccache_bin}"
+    )
+}
+
+local_build_kbuild_ccache_args()
+{
+    local -n out="$1"
+    local cross_prefix="$2"
+    local ccache_bin
+
+    out=()
+    local_build_ccache_resolve ccache_bin || return 0
+    out+=(
+        "CC=${ccache_bin} ${cross_prefix}gcc"
+        "HOSTCC=${ccache_bin} gcc"
+    )
+}
+
+local_build_tfa_ccache_args()
+{
+    local -n out="$1"
+
+    out=()
+    out+=(
+        "CC=$(local_build_ccache_wrap "${AARCH64_PREFIX}gcc")"
+        "HOSTCC=$(local_build_ccache_wrap gcc)"
+    )
+}
+
+local_build_optee_ccache_args()
+{
+    local -n out="$1"
+    local ccache_bin
+
+    out=()
+    local_build_ccache_resolve ccache_bin || return 0
+    out+=(
+        "CCcore=${ccache_bin} ${AARCH64_PREFIX}gcc"
+        "CCldelf=${ccache_bin} ${AARCH64_PREFIX}gcc"
+        "CCta_arm64=${ccache_bin} ${AARCH64_PREFIX}gcc"
+    )
+}
+
+local_build_timing_report()
+{
+    printf '%s\n' "${LOCAL_BUILD_TIMING_REPORT:-${LOG_DIR}/local-build-timings.tsv}"
+}
+
+local_build_timing_init()
+{
+    local report
+
+    report="$(local_build_timing_report)"
+    mkdir -p "$(dirname "${report}")"
+    if [[ "${LOCAL_BUILD_TIMING_INITIALIZED:-0}" != 1 ]]; then
+        printf 'kind\tname\tstatus\tseconds\telapsed\tlog\n' > "${report}"
+        LOCAL_BUILD_TIMING_INITIALIZED=1
+    fi
+}
+
+local_build_record_timing()
+{
+    local kind="$1"
+    local name="$2"
+    local status="$3"
+    local seconds="$4"
+    local log_path="${5:-}"
+    local report
+
+    local_build_timing_init
+    report="$(local_build_timing_report)"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "${kind}" "${name}" "${status}" "${seconds}" \
+        "$(format_elapsed "${seconds}")" "${log_path}" >> "${report}"
+}
+
+print_local_build_timing_summary()
+{
+    local report
+
+    report="$(local_build_timing_report)"
+    [[ -f "${report}" ]] || return 0
+
+    log "Timing report: ${report}"
+    awk -F '\t' '
+        NR == 1 { next }
+        {
+            printf "  %-8s %-36s %s exit=%s", $1, $2, $5, $3
+            if ($6 != "") {
+                printf " log=%s", $6
+            }
+            printf "\n"
+        }
+    ' "${report}"
+}
+
 die()
 {
     printf 'error: %s\n' "$*" >&2
@@ -295,7 +482,14 @@ run_logged()
     status="${PIPESTATUS[0]}"
     set -e
     end="$(timer_now)"
-    log "Completed ${name} in $(format_elapsed "$((end - start))")"
+    local elapsed="$((end - start))"
+    if [[ "${status}" == 0 ]]; then
+        log "Completed ${name} in $(format_elapsed "${elapsed}")"
+    else
+        log "Failed ${name} after $(format_elapsed "${elapsed}") (exit ${status})"
+    fi
+    local_build_record_timing command "${name}" "${status}" "${elapsed}" \
+        "${LOG_DIR}/${name}.log"
     return "${status}"
 }
 
@@ -305,11 +499,22 @@ run_step()
     shift
     local start
     local end
+    local status
     start="$(timer_now)"
     log "Starting ${name}"
+    set +e
     "$@"
+    status="$?"
+    set -e
     end="$(timer_now)"
-    log "Completed ${name} in $(format_elapsed "$((end - start))")"
+    local elapsed="$((end - start))"
+    if [[ "${status}" == 0 ]]; then
+        log "Completed ${name} in $(format_elapsed "${elapsed}")"
+    else
+        log "Failed ${name} after $(format_elapsed "${elapsed}") (exit ${status})"
+    fi
+    local_build_record_timing step "${name}" "${status}" "${elapsed}"
+    return "${status}"
 }
 
 write_file_if_changed()
