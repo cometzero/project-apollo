@@ -65,7 +65,7 @@
 [submodule "tools/qbox"]
 	path = tools/qbox
 	url = git@github.com:cometzero/qbox.git
-	branch = feature/qbox-dev
+	branch = feature/qbox-rebase
 [submodule "tools/qemu"]
 	path = tools/qemu
 	url = git@github.com:cometzero/qemu.git
@@ -101,7 +101,7 @@
 [submodule "tools/qbox-platform"]
 	path = tools/qbox-platform
 	url = git@github.com:cometzero/qbox-platform.git
-	branch = feature/qbox-platform-dev
+	branch = feature/qbox-rebase
 [submodule "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src"]
 	path = hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src
 	url = git@github.com:cometzero/zephyr_hsoc_src.git
