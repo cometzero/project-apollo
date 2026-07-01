@@ -15,8 +15,8 @@ usage() {
 Usage: ./run_qbox_yocto.sh [options] [-- extra-qbox-runner-options]
 
 Run the apollo-fvp Yocto image on QBox using the Apollo full-system runner.
-The tmux panes use the same primary-console-focused split pattern as
-run_fvp.sh.
+The default tmux panes use the same primary-console-focused split pattern as
+run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-fvp)
@@ -36,6 +36,9 @@ Options:
   --copy-disks                Copy writable rootfs/EFI disks into --out-dir first
   --no-copy-disks             Use Yocto deploy disk images in place (default)
   --legacy-file-backed-sram   Disable RSE SRAM fast-boot DMI accelerator
+  --headless                  Run without tmux and write logs under --out-dir
+  --keep-running-after-pass   Keep QBox alive after the pass condition (default)
+  --exit-after-pass           Stop QBox after the pass condition
   --no-attach                 Start tmux session without attaching
   --dry-run                   Print the underlying QBox runner command
   --help                      Show this help
@@ -200,8 +203,10 @@ YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-}"
 IMAGE_BASENAME="${IMAGE_BASENAME:-nexios-image}"
 
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}}"
-QBOX_CONF="${QBOX_CONF:-${ROOT_DIR}/tools/qbox-platform/platforms/apollo/apollo-qvp.lua}"
+QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
@@ -210,6 +215,8 @@ JOBS="${JOBS:-$(nproc)}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
+HEADLESS="${HEADLESS:-0}"
+KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 NO_ATTACH="${NO_ATTACH:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 RSE_OTP_IMAGE_SIZE="${RSE_OTP_IMAGE_SIZE:-65536}"
@@ -319,6 +326,18 @@ while (($#)); do
             ;;
         --legacy-file-backed-sram)
             LEGACY_FILE_BACKED_SRAM=1
+            shift
+            ;;
+        --headless)
+            HEADLESS=1
+            shift
+            ;;
+        --keep-running-after-pass)
+            KEEP_RUNNING_AFTER_PASS=1
+            shift
+            ;;
+        --exit-after-pass)
+            KEEP_RUNNING_AFTER_PASS=0
             shift
             ;;
         --no-attach)
@@ -511,6 +530,7 @@ fi
 
 SSH_PORT_VALUE="${SSH_PORT:-$(default_ssh_port_range)}"
 NETDEV="type=user,hostfwd=tcp::${SSH_PORT_VALUE}-:22"
+export QBOX_APOLLO_NETDEV="${NETDEV}"
 
 RSE_FAST_BOOT_MODE="--rse-fast-boot-sram-dmi"
 if [[ "${LEGACY_FILE_BACKED_SRAM}" != "0" ]]; then
@@ -529,35 +549,61 @@ QBOX_ACCEL_ARGS=(
     --rse-bl2-verify-sig-accel
 )
 
-RUNNER_CMD=(
-    "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
-    --session "${TMUX_SESSION}"
-    --out-dir "${OUT_DIR}"
-    --local-build-dir "${LOCAL_BUILD_DIR}"
-    --qbox-build-dir "${QBOX_BUILD_DIR}"
-    --conf "${QBOX_CONF}"
-    --si-mode "${SI_MODE}"
-    --timeout "${TIMEOUT}"
-    --jobs "${JOBS}"
-    --skip-build
-    --post-login-probe
-    --keep-running-after-pass
-    --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
-    --qbox-performance-preset
-    --cc3xx-qemu-native-backend
-    --netdev "${NETDEV}"
-    --tmux-layout fvp-like
-)
+if [[ "${HEADLESS}" == "1" ]]; then
+    RUNNER_CMD=(
+        "${PYTHON:-python3}"
+        "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
+        --conf "${QBOX_CONF}"
+        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --qbox-build-dir "${QBOX_BUILD_DIR}"
+        --si-mode "${SI_MODE}"
+        --out-dir "${OUT_DIR}"
+        --timeout "${TIMEOUT}"
+        --jobs "${JOBS}"
+        --skip-build
+        --post-login-probe
+        --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --range-limited-flash-dmi
+        --qbox-performance-preset
+        --cc3xx-qemu-native-backend
+    )
+else
+    RUNNER_CMD=(
+        "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
+        --session "${TMUX_SESSION}"
+        --out-dir "${OUT_DIR}"
+        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --qbox-build-dir "${QBOX_BUILD_DIR}"
+        --conf "${QBOX_CONF}"
+        --si-mode "${SI_MODE}"
+        --timeout "${TIMEOUT}"
+        --jobs "${JOBS}"
+        --skip-build
+        --post-login-probe
+        --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --qbox-performance-preset
+        --cc3xx-qemu-native-backend
+        --netdev "${NETDEV}"
+        --tmux-layout fvp-like
+    )
+fi
 
-if [[ "${NO_ATTACH}" == "1" ]]; then
+if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
+    RUNNER_CMD+=(--keep-running-after-pass)
+elif [[ "${HEADLESS}" == "0" ]]; then
+    RUNNER_CMD+=(--exit-after-pass)
+fi
+if [[ "${HEADLESS}" == "0" && "${NO_ATTACH}" == "1" ]]; then
     RUNNER_CMD+=(--no-attach)
 fi
-if [[ "${DRY_RUN}" == "1" ]]; then
+if [[ "${HEADLESS}" == "0" && "${DRY_RUN}" == "1" ]]; then
     RUNNER_CMD+=(--dry-run)
 fi
 RUNNER_CMD+=("${TMUX_RUNNER_ARGS[@]}")
+if [[ "${HEADLESS}" == "0" ]]; then
+    RUNNER_CMD+=(--)
+fi
 RUNNER_CMD+=(
-    --
     --rse-rom "${RSE_ROM}"
     --rse-flash "${RSE_FLASH}"
     --rse-otp "${RUN_RSE_OTP}"
@@ -584,6 +630,7 @@ Apollo QBox Yocto launch
   work dir:      ${YOCTO_WORK_DIR}
   output dir:    ${OUT_DIR}
   session:       ${TMUX_SESSION}
+  headless:      ${HEADLESS}
   qbox conf:     ${QBOX_CONF}
   ap cpus:       ${QBOX_APOLLO_NUM_CPUS}
   rootfs:        ${RUN_ROOTFS}
@@ -591,5 +638,12 @@ Apollo QBox Yocto launch
   rse otp:       ${RUN_RSE_OTP}
   ssh port:      ${SSH_PORT_VALUE}
 EOF
+
+if [[ "${HEADLESS}" == "1" && "${DRY_RUN}" == "1" ]]; then
+    printf 'Headless QBox runner command:\n  '
+    printf '%q ' "${RUNNER_CMD[@]}"
+    printf '\n'
+    exit 0
+fi
 
 exec "${RUNNER_CMD[@]}"
