@@ -3484,21 +3484,6 @@ def cleanup_sram_dmi_shared_memory(phase: str) -> dict[str, object]:
     return result
 
 
-def write_primary_uart(fd: int, text: str) -> None:
-    os.write(fd, text.encode("utf-8"))
-
-
-def open_post_login_probe_fifo(out_dir: Path) -> tuple[Path, int]:
-    fifo_path = out_dir / "primary-uart-input.fifo"
-    try:
-        fifo_path.unlink()
-    except FileNotFoundError:
-        pass
-    os.mkfifo(fifo_path)
-    fd = os.open(fifo_path, os.O_RDWR | os.O_NONBLOCK)
-    return fifo_path, fd
-
-
 def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
     return {
         "requested": bool(args.post_login_probe),
@@ -3513,51 +3498,6 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "login_attempts": 0,
         "last_login_time": 0.0,
     }
-
-
-def drive_post_login_probe(
-    args: argparse.Namespace,
-    logs: dict[str, str],
-    state: dict[str, object],
-    fifo_fd: int | None,
-) -> None:
-    if not args.post_login_probe or fifo_fd is None:
-        return
-    clean_primary = clean_text(logs.get("primary_console", ""))
-    actions = state.setdefault("actions", [])
-    assert isinstance(actions, list)
-    login_ready = any(
-        re.search(pattern, clean_primary, re.IGNORECASE | re.MULTILINE)
-        for pattern in LOGIN_READY_PATTERNS
-    )
-    login_attempts = int(state.get("login_attempts", 0))
-    last_login_time = float(state.get("last_login_time", 0.0))
-    retry_login = (
-        bool(state["sent_login"])
-        and not state["sent_probe"]
-        and login_ready
-        and login_attempts < 6
-        and time.monotonic() - last_login_time >= 5.0
-    )
-    if (not state["sent_login"] and login_ready) or retry_login:
-        prefix = "" if args.primary_login_prompt in clean_primary else "\n"
-        write_primary_uart(fifo_fd, prefix + args.login_user + "\n")
-        state["sent_login"] = True
-        state["login_attempts"] = login_attempts + 1
-        state["last_login_time"] = time.monotonic()
-        actions.append(f"sent_login_attempt_{login_attempts + 1}")
-    if (
-        state["sent_login"]
-        and not state["sent_probe"]
-        and re.search(args.primary_shell_prompt_re, clean_primary, re.MULTILINE)
-    ):
-        write_primary_uart(fifo_fd, "\n".join(post_login_probe_commands(args)) + "\n")
-        state["sent_probe"] = True
-        actions.append("sent_probe")
-    if PROBE_DONE_MARKER in clean_primary:
-        state["complete"] = True
-    if args.fwu_probe and fwu_probe_stage_complete(logs):
-        state["complete"] = True
 
 
 def run_platform(
@@ -3593,11 +3533,6 @@ def run_platform(
         ] + cmd
     env = qbox_env(root, args, artifacts)
     post_login_probe = make_probe_state(args)
-    primary_uart_fd: int | None = None
-    if args.post_login_probe:
-        fifo_path, primary_uart_fd = open_post_login_probe_fifo(out_dir)
-        env["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(fifo_path)
-        post_login_probe["input_path"] = str(fifo_path)
     timed_out = False
     interrupted = False
     logs = {role: "" for role in CONSOLE_LOGS}
@@ -3635,7 +3570,6 @@ def run_platform(
                     log.write(decoded)
                     platform_stdout += decoded
                 logs = read_console_logs(out_dir)
-                drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
                 live_logs = {**logs, "platform_stdout": platform_stdout}
                 update_progress_marker_first_hits(
                     live_logs,
@@ -3646,17 +3580,8 @@ def run_platform(
                     live_logs,
                     rse_sram_dmi_smoke=args.rse_sram_dmi_smoke,
                 )
-                probe_complete = bool(post_login_probe.get("complete"))
-                if (
-                    args.post_login_probe
-                    and probe_complete
-                    and not args.keep_running_after_pass
-                ):
-                    stop_process(proc)
-                    break
                 pass_condition_hit = (
                     status["passed"]
-                    and (not args.post_login_probe or probe_complete)
                     and not args.keep_running_after_pass
                 )
                 if pass_condition_hit:
@@ -3699,8 +3624,6 @@ def run_platform(
     finally:
         elapsed_s = time.monotonic() - start
         stop_process(proc)
-        if primary_uart_fd is not None:
-            os.close(primary_uart_fd)
         if args.rse_fast_boot_sram_dmi and not interrupted:
             shared_memory_cleanup.append(
                 cleanup_sram_dmi_shared_memory("after_run")
@@ -4463,20 +4386,12 @@ def build_parser() -> argparse.ArgumentParser:
             "still records the matched fail patterns."
         ),
     )
-    parser.add_argument(
-        "--post-login-probe",
-        action="store_true",
-        help=(
-            "After the primary Linux UART reaches the login prompt, feed root "
-            "and run driver/remoteproc/RPMsg probes through a FIFO-backed UART "
-            "input file. This avoids static prefeed being consumed by U-Boot."
-        ),
-    )
+    parser.set_defaults(post_login_probe=False)
     parser.add_argument(
         "--secure-service-probe",
         action="store_true",
         help=(
-            "Extend --post-login-probe with bounded Trusted Services userspace "
+            "Run bounded Trusted Services userspace "
             "checks for SE-Proxy, PSA Initial Attestation, ITS, PS, and UEFI "
             "variable paths. Results are recorded in result.json and do not "
             "change the boot pass criteria."
@@ -4512,7 +4427,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--fwu-probe",
         action="store_true",
         help=(
-            "Extend --post-login-probe with the Apollo capsule-on-disk FWU "
+            "Run the Apollo capsule-on-disk FWU "
             "setup sequence, reboot, and log-marker evaluation for bank-1 "
             "RSE/TF-A/U-Boot progress."
         ),
@@ -5163,12 +5078,11 @@ def parse_args() -> argparse.Namespace:
     if args.exception_trace:
         args.pc_trace = True
     if args.secure_service_probe or args.fwu_probe:
-        args.post_login_probe = True
+        parser.error("--secure-service-probe and --fwu-probe require removed post-login probe support")
     if args.rse_sram_dmi_smoke:
         conflicts = [
             name
             for name, enabled in (
-                ("--post-login-probe", args.post_login_probe),
                 ("--secure-service-probe", args.secure_service_probe),
                 ("--fwu-probe", args.fwu_probe),
             )

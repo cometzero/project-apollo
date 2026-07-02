@@ -36,7 +36,6 @@ CC3XX_QEMU_NATIVE_BACKEND="${CC3XX_QEMU_NATIVE_BACKEND:-0}"
 CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
 NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
-POST_LOGIN_PROBE="${POST_LOGIN_PROBE:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 NO_ATTACH=0
@@ -73,8 +72,6 @@ Options:
   --jobs N             build jobs passed to the runner (default: ${JOBS})
   --build              build QBox targets before running
   --skip-build         skip QBox build before running (default)
-  --post-login-probe   run Linux post-login probes (default)
-  --no-post-login-probe
   --keep-running-after-pass
                        keep QBox alive after Linux boot/probes pass (default)
   --exit-after-pass    stop QBox when the normal pass condition is reached
@@ -117,7 +114,7 @@ fast-boot SRAM DMI/shared-memory mode. Use
 Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_PLATFORM_DIR
   QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
-  SI_MODE TIMEOUT JOBS SKIP_BUILD POST_LOGIN_PROBE KEEP_RUNNING_AFTER_PASS
+  SI_MODE TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
   TMUX_LAYOUT
   ROOTFS_BOOTARGS_PROFILE
   QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
@@ -326,9 +323,6 @@ runner_command()
     fi
     if [[ "${SKIP_BUILD}" == "1" ]]; then
         _out+=(--skip-build)
-    fi
-    if [[ "${POST_LOGIN_PROBE}" == "1" ]]; then
-        _out+=(--post-login-probe)
     fi
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         _out+=(--keep-running-after-pass)
@@ -735,94 +729,6 @@ EOF
     done < <(known_logs)
 }
 
-is_terminal_status_response_line()
-{
-    (($# == 1)) || die "is_terminal_status_response_line requires LINE"
-
-    local clean_line="${1//$'\033'/}"
-
-    [[ "${clean_line}" =~ ^\[[0-9]{1,5}\;[0-9]{1,5}R$ ]]
-}
-
-write_fifo_line()
-{
-    (($# == 2)) || die "write_fifo_line requires FIFO_PATH LINE"
-
-    local fifo_path="$1"
-    local line="$2"
-
-    if command -v timeout >/dev/null 2>&1; then
-        # shellcheck disable=SC2016
-        timeout 1 bash -c 'printf "%s\n" "$1" >"$2"' _ "${line}" "${fifo_path}"
-    else
-        printf '%s\n' "${line}" >"${fifo_path}"
-    fi
-}
-
-interactive_primary_console()
-{
-    (($# == 3)) || die "--primary-console requires DOMAIN TITLE LOG_PATH"
-
-    local domain="$1"
-    local title="$2"
-    local log_path="$3"
-    local fifo_path="${OUT_DIR}/primary-uart-input.fifo"
-    local tail_pid=""
-    local line
-    local fifo_ready=0
-
-    cleanup_primary_console()
-    {
-        local status="${1:-0}"
-
-        trap - EXIT INT TERM HUP
-        if [[ -n "${tail_pid}" ]]; then
-            kill "${tail_pid}" 2>/dev/null || true
-            wait "${tail_pid}" 2>/dev/null || true
-        fi
-        exit "${status}"
-    }
-
-    mkdir -p "$(dirname "${log_path}")"
-    : >>"${log_path}"
-
-    printf 'Subsystem: %s\n' "${title}"
-    printf 'Domain: %s\n' "${domain}"
-    printf 'Log: %s\n' "${log_path}"
-    printf 'UART input FIFO: %s\n\n' "${fifo_path}"
-
-    tail -n +1 -F "${log_path}" &
-    tail_pid=$!
-    trap 'cleanup_primary_console $?' EXIT
-    trap 'cleanup_primary_console 130' INT
-    trap 'cleanup_primary_console 143' TERM HUP
-
-    printf '\nWaiting for primary UART input FIFO. F12 stops QBox.\n'
-    while true; do
-        if [[ -p "${fifo_path}" && "${fifo_ready}" == 0 ]]; then
-            printf '\nPrimary UART is interactive. Type commands here; F12 stops QBox.\n'
-            fifo_ready=1
-        elif [[ ! -p "${fifo_path}" && "${fifo_ready}" == 1 ]]; then
-            printf '\nPrimary UART input FIFO is unavailable; waiting for it to return.\n'
-            fifo_ready=0
-        fi
-
-        if IFS= read -r -t 0.2 line; then
-            if [[ ! -p "${fifo_path}" ]]; then
-                printf 'UART input FIFO is not ready; dropped input line.\n'
-                continue
-            fi
-            if is_terminal_status_response_line "${line}"; then
-                continue
-            fi
-            write_fifo_line "${fifo_path}" "${line}" ||
-                printf 'UART input FIFO write timed out; dropped input line.\n'
-        fi
-    done
-
-    cleanup_primary_console 0
-}
-
 start_log_pane()
 {
     local domain="$1"
@@ -854,16 +760,10 @@ log_pane_body()
     local title="$3"
     local log_path="${OUT_DIR}/${file}"
 
-    if [[ "${domain}" == "primary_console" ]]; then
-        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-        printf 'OUT_DIR=%q exec %q --primary-console %q %q %q' \
-            "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
-    else
-        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-        printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
-            "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
-            "${domain}" "${title}" "${log_path}"
-    fi
+    printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+    printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
+        "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
+        "${domain}" "${title}" "${log_path}"
 }
 
 start_domain_log_pane()
@@ -942,7 +842,6 @@ start_tmux()
     validate_bool "CC3XX_QEMU_NATIVE_BACKEND" "${CC3XX_QEMU_NATIVE_BACKEND}"
     validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
-    validate_bool "POST_LOGIN_PROBE" "${POST_LOGIN_PROBE}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
     validate_tmux_layout "${TMUX_LAYOUT}"
     require_command "${TMUX_BIN}"
@@ -1013,8 +912,7 @@ start_tmux()
         if [[ -n "${QBOX_APOLLO_NUM_CPUS:-}" ]]; then
             printf 'QBOX_APOLLO_NUM_CPUS=%q ' "${QBOX_APOLLO_NUM_CPUS}"
         fi
-        printf 'SKIP_BUILD=%q POST_LOGIN_PROBE=%q ' \
-            "${SKIP_BUILD}" "${POST_LOGIN_PROBE}"
+        printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
         printf 'TMUX_LAYOUT=%q ' "${TMUX_LAYOUT}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
@@ -1095,13 +993,6 @@ if [[ "${1:-}" == "--tail-log" ]]; then
     exit $?
 fi
 
-if [[ "${1:-}" == "--primary-console" ]]; then
-    shift
-    interactive_primary_console "$@"
-    # shellcheck disable=SC2317
-    exit $?
-fi
-
 if [[ "${1:-}" == "--stop-session" ]]; then
     shift
     stop_session "$@"
@@ -1164,14 +1055,6 @@ while (($# > 0)); do
             ;;
         --skip-build)
             SKIP_BUILD=1
-            shift
-            ;;
-        --post-login-probe)
-            POST_LOGIN_PROBE=1
-            shift
-            ;;
-        --no-post-login-probe)
-            POST_LOGIN_PROBE=0
             shift
             ;;
         --keep-running-after-pass)

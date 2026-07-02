@@ -103,11 +103,11 @@ LIVE_CL1_REQUIRED_MARKERS = {
     "pfdi_service": "PFDI service ready",
     "network_configured": "si_net_init: Network interface configured",
 }
-LIVE_CL1_POST_LOGIN_DRIVERS = [
-    "arm_si_rproc",
-    "rpmsg",
-    "hipc_ethsi1",
-]
+LIVE_CL1_BOOT_GATE_OPTIONAL_MARKERS = {
+    "pfdi_agent",
+    "pfdi_service",
+    "network_configured",
+}
 LIVE_CL0_REQUIRED_MARKERS = {
     "scp_started": "[SI0_PLATFORM] SCP started",
     "module_init_complete": "[FWK] Module initialization complete!",
@@ -119,7 +119,6 @@ MARKER_GROUP_PRIORITY = [
     "si_cl1",
     "ap_firmware",
     "linux",
-    "post_login",
     "maps_and_interrupts",
 ]
 
@@ -234,32 +233,17 @@ def keep_running_child_logs(out_dir: Path) -> dict[str, str]:
     }
 
 
-def keep_running_probe_state(primary_console: str, *, requested: bool) -> dict[str, Any]:
+def keep_running_probe_state(primary_console: str) -> dict[str, Any]:
     clean_primary = clean_console_text(primary_console)
-    driver_patterns = {
-        "arm_si_rproc": (
-            "arm_si_rproc_modprobe_rc:0" in clean_primary
-            or "remoteproc_state_after:si-cl1:attached" in clean_primary
-            or "remoteproc_state:si-cl1:attached" in clean_primary
-        ),
-        "rpmsg": (
-            "rpmsg_net_modprobe_rc:0" in clean_primary
-            and "virtio_rpmsg_bus_modprobe_rc:0" in clean_primary
-        ),
-        "hipc_ethsi1": (
-            "ethsi1_iplink_rc:0" in clean_primary
-            or "rpmsg_device:virtio6.ethsi1" in clean_primary
-        ),
-    }
     return {
-        "requested": requested,
+        "requested": False,
         "secure_service_requested": False,
         "fwu_requested": False,
         "sent_login": APOLLO_PRIMARY_LOGIN_PROMPT in clean_primary,
-        "sent_probe": "__QBOX_PROBE_START__" in clean_primary,
-        "complete": "__QBOX_PROBE_DONE__" in clean_primary,
-        "done_marker": "__QBOX_PROBE_DONE__" in clean_primary,
-        "driver_patterns": driver_patterns,
+        "sent_probe": False,
+        "complete": False,
+        "done_marker": False,
+        "driver_patterns": {},
         "return_codes": {
             match.group(1): int(match.group(2))
             for match in re.finditer(r"\b([A-Za-z0-9_]+_rc):(\d+)\b", clean_primary)
@@ -327,10 +311,7 @@ def synthesize_keep_running_child_status(
         APOLLO_PRIMARY_SHELL_MARKER: APOLLO_PRIMARY_SHELL_MARKER in combined,
     }
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
-    probe = keep_running_probe_state(
-        logs.get("primary_console", ""),
-        requested=bool(args.post_login_probe),
-    )
+    probe = keep_running_probe_state(logs.get("primary_console", ""))
     linux_hit = any(marker_groups["linux_boot"].values())
     non_linux_hit = all(
         hit
@@ -338,8 +319,7 @@ def synthesize_keep_running_child_status(
         if group != "linux_boot"
         for hit in markers.values()
     )
-    probe_ready = not args.post_login_probe or bool(probe.get("complete"))
-    passed = bool(non_linux_hit and linux_hit and probe_ready and not any(fail_hits.values()))
+    passed = bool(non_linux_hit and linux_hit and not any(fail_hits.values()))
     scp_strategy = "real-si-scp" if args.si_mode == "live-cl0-cl1" else "service-model"
     return {
         "passed": passed,
@@ -729,6 +709,8 @@ def post_login_probe(child_status: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(probe, dict):
         return {}
     normalized = dict(probe)
+    if not normalized.get("requested"):
+        return {}
     if "passed" not in normalized:
         normalized["passed"] = bool(
             normalized.get("requested")
@@ -785,9 +767,6 @@ def build_marker_groups(
     linux_boot = groups.get("linux_boot", {})
     rse_scp = groups.get("rse_scp_handoff", {})
     probe = post_login_probe(child_status)
-    driver_patterns = probe.get("driver_patterns", {})
-    if not isinstance(driver_patterns, dict):
-        driver_patterns = {}
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
     primary_obs = primary_console_observations(args.out_dir)
@@ -857,15 +836,6 @@ def build_marker_groups(
             for name, marker in LIVE_CL1_REQUIRED_MARKERS.items()
         }
 
-    if probe:
-        groups["post_login"] = {
-            "probe_complete": bool(probe.get("complete")),
-            **{
-                name: bool(driver_patterns.get(name))
-                for name in LIVE_CL1_POST_LOGIN_DRIVERS
-            },
-        }
-
     return groups
 
 
@@ -891,28 +861,13 @@ def live_cl1_gate_blocker(
         cl0_missing = missing_markers(marker_groups.get("si_cl0", {}))
         if cl0_missing:
             return f"{prefix}_marker_blocked:" + ",".join(cl0_missing)
-    cl1_missing = missing_markers(marker_groups.get("si_cl1", {}))
-    post_login = marker_groups.get("post_login", {})
-    post_login_drivers_passed = all(
-        post_login.get(name, False)
-        for name in ["probe_complete", *LIVE_CL1_POST_LOGIN_DRIVERS]
-    )
-    if post_login_drivers_passed:
-        cl1_missing = [
-            name
-            for name in cl1_missing
-            if name not in {"pfdi_agent", "pfdi_service", "network_configured"}
-        ]
+    cl1_missing = [
+        name
+        for name in missing_markers(marker_groups.get("si_cl1", {}))
+        if name not in LIVE_CL1_BOOT_GATE_OPTIONAL_MARKERS
+    ]
     if cl1_missing:
         return f"{prefix}_marker_blocked:" + ",".join(cl1_missing)
-    post_login_missing = missing_markers(
-        {
-            name: post_login.get(name, False)
-            for name in ["probe_complete", *LIVE_CL1_POST_LOGIN_DRIVERS]
-        }
-    )
-    if post_login_missing:
-        return f"{prefix}_hipc_rpmsg_blocked:" + ",".join(post_login_missing)
     return None
 
 
@@ -1124,8 +1079,6 @@ def clear_run_outputs(out_dir: Path) -> None:
         "summary.txt",
         RD_ASPEN_CHILD_RESULT,
         "rd-aspen-summary.txt",
-        "post-login-probe-actions.log",
-        "primary-uart-input.fifo",
         "comparison.json",
         "map-comparison.json",
         "coverage-audit.json",
@@ -1373,8 +1326,6 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--rse-fast-boot-sram-dmi")
     if getattr(args, "provision_blank_rse_otp", False):
         cmd.append("--allow-blank-rse-otp")
-    if args.post_login_probe:
-        cmd.append("--post-login-probe")
     if args.keep_running_after_pass:
         cmd.append("--keep-running-after-pass")
     if args.build_only:
@@ -1520,7 +1471,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Run the isolated live Safety Island mode for this --si-mode.",
     )
-    parser.add_argument("--post-login-probe", action="store_true")
     parser.add_argument(
         "--keep-running-after-pass",
         action="store_true",

@@ -561,7 +561,6 @@ if [[ "${HEADLESS}" == "1" ]]; then
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --skip-build
-        --post-login-probe
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
         --range-limited-flash-dmi
         --qbox-performance-preset
@@ -579,7 +578,6 @@ else
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --skip-build
-        --post-login-probe
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
         --qbox-performance-preset
         --cc3xx-qemu-native-backend

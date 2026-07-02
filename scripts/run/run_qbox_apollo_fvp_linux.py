@@ -50,30 +50,9 @@ DEFAULT_LOCAL_BOOTARGS = (
     "root=/dev/ram0 rw rdinit=/init loglevel=7 "
     "cpuidle.governor=menu maxcpus=16 mem=4064M"
 )
-PROBE_DONE_MARKER = "__QBOX_APOLLO_PROBE_DONE__"
-PROBE_DONE_OUTPUT_RE = re.compile(
-    rf"(?:^|\n){re.escape(PROBE_DONE_MARKER)}:0(?:\r?\n|$)"
-)
 PRIMARY_VIRTIO_BLOCK_NODE = "/soc/virtio@30020000"
 HOSTFWD_TCP_RE = re.compile(r"(?:^|,)hostfwd=tcp:[^:,]*:(\d+)-")
-POST_LOGIN_PROBE_COMMANDS = [
-    "uname -a",
-    "cat /proc/cmdline",
-    "printf 'possible='; cat /sys/devices/system/cpu/possible",
-    "printf 'present='; cat /sys/devices/system/cpu/present",
-    "printf 'online='; cat /sys/devices/system/cpu/online",
-    "printf 'cpuinfo_processors='; grep -c '^processor' /proc/cpuinfo",
-    "printf 'cpu_directories='; ls -d /sys/devices/system/cpu/cpu[0-9]* 2>/dev/null | wc -l",
-    "cat /proc/meminfo | head -n 5",
-    "ls -l /dev/vd* 2>/dev/null || true",
-    "ip link show || true",
-    "dmesg | grep -Ei 'GIC|pl011|ttyAMA|virtio|rng|rtc|watchdog|initrd|Freeing initrd|VFS|Run /init' || true",
-    f"printf '\\n{PROBE_DONE_MARKER}:%s\\n' \"$?\"",
-]
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\a]*(?:\a|\x1b\\)")
-APOLLO_SHELL_PROMPT_RE = re.compile(
-    r"(?:^|\n)(?:root@apollo-fvp:[^\n]*[#>]|\S+ #)\s*$"
-)
 FAIL_PATTERNS = [
     "Kernel panic",
     "Unable to mount root fs",
@@ -100,8 +79,6 @@ class EvalStatus(TypedDict, total=False):
     log_bytes: int
     timeout_s: int | None
     interrupted: bool
-    post_login_probe: bool
-    probe_complete: bool
     duration_s: float
     command: list[str]
     log_path: str
@@ -166,14 +143,6 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
 def initramfs_range(initramfs: Path, load_addr: int) -> tuple[int, int]:
     size = initramfs.stat().st_size
     return load_addr, load_addr + size
-
-
-def apollo_shell_prompt_ready(text: str) -> bool:
-    return bool(APOLLO_SHELL_PROMPT_RE.search(text))
-
-
-def probe_complete_from_log(text: str) -> bool:
-    return bool(PROBE_DONE_OUTPUT_RE.search(text))
 
 
 def dts_escape(value: str) -> str:
@@ -463,9 +432,6 @@ def run_qbox(
     text = ""
     timed_out = False
     interrupted = False
-    sent_login = False
-    sent_probe = False
-    probe_complete = False
     process_group = not args.interactive
     proc = subprocess.Popen(
         cmd,
@@ -490,35 +456,11 @@ def run_qbox(
                     decoded = chunk.decode("utf-8", errors="replace")
                     log.write(decoded)
                     text += decoded
-                    clean_text = ANSI_RE.sub("", text).replace("\r", "")
-                    if (
-                        args.post_login_probe
-                        and not args.interactive
-                        and proc.stdin is not None
-                    ):
-                        prompt_ready = apollo_shell_prompt_ready(clean_text)
-                        if not sent_login and prompt_ready:
-                            sent_login = True
-                        elif not sent_login and "apollo-fvp login:" in clean_text:
-                            proc.stdin.write((args.login_user + "\n").encode())
-                            proc.stdin.flush()
-                            sent_login = True
-                        if sent_login and not sent_probe and prompt_ready:
-                            proc.stdin.write(
-                                ("\n".join(POST_LOGIN_PROBE_COMMANDS) + "\n").encode()
-                            )
-                            proc.stdin.flush()
-                            sent_probe = True
-                        probe_complete = probe_complete_from_log(clean_text)
                     if args.interactive:
                         sys.stdout.write(decoded)
                         sys.stdout.flush()
                     passed, status = evaluate(text)
-                    if (
-                        passed
-                        and not args.interactive
-                        and (not args.post_login_probe or probe_complete)
-                    ):
+                    if passed and not args.interactive:
                         stop_process(proc, process_group=process_group)
                         break
                     if any(status["fail_patterns"].values()) and not args.interactive:
@@ -539,12 +481,8 @@ def run_qbox(
 
     duration_s = time.monotonic() - start
     passed, status = evaluate(text)
-    if args.post_login_probe and not probe_complete:
-        passed = False
     status["timeout_s"] = args.timeout if timed_out and not passed else None
     status["interrupted"] = interrupted
-    status["post_login_probe"] = args.post_login_probe
-    status["probe_complete"] = probe_complete
     status["duration_s"] = round(duration_s, 3)
     status["command"] = cmd
     status["log_path"] = str(log_path)
@@ -578,8 +516,6 @@ def run_qbox(
         f"bootargs: {args.bootargs}",
         f"initramfs_addr: 0x{args.initramfs_addr:x}",
         f"disk: {disk.resolve() if disk is not None else None}",
-        f"post_login_probe: {args.post_login_probe}",
-        f"probe_complete: {probe_complete}",
         "extra_disks:",
         *[f"  - {path.resolve()}" for path in extra_disks],
         "pass_patterns:",
@@ -679,12 +615,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print UART output to this terminal and pass stdin to the guest.",
     )
-    parser.add_argument(
-        "--post-login-probe",
-        action="store_true",
-        help="Log in on the serial console and run Apollo direct-boot probes.",
-    )
-    parser.add_argument("--login-user", default="root")
     parser.add_argument(
         "--no-copy-disk",
         action="store_true",

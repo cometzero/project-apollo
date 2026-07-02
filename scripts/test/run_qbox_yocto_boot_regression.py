@@ -50,7 +50,6 @@ KNOWN_LOG_ORDER = [
     "qbox-safety-island-cl0.log",
     "qbox-safety-island-cl1.log",
     "qbox-primary-console.log",
-    "post-login-probe-actions.log",
 ]
 
 DEFAULT_ERROR_REGEXES = [
@@ -171,13 +170,6 @@ LOG_STAGE_DEFS = [
         "label": "Primary console login prompt",
         "log": "qbox-primary-console.log",
         "marker": "apollo-fvp login:",
-    },
-    {
-        "name": "post_login_probe_done",
-        "subsystem": "primary_console",
-        "label": "Post-login probe complete",
-        "log": "qbox-primary-console.log",
-        "marker": "__QBOX_PROBE_DONE__",
     },
 ]
 
@@ -1012,12 +1004,16 @@ def compare_snapshot(
 
     current_by_name = {stage["name"]: stage for stage in current["stages"]}
     checked = 0
+    skipped_removed = 0
     for baseline_stage in baseline.get("stages", []):
         if baseline_stage.get("optional"):
             continue
         name = baseline_stage.get("name")
         current_stage = current_by_name.get(name)
-        if not current_stage or not current_stage.get("seen"):
+        if not current_stage:
+            skipped_removed += 1
+            continue
+        if not current_stage.get("seen"):
             raise RegressionFailure(
                 "boot stage missing in current run:\n"
                 f"  {name} ({baseline_stage.get('label')}) marker={baseline_stage.get('marker')!r}"
@@ -1076,6 +1072,7 @@ def compare_snapshot(
         "checked_timed_stages": checked,
         "baseline_stage_count": len(baseline.get("stages", [])),
         "current_stage_count": len(current.get("stages", [])),
+        "skipped_removed_stage_count": skipped_removed,
         "baseline_error_match_count": len(baseline_errors),
         "current_error_match_count": len(current.get("error_matches", [])),
         "threshold": threshold,

@@ -254,7 +254,6 @@ For non-interactive validation with file-backed logs:
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --skip-build \
-  --post-login-probe \
   --qbox-performance-preset \
   --cc3xx-qemu-native-backend \
   --si-mode live-cl0-cl1 \

@@ -376,7 +376,6 @@ main()
         --timeout "${TIMEOUT}" \
         --jobs "${JOBS}" \
         --skip-build \
-        --post-login-probe \
         --keep-running-after-pass \
         --qbox-performance-preset \
         --cc3xx-qemu-native-backend \

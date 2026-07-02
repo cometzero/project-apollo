@@ -2178,27 +2178,6 @@ def runner_command(root: Path, args: argparse.Namespace, run_dir: Path) -> list[
         cmd.extend(["--efi-capsule-disk", str(args.efi_capsule_disk)])
     if not args.copy_writable_flash:
         cmd.append("--no-copy-writable-flash")
-    if args.post_login_probe:
-        cmd.append("--post-login-probe")
-    if args.secure_service_probe:
-        cmd.append("--secure-service-probe")
-        cmd.extend(["--secure-service-probe-timeout", str(args.secure_service_probe_timeout)])
-        cmd.extend(["--secure-service-probe-tests", args.secure_service_probe_tests])
-        if args.secure_service_ps_test_list:
-            cmd.extend(
-                [
-                    "--secure-service-ps-test-list",
-                    args.secure_service_ps_test_list,
-                ]
-            )
-    if args.fwu_probe:
-        cmd.append("--fwu-probe")
-        cmd.extend(
-            [
-                "--fwu-system-running-timeout",
-                str(args.fwu_system_running_timeout),
-            ]
-        )
     if args.keep_running_after_pass:
         cmd.append("--keep-running-after-pass")
     for param in platform_params(args.rse_port, args.ap_port):
@@ -2221,25 +2200,6 @@ def write_readme(
     runner_options = ""
     if not args.copy_writable_flash:
         runner_options += "          --no-copy-writable-flash \\\n"
-    if args.post_login_probe:
-        runner_options += "          --post-login-probe \\\n"
-    if args.secure_service_probe:
-        runner_options += "          --secure-service-probe \\\n"
-        runner_options += (
-            f"          --secure-service-probe-timeout "
-            f"{args.secure_service_probe_timeout} \\\n"
-        )
-        runner_options += (
-            f"          --secure-service-probe-tests "
-            f"{args.secure_service_probe_tests} \\\n"
-        )
-        if args.secure_service_ps_test_list:
-            runner_options += (
-                f"          --secure-service-ps-test-list "
-                f"{shlex.quote(args.secure_service_ps_test_list)} \\\n"
-            )
-    if args.fwu_probe:
-        runner_options += "          --fwu-probe \\\n"
     if args.keep_running_after_pass:
         runner_options += "          --keep-running-after-pass \\\n"
     symbol_lines = "\n".join(
@@ -2381,8 +2341,8 @@ def write_readme(
 
         For minimal perturbation when checking only the later progress point,
         regenerate this bundle with `--launch --sample-only --sample-delay N`.
-        Add `--post-login-probe --keep-running-after-pass` when the target
-        should stay attachable after Linux login and driver probes complete.
+        Add `--keep-running-after-pass` when the target should stay attachable
+        after the normal pass condition.
         Add `--copy-writable-flash` when first-boot secure-storage or UEFI
         variable writeback behavior needs the same per-run writable flash
         copies as the normal runtime helper.
@@ -3275,65 +3235,11 @@ def parse_args() -> argparse.Namespace:
         help="Wait for the sample delay before probing live targets, avoiding early GDB attach perturbation.",
     )
     parser.add_argument(
-        "--post-login-probe",
-        action="store_true",
-        help=(
-            "Pass --post-login-probe to the QBox runner so Linux driver, "
-            "remoteproc, RPMsg, and network probes are executed before the "
-            "debug session ends."
-        ),
-    )
-    parser.add_argument(
-        "--secure-service-probe",
-        action="store_true",
-        help=(
-            "Pass --secure-service-probe to the QBox runner so bounded "
-            "Trusted Services userspace checks run after Linux login."
-        ),
-    )
-    parser.add_argument(
-        "--secure-service-probe-timeout",
-        type=int,
-        default=12,
-        help="Per-command timeout in seconds for --secure-service-probe.",
-    )
-    parser.add_argument(
-        "--secure-service-probe-tests",
-        default="ps,iat,its",
-        help=(
-            "Comma-separated Trusted Services tests to pass through to "
-            "run_qbox_fvp_rd_aspen_rse.py."
-        ),
-    )
-    parser.add_argument(
-        "--secure-service-ps-test-list",
-        default="",
-        help=(
-            "Optional psa-ps-api-test -t list, for example 'test_403;', "
-            "passed through when --secure-service-probe-tests includes ps."
-        ),
-    )
-    parser.add_argument(
-        "--fwu-probe",
-        action="store_true",
-        help=(
-            "Pass --fwu-probe to the QBox runner so the capsule-on-disk "
-            "FWU reboot sequence runs before marker-gated GDB sampling."
-        ),
-    )
-    parser.add_argument(
-        "--fwu-system-running-timeout",
-        type=int,
-        default=180,
-        help="Pass-through FWU probe systemctl wait timeout in seconds.",
-    )
-    parser.add_argument(
         "--keep-running-after-pass",
         action="store_true",
         help=(
             "Pass --keep-running-after-pass to keep QBox attachable after "
-            "normal pass or post-login probe completion until this helper "
-            "finishes its bounded GDB probes."
+            "normal pass until this helper finishes its bounded GDB probes."
         ),
     )
     parser.add_argument(
@@ -3484,8 +3390,6 @@ def parse_args() -> argparse.Namespace:
         parser.error("--flash-stats-interval must be positive when --flash-stats is enabled")
     if args.mhu_trace_limit < 0:
         parser.error("--mhu-trace-limit must be non-negative")
-    if args.secure_service_probe or args.fwu_probe:
-        args.post_login_probe = True
     return args
 
 
@@ -3543,13 +3447,6 @@ def main() -> int:
         ),
         "host_sample_seconds": args.host_sample_seconds,
         "sample_only": args.sample_only,
-        "post_login_probe": args.post_login_probe,
-        "secure_service_probe": args.secure_service_probe,
-        "secure_service_probe_timeout": args.secure_service_probe_timeout,
-        "secure_service_probe_tests": args.secure_service_probe_tests,
-        "secure_service_ps_test_list": args.secure_service_ps_test_list,
-        "fwu_probe": args.fwu_probe,
-        "fwu_system_running_timeout": args.fwu_system_running_timeout,
         "keep_running_after_pass": args.keep_running_after_pass,
         "copy_writable_flash": args.copy_writable_flash,
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
