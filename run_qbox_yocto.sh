@@ -207,6 +207,7 @@ QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}}"
 QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
+export QBOX_CORE_DIR QBOX_PLATFORM_DIR
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"

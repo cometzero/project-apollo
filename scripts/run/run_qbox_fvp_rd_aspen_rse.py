@@ -3154,7 +3154,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     env["QBOX_RDASPEN_PRIMARY_CONSOLE_LOG"] = str(
         args.out_dir / CONSOLE_LOGS["primary_console"]
     )
-    env["QBOX_RDASPEN_UART_READ_FILE"] = os.devnull
+    env.setdefault("QBOX_RDASPEN_UART_READ_FILE", os.devnull)
     extra_qemu_args = qemu_trace_args(root, args)
     if extra_qemu_args:
         env["QBOX_RDASPEN_RSE_QEMU_ARGS"] = extra_qemu_args

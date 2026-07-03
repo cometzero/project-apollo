@@ -93,6 +93,11 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "Apollo QBox Yocto launch" in result.stdout
     assert "tmux_layout: fvp-like" in result.stdout
+    assert f"qbox_core_dir: {ROOT / 'hsoc-stack/tools/qbox'}" in result.stdout
+    assert (
+        f"qbox_platform_dir: {ROOT / 'hsoc-stack/tools/qbox-platform'}"
+        in result.stdout
+    )
     assert "ap cpus:       4" in result.stdout
     assert "--rootfs" in result.stdout
     assert "nexios-image-apollo-fvp.wic" in result.stdout
@@ -186,7 +191,15 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert any(line == "select-pane -t %3 -T safety_island_cl0" for line in tmux_lines)
     assert any(line == "select-pane -t %4 -T safety_island_cl1" for line in tmux_lines)
     assert any(line == "select-pane -t %5 -T secure_console" for line in tmux_lines)
-    assert any(line == "select-pane -t %6 -T platform" for line in tmux_lines)
+    assert any(line == "select-pane -t %0 -T platform" for line in tmux_lines)
+    assert any(line == "select-pane -t %6 -T shell" for line in tmux_lines)
+    assert sum("--uart-console" in line for line in split_lines) == 5
+    assert any("QBOX_RDASPEN_PRIMARY_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any("QBOX_RDASPEN_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any("QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any("QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any("QBOX_RDASPEN_SECURE_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any(f"QBOX_CORE_DIR={ROOT / 'hsoc-stack/tools/qbox'}" in line for line in tmux_lines)
     assert any(
         line.startswith("set-hook ")
         and "client-attached" in line
@@ -338,13 +351,16 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
         )
 
 
-def test_tmux_primary_console_filters_terminal_status_response() -> None:
+def test_tmux_uart_console_filters_terminal_status_response() -> None:
     tmux_script = ROOT / "scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
     script_text = tmux_script.read_text(encoding="utf-8")
 
     assert "is_terminal_status_response_line" in script_text
     assert r"^\[[0-9]{1,5}\;[0-9]{1,5}R$" in script_text
     assert "write_fifo_line \"${fifo_path}\" \"${line}\"" in script_text
+    assert "--uart-console" in script_text
+    assert "primary-uart-input.fifo" in script_text
+    assert "si-cl0-uart-input.fifo" in script_text
 
 
 @pytest.mark.parametrize(

@@ -18,9 +18,10 @@ RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-full-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-tmux-${RUN_STAMP}}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-}"
-QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/tools/qbox-platform}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
@@ -112,8 +113,8 @@ fast-boot SRAM DMI/shared-memory mode. Use
 --legacy-file-backed-sram for the older direct file-backed SRAM alias mode.
 
 Environment overrides:
-  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR QBOX_PLATFORM_DIR
-  QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
+  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR
+  QBOX_CORE_DIR QBOX_PLATFORM_DIR QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
   TMUX_LAYOUT
   ROOTFS_BOOTARGS_PROFILE
@@ -414,6 +415,7 @@ supervise_run()
     runner_command cmd "${EXTRA_RUNNER_ARGS[@]}"
 
     prepare_log_files
+    prepare_uart_input_fifos
     : >"${OUT_DIR}/qbox-runner.log"
     rm -f "${OUT_DIR}/.qbox-run.done" "${OUT_DIR}/qbox-run.pid"
     printf 'running\n' >"${OUT_DIR}/qbox-run.status"
@@ -714,6 +716,7 @@ Apollo QBox full-system tmux run
   netdev: ${NETDEV:-default}
   tmux_layout: ${TMUX_LAYOUT}
   out_dir: ${OUT_DIR}
+  qbox_core_dir: ${QBOX_CORE_DIR}
   qbox_platform_dir: ${QBOX_PLATFORM_DIR}
   qbox_conf: ${QBOX_CONF}
   qbox_build_dir: ${QBOX_BUILD_DIR}
@@ -727,6 +730,155 @@ EOF
     while IFS=: read -r domain file title; do
         printf '  %-18s %s/%s (%s)\n' "${domain}" "${OUT_DIR}" "${file}" "${title}"
     done < <(known_logs)
+    printf '\nUART input FIFOs\n'
+    for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
+        printf '  %-18s %s\n' "${domain}" "$(uart_fifo_for_domain "${domain}")"
+    done
+}
+
+uart_fifo_for_domain()
+{
+    (($# == 1)) || die "uart_fifo_for_domain requires DOMAIN"
+
+    case "$1" in
+        rse) printf '%s/rse-uart-input.fifo\n' "${OUT_DIR}" ;;
+        safety_island_cl0) printf '%s/si-cl0-uart-input.fifo\n' "${OUT_DIR}" ;;
+        safety_island_cl1) printf '%s/si-cl1-uart-input.fifo\n' "${OUT_DIR}" ;;
+        secure_console) printf '%s/secure-uart-input.fifo\n' "${OUT_DIR}" ;;
+        primary_console) printf '%s/primary-uart-input.fifo\n' "${OUT_DIR}" ;;
+        *) return 1 ;;
+    esac
+}
+
+prepare_uart_input_fifos()
+{
+    local domain
+    local fifo_path
+
+    : >"${OUT_DIR}/tmux-uart-inputs.tsv"
+    printf 'domain\tfifo\n' >"${OUT_DIR}/tmux-uart-inputs.tsv"
+    for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
+        fifo_path="$(uart_fifo_for_domain "${domain}")"
+        rm -f "${fifo_path}"
+        mkfifo "${fifo_path}"
+        printf '%s\t%s\n' "${domain}" "${fifo_path}" >>"${OUT_DIR}/tmux-uart-inputs.tsv"
+    done
+}
+
+is_terminal_status_response_line()
+{
+    (($# == 1)) || die "is_terminal_status_response_line requires LINE"
+
+    local clean_line="${1//$'\033'/}"
+
+    [[ "${clean_line}" =~ ^\[[0-9]{1,5}\;[0-9]{1,5}R$ ]]
+}
+
+write_fifo_line()
+{
+    (($# == 2)) || die "write_fifo_line requires FIFO_PATH LINE"
+
+    local fifo_path="$1"
+    local line="$2"
+
+    if command -v timeout >/dev/null 2>&1; then
+        # shellcheck disable=SC2016
+        timeout 1 bash -c 'printf "%s\n" "$1" >"$2"' _ "${line}" "${fifo_path}"
+    else
+        printf '%s\n' "${line}" >"${fifo_path}"
+    fi
+}
+
+interactive_uart_console()
+{
+    (($# == 3)) || die "--uart-console requires DOMAIN TITLE LOG_PATH"
+
+    local domain="$1"
+    local title="$2"
+    local log_path="$3"
+    local fifo_path
+    local tail_pid=""
+    local fifo_keeper_pid=""
+    local line
+    local fifo_ready=0
+
+    fifo_path="$(uart_fifo_for_domain "${domain}")" ||
+        die "domain does not have UART input: ${domain}"
+
+    cleanup_uart_console()
+    {
+        local status="${1:-0}"
+
+        trap - EXIT INT TERM HUP
+        if [[ -n "${tail_pid}" ]]; then
+            kill "${tail_pid}" 2>/dev/null || true
+            wait "${tail_pid}" 2>/dev/null || true
+        fi
+        if [[ -n "${fifo_keeper_pid}" ]]; then
+            kill "${fifo_keeper_pid}" 2>/dev/null || true
+            wait "${fifo_keeper_pid}" 2>/dev/null || true
+        fi
+        exit "${status}"
+    }
+
+    start_uart_fifo_keeper()
+    {
+        [[ -p "${fifo_path}" ]] || return 1
+        if [[ -n "${fifo_keeper_pid}" ]] &&
+            kill -0 "${fifo_keeper_pid}" 2>/dev/null; then
+            return 0
+        fi
+
+        tail -f /dev/null >"${fifo_path}" &
+        fifo_keeper_pid=$!
+    }
+
+    mkdir -p "$(dirname "${log_path}")"
+    : >>"${log_path}"
+
+    printf 'Subsystem: %s\n' "${title}"
+    printf 'Domain: %s\n' "${domain}"
+    printf 'Log: %s\n' "${log_path}"
+    printf 'UART input FIFO: %s\n\n' "${fifo_path}"
+
+    tail -n +1 -F "${log_path}" &
+    tail_pid=$!
+    trap 'cleanup_uart_console $?' EXIT
+    trap 'cleanup_uart_console 130' INT
+    trap 'cleanup_uart_console 143' TERM HUP
+
+    printf '\nWaiting for UART input FIFO. F12 stops QBox.\n'
+    while true; do
+        if [[ -p "${fifo_path}" ]]; then
+            start_uart_fifo_keeper || true
+            if [[ "${fifo_ready}" == 0 ]]; then
+                printf '\nUART is interactive. Type commands here; F12 stops QBox.\n'
+                fifo_ready=1
+            fi
+        elif [[ "${fifo_ready}" == 1 ]]; then
+            if [[ -n "${fifo_keeper_pid}" ]]; then
+                kill "${fifo_keeper_pid}" 2>/dev/null || true
+                wait "${fifo_keeper_pid}" 2>/dev/null || true
+                fifo_keeper_pid=""
+            fi
+            printf '\nUART input FIFO is unavailable; waiting for it to return.\n'
+            fifo_ready=0
+        fi
+
+        if IFS= read -r -t 0.2 line; then
+            if [[ ! -p "${fifo_path}" ]]; then
+                printf 'UART input FIFO is not ready; dropped input line.\n'
+                continue
+            fi
+            if is_terminal_status_response_line "${line}"; then
+                continue
+            fi
+            write_fifo_line "${fifo_path}" "${line}" ||
+                printf 'UART input FIFO write timed out; dropped input line.\n'
+        fi
+    done
+
+    cleanup_uart_console 0
 }
 
 start_log_pane()
@@ -761,9 +913,14 @@ log_pane_body()
     local log_path="${OUT_DIR}/${file}"
 
     printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-    printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
-        "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
-        "${domain}" "${title}" "${log_path}"
+    if uart_fifo_for_domain "${domain}" >/dev/null; then
+        printf 'OUT_DIR=%q exec %q --uart-console %q %q %q' \
+            "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
+    else
+        printf 'OUT_DIR=%q KEEP_RUNNING_AFTER_PASS=%q exec %q --tail-log %q %q %q' \
+            "${OUT_DIR}" "${KEEP_RUNNING_AFTER_PASS}" "${SCRIPT_PATH}" \
+            "${domain}" "${title}" "${log_path}"
+    fi
 }
 
 start_domain_log_pane()
@@ -855,6 +1012,7 @@ start_tmux()
     SCRIPT_PATH="$(abspath "${SCRIPT_PATH}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"
     LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+    QBOX_CORE_DIR="$(abspath "${QBOX_CORE_DIR}")"
     QBOX_PLATFORM_DIR="$(abspath "${QBOX_PLATFORM_DIR}")"
     if [[ -z "${QBOX_PLATFORM_BUILD_DIR}" ]]; then
         if [[ -n "${QBOX_BUILD_DIR}" ]]; then
@@ -892,10 +1050,20 @@ start_tmux()
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
         printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
-        printf 'QBOX_PLATFORM_DIR=%q QBOX_PLATFORM_BUILD_DIR=%q ' \
-            "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
+        printf 'QBOX_CORE_DIR=%q QBOX_PLATFORM_DIR=%q QBOX_PLATFORM_BUILD_DIR=%q ' \
+            "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
+        printf 'QBOX_RDASPEN_UART_READ_FILE=%q ' \
+            "$(uart_fifo_for_domain rse)"
+        printf 'QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=%q ' \
+            "$(uart_fifo_for_domain safety_island_cl0)"
+        printf 'QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE=%q ' \
+            "$(uart_fifo_for_domain safety_island_cl1)"
+        printf 'QBOX_RDASPEN_SECURE_UART_READ_FILE=%q ' \
+            "$(uart_fifo_for_domain secure_console)"
+        printf 'QBOX_RDASPEN_PRIMARY_UART_READ_FILE=%q ' \
+            "$(uart_fifo_for_domain primary_console)"
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
         printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
@@ -990,6 +1158,12 @@ fi
 if [[ "${1:-}" == "--tail-log" ]]; then
     shift
     tail_log "$@"
+    exit $?
+fi
+
+if [[ "${1:-}" == "--uart-console" ]]; then
+    shift
+    interactive_uart_console "$@"
     exit $?
 fi
 
