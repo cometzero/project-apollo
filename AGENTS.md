@@ -25,9 +25,9 @@ hardware models over register-only stubs.
 - Apollo Safety Island Zephyr workspace:
   `hsoc-stack/components/system_mgmt/zephyrproject/`
 - QBox core under active development:
-  `tools/qbox/`
+  `hsoc-stack/tools/qbox/`
 - QBox platform under active development:
-  `tools/qbox-platform/platforms/apollo/`
+  `hsoc-stack/tools/qbox-platform/platforms/apollo/`
 - QBox helper scripts:
   `./local-build.sh qbox`,
   `scripts/build/build_qbox.sh`,
@@ -56,12 +56,30 @@ hardware models over register-only stubs.
   and OP-TEE integration.
 - `layers/`: pinned upstream/downstream Yocto layers. Treat as external unless
   explicitly asked to patch them.
-- `tools/qbox/`: upstream-friendly QBox core, including `platforms-vp`,
+- `hsoc-stack/tools/qbox/`: upstream-friendly QBox core, including
+  `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM
+  components, reusable QEMU-backed components, tests, and examples.
+- `hsoc-stack/tools/qbox-platform/`: Apollo/RD-Aspen platform overlay,
+  including Apollo and RD-Aspen Lua entrypoints, Zena/RSE SystemC models,
+  Apollo-specific QEMU wrappers, platform tests, and the
+  `apollo_fvp_full_system` aggregate target. Patch files under
+  `hsoc-stack/tools/qbox-platform/patch-qbox/` are archived candidate
+  QBox-core patches for later manual review or application. The normal local
+  build must not apply these patches automatically; QBox builds should use the
+  checked-out `hsoc-stack/tools/qbox/` source unless a task explicitly requests
+  applying one of those patches.
+- `tools/qbox/`: legacy upstream-friendly QBox core path, including
+  `platforms-vp`,
   libqbox/libqemu integration, reusable SystemC/TLM components, reusable
   QEMU-backed components, tests, and examples.
-- `tools/qbox-platform/`: Apollo/RD-Aspen platform overlay, including Apollo
+- `tools/qbox-platform/`: legacy Apollo/RD-Aspen platform overlay, including Apollo
   and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU
   wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target.
+  Patch files under `tools/qbox-platform/patch-qbox/` are also archived candidate
+  QBox-core patches for later manual review or application. The normal local
+  build must not apply these patches automatically; QBox builds should use the
+  checked-out QBox source unless a task explicitly requests applying one of
+  those patches.
 - `tools/qemu/`: local QEMU/libqemu source used by QBox.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
   `yocto_build.sh`, `local-build.sh`, and `run_qbox.sh` call into these
