@@ -368,6 +368,8 @@ def test_qbox_build_dry_run_resolves_qbox_target() -> None:
     output = output_of(result)
     assert component_step_lines(output) == ["qbox: build"]
     assert "function: build_qbox" in output
+    assert "qbox core: hsoc-stack/tools/qbox" in output
+    assert "qbox patches:" not in output
     assert "apollo_fvp_full_system" in output
     assert "package: local FVP deploy" not in output
 

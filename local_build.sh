@@ -280,6 +280,8 @@ print_component_dry_run()
                     printf '    cmake: -S %s -B %s\n' \
                         "${QBOX_PLATFORM_DIR#"${ROOT_DIR}"/}" \
                         "${QBOX_PLATFORM_BUILD_DIR#"${ROOT_DIR}"/}"
+                    printf '    qbox core: %s\n' \
+                        "${QBOX_CORE_DIR#"${ROOT_DIR}"/}"
                     printf '    target: %s\n' "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}"
                     if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
                         printf '    test target: qbox_platform_systemc_component_tests\n'
@@ -303,7 +305,7 @@ print_component_dry_run()
                     printf '    remove deploy: %s %s\n' "${BOOT_DIR}/Image" "${BOOT_DIR}/apollo-fvp.dtb"
                     ;;
                 qbox)
-                    printf '    remove qbox platform build only\n'
+                    printf '    remove qbox platform build directory\n'
                     return 0
                     ;;
                 tf-m|scp-firmware|zephyr|optee|u-boot|tf-a)
