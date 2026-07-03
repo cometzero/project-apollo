@@ -39,6 +39,7 @@ NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
+TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
 NO_ATTACH=0
 DRY_RUN=0
 
@@ -107,6 +108,10 @@ Options:
   --dry-run            print the run command and log layout only
   -h, --help           show this help
 
+UART input:
+  TMUX_UART_INPUT_FIFOS=1 enables FIFO-backed interactive UART panes (default).
+  Set TMUX_UART_INPUT_FIFOS=0 to use read-only log panes with /dev/null input.
+
 The default performance preset is expanded by the Python runner into the
 QEMU-native CC3XX backend, RSE hotpaths, BL2 semantic accelerators, and RSE
 fast-boot SRAM DMI/shared-memory mode. Use
@@ -117,6 +122,7 @@ Environment overrides:
   QBOX_CORE_DIR QBOX_PLATFORM_DIR QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
   TMUX_LAYOUT
+  TMUX_UART_INPUT_FIFOS
   ROOTFS_BOOTARGS_PROFILE
   QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
   RANGE_LIMITED_FLASH_DMI CC3XX_STATS
@@ -415,7 +421,9 @@ supervise_run()
     runner_command cmd "${EXTRA_RUNNER_ARGS[@]}"
 
     prepare_log_files
-    prepare_uart_input_fifos
+    if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
+        prepare_uart_input_fifos
+    fi
     : >"${OUT_DIR}/qbox-runner.log"
     rm -f "${OUT_DIR}/.qbox-run.done" "${OUT_DIR}/qbox-run.pid"
     printf 'running\n' >"${OUT_DIR}/qbox-run.status"
@@ -730,10 +738,14 @@ EOF
     while IFS=: read -r domain file title; do
         printf '  %-18s %s/%s (%s)\n' "${domain}" "${OUT_DIR}" "${file}" "${title}"
     done < <(known_logs)
-    printf '\nUART input FIFOs\n'
-    for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
-        printf '  %-18s %s\n' "${domain}" "$(uart_fifo_for_domain "${domain}")"
-    done
+    if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
+        printf '\nUART input FIFOs\n'
+        for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
+            printf '  %-18s %s\n' "${domain}" "$(uart_fifo_for_domain "${domain}")"
+        done
+    else
+        printf '\nUART input FIFOs disabled; logs use /dev/null input.\n'
+    fi
 }
 
 uart_fifo_for_domain()
@@ -771,7 +783,25 @@ is_terminal_status_response_line()
 
     local clean_line="${1//$'\033'/}"
 
-    [[ "${clean_line}" =~ ^\[[0-9]{1,5}\;[0-9]{1,5}R$ ]]
+    [[ "${clean_line}" =~ ^\[{1,2}[0-9]{1,5}\;[0-9]{1,5}R$ ]]
+}
+
+sanitize_uart_input_line()
+{
+    (($# == 1)) || die "sanitize_uart_input_line requires LINE"
+
+    local sanitized="$1"
+    local csi_response_re=$'\033''\[{1,2}[0-9]{1,5};[0-9]{1,5}R'
+    local bracket_response_re='\[{1,2}[0-9]{1,5};[0-9]{1,5}R'
+
+    while [[ "${sanitized}" =~ ${csi_response_re} ]]; do
+        sanitized="${sanitized/${BASH_REMATCH[0]}/}"
+    done
+    while [[ "${sanitized}" =~ ${bracket_response_re} ]]; do
+        sanitized="${sanitized/${BASH_REMATCH[0]}/}"
+    done
+
+    printf '%s\n' "${sanitized}"
 }
 
 write_fifo_line()
@@ -800,6 +830,7 @@ interactive_uart_console()
     local tail_pid=""
     local fifo_keeper_pid=""
     local line
+    local raw_line
     local fifo_ready=0
 
     fifo_path="$(uart_fifo_for_domain "${domain}")" ||
@@ -873,6 +904,11 @@ interactive_uart_console()
             if is_terminal_status_response_line "${line}"; then
                 continue
             fi
+            raw_line="${line}"
+            line="$(sanitize_uart_input_line "${line}")"
+            if [[ -z "${line}" && -n "${raw_line}" ]]; then
+                continue
+            fi
             write_fifo_line "${fifo_path}" "${line}" ||
                 printf 'UART input FIFO write timed out; dropped input line.\n'
         fi
@@ -913,7 +949,8 @@ log_pane_body()
     local log_path="${OUT_DIR}/${file}"
 
     printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-    if uart_fifo_for_domain "${domain}" >/dev/null; then
+    if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]] &&
+        uart_fifo_for_domain "${domain}" >/dev/null; then
         printf 'OUT_DIR=%q exec %q --uart-console %q %q %q' \
             "${OUT_DIR}" "${SCRIPT_PATH}" "${domain}" "${title}" "${log_path}"
     else
@@ -1000,6 +1037,7 @@ start_tmux()
     validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
+    validate_bool "TMUX_UART_INPUT_FIFOS" "${TMUX_UART_INPUT_FIFOS}"
     validate_tmux_layout "${TMUX_LAYOUT}"
     require_command "${TMUX_BIN}"
     require_command "${PYTHON_BIN}"
@@ -1054,16 +1092,18 @@ start_tmux()
             "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
-        printf 'QBOX_RDASPEN_UART_READ_FILE=%q ' \
-            "$(uart_fifo_for_domain rse)"
-        printf 'QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=%q ' \
-            "$(uart_fifo_for_domain safety_island_cl0)"
-        printf 'QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE=%q ' \
-            "$(uart_fifo_for_domain safety_island_cl1)"
-        printf 'QBOX_RDASPEN_SECURE_UART_READ_FILE=%q ' \
-            "$(uart_fifo_for_domain secure_console)"
-        printf 'QBOX_RDASPEN_PRIMARY_UART_READ_FILE=%q ' \
-            "$(uart_fifo_for_domain primary_console)"
+        if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
+            printf 'QBOX_RDASPEN_UART_READ_FILE=%q ' \
+                "$(uart_fifo_for_domain rse)"
+            printf 'QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=%q ' \
+                "$(uart_fifo_for_domain safety_island_cl0)"
+            printf 'QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE=%q ' \
+                "$(uart_fifo_for_domain safety_island_cl1)"
+            printf 'QBOX_RDASPEN_SECURE_UART_READ_FILE=%q ' \
+                "$(uart_fifo_for_domain secure_console)"
+            printf 'QBOX_RDASPEN_PRIMARY_UART_READ_FILE=%q ' \
+                "$(uart_fifo_for_domain primary_console)"
+        fi
         printf 'ROOTFS_BOOTARGS_PROFILE=%q ' "${ROOTFS_BOOTARGS_PROFILE}"
         printf 'QBOX_PERFORMANCE_PRESET=%q ' "${QBOX_PERFORMANCE_PRESET}"
         printf 'LEGACY_FILE_BACKED_SRAM=%q ' "${LEGACY_FILE_BACKED_SRAM}"
@@ -1082,7 +1122,8 @@ start_tmux()
         fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
-        printf 'TMUX_LAYOUT=%q ' "${TMUX_LAYOUT}"
+        printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \
+            "${TMUX_LAYOUT}" "${TMUX_UART_INPUT_FIFOS}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
             "${RUNNER_ARGS_FILE}" "${SCRIPT_PATH}"
     )

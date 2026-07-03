@@ -199,6 +199,8 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert any("QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=" in line for line in tmux_lines)
     assert any("QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE=" in line for line in tmux_lines)
     assert any("QBOX_RDASPEN_SECURE_UART_READ_FILE=" in line for line in tmux_lines)
+    assert any("primary-uart-input.fifo" in line for line in tmux_lines)
+    assert any("rse-uart-input.fifo" in line for line in tmux_lines)
     assert any(f"QBOX_CORE_DIR={ROOT / 'hsoc-stack/tools/qbox'}" in line for line in tmux_lines)
     assert any(
         line.startswith("set-hook ")
@@ -214,6 +216,18 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     )
     assert not any(line.startswith("select-layout ") for line in tmux_lines)
     assert any("QBOX_APOLLO_NUM_CPUS=4" in line for line in tmux_lines)
+
+
+def test_run_qbox_yocto_can_disable_tmux_uart_input_fifos(tmp_path: Path) -> None:
+    result = run_dry_run(
+        tmp_path,
+        extra_env={"TMUX_UART_INPUT_FIFOS": "0"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "UART input FIFOs disabled; logs use /dev/null input." in result.stdout
+    assert "QBOX_RDASPEN_PRIMARY_UART_READ_FILE=" not in result.stdout
+    assert "QBOX_RDASPEN_UART_READ_FILE=" not in result.stdout
 
 
 def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
@@ -356,7 +370,10 @@ def test_tmux_uart_console_filters_terminal_status_response() -> None:
     script_text = tmux_script.read_text(encoding="utf-8")
 
     assert "is_terminal_status_response_line" in script_text
-    assert r"^\[[0-9]{1,5}\;[0-9]{1,5}R$" in script_text
+    assert "sanitize_uart_input_line" in script_text
+    assert r"^\[{1,2}[0-9]{1,5}\;[0-9]{1,5}R$" in script_text
+    assert r"\[{1,2}[0-9]{1,5};[0-9]{1,5}R" in script_text
+    assert 'line="$(sanitize_uart_input_line "${line}")"' in script_text
     assert "write_fifo_line \"${fifo_path}\" \"${line}\"" in script_text
     assert "--uart-console" in script_text
     assert "primary-uart-input.fifo" in script_text
