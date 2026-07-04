@@ -1,6 +1,6 @@
 # 현재 소스 구조
 
-Updated: 2026-06-21
+Updated: 2026-07-04
 
 이 문서는 현재 `project-apollo` 체크아웃의 소스 소유권과 생성물 경계를
 정리한다. 현재 루트 디렉터리는 Git 저장소이며, 구현 소스의 대부분은 루트
@@ -96,18 +96,19 @@ System Management와 Safety Island 소스는
 
 | 경로 | 역할 |
 | --- | --- |
-| `tools/qbox/` | upstream-friendly QBox core submodule. `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, examples를 소유한다. |
-| `tools/qbox-platform/` | Apollo/RD-Aspen platform overlay submodule. Apollo/RD-Aspen Lua, Zena/RSE SystemC model, Apollo-specific QEMU wrapper, platform tests, `apollo_fvp_full_system` aggregate target을 소유한다. |
-| `tools/qbox-platform/platforms/apollo/` | Apollo full-system QVP, primary-compute direct boot, SI CL1 isolated boot Lua entrypoint. |
-| `tools/qbox-platform/platforms/apollo/hw-block/` | RSE, Primary Compute, AP compute, SI CL0/CL1, ROS, system management block Lua 구성. |
-| `tools/qbox-platform/systemc-components/` | Apollo/RD-Aspen overlay가 소유하는 QBox SystemC/TLM hardware models. Apollo에서 사용하는 `mhu320ae`, `mmu720ae`, `cc3xx`, `rse_*`, `zena_*`, `gicx00_multiview` 등이 있다. |
-| `tools/qbox-platform/qemu-components/` | Apollo/RD-Aspen overlay가 소유하는 QEMU/libqemu-backed wrapper. Apollo-specific `qemu_cc3xx` 같은 wrapper를 포함한다. |
-| `tools/qemu/` | QBox가 사용하는 local QEMU/libqemu source submodule. |
+| `hsoc-stack/tools/qbox/` | active upstream-friendly QBox core submodule. `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, examples를 소유한다. |
+| `hsoc-stack/tools/qbox-platform/` | active Apollo/RD-Aspen platform overlay submodule. Apollo/RD-Aspen Lua, Zena/RSE SystemC model, Apollo-specific QEMU wrapper, platform tests, `apollo_fvp_full_system` aggregate target을 소유한다. |
+| `hsoc-stack/tools/qbox-platform/platforms/apollo/` | Apollo full-system QVP, primary-compute direct boot, SI CL1 isolated boot Lua entrypoint. |
+| `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/` | RSE, Primary Compute, AP compute, SI CL0/CL1, ROS, system management block Lua 구성. |
+| `hsoc-stack/tools/qbox-platform/systemc-components/` | Apollo/RD-Aspen overlay가 소유하는 QBox SystemC/TLM hardware models. Apollo에서 사용하는 `mhu320ae`, `mmu720ae`, `cc3xx`, `rse_*`, `zena_*`, `gicx00_multiview` 등이 있다. |
+| `hsoc-stack/tools/qbox-platform/qemu-components/` | Apollo/RD-Aspen overlay가 소유하는 QEMU/libqemu-backed wrapper. Apollo-specific `qemu_cc3xx` 같은 wrapper를 포함한다. |
+| `hsoc-stack/tools/qemu/` | active QBox local build가 사용하는 local QEMU/libqemu source submodule. |
+| `tools/qbox/`, `tools/qbox-platform/`, `tools/qemu/` | legacy QBox/QEMU checkout. 비교, 이력 확인, migration reference 용도로 유지하며 기본 Apollo QBox local build 입력은 아니다. |
 
 새 Apollo hardware model이나 Lua wiring 변경은 대부분
-`tools/qbox-platform/`이 소유한다. 재사용 가능한 QBox core 변경은
-`tools/qbox/`가 소유하고, QEMU device/backend 변경은 `tools/qemu/`가
-소유한다. 기본 Apollo overlay build output은
+`hsoc-stack/tools/qbox-platform/`이 소유한다. 재사용 가능한 QBox core 변경은
+`hsoc-stack/tools/qbox/`가 소유하고, QEMU device/backend 변경은
+`hsoc-stack/tools/qemu/`가 소유한다. 기본 Apollo overlay build output은
 `build/local-apollo-fvp/work/qbox-platform/`이며, `QBOX_BUILD_DIR`는
 `QBOX_PLATFORM_BUILD_DIR`의 호환 alias로만 사용한다.
 
@@ -147,7 +148,7 @@ docs/scripts에 반영한다.
 - 소스 구조나 ownership을 바꾸면 `AGENTS.md`, `README.md`, 이 문서를 함께
   확인한다.
 - QBox Apollo platform 경로가 바뀌면
-  `tools/qbox-platform/platforms/apollo/README.md`와
+  `hsoc-stack/tools/qbox-platform/platforms/apollo/README.md`와
   `doc/apollo-qbox-hardware-ko.md`도 확인한다.
 - Yocto layer/machine/recipe ownership이 바뀌면
   `doc/yocto-layer-and-recipe-map.md`를 확인한다.

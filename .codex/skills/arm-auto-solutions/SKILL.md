@@ -32,8 +32,12 @@ ownership boundaries are:
 - `hsoc-stack/yocto/meta-hsoc-bsp/` - Apollo BSP, machine, firmware, kernel,
   signing, and secure-world metadata.
 - `layers/*` - external Yocto layers, usually pinned upstream/downstream.
-- `tools/qbox/` - QBox SystemC/TLM/QEMU platform implementation.
-- `tools/qemu/` - local QEMU/libqemu source used by QBox.
+- `hsoc-stack/tools/qbox/` - active upstream-friendly QBox core.
+- `hsoc-stack/tools/qbox-platform/` - active Apollo/RD-Aspen QBox platform
+  overlay.
+- `hsoc-stack/tools/qemu/` - active local QEMU/libqemu source used by QBox.
+- `tools/qbox/`, `tools/qbox-platform/`, `tools/qemu/` - legacy QBox/QEMU
+  checkouts retained for comparison and migration history.
 - `scripts/` and `tests/` - project orchestration helpers and helper tests.
 - `build/conf/` - active local Yocto build configuration.
 - `build/` other than `build/conf/` - generated output, useful for evidence
@@ -70,9 +74,12 @@ ownership boundaries are:
 - Test automation:
   `sw-ref-stack/test_automation`
 - QBox platform:
-  `tools/qbox/platforms/apollo`,
-  `tools/qbox/systemc-components`,
-  `tools/qbox/qemu-components`
+  `hsoc-stack/tools/qbox-platform/platforms/apollo`,
+  `hsoc-stack/tools/qbox-platform/systemc-components`,
+  `hsoc-stack/tools/qbox-platform/qemu-components`
+- QBox core and libqemu:
+  `hsoc-stack/tools/qbox`,
+  `hsoc-stack/tools/qemu`
 - Current generated evidence:
   `build/tmp_baremetal/deploy/images/apollo-fvp`,
   `build/tmp_baremetal/log/cooker/apollo-fvp`

@@ -28,6 +28,8 @@ hardware models over register-only stubs.
   `hsoc-stack/tools/qbox/`
 - QBox platform under active development:
   `hsoc-stack/tools/qbox-platform/platforms/apollo/`
+- QBox-local QEMU/libqemu under active development:
+  `hsoc-stack/tools/qemu/`
 - QBox helper scripts:
   `./local-build.sh qbox`,
   `scripts/build/build_qbox.sh`,
@@ -68,6 +70,7 @@ hardware models over register-only stubs.
   build must not apply these patches automatically; QBox builds should use the
   checked-out `hsoc-stack/tools/qbox/` source unless a task explicitly requests
   applying one of those patches.
+- `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
 - `tools/qbox/`: legacy upstream-friendly QBox core path, including
   `platforms-vp`,
   libqbox/libqemu integration, reusable SystemC/TLM components, reusable
@@ -80,7 +83,9 @@ hardware models over register-only stubs.
   build must not apply these patches automatically; QBox builds should use the
   checked-out QBox source unless a task explicitly requests applying one of
   those patches.
-- `tools/qemu/`: local QEMU/libqemu source used by QBox.
+- `tools/qemu/`: legacy local QEMU/libqemu checkout retained for comparison
+  and migration history. Normal Apollo QBox local builds use
+  `hsoc-stack/tools/qemu/`.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
   `yocto_build.sh`, `local-build.sh`, and `run_qbox.sh` call into these
   helpers.
@@ -106,7 +111,9 @@ hardware models over register-only stubs.
 3. Keep changes scoped to the owning repository or project-local docs. For
    example, kernel source changes belong in
    `hsoc-stack/components/primary_compute/linux`, QBox model changes belong in
-   `tools/qbox`, and top-level workflow docs belong in this repository.
+   `hsoc-stack/tools/qbox`, QBox platform changes belong in
+   `hsoc-stack/tools/qbox-platform`, and top-level workflow docs belong in
+   this repository.
 4. Preserve user changes. Do not reset nested repos or generated state unless
    explicitly requested.
 5. Prefer log and artifact based validation over tmux-only screen output.
@@ -228,7 +235,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
 
 1. Static checks:
    - `python3 -m py_compile scripts/*/*.py` for changed Python helpers.
-   - `git -C tools/qbox diff --check` for QBox changes.
+   - `git -C hsoc-stack/tools/qbox diff --check` for QBox core changes.
    - `python3 scripts/test/validate_qbox_apollo_fvp_full_map.py`
    - `python3 scripts/test/audit_qbox_core_boundary.py`
 2. Yocto build checks:
@@ -277,8 +284,8 @@ Use the narrowest meaningful command first, then broaden only when needed.
 When adding or replacing a hardware model, update project-local evidence:
 
 - `doc/qbox-fvp-emulation-project.md` for roadmap/status changes.
-- `tools/qbox-platform/platforms/apollo/README.md` for Apollo platform runtime
-  instructions.
+- `hsoc-stack/tools/qbox-platform/platforms/apollo/README.md` for Apollo
+  platform runtime instructions.
 - `build/qbox-apollo-fvp/` only for generated verification reports.
 
 Final reports must include files changed, commands run, static/build/runtime

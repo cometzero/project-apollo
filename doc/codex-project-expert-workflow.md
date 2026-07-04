@@ -1,6 +1,6 @@
 # Codex Project Expert Workflow
 
-Updated: 2026-06-18
+Updated: 2026-07-04
 
 ## Summary
 
@@ -38,8 +38,10 @@ guidance in this workspace. It encodes the important boundaries:
 
 - Root is a Git repository that pins nested source repositories with
   submodules.
-- `arm-zena-css/`, `sw-ref-stack/`, `hsoc-stack/components/*`, `hsoc-stack/yocto/*`,
-  `tools/qbox/`, `tools/qemu/`, and `layers/*` are separate source zones.
+- `arm-zena-css/`, `sw-ref-stack/`, `hsoc-stack/components/*`,
+  `hsoc-stack/yocto/*`, `hsoc-stack/tools/qbox/`,
+  `hsoc-stack/tools/qbox-platform/`, `hsoc-stack/tools/qemu/`, and `layers/*`
+  are separate source zones.
 - `build/conf/` is active local Yocto configuration; the rest of `build/` is
   generated output and should be inspected only for evidence.
 - Default outputs should include exact paths, commands, and validation evidence.
@@ -145,7 +147,9 @@ Then choose the narrow source area:
   `hsoc-stack/yocto/meta-hsoc-auto-solutions/`,
   `hsoc-stack/yocto/meta-hsoc-bsp/`
 - QBox/QEMU platform sources:
-  `tools/qbox/`, `tools/qemu/`
+  `hsoc-stack/tools/qbox/`,
+  `hsoc-stack/tools/qbox-platform/`,
+  `hsoc-stack/tools/qemu/`
 - Automotive images/tests:
   `sw-ref-stack/yocto/meta-arm-auto-solutions`,
   `sw-ref-stack/test_automation`
