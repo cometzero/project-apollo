@@ -24,6 +24,32 @@ SCHEMA_VERSION = 1
 DEFAULT_THRESHOLD = 0.20
 DEFAULT_POLL_INTERVAL = 0.5
 LIVE_TIMING_FILE = "qbox-live-line-timing.json"
+EXPECTED_AP_CPU_TIMER_LINE = "arch_timer: cp15 timer running at 125.00MHz (phys)."
+EXPECTED_AP_MMIO_TIMER_LINE = (
+    "arch-timer-mmio 1a810000.timer: mmio timer running at 125.00MHz (phys)"
+)
+CURRENT_BASELINE_AP_MMIO_TIMER_LINE = (
+    "arch-timer-mmio 1a810000.timer: mmio timer running at 19.20MHz (phys)"
+)
+AP_MMIO_TIMER_PREFIX = "arch-timer-mmio 1a810000.timer:"
+TIMER_HEALTH_LOGS = {
+    "qbox-primary-console.log",
+    "qbox-platform.log",
+    "qbox-rse.log",
+    "qbox-scp.log",
+    "qbox-safety-island-cl0.log",
+}
+TIMER_SHADOW_WARNING_RE = re.compile(
+    r"css_counters_timers.*shadowed|refclk.*shadowed|syscntr.*shadowed",
+    re.IGNORECASE,
+)
+TIMER_BAD_RE = re.compile(
+    r"\b(?:timer|counter|syscntr|refclk|css_counters_timers)\b.*"
+    r"\b(?:error|failed|failure|fatal|regression)\b|"
+    r"\b(?:error|failed|failure|fatal|regression)\b.*"
+    r"\b(?:timer|counter|syscntr|refclk|css_counters_timers)\b",
+    re.IGNORECASE,
+)
 QBOX_PROCESS_PATTERNS = [
     "platforms-vp",
     "run_qbox_yocto.sh",
@@ -581,6 +607,168 @@ def scan_error_logs(
     return matches
 
 
+def log_line_record(log: dict[str, Any], line_number: int, line: str) -> dict[str, Any]:
+    return {
+        "log": str(log["path"]),
+        "log_name": log["name"],
+        "line_number": line_number,
+        "line": line,
+    }
+
+
+def find_log_line(
+    logs: list[dict[str, Any]], expected: str, *, log_name: str | None = None
+) -> dict[str, Any] | None:
+    for log in logs:
+        if log_name is not None and log["name"] != log_name:
+            continue
+        for index, raw_line in enumerate(log["lines"], start=1):
+            line = clean_line(raw_line)
+            if expected in line:
+                return log_line_record(log, index, line)
+    return None
+
+
+def find_prefixed_log_lines(
+    logs: list[dict[str, Any]], prefix: str, *, log_name: str | None = None
+) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for log in logs:
+        if log_name is not None and log["name"] != log_name:
+            continue
+        for index, raw_line in enumerate(log["lines"], start=1):
+            line = clean_line(raw_line)
+            if prefix in line:
+                matches.append(log_line_record(log, index, line))
+    return matches
+
+
+def scan_timer_health_logs(logs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for log in logs:
+        if log["name"] not in TIMER_HEALTH_LOGS:
+            continue
+        for index, raw_line in enumerate(log["lines"], start=1):
+            line = clean_line(raw_line)
+            if TIMER_SHADOW_WARNING_RE.search(line):
+                match = log_line_record(log, index, line)
+                match["check"] = "timer_window_shadow_warning"
+                matches.append(match)
+                continue
+            if TIMER_BAD_RE.search(line):
+                match = log_line_record(log, index, line)
+                match["check"] = "timer_related_error"
+                matches.append(match)
+    return matches
+
+
+def extract_timer_topology(logs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "ap_cpu_timer": find_log_line(
+            logs,
+            EXPECTED_AP_CPU_TIMER_LINE,
+            log_name="qbox-primary-console.log",
+        ),
+        "ap_mmio_timer_expected": find_log_line(
+            logs,
+            EXPECTED_AP_MMIO_TIMER_LINE,
+            log_name="qbox-primary-console.log",
+        ),
+        "ap_mmio_timer_current_baseline": find_log_line(
+            logs,
+            CURRENT_BASELINE_AP_MMIO_TIMER_LINE,
+            log_name="qbox-primary-console.log",
+        ),
+        "ap_mmio_timer_lines": find_prefixed_log_lines(
+            logs,
+            AP_MMIO_TIMER_PREFIX,
+            log_name="qbox-primary-console.log",
+        ),
+        "timer_health_matches": scan_timer_health_logs(logs),
+    }
+
+
+def timer_topology_location(hit: dict[str, Any] | None) -> tuple[str | None, int | None]:
+    if hit is None:
+        return None, None
+    log = hit.get("log") if isinstance(hit.get("log"), str) else None
+    line_number = hit.get("line_number") if isinstance(hit.get("line_number"), int) else None
+    return log, line_number
+
+
+def require_timer_topology(
+    snapshot: dict[str, Any], *, context: int, allow_current_baseline: bool
+) -> dict[str, Any]:
+    timer = snapshot["timer_topology"]
+    cpu_hit = timer.get("ap_cpu_timer")
+    if not isinstance(cpu_hit, dict):
+        raise RegressionFailure(
+            "AP CPU timer line missing or changed:\n"
+            f"  expected: {EXPECTED_AP_CPU_TIMER_LINE}"
+        )
+
+    mmio_hit = timer.get("ap_mmio_timer_expected")
+    current_baseline_hit = timer.get("ap_mmio_timer_current_baseline")
+    baseline_allowed = allow_current_baseline and isinstance(current_baseline_hit, dict)
+    if not isinstance(mmio_hit, dict) and not baseline_allowed:
+        observed = timer.get("ap_mmio_timer_lines")
+        observed_items = observed if isinstance(observed, list) else []
+        observed_lines = [
+            f"  observed: {item.get('line')}"
+            for item in observed_items
+            if isinstance(item, dict)
+        ]
+        details = [
+            "AP MMIO timer mismatch:",
+            f"  expected: {EXPECTED_AP_MMIO_TIMER_LINE}",
+            f"  known old baseline: {CURRENT_BASELINE_AP_MMIO_TIMER_LINE}",
+            "  use --allow-current-timer-baseline only for explicit baseline characterization",
+            *observed_lines,
+        ]
+        first_observed = next(
+            (item for item in observed_items if isinstance(item, dict)),
+            None,
+        )
+        log, line_number = timer_topology_location(first_observed)
+        fail_with_log_context(
+            "timer topology regression detected",
+            log=log,
+            line_number=line_number,
+            context=context,
+            details=details,
+        )
+
+    timer_health_matches = timer.get("timer_health_matches")
+    if isinstance(timer_health_matches, list) and timer_health_matches:
+        match = next((item for item in timer_health_matches if isinstance(item, dict)), None)
+        if match is not None:
+            log, line_number = timer_topology_location(match)
+            fail_with_log_context(
+                "timer topology regression detected",
+                log=log,
+                line_number=line_number,
+                context=context,
+                details=[
+                    f"check: {match.get('check')}",
+                    f"line: {match.get('line')}",
+                    "timer-related platform shadow warnings are not allowlisted",
+                ],
+            )
+
+    return {
+        "ap_cpu_timer": str(cpu_hit.get("line")),
+        "ap_mmio_timer": (
+            str(mmio_hit.get("line"))
+            if isinstance(mmio_hit, dict)
+            else str(current_baseline_hit.get("line"))
+        ),
+        "allowed_current_timer_baseline": baseline_allowed,
+        "timer_health_match_count": len(timer_health_matches)
+        if isinstance(timer_health_matches, list)
+        else 0,
+    }
+
+
 def build_snapshot(
     result_dir: Path,
     *,
@@ -601,6 +789,7 @@ def build_snapshot(
         "ignore_error_regexes": ignore_error_regexes,
         "result_status_failures": result_status_failures(result, child),
         "error_matches": scan_error_logs(logs, error_regexes, ignore_error_regexes),
+        "timer_topology": extract_timer_topology(logs),
         "logs": [
             {
                 "name": log["name"],
@@ -819,6 +1008,7 @@ class RealtimeLogMonitor:
         error_regexes: list[str],
         ignore_regexes: list[str],
         context: int,
+        allow_current_timer_baseline: bool,
     ) -> None:
         self.baseline_errors = {
             error_fingerprint(match) for match in baseline.get("error_matches", [])
@@ -828,6 +1018,7 @@ class RealtimeLogMonitor:
         self.error_regexes = compile_regexes(error_regexes)
         self.ignore_regexes = compile_regexes(ignore_regexes)
         self.context = context
+        self.allow_current_timer_baseline = allow_current_timer_baseline
         self.line_counts: dict[Path, int] = {}
         self.start_time = time.monotonic()
         self.stage_seen: set[str] = set()
@@ -904,6 +1095,7 @@ class RealtimeLogMonitor:
         self, path: Path, line_number: int, raw_line: str, *, complete: bool = True
     ) -> None:
         line = clean_line(raw_line)
+        self.check_timer_topology_line(path, line_number, line)
         if complete and not ignored_line(line, self.ignore_regexes):
             for pattern, regex in self.error_regexes:
                 if not regex.search(line):
@@ -966,6 +1158,52 @@ class RealtimeLogMonitor:
                 log=str(path),
                 line_number=line_number,
             )
+
+    def check_timer_topology_line(self, path: Path, line_number: int, line: str) -> None:
+        if path.name not in TIMER_HEALTH_LOGS:
+            return
+        if TIMER_SHADOW_WARNING_RE.search(line):
+            fail_with_log_context(
+                "timer topology regression detected",
+                log=str(path),
+                line_number=line_number,
+                context=self.context,
+                details=[
+                    "check: timer_window_shadow_warning",
+                    f"line: {line}",
+                    "timer-related platform shadow warnings are not allowlisted",
+                ],
+            )
+        if TIMER_BAD_RE.search(line):
+            fail_with_log_context(
+                "timer topology regression detected",
+                log=str(path),
+                line_number=line_number,
+                context=self.context,
+                details=[
+                    "check: timer_related_error",
+                    f"line: {line}",
+                ],
+            )
+        if path.name != "qbox-primary-console.log" or AP_MMIO_TIMER_PREFIX not in line:
+            return
+        if EXPECTED_AP_MMIO_TIMER_LINE in line:
+            return
+        if self.allow_current_timer_baseline and CURRENT_BASELINE_AP_MMIO_TIMER_LINE in line:
+            return
+        fail_with_log_context(
+            "timer topology regression detected",
+            log=str(path),
+            line_number=line_number,
+            context=self.context,
+            details=[
+                "AP MMIO timer mismatch:",
+                f"  expected: {EXPECTED_AP_MMIO_TIMER_LINE}",
+                f"  known old baseline: {CURRENT_BASELINE_AP_MMIO_TIMER_LINE}",
+                f"  observed: {line}",
+                "  use --allow-current-timer-baseline only for explicit baseline characterization",
+            ],
+        )
 
 
 def compare_snapshot(
@@ -1325,6 +1563,7 @@ def run_qbox_yocto(
             error_regexes=error_regexes,
             ignore_regexes=ignore_error_regexes,
             context=args.context_lines,
+            allow_current_timer_baseline=args.allow_current_timer_baseline,
         )
         if baseline is not None
         else None
@@ -1399,6 +1638,16 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("--error-regex", action="append")
     parser.add_argument("--ignore-error-regex", action="append", default=[])
     parser.add_argument("--summary-out", type=Path)
+    parser.add_argument(
+        "--allow-current-timer-baseline",
+        action="store_true",
+        help=(
+            "Allow the known pre-fix Apollo AP MMIO timer baseline "
+            "(`arch-timer-mmio 1a810000.timer` at 19.20MHz) for explicit "
+            "baseline characterization only; timer-window shadow warnings and "
+            "timer-related errors still fail."
+        ),
+    )
     parser.add_argument("runner_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -1477,6 +1726,11 @@ def main() -> int:
         )
 
         if args.record_baseline:
+            timer_summary = require_timer_topology(
+                snapshot,
+                context=args.context_lines,
+                allow_current_baseline=args.allow_current_timer_baseline,
+            )
             require_clean_baseline(
                 snapshot,
                 fail_on_baseline_errors=args.fail_on_baseline_errors,
@@ -1487,11 +1741,17 @@ def main() -> int:
             print(f"source result dir: {result_dir}")
             print(f"stages: {len(snapshot['stages'])}")
             print(f"known error matches: {len(snapshot['error_matches'])}")
+            print(f"timer topology: {json.dumps(timer_summary, sort_keys=True)}")
             return 0
 
         if baseline is None:
             baseline = read_json(args.baseline)
 
+        timer_summary = require_timer_topology(
+            snapshot,
+            context=args.context_lines,
+            allow_current_baseline=args.allow_current_timer_baseline,
+        )
         summary = compare_snapshot(
             baseline,
             snapshot,
@@ -1501,6 +1761,7 @@ def main() -> int:
         )
         summary["result_dir"] = str(result_dir)
         summary["baseline"] = str(args.baseline)
+        summary["timer_topology"] = timer_summary
         if args.summary_out:
             write_json(args.summary_out, summary)
         print(json.dumps(summary, indent=2, sort_keys=True))
