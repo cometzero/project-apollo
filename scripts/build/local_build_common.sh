@@ -148,7 +148,7 @@ DEPLOY_DIR="${LOCAL_BUILD_DIR}/deploy"
 LOG_DIR="${LOCAL_BUILD_DIR}/logs"
 QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
-QBOX_QEMU_DIR="${QBOX_QEMU_DIR:-${ROOT_DIR}/tools/qemu}"
+QBOX_QEMU_DIR="${QBOX_QEMU_DIR:-${ROOT_DIR}/hsoc-stack/tools/qemu}"
 if [[ -n "${QBOX_PLATFORM_BUILD_DIR:-}" ]]; then
     :
 elif [[ -n "${QBOX_BUILD_DIR:-}" ]]; then
