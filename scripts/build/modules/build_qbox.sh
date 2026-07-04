@@ -26,6 +26,7 @@ build_qbox()
         -B "${QBOX_PLATFORM_BUILD_DIR}" \
         "${cmake_ccache_args[@]}" \
         -DCMAKE_BUILD_TYPE="${QBOX_CMAKE_BUILD_TYPE:-Release}" \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DCMAKE_INSTALL_PREFIX="${QBOX_PLATFORM_BUILD_DIR}/install" \
         -DQBOX_CORE_SOURCE_DIR="${QBOX_CORE_DIR}" \
         -DQBOX_QEMU_SOURCE_DIR="${QBOX_QEMU_DIR}" \
