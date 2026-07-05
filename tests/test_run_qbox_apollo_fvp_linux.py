@@ -1,8 +1,7 @@
 from pathlib import Path
 import importlib.util
+import re
 import sys
-
-import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +16,15 @@ def load_runner():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
+
+
+def assert_raises_match(exc_type, pattern, func, *args, **kwargs):
+    try:
+        func(*args, **kwargs)
+    except exc_type as exc:
+        assert re.search(pattern, str(exc)), str(exc)
+        return
+    raise AssertionError(f"{exc_type.__name__} was not raised")
 
 
 def test_local_build_artifacts_are_resolved_from_deploy_root(tmp_path):
@@ -148,8 +156,13 @@ def test_prepare_debug_outputs_rejects_external_trace_file_without_deleting(
         "QBOX_APOLLO_PC_TRACE_FILE": str(external),
     }
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_PC_TRACE_FILE"):
-        runner.prepare_debug_outputs(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_PC_TRACE_FILE",
+        runner.prepare_debug_outputs,
+        args,
+        env,
+    )
 
     assert external.read_text(encoding="utf-8") == "keep me\n"
 
@@ -176,8 +189,13 @@ def test_validate_debug_env_rejects_zero_cpu_direct_boot(tmp_path):
     args = type("Args", (), {"netdev": "type=user", "out_dir": tmp_path})()
     env = {"QBOX_APOLLO_NUM_CPUS": "0"}
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_NUM_CPUS"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_NUM_CPUS",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_validate_debug_env_rejects_malformed_gdb_base(tmp_path):
@@ -188,8 +206,13 @@ def test_validate_debug_env_rejects_malformed_gdb_base(tmp_path):
         "QBOX_APOLLO_NUM_CPUS": "16",
     }
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_PORT_BASE"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_GDB_PORT_BASE",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_validate_debug_env_rejects_nonzero_gdb_base(tmp_path):
@@ -207,8 +230,13 @@ def test_validate_debug_env_rejects_nonzero_gdb_base(tmp_path):
         "QBOX_APOLLO_NUM_CPUS": "16",
     }
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_PORT_BASE"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_GDB_PORT_BASE",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_validate_debug_env_allows_selected_gdb_cpu(tmp_path):
@@ -246,8 +274,13 @@ def test_validate_debug_env_rejects_selected_gdb_hostfwd_collision(tmp_path):
         "QBOX_APOLLO_NUM_CPUS": "16",
     }
 
-    with pytest.raises(ValueError, match="hostfwd"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "hostfwd",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_validate_debug_env_rejects_selected_gdb_cpu_out_of_range(tmp_path):
@@ -259,8 +292,13 @@ def test_validate_debug_env_rejects_selected_gdb_cpu_out_of_range(tmp_path):
         "QBOX_APOLLO_NUM_CPUS": "16",
     }
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_CPU_INDEX"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_GDB_CPU_INDEX",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_validate_debug_env_rejects_selected_gdb_port_without_cpu(tmp_path):
@@ -271,8 +309,13 @@ def test_validate_debug_env_rejects_selected_gdb_port_without_cpu(tmp_path):
         "QBOX_APOLLO_NUM_CPUS": "16",
     }
 
-    with pytest.raises(ValueError, match="QBOX_APOLLO_GDB_CPU_INDEX"):
-        runner.validate_debug_env(args, env)
+    assert_raises_match(
+        ValueError,
+        "QBOX_APOLLO_GDB_CPU_INDEX",
+        runner.validate_debug_env,
+        args,
+        env,
+    )
 
 
 def test_qbox_env_removes_stale_rootfs_env(tmp_path, monkeypatch):
