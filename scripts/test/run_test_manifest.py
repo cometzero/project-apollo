@@ -125,6 +125,10 @@ def words(value: str) -> list[str]:
     return [part for part in value.split() if part]
 
 
+def json_strings(values: list[str]) -> list[JsonValue]:
+    return [value for value in values]
+
+
 def merged_words(*values: str) -> list[str]:
     merged: list[str] = []
     seen: set[str] = set()
@@ -199,30 +203,40 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
             local_conf.get("PC_CPUS_COUNT_DEFAULT", "") or str_field(testdata, "PC_CPUS_COUNT_DEFAULT")
         ),
         "tmpdir": tmpdir,
-        "extra_image_features": words(
-            f"{local_conf.get('EXTRA_IMAGE_FEATURES', '')} {str_field(testdata, 'EXTRA_IMAGE_FEATURES')}"
+        "extra_image_features": json_strings(
+            words(
+                f"{local_conf.get('EXTRA_IMAGE_FEATURES', '')} {str_field(testdata, 'EXTRA_IMAGE_FEATURES')}"
+            )
         ),
-        "image_classes": words(
-            f"{local_conf.get('IMAGE_CLASSES', '')} {str_field(testdata, 'IMAGE_CLASSES')}"
+        "image_classes": json_strings(
+            words(
+                f"{local_conf.get('IMAGE_CLASSES', '')} {str_field(testdata, 'IMAGE_CLASSES')}"
+            )
         ),
-        "test_suites": words(str_field(testdata, "TEST_SUITES")),
-        "hsoc_run_test_skip_suites": merged_words(
-            str_field(testdata, "HSOC_RUN_TEST_SKIP_SUITES"),
-            distro_conf.get("HSOC_RUN_TEST_SKIP_SUITES", ""),
+        "test_suites": json_strings(words(str_field(testdata, "TEST_SUITES"))),
+        "hsoc_run_test_skip_suites": json_strings(
+            merged_words(
+                str_field(testdata, "HSOC_RUN_TEST_SKIP_SUITES"),
+                distro_conf.get("HSOC_RUN_TEST_SKIP_SUITES", ""),
+            )
         ),
-        "hsoc_run_test_skip_extra_lanes": merged_words(
-            str_field(testdata, "HSOC_RUN_TEST_SKIP_EXTRA_LANES"),
-            distro_conf.get("HSOC_RUN_TEST_SKIP_EXTRA_LANES", ""),
+        "hsoc_run_test_skip_extra_lanes": json_strings(
+            merged_words(
+                str_field(testdata, "HSOC_RUN_TEST_SKIP_EXTRA_LANES"),
+                distro_conf.get("HSOC_RUN_TEST_SKIP_EXTRA_LANES", ""),
+            )
         ),
         "hsoc_run_test_skip_reason": str_field(testdata, "HSOC_RUN_TEST_SKIP_REASON") or distro_conf.get("HSOC_RUN_TEST_SKIP_REASON", ""),
-        "test_fvp_devices": words(
-            distro_conf.get("TEST_FVP_DEVICES", "")
-            or str_field(testdata, "TEST_FVP_DEVICES")
+        "test_fvp_devices": json_strings(
+            words(
+                distro_conf.get("TEST_FVP_DEVICES", "")
+                or str_field(testdata, "TEST_FVP_DEVICES")
+            )
         ),
         "test_target": str_field(testdata, "TEST_TARGET"),
         "test_target_ip": str_field(testdata, "TEST_TARGET_IP"),
         "fvp_exe": str_field(testdata, "FVP_EXE") or fvpconf.exe,
-        "bblayers": words(bblayers_conf.get("BBLAYERS", "")),
+        "bblayers": json_strings(words(bblayers_conf.get("BBLAYERS", ""))),
         "templateconf": templateconf,
         "config_yaml": config_yaml,
         "testdata_path": str(testdata_path),
@@ -231,7 +245,7 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
             "provider": fvpconf.provider,
             "bindir": fvpconf.bindir,
             "exe": fvpconf.exe,
-            "args": fvpconf.args,
+            "args": json_strings(fvpconf.args),
         },
     }
 
@@ -302,7 +316,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     write_conf.add_argument("--build-dir", type=Path, default=Path("build"))
     write_conf.add_argument("--machine", default="apollo-fvp")
     write_conf.add_argument("--run-dir", type=Path, required=True)
-    write_conf.add_argument("--kind", choices=("current", "extended", "extra"), required=True)
+    write_conf.add_argument(
+        "--kind",
+        choices=("current", "functional", "power", "extended", "extra"),
+        required=True,
+    )
     write_conf.add_argument("--test-overall-timeout", default="10800")
     write_conf.add_argument("--out", type=Path)
     write_conf.set_defaults(func=run_write_conf)

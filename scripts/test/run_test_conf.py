@@ -103,6 +103,10 @@ def _lane_name(kind: str) -> str:
     match kind:
         case "current":
             return "current"
+        case "functional":
+            return "functional"
+        case "power":
+            return "power"
         case "extended":
             return "extended"
         case "extra":
@@ -115,12 +119,13 @@ def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
     match kind:
         case "current" | "extra":
             return None
-        case "extended":
+        case "functional" | "power" | "extended":
             plan = resolve_plan(manifest)
             included = plan.get("included", {})
             if not isinstance(included, dict):
                 return ""
-            suite = included.get("validation_extended", [])
+            suite_key = f"validation_{kind}" if kind != "functional" else "validation_current"
+            suite = included.get(suite_key, [])
             if not isinstance(suite, list):
                 return ""
             tests = [item for item in suite if isinstance(item, str)]

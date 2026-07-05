@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 import shutil
@@ -7,12 +8,22 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/test"))
 
-from run_test_conf import ConfRequest, PublicRunRequest, public_run_rejection_message, write_conf
 from run_test_helpers import load_json, nonempty_lines, run_runner
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/test/run_test_manifest.py"
+CONF_SCRIPT = ROOT / "scripts/test/run_test_conf.py"
+CONF_SPEC = importlib.util.spec_from_file_location("run_test_conf", CONF_SCRIPT)
+assert CONF_SPEC is not None
+assert CONF_SPEC.loader is not None
+RUN_TEST_CONF = importlib.util.module_from_spec(CONF_SPEC)
+sys.modules[CONF_SPEC.name] = RUN_TEST_CONF
+CONF_SPEC.loader.exec_module(RUN_TEST_CONF)
+ConfRequest = RUN_TEST_CONF.ConfRequest
+PublicRunRequest = RUN_TEST_CONF.PublicRunRequest
+public_run_rejection_message = RUN_TEST_CONF.public_run_rejection_message
+write_conf = RUN_TEST_CONF.write_conf
 
 
 def run_manifest(*args: str) -> subprocess.CompletedProcess[str]:
@@ -58,6 +69,61 @@ def test_write_conf_current_when_run_dir_is_safe(tmp_path: Path) -> None:
     ) in text
     assert "cpu_hotplug" not in text
     assert "TEST_SUITES" not in text
+
+
+def test_write_conf_functional_pins_single_boot_suite(tmp_path: Path) -> None:
+    # Given: a safe task run directory outside build/conf.
+    run_dir = tmp_path / "functional"
+
+    # When: the functional OEQA override conf is requested.
+    result = run_manifest(
+        "write-conf",
+        "--build-dir",
+        "build",
+        "--machine",
+        "apollo-fvp",
+        "--run-dir",
+        str(run_dir),
+        "--kind",
+        "functional",
+    )
+
+    # Then: it includes only tests that do not require poweroff or reboot cycles.
+    assert result.returncode == 0, result.stderr
+    text = (run_dir / "conf/oeqa-functional.conf").read_text(encoding="utf-8")
+    assert 'TEST_SUITES = "' in text
+    assert "test_00_rse.RseTest.test_normal_boot" in text
+    assert "test_00_rse.RseTest.test_measured_boot" not in text
+    assert "test_00_rse.RseTest.test_scmi_poweroff" not in text
+    assert "test_00_rse.RseTest.test_scmi_reboot" not in text
+    assert "fvp_boot" not in text
+
+
+def test_write_conf_power_pins_power_reboot_suite(tmp_path: Path) -> None:
+    # Given: a safe task run directory outside build/conf.
+    run_dir = tmp_path / "power"
+
+    # When: the power OEQA override conf is requested.
+    result = run_manifest(
+        "write-conf",
+        "--build-dir",
+        "build",
+        "--machine",
+        "apollo-fvp",
+        "--run-dir",
+        str(run_dir),
+        "--kind",
+        "power",
+    )
+
+    # Then: it includes the RSE measured boot, poweroff, reboot, and FVP boot lanes.
+    assert result.returncode == 0, result.stderr
+    text = (run_dir / "conf/oeqa-power.conf").read_text(encoding="utf-8")
+    assert "test_00_rse.RseTest.test_normal_boot" in text
+    assert "test_00_rse.RseTest.test_measured_boot" in text
+    assert "test_00_rse.RseTest.test_scmi_poweroff" in text
+    assert "test_00_rse.RseTest.test_scmi_reboot" in text
+    assert "fvp_boot" in text
 
 
 def test_auto_ad_nexios_updates_fvp_device_testdata_for_oeqa() -> None:
@@ -297,19 +363,17 @@ def test_public_runner_rejects_alternate_build_dir_tests_escape() -> None:
     assert not out_dir.exists()
 
 
-def test_public_runner_writes_domu_exclusion_to_artifacts() -> None:
+def test_public_runner_writes_category_suite_artifacts() -> None:
     # Given: an explicit dry-run output directory under project build/tests.
-    stamp = "task-domu-exclusion"
+    stamp = "task-category-suite-artifacts"
     out_dir = Path("build/tests") / stamp
     shutil.rmtree(ROOT / out_dir, ignore_errors=True)
 
-    # When: dry-run mode writes the plan, excluded sidecar, and summary.
-    result = run_runner("--dry-run", "--stamp", stamp, "--out-dir", str(out_dir))
+    # When: an opt-in extended category run writes suite evidence.
+    result = run_runner("--category", "extended", "--stamp", stamp, "--out-dir", str(out_dir))
 
-    # Then: all public exclusion artifacts carry DomU evidence.
+    # Then: public artifacts describe the selected category.
     assert result.returncode == 0, result.stderr
-    for name in ("plan.json", "excluded.json", "summary.json"):
-        text = (ROOT / out_dir / name).read_text(encoding="utf-8")
-        assert "DomU" in text or "domu" in text
-    excluded_ids = {item["id"] for item in load_json(ROOT / out_dir / "excluded.json")["excluded"]}
-    assert {"test_40_virtualization", "domu-lifecycle"}.issubset(excluded_ids)
+    suite = load_json(ROOT / out_dir / "suite.json")
+    assert set(suite["categories"]) == {"extended"}
+    assert load_json(ROOT / out_dir / "summary.json")["status"] == "PASS"

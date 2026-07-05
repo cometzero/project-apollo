@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -43,10 +44,13 @@ if [[ "$1" == "-m" && "$2" == "compileall" ]]; then
   printf 'fake compileall failure\\n' >&2
   exit 9
 fi
+if [[ "$1" == "-c" && "$2" == "import pexpect, ptyprocess" ]]; then
+  exit 0
+fi
 if [[ "$1" == "scripts/test/run_test_manifest.py" ]]; then
   subcmd="$2"
   out=""
-  while (($#)); do
+  while [[ "$#" -gt 0 ]]; do
     if [[ "$1" == "--out" ]]; then
       out="$2"
       break
@@ -71,9 +75,27 @@ if [[ "$1" == "scripts/test/run_test_manifest.py" ]]; then
   printf '%s\\n' "${out}"
   exit 0
 fi
+if [[ "$1" == "scripts/run/runfvp_log_boot.py" ]]; then
+  out=""
+  while [[ "$#" -gt 0 ]]; do
+    if [[ "$1" == "--out-dir" ]]; then
+      out="$2"
+      break
+    fi
+    shift
+  done
+  mkdir -p "${out}"
+  printf '{"passed": true}\\n' >"${out}/result.json"
+  {
+    printf 'passed: true\\n'
+    printf 'boot_status_passed: true\\n'
+    printf 'duration_s: 1.0\\n'
+  } >"${out}/summary.txt"
+  exit 0
+fi
 if [[ "$1" == scripts/test/validate_qbox_* || "$1" == scripts/test/audit_qbox_* ]]; then
   out=""
-  while (($#)); do
+  while [[ "$#" -gt 0 ]]; do
     if [[ "$1" == "--out" || "$1" == "--output" ]]; then
       out="$2"
       break
@@ -120,42 +142,46 @@ def write_fake_timeout(path: Path) -> None:
     path.chmod(0o755)
 
 
-def test_default_run_reaches_preflight_after_extra_lane_failure(tmp_path: Path) -> None:
-    # Given: fake cheap lanes where compileall fails but runtime prerequisites pass.
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    write_fake_python(fake_bin / "python3")
-    write_fake_pytest(fake_bin / "pytest")
-    write_fake_timeout(fake_bin / "timeout")
-    out_dir = Path("build/tests/task-11-pytest-continue-after-extra-fail")
+def test_functional_category_pass_refreshes_latest() -> None:
+    # Given: a functional category request with fake boot and OEQA commands.
+    fake_bin = Path("build/tests/task-11-functional-category-fake-bin")
+    shutil.rmtree(ROOT / fake_bin, ignore_errors=True)
+    (ROOT / fake_bin).mkdir(parents=True)
+    write_fake_python(ROOT / fake_bin / "python3")
+    write_fake_timeout(ROOT / fake_bin / "timeout")
+    out_dir = Path("build/tests/task-11-functional-category")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
 
-    # When: the default runner executes without --skip-runtime.
+    # When: the root runner executes boot before functional OEQA lanes.
     result = run_runner(
+        "--category",
+        "functional",
         "--stamp",
-        "task-11-pytest-continue-after-extra-fail",
+        "task-11-functional-category",
         "--out-dir",
         str(out_dir),
         extra_env={
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "PATH": f"{ROOT / fake_bin}:{os.environ['PATH']}",
             "REAL_PYTHON": sys.executable,
-            "RUN_TEST_QBOX_BUILD_DIR": str(tmp_path / "missing-qbox-platform"),
+            "RUN_TEST_HOST_PYTHON_BIN": str(ROOT / fake_bin / "python3"),
         },
     )
 
-    # Then: it still records later safe validation phases and reports final FAIL.
-    assert result.returncode == 1
+    # Then: it reports PASS, records boot and OEQA lanes, and refreshes latest.
+    assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
+    assert "[run_test] START basic-boot" in lines
+    assert "[run_test] START host-python" in lines
+    assert "[run_test] START oeqa-functional" in lines
     assert lines[-2:] == [
-        "RESULT: FAIL",
-        "SUMMARY: build/tests/task-11-pytest-continue-after-extra-fail/summary.json",
+        "RESULT: PASS",
+        "SUMMARY: build/tests/task-11-functional-category/summary.json",
     ]
     summary = load_json(ROOT / out_dir / "summary.json")
-    assert summary["status"] == "FAIL"
-    steps = {step["name"]: step for step in summary["steps"]}
-    assert steps["extra-static-compileall"]["exit_code"] == 9
-    assert steps["preflight"]["status"] == "PASS"
-    assert steps["oeqa-current"]["status"] == "PASS"
-    assert steps["oeqa-extended"]["status"] == "PASS"
+    assert summary["status"] == "PASS"
+    command_names = {record["name"] for record in summary["records"]}
+    assert {"basic-boot", "host-python", "oeqa-functional"}.issubset(command_names)
+    assert os.readlink(ROOT / "build/tests/latest") == "task-11-functional-category"
 
 
 def test_default_run_refreshes_latest_after_nested_selftest_run(tmp_path: Path) -> None:

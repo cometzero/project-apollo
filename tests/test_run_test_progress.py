@@ -23,10 +23,11 @@ def test_preflight_prints_environment_and_step_progress() -> None:
     lines = nonempty_lines(result.stdout)
     assert "[run_test] Environment" in lines
     assert "[run_test]   machine: apollo-fvp" in lines
-    assert "[run_test] START manifest" in lines
-    assert "[run_test] DONE manifest (pass)" in lines
-    assert "[run_test] START preflight" in lines
-    assert "[run_test] DONE preflight (pass)" in lines
+    assert "[run_test]   category: basic" in lines
+    assert "[run_test] START context" in lines
+    assert "[run_test] DONE context (pass)" in lines
+    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] DONE basic-preflight (pass)" in lines
     assert lines[-2:] == [
         "RESULT: PASS",
         "SUMMARY: build/tests/task-progress-preflight/summary.json",

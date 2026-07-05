@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 import os
 import signal
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-import pytest
-
 from run_test_helpers import (
+    LATEST,
     ROOT,
     command_texts,
     latest_target,
@@ -19,15 +16,20 @@ from run_test_helpers import (
     nonempty_lines,
     preserve_latest_link,
     run_runner,
-    write_fake_pytest,
-    write_fake_python,
 )
 
 
-@pytest.fixture(autouse=True)
-def restore_latest_link() -> Iterator[None]:
-    with preserve_latest_link():
-        yield
+LATEST_BEFORE = latest_target()
+
+
+def teardown_module() -> None:
+    if LATEST.is_symlink() or LATEST.is_file():
+        LATEST.unlink()
+    elif LATEST.exists():
+        shutil.rmtree(LATEST)
+    if LATEST_BEFORE is not None:
+        LATEST.parent.mkdir(parents=True, exist_ok=True)
+        LATEST.symlink_to(LATEST_BEFORE)
 
 
 def test_help_documents_runner_options() -> None:
@@ -47,6 +49,7 @@ def test_help_documents_runner_options() -> None:
         "--dry-run",
         "--preflight-only",
         "--skip-runtime",
+        "--category",
         "--include-qbox-runtime",
         "--timeout-oeqa",
         "--timeout-fvp",
@@ -72,40 +75,106 @@ def test_help_documents_runner_options() -> None:
 
 
 def test_list_prints_pass_and_summary_as_final_lines() -> None:
-    # Given: an explicit list-mode output directory under build/tests.
+    # Given: an explicit full-list-mode output directory under build/tests.
     out_dir = Path("build/tests/task-5-pytest-list")
 
-    # When: list mode resolves the current Apollo validation manifest.
+    # When: list mode resolves the current Apollo validation manifest without a category filter.
     result = run_runner("--list", "--stamp", "task-5-pytest-list", "--out-dir", str(out_dir))
 
-    # Then: it exits PASS and the final two non-empty lines are machine-readable.
+    # Then: it exits PASS, prints every category, and ends with machine-readable result lines.
     assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
+    for category in ("basic:", "functional:", "power:", "extended:", "stress:"):
+        assert category in lines
+    assert "[run_test] START category-all-list" in lines
+    assert "[run_test] DONE category-all-list (pass)" in lines
     assert lines[-2:] == [
         "RESULT: PASS",
         "SUMMARY: build/tests/task-5-pytest-list/summary.json",
     ]
+    suite = load_json(ROOT / out_dir / "suite.json")
+    assert set(suite["categories"]) == {"basic", "functional", "power", "extended", "stress"}
     assert load_json(ROOT / out_dir / "summary.json")["status"] == "PASS"
+    command_names = {record["name"] for record in load_commands(ROOT / out_dir)}
+    assert "category-all-list" in command_names
+
+
+def test_list_category_filters_to_named_category() -> None:
+    # Given: an explicit category-filtered list-mode output directory under build/tests.
+    out_dir = Path("build/tests/task-list-category-extended")
+
+    # When: list mode is requested with a category filter.
+    result = run_runner(
+        "--list",
+        "--category",
+        "extended",
+        "--stamp",
+        "task-list-category-extended",
+        "--out-dir",
+        str(out_dir),
+    )
+
+    # Then: it lists only the selected category.
+    assert result.returncode == 0, result.stderr
+    lines = nonempty_lines(result.stdout)
+    assert "extended:" in lines
+    assert "basic:" not in lines
+    assert "functional:" not in lines
+    assert "stress:" not in lines
+    assert "[run_test] START category-extended-list" in lines
+    assert "[run_test] DONE category-extended-list (pass)" in lines
+    suite = load_json(ROOT / out_dir / "suite.json")
+    assert set(suite["categories"]) == {"extended"}
+    command_names = {record["name"] for record in load_commands(ROOT / out_dir)}
+    assert "category-extended-list" in command_names
+
+
+def test_category_option_runs_named_category_with_progress() -> None:
+    # Given: an explicit category run that does not need to launch FVP.
+    out_dir = Path("build/tests/task-category-extended")
+
+    # When: the root runner is asked to run only the extended category.
+    result = run_runner(
+        "--category",
+        "extended",
+        "--stamp",
+        "task-category-extended",
+        "--out-dir",
+        str(out_dir),
+    )
+
+    # Then: stdout reports the selected category and per-test progress.
+    assert result.returncode == 0, result.stderr
+    lines = nonempty_lines(result.stdout)
+    assert "[run_test]   category: extended" in lines
+    assert "[run_test] START category-extended" in lines
+    assert "[run_test] START extended-list" in lines
+    assert "[run_test] DONE extended-list (pass)" in lines
+    assert "[run_test] DONE category-extended (pass)" in lines
+    assert lines[-2:] == [
+        "RESULT: PASS",
+        "SUMMARY: build/tests/task-category-extended/summary.json",
+    ]
+    summary = load_json(ROOT / out_dir / "summary.json")
+    assert summary["status"] == "PASS"
+    command_names = {record["name"] for record in load_commands(ROOT / out_dir)}
+    assert "extended-list" in command_names
 
 
 def test_dry_run_records_oeqa_bitbake_commands() -> None:
-    # Given: an explicit dry-run output directory under build/tests.
+    # Given: an explicit basic-category dry-run output directory under build/tests.
     out_dir = Path("build/tests/task-5-pytest-dry")
 
-    # When: dry-run mode plans the wrapper records.
+    # When: dry-run mode plans the basic boot lane.
     result = run_runner("--dry-run", "--stamp", "task-5-pytest-dry", "--out-dir", str(out_dir))
 
-    # Then: it writes artifacts and records both OEQA BitBake lanes.
+    # Then: it writes artifacts and records preflight plus skipped boot.
     assert result.returncode == 0, result.stderr
     run_dir = ROOT / out_dir
-    for name in ("manifest.json", "excluded.json", "commands.jsonl", "summary.json"):
+    for name in ("manifest.json", "commands.jsonl", "summary.json"):
         assert (run_dir / name).is_file()
-    commands = load_commands(run_dir)
-    assert commands
-    command_text = "\n".join(" ".join(command.get("argv", [])) for command in commands)
-    assert "bitbake -R " in command_text
-    assert "oeqa-current.conf nexios-image -c testimage" in command_text
-    assert "oeqa-extended.conf nexios-image -c testimage" in command_text
+    command_names = {command["name"] for command in load_commands(run_dir)}
+    assert {"context", "basic-preflight", "basic-boot"}.issubset(command_names)
 
 
 def test_dry_run_rejects_project_root_out_dir_before_writing_artifacts() -> None:
@@ -208,64 +277,110 @@ def test_latest_snapshot_helper_restores_after_runner_invocation() -> None:
     assert latest_target() == latest_before
 
 
-def test_extra_static_lanes_are_planned() -> None:
-    # Given: an explicit Todo 7 dry-run output directory.
+def test_basic_dry_run_records_skipped_boot_lane() -> None:
+    # Given: an explicit basic category dry-run output directory.
     out_dir = Path("build/tests/task-7-pytest-dry")
 
-    # When: dry-run mode plans the enabled extra static/project lanes.
+    # When: dry-run mode plans the selected category.
     result = run_runner("--dry-run", "--stamp", "task-7-pytest-dry", "--out-dir", str(out_dir))
 
-    # Then: all required extra commands are recorded but not executed.
+    # Then: the boot lane is recorded but not executed.
     assert result.returncode == 0, result.stderr
     run_dir = ROOT / out_dir
-    commands = command_texts(run_dir)
-    assert any(
-        "PYTHONPYCACHEPREFIX=build/tests/task-7-pytest-dry/extra/static/pycache "
-        "python3 -m compileall scripts tests sw-ref-stack/test_automation" in command
-        for command in commands
-    )
-    assert any(
-        "pytest tests -o cache_dir=build/tests/task-7-pytest-dry/extra/project-pytest/cache "
-        "--junitxml build/tests/task-7-pytest-dry/extra/project-pytest/junit.xml" in command
-        for command in commands
-    )
-    assert not any("pytest unittests" in command for command in commands)
-    extra_records = [command for command in load_commands(run_dir) if command["name"].startswith("extra-")]
-    assert extra_records
-    assert all("stdout_log" not in command and "stderr_log" not in command for command in extra_records)
+    boot_record = next(command for command in load_commands(run_dir) if command["name"] == "basic-boot")
+    assert boot_record["status"] == "skipped"
+    assert "planned_command" in str(boot_record["artifacts"])
 
 
-def test_extra_lane_failure_makes_summary_fail(tmp_path: Path) -> None:
-    # Given: a fake python3 that fails only the compileall lane.
-    fake_bin = tmp_path / "bin"
-    fake_bin.mkdir()
-    write_fake_python(fake_bin / "python3")
-    write_fake_pytest(fake_bin / "pytest")
-    out_dir = Path("build/tests/task-7-pytest-fail")
+def test_functional_dry_run_records_boot_and_oeqa_lanes() -> None:
+    # Given: a functional category dry-run output directory.
+    out_dir = Path("build/tests/task-functional-dry-run")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
 
-    # When: normal mode runs extra lanes and skips not-yet-implemented runtime lanes.
+    # When: the functional category is requested in dry-run mode.
     result = run_runner(
-        "--skip-runtime",
+        "--category",
+        "functional",
+        "--dry-run",
         "--stamp",
-        "task-7-pytest-fail",
+        "task-functional-dry-run",
         "--out-dir",
         str(out_dir),
-        extra_env={
-            "PATH": f"{fake_bin}:{os.environ['PATH']}",
-            "REAL_PYTHON": sys.executable,
-        },
     )
 
-    # Then: the failing extra lane makes the overall summary FAIL.
-    assert result.returncode == 1
+    # Then: the runner records boot preflight, skipped boot, and skipped OEQA lanes.
+    assert result.returncode == 0, result.stderr
+    lines = nonempty_lines(result.stdout)
+    assert "[run_test] START category-functional" in lines
+    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] SKIP basic-boot (dry-run)" in lines
+    assert "[run_test] START oeqa-lanes" in lines
+    assert "[run_test] SKIP oeqa-functional (dry-run)" in lines
+    assert "[run_test] DONE category-functional (pass)" in lines
     run_dir = ROOT / out_dir
     summary = load_json(run_dir / "summary.json")
-    assert summary["status"] == "FAIL"
-    static_step = next(step for step in summary["steps"] if step["name"] == "extra-static-compileall")
-    assert static_step["exit_code"] == 9
-    assert (run_dir / "extra/static/stderr.log").read_text(encoding="utf-8").strip() == (
-        "fake compileall failure"
+    assert summary["status"] == "PASS"
+    command_names = {command["name"] for command in load_commands(run_dir)}
+    assert {"basic-preflight", "basic-boot", "oeqa-functional"}.issubset(command_names)
+
+
+def test_power_dry_run_records_power_oeqa_lane() -> None:
+    # Given: a power category dry-run output directory.
+    out_dir = Path("build/tests/task-power-dry-run")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
+
+    # When: the power category is requested in dry-run mode.
+    result = run_runner(
+        "--category",
+        "power",
+        "--dry-run",
+        "--stamp",
+        "task-power-dry-run",
+        "--out-dir",
+        str(out_dir),
     )
+
+    # Then: the runner records preflight and the skipped power OEQA lane.
+    assert result.returncode == 0, result.stderr
+    lines = nonempty_lines(result.stdout)
+    assert "[run_test] START category-power" in lines
+    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] START oeqa-lanes" in lines
+    assert "[run_test] SKIP oeqa-power (dry-run)" in lines
+    assert "[run_test] DONE category-power (pass)" in lines
+    run_dir = ROOT / out_dir
+    summary = load_json(run_dir / "summary.json")
+    assert summary["status"] == "PASS"
+    command_names = {command["name"] for command in load_commands(run_dir)}
+    assert {"basic-preflight", "oeqa-power"}.issubset(command_names)
+
+
+def test_power_preflight_only_stops_before_oeqa() -> None:
+    # Given: a power category preflight-only output directory.
+    out_dir = Path("build/tests/task-power-preflight-only")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
+
+    # When: preflight-only is requested for the power category.
+    result = run_runner(
+        "--category",
+        "power",
+        "--preflight-only",
+        "--stamp",
+        "task-power-preflight-only",
+        "--out-dir",
+        str(out_dir),
+    )
+
+    # Then: the runner stops after preflight and does not plan the power OEQA lane.
+    assert result.returncode == 0, result.stderr
+    lines = nonempty_lines(result.stdout)
+    assert "[run_test] START category-power" in lines
+    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] START oeqa-lanes" not in lines
+    run_dir = ROOT / out_dir
+    command_names = {command["name"] for command in load_commands(run_dir)}
+    assert "basic-preflight" in command_names
+    assert "oeqa-power" not in command_names
 
 
 def test_stale_pass_summary_is_not_reused_when_command_record_init_fails() -> None:

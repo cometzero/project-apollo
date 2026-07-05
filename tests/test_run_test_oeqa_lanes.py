@@ -248,6 +248,15 @@ def test_timeout_with_real_oeqa_failure_json_records_fail(tmp_path: Path) -> Non
     assert records[0]["status"] == "fail"
     assert records[0]["exit_code"] == 124
     assert any(artifact["kind"] == "oeqa_result" for artifact in records[0]["artifacts"])
+    assert (
+        "[run_test] START oeqa-current:oeqa.runtime.case.TestLinuxBoot.test_linux_boot"
+        in result.stdout
+    )
+    assert (
+        "[run_test] DONE oeqa-current:oeqa.runtime.case.TestLinuxBoot.test_linux_boot (fail)"
+        in result.stdout
+    )
+    assert "[run_test] DONE oeqa-current:oeqa.runtime.case.TestSsh.test_ssh (pass)" in result.stdout
 
 
 def test_oeqa_results_directory_artifacts_only_classify_json_as_result(tmp_path: Path) -> None:
@@ -292,6 +301,53 @@ def test_oeqa_results_directory_artifacts_only_classify_json_as_result(tmp_path:
     artifacts = records[0]["artifacts"]
     assert {"kind": "oeqa_result", "path": "oeqa/current/results/nexios-image/testresults.json"} in artifacts
     assert {"kind": "oeqa_result_artifact", "path": "oeqa/current/results/nexios-image/qemu_boot_log.20260628"} in artifacts
+    assert (
+        "[run_test] START oeqa-current:oeqa.runtime.case.TestLinuxBoot.test_linux_boot"
+        in result.stdout
+    )
+    assert (
+        "[run_test] DONE oeqa-current:oeqa.runtime.case.TestLinuxBoot.test_linux_boot (pass)"
+        in result.stdout
+    )
+
+
+def test_do_testimage_log_progress_is_printed_while_lane_runs(tmp_path: Path) -> None:
+    # Given: a fake OEQA run that writes the Yocto do_testimage progress log.
+    run_dir = tmp_path / "live-progress"
+    commands_file = make_run_dir(run_dir)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    log_path = (
+        ROOT
+        / "build/tmp_baremetal/work/apollo_fvp-poky-linux/nexios-image/1.0/temp"
+        / f"log.do_testimage.{os.getpid()}"
+    )
+    write_fake_timeout(
+        fake_bin / "timeout",
+        f"mkdir -p {log_path.parent}; "
+        f"printf 'NOTE: test_ping (ping.PingTest.test_ping)\\n' > {log_path}; "
+        "sleep 1; "
+        f"printf 'NOTE:  ... ok\\n' >> {log_path}; "
+        "exit 0",
+    )
+
+    # When: the current OEQA lane runs.
+    result = run_oeqa(
+        "--run-dir",
+        str(run_dir),
+        "--commands-file",
+        str(commands_file),
+        "--build-dir",
+        "build",
+        "--image",
+        "nexios-image",
+        extra_env={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+    )
+
+    # Then: functional progress includes the individual OEQA test status.
+    assert result.returncode == 0, result.stderr
+    assert "[run_test] START oeqa-current:ping.PingTest.test_ping" in result.stdout
+    assert "[run_test] DONE oeqa-current:ping.PingTest.test_ping (pass)" in result.stdout
 
 
 @pytest.mark.parametrize("return_code", [0, 124])

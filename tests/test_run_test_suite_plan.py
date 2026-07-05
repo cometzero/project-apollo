@@ -24,17 +24,23 @@ resolve_plan = RUN_TEST_SUITE_PLAN.resolve_plan
 CURRENT_SUITE = [
     "ping",
     "ssh",
-    "test_00_rse",
+    "test_00_rse.RseTest.test_normal_boot",
     "test_00_secure_partition",
     "test_01_auto_ad_nexios_uki_boot",
-    "test_02_safety_boot",
     "test_10_linuxboot",
     "test_20_aspen_ap_dsu",
     "test_30_configurable_pc_cores",
-    "fvp_boot",
     "fvp_devices",
 ]
+POWER_SUITE = {
+    "test_00_rse.RseTest.test_measured_boot",
+    "test_00_rse.RseTest.test_scmi_poweroff",
+    "test_00_rse.RseTest.test_scmi_reboot",
+    "fvp_boot",
+}
 EXTENDED_REQUIRED = {
+    "test_02_safety_boot.TestSafetyBoot.test_lbist",
+    "test_02_safety_boot.TestSafetyBoot.test_mbist",
     "test_991_smcf",
     "test_992_safety_island_pfdi",
 }
@@ -81,6 +87,7 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
     assert result.returncode == 0, result.stderr
     plan = load_json(out)
     assert plan["included"]["validation_current"] == CURRENT_SUITE
+    assert POWER_SUITE.issubset(plan["included"]["validation_power"])
     assert EXTENDED_REQUIRED.issubset(plan["included"]["validation_extended"])
     assert EXTENDED_SKIPPED.isdisjoint(plan["included"]["validation_extended"])
     assert "test_99_uefi_secure_boot" not in plan["included"]["validation_extended"]

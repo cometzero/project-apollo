@@ -35,7 +35,7 @@ CFG2_DEMO_SUITE: Final = [
     "test_20_hipc_baremetal",
     "test_992_safety_island_pfdi",
 ]
-VIRTUALIZATION_EXCLUSIONS: Final = [
+VIRTUALIZATION_EXCLUSIONS: Final[list[JsonObject]] = [
     {
         "name": "test_40_virtualization",
         "reason": "excluded_baremetal_no_xen",
@@ -58,7 +58,7 @@ VIRTUALIZATION_EXCLUSIONS: Final = [
         "note": "DomU lifecycle requires Xen virtualization, Dom0, and BBMULTICONFIG domu.",
     },
 ]
-SYSTEMD_BOOT_EXCLUSION: Final = {
+SYSTEMD_BOOT_EXCLUSION: Final[JsonObject] = {
     "name": "test_01_systemd_boot",
     "reason": "replaced_by_auto_ad_nexios_uki_boot",
     "source_suite": "fvp-rd-aspen TEST_SUITES",
@@ -68,6 +68,22 @@ EXCLUDED_TEST_NAMES: Final = {
     "test_40_virtualization",
     "test_41_rt_patch_presence",
 }
+SINGLE_BOOT_REPLACEMENTS: Final = {
+    "test_00_rse": ["test_00_rse.RseTest.test_normal_boot"],
+    "test_02_safety_boot": [],
+    "fvp_boot": [],
+}
+BIST_EXTENDED_SUITE: Final = [
+    "test_02_safety_boot.TestSafetyBoot.test_lbist",
+    "test_02_safety_boot.TestSafetyBoot.test_mbist",
+]
+POWER_REBOOT_SUITE: Final = [
+    "test_00_rse.RseTest.test_normal_boot",
+    "test_00_rse.RseTest.test_measured_boot",
+    "test_00_rse.RseTest.test_scmi_poweroff",
+    "test_00_rse.RseTest.test_scmi_reboot",
+    "fvp_boot",
+]
 HSOC_SKIP_REASON: Final = "excluded_by_hsoc_yocto_build_config"
 HSOC_SKIP_SUITE_SOURCE: Final = "HSOC_RUN_TEST_SKIP_SUITES"
 HSOC_SKIP_EXTRA_SOURCE: Final = "HSOC_RUN_TEST_SKIP_EXTRA_LANES"
@@ -96,6 +112,14 @@ def _str_value(value: JsonValue) -> str:
     if isinstance(value, str):
         return value
     return ""
+
+
+def _json_strings(values: list[str]) -> list[JsonValue]:
+    return [value for value in values]
+
+
+def _json_objects(values: list[JsonObject]) -> list[JsonValue]:
+    return [value for value in values]
 
 
 def _int_value(value: JsonValue) -> int:
@@ -135,13 +159,37 @@ def _filter_entries(entries: list[str], skip_entries: list[str]) -> list[str]:
     return [entry for entry in entries if entry not in skipped]
 
 
+def _skip_base_names(skip_entries: list[str]) -> set[str]:
+    return {entry.split(".")[0] for entry in skip_entries}
+
+
 def _hsoc_exclusions(names: list[str], reason: str, source: str) -> list[JsonObject]:
     return [{"name": name, "reason": reason, "source_suite": source} for name in names]
 
 
 def _current_suite(manifest: JsonObject) -> list[str]:
     skipped = set(EXCLUDED_TEST_NAMES) | set(_hsoc_skip_suites(manifest))
-    return [test for test in _str_list(manifest.get("test_suites")) if test not in skipped]
+    skip_bases = _skip_base_names(list(skipped))
+    tests: list[str] = []
+    for test in _str_list(manifest.get("test_suites")):
+        if test in skipped:
+            continue
+        replacements = SINGLE_BOOT_REPLACEMENTS.get(test)
+        if replacements is None:
+            tests.append(test)
+            continue
+        tests.extend(replacement for replacement in replacements if replacement.split(".")[0] not in skip_bases)
+    return tests
+
+
+def _power_reboot_suite(manifest: JsonObject) -> list[str]:
+    skipped = set(EXCLUDED_TEST_NAMES) | set(_hsoc_skip_suites(manifest))
+    skip_bases = _skip_base_names(list(skipped))
+    return [
+        test
+        for test in POWER_REBOOT_SUITE
+        if test not in skipped and test.split(".")[0] not in skip_bases
+    ]
 
 
 def resolve_plan(manifest: JsonObject) -> JsonObject:
@@ -150,20 +198,25 @@ def resolve_plan(manifest: JsonObject) -> JsonObject:
     skip_suites = _hsoc_skip_suites(manifest)
     skip_extra = _hsoc_skip_extra_lanes(manifest)
     reason = _hsoc_skip_reason(manifest)
-    extended = _filter_entries(DEMO_SUITE_BASE + _cfg2_entries(manifest) + _pc16_entries(manifest), skip_suites)
+    extended = _filter_entries(
+        BIST_EXTENDED_SUITE + DEMO_SUITE_BASE + _cfg2_entries(manifest) + _pc16_entries(manifest),
+        skip_suites,
+    )
+    exclusions = [
+        SYSTEMD_BOOT_EXCLUSION,
+        *VIRTUALIZATION_EXCLUSIONS,
+        *_hsoc_exclusions(skip_suites, reason, HSOC_SKIP_SUITE_SOURCE),
+        *_hsoc_exclusions(skip_extra, reason, HSOC_SKIP_EXTRA_SOURCE),
+    ]
     return {
         "status": "ok",
         "machine": _str_value(manifest.get("machine")),
         "distro": _str_value(manifest.get("distro")),
         "included": {
-            "validation_current": _current_suite(manifest),
-            "validation_extended": extended,
-            "extra": _filter_entries(EXTRA_LANES, skip_extra),
+            "validation_current": _json_strings(_current_suite(manifest)),
+            "validation_power": _json_strings(_power_reboot_suite(manifest)),
+            "validation_extended": _json_strings(extended),
+            "extra": _json_strings(_filter_entries(EXTRA_LANES, skip_extra)),
         },
-        "excluded": [
-            SYSTEMD_BOOT_EXCLUSION,
-            *VIRTUALIZATION_EXCLUSIONS,
-            *_hsoc_exclusions(skip_suites, reason, HSOC_SKIP_SUITE_SOURCE),
-            *_hsoc_exclusions(skip_extra, reason, HSOC_SKIP_EXTRA_SOURCE),
-        ],
+        "excluded": _json_objects(exclusions),
     }
