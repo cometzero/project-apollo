@@ -11,8 +11,9 @@ SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
 
 def load_runner():
     spec = importlib.util.spec_from_file_location("apollo_runner", SCRIPT)
-    module = importlib.util.module_from_spec(spec)
+    assert spec is not None
     assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
@@ -304,24 +305,26 @@ def test_qbox_env_removes_stale_rootfs_env(tmp_path, monkeypatch):
 def test_apollo_shell_prompt_accepts_local_initramfs_prompt():
     runner = load_runner()
 
-    assert runner.apollo_shell_prompt_ready(
-        "apollo-fvp login:\n/bin/sh: can't access tty; job control turned off\n~ # "
+    passed, status = runner.evaluate(
+        "Booting Linux on physical CPU 0x0000000000\n"
+        "/bin/sh: can't access tty; job control turned off\n"
+        "~ # "
     )
-    assert runner.apollo_shell_prompt_ready("root@apollo-fvp:~# ")
-    assert not runner.apollo_shell_prompt_ready("apollo-fvp login:")
+
+    assert passed is True
+    assert status["login_patterns"]["~ #"] is True
 
 
-def test_probe_done_requires_output_marker_line():
+def test_direct_boot_probe_marker_does_not_replace_login_surface():
     runner = load_runner()
 
-    assert not runner.probe_complete_from_log(
-        "~ # printf '\\n__QBOX_APOLLO_PROBE_DONE__:%s\\n' \"$?\"\n"
-    )
-    assert not runner.probe_complete_from_log("__QBOX_APOLLO_PROBE_DONE__:1\n")
-    assert runner.probe_complete_from_log(
-        "~ # printf '\\n__QBOX_APOLLO_PROBE_DONE__:%s\\n' \"$?\"\n"
+    passed, status = runner.evaluate(
+        "Booting Linux on physical CPU 0x0000000000\n"
         "__QBOX_APOLLO_PROBE_DONE__:0\n"
     )
+
+    assert passed is False
+    assert not any(status["login_patterns"].values())
 
 
 def test_initramfs_end_is_computed_from_size(tmp_path):

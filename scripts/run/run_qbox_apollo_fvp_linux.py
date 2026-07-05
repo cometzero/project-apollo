@@ -44,6 +44,7 @@ LOGIN_PATTERNS = [
     "Reached target Multi-User System",
     "apollo-fvp login:",
     "root@apollo-fvp",
+    "~ #",
 ]
 DEFAULT_LOCAL_BOOTARGS = (
     "console=ttyAMA0,115200 earlycon=pl011,0x1A400000 "
