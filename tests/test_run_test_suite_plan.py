@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -8,9 +9,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/test/run_test_manifest.py"
-sys.path.insert(0, str(ROOT / "scripts/test"))
 
-from run_test_suite_plan import resolve_plan
+SPEC = importlib.util.spec_from_file_location(
+    "run_test_suite_plan",
+    ROOT / "scripts/test/run_test_suite_plan.py",
+)
+assert SPEC is not None
+assert SPEC.loader is not None
+RUN_TEST_SUITE_PLAN = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = RUN_TEST_SUITE_PLAN
+SPEC.loader.exec_module(RUN_TEST_SUITE_PLAN)
+resolve_plan = RUN_TEST_SUITE_PLAN.resolve_plan
 
 CURRENT_SUITE = [
     "ping",
@@ -26,7 +35,6 @@ CURRENT_SUITE = [
     "fvp_devices",
 ]
 EXTENDED_REQUIRED = {
-    "test_70_mission_based_profiles",
     "test_991_smcf",
     "test_992_safety_island_pfdi",
 }

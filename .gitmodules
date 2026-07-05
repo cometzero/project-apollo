@@ -114,3 +114,7 @@
 	path = hsoc-stack/tools/qemu
 	url = git@github.com:cometzero/qemu.git
 	branch = feature/qbox-rebase
+[submodule "hsoc-stack/tests"]
+	path = hsoc-stack/tests
+	url = git@github.com:cometzero/hsoc-tests.git
+	branch = main

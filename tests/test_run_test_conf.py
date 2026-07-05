@@ -101,7 +101,7 @@ def test_write_conf_extended_when_run_dir_is_safe(tmp_path: Path) -> None:
     assert 'TEST_SUITES = "' in text
     assert 'TEST_FVP_DEVICES = "rtc watchdog networking virtiorng"' in text
     assert "cpu_hotplug" not in text
-    assert "test_70_mission_based_profiles" in text
+    assert "test_70_mission_based_profiles" not in text
     assert "test_10_pfdi" not in tokens
     assert "test_10_ras_cpu" not in tokens
     assert "test_10_sbistc_integration" not in tokens

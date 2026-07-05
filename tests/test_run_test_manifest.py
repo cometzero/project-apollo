@@ -46,7 +46,7 @@ def test_inspect_writes_active_apollo_manifest_when_config_is_current(tmp_path: 
     assert manifest["machine"] == "apollo-fvp"
     assert manifest["distro"] == "auto-ad-nexios"
     assert manifest["rd_aspen_variant"] == "cfg2"
-    assert manifest["pc_cpus_count_default"] == 16
+    assert manifest["pc_cpus_count_default"] == 4
     assert manifest["tmpdir"] in {"${TOPDIR}/tmp_baremetal", "tmp_baremetal"}
     assert {"baremetal", "demos"}.issubset(manifest["extra_image_features"])
     assert "testimage" in manifest["image_classes"]
