@@ -93,7 +93,7 @@ def qbox_platform_dir(root: Path) -> Path:
     value = os.environ.get("QBOX_PLATFORM_DIR")
     if value:
         return Path(value).expanduser().resolve()
-    return root / "tools/qbox-platform"
+    return root / "hsoc-stack/tools/qbox-platform"
 
 
 def resolve_check_path(root: Path, rel_path: str) -> Path:
