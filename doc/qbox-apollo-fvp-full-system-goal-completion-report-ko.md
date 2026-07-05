@@ -244,7 +244,7 @@ cmake --build build/local-apollo-fvp/work/qbox-platform \
            host_system_pll reset_fanout \
   --parallel 8
 
-JOBS=8 ./local-build.sh qbox
+JOBS=8 ./local_build.sh qbox
 ```
 
 최종 G4 실행:

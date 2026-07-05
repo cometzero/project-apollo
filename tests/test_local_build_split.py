@@ -52,7 +52,7 @@ def test_component_modules_exist_and_are_source_only() -> None:
 
 def test_stage_wrappers_keep_help_contract() -> None:
     scripts = [
-        ROOT / "local-build.sh",
+        ROOT / "local_build.sh",
         BUILD / "build_all.sh",
         BUILD / "build_images.sh",
         BUILD / "build_qbox.sh",
@@ -69,7 +69,7 @@ def test_stage_wrappers_keep_help_contract() -> None:
 
 def test_shell_syntax_for_local_build_scripts() -> None:
     scripts = [
-        ROOT / "local-build.sh",
+        ROOT / "local_build.sh",
         ROOT / "scripts" / "package.sh",
         *sorted(BUILD.glob("*.sh")),
         *sorted(MODULES.glob("*.sh")),

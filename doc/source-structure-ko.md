@@ -15,7 +15,7 @@ Updated: 2026-07-04
 | `README.md` | 사용자용 clean checkout, Yocto/local build, QBox boot 가이드. |
 | `.gitmodules` | 루트 저장소가 고정하는 submodule 목록과 기본 branch. |
 | `yocto_build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `nexios-image` 빌드 진입점. |
-| `local-build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
+| `local_build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
 | `run_fvp.sh` | Yocto 빌드 산출물을 Apollo FVP tmux 세션에서 실행하는 사용자용 진입점. |
 | `run_qbox.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |
 
@@ -117,7 +117,7 @@ System Management와 Safety Island 소스는
 
 | 경로 | 역할 |
 | --- | --- |
-| `scripts/build/` | `local-build.sh`가 호출하는 stage별 build script. |
+| `scripts/build/` | `local_build.sh`가 호출하는 stage별 build script. |
 | `scripts/run/` | FVP/QBox headless runner와 tmux runner. |
 | `scripts/setup/` | bootstrap, RSE OTP provisioning, debug manifest 생성. |
 | `scripts/debug/` | GDB/Iris/FVP debug helper. |

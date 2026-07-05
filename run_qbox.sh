@@ -54,7 +54,7 @@ usage()
 Usage: ./run_qbox.sh [tmux-runner options]
 
 Build local boot artifacts first:
-  ./local-build.sh
+  ./local_build.sh
 
 Then launch QBox in tmux:
   ./run_qbox.sh
@@ -340,7 +340,7 @@ main()
     QBOX_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
 
     [[ -d "${LOCAL_BUILD_DIR}" ]] ||
-        die "missing local build directory: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
+        die "missing local build directory: ${LOCAL_BUILD_DIR}. Run ./local_build.sh build first."
 
     local ssh_port
     local netdev

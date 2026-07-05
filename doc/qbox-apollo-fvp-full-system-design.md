@@ -112,7 +112,7 @@ Keep the existing fast direct-boot path unchanged:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_linux.py
-./local-build.sh qbox
+./local_build.sh qbox
 tools/qbox-platform/platforms/apollo/apollo-pc.lua
 ```
 
@@ -120,7 +120,7 @@ Add a separate full-system path:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
-./local-build.sh qbox
+./local_build.sh qbox
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 scripts/test/verify_qbox_apollo_fvp_full_completion.py

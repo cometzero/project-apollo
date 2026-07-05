@@ -25,11 +25,11 @@ scripts/test/validate_qbox_apollo_fvp_full_map.py
 ```
 
 The workspace still keeps user-facing root entrypoints such as
-`./yocto_build.sh`, `./local-build.sh`, `./run_fvp.sh`, and `./run_qbox.sh`.
+`./yocto_build.sh`, `./local_build.sh`, `./run_fvp.sh`, and `./run_qbox.sh`.
 
-Use `./local-build.sh qbox` for QBox target builds. The former dedicated build
+Use `./local_build.sh qbox` for QBox target builds. The former dedicated build
 shortcut wrappers were replaced by stage entrypoints under `scripts/build/`.
-`local-build.sh` is the user-facing gate and calls those scripts.
+`local_build.sh` is the user-facing gate and calls those scripts.
 
 Build stages can also be run directly:
 
@@ -44,7 +44,7 @@ The `scripts/build/build_*.sh` files are executable stage entrypoints. The
 loaded by those entrypoints through `scripts/build/local_build_common.sh`; do
 not execute module files directly.
 
-Use `./local-build.sh package` or `scripts/package.sh` to package existing
+Use `./local_build.sh --package` or `scripts/package.sh` to package existing
 local build outputs into a QBox-runnable local-build tree under
 `build/local-apollo-fvp/package/qbox/local-build`.
 

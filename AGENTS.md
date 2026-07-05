@@ -31,7 +31,7 @@ hardware models over register-only stubs.
 - QBox-local QEMU/libqemu under active development:
   `hsoc-stack/tools/qemu/`
 - QBox helper scripts:
-  `./local-build.sh qbox`,
+  `./local_build.sh qbox`,
   `scripts/build/build_qbox.sh`,
   `scripts/package.sh`,
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
@@ -72,7 +72,7 @@ hardware models over register-only stubs.
   applying one of those patches.
 - `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
-  `yocto_build.sh`, `local-build.sh`, and `run_qbox.sh` call into these
+  `yocto_build.sh`, `local_build.sh`, and `run_qbox.sh` call into these
   helpers.
 - `tests/`: repository-local tests for Python tooling and QBox helper logic.
 - `build/conf/`: active local Yocto build configuration.
@@ -116,16 +116,16 @@ Use the local debug helpers when a component needs source symbols,
 breakpoints, or precise handoff analysis. The local build enables debug
 symbols by default:
 
-- Linux: `local-build.sh` enables `CONFIG_DEBUG_INFO`,
+- Linux: `local_build.sh` enables `CONFIG_DEBUG_INFO`,
   `CONFIG_GDB_SCRIPTS`, and `CONFIG_KALLSYMS_ALL` unless
   `KERNEL_DEBUG_INFO=0` is set.
-- Buildroot userspace: `local-build.sh` builds with `BR2_ENABLE_DEBUG=y`,
+- Buildroot userspace: `local_build.sh` builds with `BR2_ENABLE_DEBUG=y`,
   `BR2_OPTIMIZE_G=y`, and no target stripping.
 - Firmware and boot components are built from their unstripped local build
   ELF files.
 - Safety Island CL1 Zephyr is built locally from
   `hsoc-stack/components/system_mgmt/zephyrproject/` by
-  `./local-build.sh zephyr` and as part of `./local-build.sh build`.
+  `./local_build.sh zephyr` and as part of `./local_build.sh build`.
 
 Generate or refresh the debug manifest after a local build:
 
@@ -170,7 +170,7 @@ When setting breakpoints manually, use component names and symbols from
 
 Boot issue escalation path:
 
-1. Build local images with `./local-build.sh build`, then run normal
+1. Build local images with `./local_build.sh build`, then run normal
    log-backed boot validation with:
    ```bash
    python3 scripts/run/runfvp_log_boot.py \
@@ -249,7 +249,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
    - Use `./yocto_build.sh` for the configured `baremetal-image` build.
 3. QBox build checks:
-   - Prefer `./local-build.sh qbox` for the Apollo overlay build contract.
+   - Prefer `./local_build.sh qbox` for the Apollo overlay build contract.
    - Targeted overlay builds use
      `cmake --build build/local-apollo-fvp/work/qbox-platform --target
      <target> --parallel <n>`.
@@ -267,7 +267,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
      inspect `build/qbox-apollo-fvp/<timestamp>/`.
    - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` only as the lower-level
      RSE/RD-Aspen compatibility runner when focused RSE evidence is needed.
-   - For Apollo FVP local boot, build with `./local-build.sh build`, then use
+   - For Apollo FVP local boot, build with `./local_build.sh build`, then use
      `python3 scripts/run/runfvp_log_boot.py --machine apollo-fvp --fvpconf
      build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf --out-dir
      build/local-apollo-fvp/fvp-boot --timeout 900 --require all

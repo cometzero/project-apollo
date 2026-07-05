@@ -447,9 +447,9 @@ YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/work/${WORK_P
 
 [[ -d "${DEPLOY_DIR}" ]] || die "Yocto deploy directory not found: ${DEPLOY_DIR}"
 [[ -d "${YOCTO_WORK_DIR}" ]] || die "Yocto work directory not found: ${YOCTO_WORK_DIR}"
-[[ -d "${LOCAL_BUILD_DIR}" ]] || die "local build directory not found: ${LOCAL_BUILD_DIR}. Build QBox first with ./local-build.sh qbox or set --local-build-dir."
+[[ -d "${LOCAL_BUILD_DIR}" ]] || die "local build directory not found: ${LOCAL_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --local-build-dir."
 [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
-[[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local-build.sh qbox or set --qbox-build-dir."
+[[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
 
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-$(default_ap_cpu_count || true)}"
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-4}"

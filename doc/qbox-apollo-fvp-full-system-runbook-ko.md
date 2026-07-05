@@ -12,8 +12,8 @@ emulation을 실행하고, G0-G5 completion gate를 검증하는 절차를 설�
 최종 완료를 다시 검증하려면 아래 순서로 실행한다.
 
 ```bash
-./local-build.sh build
-./local-build.sh qbox
+./local_build.sh build
+./local_build.sh qbox
 
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
@@ -472,7 +472,7 @@ cd /build/arm/arm-auto-solutions
 산출물이 없으면 먼저 local build를 실행한다.
 
 ```bash
-./local-build.sh build
+./local_build.sh build
 ```
 
 FVP 비교를 위해서는 FVP boot evidence도 필요하다.
@@ -495,7 +495,7 @@ python3 scripts/run/runfvp_log_boot.py \
 full-system에 필요한 QBox target을 빌드한다.
 
 ```bash
-./local-build.sh qbox
+./local_build.sh qbox
 ```
 
 target 단위로 직접 빌드하려면 다음 command를 사용할 수 있다.
@@ -825,7 +825,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 대응:
 
 ```bash
-./local-build.sh build
+./local_build.sh build
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --check-only \
   --out-dir build/qbox-apollo-fvp/full-check-only

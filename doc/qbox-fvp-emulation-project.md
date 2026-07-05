@@ -66,7 +66,7 @@ model, upstream SystemC model, or local SystemC/TLM model based on the TRM.
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
 
-- `./local-build.sh qbox`
+- `./local_build.sh qbox`
 - `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
 - `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
 - `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`

@@ -26,8 +26,8 @@ Run packaged images:
   ./run_qbox.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
 
 Useful overrides:
-  PACKAGE_DIR=/path/to/package ./local-build.sh package
-  LOCAL_BUILD_DIR=/path/to/local-build ./local-build.sh package
+  PACKAGE_DIR=/path/to/package ./local_build.sh --package
+  LOCAL_BUILD_DIR=/path/to/local-build ./local_build.sh --package
 EOF
 }
 
@@ -41,7 +41,7 @@ copy_package_artifact()
 
     if [[ ! -f "${src}" ]]; then
         if [[ "${required}" == "required" ]]; then
-            die "missing package artifact ${name}: ${src}; run ./local-build.sh build first"
+            die "missing package artifact ${name}: ${src}; run ./local_build.sh first"
         fi
         return 0
     fi

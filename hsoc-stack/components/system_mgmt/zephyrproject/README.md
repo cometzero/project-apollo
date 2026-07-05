@@ -20,7 +20,7 @@ are no longer kept here, `modules/`, `bootloader/`, and `tools/`, are still
 fetched by `meta-zephyr` and used from the Yocto `${UNPACKDIR}/git` unpack
 tree.
 
-Local builds follow the same model: `./local-build.sh zephyr` uses the Yocto
+Local builds follow the same model: `./local_build.sh zephyr` uses the Yocto
 `zephyr-demos-cl1` unpack tree for the modules listed in
 `apollo-modules.list`. Set `ZEPHYR_DEPS_SRC` only when using a custom
 Yocto-unpacked dependency root.

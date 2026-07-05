@@ -318,7 +318,7 @@ start_tmux()
 
     [[ -x "${RUNFVP_BIN}" ]] || die "runfvp not executable: ${RUNFVP_BIN}"
     [[ -f "${FVP_CONF}" ]] ||
-        die "FVP config not found: ${FVP_CONF}. Run ./local-build.sh build first."
+        die "FVP config not found: ${FVP_CONF}. Run ./local_build.sh build first."
 
     FVP_CONF="$(abspath "${FVP_CONF}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"

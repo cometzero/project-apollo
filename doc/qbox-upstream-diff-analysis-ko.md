@@ -137,7 +137,7 @@ python3 -m py_compile \
   scripts/run/run_qbox_fvp_rd_aspen_rse.py \
   scripts/run/run_qbox_apollo_fvp_full.py
 python3 scripts/test/audit_qbox_core_boundary.py --json
-./local-build.sh qbox
+./local_build.sh qbox
 ctest --test-dir build/local-apollo-fvp/work/qbox-platform \
   -R 'cc3xx_core|rse_lms|rse_mcuboot|rse_p256|pl011-aperture|cortex_m55_remote_dmi' \
   --output-on-failure

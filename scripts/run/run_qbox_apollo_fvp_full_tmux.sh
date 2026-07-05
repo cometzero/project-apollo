@@ -1044,7 +1044,7 @@ start_tmux()
 
     [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
     [[ -d "${LOCAL_BUILD_DIR}" ]] ||
-        die "local build directory not found: ${LOCAL_BUILD_DIR}. Run ./local-build.sh build first."
+        die "local build directory not found: ${LOCAL_BUILD_DIR}. Run ./local_build.sh build first."
 
     ROOT_DIR="$(abspath "${ROOT_DIR}")"
     SCRIPT_PATH="$(abspath "${SCRIPT_PATH}")"
