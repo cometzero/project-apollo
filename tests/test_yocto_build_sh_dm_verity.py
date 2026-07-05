@@ -138,6 +138,69 @@ def test_yocto_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -
     assert "mode 'on' uses multiconfig apollo-fvp-dm-verity" in result.stderr
 
 
+def test_yocto_build_sh_selects_qvp_no_dm_verity_multiconfig(
+    tmp_path: Path,
+) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        ["--machine", "apollo-qvp", "--dm-verity=off"],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "mc:apollo-qvp-no-dm-verity:nexios-image" in result.stdout
+    assert "mode 'off' uses multiconfig apollo-qvp-no-dm-verity" in result.stderr
+
+    multiconfig = tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
+    assert multiconfig.read_text(encoding="utf-8").splitlines()[-1] == (
+        'BBMULTICONFIG = "apollo-qvp-no-dm-verity"'
+    )
+
+
+def test_yocto_build_sh_defaults_qvp_to_separate_build_dir(
+    tmp_path: Path,
+) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        ["--machine", "apollo-qvp"],
+        {"APOLLO_AUTO_RESOURCE_LIMITS": "1", "BUILD_DIR": ""},
+    )
+
+    assert result.returncode == 0, result.stderr
+    expected = ROOT / "build-apollo-qvp/conf/apollo-bitbake-resources.conf"
+    assert str(expected) in result.stderr
+
+
+def test_yocto_build_sh_selects_qvp_dm_verity_multiconfig(
+    tmp_path: Path,
+) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        ["--machine", "apollo-qvp", "--dm-verity=on"],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
+    assert "mode 'on' uses multiconfig apollo-qvp-dm-verity" in result.stderr
+
+
+def test_yocto_build_sh_accepts_machine_from_env(tmp_path: Path) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        ["--dm-verity=on"],
+        {"MACHINE": "apollo-qvp"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
+
+
+def test_yocto_build_sh_rejects_invalid_machine(tmp_path: Path) -> None:
+    result = run_build_dry_run(tmp_path, ["--machine", "invalid-qvp"])
+
+    assert result.returncode == 2
+    assert "invalid-machine 'invalid-qvp'" in result.stderr
+
+
 def test_yocto_build_sh_rejects_invalid_dm_verity_mode(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, ["--dm-verity=maybe"])
 

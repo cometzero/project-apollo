@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import json
@@ -16,8 +17,10 @@ from run_test_qbox_lane_defs import QboxInputs
 from run_test_qbox_lanes import run_qbox_lanes
 
 
-type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
-type JsonObject = dict[str, JsonValue]
+type JsonValue = (
+    None | bool | int | float | str | Sequence[JsonValue] | Mapping[str, JsonValue]
+)
+type JsonObject = Mapping[str, JsonValue]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +45,7 @@ class LaneInputs:
     include_qbox_runtime: bool
     skip_runtime: bool
     timeout_fvp: str
+    machine: str
 
 
 def _now() -> str:
@@ -233,6 +237,7 @@ def run_lanes(inputs: LaneInputs) -> int:
             include_runtime=inputs.include_qbox_runtime,
             skip_runtime=inputs.skip_runtime,
             timeout_fvp=inputs.timeout_fvp,
+            machine=inputs.machine,
         )
     )
     if qbox_rc == 2 and not failed:
@@ -250,6 +255,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--include-qbox-runtime", action="store_true")
     parser.add_argument("--skip-runtime", action="store_true")
     parser.add_argument("--timeout-fvp", default="600")
+    parser.add_argument(
+        "--machine",
+        default="apollo-fvp",
+        choices=("apollo-fvp", "apollo-qvp"),
+    )
     return parser.parse_args(argv)
 
 
@@ -267,6 +277,7 @@ def main(argv: list[str] | None = None) -> int:
             include_qbox_runtime=include_qbox_runtime,
             skip_runtime=args.skip_runtime,
             timeout_fvp=args.timeout_fvp,
+            machine=args.machine,
         )
     )
 

@@ -8,10 +8,11 @@ set -euo pipefail
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POKY_DIR="${WORKSPACE_DIR}/layers/poky"
 
-BUILD_DIR="${BUILD_DIR:-${WORKSPACE_DIR}/build}"
-TEMPLATECONF="${TEMPLATECONF:-${WORKSPACE_DIR}/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp}"
+BUILD_DIR="${BUILD_DIR:-}"
+TEMPLATECONF="${TEMPLATECONF:-}"
 
 DM_VERITY_MODE="${APOLLO_DM_VERITY:-}"
+APOLLO_MACHINE="${MACHINE:-apollo-fvp}"
 DRY_RUN=0
 
 usage() {
@@ -21,6 +22,8 @@ Usage: ./yocto_build.sh [options]
 Build the Apollo FVP Yocto nexios-image.
 
 Options:
+  --machine apollo-fvp|apollo-qvp
+                          Select the Apollo Yocto machine.
   --dm-verity=on|off      Build through the matching Yocto multiconfig.
   --dm-verity on|off      Same as --dm-verity=on|off.
   --with-dm-verity        Alias for --dm-verity=on.
@@ -29,8 +32,24 @@ Options:
   -h, --help              Show this help.
 
 Environment:
+  MACHINE=apollo-fvp|apollo-qvp
+                          Select the Apollo Yocto machine.
   APOLLO_DM_VERITY=on|off Select the same multiconfig as --dm-verity.
 EOF
+}
+
+normalize_machine() {
+    local machine="$1"
+
+    case "${machine}" in
+        apollo-fvp|apollo-qvp)
+            echo "${machine}"
+            ;;
+        *)
+            echo "error: invalid-machine '${machine}' (expected apollo-fvp or apollo-qvp)" >&2
+            exit 2
+            ;;
+    esac
 }
 
 normalize_dm_verity_mode() {
@@ -58,6 +77,14 @@ while (($#)); do
         -h|--help)
             usage
             exit 0
+            ;;
+        --machine)
+            [[ $# -ge 2 ]] || {
+                echo "error: --machine requires apollo-fvp or apollo-qvp" >&2
+                exit 2
+            }
+            APOLLO_MACHINE="$2"
+            shift 2
             ;;
         --dry-run)
             DRY_RUN=1
@@ -91,7 +118,20 @@ while (($#)); do
     esac
 done
 
+APOLLO_MACHINE="$(normalize_machine "${APOLLO_MACHINE}")"
 DM_VERITY_MODE="$(normalize_dm_verity_mode "${DM_VERITY_MODE}")"
+
+if [[ -z "${BUILD_DIR}" ]]; then
+    if [[ "${APOLLO_MACHINE}" == "apollo-qvp" ]]; then
+        BUILD_DIR="${WORKSPACE_DIR}/build-apollo-qvp"
+    else
+        BUILD_DIR="${WORKSPACE_DIR}/build"
+    fi
+fi
+
+if [[ -z "${TEMPLATECONF}" ]]; then
+    TEMPLATECONF="${WORKSPACE_DIR}/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/${APOLLO_MACHINE}"
+fi
 
 host_cpus() {
     if [[ -n "${APOLLO_HOST_CPUS:-}" ]]; then
@@ -162,6 +202,7 @@ if [[ ! -d "${TEMPLATECONF}" ]]; then
 fi
 
 export TEMPLATECONF
+export MACHINE="${APOLLO_MACHINE}"
 
 # shellcheck source=/dev/null
 set +u
@@ -173,10 +214,10 @@ BITBAKE_TARGET="nexios-image"
 
 case "${DM_VERITY_MODE}" in
     on)
-        DM_VERITY_MC="apollo-fvp-dm-verity"
+        DM_VERITY_MC="${APOLLO_MACHINE}-dm-verity"
         ;;
     off)
-        DM_VERITY_MC="apollo-fvp-no-dm-verity"
+        DM_VERITY_MC="${APOLLO_MACHINE}-no-dm-verity"
         ;;
     *)
         DM_VERITY_MC=""

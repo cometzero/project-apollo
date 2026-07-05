@@ -58,14 +58,33 @@ System Management와 Safety Island 소스는
 
 | 경로 | 역할 |
 | --- | --- |
-| `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer. `conf/templates/apollo-fvp/`가 현재 `TEMPLATECONF` 기준이며 dynamic-layer patch도 이곳에 둔다. |
-| `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer. `apollo-fvp` machine, firmware recipes, externalsrc 설정, Linux kernel metadata, module signing, OP-TEE 통합을 소유한다. |
+| `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer. `conf/templates/apollo-fvp/`와 `conf/templates/apollo-qvp/`를 소유하며 dynamic-layer patch도 이곳에 둔다. |
+| `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer. `apollo-fvp`와 `apollo-qvp` machine, firmware recipes, QBox native recipes, externalsrc 설정, Linux kernel metadata, module signing, OP-TEE 통합을 소유한다. |
 
 현재 active build는 `build/conf/templateconf.cfg`가 가리키는
 `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`를 사용한다.
 `build/conf/local.conf`의 active machine은 `MACHINE = "apollo-fvp"`이다.
 `apollo-fvp` machine은 현재 `fvp-rd-aspen`을 상속하지만, 향후 Apollo 전용
 하드웨어 차이를 분리하기 위한 포팅 지점이다.
+
+Apollo QVP는 별도 machine인 `apollo-qvp`와 별도 권장 build directory
+`build-apollo-qvp/`를 사용한다. QVP template은
+`hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/`에 있고,
+deploy root는
+`build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/`이다. QVP 산출물은
+`nexios-image-apollo-qvp.*`, `apollo-qvp.dtb`,
+`efi-capsule-update-disk-image-apollo-qvp.img`, `firmware-apollo-qvp`,
+`uefi-capsule-apollo-qvp`, `qbox-apollo-qvp/`처럼 deploy-visible 이름에
+`apollo-qvp` 또는 `qbox-apollo-qvp`를 사용해야 한다.
+
+QBox Yocto native recipe는
+`hsoc-stack/yocto/meta-hsoc-bsp/recipes-devtools/qbox/`가 소유한다.
+`qbox-libqemu-native`는 local `hsoc-stack/tools/qemu/`에서
+`libqemu-system-aarch64.so`를 만들고,
+`qbox-apollo-qvp-native`는 local `hsoc-stack/tools/qbox-platform/`,
+`hsoc-stack/tools/qbox/`, `hsoc-stack/tools/qemu/`를 묶어
+`qbox-apollo-qvp/` runtime bundle을 deploy한다. Bundle의 durable contract는
+`qbox-apollo-qvp-env.sh`와 `qbox-apollo-qvp-manifest.json`으로 확인한다.
 
 ## 외부 Yocto Layer
 
@@ -134,8 +153,10 @@ runner behavior를 바꾸면 `python3 -m py_compile`과 관련 pytest/validator�
 | 경로 | 취급 |
 | --- | --- |
 | `build/conf/` | active Yocto local configuration. build/runtime claim 전에 반드시 확인한다. |
+| `build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/` | Apollo QVP Yocto deploy 산출물 위치. `qbox-apollo-qvp/` bundle도 여기에 배치된다. generated evidence이다. |
 | `build/local-apollo-fvp/` | local build 산출물과 debug manifest. generated evidence이다. |
 | `build/qbox-apollo-fvp/` | QBox runtime logs, result.json, summary, per-UART log. generated evidence이다. |
+| `build/qbox-apollo-qvp/` | Apollo QVP QBox runtime logs, result.json, summary, per-UART log의 목표 위치. runtime evidence가 생기기 전에는 runtime 성공 근거로 취급하지 않는다. |
 | `build/tmp_baremetal/` | BitBake task output, deploy, sysroot, logs, sstate 관련 산출물. generated evidence이다. |
 
 `build/conf/`을 제외한 `build/` 하위 파일은 소스가 아니다. 검증 증거로

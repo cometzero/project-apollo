@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 
 import pytest
@@ -11,6 +12,17 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "run_qbox_yocto.sh"
 TMUX_SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
+QBOX_YOCTO_ENV_OVERRIDES = (
+    "YOCTO_BUILD_DIR",
+    "DEPLOY_DIR",
+    "YOCTO_WORK_DIR",
+    "LOCAL_BUILD_DIR",
+    "QBOX_TOOL_DIR",
+    "QBOX_BUILD_DIR",
+    "QBOX_PLATFORM_BUILD_DIR",
+    "QBOX_CONF",
+    "OUT_DIR",
+)
 
 
 def touch_file(path: Path, content: str = "x\n") -> None:
@@ -18,15 +30,23 @@ def touch_file(path: Path, content: str = "x\n") -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def create_yocto_tree(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
+def create_yocto_tree(
+    tmp_path: Path,
+    *,
+    machine: str = "apollo-fvp",
+    build_dir_name: str = "yocto-build",
+    include_qbox_bundle: bool = False,
+) -> tuple[Path, Path, Path, Path, Path]:
     yocto_build = tmp_path / "yocto-build"
-    deploy = yocto_build / "tmp_baremetal/deploy/images/apollo-fvp"
-    work = yocto_build / "tmp_baremetal/work/apollo_fvp-poky-linux"
+    if build_dir_name != "yocto-build":
+        yocto_build = tmp_path / build_dir_name
+    deploy = yocto_build / f"tmp_baremetal/deploy/images/{machine}"
+    work = yocto_build / f"tmp_baremetal/work/{machine.replace('-', '_')}-poky-linux"
     local_build = tmp_path / "local-build"
     qbox_build = local_build / "work/qbox-platform"
 
     for path in (
-        deploy / "nexios-image-apollo-fvp.wic",
+        deploy / f"nexios-image-{machine}.wic",
         deploy / "efi-capsule-update-disk-image-fvp-rd-aspen.img",
         deploy / "rse-rom-image.img",
         deploy / "rse-flash-image.img",
@@ -34,7 +54,7 @@ def create_yocto_tree(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         deploy / "ap-flash-image.img",
         deploy / "bl2.elf",
         deploy / "combined_provisioning_message.bin",
-        deploy / "apollo-fvp.dtb",
+        deploy / f"{machine}.dtb",
         deploy / "si0_ramfw.bin",
         deploy / "zephyr-demos-cl1.bin",
         deploy / "zephyr-demos-cl1.elf",
@@ -43,11 +63,19 @@ def create_yocto_tree(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         local_build / "debug/symbols.json",
     ):
         touch_file(path)
+    if machine != "apollo-fvp":
+        touch_file(deploy / f"efi-capsule-update-disk-image-{machine}.img")
     (deploy / "rse-otp-image.img").write_bytes(b"")
     qbox_build.mkdir(parents=True)
 
     conf = tmp_path / "qbox-platform/platforms/apollo/apollo-qvp.lua"
     touch_file(conf, "return {}\n")
+    if include_qbox_bundle:
+        bundle = deploy / "qbox-apollo-qvp"
+        touch_file(bundle / "platforms-vp")
+        (bundle / "platforms-vp").chmod(0o755)
+        touch_file(bundle / "platforms/apollo/apollo-qvp.lua", "return {}\n")
+        touch_file(bundle / "debug/symbols.json", "{}\n")
     return yocto_build, deploy, work, local_build, conf
 
 
@@ -87,6 +115,56 @@ def run_dry_run(
     )
 
 
+def run_qvp_dry_run(
+    tmp_path: Path,
+    extra_args: list[str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    yocto_build, _deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build-apollo-qvp",
+        include_qbox_bundle=True,
+    )
+
+    env = os.environ.copy()
+    for name in QBOX_YOCTO_ENV_OVERRIDES:
+        env.pop(name, None)
+    env.update(
+        {
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp",
+            "SSH_PORT_START": "24900",
+            "SSH_PORT_END": "24999",
+        }
+    )
+
+    command = [
+        str(SCRIPT),
+        "--machine",
+        "apollo-qvp",
+        "--build-dir",
+        str(yocto_build),
+        "--headless",
+        "--dry-run",
+        *(extra_args or []),
+    ]
+    return subprocess.run(
+        command,
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def dry_run_command_argv(output: str) -> list[str]:
+    lines = output.splitlines()
+    marker = "Headless QBox runner command:"
+    index = lines.index(marker)
+    return shlex.split(lines[index + 1])
+
+
 def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     result = run_dry_run(tmp_path)
 
@@ -113,6 +191,147 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "--qbox-performance-preset" in result.stdout
     assert "--cc3xx-qemu-native-backend" in result.stdout
     assert "type=user,hostfwd=tcp::" in result.stdout
+
+
+def test_run_qbox_yocto_qvp_uses_yocto_bundle_defaults(tmp_path: Path) -> None:
+    # Given: Yocto-style apollo-qvp deploy artifacts with a QBox bundle.
+    result = run_qvp_dry_run(tmp_path)
+
+    # Then: the launcher uses qvp deploy names and the bundled QBox tools.
+    assert result.returncode == 0, result.stderr
+    deploy = tmp_path / "build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp"
+    bundle = deploy / "qbox-apollo-qvp"
+    assert f"deploy dir:    {deploy}" in result.stdout
+    assert f"qbox tools:    {bundle}" in result.stdout
+    assert f"qbox conf:     {bundle / 'platforms/apollo/apollo-qvp.lua'}" in result.stdout
+    argv = dry_run_command_argv(result.stdout)
+    assert argv[argv.index("--qbox-build-dir") + 1] == str(bundle)
+    assert "build/qbox-apollo-qvp/yocto-apollo-qvp-" in result.stdout
+    assert "nexios-image-apollo-qvp.wic" in result.stdout
+    assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stdout
+    assert "apollo-qvp.dtb" in result.stdout
+
+
+def test_run_qbox_yocto_qvp_requires_qvp_efi_capsule_name(
+    tmp_path: Path,
+) -> None:
+    # Given: a QVP deploy tree with only the inherited RD-Aspen EFI disk name.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build-apollo-qvp",
+        include_qbox_bundle=True,
+    )
+    (deploy / "efi-capsule-update-disk-image-apollo-qvp.img").unlink()
+
+    # When: the QVP runner resolves artifacts from the deploy directory.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-missing-efi",
+            "SSH_PORT_START": "25000",
+            "SSH_PORT_END": "25099",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the missing QVP deploy-visible name is not masked by an FVP alias.
+    assert result.returncode != 0
+    assert "missing required EFI capsule update disk" in result.stderr
+    assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stderr
+
+
+def test_run_qbox_yocto_qvp_allows_explicit_efi_override(tmp_path: Path) -> None:
+    # Given: a QVP deploy tree with an explicit compatibility artifact override.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build-apollo-qvp",
+        include_qbox_bundle=True,
+    )
+    qvp_efi = deploy / "efi-capsule-update-disk-image-apollo-qvp.img"
+    qvp_efi.unlink()
+    explicit_efi = deploy / "efi-capsule-update-disk-image-fvp-rd-aspen.img"
+
+    # When: the operator explicitly provides the alternate EFI disk.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--efi-capsule-disk",
+            str(explicit_efi),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-explicit-efi",
+            "SSH_PORT_START": "25000",
+            "SSH_PORT_END": "25099",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: explicit operator override is accepted and visible in the command.
+    assert result.returncode == 0, result.stderr
+    assert str(explicit_efi) in result.stdout
+
+
+def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None:
+    # Given: QVP image artifacts without the Yocto-deployed QBox bundle.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build-apollo-qvp",
+    )
+
+    # When: the QVP runner resolves its default QBox tools.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-missing-bundle",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: it fails on the missing QVP bundle instead of falling back to local FVP QBox.
+    assert result.returncode != 0
+    assert f"QBox Yocto bundle not found: {deploy / 'qbox-apollo-qvp'}" in result.stderr
 
 
 def test_run_qbox_yocto_passes_child_args_after_separator(tmp_path: Path) -> None:
@@ -234,6 +453,7 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
     tmux_bin = shutil.which("tmux")
     if tmux_bin is None:
         pytest.skip("tmux is not installed")
+    assert tmux_bin is not None
 
     session = f"pytest-qbox-layout-{os.getpid()}"
 

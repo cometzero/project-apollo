@@ -17,7 +17,13 @@ def write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def result_tree(root: Path, *, login_elapsed: float = 10.0, error_line: str | None = None) -> Path:
+def result_tree(
+    root: Path,
+    *,
+    login_elapsed: float = 10.0,
+    login_marker: str = "apollo-fvp login:",
+    error_line: str | None = None,
+) -> Path:
     root.mkdir(parents=True)
     progress_hits = {
         "rse_bl1_1": {"elapsed_s": 1.0, "marker": "Starting TF-M BL1_1"},
@@ -38,7 +44,7 @@ def result_tree(root: Path, *, login_elapsed: float = 10.0, error_line: str | No
         "rse_first_image_slot": {"elapsed_s": 8.7, "marker": "Jumping to the first image slot"},
         "measured_boot_bl33": {"elapsed_s": 9.0, "marker": "BL_33"},
         "primary_linux_cpu": {"elapsed_s": 9.5, "marker": "Booting Linux on physical CPU"},
-        "primary_login_prompt": {"elapsed_s": login_elapsed, "marker": "apollo-fvp login:"},
+        "primary_login_prompt": {"elapsed_s": login_elapsed, "marker": login_marker},
     }
     profile_markers = [
         {
@@ -149,7 +155,7 @@ def result_tree(root: Path, *, login_elapsed: float = 10.0, error_line: str | No
                 "arch_timer: cp15 timer running at 125.00MHz (phys).",
                 "arch-timer-mmio 1a810000.timer: mmio timer running at 125.00MHz (phys)",
                 "Linux version test",
-                "apollo-fvp login: root",
+                f"{login_marker} root",
                 "root@apollo-fvp:~# echo __QBOX_PROBE_DONE__",
                 "__QBOX_PROBE_DONE__",
             ]
@@ -218,6 +224,42 @@ def test_run_qbox_yocto_boot_regression_records_and_checks_baseline(tmp_path: Pa
     assert "baseline_elapsed_s=1.000" in checked.stdout
     assert "current_elapsed_s=1.000" in checked.stdout
     assert "threshold=+20.0%" in checked.stdout
+
+
+def test_qvp_login_marker_is_observed_and_fvp_marker_still_matches(tmp_path: Path) -> None:
+    baseline_result = result_tree(
+        tmp_path / "baseline",
+        login_marker="apollo-qvp login:",
+    )
+    current_result = result_tree(tmp_path / "current", login_marker="apollo-fvp login:")
+    baseline = tmp_path / "baseline.json"
+
+    recorded = run_cli(
+        "--machine",
+        "apollo-qvp",
+        "--record-baseline",
+        "--baseline",
+        str(baseline),
+        "--result-dir",
+        str(baseline_result),
+    )
+    assert recorded.returncode == 0, recorded.stderr
+
+    data = json.loads(baseline.read_text(encoding="utf-8"))
+    login_stage = next(item for item in data["stages"] if item["name"] == "primary_login_prompt")
+    assert login_stage["observed_marker"] == "apollo-qvp login:"
+    assert login_stage["markers"] == ["apollo-fvp login:", "apollo-qvp login:"]
+
+    checked = run_cli(
+        "--machine",
+        "apollo-qvp",
+        "--baseline",
+        str(baseline),
+        "--result-dir",
+        str(current_result),
+    )
+    assert checked.returncode == 0, checked.stderr
+    assert '"passed": true' in checked.stdout
 
 
 def test_record_baseline_uses_live_timing_for_timestampless_logs(tmp_path: Path) -> None:

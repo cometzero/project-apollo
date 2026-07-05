@@ -275,8 +275,10 @@ def test_explicit_components_and_action_skip_package_when_requested() -> None:
     assert "linux" in output
     assert "clean-build" in output
     assert "package: local FVP deploy" not in output
-    for component in ("qbox", "tf-m", "scp-firmware", "zephyr", "optee", "tf-a"):
-        assert component not in output
+    planned_components = {
+        line.split(":", maxsplit=1)[0] for line in component_step_lines(output)
+    }
+    assert planned_components == {"u-boot", "linux"}
 
 
 def test_package_flag_is_package_only_when_no_components_are_selected() -> None:

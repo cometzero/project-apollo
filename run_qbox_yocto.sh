@@ -14,17 +14,18 @@ usage() {
     cat <<'EOF'
 Usage: ./run_qbox_yocto.sh [options] [-- extra-qbox-runner-options]
 
-Run the apollo-fvp Yocto image on QBox using the Apollo full-system runner.
+Run the Apollo Yocto image on QBox using the Apollo full-system runner.
 The default tmux panes use the same primary-console-focused split pattern as
 run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-fvp)
-  --build-dir DIR             Yocto build directory (default: ./build)
+  --build-dir DIR             Yocto build directory (default: ./build, ./build-apollo-qvp for apollo-qvp)
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
   --image-basename NAME       Yocto image recipe basename (default: nexios-image)
   --local-build-dir DIR       Local-build directory used for QBox build/debug files
+  --qbox-tool-dir DIR         Yocto-deployed QBox tool bundle
   --qbox-build-dir DIR        QBox platform build directory
   --conf FILE                 QBox Lua configuration
   --session NAME              tmux session name
@@ -62,8 +63,8 @@ Artifact overrides:
 
 Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
-  LOCAL_BUILD_DIR, QBOX_BUILD_DIR, QBOX_CONF, OUT_DIR, TMUX_SESSION,
-  SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT
+  LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF, OUT_DIR,
+  TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT
 EOF
 }
 
@@ -197,19 +198,20 @@ validate_ap_cpu_count() {
 
 RUN_STAMP="$(date +%Y%m%d-%H%M%S)"
 MACHINE="${MACHINE:-apollo-fvp}"
-YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
+YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-}"
 DEPLOY_DIR="${DEPLOY_DIR:-}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-}"
 IMAGE_BASENAME="${IMAGE_BASENAME:-nexios-image}"
 
-LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-}"
 QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
-QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}}"
-QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
+QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-}"
+QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-}}"
+QBOX_CONF="${QBOX_CONF:-}"
 export QBOX_CORE_DIR QBOX_PLATFORM_DIR
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
-OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
+OUT_DIR="${OUT_DIR:-}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(nproc)}"
@@ -275,6 +277,11 @@ while (($#)); do
         --local-build-dir)
             [[ $# -ge 2 ]] || die "--local-build-dir requires a value"
             LOCAL_BUILD_DIR="$2"
+            shift 2
+            ;;
+        --qbox-tool-dir)
+            [[ $# -ge 2 ]] || die "--qbox-tool-dir requires a value"
+            QBOX_TOOL_DIR="$2"
             shift 2
             ;;
         --qbox-build-dir)
@@ -441,12 +448,36 @@ done
 
 reject_removed_env
 
+if [[ -z "${YOCTO_BUILD_DIR}" ]]; then
+    if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+        YOCTO_BUILD_DIR="${ROOT_DIR}/build-apollo-qvp"
+    else
+        YOCTO_BUILD_DIR="${ROOT_DIR}/build"
+    fi
+fi
 WORK_PREFIX="$(machine_to_work_prefix "${MACHINE}")"
 DEPLOY_DIR="${DEPLOY_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/images/${MACHINE}}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/work/${WORK_PREFIX}-poky-linux}"
+if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+    QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-${DEPLOY_DIR}/qbox-apollo-qvp}"
+    LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${QBOX_TOOL_DIR}}"
+    QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_TOOL_DIR}}"
+    QBOX_CONF="${QBOX_CONF:-${QBOX_TOOL_DIR}/platforms/apollo/apollo-qvp.lua}"
+    OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-qvp/yocto-${MACHINE}-${RUN_STAMP}}"
+else
+    LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+    QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}"
+    QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
+    OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
+    QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-${QBOX_BUILD_DIR}}"
+fi
+export QBOX_TOOL_DIR
 
 [[ -d "${DEPLOY_DIR}" ]] || die "Yocto deploy directory not found: ${DEPLOY_DIR}"
 [[ -d "${YOCTO_WORK_DIR}" ]] || die "Yocto work directory not found: ${YOCTO_WORK_DIR}"
+if [[ "${MACHINE}" == "apollo-qvp" && ! -d "${QBOX_TOOL_DIR}" ]]; then
+    die "QBox Yocto bundle not found: ${QBOX_TOOL_DIR}. Build qbox-apollo-qvp-native or set --qbox-tool-dir."
+fi
 [[ -d "${LOCAL_BUILD_DIR}" ]] || die "local build directory not found: ${LOCAL_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --local-build-dir."
 [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
 [[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
@@ -460,10 +491,16 @@ ROOTFS="$(resolve_file_with_glob \
     "Yocto rootfs WIC image" \
     "${ROOTFS_OVERRIDE:-${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.wic}" \
     "${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.wic")"
-EFI_CAPSULE_DISK="$(resolve_file \
-    "EFI capsule update disk" \
-    "${EFI_CAPSULE_DISK_OVERRIDE:-${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img}" \
-    "${DEPLOY_DIR}/efi-capsule-update-disk-image-fvp-rd-aspen.img")"
+if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+    EFI_CAPSULE_DISK="$(resolve_file \
+        "EFI capsule update disk" \
+        "${EFI_CAPSULE_DISK_OVERRIDE:-${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img}")"
+else
+    EFI_CAPSULE_DISK="$(resolve_file \
+        "EFI capsule update disk" \
+        "${EFI_CAPSULE_DISK_OVERRIDE:-${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img}" \
+        "${DEPLOY_DIR}/efi-capsule-update-disk-image-fvp-rd-aspen.img")"
+fi
 RSE_ROM="$(resolve_file \
     "RSE ROM image" \
     "${RSE_ROM_OVERRIDE:-${DEPLOY_DIR}/rse-rom-image.img}")"
@@ -630,6 +667,7 @@ Apollo QBox Yocto launch
   output dir:    ${OUT_DIR}
   session:       ${TMUX_SESSION}
   headless:      ${HEADLESS}
+  qbox tools:    ${QBOX_TOOL_DIR}
   qbox conf:     ${QBOX_CONF}
   ap cpus:       ${QBOX_APOLLO_NUM_CPUS}
   rootfs:        ${RUN_ROOTFS}

@@ -18,8 +18,9 @@ from typing import Any, NoReturn
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_BASELINE = ROOT / "build/qbox-apollo-fvp/run_qbox_yocto_baseline.json"
-DEFAULT_RESULT_ROOT = ROOT / "build/qbox-apollo-fvp"
+SUPPORTED_MACHINES = ("apollo-fvp", "apollo-qvp")
+DEFAULT_MACHINE = "apollo-fvp"
+LOGIN_PROMPT_MARKERS = ("apollo-fvp login:", "apollo-qvp login:")
 SCHEMA_VERSION = 1
 DEFAULT_THRESHOLD = 0.20
 DEFAULT_POLL_INTERVAL = 0.5
@@ -195,7 +196,8 @@ LOG_STAGE_DEFS = [
         "subsystem": "primary_console",
         "label": "Primary console login prompt",
         "log": "qbox-primary-console.log",
-        "marker": "apollo-fvp login:",
+        "marker": LOGIN_PROMPT_MARKERS[0],
+        "markers": list(LOGIN_PROMPT_MARKERS),
     },
 ]
 
@@ -219,6 +221,14 @@ ZEPHYR_TS_RE = re.compile(
 
 class RegressionFailure(RuntimeError):
     pass
+
+
+def result_root_for_machine(machine: str) -> Path:
+    return ROOT / f"build/qbox-{machine}"
+
+
+def baseline_for_machine(machine: str) -> Path:
+    return result_root_for_machine(machine) / "run_qbox_yocto_baseline.json"
 
 
 def raise_keyboard_interrupt(_signum: int, _frame: FrameType | None) -> NoReturn:
@@ -417,19 +427,30 @@ def preferred_logs(logs: list[dict[str, Any]], subsystem: str) -> list[dict[str,
     return preferred + rest
 
 
-def find_marker(logs: list[dict[str, Any]], marker: str | None, subsystem: str) -> dict[str, Any] | None:
-    if not marker:
+def marker_candidates(name: str, marker: str | None) -> list[str]:
+    if name == "primary_login_prompt" or marker in LOGIN_PROMPT_MARKERS:
+        return list(LOGIN_PROMPT_MARKERS)
+    return [marker] if marker else []
+
+
+def find_marker(
+    logs: list[dict[str, Any]], markers: list[str], subsystem: str
+) -> dict[str, Any] | None:
+    if not markers:
         return None
     for log in preferred_logs(logs, subsystem):
         for index, line in enumerate(log["lines"], start=1):
-            if marker in clean_line(line):
-                return {
-                    "log": str(log["path"]),
-                    "log_name": log["name"],
-                    "line_number": index,
-                    "line": clean_line(line),
-                    "elapsed_s": parse_elapsed_from_line(line, index),
-                }
+            clean = clean_line(line)
+            for marker in markers:
+                if marker in clean:
+                    return {
+                        "log": str(log["path"]),
+                        "log_name": log["name"],
+                        "line_number": index,
+                        "line": clean,
+                        "marker": marker,
+                        "elapsed_s": parse_elapsed_from_line(line, index),
+                    }
     return None
 
 
@@ -454,10 +475,12 @@ def add_stage(
     source: str,
     logs: list[dict[str, Any]],
     optional: bool = False,
+    markers: list[str] | None = None,
 ) -> None:
     if name in seen_names:
         return
-    hit = find_marker(logs, marker, subsystem)
+    marker_list = markers if markers is not None else marker_candidates(name, marker)
+    hit = find_marker(logs, marker_list, subsystem)
     if elapsed_s is None and hit is not None:
         elapsed_s = normalize_elapsed(hit.get("elapsed_s"))
     if hit is not None and str(hit.get("line") or "").startswith("\x00"):
@@ -468,6 +491,8 @@ def add_stage(
             "subsystem": subsystem,
             "label": label,
             "marker": marker,
+            "markers": marker_list,
+            "observed_marker": hit.get("marker") if hit else None,
             "seen": hit is not None or elapsed_s is not None,
             "optional": optional,
             "elapsed_s": normalize_elapsed(elapsed_s),
@@ -517,6 +542,10 @@ def extract_stages(result: dict[str, Any], child: dict[str, Any], logs: list[dic
             elapsed_s=normalize_elapsed(marker.get("elapsed_s")),
             source="rse_boot_timing_profile",
             logs=logs,
+            markers=marker_candidates(
+                name,
+                marker.get("marker") if isinstance(marker.get("marker"), str) else None,
+            ),
         )
 
     progress_hits = progress_hits_from_results(result, child)
@@ -534,6 +563,10 @@ def extract_stages(result: dict[str, Any], child: dict[str, Any], logs: list[dic
             elapsed_s=normalize_elapsed(hit.get("elapsed_s")),
             source="progress_marker_first_hits",
             logs=logs,
+            markers=marker_candidates(
+                name,
+                hit.get("marker") if isinstance(hit.get("marker"), str) else None,
+            ),
         )
 
     for stage_def in LOG_STAGE_DEFS:
@@ -550,6 +583,7 @@ def extract_stages(result: dict[str, Any], child: dict[str, Any], logs: list[dic
             source="console_log",
             logs=stage_logs,
             optional=bool(stage_def.get("optional")),
+            markers=stage_def.get("markers") if isinstance(stage_def.get("markers"), list) else None,
         )
 
     return stages
@@ -1025,7 +1059,7 @@ class RealtimeLogMonitor:
         self.stages = [
             stage
             for stage in baseline.get("stages", [])
-            if isinstance(stage.get("marker"), str)
+            if stage_marker_candidates(stage)
             and (normalize_elapsed(stage.get("elapsed_s")) or 0.0) > 0.0
             and not stage.get("optional")
         ]
@@ -1119,13 +1153,15 @@ class RealtimeLogMonitor:
 
         for stage in self.stages:
             name = str(stage.get("name") or "")
-            marker = stage.get("marker")
-            if not name or name in self.stage_seen or not isinstance(marker, str):
+            markers = stage_marker_candidates(stage)
+            if not name or name in self.stage_seen or not markers:
                 continue
             if not realtime_stage_log_allowed(stage, path):
                 continue
-            if marker not in line:
+            observed_marker = next((marker for marker in markers if marker in line), None)
+            if observed_marker is None:
                 continue
+            stage["observed_marker"] = observed_marker
             self.stage_seen.add(name)
             baseline_elapsed = normalize_elapsed(stage.get("elapsed_s"))
             if baseline_elapsed is None or baseline_elapsed <= 0:
@@ -1317,6 +1353,14 @@ def compare_snapshot(
     }
 
 
+def stage_marker_candidates(stage: dict[str, Any]) -> list[str]:
+    markers = stage.get("markers")
+    if isinstance(markers, list):
+        return [marker for marker in markers if isinstance(marker, str)]
+    marker = stage.get("marker")
+    return [marker] if isinstance(marker, str) else []
+
+
 def latest_result_dir(root: Path) -> Path | None:
     candidates = []
     for path in root.iterdir() if root.exists() else []:
@@ -1428,6 +1472,8 @@ def headless_runner_command(
     command = [
         str(args.runner),
         "--headless",
+        "--machine",
+        str(args.machine),
         "--out-dir",
         str(out_dir),
         "--timeout",
@@ -1436,8 +1482,20 @@ def headless_runner_command(
     ]
     if dry_run:
         command.append("--dry-run")
-    command.extend(runner_args)
+    command.extend(remove_runner_machine_arg(runner_args))
     return command
+
+
+def remove_runner_machine_arg(runner_args: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    index = 0
+    while index < len(runner_args):
+        if runner_args[index] == "--machine" and index + 1 < len(runner_args):
+            index += 2
+            continue
+        cleaned.append(runner_args[index])
+        index += 1
+    return cleaned
 
 
 def dry_run_headless_command(
@@ -1544,7 +1602,7 @@ def run_qbox_yocto(
     out_dir = args.out_dir
     if out_dir is None:
         stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        out_dir = DEFAULT_RESULT_ROOT / f"regression-{stamp}"
+        out_dir = result_root_for_machine(args.machine) / f"regression-{stamp}"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     resolved_command = dry_run_headless_command(args, runner_args, out_dir)
@@ -1622,9 +1680,10 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
             "against it with fail-fast timing and error-log checks."
         )
     )
-    parser.add_argument("--baseline", type=Path, default=DEFAULT_BASELINE)
+    parser.add_argument("--machine", choices=SUPPORTED_MACHINES, default=DEFAULT_MACHINE)
+    parser.add_argument("--baseline", type=Path)
     parser.add_argument("--result-dir", type=Path)
-    parser.add_argument("--latest-result-root", type=Path, default=DEFAULT_RESULT_ROOT)
+    parser.add_argument("--latest-result-root", type=Path)
     parser.add_argument("--record-baseline", action="store_true")
     parser.add_argument("--fail-on-baseline-errors", action="store_true")
     parser.add_argument("--run", action="store_true")
@@ -1654,6 +1713,10 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     runner_args = list(args.runner_args)
     if runner_args and runner_args[0] == "--":
         runner_args = runner_args[1:]
+    if args.baseline is None:
+        args.baseline = baseline_for_machine(args.machine)
+    if args.latest_result_root is None:
+        args.latest_result_root = result_root_for_machine(args.machine)
     return args, runner_args
 
 

@@ -14,6 +14,7 @@ class QboxInputs:
     include_runtime: bool
     skip_runtime: bool
     timeout_fvp: str
+    machine: str = "apollo-fvp"
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,18 @@ def qbox_build_dir(inputs: QboxInputs) -> Path:
 
 def qbox_build_arg() -> str:
     return os.environ.get("RUN_TEST_QBOX_BUILD_DIR") or "build/local-apollo-fvp/work/qbox-platform"
+
+
+def qbox_yocto_result_root(inputs: QboxInputs) -> Path:
+    return inputs.root / f"build/qbox-{inputs.machine}"
+
+
+def qbox_yocto_baseline(inputs: QboxInputs) -> Path:
+    return qbox_yocto_result_root(inputs) / "run_qbox_yocto_baseline.json"
+
+
+def include_yocto_boot_regression() -> bool:
+    return os.environ.get("RUN_TEST_QBOX_YOCTO_BOOT_REGRESSION") == "1"
 
 
 def static_lanes(inputs: QboxInputs) -> list[QboxLane]:
@@ -160,7 +173,7 @@ def ctest_lanes(inputs: QboxInputs) -> list[QboxLane]:
 def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
     check_dir = inputs.run_dir / "extra/qbox-full/check-only"
     live_dir = inputs.run_dir / "extra/qbox-full/live-cl0-cl1"
-    return [
+    lanes = [
         QboxLane(
             "qbox-full-check-only",
             [
@@ -218,3 +231,47 @@ def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
             True,
         ),
     ]
+    if include_yocto_boot_regression():
+        result_root = qbox_yocto_result_root(inputs)
+        regression_dir = result_root / f"regression-{inputs.run_dir.name}"
+        lanes.append(
+            QboxLane(
+                "qbox-yocto-boot-regression",
+                [
+                    "python3",
+                    "scripts/test/run_qbox_yocto_boot_regression.py",
+                    "--run",
+                    "--machine",
+                    inputs.machine,
+                    "--baseline",
+                    str(qbox_yocto_baseline(inputs)),
+                    "--latest-result-root",
+                    str(result_root),
+                    "--out-dir",
+                    str(regression_dir),
+                    "--timeout",
+                    inputs.timeout_fvp,
+                ],
+                [
+                    "python3",
+                    "scripts/test/run_qbox_yocto_boot_regression.py",
+                    "--run",
+                    "--machine",
+                    inputs.machine,
+                    "--baseline",
+                    str(qbox_yocto_baseline(inputs)),
+                    "--latest-result-root",
+                    str(result_root),
+                    "--out-dir",
+                    str(regression_dir),
+                    "--timeout",
+                    inputs.timeout_fvp,
+                ],
+                inputs.root,
+                regression_dir / "stdout.log",
+                regression_dir / "stderr.log",
+                regression_dir,
+                True,
+            )
+        )
+    return lanes
