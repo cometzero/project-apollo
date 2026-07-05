@@ -75,6 +75,9 @@ separate.
   patches, cfg/scc fragments, and kernel metadata.
 - [Validation, CI, And Runtime](validation-ci-and-runtime.md) - OEQA,
   pytest-based automation, GitLab CI, and runtime test dependencies.
+- [Apollo FVP Validation Test Process KR](apollo-fvp-validation-test-process-ko.md) -
+  Korean table summary of `run_test.sh` validation preparation, category
+  flow, pass/fail rules, dependencies, and measured basic/functional runtime.
 - [Headless FVP Boot Logs](fvp-log-boot.md) - non-interactive FVP launch with
   file-based stdout and per-console boot logs.
 - [Generated Artifacts And Risks](generated-artifacts-and-risks.md) - active
