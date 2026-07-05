@@ -70,7 +70,7 @@ python3 -m py_compile \
   scripts/run/run_qbox_apollo_fvp_si_cl1.py \
   scripts/test/validate_qbox_fvp_rd_aspen_map.py
 
-bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
+bash -n run_qbox_local.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
 

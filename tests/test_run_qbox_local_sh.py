@@ -8,7 +8,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "run_qbox.sh"
+SCRIPT = ROOT / "run_qbox_local.sh"
 
 
 REMOVED_SURFACES = (

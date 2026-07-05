@@ -17,7 +17,7 @@ Updated: 2026-07-04
 | `yocto_build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `nexios-image` 빌드 진입점. |
 | `local_build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
 | `run_fvp.sh` | Yocto 빌드 산출물을 Apollo FVP tmux 세션에서 실행하는 사용자용 진입점. |
-| `run_qbox.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |
+| `run_qbox_local.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |
 
 ## Arm 제공 소스
 

@@ -51,26 +51,26 @@ reject_removed_option()
 usage()
 {
     cat <<EOF
-Usage: ./run_qbox.sh [tmux-runner options]
+Usage: ./run_qbox_local.sh [tmux-runner options]
 
 Build local boot artifacts first:
   ./local_build.sh
 
 Then launch QBox in tmux:
-  ./run_qbox.sh
+  ./run_qbox_local.sh
 
 Common overrides:
-  TMUX_SESSION=apollo-demo ./run_qbox.sh
-  OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox.sh
-  QBOX_PLATFORM_BUILD_DIR=build/local-apollo-fvp/work/qbox-platform ./run_qbox.sh
-  QBOX_BUILD_DIR=/path/to/qbox-platform-build ./run_qbox.sh
-  QBOX_PLATFORM_DIR=hsoc-stack/tools/qbox-platform ./run_qbox.sh
-  QBOX_CONF=hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox.sh
-  SSH_PORT=2225 ./run_qbox.sh
-  ./run_qbox.sh --copy-disks
-  ./run_qbox.sh --no-attach
-  ./run_qbox.sh --legacy-file-backed-sram
-  ./run_qbox.sh --dry-run
+  TMUX_SESSION=apollo-demo ./run_qbox_local.sh
+  OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox_local.sh
+  QBOX_PLATFORM_BUILD_DIR=build/local-apollo-fvp/work/qbox-platform ./run_qbox_local.sh
+  QBOX_BUILD_DIR=/path/to/qbox-platform-build ./run_qbox_local.sh
+  QBOX_PLATFORM_DIR=hsoc-stack/tools/qbox-platform ./run_qbox_local.sh
+  QBOX_CONF=hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox_local.sh
+  SSH_PORT=2225 ./run_qbox_local.sh
+  ./run_qbox_local.sh --copy-disks
+  ./run_qbox_local.sh --no-attach
+  ./run_qbox_local.sh --legacy-file-backed-sram
+  ./run_qbox_local.sh --dry-run
 
 Defaults:
   session: ${TMUX_SESSION}

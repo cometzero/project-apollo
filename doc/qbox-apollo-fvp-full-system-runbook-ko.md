@@ -246,7 +246,7 @@ legacy file-backed SRAM alias는 명시적 debug/compatibility rollback 경로�
 사용한다. top-level wrapper를 쓸 때는 다음처럼 legacy mode를 요청한다.
 
 ```bash
-./run_qbox.sh --legacy-file-backed-sram
+./run_qbox_local.sh --legacy-file-backed-sram
 ```
 
 RSE runner를 직접 디버그할 때만 legacy preset을 명시적으로 전달한다.
@@ -398,7 +398,7 @@ tmux 화면 실행에서 legacy file-backed SRAM alias rollback이 필요하면
 top-level wrapper의 compatibility option을 사용한다.
 
 ```bash
-./run_qbox.sh --legacy-file-backed-sram
+./run_qbox_local.sh --legacy-file-backed-sram
 ```
 
 | Pane | 로그 |

@@ -103,7 +103,7 @@ Commands:
 
 ```bash
 python3 -m py_compile scripts/*/*.py
-bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
+bash -n run_qbox_local.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh
 git -C tools/qbox diff --check
 git diff --check
 cmake --build build/local-apollo-fvp/work/qbox-platform \
@@ -148,7 +148,7 @@ Use `$commit-atomic` rules:
 
 | Check | Result | Evidence |
 | --- | --- | --- |
-| Shell syntax | pass | `bash -n run_qbox.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh` |
+| Shell syntax | pass | `bash -n run_qbox_local.sh scripts/run/run_qbox_apollo_fvp_full_tmux.sh` |
 | Python syntax | pass | `python3 -m py_compile ...` for changed QBox runners and validators |
 | Diff whitespace | pass | `git diff --check`, `git -C tools/qbox diff --check` |
 | Map validation | pass | `build/qbox-fvp-rd-aspen/map-validation.json` |

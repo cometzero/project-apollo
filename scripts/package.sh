@@ -23,7 +23,7 @@ Default output:
   ${PACKAGE_LOCAL_BUILD_DIR}
 
 Run packaged images:
-  ./run_qbox.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
+  ./run_qbox_local.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
 
 Useful overrides:
   PACKAGE_DIR=/path/to/package ./local_build.sh --package
@@ -62,7 +62,7 @@ QBox full-system runner consumes.
 Run it from the workspace top directory:
 
 \`\`\`bash
-./run_qbox.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
+./run_qbox_local.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
 \`\`\`
 
 The artifact manifest is \`manifest.json\`.
@@ -157,7 +157,7 @@ manifest = {
     "local_build_dir": str(package_local_build_dir),
     "source_local_build_dir": str(source_local_build_dir),
     "run_command": [
-        "./run_qbox.sh",
+        "./run_qbox_local.sh",
         "--local-build-dir",
         str(package_local_build_dir),
         "--qbox-build-dir",

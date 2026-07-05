@@ -216,7 +216,7 @@ To package existing local-build outputs into a QBox-runnable image set:
 
 ```bash
 ./local_build.sh --package
-./run_qbox.sh --local-build-dir build/local-apollo-fvp/package/qbox/local-build
+./run_qbox_local.sh --local-build-dir build/local-apollo-fvp/package/qbox/local-build
 ```
 
 Repeated `local_build.sh build` runs check the qbox-platform CMake cache and
@@ -241,7 +241,7 @@ After the local build, boot the local images with the default QBox performance
 options:
 
 ```bash
-./run_qbox.sh
+./run_qbox_local.sh
 ```
 
 For Apollo images produced by the Yocto build, use:

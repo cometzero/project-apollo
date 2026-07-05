@@ -33,10 +33,10 @@ workspace top directory인 `/build/arm/arm-auto-solutions`에서 실행한다.
 
 ```bash
 ./local_build.sh
-./run_qbox.sh
+./run_qbox_local.sh
 ```
 
-`run_qbox.sh`는 다음 동작을 자동으로 수행한다.
+`run_qbox_local.sh`는 다음 동작을 자동으로 수행한다.
 
 - `live-cl0-cl1` Safety Island mode 선택
 - QEMU-native CC3XX backend와 현재 RSE fast-path 옵션 적용
@@ -59,7 +59,7 @@ post-login probe가 통과해도 QBox는 자동 종료되지 않는다.
 기본 포트를 직접 지정하려면 다음처럼 실행한다.
 
 ```bash
-SSH_PORT=2225 ./run_qbox.sh
+SSH_PORT=2225 ./run_qbox_local.sh
 ```
 
 기존 QBox 실행이 같은 disk image를 잡고 있으면 QEMU가 `Failed to get "write"
@@ -68,7 +68,7 @@ local build disk를 직접 사용한다. 충돌 회피가 필요하면 rootfs와
 disk를 per-run copy로 만들어 실행한다.
 
 ```bash
-./run_qbox.sh --copy-disks
+./run_qbox_local.sh --copy-disks
 ```
 
 ## 백그라운드 실행
@@ -76,7 +76,7 @@ disk를 per-run copy로 만들어 실행한다.
 터미널을 바로 점유하지 않으려면 `--no-attach`를 추가한다.
 
 ```bash
-./run_qbox.sh --no-attach
+./run_qbox_local.sh --no-attach
 ```
 
 실행 시 출력되는 session 이름으로 나중에 접속한다.
@@ -126,7 +126,7 @@ local boot image 자체를 다시 만들려면 다음을 사용한다.
 ./local_build.sh
 ```
 
-그 뒤 다시 `./run_qbox.sh`를 실행한다.
+그 뒤 다시 `./run_qbox_local.sh`를 실행한다.
 
 ## 참고
 

@@ -32,6 +32,7 @@ hardware models over register-only stubs.
   `hsoc-stack/tools/qemu/`
 - QBox helper scripts:
   `./local_build.sh qbox`,
+  `./run_qbox_local.sh`,
   `scripts/build/build_qbox.sh`,
   `scripts/package.sh`,
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
@@ -72,7 +73,7 @@ hardware models over register-only stubs.
   applying one of those patches.
 - `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
-  `yocto_build.sh`, `local_build.sh`, and `run_qbox.sh` call into these
+  `yocto_build.sh`, `local_build.sh`, and `run_qbox_local.sh` call into these
   helpers.
 - `tests/`: repository-local tests for Python tooling and QBox helper logic.
 - `build/conf/`: active local Yocto build configuration.
