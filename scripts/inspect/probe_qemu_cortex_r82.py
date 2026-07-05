@@ -38,7 +38,7 @@ def probe_sources(source_root: Path) -> list[str]:
     root = source_root.resolve()
     checks: list[str] = []
 
-    cpu64 = read_text(root / "tools/qemu/target/arm/tcg/cpu64.c")
+    cpu64 = read_text(root / "hsoc-stack/tools/qemu/target/arm/tcg/cpu64.c")
     require(cpu64, "aarch64_cortex_r82_initfn", "QEMU CPU model")
     require(cpu64, '"cortex-r82"', "QEMU CPU model")
     r82_init = extract_between(
@@ -52,7 +52,7 @@ def probe_sources(source_root: Path) -> list[str]:
     require(r82_init, "ID_ISAR0, 0x02101110", "QEMU CPU model")
     checks.append("qemu-cpu-model")
 
-    helper = read_text(root / "tools/qemu/target/arm/helper.c")
+    helper = read_text(root / "hsoc-stack/tools/qemu/target/arm/helper.c")
     require(helper, "CNTHPS_CTL_EL2", "QEMU FEAT_SEL2 timer sysregs")
     require(helper, "arm_is_v8r_el2_sel2", "QEMU FEAT_SEL2 timer sysregs")
     require(helper, "cpu_isar_feature(aa64_sel2, cpu)", "QEMU FEAT_SEL2 timer sysregs")
@@ -67,8 +67,8 @@ def probe_sources(source_root: Path) -> list[str]:
         require(helper, reg, "QEMU AArch64 EL2 MPU sysregs")
     checks.append("qemu-el2-mpu-sysregs")
 
-    cpu_h = read_text(root / "tools/qemu/target/arm/cpu.h")
-    ptw_c = read_text(root / "tools/qemu/target/arm/ptw.c")
+    cpu_h = read_text(root / "hsoc-stack/tools/qemu/target/arm/cpu.h")
+    ptw_c = read_text(root / "hsoc-stack/tools/qemu/target/arm/ptw.c")
     for field in (
         "uint64_t *rbar[M_REG_NUM_BANKS]",
         "uint64_t *rlar[M_REG_NUM_BANKS]",
@@ -82,15 +82,16 @@ def probe_sources(source_root: Path) -> list[str]:
     checks.append("qemu-pmsav8-64bit-storage")
 
     cpu_arm_cmake = read_text(
-        root / "tools/qbox/qemu-components/cpu_arm/CMakeLists.txt"
+        root / "hsoc-stack/tools/qbox-platform/qemu-components/CMakeLists.txt"
     )
-    require(cpu_arm_cmake, "add_subdirectory(cpu_arm_cortex_r82)", "QBox CPU")
+    require(cpu_arm_cmake, "add_subdirectory(cpu_arm/cpu_arm_cortex_r82)", "QBox CPU")
     qbox_header = read_text(
         root
-        / "tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_r82/include/cortex-r82.h"
+        / "hsoc-stack/tools/qbox-platform/qemu-components/cpu_arm/cpu_arm_cortex_r82/include/cortex-r82.h"
     )
     qbox_cmake = read_text(
-        root / "tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_r82/CMakeLists.txt"
+        root
+        / "hsoc-stack/tools/qbox-platform/qemu-components/cpu_arm/cpu_arm_cortex_r82/CMakeLists.txt"
     )
     require(qbox_header, "cpu_arm_cortexR82", "QBox CPU")
     require(qbox_header, '"cortex-r82-arm"', "QBox CPU")
@@ -127,7 +128,7 @@ def parse_args() -> argparse.Namespace:
         "--source-root",
         type=Path,
         default=Path.cwd(),
-        help="workspace root containing tools/qemu and tools/qbox",
+        help="workspace root containing hsoc-stack/tools/qemu and qbox-platform",
     )
     parser.add_argument(
         "--qemu-system-aarch64",

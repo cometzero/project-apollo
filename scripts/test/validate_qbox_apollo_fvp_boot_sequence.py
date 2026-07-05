@@ -50,7 +50,7 @@ def require_contains(errors: list[str], path: Path, text: str, needle: str, labe
 
 def validate_static(root: Path) -> list[str]:
     errors: list[str] = []
-    apollo = root / "tools/qbox-platform/platforms/apollo/hw-block"
+    apollo = root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block"
     si_cl0 = apollo / "si_cl0.lua"
     si_cl1 = apollo / "si_cl1.lua"
 

@@ -10,9 +10,9 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPONENTS_DIR = ROOT / "tools/qbox-platform/systemc-components"
-TESTS_DIR = ROOT / "tools/qbox-platform/tests/components"
-TOP_CMAKE = ROOT / "tools/qbox-platform/CMakeLists.txt"
+COMPONENTS_DIR = ROOT / "hsoc-stack/tools/qbox-platform/systemc-components"
+TESTS_DIR = ROOT / "hsoc-stack/tools/qbox-platform/tests/components"
+TOP_CMAKE = ROOT / "hsoc-stack/tools/qbox-platform/CMakeLists.txt"
 ALL_TESTS_CMAKE = TESTS_DIR / "CMakeLists.txt"
 
 
@@ -21,7 +21,7 @@ ADD_TEST_CALL_RE = re.compile(r"add_test\s*\((.*?)\)", re.DOTALL)
 GTEST_RE = re.compile(r"\bTEST(?:_F|_P)?\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)")
 PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_./-])"
-    r"((?:tools|doc|scripts)/[A-Za-z0-9_./:+@-]+)"
+    r"((?:hsoc-stack/tools|doc|scripts)/[A-Za-z0-9_./:+@-]+)"
 )
 
 

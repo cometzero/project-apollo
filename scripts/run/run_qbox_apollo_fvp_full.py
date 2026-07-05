@@ -1412,7 +1412,7 @@ def validate_child_forward_args(
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     qbox_platform_dir = Path(
-        os.environ.get("QBOX_PLATFORM_DIR", str(root / "tools/qbox-platform"))
+        os.environ.get("QBOX_PLATFORM_DIR", str(root / "hsoc-stack/tools/qbox-platform"))
     )
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

@@ -103,7 +103,6 @@ System Management와 Safety Island 소스는
 | `hsoc-stack/tools/qbox-platform/systemc-components/` | Apollo/RD-Aspen overlay가 소유하는 QBox SystemC/TLM hardware models. Apollo에서 사용하는 `mhu320ae`, `mmu720ae`, `cc3xx`, `rse_*`, `zena_*`, `gicx00_multiview` 등이 있다. |
 | `hsoc-stack/tools/qbox-platform/qemu-components/` | Apollo/RD-Aspen overlay가 소유하는 QEMU/libqemu-backed wrapper. Apollo-specific `qemu_cc3xx` 같은 wrapper를 포함한다. |
 | `hsoc-stack/tools/qemu/` | active QBox local build가 사용하는 local QEMU/libqemu source submodule. |
-| `tools/qbox/`, `tools/qbox-platform/`, `tools/qemu/` | legacy QBox/QEMU checkout. 비교, 이력 확인, migration reference 용도로 유지하며 기본 Apollo QBox local build 입력은 아니다. |
 
 새 Apollo hardware model이나 Lua wiring 변경은 대부분
 `hsoc-stack/tools/qbox-platform/`이 소유한다. 재사용 가능한 QBox core 변경은

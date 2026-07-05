@@ -11,7 +11,7 @@ from typing import Final
 
 
 DESCRIPTION: Final = "Audit Apollo QBox Lua hardware-object ownership."
-HW_BLOCK_REL: Final = "tools/qbox-platform/platforms/apollo/hw-block"
+HW_BLOCK_REL: Final = "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block"
 ROS_OBJECTS: Final = {
     "ap_virtioblk_0",
     "ap_virtioblk_1",

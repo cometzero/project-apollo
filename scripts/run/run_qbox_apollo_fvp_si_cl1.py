@@ -328,7 +328,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua",
+        default=root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua",
     )
     parser.add_argument("--image", type=Path, default=default_image(root))
     parser.add_argument("--symbols", type=Path, default=default_symbols(root))

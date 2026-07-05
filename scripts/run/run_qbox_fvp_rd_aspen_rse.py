@@ -575,12 +575,12 @@ def qbox_build_dir(root: Path) -> Path:
 
 
 def qbox_core_dir(root: Path) -> Path:
-    return Path(os.environ.get("QBOX_CORE_DIR", str(root / "tools/qbox"))).resolve()
+    return Path(os.environ.get("QBOX_CORE_DIR", str(root / "hsoc-stack/tools/qbox"))).resolve()
 
 
 def qbox_platform_dir(root: Path) -> Path:
     return Path(
-        os.environ.get("QBOX_PLATFORM_DIR", str(root / "tools/qbox-platform"))
+        os.environ.get("QBOX_PLATFORM_DIR", str(root / "hsoc-stack/tools/qbox-platform"))
     ).resolve()
 
 
@@ -612,7 +612,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     platform_dir = qbox_platform_dir(root)
     build_dir = qbox_build_dir(root)
     cache = build_dir / "CMakeCache.txt"
-    local_qemu = (root / "tools/qemu").resolve()
+    local_qemu = (root / "hsoc-stack/tools/qemu").resolve()
     libqemu_git = os.environ.get("QBOX_LIBQEMU_GIT", f"file://{local_qemu}")
     libqemu_source = os.environ.get(
         "QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU", str(local_qemu)
@@ -4238,7 +4238,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox-platform/platforms/apollo/apollo-qvp.lua",
+        default=root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua",
         help="RSE-oriented QBox Lua config. Missing config is reported as an implementation blocker.",
     )
     parser.add_argument("--rse-rom", type=Path, default=deploy / "rse-rom-image.img")

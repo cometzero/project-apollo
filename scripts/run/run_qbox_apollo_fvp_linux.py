@@ -546,7 +546,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "tools/qbox-platform/platforms/apollo/apollo-pc.lua",
+        default=root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-pc.lua",
     )
     parser.add_argument(
         "--base-dtb",

@@ -71,21 +71,6 @@ hardware models over register-only stubs.
   checked-out `hsoc-stack/tools/qbox/` source unless a task explicitly requests
   applying one of those patches.
 - `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
-- `tools/qbox/`: legacy upstream-friendly QBox core path, including
-  `platforms-vp`,
-  libqbox/libqemu integration, reusable SystemC/TLM components, reusable
-  QEMU-backed components, tests, and examples.
-- `tools/qbox-platform/`: legacy Apollo/RD-Aspen platform overlay, including Apollo
-  and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU
-  wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target.
-  Patch files under `tools/qbox-platform/patch-qbox/` are also archived candidate
-  QBox-core patches for later manual review or application. The normal local
-  build must not apply these patches automatically; QBox builds should use the
-  checked-out QBox source unless a task explicitly requests applying one of
-  those patches.
-- `tools/qemu/`: legacy local QEMU/libqemu checkout retained for comparison
-  and migration history. Normal Apollo QBox local builds use
-  `hsoc-stack/tools/qemu/`.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
   `yocto_build.sh`, `local-build.sh`, and `run_qbox.sh` call into these
   helpers.

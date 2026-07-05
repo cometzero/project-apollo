@@ -23,7 +23,6 @@ Main source areas:
 | `hsoc-stack/tools/qbox/` | Active upstream-friendly QBox core: `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, and examples. |
 | `hsoc-stack/tools/qbox-platform/` | Active Apollo/RD-Aspen platform overlay: Apollo and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target. |
 | `hsoc-stack/tools/qemu/` | Active local QEMU/libqemu source used by QBox. |
-| `tools/qbox/`, `tools/qbox-platform/`, `tools/qemu/` | Legacy QBox/QEMU checkouts kept for comparison and migration history. Normal Apollo QBox local builds use the active `hsoc-stack/tools/` paths. |
 | `scripts/` | Categorized build, run, setup, debug, inspect, analyze, and test helpers. See `scripts/README.md`. |
 | `tests/` | Repository-local tests for helper scripts and QBox runner behavior. |
 | `doc/` | Project architecture notes, hardware analysis, plans, runbooks, and verification reports. |
@@ -49,9 +48,8 @@ checkout command. Some Zephyr HAL repositories contain optional nested gitlinks
 without URL entries in their `.gitmodules` files, and a blanket recursive
 update fails before the Apollo build starts. The bootstrap script initializes
 all root submodules, including `hsoc-stack/tools/qbox`,
-`hsoc-stack/tools/qbox-platform`, `hsoc-stack/tools/qemu`, and the legacy
-`tools/` QBox checkouts, and only the nested dependencies required by the
-Apollo Yocto, local build, and QBox flows.
+`hsoc-stack/tools/qbox-platform`, and `hsoc-stack/tools/qemu`, and only the
+nested dependencies required by the Apollo Yocto, local build, and QBox flows.
 
 If a checkout was already left in a partial state by a failed recursive
 submodule update, restore the pinned submodule worktrees with:

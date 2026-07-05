@@ -15,7 +15,7 @@ OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-user-demo-${RUN_STAMP
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-}"
-QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/tools/qbox-platform}"
+QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
@@ -64,8 +64,8 @@ Common overrides:
   OUT_DIR=build/qbox-apollo-fvp/my-run ./run_qbox.sh
   QBOX_PLATFORM_BUILD_DIR=build/local-apollo-fvp/work/qbox-platform ./run_qbox.sh
   QBOX_BUILD_DIR=/path/to/qbox-platform-build ./run_qbox.sh
-  QBOX_PLATFORM_DIR=tools/qbox-platform ./run_qbox.sh
-  QBOX_CONF=tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox.sh
+  QBOX_PLATFORM_DIR=hsoc-stack/tools/qbox-platform ./run_qbox.sh
+  QBOX_CONF=hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua ./run_qbox.sh
   SSH_PORT=2225 ./run_qbox.sh
   ./run_qbox.sh --copy-disks
   ./run_qbox.sh --no-attach

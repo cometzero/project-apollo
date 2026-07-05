@@ -28,7 +28,6 @@ template is
 | `hsoc-stack/tools/qbox/` | Active QBox core source | SystemC/TLM/QEMU co-simulation core, reusable QEMU-backed components, reusable SystemC components, and QBox tests. |
 | `hsoc-stack/tools/qbox-platform/` | Active Apollo/RD-Aspen QBox platform overlay | Apollo and RD-Aspen Lua platforms, Zena/RSE SystemC models, Apollo-specific QEMU wrappers, platform tests, and `apollo_fvp_full_system`. |
 | `hsoc-stack/tools/qemu/` | Active QEMU/libqemu source | Local QEMU/libqemu source consumed by the Apollo QBox local build. |
-| `tools/qbox/`, `tools/qbox-platform/`, `tools/qemu/` | Legacy QBox/QEMU checkouts | Retained for comparison and migration history; normal Apollo QBox local builds use `hsoc-stack/tools/`. |
 | `scripts/` | Project orchestration helpers | Categorized build, run, setup, debug, inspect, analyze, and test scripts. |
 | `tests/` | Repository-local tests | Tests for helper scripts and QBox runner behavior. |
 | `build/conf/` | Active Yocto configuration | Generated from the Apollo `TEMPLATECONF` flow and edited as local build configuration. |

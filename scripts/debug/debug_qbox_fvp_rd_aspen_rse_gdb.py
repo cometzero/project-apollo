@@ -453,8 +453,8 @@ def elf_section_address(root: Path, elf: Path | None, section: str) -> str | Non
 
 
 def qbox_source_setup(root: Path) -> str:
-    qbox = root / "tools/qbox"
-    qbox_platform = root / "tools/qbox-platform"
+    qbox = root / "hsoc-stack/tools/qbox"
+    qbox_platform = root / "hsoc-stack/tools/qbox-platform"
     paths = [
         qbox,
         qbox / "systemc-components",

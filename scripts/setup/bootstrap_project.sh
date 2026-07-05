@@ -92,7 +92,7 @@ required_recursive_paths=(
 )
 
 if ((WITH_QEMU_ROMS)); then
-    required_recursive_paths+=("tools/qemu" "hsoc-stack/tools/qemu")
+    required_recursive_paths+=("hsoc-stack/tools/qemu")
 fi
 
 submodule_update_args=(submodule update --init --checkout --jobs "${JOBS}")
