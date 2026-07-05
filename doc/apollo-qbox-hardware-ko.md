@@ -175,7 +175,7 @@ full-system에서는 AP BL2 reset loader와 RSE/SI image loader가 역할을
 | PL011 secure UART | `ap_secure_uart` | `Pl011` | secure console file backend |
 | SBSA watchdog | direct: `watchdog_0`, full: `ap_watchdog_0` | `sbsa_gwdt` | `tools/qemu/hw/watchdog/sbsa_gwdt.c` |
 | Secure watchdog placeholder | `ap_secure_wdog` | `gs_memory` | secure-world error path access 보존 |
-| Memory-mapped timer | full: `ap_timer_mem` | `qemu_hexagon_qtimer` | QEMU-backed timer component |
+| AP REFCLK memory-mapped timer | full: `ap_timer_mem` | `qemu_arm_arch_timer_mmio` | reusable Arm MMIO QEMU/QBox timer path, 125MHz |
 | RTC | direct: `rtc_0`, full: `ap_rtc_0` | `pl031` | `tools/qemu/hw/rtc/pl031` equivalent wrapper |
 | Virtio block | direct: `virtioblk_0..3`, full: `ap_virtioblk_0..3` | `virtio_mmio_blk` | `tools/qemu/hw/block/virtio-blk.c`, `tools/qemu/hw/virtio/virtio-mmio.c` |
 | Virtio net | direct: `virtionet0_0`, full: `ap_virtionet_0` | `virtio_mmio_net` | `tools/qemu/hw/net/virtio-net.c` |
@@ -184,6 +184,18 @@ full-system에서는 AP BL2 reset loader와 RSE/SI image loader가 역할을
 Direct boot DTS는 AP 4-core subset만 기술하고, full-system 경로는
 RSE-first topology의 AP GIC, SMMU, virtio, UART, watchdog, RTC, AP-SI MHU
 구성을 사용한다.
+
+AP timer topology는 CPU-local generic timer와 AP REFCLK MMIO timer를
+분리한다. CPU internal Arm generic timer는 per-core QEMU `ARMCPU` 경로에
+남아 GIC PPI로 전달된다. AP REFCLK는 125MHz Arm memory-mapped generic
+timer이며 `qemu_arm_arch_timer_mmio` wrapper를 통해 reusable Arm MMIO
+QEMU/QBox path로 노출된다. Apollo AP REFCLK는 `qemu_hexagon_qtimer`,
+`qct-qtimer`, 또는 `qct-qtimer` compatibility alias를 사용하지 않는다.
+
+AP REFCLK frame 0은 non-secure `AP_SYS_CNT_BASE_NS` view이며 SPI 49를
+사용한다. AP REFCLK frame 1은 secure `AP_SYS_CNT_BASE_S` view이며 SPI 48을
+사용한다. 두 frame은 하나의 REFCLK counter source를 공유하되 frame별
+compare/IRQ state는 분리한다.
 
 ### AP 9.1.1 memory-map coverage
 
@@ -198,7 +210,7 @@ P1 범위를 정적으로 추적한다. 이는 full FVP-equivalent AP memory-map
 | High DRAM | `ram_1`, `host_ap_dram2` | 현재 FVP handoff와 맞춰 bank1 base를 `0x200_0000_0000` / `0x20000000000`로 둔다. DTS high-memory cells도 `<0x200 0x00000000 0x0 0x80000000>`로 맞춘다. AP 9.1.1의 `0x08_8000_0000` row는 full programmer-model parity 항목으로 남긴다. |
 | AP SID | `ap_sid` / `host_scr` | `0x1a4a0000..0x1a4affff` AP System ID register window를 AP logical view에 노출한다. |
 | AP secure watchdog control/refresh | `ap_secure_wdog`, `ap_secure_wdog_refresh` / `gs_memory` | `0x1a460000..0x1a46ffff`와 `0x1a470000..0x1a47ffff`를 각각 좁은 명시 placeholder로 AP logical view에 노출한다. watchdog side effect, interrupt/reset 동작, access-control fidelity는 후속 full model debt다. |
-| AP secure timer frame | `ap_secure_timer_frame` / `gs_memory` | `0x1a820000..0x1a82ffff` 명시 placeholder이다. secure generic timer의 side effect나 PPI 동작을 FVP-equivalent로 모델링한 것은 아니다. |
+| AP REFCLK timer frame 1 | `ap_timer_mem` / `qemu_arm_arch_timer_mmio` | `0x1a820000..0x1a82ffff` secure `AP_SYS_CNT_BASE_S` frame이다. SPI 48을 사용하며 frame 0과 같은 125MHz counter source를 공유한다. |
 | RGIC2LGIC_MESSREG | `ap_rgic2lgic_messreg` / `gic720ae_messreg` | `0x5fff0000..0x5fffffff` 64 KiB named SystemC/TLM sideband model이다. deterministic storage, bounds/size errors, `transport_dbg`를 제공하며 AXI5-Stream timing과 full SPI Collator semantics는 후속 구현 debt다. |
 | APP subsystem FMU | `ap_cl0_ni710ae_fmu..ap_cl3_ni710ae_fmu` / `zena_fmu` | `0x1d000000..0x1defffff` aggregate row 중 firmware-derived NI-710AE cluster FMU subwindow만 partial model로 다룬다. 나머지 aggregate/reserved 영역을 broad memory blob으로 full coverage 처리하지 않는다. |
 
@@ -289,7 +301,7 @@ control surface이다. 실제 interrupt delivery는 CL0/CL1/AP 각각의
 | CL0 SRAM | `si_cl0_sram` | `gs_memory` | live SCP RAM |
 | RSE/SCP shared SRAM | `si_cl0_rse_shared_sram` | `gs_memory` | CL0 local `0x40000000` view |
 | SCR/System ID | `si_cl0_scr`, `si_cl0_system_id` | `host_scr` | CL1 present bit, ID/PID/CID reset values |
-| Generic timers/counters | `si_cl0_timer_cntctl`, `si_cl0_timer_cntbase`, `si_cl0_refclk_cntcontrol` | `host_gtimer` | counter/control register behavior |
+| Generic timers/counters | `si_cl0_timer_cntctl`, `si_cl0_timer_cntbase`, `si_cl0_refclk_cntcontrol`, CSS/RSE counter windows | `host_gtimer` | control/read/sync frame model, 125MHz REFCLK counter behavior |
 | SSU | `si_cl0_ssu` | `zena_ssu` | FMU critical/non-critical signal 수신, firmware-visible SSU register surface |
 | FMU | `si_cl0_fmu` | `zena_fmu` | 5 banks, 384 records, CL0 GIC SPI 128/129와 SSU signal 연결 |
 | NI-710AE NCI | `si_cl0_ni710ae_primary_nci`, `*_secondary_nci`, `*_mhu_nci` | `host_ni710ae_nci` | topology/build register model |
@@ -421,7 +433,7 @@ windows는 `system_mgmt.lua`, SI host-visible SRAM/PPU window는 `si_cl0.lua`와
 
 | 도메인 | FVP peripheral | QBox module |
 | --- | --- | --- |
-| AP | UART, watchdog, RTC, timer, virtio | `Pl011`, `sbsa_gwdt`, `pl031`, `qemu_hexagon_qtimer`, `virtio_mmio_*` |
+| AP | UART, watchdog, RTC, AP REFCLK timer, virtio | `Pl011`, `sbsa_gwdt`, `pl031`, `qemu_arm_arch_timer_mmio`, `virtio_mmio_*` |
 | RSE | UART, boot flash, DMA350, CC3XX, KMU, LCM, SAM, ATU, MHU | `Pl011`, `strata_flash_j3`, `dma350`, `cc3xx`/`qemu_cc3xx`, `rse_kmu`, `rse_lcm`, `rse_sam`, `rse_atu`, `mhu320ae` |
 | SI CL0 | UART, GIC, timers, SCR, NI-710AE, CMN, PPU, SMCF, SSU/FMU | `Pl011`, `arm_gicv3`, `gicx00_multiview`, `host_gtimer`, `host_scr`, `host_ni710ae_nci`, `host_cmn_cyprus`, `host_ppu`, `host_smcf_mgi`, `zena_ssu`, `zena_fmu`, `gs_memory` |
 | SI CL1 | UART, GIC, HIPC/PFDI MHU, SCMI shmem, SRAM | `Pl011`, `arm_gicv3`, `mhu320ae`, `gs_memory` |
@@ -435,7 +447,7 @@ windows는 `system_mgmt.lua`, SI host-visible SRAM/PPU window는 `si_cl0.lua`와
 | QEMU-native fast path | `qemu_cc3xx` |
 | Remote bridge | `RemotePass`, `RemoteCPU`, `remote_cpu` |
 | Infrastructure | `router`, `addrtr`, `loader`, `gs_memory`, `char_backend_file`, `char_backend_stdio`, `global_peripheral_initiator`, `reset_fanout`, `reset_gpio`, `keep_alive`, `QemuInstance`, `QemuInstanceManager` |
-| Placeholder/fidelity debt | broad fallback windows, selected AP/SI cluster control windows as `gs_memory`, secure watchdog placeholder, TRAM/counter windows without side-effect model |
+| Placeholder/fidelity debt | broad fallback windows, selected AP/SI cluster control windows as `gs_memory`, secure watchdog placeholder, TRAM windows without side-effect model |
 
 상세 placeholder 분류와 full-model 승격 gate는
 [`doc/apollo-qbox-full-model/coverage-ledger.md`](apollo-qbox-full-model/coverage-ledger.md)에

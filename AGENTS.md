@@ -229,6 +229,25 @@ For each hardware block or IP:
 6. Keep FVP/QBox memory maps, IRQ lines, device tree expectations, boot
    artifacts, and Linux driver evidence aligned.
 
+## Apollo Timer Topology
+
+Apollo QBox timer work must preserve the Arm Zena CSS split between CPU
+internal timers and platform REFCLK timer frames:
+
+- CPU internal Arm generic timers remain per-core PPI devices owned by the
+  QEMU `ARMCPU` path. Do not replace the per-core PPI wiring with a platform
+  MMIO timer.
+- AP REFCLK is a 125MHz Arm memory-mapped generic timer exposed through the
+  reusable Arm MMIO QEMU/QBox path. Apollo AP REFCLK must not use
+  `qemu_hexagon_qtimer`, `qct-qtimer`, or a `qct-qtimer` compatibility alias.
+- AP REFCLK frame 0 is the non-secure `AP_SYS_CNT_BASE_NS` view and uses
+  SPI 49.
+- AP REFCLK frame 1 is the secure `AP_SYS_CNT_BASE_S` view and uses SPI 48.
+- SI0, CSS, and RSE counter windows use the `host_gtimer` control/read/sync
+  frame model where firmware expects REFCLK counter behavior. Do not model
+  these windows as broad inert memory unless the missing behavior is recorded
+  as explicit fidelity debt.
+
 ## Validation Ladder
 
 Use the narrowest meaningful command first, then broaden only when needed.
