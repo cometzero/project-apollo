@@ -146,6 +146,8 @@ def result_tree(root: Path, *, login_elapsed: float = 10.0, error_line: str | No
             [
                 "U-Boot 2026.01 apollo_fvp",
                 "Booting Linux on physical CPU 0x0000000000",
+                "arch_timer: cp15 timer running at 125.00MHz (phys).",
+                "arch-timer-mmio 1a810000.timer: mmio timer running at 125.00MHz (phys)",
                 "Linux version test",
                 "apollo-fvp login: root",
                 "root@apollo-fvp:~# echo __QBOX_PROBE_DONE__",

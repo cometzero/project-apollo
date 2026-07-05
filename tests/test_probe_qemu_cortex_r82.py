@@ -20,7 +20,7 @@ def write(path: Path, text: str) -> None:
 
 def make_source_tree(root: Path) -> None:
     write(
-        root / "tools/qemu/target/arm/tcg/cpu64.c",
+        root / "hsoc-stack/tools/qemu/target/arm/tcg/cpu64.c",
         """
         static void aarch64_cortex_r82_initfn(Object *obj) {
             SET_IDREG(isar, ID_AA64PFR0, 0x0000001000000222ull);
@@ -33,7 +33,7 @@ def make_source_tree(root: Path) -> None:
         """,
     )
     write(
-        root / "tools/qemu/target/arm/helper.c",
+        root / "hsoc-stack/tools/qemu/target/arm/helper.c",
         """
         if (cpu_isar_feature(aa64_sel2, cpu)) {}
         static bool arm_is_v8r_el2_sel2(CPUARMState *env) { return true; }
@@ -46,7 +46,7 @@ def make_source_tree(root: Path) -> None:
         """,
     )
     write(
-        root / "tools/qemu/target/arm/cpu.h",
+        root / "hsoc-stack/tools/qemu/target/arm/cpu.h",
         """
         uint64_t *rbar[M_REG_NUM_BANKS];
         uint64_t *rlar[M_REG_NUM_BANKS];
@@ -55,7 +55,7 @@ def make_source_tree(root: Path) -> None:
         """,
     )
     write(
-        root / "tools/qemu/target/arm/ptw.c",
+        root / "hsoc-stack/tools/qemu/target/arm/ptw.c",
         """
         static uint64_t *regime_rbar(CPUARMState *env, ARMMMUIdx mmu_idx,
                                      uint32_t secure);
@@ -65,12 +65,12 @@ def make_source_tree(root: Path) -> None:
         """,
     )
     write(
-        root / "tools/qbox/qemu-components/cpu_arm/CMakeLists.txt",
-        "add_subdirectory(cpu_arm_cortex_r82)\n",
+        root / "hsoc-stack/tools/qbox-platform/qemu-components/CMakeLists.txt",
+        "add_subdirectory(cpu_arm/cpu_arm_cortex_r82)\n",
     )
     write(
         root
-        / "tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_r82/include/cortex-r82.h",
+        / "hsoc-stack/tools/qbox-platform/qemu-components/cpu_arm/cpu_arm_cortex_r82/include/cortex-r82.h",
         """
         class cpu_arm_cortexR82 : public QemuCpuArm {
             cpu_arm_cortexR82(sc_core::sc_module_name name, QemuInstance& inst)
@@ -83,7 +83,7 @@ def make_source_tree(root: Path) -> None:
     )
     write(
         root
-        / "tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_r82/CMakeLists.txt",
+        / "hsoc-stack/tools/qbox-platform/qemu-components/cpu_arm/cpu_arm_cortex_r82/CMakeLists.txt",
         "gs_create_dymod(cpu_arm_cortexR82)\n",
     )
 
@@ -103,7 +103,7 @@ def test_probe_sources_accepts_complete_tree(tmp_path: Path) -> None:
 
 def test_probe_sources_reports_missing_cpu(tmp_path: Path) -> None:
     make_source_tree(tmp_path)
-    (tmp_path / "tools/qemu/target/arm/tcg/cpu64.c").write_text(
+    (tmp_path / "hsoc-stack/tools/qemu/target/arm/tcg/cpu64.c").write_text(
         "static const ARMCPUInfo aarch64_cpus[] = {};",
         encoding="utf-8",
     )

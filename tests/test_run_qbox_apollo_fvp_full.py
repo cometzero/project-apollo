@@ -11,13 +11,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
-APOLLO_QVP_CONFIG = ROOT / "tools/qbox-platform/platforms/apollo/hw-block/config.lua"
+APOLLO_QVP_CONFIG = (
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
+)
 
 
 def load_runner():
     spec = importlib.util.spec_from_file_location("apollo_full_runner", SCRIPT)
-    module = importlib.util.module_from_spec(spec)
+    assert spec is not None
     assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
@@ -127,6 +130,7 @@ def test_apollo_qvp_config_rejects_enabled_zero_ap_cpus():
     lua = shutil.which("lua")
     if lua is None:
         pytest.skip("lua is not installed")
+    assert lua is not None
     env = os.environ.copy()
     env["QBOX_RDASPEN_ENABLE_AP_CPUS"] = "true"
     env["QBOX_APOLLO_NUM_CPUS"] = "0"
@@ -255,7 +259,7 @@ def write_passing_logs(tmp_path):
     )
 
 
-def test_keep_running_child_status_passes_after_probe_marker(tmp_path):
+def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
 
@@ -267,14 +271,11 @@ def test_keep_running_child_status_passes_after_probe_marker(tmp_path):
 
     assert status["passed"] is True
     assert status["marker_hits"]["linux_boot"]["apollo-fvp login:"] is True
-    assert status["post_login_probe"]["complete"] is True
+    assert status["post_login_probe"]["requested"] is False
+    assert status["post_login_probe"]["complete"] is False
     assert "rse_cpu_mode" not in status
     assert "remotepass_dmi_cache" not in status
-    assert status["post_login_probe"]["driver_patterns"] == {
-        "arm_si_rproc": True,
-        "rpmsg": True,
-        "hipc_ethsi1": True,
-    }
+    assert status["post_login_probe"]["driver_patterns"] == {}
     profile = status["rse_boot_timing_profile"]
     assert profile["markers"][-1] == {
         "name": "primary_login_prompt",
@@ -290,7 +291,7 @@ def test_keep_running_child_status_passes_after_probe_marker(tmp_path):
     assert status["scp_service_model"]["strategy"] == "real-si-scp"
 
 
-def test_keep_running_child_status_waits_for_probe_done_marker(tmp_path):
+def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
     primary = tmp_path / "qbox-primary-console.log"
@@ -305,5 +306,5 @@ def test_keep_running_child_status_waits_for_probe_done_marker(tmp_path):
         child_returncode=None,
     )
 
-    assert status["passed"] is False
+    assert status["passed"] is True
     assert status["post_login_probe"]["complete"] is False
