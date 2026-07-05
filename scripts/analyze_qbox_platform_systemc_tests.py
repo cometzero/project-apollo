@@ -174,13 +174,14 @@ def check_coverage(report: Path) -> int:
 
 def check_stale() -> int:
     data = analyze()
+    component_count = int_value(data, "component_count")
     missing = string_list(data, "components_without_test_dir")
     unregistered = string_list(data, "component_tests_not_top_registered")
     extras = string_list(data, "non_platform_test_dirs")
 
-    print(f"component_count={data['component_count']}")
+    print(f"component_count={component_count}")
     print(f"test_dir_count={data['test_dir_count']}")
-    print("direct_component_test_dirs=" + str(data["component_count"] - len(missing)))
+    print("direct_component_test_dirs=" + str(component_count - len(missing)))
     print("components_without_test_dir=" + ",".join(missing))
     print("component_tests_not_top_registered=" + ",".join(unregistered))
     print("non_platform_test_dirs_ignored=" + ",".join(extras))
@@ -232,6 +233,13 @@ def string_list(data: dict[str, object], key: str) -> list[str]:
     if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
         raise TypeError(f"{key} is not a string list")
     return values
+
+
+def int_value(data: dict[str, object], key: str) -> int:
+    value = data[key]
+    if not isinstance(value, int):
+        raise TypeError(f"{key} is not an int")
+    return value
 
 
 def main() -> int:

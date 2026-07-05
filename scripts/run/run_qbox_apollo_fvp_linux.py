@@ -15,7 +15,7 @@ import signal
 import subprocess
 import sys
 import time
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 REQUIRED_TARGETS = [
@@ -72,26 +72,26 @@ class DebugEnvError(ValueError):
     pass
 
 
-class EvalStatus(TypedDict, total=False):
+class EvalStatus(TypedDict):
     pass_patterns: dict[str, bool]
     login_patterns: dict[str, bool]
     fail_patterns: dict[str, bool]
     log_bytes: int
-    timeout_s: int | None
-    interrupted: bool
-    duration_s: float
-    command: list[str]
-    log_path: str
-    kernel: str
-    dtb: str
-    base_dtb: str
-    dt_overlay: str | None
-    initramfs: str | None
-    bootargs: str
-    initramfs_addr: str
-    disk: str | None
-    extra_disks: list[str]
-    passed: bool
+    timeout_s: NotRequired[int | None]
+    interrupted: NotRequired[bool]
+    duration_s: NotRequired[float]
+    command: NotRequired[list[str]]
+    log_path: NotRequired[str]
+    kernel: NotRequired[str]
+    dtb: NotRequired[str]
+    base_dtb: NotRequired[str]
+    dt_overlay: NotRequired[str | None]
+    initramfs: NotRequired[str | None]
+    bootargs: NotRequired[str]
+    initramfs_addr: NotRequired[str]
+    disk: NotRequired[str | None]
+    extra_disks: NotRequired[list[str]]
+    passed: NotRequired[bool]
 
 
 def resolve_local_build_artifacts(local_build_dir: Path) -> LocalBuildArtifacts:
@@ -695,12 +695,16 @@ def main() -> int:
         if not args.skip_build:
             ensure_qbox_targets(root, args.jobs)
         if not args.skip_dtb:
+            initramfs = args.initramfs
+            if initramfs is None:
+                print("error: initramfs image not found: None", file=sys.stderr)
+                return 2
             overlay_dts, _overlay_dtbo = prepare_direct_boot_dtb(
                 root,
                 args.base_dtb,
                 args.dtb,
                 bootargs=args.bootargs,
-                initramfs=args.initramfs,
+                initramfs=initramfs,
                 initramfs_addr=args.initramfs_addr,
                 primary_disk_enabled=disk_available,
             )
@@ -710,8 +714,9 @@ def main() -> int:
             return 0
         disk = args.disk if disk_available else None
         if disk is not None and not args.no_copy_disk:
-            disk = args.out_dir / disk.name
-            copy_disk(args.disk, disk)
+            source_disk = disk
+            disk = args.out_dir / source_disk.name
+            copy_disk(source_disk, disk)
         extra_disks = prepare_extra_disks(args.out_dir, args.extra_disk_size_mib)
         rc, _status = run_qbox(root, args, disk, extra_disks)
         return rc

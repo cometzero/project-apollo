@@ -753,6 +753,7 @@ def patched_bootargs(old_options: str, *, profile: str) -> str:
 
 def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]:
     old_options = ""
+    new_options = ""
     new_lines: list[str] = []
     patched = False
     for line in text.splitlines():
@@ -776,6 +777,7 @@ def extract_uboot_script_payload(data: bytes) -> bytes:
 
 def patch_uboot_script_options(text: str, *, profile: str) -> tuple[str, str, str]:
     old_options = ""
+    new_options = ""
     new_lines: list[str] = []
     patched = False
     for line in text.splitlines():
@@ -983,7 +985,7 @@ def prepare_flash_for_qbox(
             "pad_erased_value": hex(FLASH_ERASED_VALUE),
             "padded_bytes": padded_bytes,
             "padded_size": path.stat().st_size,
-            "state": info["state"] + "_padded_to_qbox_flash_size",
+            "state": str(info["state"]) + "_padded_to_qbox_flash_size",
         }
     )
     return path, info
@@ -1526,6 +1528,26 @@ def evaluate(
     }
 
 
+def object_dict(value: object) -> dict[str, object]:
+    if not isinstance(value, dict):
+        return {}
+    return {str(key): item for key, item in value.items()}
+
+
+def bool_dict(value: object) -> dict[str, bool]:
+    return {key: bool(item) for key, item in object_dict(value).items()}
+
+
+def nested_bool_dict(value: object) -> dict[str, dict[str, bool]]:
+    return {key: bool_dict(item) for key, item in object_dict(value).items()}
+
+
+def string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
 def update_progress_marker_first_hits(
     logs: dict[str, str],
     first_hits: dict[str, dict[str, object]],
@@ -1546,10 +1568,13 @@ def progress_elapsed_s(
     hit = first_hits.get(name)
     if not isinstance(hit, dict):
         return None
-    try:
-        return float(hit["elapsed_s"])
-    except (KeyError, TypeError, ValueError):
-        return None
+    value = hit.get("elapsed_s")
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def progress_hit_elapsed_s(hit: dict[str, object]) -> float:
+    value = hit.get("elapsed_s")
+    return float(value) if isinstance(value, (int, float)) else 0.0
 
 
 def rounded_s(value: float | None) -> float | None:
@@ -1597,7 +1622,7 @@ def build_rse_boot_timing_profile(
     if deltas:
         slowest_delta = max(
             deltas,
-            key=lambda item: float(item.get("delta_s") or 0.0),
+            key=progress_hit_elapsed_s,
         )
 
     def span(start: str, end: str) -> float | None:
@@ -2291,6 +2316,8 @@ def rse_boot_flash_direct_read_ranges(
 
 def rse_direct_rse_flash_alias_spec(artifacts: dict[str, Path]) -> str:
     rse_flash = artifacts.get("rse_flash")
+    if rse_flash is None:
+        return ""
     return ";".join(
         direct_file_alias_entry(
             RSE_BOOT_FLASH_BASE_S + offset,
@@ -3605,7 +3632,7 @@ def run_platform(
                     stop_process(proc)
                     break
                 if (
-                    any(status["fail_patterns"].values())
+                    any(bool_dict(status.get("fail_patterns")).values())
                     and not args.ignore_fail_patterns
                 ):
                     stop_process(proc)
@@ -3657,7 +3684,8 @@ def run_platform(
         logs.get("rse", ""),
     )
     post_login_probe.update(probe_eval)
-    fwu_complete = bool(probe_eval.get("fwu_probe", {}).get("complete"))
+    fwu_probe = object_dict(probe_eval.get("fwu_probe"))
+    fwu_complete = bool(fwu_probe.get("complete"))
     if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
         post_login_probe["complete"] = True
     post_login_probe["passed"] = bool(
@@ -3677,7 +3705,7 @@ def run_platform(
             f"complete: {post_login_probe['complete']}",
             f"passed: {post_login_probe['passed']}",
             "actions:",
-            *[f"  - {action}" for action in post_login_probe.get("actions", [])],
+            *[f"  - {action}" for action in string_list(post_login_probe.get("actions"))],
         ]
         action_log.write_text("\n".join(action_lines) + "\n", encoding="utf-8")
         post_login_probe["action_log"] = str(action_log)
@@ -3726,8 +3754,9 @@ def write_result(
     status = evaluate(logs, rse_sram_dmi_smoke=args.rse_sram_dmi_smoke)
     if blocker:
         status["passed"] = False
-    rse_boot_started = any(status["marker_hits"]["rse_boot"].values())
-    rse_scp_complete = all(status["marker_hits"]["rse_scp_handoff"].values())
+    marker_hits = nested_bool_dict(status.get("marker_hits"))
+    rse_boot_started = any(marker_hits.get("rse_boot", {}).values())
+    rse_scp_complete = all(marker_hits.get("rse_scp_handoff", {}).values())
     ap_boot_started = bool(logs.get("secure_console", "").strip())
     ap_boot_label = (
         "functional-model"
@@ -4070,6 +4099,10 @@ def write_result(
     result_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     result_path.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    console_logs = object_dict(status.get("console_logs"))
+    cc3xx_stats = object_dict(status.get("cc3xx_stats"))
+    qbox_perf_profile = object_dict(status.get("qbox_perf_profile"))
+    status_post_login_probe = object_dict(status.get("post_login_probe"))
 
     lines = [
         f"passed: {status['passed']}",
@@ -4106,7 +4139,7 @@ def write_result(
         + json.dumps(status["scp_service_model"], sort_keys=True),
         f"blocker: {blocker or 'none'}",
         "console_logs:",
-        *[f"  - {role}: {path}" for role, path in status["console_logs"].items()],
+        *[f"  - {role}: {path}" for role, path in console_logs.items()],
         f"platform_stdout_log: {status['platform_stdout_log']}",
         "runtime_elapsed_s: "
         + (
@@ -4117,11 +4150,11 @@ def write_result(
         "progress_marker_first_hits:",
         *(
             [
-                f"  - {name}: {float(hit['elapsed_s']):.3f}s "
-                f"({hit['marker']})"
+                f"  - {name}: {progress_hit_elapsed_s(hit):.3f}s "
+                f"({hit.get('marker', '')})"
                 for name, hit in sorted(
                     (progress_marker_first_hits or {}).items(),
-                    key=lambda item: float(item[1].get("elapsed_s", 0.0)),
+                    key=lambda item: progress_hit_elapsed_s(item[1]),
                 )
             ]
             or ["  none"]
@@ -4140,17 +4173,17 @@ def write_result(
         "cc3xx_stats: "
         + json.dumps(
             {
-                "enabled": status["cc3xx_stats"].get("enabled"),
-                "path": status["cc3xx_stats"].get("path"),
-                "present": status["cc3xx_stats"].get("present"),
+                "enabled": cc3xx_stats.get("enabled"),
+                "path": cc3xx_stats.get("path"),
+                "present": cc3xx_stats.get("present"),
             },
             sort_keys=True,
         ),
         "qbox_perf_profile: "
         + json.dumps(
             {
-                "enabled": status["qbox_perf_profile"].get("enabled"),
-                "root": status["qbox_perf_profile"].get("root"),
+                "enabled": qbox_perf_profile.get("enabled"),
+                "root": qbox_perf_profile.get("root"),
             },
             sort_keys=True,
         ),
@@ -4186,8 +4219,8 @@ def write_result(
         ),
         "post_login_probe: "
         + (
-            json.dumps(status["post_login_probe"], sort_keys=True)
-            if status.get("post_login_probe", {}).get("requested")
+            json.dumps(status_post_login_probe, sort_keys=True)
+            if status_post_login_probe.get("requested")
             else "disabled"
         ),
         "first_failing_register_access: "
@@ -4216,7 +4249,7 @@ def write_result(
         ),
         "marker_hits:",
     ]
-    for group, hits in status["marker_hits"].items():
+    for group, hits in marker_hits.items():
         lines.append(f"  {group}:")
         for marker, hit in hits.items():
             lines.append(f"    - {marker}: {hit}")

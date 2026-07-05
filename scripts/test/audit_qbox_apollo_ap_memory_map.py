@@ -671,6 +671,7 @@ def fmu_subwindow_details(row: MapRow, sockets: list[LuaSocket]) -> dict[str, An
 
 
 def classify(row: MapRow, sockets: list[LuaSocket]) -> dict[str, Any]:
+    fmu_details = None
     if row.scope == "deferred_epic":
         status = "deferred_epic"
         matches: list[LuaSocket] = []
@@ -708,7 +709,6 @@ def classify(row: MapRow, sockets: list[LuaSocket]) -> dict[str, Any]:
                 else "missing"
             )
         else:
-            fmu_details = None
             status = (
                 "explicit_placeholder" if placeholder_exact
                 else "invalid_placeholder" if invalid_placeholder
@@ -1044,10 +1044,13 @@ def collect_fmu_plan(
     for index, entry in enumerate(fmu_entries):
         cluster_row = by_cluster.get(f"FMU_CLUSTER_00{index}")
         ap_subwindow_start = ap_fmu_row.start + index * AP_FMU_SUBWINDOW_SIZE
+        firmware_resolved_base = entry["firmware_resolved_base"]
+        if not isinstance(firmware_resolved_base, int):
+            firmware_resolved_base = None
         enriched_entries.append(
             {
                 **entry,
-                "firmware_resolved_base_hex": hex_or_missing(entry["firmware_resolved_base"]),
+                "firmware_resolved_base_hex": hex_or_missing(firmware_resolved_base),
                 "smd_source_window": cluster_row,
                 "target_ap_9_1_1_coverage_row": expected_row_to_json(ap_fmu_row),
                 "target_ap_subwindow": {

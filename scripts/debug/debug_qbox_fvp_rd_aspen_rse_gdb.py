@@ -2526,7 +2526,7 @@ def qbox_effective_probe_env(
     }
 
 
-def terminate_process(proc: subprocess.Popen[object]) -> None:
+def terminate_process(proc: subprocess.Popen[str]) -> None:
     if proc.poll() is not None:
         return
     try:
