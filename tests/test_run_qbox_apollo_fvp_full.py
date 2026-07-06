@@ -27,15 +27,13 @@ def load_runner():
 
 
 def make_args(tmp_path, *, post_login_probe=True):
-    return type(
-        "Args",
-        (),
-        {
-            "out_dir": tmp_path,
-            "post_login_probe": post_login_probe,
-            "si_mode": "live-cl0-cl1",
-        },
-    )()
+    return SimpleNamespace(
+        out_dir=tmp_path,
+        post_login_probe=post_login_probe,
+        primary_login_prompt="apollo-fvp login:",
+        primary_shell_marker="~ #",
+        si_mode="live-cl0-cl1",
+    )
 
 
 def make_child_command_args(tmp_path):
@@ -54,6 +52,9 @@ def make_child_command_args(tmp_path):
         out_dir=tmp_path,
         platform_param=[],
         post_login_probe=False,
+        primary_login_prompt="apollo-fvp login:",
+        primary_shell_marker="~ #",
+        primary_shell_prompt_re=r"(?:root@apollo-fvp[^\n]*[#>]|\S+ #)\s*$",
         provision_blank_rse_otp=False,
         qbox_build_dir=tmp_path / "work/qbox-platform",
         qbox_perf_profile=False,
@@ -308,3 +309,33 @@ def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_pat
 
     assert status["passed"] is True
     assert status["post_login_probe"]["complete"] is False
+
+
+def test_keep_running_child_status_uses_configured_qvp_login_prompt(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    primary = tmp_path / "qbox-primary-console.log"
+    primary.write_text(
+        primary.read_text(encoding="utf-8").replace(
+            "apollo-fvp login:",
+            "apollo-qvp login:",
+        ),
+        encoding="utf-8",
+    )
+    args = make_args(tmp_path)
+    args.primary_login_prompt = "apollo-qvp login:"
+
+    status = runner.synthesize_keep_running_child_status(
+        args,
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["passed"] is True
+    assert status["marker_hits"]["linux_boot"]["apollo-qvp login:"] is True
+    assert "apollo-fvp login:" not in status["marker_hits"]["linux_boot"]
+    assert status["post_login_probe"]["sent_login"] is True
+    assert status["progress_marker_first_hits"]["primary_login_prompt"] == {
+        "elapsed_s": None,
+        "marker": "apollo-qvp login:",
+    }

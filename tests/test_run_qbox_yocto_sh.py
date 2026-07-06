@@ -477,6 +477,70 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert any("QBOX_APOLLO_NUM_CPUS=4" in line for line in tmux_lines)
 
 
+def test_run_qbox_yocto_qvp_tmux_preserves_machine_console_prompts(
+    tmp_path: Path,
+) -> None:
+    # Given: a QVP Yocto deploy tree and a fake tmux binary that records commands.
+    yocto_build, _deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qbox_bundle=True,
+    )
+    fake_bin_dir = tmp_path / "bin"
+    tmux_log = tmp_path / "tmux.log"
+    fake_bin_dir.mkdir()
+
+    fake_tmux = fake_bin_dir / "tmux"
+    fake_tmux.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf '%s\\n' \"$*\" >> \"$TMUX_LOG\"\n"
+        "case \"$1\" in\n"
+        "  has-session) exit 1 ;;\n"
+        "  new-session) printf '%%0\\n' ;;\n"
+        "  split-window) printf '%%1\\n' ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_tmux.chmod(0o755)
+
+    env = os.environ.copy()
+    for name in QBOX_YOCTO_ENV_OVERRIDES:
+        env.pop(name, None)
+    env.update(
+        {
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-prompts",
+            "TMUX_BIN": str(fake_tmux),
+            "TMUX_LOG": str(tmux_log),
+            "SSH_PORT_START": "25400",
+            "SSH_PORT_END": "25499",
+        }
+    )
+
+    # When: run_qbox_yocto.sh starts the tmux path for apollo-qvp.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--build-dir",
+            str(yocto_build),
+            "--no-attach",
+        ],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the in-tmux supervisor keeps the QVP login/shell prompt overrides.
+    assert result.returncode == 0, result.stderr
+    tmux_output = tmux_log.read_text(encoding="utf-8")
+    assert r"PRIMARY_LOGIN_PROMPT=apollo-qvp\ login:" in tmux_output
+    assert r"PRIMARY_SHELL_PROMPT_RE=\(\?:root@apollo-qvp" in tmux_output
+    assert r"PRIMARY_LOGIN_PROMPT=apollo-fvp\ login:" not in tmux_output
+
+
 def test_run_qbox_yocto_can_disable_tmux_uart_input_fifos(tmp_path: Path) -> None:
     result = run_dry_run(
         tmp_path,

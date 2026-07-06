@@ -237,13 +237,16 @@ def keep_running_child_logs(out_dir: Path) -> dict[str, str]:
     }
 
 
-def keep_running_probe_state(primary_console: str) -> dict[str, Any]:
+def keep_running_probe_state(
+    primary_console: str,
+    login_prompt: str,
+) -> dict[str, Any]:
     clean_primary = clean_console_text(primary_console)
     return {
         "requested": False,
         "secure_service_requested": False,
         "fwu_requested": False,
-        "sent_login": APOLLO_PRIMARY_LOGIN_PROMPT in clean_primary,
+        "sent_login": login_prompt in clean_primary,
         "sent_probe": False,
         "complete": False,
         "done_marker": False,
@@ -257,6 +260,7 @@ def keep_running_probe_state(primary_console: str) -> dict[str, Any]:
 
 def keep_running_progress_marker_first_hits(
     logs: dict[str, str],
+    login_prompt: str,
 ) -> dict[str, dict[str, Any]]:
     combined = clean_console_text("\n".join(logs.values()))
     return {
@@ -264,15 +268,23 @@ def keep_running_progress_marker_first_hits(
             "elapsed_s": None,
             "marker": marker,
         }
-        for name, _label, marker in KEEP_RUNNING_PROGRESS_MARKERS
+        for name, _label, marker in keep_running_progress_markers(login_prompt)
         if marker in combined
     }
 
 
+def keep_running_progress_markers(login_prompt: str) -> list[tuple[str, str, str]]:
+    return [
+        *KEEP_RUNNING_PROGRESS_MARKERS[:-1],
+        ("primary_login_prompt", "Linux login prompt", login_prompt),
+    ]
+
+
 def keep_running_rse_boot_timing_profile(
     logs: dict[str, str],
+    login_prompt: str,
 ) -> dict[str, Any]:
-    first_hits = keep_running_progress_marker_first_hits(logs)
+    first_hits = keep_running_progress_marker_first_hits(logs, login_prompt)
     markers = [
         {
             "name": name,
@@ -281,7 +293,7 @@ def keep_running_rse_boot_timing_profile(
             "seen": name in first_hits,
             "elapsed_s": None,
         }
-        for name, label, marker in KEEP_RUNNING_PROGRESS_MARKERS
+        for name, label, marker in keep_running_progress_markers(login_prompt)
     ]
     return {
         "markers": markers,
@@ -311,11 +323,14 @@ def synthesize_keep_running_child_status(
         for group, markers in CHILD_REQUIRED_MARKERS.items()
     }
     marker_groups["linux_boot"] = {
-        APOLLO_PRIMARY_LOGIN_PROMPT: APOLLO_PRIMARY_LOGIN_PROMPT in combined,
-        APOLLO_PRIMARY_SHELL_MARKER: APOLLO_PRIMARY_SHELL_MARKER in combined,
+        args.primary_login_prompt: args.primary_login_prompt in combined,
+        args.primary_shell_marker: args.primary_shell_marker in combined,
     }
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
-    probe = keep_running_probe_state(logs.get("primary_console", ""))
+    probe = keep_running_probe_state(
+        logs.get("primary_console", ""),
+        args.primary_login_prompt,
+    )
     linux_hit = any(marker_groups["linux_boot"].values())
     non_linux_hit = all(
         hit
@@ -339,8 +354,14 @@ def synthesize_keep_running_child_status(
             "live_scp_cpu_gdb": scp_strategy == "real-si-scp",
         },
         "runtime_artifacts": {},
-        "progress_marker_first_hits": keep_running_progress_marker_first_hits(logs),
-        "rse_boot_timing_profile": keep_running_rse_boot_timing_profile(logs),
+        "progress_marker_first_hits": keep_running_progress_marker_first_hits(
+            logs,
+            args.primary_login_prompt,
+        ),
+        "rse_boot_timing_profile": keep_running_rse_boot_timing_profile(
+            logs,
+            args.primary_login_prompt,
+        ),
         "cc3xx_stats": None,
         "qbox_perf_profile": None,
         "platform_returncode": child_returncode,

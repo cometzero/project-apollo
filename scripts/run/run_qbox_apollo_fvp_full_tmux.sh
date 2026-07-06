@@ -1106,6 +1106,8 @@ start_tmux()
             "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
             "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
+        printf 'PRIMARY_LOGIN_PROMPT=%q PRIMARY_SHELL_MARKER=%q PRIMARY_SHELL_PROMPT_RE=%q ' \
+            "${PRIMARY_LOGIN_PROMPT}" "${PRIMARY_SHELL_MARKER}" "${PRIMARY_SHELL_PROMPT_RE}"
         if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
             printf 'QBOX_RDASPEN_UART_READ_FILE=%q ' \
                 "$(uart_fifo_for_domain rse)"
