@@ -3129,6 +3129,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     build_dir = qbox_build_dir(root)
     lib_paths = [
         build_dir,
+        build_dir / "lib",
         build_dir / "_deps/libqemu-build/qemu-prefix/lib",
     ]
     current = env.get("LD_LIBRARY_PATH")

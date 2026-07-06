@@ -20,7 +20,7 @@ run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-fvp)
-  --build-dir DIR             Yocto build directory (default: ./build, ./build-apollo-qvp for apollo-qvp)
+  --build-dir DIR             Yocto build directory (default: ./build)
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
   --image-basename NAME       Yocto image recipe basename (default: nexios-image)
@@ -216,6 +216,9 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(nproc)}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
+PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
+PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
+PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
@@ -449,11 +452,7 @@ done
 reject_removed_env
 
 if [[ -z "${YOCTO_BUILD_DIR}" ]]; then
-    if [[ "${MACHINE}" == "apollo-qvp" ]]; then
-        YOCTO_BUILD_DIR="${ROOT_DIR}/build-apollo-qvp"
-    else
-        YOCTO_BUILD_DIR="${ROOT_DIR}/build"
-    fi
+    YOCTO_BUILD_DIR="${ROOT_DIR}/build"
 fi
 WORK_PREFIX="$(machine_to_work_prefix "${MACHINE}")"
 DEPLOY_DIR="${DEPLOY_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/images/${MACHINE}}"
@@ -486,6 +485,9 @@ QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-$(default_ap_cpu_count || true)}"
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-4}"
 validate_ap_cpu_count "${QBOX_APOLLO_NUM_CPUS}"
 export QBOX_APOLLO_NUM_CPUS
+
+PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
+PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
 
 ROOTFS="$(resolve_file_with_glob \
     "Yocto rootfs WIC image" \
@@ -600,6 +602,9 @@ if [[ "${HEADLESS}" == "1" ]]; then
         --jobs "${JOBS}"
         --skip-build
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
+        --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
+        --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
         --range-limited-flash-dmi
         --qbox-performance-preset
         --cc3xx-qemu-native-backend
@@ -617,6 +622,9 @@ else
         --jobs "${JOBS}"
         --skip-build
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
+        --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
+        --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
         --qbox-performance-preset
         --cc3xx-qemu-native-backend
         --netdev "${NETDEV}"

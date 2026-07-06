@@ -122,7 +122,7 @@ def run_qvp_dry_run(
     yocto_build, _deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
-        build_dir_name="build-apollo-qvp",
+        build_dir_name="build",
         include_qbox_bundle=True,
     )
 
@@ -199,7 +199,7 @@ def test_run_qbox_yocto_qvp_uses_yocto_bundle_defaults(tmp_path: Path) -> None:
 
     # Then: the launcher uses qvp deploy names and the bundled QBox tools.
     assert result.returncode == 0, result.stderr
-    deploy = tmp_path / "build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp"
+    deploy = tmp_path / "build/tmp_baremetal/deploy/images/apollo-qvp"
     bundle = deploy / "qbox-apollo-qvp"
     assert f"deploy dir:    {deploy}" in result.stdout
     assert f"qbox tools:    {bundle}" in result.stdout
@@ -219,7 +219,7 @@ def test_run_qbox_yocto_qvp_requires_qvp_efi_capsule_name(
     yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
-        build_dir_name="build-apollo-qvp",
+        build_dir_name="build",
         include_qbox_bundle=True,
     )
     (deploy / "efi-capsule-update-disk-image-apollo-qvp.img").unlink()
@@ -259,7 +259,7 @@ def test_run_qbox_yocto_qvp_allows_explicit_efi_override(tmp_path: Path) -> None
     yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
-        build_dir_name="build-apollo-qvp",
+        build_dir_name="build",
         include_qbox_bundle=True,
     )
     qvp_efi = deploy / "efi-capsule-update-disk-image-apollo-qvp.img"
@@ -302,7 +302,7 @@ def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None
     yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
-        build_dir_name="build-apollo-qvp",
+        build_dir_name="build",
     )
 
     # When: the QVP runner resolves its default QBox tools.

@@ -27,6 +27,9 @@ SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
+PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-apollo-fvp login:}"
+PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
+PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@apollo-fvp[^\\n]*[#>]|\\S+ #)\\s*$}"
 QBOX_PERFORMANCE_PRESET="${QBOX_PERFORMANCE_PRESET:-1}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 RANGE_LIMITED_FLASH_DMI="${RANGE_LIMITED_FLASH_DMI:-1}"
@@ -79,6 +82,14 @@ Options:
   --exit-after-pass    stop QBox when the normal pass condition is reached
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
+  --primary-login-prompt TEXT
+                       primary console login prompt
+                       (default: ${PRIMARY_LOGIN_PROMPT})
+  --primary-shell-marker TEXT
+                       primary console shell marker
+                       (default: ${PRIMARY_SHELL_MARKER})
+  --primary-shell-prompt-re REGEX
+                       primary shell prompt regex
   --qbox-performance-preset
                        enable default QBox boot acceleration preset (default;
                        uses SRAM DMI/shared-memory fast boot)
@@ -303,6 +314,9 @@ runner_command()
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --rootfs-bootargs-profile "${ROOTFS_BOOTARGS_PROFILE}"
+        --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
+        --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
+        --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
     )
 
     if [[ "${RANGE_LIMITED_FLASH_DMI}" == "1" ]]; then
@@ -1283,6 +1297,21 @@ while (($# > 0)); do
         --rootfs-bootargs-profile)
             (($# >= 2)) || die "--rootfs-bootargs-profile requires a value"
             ROOTFS_BOOTARGS_PROFILE="$2"
+            shift 2
+            ;;
+        --primary-login-prompt)
+            (($# >= 2)) || die "--primary-login-prompt requires a value"
+            PRIMARY_LOGIN_PROMPT="$2"
+            shift 2
+            ;;
+        --primary-shell-marker)
+            (($# >= 2)) || die "--primary-shell-marker requires a value"
+            PRIMARY_SHELL_MARKER="$2"
+            shift 2
+            ;;
+        --primary-shell-prompt-re)
+            (($# >= 2)) || die "--primary-shell-prompt-re requires a value"
+            PRIMARY_SHELL_PROMPT_RE="$2"
             shift 2
             ;;
         --rse-cpu-mode|--rse-cpu-mode=*)

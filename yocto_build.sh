@@ -19,7 +19,7 @@ usage() {
     cat <<'EOF'
 Usage: ./yocto_build.sh [options]
 
-Build the Apollo FVP Yocto nexios-image.
+Build the Apollo Yocto nexios-image.
 
 Options:
   --machine apollo-fvp|apollo-qvp
@@ -34,6 +34,7 @@ Options:
 Environment:
   MACHINE=apollo-fvp|apollo-qvp
                           Select the Apollo Yocto machine.
+  BUILD_DIR=PATH          Select the Yocto build directory (default: build).
   APOLLO_DM_VERITY=on|off Select the same multiconfig as --dm-verity.
 EOF
 }
@@ -122,11 +123,7 @@ APOLLO_MACHINE="$(normalize_machine "${APOLLO_MACHINE}")"
 DM_VERITY_MODE="$(normalize_dm_verity_mode "${DM_VERITY_MODE}")"
 
 if [[ -z "${BUILD_DIR}" ]]; then
-    if [[ "${APOLLO_MACHINE}" == "apollo-qvp" ]]; then
-        BUILD_DIR="${WORKSPACE_DIR}/build-apollo-qvp"
-    else
-        BUILD_DIR="${WORKSPACE_DIR}/build"
-    fi
+    BUILD_DIR="${WORKSPACE_DIR}/build"
 fi
 
 if [[ -z "${TEMPLATECONF}" ]]; then
@@ -212,6 +209,8 @@ set -u
 BITBAKE_ARGS=()
 BITBAKE_TARGET="nexios-image"
 
+echo "notice: machine '${APOLLO_MACHINE}' uses shared build directory ${PWD}" >&2
+
 case "${DM_VERITY_MODE}" in
     on)
         DM_VERITY_MC="${APOLLO_MACHINE}-dm-verity"
@@ -276,10 +275,10 @@ EOF
 fi
 
 if [[ "${DRY_RUN}" == "1" ]]; then
-    printf 'bitbake'
+    printf 'MACHINE=%q bitbake' "${APOLLO_MACHINE}"
     printf ' %q' "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGET}"
     printf '\n'
     exit 0
 fi
 
-bitbake "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGET}"
+MACHINE="${APOLLO_MACHINE}" bitbake "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGET}"

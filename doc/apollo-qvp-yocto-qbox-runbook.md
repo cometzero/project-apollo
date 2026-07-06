@@ -18,8 +18,8 @@ Canonical names:
 | Item | Name |
 | --- | --- |
 | Yocto machine | `apollo-qvp` |
-| Recommended build directory | `build-apollo-qvp` |
-| Deploy image root | `build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp` |
+| Recommended build directory | `build/` |
+| Deploy image root | `build/tmp_baremetal/deploy/images/apollo-qvp` |
 | QBox bundle directory | `qbox-apollo-qvp/` |
 | QBox bundle env file | `qbox-apollo-qvp-env.sh` |
 | QBox bundle manifest | `qbox-apollo-qvp-manifest.json` |
@@ -28,15 +28,17 @@ Canonical names:
 
 ## Setup
 
-Initialize a separate Apollo QVP build directory:
+Initialize the shared Apollo build directory:
 
 ```bash
 export TEMPLATECONF=$PWD/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp
-source layers/poky/oe-init-build-env build-apollo-qvp
+source layers/poky/oe-init-build-env build
 ```
 
-The QVP template sets `MACHINE = "apollo-qvp"` and keeps the baremetal
-`TMPDIR` layout. It also keeps BitBake disk monitoring enabled with
+The QVP template sets `MACHINE ??= "apollo-qvp"` and keeps the baremetal
+`TMPDIR` layout. The shared `build/conf/local.conf` can also be overridden
+with `MACHINE=apollo-qvp bitbake ...` or `./yocto_build.sh --machine
+apollo-qvp`. The template keeps BitBake disk monitoring enabled with
 `STOPTASKS` thresholds for `${TMPDIR}`, `${DL_DIR}`, `${SSTATE_DIR}`, and
 `/tmp`.
 
@@ -64,7 +66,7 @@ Optional dm-verity variants use QVP multiconfig names:
 The expected deploy image root is:
 
 ```text
-build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/
 ```
 
 Expected QVP deploy-visible image names include:
@@ -77,8 +79,8 @@ Expected QVP deploy-visible image names include:
 
 ## QBox Native Bundle
 
-Build the QBox host-side native artifacts from an initialized
-`build-apollo-qvp` BitBake shell:
+Build the QBox host-side native artifacts from an initialized `build/`
+BitBake shell:
 
 ```bash
 MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
@@ -88,7 +90,7 @@ MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
 The canonical bundle path is:
 
 ```text
-build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
 ```
 
 The bundle contract is:
@@ -110,13 +112,13 @@ The bundle contract is:
 Run Apollo QVP through the Yocto deploy tree and QBox bundle:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp
+./run_qbox_yocto.sh --machine apollo-qvp
 ```
 
 For a file-backed dry run:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp --headless --dry-run
+./run_qbox_yocto.sh --machine apollo-qvp --headless --dry-run
 ```
 
 The QVP runtime output root should use:
@@ -157,20 +159,21 @@ Use these statuses in reports:
 | `runtime_unverified` | Build or deploy evidence exists, but no QVP `result.json` and UART logs have been inspected. |
 | `compatibility_alias_in_use` | A documented alias such as `apollo_fvp_full_system` or `fvp-rd-aspen` is still present as an implementation detail. |
 
-Current blockers:
+Current verification notes:
 
-- `qbox-libqemu-native -c deploy` is blocked because configure did not finish
-  before BitBake `STOPTASKS`; deploy was not run.
-- `qbox-apollo-qvp-native` deploy/runtime artifacts are therefore missing.
-- QVP runtime artifacts under `build/qbox-apollo-qvp/` are not available.
+- Build and deploy evidence belongs under the shared `build/` directory.
+- `qbox-libqemu-native` keeps QEMU share data in the deploy bundle but does not
+  stage it into the native sysroot, so it does not collide with `qemu-native`.
+- QVP runtime success still requires generated `result.json`, `summary.txt`,
+  and per-UART logs under `build/qbox-apollo-qvp/`.
 
-After freeing disk space, resume with:
+To refresh the QBox deploy artifacts directly:
 
 ```bash
-source layers/poky/oe-init-build-env build-apollo-qvp
+source layers/poky/oe-init-build-env build
 MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
 MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
-./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp --headless --dry-run
+./run_qbox_yocto.sh --machine apollo-qvp --headless --dry-run
 ```
 
 Only run a bounded boot after the deploy artifacts and dry-run command are

@@ -68,12 +68,12 @@ The Yocto entrypoint uses the Apollo template under
 ./yocto_build.sh
 ```
 
-Apollo QVP is available as a separate Yocto machine and should use its own
-build directory:
+Apollo QVP is available as a separate Yocto machine and uses the shared
+`build/` directory:
 
 ```bash
 export TEMPLATECONF=$PWD/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp
-source layers/poky/oe-init-build-env build-apollo-qvp
+source layers/poky/oe-init-build-env build
 ```
 
 From the repository root, build the Apollo QVP image with:
@@ -85,7 +85,7 @@ From the repository root, build the Apollo QVP image with:
 The recommended Apollo QVP deploy root is:
 
 ```text
-build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/
 ```
 
 QVP deploy-visible names use `apollo-qvp`, including
@@ -94,7 +94,7 @@ QVP deploy-visible names use `apollo-qvp`, including
 `efi-capsule-update-disk-image-apollo-qvp.img`.
 
 For the Yocto-built QBox host bundle, build the native recipes from an
-initialized `build-apollo-qvp` shell:
+initialized `build/` shell:
 
 ```bash
 MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
@@ -104,7 +104,7 @@ MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
 Those recipes deploy the QBox runtime under:
 
 ```text
-build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
 ```
 
 See [doc/apollo-qvp-yocto-qbox-runbook.md](doc/apollo-qvp-yocto-qbox-runbook.md)
@@ -145,7 +145,7 @@ To run the same Yocto deploy image on QBox instead of FVP:
 For Apollo QVP images and the Yocto-built QBox bundle, use:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp
+./run_qbox_yocto.sh --machine apollo-qvp
 ```
 
 The wrapper resolves the Apollo Yocto WIC image, RSE/AP firmware images,
@@ -155,7 +155,7 @@ workdir, then launches the Apollo full-system QBox runner. QBox itself must
 already be built, for example with `./local_build.sh qbox`.
 
 For QVP, the expected deploy root is
-`build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/` and the expected
+`build/tmp_baremetal/deploy/images/apollo-qvp/` and the expected
 Yocto-built QBox bundle directory is `qbox-apollo-qvp/`. Treat QVP runtime as
 blocked until the image artifacts, `qbox-apollo-qvp/qbox-apollo-qvp-env.sh`,
 `qbox-apollo-qvp/qbox-apollo-qvp-manifest.json`, and file-backed QBox logs are
@@ -309,7 +309,7 @@ For Apollo images produced by the Yocto build, use:
 For Apollo QVP images and the Yocto-built QBox bundle, use:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp
+./run_qbox_yocto.sh --machine apollo-qvp
 ```
 
 For non-interactive validation with file-backed logs:

@@ -177,7 +177,11 @@ def secure_console_observations(out_dir: Path) -> dict[str, Any]:
     }
 
 
-def primary_console_observations(out_dir: Path) -> dict[str, Any]:
+def primary_console_observations(
+    out_dir: Path,
+    login_prompt: str,
+    shell_marker: str,
+) -> dict[str, Any]:
     primary_log = read_log(out_dir / CONSOLE_LOGS["primary_console"])
     return {
         "u_boot_console": "U-Boot " in primary_log,
@@ -185,8 +189,8 @@ def primary_console_observations(out_dir: Path) -> dict[str, Any]:
             "Booting Linux on physical CPU" in primary_log
             or "Linux version " in primary_log
         ),
-        "login_prompt": "apollo-fvp login:" in primary_log,
-        "root_shell": "~ #" in primary_log,
+        "login_prompt": login_prompt in primary_log,
+        "root_shell": shell_marker in primary_log,
     }
 
 
@@ -769,7 +773,11 @@ def build_marker_groups(
     probe = post_login_probe(child_status)
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
-    primary_obs = primary_console_observations(args.out_dir)
+    primary_obs = primary_console_observations(
+        args.out_dir,
+        args.primary_login_prompt,
+        args.primary_shell_marker,
+    )
     cl1_log = read_log(args.out_dir / CONSOLE_LOGS["si_cl1"])
 
     groups["rse"] = {
@@ -789,8 +797,8 @@ def build_marker_groups(
         "u_boot": bool(measured_boot.get("BL_33") and primary_obs["u_boot_console"]),
     }
     groups["linux"] = {
-        "login_prompt": bool(linux_boot.get("apollo-fvp login:")),
-        "root_shell": bool(linux_boot.get("~ #")),
+        "login_prompt": bool(linux_boot.get(args.primary_login_prompt)),
+        "root_shell": bool(linux_boot.get(args.primary_shell_marker)),
     }
     groups["maps_and_interrupts"] = {
         "no_unexpected_shadowed_ranges": not bool(platform_obs["unexpected_shadowed_range"]),
@@ -889,7 +897,11 @@ def write_result(
     marker_groups = build_marker_groups(args, child_status)
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
-    primary_obs = primary_console_observations(args.out_dir)
+    primary_obs = primary_console_observations(
+        args.out_dir,
+        args.primary_login_prompt,
+        args.primary_shell_marker,
+    )
     gate_blocker = None
     if not check_only and not args.build_only:
         gate_blocker = live_cl1_gate_blocker(args, marker_groups, child_status)
@@ -1245,11 +1257,11 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         "--rootfs-bootargs-profile",
         args.rootfs_bootargs_profile,
         "--primary-login-prompt",
-        "apollo-fvp login:",
+        args.primary_login_prompt,
         "--primary-shell-marker",
-        "~ #",
+        args.primary_shell_marker,
         "--primary-shell-prompt-re",
-        r"(?:root@apollo-fvp[^\n]*[#>]|\S+ #)\s*$",
+        args.primary_shell_prompt_re,
     ]
     if args.skip_build:
         cmd.append("--skip-build")
@@ -1487,6 +1499,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
     parser.add_argument("--rootfs-bootargs-profile", default="quiet-console")
+    parser.add_argument("--primary-login-prompt", default=APOLLO_PRIMARY_LOGIN_PROMPT)
+    parser.add_argument("--primary-shell-marker", default=APOLLO_PRIMARY_SHELL_MARKER)
+    parser.add_argument(
+        "--primary-shell-prompt-re",
+        default=r"(?:root@apollo-fvp[^\n]*[#>]|\S+ #)\s*$",
+    )
     perf_group = parser.add_mutually_exclusive_group()
     perf_group.add_argument(
         "--qbox-performance-preset",

@@ -156,7 +156,7 @@ def test_yocto_build_sh_selects_qvp_no_dm_verity_multiconfig(
     )
 
 
-def test_yocto_build_sh_defaults_qvp_to_separate_build_dir(
+def test_yocto_build_sh_defaults_qvp_to_shared_build_dir(
     tmp_path: Path,
 ) -> None:
     result = run_build_dry_run(
@@ -166,7 +166,7 @@ def test_yocto_build_sh_defaults_qvp_to_separate_build_dir(
     )
 
     assert result.returncode == 0, result.stderr
-    expected = ROOT / "build-apollo-qvp/conf/apollo-bitbake-resources.conf"
+    expected = ROOT / "build/conf/apollo-bitbake-resources.conf"
     assert str(expected) in result.stderr
 
 

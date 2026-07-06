@@ -91,13 +91,13 @@ REQUIRED_SNIPPETS: Final = {
 
 REQUIRED_DOC_SNIPPETS: Final = {
     Path("README.md"): (
-        "build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp/",
+        "build/tmp_baremetal/deploy/images/apollo-qvp/",
         "qbox-apollo-qvp/qbox-apollo-qvp-env.sh",
         "qbox-apollo-qvp-native",
-        "./run_qbox_yocto.sh --machine apollo-qvp --build-dir build-apollo-qvp",
+        "./run_qbox_yocto.sh --machine apollo-qvp",
     ),
     Path("doc/apollo-qvp-yocto-qbox-runbook.md"): (
-        "build-apollo-qvp/tmp_baremetal/deploy/images/apollo-qvp",
+        "build/tmp_baremetal/deploy/images/apollo-qvp",
         "qbox-apollo-qvp-env.sh",
         "qbox-apollo-qvp-manifest.json",
         "apollo_fvp_full_system",
