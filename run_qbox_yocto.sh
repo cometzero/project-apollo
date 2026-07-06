@@ -558,6 +558,9 @@ if [[ "${RUN_QBOX_COPY_DISKS}" == "1" ]]; then
     fi
 fi
 if [[ -z "${RSE_OTP_OVERRIDE}" && ! -s "${RSE_OTP}" ]]; then
+    if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+        die "RSE OTP image is empty: ${RSE_OTP}. Rebuild firmware-apollo-qvp so Yocto generates the provisioned OTP image."
+    fi
     RUN_RSE_OTP="${OUT_DIR}/input-images/$(basename "${RSE_OTP}")"
     if [[ "${DRY_RUN}" == "0" ]]; then
         python3 "${ROOT_DIR}/scripts/setup/provision_rse_otp_image.py" \

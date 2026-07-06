@@ -65,7 +65,10 @@ def create_yocto_tree(
         touch_file(path)
     if machine != "apollo-fvp":
         touch_file(deploy / f"efi-capsule-update-disk-image-{machine}.img")
-    (deploy / "rse-otp-image.img").write_bytes(b"")
+    if machine == "apollo-qvp":
+        (deploy / "rse-otp-image.img").write_bytes(b"otp")
+    else:
+        (deploy / "rse-otp-image.img").write_bytes(b"")
     qbox_build.mkdir(parents=True)
 
     conf = tmp_path / "qbox-platform/platforms/apollo/apollo-qvp.lua"
@@ -331,6 +334,43 @@ def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None
     # Then: it fails on the missing QVP bundle instead of falling back to local FVP QBox.
     assert result.returncode != 0
     assert f"QBox Yocto bundle not found: {deploy / 'qbox-apollo-qvp'}" in result.stderr
+
+
+def test_run_qbox_yocto_qvp_rejects_empty_rse_otp(tmp_path: Path) -> None:
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qbox_bundle=True,
+    )
+    (deploy / "rse-otp-image.img").write_bytes(b"")
+
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-empty-otp",
+            "SSH_PORT_START": "25200",
+            "SSH_PORT_END": "25299",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode != 0
+    assert "RSE OTP image is empty" in result.stderr
+    assert "Rebuild firmware-apollo-qvp" in result.stderr
 
 
 def test_run_qbox_yocto_passes_child_args_after_separator(tmp_path: Path) -> None:

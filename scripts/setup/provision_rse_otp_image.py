@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import logging
 import os
 import struct
@@ -46,8 +47,11 @@ def require(path: Path, description: str) -> Path:
 
 def find_site_packages(root: Path, tfm_build: Path) -> list[Path]:
     candidates = []
-    native = root / "build/tmp_baremetal/work/apollo_fvp-poky-linux/trusted-firmware-m"
-    candidates.extend(native.glob("*/recipe-sysroot-native/usr/lib/python*/site-packages"))
+    work = root / "build/tmp_baremetal/work"
+    for native in work.glob("*-poky-linux/trusted-firmware-m"):
+        candidates.extend(
+            native.glob("*/recipe-sysroot-native/usr/lib/python*/site-packages")
+        )
 
     components = root / "build/tmp_baremetal/sysroots-components/x86_64"
     candidates.extend(
@@ -296,14 +300,19 @@ def create_otp(root: Path, tfm_build: Path, output: Path, size: int) -> str:
     logging.getLogger("TF-M").setLevel(logging.ERROR)
 
     import __main__
-    from rse.otp_config import OTP_config
-    from rse.provisioning_config import Provisioning_config
-    from rse.provisioning_message_config import Provisioning_message_config
-    import rse_scripts.create_combined_provisioning_bundle as cpb
 
-    __main__.OTP_config = OTP_config
-    __main__.Provisioning_config = Provisioning_config
-    __main__.Provisioning_message_config = Provisioning_message_config
+    otp_module = importlib.import_module("rse.otp_config")
+    prov_module = importlib.import_module("rse.provisioning_config")
+    msg_module = importlib.import_module("rse.provisioning_message_config")
+    cpb = importlib.import_module("rse_scripts.create_combined_provisioning_bundle")
+
+    OTP_config = otp_module.OTP_config
+    Provisioning_config = prov_module.Provisioning_config
+    Provisioning_message_config = msg_module.Provisioning_message_config
+
+    setattr(__main__, "OTP_config", OTP_config)
+    setattr(__main__, "Provisioning_config", Provisioning_config)
+    setattr(__main__, "Provisioning_message_config", Provisioning_message_config)
 
     cache = read_cmake_cache(require(tfm_build / "CMakeCache.txt", "TF-M CMake cache"))
     argv = ["provision_rse_otp_image.py"] + build_provisioning_args(root, tfm_build, cache)

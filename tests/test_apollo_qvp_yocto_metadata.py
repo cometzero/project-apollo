@@ -77,6 +77,9 @@ REQUIRED_SNIPPETS: Final = {
     BSP / "recipes-bsp/images/firmware-apollo-qvp.bb": (
         'SUMMARY = "The firmware images for apollo-qvp"',
         'COMPATIBLE_MACHINE = "apollo-qvp"',
+        "do_generate_rse_otp_image",
+        "provision_rse_otp_image.py",
+        "rse-otp-image.img",
     ),
     BSP / "recipes-bsp/images/uefi-capsule-apollo-qvp.bb": (
         'SUMMARY = "The UEFI capsule generation for apollo-qvp"',
