@@ -50,7 +50,7 @@ QVP_DEPLOY_VISIBLE_PATHS: Final = (
 REQUIRED_SNIPPETS: Final = {
     AUTO_SOLUTIONS
     / "conf/templates/apollo-qvp/local.conf.sample": (
-        'MACHINE = "apollo-qvp"',
+        'MACHINE ??= "apollo-qvp"',
         'DISTRO ??= "auto-ad-nexios"',
     ),
     AUTO_SOLUTIONS
@@ -94,7 +94,7 @@ REQUIRED_DOC_SNIPPETS: Final = {
         "build/tmp_baremetal/deploy/images/apollo-qvp/",
         "qbox-apollo-qvp/qbox-apollo-qvp-env.sh",
         "qbox-apollo-qvp-native",
-        "./run_qbox_yocto.sh --machine apollo-qvp",
+        "To run the default Apollo QVP Yocto deploy image",
     ),
     Path("doc/apollo-qvp-yocto-qbox-runbook.md"): (
         "build/tmp_baremetal/deploy/images/apollo-qvp",
@@ -122,6 +122,10 @@ FVP_RD_ASPEN_ALLOWLIST: Final = (
     (BSP / "conf/machine/apollo-qvp.conf", 'MACHINEOVERRIDES =. "fvp-rd-aspen:"'),
     (BSP / "conf/machine/apollo-qvp.conf", 'NATIVE_MACHINE = "fvp-rd-aspen"'),
     (BSP / "conf/machine/apollo-qvp.conf", "require conf/machine/fvp-rd-aspen.conf"),
+    (
+        BSP / "conf/machine/apollo-qvp.conf",
+        'EXTRA_IMAGEDEPENDS:remove = "efi-capsule-update-disk-image-fvp-rd-aspen:do_deploy"',
+    ),
     (
         BSP / "conf/machine/include/apollo-qvp-cassini-extra-settings.inc",
         "require conf/machine/include/fvp-rd-aspen-cassini-extra-settings.inc",

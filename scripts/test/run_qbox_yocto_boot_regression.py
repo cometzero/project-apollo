@@ -19,7 +19,7 @@ from typing import Any, NoReturn
 
 ROOT = Path(__file__).resolve().parents[2]
 SUPPORTED_MACHINES = ("apollo-fvp", "apollo-qvp")
-DEFAULT_MACHINE = "apollo-fvp"
+DEFAULT_MACHINE = "apollo-qvp"
 LOGIN_PROMPT_MARKERS = ("apollo-fvp login:", "apollo-qvp login:")
 SCHEMA_VERSION = 1
 DEFAULT_THRESHOLD = 0.20

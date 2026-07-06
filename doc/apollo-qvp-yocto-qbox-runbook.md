@@ -112,13 +112,13 @@ The bundle contract is:
 Run Apollo QVP through the Yocto deploy tree and QBox bundle:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp
+./run_qbox_yocto.sh
 ```
 
 For a file-backed dry run:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp --headless --dry-run
+./run_qbox_yocto.sh --headless --dry-run
 ```
 
 The QVP runtime output root should use:
@@ -173,7 +173,7 @@ To refresh the QBox deploy artifacts directly:
 source layers/poky/oe-init-build-env build
 MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
 MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
-./run_qbox_yocto.sh --machine apollo-qvp --headless --dry-run
+./run_qbox_yocto.sh --headless --dry-run
 ```
 
 Only run a bounded boot after the deploy artifacts and dry-run command are

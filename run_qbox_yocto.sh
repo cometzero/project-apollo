@@ -19,7 +19,7 @@ The default tmux panes use the same primary-console-focused split pattern as
 run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
-  --machine NAME              Yocto machine name (default: apollo-fvp)
+  --machine NAME              Yocto machine name (default: apollo-qvp)
   --build-dir DIR             Yocto build directory (default: ./build)
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
@@ -197,7 +197,7 @@ validate_ap_cpu_count() {
 }
 
 RUN_STAMP="$(date +%Y%m%d-%H%M%S)"
-MACHINE="${MACHINE:-apollo-fvp}"
+MACHINE="${MACHINE:-apollo-qvp}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-}"
 DEPLOY_DIR="${DEPLOY_DIR:-}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-}"

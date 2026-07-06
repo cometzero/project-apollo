@@ -94,6 +94,7 @@ def run_dry_run(
             "LOCAL_BUILD_DIR": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
+            "MACHINE": "apollo-fvp",
             "OUT_DIR": str(out_dir),
             "TMUX_SESSION": "pytest-run-qbox-yocto",
             "SSH_PORT_START": "24600",
@@ -139,8 +140,6 @@ def run_qvp_dry_run(
 
     command = [
         str(SCRIPT),
-        "--machine",
-        "apollo-qvp",
         "--build-dir",
         str(yocto_build),
         "--headless",
@@ -376,6 +375,7 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
             "LOCAL_BUILD_DIR": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
+            "MACHINE": "apollo-fvp",
             "OUT_DIR": str(out_dir),
             "TMUX_SESSION": "pytest-run-qbox-yocto-layout",
             "TMUX_BIN": str(fake_tmux),
@@ -635,6 +635,7 @@ def test_run_qbox_yocto_rejects_missing_rootfs(tmp_path: Path) -> None:
             "LOCAL_BUILD_DIR": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
+            "MACHINE": "apollo-fvp",
             "OUT_DIR": str(tmp_path / "out"),
             "TMUX_SESSION": "pytest-run-qbox-yocto-missing-rootfs",
             "SSH_PORT_START": "24700",

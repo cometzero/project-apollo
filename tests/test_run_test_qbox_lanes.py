@@ -51,7 +51,7 @@ def run_extra_lanes(
     *,
     extra_env: dict[str, str] | None = None,
     include_qbox_runtime: bool = False,
-    machine: str = "apollo-fvp",
+    machine: str = "apollo-qvp",
     timeout_fvp: str = "600",
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
@@ -246,7 +246,7 @@ def qbox_inputs(
     tmp_path: Path,
     include_runtime: bool = True,
     skip_runtime: bool = False,
-    machine: str = "apollo-fvp",
+    machine: str = "apollo-qvp",
 ) -> QboxInputs:
     return QboxInputs(
         root=ROOT,
@@ -334,9 +334,9 @@ def test_qvp_yocto_regression_lane_uses_qvp_result_root(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    # Given: the optional Yocto boot-regression lane is enabled for Apollo QVP.
+    # Given: the optional Yocto boot-regression lane is enabled with defaults.
     monkeypatch.setenv("RUN_TEST_QBOX_YOCTO_BOOT_REGRESSION", "1")
-    inputs = qbox_inputs(tmp_path, machine="apollo-qvp")
+    inputs = qbox_inputs(tmp_path)
 
     # When: QBox runtime lanes are planned.
     lanes = runtime_lanes(inputs)
@@ -357,9 +357,9 @@ def test_fvp_yocto_regression_lane_keeps_historical_result_root(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    # Given: the optional Yocto boot-regression lane is enabled for the FVP default.
+    # Given: the optional Yocto boot-regression lane is enabled for explicit FVP.
     monkeypatch.setenv("RUN_TEST_QBOX_YOCTO_BOOT_REGRESSION", "1")
-    inputs = qbox_inputs(tmp_path)
+    inputs = qbox_inputs(tmp_path, machine="apollo-fvp")
 
     # When: QBox runtime lanes are planned.
     lanes = runtime_lanes(inputs)

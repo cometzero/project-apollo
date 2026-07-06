@@ -135,30 +135,27 @@ The wrapper uses
 by default, starts an interactive tmux session, and mirrors subsystem UARTs to
 `build/fvp-tmux/apollo-fvp-<timestamp>/`.
 
-To run the same Yocto deploy image on QBox instead of FVP:
+To run the default Apollo QVP Yocto deploy image and Yocto-built QBox bundle:
 
 ```bash
 ./run_qbox_yocto.sh
 ```
 
-For Apollo QVP images and the Yocto-built QBox bundle, use:
+For Apollo FVP images and a local QBox build, use:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp
+./run_qbox_yocto.sh --machine apollo-fvp
 ```
 
 The wrapper resolves the Apollo Yocto WIC image, RSE/AP firmware images,
 TF-A/TF-M ELFs, DTB, and Safety Island images from
-`build/tmp_baremetal/deploy/images/apollo-fvp/` plus the matching Yocto
-workdir, then launches the Apollo full-system QBox runner. QBox itself must
-already be built, for example with `./local_build.sh qbox`.
-
-For QVP, the expected deploy root is
-`build/tmp_baremetal/deploy/images/apollo-qvp/` and the expected
-Yocto-built QBox bundle directory is `qbox-apollo-qvp/`. Treat QVP runtime as
-blocked until the image artifacts, `qbox-apollo-qvp/qbox-apollo-qvp-env.sh`,
+`build/tmp_baremetal/deploy/images/apollo-qvp/` plus the matching Yocto
+workdir, then launches the Apollo full-system QBox runner with the deployed
+`qbox-apollo-qvp/` bundle. Treat QVP runtime as blocked until the image
+artifacts, `qbox-apollo-qvp/qbox-apollo-qvp-env.sh`,
 `qbox-apollo-qvp/qbox-apollo-qvp-manifest.json`, and file-backed QBox logs are
-present.
+present. In FVP mode, QBox itself must already be built, for example with
+`./local_build.sh qbox`.
 
 `yocto_build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
@@ -299,16 +296,16 @@ options:
 ./run_qbox_local.sh
 ```
 
-For Apollo images produced by the Yocto build, use:
+For Apollo QVP images produced by the Yocto build, use:
 
 ```bash
 ./run_qbox_yocto.sh
 ```
 
-For Apollo QVP images and the Yocto-built QBox bundle, use:
+For Apollo FVP images and a local QBox build, use:
 
 ```bash
-./run_qbox_yocto.sh --machine apollo-qvp
+./run_qbox_yocto.sh --machine apollo-fvp
 ```
 
 For non-interactive validation with file-backed logs:

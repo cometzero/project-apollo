@@ -14,7 +14,7 @@ class QboxInputs:
     include_runtime: bool
     skip_runtime: bool
     timeout_fvp: str
-    machine: str = "apollo-fvp"
+    machine: str = "apollo-qvp"
 
 
 @dataclass(frozen=True, slots=True)

@@ -542,6 +542,8 @@ def test_run_qbox_yocto_boot_regression_waits_for_async_runner(tmp_path: Path) -
     assert '"passed": true' in checked.stdout
     runner_args = args_log.read_text(encoding="utf-8")
     assert "--headless" in runner_args
+    assert "--machine apollo-qvp" in runner_args
+    assert "--machine apollo-fvp" not in runner_args
     assert "--no-attach" not in runner_args
 
 
