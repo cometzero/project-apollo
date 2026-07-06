@@ -60,23 +60,22 @@ scripts/setup/bootstrap_project.sh --jobs 8 --force
 
 ## Yocto Build
 
-The Yocto entrypoint uses the Apollo template under
-`hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/` and builds the
-`nexios-image` target for `MACHINE = "apollo-fvp"`:
+The Yocto entrypoint defaults to the Apollo QVP template under
+`hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/` and
+builds the `nexios-image` target for `MACHINE = "apollo-qvp"`:
 
 ```bash
 ./yocto_build.sh
 ```
 
-Apollo QVP is available as a separate Yocto machine and uses the shared
-`build/` directory:
+Apollo QVP uses the shared `build/` directory:
 
 ```bash
 export TEMPLATECONF=$PWD/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp
 source layers/poky/oe-init-build-env build
 ```
 
-From the repository root, build the Apollo QVP image with:
+From the repository root, this is equivalent to:
 
 ```bash
 ./yocto_build.sh --machine apollo-qvp

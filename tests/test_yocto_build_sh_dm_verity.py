@@ -104,14 +104,15 @@ def test_yocto_build_sh_accepts_bb_num_threads_alias(tmp_path: Path) -> None:
     assert 'PARALLEL_MAKE = "-j11"' in resource_text
 
 
-def test_yocto_build_sh_keeps_legacy_target_without_dm_verity_option(
+def test_yocto_build_sh_uses_default_qvp_without_dm_verity_option(
     tmp_path: Path,
 ) -> None:
     result = run_build_dry_run(tmp_path, [])
 
     assert result.returncode == 0, result.stderr
+    assert "MACHINE=apollo-qvp bitbake " in result.stdout
     assert result.stdout.strip().endswith(" nexios-image")
-    assert "mc:apollo-fvp" not in result.stdout
+    assert "mc:apollo-qvp" not in result.stdout
     assert not (
         tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
     ).exists()
@@ -121,12 +122,12 @@ def test_yocto_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None
     result = run_build_dry_run(tmp_path, ["--dm-verity=off"])
 
     assert result.returncode == 0, result.stderr
-    assert "mc:apollo-fvp-no-dm-verity:nexios-image" in result.stdout
-    assert "mode 'off' uses multiconfig apollo-fvp-no-dm-verity" in result.stderr
+    assert "mc:apollo-qvp-no-dm-verity:nexios-image" in result.stdout
+    assert "mode 'off' uses multiconfig apollo-qvp-no-dm-verity" in result.stderr
 
     multiconfig = tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
     assert multiconfig.read_text(encoding="utf-8").splitlines()[-1] == (
-        'BBMULTICONFIG = "apollo-fvp-no-dm-verity"'
+        'BBMULTICONFIG = "apollo-qvp-no-dm-verity"'
     )
 
 
@@ -134,8 +135,8 @@ def test_yocto_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -
     result = run_build_dry_run(tmp_path, [], {"APOLLO_DM_VERITY": "on"})
 
     assert result.returncode == 0, result.stderr
-    assert "mc:apollo-fvp-dm-verity:nexios-image" in result.stdout
-    assert "mode 'on' uses multiconfig apollo-fvp-dm-verity" in result.stderr
+    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
+    assert "mode 'on' uses multiconfig apollo-qvp-dm-verity" in result.stderr
 
 
 def test_yocto_build_sh_selects_qvp_no_dm_verity_multiconfig(
@@ -161,13 +162,46 @@ def test_yocto_build_sh_defaults_qvp_to_shared_build_dir(
 ) -> None:
     result = run_build_dry_run(
         tmp_path,
-        ["--machine", "apollo-qvp"],
+        [],
         {"APOLLO_AUTO_RESOURCE_LIMITS": "1", "BUILD_DIR": ""},
     )
 
     assert result.returncode == 0, result.stderr
     expected = ROOT / "build/conf/apollo-bitbake-resources.conf"
     assert str(expected) in result.stderr
+
+
+def test_yocto_build_sh_relaxes_legacy_machine_assignment(
+    tmp_path: Path,
+) -> None:
+    init_result = run_build_dry_run(tmp_path, [])
+    assert init_result.returncode == 0, init_result.stderr
+
+    local_conf = tmp_path / "build/conf/local.conf"
+    local_conf.write_text('MACHINE = "apollo-fvp"\n', encoding="utf-8")
+
+    result = run_build_dry_run(tmp_path, ["--machine", "apollo-qvp"])
+
+    assert result.returncode == 0, result.stderr
+    assert "set default MACHINE to 'apollo-qvp'" in result.stderr
+    assert 'MACHINE ??= "apollo-qvp"' in local_conf.read_text(encoding="utf-8")
+    assert "MACHINE=apollo-qvp bitbake " in result.stdout
+
+
+def test_yocto_build_sh_explicit_fvp_keeps_qvp_default(
+    tmp_path: Path,
+) -> None:
+    init_result = run_build_dry_run(tmp_path, [])
+    assert init_result.returncode == 0, init_result.stderr
+
+    local_conf = tmp_path / "build/conf/local.conf"
+    local_conf.write_text('MACHINE = "apollo-fvp"\n', encoding="utf-8")
+
+    result = run_build_dry_run(tmp_path, ["--machine", "apollo-fvp"])
+
+    assert result.returncode == 0, result.stderr
+    assert "MACHINE=apollo-fvp bitbake " in result.stdout
+    assert 'MACHINE ??= "apollo-qvp"' in local_conf.read_text(encoding="utf-8")
 
 
 def test_yocto_build_sh_selects_qvp_dm_verity_multiconfig(
@@ -187,11 +221,11 @@ def test_yocto_build_sh_accepts_machine_from_env(tmp_path: Path) -> None:
     result = run_build_dry_run(
         tmp_path,
         ["--dm-verity=on"],
-        {"MACHINE": "apollo-qvp"},
+        {"MACHINE": "apollo-fvp"},
     )
 
     assert result.returncode == 0, result.stderr
-    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
+    assert "mc:apollo-fvp-dm-verity:nexios-image" in result.stdout
 
 
 def test_yocto_build_sh_rejects_invalid_machine(tmp_path: Path) -> None:

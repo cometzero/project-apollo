@@ -11,8 +11,9 @@ POKY_DIR="${WORKSPACE_DIR}/layers/poky"
 BUILD_DIR="${BUILD_DIR:-}"
 TEMPLATECONF="${TEMPLATECONF:-}"
 
+DEFAULT_APOLLO_MACHINE="apollo-qvp"
 DM_VERITY_MODE="${APOLLO_DM_VERITY:-}"
-APOLLO_MACHINE="${MACHINE:-apollo-fvp}"
+APOLLO_MACHINE="${MACHINE:-${DEFAULT_APOLLO_MACHINE}}"
 DRY_RUN=0
 
 usage() {
@@ -188,6 +189,32 @@ except OSError:
 PY
 }
 
+sync_existing_machine_default() {
+    local local_conf="${BUILD_DIR}/conf/local.conf"
+    local tmp_conf
+
+    if [[ ! -f "${local_conf}" ]]; then
+        return 0
+    fi
+
+    if ! grep -Eq '^[[:space:]]*MACHINE[[:space:]]*(\?\?=|=)[[:space:]]*"(apollo-fvp|apollo-qvp)"([[:space:]]*(#.*)?)?$' "${local_conf}"; then
+        return 0
+    fi
+
+    tmp_conf="$(mktemp "${local_conf}.XXXXXX")"
+    sed -E \
+        "s/^([[:space:]]*)MACHINE[[:space:]]*(\\?\\?=|=)[[:space:]]*\"(apollo-fvp|apollo-qvp)\"([[:space:]]*(#.*)?)?$/\\1MACHINE ??= \"${DEFAULT_APOLLO_MACHINE}\"\\4/" \
+        "${local_conf}" >"${tmp_conf}"
+
+    if cmp -s "${local_conf}" "${tmp_conf}"; then
+        rm -f "${tmp_conf}"
+        return 0
+    fi
+
+    mv "${tmp_conf}" "${local_conf}"
+    echo "notice: set default MACHINE to '${DEFAULT_APOLLO_MACHINE}' in ${local_conf}" >&2
+}
+
 if [[ ! -f "${POKY_DIR}/oe-init-build-env" ]]; then
     echo "error: missing ${POKY_DIR}/oe-init-build-env" >&2
     exit 1
@@ -200,6 +227,8 @@ fi
 
 export TEMPLATECONF
 export MACHINE="${APOLLO_MACHINE}"
+
+sync_existing_machine_default
 
 # shellcheck source=/dev/null
 set +u

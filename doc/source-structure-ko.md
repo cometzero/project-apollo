@@ -61,14 +61,10 @@ System Management와 Safety Island 소스는
 | `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer. `conf/templates/apollo-fvp/`와 `conf/templates/apollo-qvp/`를 소유하며 dynamic-layer patch도 이곳에 둔다. |
 | `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer. `apollo-fvp`와 `apollo-qvp` machine, firmware recipes, QBox native recipes, externalsrc 설정, Linux kernel metadata, module signing, OP-TEE 통합을 소유한다. |
 
-현재 active build는 `build/conf/templateconf.cfg`가 가리키는
-`hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`를 사용한다.
-`build/conf/local.conf`의 기본 active machine은 `MACHINE ??= "apollo-fvp"`이다.
-`apollo-fvp` machine은 현재 `fvp-rd-aspen`을 상속하지만, 향후 Apollo 전용
-하드웨어 차이를 분리하기 위한 포팅 지점이다.
-
-Apollo QVP는 별도 machine인 `apollo-qvp`를 사용하되, `apollo-fvp`와 같은
-권장 build directory인 `build/`를 공유한다. QVP template은
+현재 active build는 `apollo-qvp`를 기본 machine으로 사용한다.
+`build/conf/local.conf`의 기본 active machine은 `MACHINE ??= "apollo-qvp"`이다.
+Apollo QVP는 `apollo-fvp`와 같은 권장 build directory인 `build/`를 공유한다.
+QVP template은
 `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/`에 있고,
 deploy root는
 `build/tmp_baremetal/deploy/images/apollo-qvp/`이다. QVP 산출물은
@@ -76,6 +72,10 @@ deploy root는
 `efi-capsule-update-disk-image-apollo-qvp.img`, `firmware-apollo-qvp`,
 `uefi-capsule-apollo-qvp`, `qbox-apollo-qvp/`처럼 deploy-visible 이름에
 `apollo-qvp` 또는 `qbox-apollo-qvp`를 사용해야 한다.
+
+`apollo-fvp` machine은 현재 `fvp-rd-aspen`을 상속하지만, 향후 Apollo 전용
+하드웨어 차이를 분리하기 위한 포팅 지점이며 명시적으로
+`./yocto_build.sh --machine apollo-fvp`로 선택한다.
 
 QBox Yocto native recipe는
 `hsoc-stack/yocto/meta-hsoc-bsp/recipes-devtools/qbox/`가 소유한다.
