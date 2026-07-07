@@ -70,8 +70,8 @@ deploy root는
 `build/tmp_baremetal/deploy/images/apollo-qvp/`이다. QVP 산출물은
 `nexios-image-apollo-qvp.*`, `apollo-qvp.dtb`,
 `efi-capsule-update-disk-image-apollo-qvp.img`, `firmware-apollo-qvp`,
-`uefi-capsule-apollo-qvp`, `qbox-apollo-qvp/`처럼 deploy-visible 이름에
-`apollo-qvp` 또는 `qbox-apollo-qvp`를 사용해야 한다.
+`uefi-capsule-apollo-qvp`, `nexios-image-apollo-qvp.qboxconf`처럼
+deploy-visible 이름에 `apollo-qvp`를 사용해야 한다.
 
 `apollo-fvp` machine은 현재 `fvp-rd-aspen`을 상속하지만, 향후 Apollo 전용
 하드웨어 차이를 분리하기 위한 포팅 지점이며 명시적으로
@@ -80,11 +80,13 @@ deploy root는
 QBox Yocto native recipe는
 `hsoc-stack/yocto/meta-hsoc-bsp/recipes-devtools/qbox/`가 소유한다.
 `qbox-libqemu-native`는 local `hsoc-stack/tools/qemu/`에서
-`libqemu-system-aarch64.so`를 만들고,
+`libqemu-system-aarch64.so`를 만들어 native sysroot provider로 설치한다.
 `qbox-apollo-qvp-native`는 local `hsoc-stack/tools/qbox-platform/`,
-`hsoc-stack/tools/qbox/`, `hsoc-stack/tools/qemu/`를 묶어
-`qbox-apollo-qvp/` runtime bundle을 deploy한다. Bundle의 durable contract는
-`qbox-apollo-qvp-env.sh`와 `qbox-apollo-qvp-manifest.json`으로 확인한다.
+`hsoc-stack/tools/qbox/`, `hsoc-stack/tools/qemu/`를 사용해 `platforms-vp`,
+`libqbox.so`, QBox module, Apollo Lua platform data를 native sysroot
+components에 설치한다. 실행 deploy contract는 복사된 bundle이 아니라
+`qboxboot`이 생성하는 `.qboxconf`와 native sysroot provider 경로로
+확인한다.
 
 ## 외부 Yocto Layer
 
@@ -153,7 +155,7 @@ runner behavior를 바꾸면 `python3 -m py_compile`과 관련 pytest/validator�
 | 경로 | 취급 |
 | --- | --- |
 | `build/conf/` | active Yocto local configuration. build/runtime claim 전에 반드시 확인한다. |
-| `build/tmp_baremetal/deploy/images/apollo-qvp/` | Apollo QVP Yocto deploy 산출물 위치. `qbox-apollo-qvp/` bundle도 여기에 배치된다. generated evidence이다. |
+| `build/tmp_baremetal/deploy/images/apollo-qvp/` | Apollo QVP Yocto deploy 산출물 위치. QBox 실행 설정인 `.qboxconf`도 여기에 생성된다. generated evidence이다. |
 | `build/local-apollo-fvp/` | local build 산출물과 debug manifest. generated evidence이다. |
 | `build/qbox-apollo-fvp/` | QBox runtime logs, result.json, summary, per-UART log. generated evidence이다. |
 | `build/qbox-apollo-qvp/` | Apollo QVP QBox runtime logs, result.json, summary, per-UART log의 목표 위치. runtime evidence가 생기기 전에는 runtime 성공 근거로 취급하지 않는다. |

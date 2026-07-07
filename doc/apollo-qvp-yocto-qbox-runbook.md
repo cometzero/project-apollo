@@ -3,7 +3,7 @@
 Updated: 2026-07-06
 
 This runbook covers the Apollo QVP Yocto machine and the Yocto-built QBox host
-bundle. It documents the deploy contract and current blockers. It does not
+provider. It documents the deploy contract and current blockers. It does not
 claim QVP runtime success; that requires QBox runtime logs and `result.json`
 evidence from the QVP path.
 
@@ -20,11 +20,10 @@ Canonical names:
 | Yocto machine | `apollo-qvp` |
 | Recommended build directory | `build/` |
 | Deploy image root | `build/tmp_baremetal/deploy/images/apollo-qvp` |
-| QBox bundle directory | `qbox-apollo-qvp/` |
-| QBox bundle env file | `qbox-apollo-qvp-env.sh` |
-| QBox bundle manifest | `qbox-apollo-qvp-manifest.json` |
+| QBox run config | `nexios-image-apollo-qvp.qboxconf` |
+| QBox image class | `qboxboot` |
 | libqemu native recipe | `qbox-libqemu-native` |
-| Apollo QVP QBox bundle recipe | `qbox-apollo-qvp-native` |
+| Apollo QVP QBox provider recipe | `qbox-apollo-qvp-native` |
 
 ## Setup
 
@@ -77,39 +76,44 @@ Expected QVP deploy-visible image names include:
 - `uefi-capsule-apollo-qvp`
 - `efi-capsule-update-disk-image-apollo-qvp.img`
 
-## QBox Native Bundle
+## QBox Native Sysroot/qboxconf
 
-Build the QBox host-side native artifacts from an initialized `build/`
-BitBake shell:
+Build the QBox host-side native provider and generate the image `.qboxconf`
+from an initialized `build/` BitBake shell:
 
 ```bash
-MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
-MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
+MACHINE=apollo-qvp bitbake qbox-libqemu-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake nexios-image -c do_write_qboxboot_conf
 ```
 
-The canonical bundle path is:
+The canonical QBox run config is:
 
 ```text
-build/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/nexios-image-apollo-qvp.qboxconf
 ```
 
-The bundle contract is:
+The deploy contract is the generated `.qboxconf` plus the native sysroot
+provider. The deploy tree carries the run configuration; host executables,
+libraries, modules, and data stay in native sysroot components.
 
-| Path | Purpose |
+| Field or path | Purpose |
 | --- | --- |
-| `platforms-vp` | Native QBox executable. |
-| `lib/` | Apollo QBox modules, `libqbox.so`, `libqemu-system-aarch64.so`, and optional `liblua.so`. |
-| `platforms/apollo/apollo-qvp.lua` | QVP Lua entrypoint. |
-| `platforms/apollo/hw-block/` | Apollo hardware-block Lua configuration. |
-| `fw/` | Optional QBox platform firmware helper files. |
-| `share/` | Optional QBox/libqemu share data. |
-| `qbox-apollo-qvp-env.sh` | Environment file that sets `QBOX_APOLLO_QVP_BUNDLE_DIR`, default `QBOX_CONF`, `PATH`, and `LD_LIBRARY_PATH`. |
-| `qbox-apollo-qvp-manifest.json` | Machine-readable bundle manifest with source paths, aggregate target, required targets, and deployed artifacts. |
-| `libqemu/manifest.txt` | `qbox-libqemu-native` deploy manifest for the standalone libqemu output. |
+| `provider.name` | Native provider recipe, currently `qbox-apollo-qvp-native`. |
+| `provider.bindir` | Native sysroot component directory containing `platforms-vp`. |
+| `provider.libdir` | Native sysroot component directory containing `libqbox.so` and libqemu libraries. |
+| `provider.module_dir` | Native sysroot component directory containing QBox module `.so` files. |
+| `provider.data_dir` | Native sysroot component directory containing QBox Lua platform data. |
+| `sysroot.components_dir` | Yocto native sysroot components root. |
+| `sysroot.recipe_sysroot_native` | Provider recipe native sysroot used by the runner. |
+| `exe` | Relative executable path, currently `platforms-vp`. |
+| `config` | Relative Lua entrypoint, currently `platforms/apollo/apollo-qvp.lua`. |
+| `images` | Deploy image artifact names consumed by the runner. |
 
 ## Run
 
-Run Apollo QVP through the Yocto deploy tree and QBox bundle:
+Run Apollo QVP through the Yocto deploy tree, generated `.qboxconf`, and
+native sysroot provider:
 
 ```bash
 ./run_qbox_yocto.sh
@@ -137,8 +141,8 @@ These names are allowed only as transition details:
 
 - `apollo_fvp_full_system`: current QBox aggregate CMake target used by
   `qbox-apollo-qvp-native` through `QBOX_APOLLO_BUILD_TARGET`.
-- `apollo-qvp.lua`: canonical QVP Lua entrypoint. A manifest-declared
-  compatibility Lua path is acceptable only while the bundle records it.
+- `apollo-qvp.lua`: canonical QVP Lua entrypoint. A `.qboxconf`-declared
+  compatibility Lua path is acceptable only while the config records it.
 - `fvp-rd-aspen`: inherited machine override, native machine name, firmware
   recipe include, and existing RD-Aspen QBox environment prefix. QVP runtime
   scripts do not automatically fall back to FVP-named deploy artifacts; use an
@@ -155,26 +159,27 @@ Use these statuses in reports:
 | Status | Meaning |
 | --- | --- |
 | `blocked_disk_space_stoptasks` | BitBake stopped scheduling tasks because the disk monitor action was `STOPTASKS`. Current `df -h /build` evidence shows `/build` at 100% with 713M available, below the configured 1G threshold, and QBox native deploy did not complete. |
-| `runtime_blocked_missing_artifacts` | Required QVP image files, QBox bundle files, or runtime logs are missing. |
+| `runtime_blocked_missing_artifacts` | Required QVP image files, `.qboxconf`, native sysroot provider files, or runtime logs are missing. |
 | `runtime_unverified` | Build or deploy evidence exists, but no QVP `result.json` and UART logs have been inspected. |
 | `compatibility_alias_in_use` | A documented alias such as `apollo_fvp_full_system` or `fvp-rd-aspen` is still present as an implementation detail. |
 
 Current verification notes:
 
 - Build and deploy evidence belongs under the shared `build/` directory.
-- `qbox-libqemu-native` keeps QEMU share data in the deploy bundle but does not
-  stage it into the native sysroot, so it does not collide with `qemu-native`.
+- Native QBox provider artifacts belong in Yocto sysroot components; deploy
+  contains the `.qboxconf` run configuration and image artifacts.
 - QVP runtime success still requires generated `result.json`, `summary.txt`,
   and per-UART logs under `build/qbox-apollo-qvp/`.
 
-To refresh the QBox deploy artifacts directly:
+To refresh the QBox provider and run config directly:
 
 ```bash
 source layers/poky/oe-init-build-env build
-MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
-MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
+MACHINE=apollo-qvp bitbake qbox-libqemu-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake nexios-image -c do_write_qboxboot_conf
 ./run_qbox_yocto.sh --headless --dry-run
 ```
 
-Only run a bounded boot after the deploy artifacts and dry-run command are
-valid.
+Only run a bounded boot after the image artifacts, `.qboxconf`, native provider
+artifacts, and dry-run command are valid.

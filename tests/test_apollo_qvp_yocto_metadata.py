@@ -95,14 +95,16 @@ REQUIRED_SNIPPETS: Final = {
 REQUIRED_DOC_SNIPPETS: Final = {
     Path("README.md"): (
         "build/tmp_baremetal/deploy/images/apollo-qvp/",
-        "qbox-apollo-qvp/qbox-apollo-qvp-env.sh",
+        "nexios-image-apollo-qvp.qboxconf",
+        "native sysroot provider",
         "qbox-apollo-qvp-native",
         "To run the default Apollo QVP Yocto deploy image",
     ),
     Path("doc/apollo-qvp-yocto-qbox-runbook.md"): (
         "build/tmp_baremetal/deploy/images/apollo-qvp",
-        "qbox-apollo-qvp-env.sh",
-        "qbox-apollo-qvp-manifest.json",
+        "QBox Native Sysroot/qboxconf",
+        "provider.bindir",
+        "sysroot.recipe_sysroot_native",
         "apollo_fvp_full_system",
         "fvp-rd-aspen",
         "blocked_disk_space_stoptasks",
@@ -113,7 +115,8 @@ REQUIRED_DOC_SNIPPETS: Final = {
         "recipes-devtools/qbox/",
         "qbox-libqemu-native",
         "qbox-apollo-qvp-native",
-        "qbox-apollo-qvp/",
+        ".qboxconf",
+        "native sysroot provider",
     ),
 }
 

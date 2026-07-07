@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import shutil
@@ -21,6 +22,7 @@ QBOX_YOCTO_ENV_OVERRIDES = (
     "QBOX_BUILD_DIR",
     "QBOX_PLATFORM_BUILD_DIR",
     "QBOX_CONF",
+    "QBOX_CONF_FILE",
     "OUT_DIR",
 )
 
@@ -30,12 +32,72 @@ def touch_file(path: Path, content: str = "x\n") -> None:
     path.write_text(content, encoding="utf-8")
 
 
+def create_qboxconf(
+    yocto_build: Path,
+    deploy: Path,
+    *,
+    machine: str = "apollo-qvp",
+    basename: str = "nexios-image",
+    include_debug_symbols: bool = False,
+) -> Path:
+    components_dir = yocto_build / "tmp_baremetal/sysroots-components/x86_64"
+    provider_root = components_dir / "qbox-apollo-qvp-native/usr"
+    bindir = provider_root / "bin"
+    libdir = provider_root / "lib"
+    module_dir = libdir / "qbox"
+    data_dir = provider_root / "share/qbox"
+    recipe_sysroot_native = (
+        yocto_build
+        / "tmp_baremetal/work/x86_64-linux/qbox-apollo-qvp-native/1.0/recipe-sysroot-native"
+    )
+
+    touch_file(bindir / "platforms-vp")
+    (bindir / "platforms-vp").chmod(0o755)
+    touch_file(module_dir / "libqbox-apollo.so")
+    touch_file(data_dir / "platforms/apollo/apollo-qvp.lua", "return {}\n")
+    recipe_sysroot_native.mkdir(parents=True)
+
+    qboxconf = deploy / f"{basename}-{machine}.qboxconf"
+    payload = {
+        "provider": {
+            "name": "qbox-apollo-qvp-native",
+            "bindir": str(bindir),
+            "libdir": str(libdir),
+            "module_dir": str(module_dir),
+            "data_dir": str(data_dir),
+        },
+        "sysroot": {
+            "components_dir": str(yocto_build / "tmp_baremetal/sysroots-components"),
+            "recipe_sysroot_native": str(recipe_sysroot_native),
+        },
+        "exe": "platforms-vp",
+        "config": "platforms/apollo/apollo-qvp.lua",
+        "images": {
+            "wic": f"{basename}-{machine}.wic",
+            "efi_capsule_disk": f"efi-capsule-update-disk-image-{machine}.img",
+        },
+        "env": {
+            "LD_LIBRARY_PATH": "${provider.libdir}:${provider.module_dir}",
+        },
+    }
+    if include_debug_symbols:
+        touch_file(data_dir / "debug/symbols.json", "{}\n")
+        payload["debug_symbols"] = str(data_dir / "debug/symbols.json")
+    qboxconf.parent.mkdir(parents=True, exist_ok=True)
+    qboxconf.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return qboxconf
+
+
+def rewrite_qboxconf(qboxconf: Path, payload: dict) -> None:
+    qboxconf.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
 def create_yocto_tree(
     tmp_path: Path,
     *,
     machine: str = "apollo-fvp",
     build_dir_name: str = "yocto-build",
-    include_qbox_bundle: bool = False,
+    include_qboxconf: bool = False,
 ) -> tuple[Path, Path, Path, Path, Path]:
     yocto_build = tmp_path / "yocto-build"
     if build_dir_name != "yocto-build":
@@ -73,12 +135,8 @@ def create_yocto_tree(
 
     conf = tmp_path / "qbox-platform/platforms/apollo/apollo-qvp.lua"
     touch_file(conf, "return {}\n")
-    if include_qbox_bundle:
-        bundle = deploy / "qbox-apollo-qvp"
-        touch_file(bundle / "platforms-vp")
-        (bundle / "platforms-vp").chmod(0o755)
-        touch_file(bundle / "platforms/apollo/apollo-qvp.lua", "return {}\n")
-        touch_file(bundle / "debug/symbols.json", "{}\n")
+    if include_qboxconf:
+        create_qboxconf(yocto_build, deploy, machine=machine)
     return yocto_build, deploy, work, local_build, conf
 
 
@@ -127,7 +185,7 @@ def run_qvp_dry_run(
         tmp_path,
         machine="apollo-qvp",
         build_dir_name="build",
-        include_qbox_bundle=True,
+        include_qboxconf=True,
     )
 
     env = os.environ.copy()
@@ -195,23 +253,79 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
-def test_run_qbox_yocto_qvp_uses_yocto_bundle_defaults(tmp_path: Path) -> None:
-    # Given: Yocto-style apollo-qvp deploy artifacts with a QBox bundle.
+def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> None:
+    # Given: Yocto-style apollo-qvp deploy artifacts with qboxconf/sysroot provider paths.
     result = run_qvp_dry_run(tmp_path)
 
-    # Then: the launcher uses qvp deploy names and the bundled QBox tools.
+    # Then: the launcher uses qvp deploy names and the qboxconf provider paths.
     assert result.returncode == 0, result.stderr
     deploy = tmp_path / "build/tmp_baremetal/deploy/images/apollo-qvp"
-    bundle = deploy / "qbox-apollo-qvp"
+    qboxconf = deploy / "nexios-image-apollo-qvp.qboxconf"
+    provider_root = (
+        tmp_path
+        / "build/tmp_baremetal/sysroots-components/x86_64/qbox-apollo-qvp-native/usr"
+    )
+    bindir = provider_root / "bin"
+    data_dir = provider_root / "share/qbox"
     assert f"deploy dir:    {deploy}" in result.stdout
-    assert f"qbox tools:    {bundle}" in result.stdout
-    assert f"qbox conf:     {bundle / 'platforms/apollo/apollo-qvp.lua'}" in result.stdout
+    assert f"qboxconf:      {qboxconf}" in result.stdout
+    assert f"qbox tools:    {bindir}" in result.stdout
+    assert f"qbox conf:     {data_dir / 'platforms/apollo/apollo-qvp.lua'}" in result.stdout
     argv = dry_run_command_argv(result.stdout)
-    assert argv[argv.index("--qbox-build-dir") + 1] == str(bundle)
+    assert argv[argv.index("--qbox-build-dir") + 1] == str(bindir)
     assert "build/qbox-apollo-qvp/yocto-apollo-qvp-" in result.stdout
     assert "nexios-image-apollo-qvp.wic" in result.stdout
     assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stdout
     assert "apollo-qvp.dtb" in result.stdout
+    assert "--rse-symbols" not in argv
+
+
+def test_run_qbox_yocto_qvp_uses_latest_qboxconf_when_link_is_absent(
+    tmp_path: Path,
+) -> None:
+    # Given: versioned deploy qboxconf files without the image-link qboxconf.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qboxconf=True,
+    )
+    fixed = deploy / "nexios-image-apollo-qvp.qboxconf"
+    older = deploy / "nexios-image-apollo-qvp-20260101000000.qboxconf"
+    newer = deploy / "nexios-image-apollo-qvp-20260201000000.qboxconf"
+    older.write_text(fixed.read_text(encoding="utf-8"), encoding="utf-8")
+    newer.write_text(fixed.read_text(encoding="utf-8"), encoding="utf-8")
+    fixed.unlink()
+    os.utime(older, (1, 1))
+    os.utime(newer, (2, 2))
+
+    # When: the QVP runner resolves qboxconf from deploy defaults.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-latest-qboxconf",
+            "SSH_PORT_START": "25300",
+            "SSH_PORT_END": "25399",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the newest versioned qboxconf is selected.
+    assert result.returncode == 0, result.stderr
+    assert f"qboxconf:      {newer}" in result.stdout
 
 
 def test_run_qbox_yocto_qvp_requires_qvp_efi_capsule_name(
@@ -222,7 +336,7 @@ def test_run_qbox_yocto_qvp_requires_qvp_efi_capsule_name(
         tmp_path,
         machine="apollo-qvp",
         build_dir_name="build",
-        include_qbox_bundle=True,
+        include_qboxconf=True,
     )
     (deploy / "efi-capsule-update-disk-image-apollo-qvp.img").unlink()
 
@@ -256,13 +370,60 @@ def test_run_qbox_yocto_qvp_requires_qvp_efi_capsule_name(
     assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stderr
 
 
+def test_run_qbox_yocto_qvp_uses_qboxconf_debug_symbols_when_present(
+    tmp_path: Path,
+) -> None:
+    # Given: a qboxconf that explicitly names a deployed RSE debug manifest.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+    )
+    qboxconf = create_qboxconf(
+        yocto_build,
+        deploy,
+        machine="apollo-qvp",
+        include_debug_symbols=True,
+    )
+    payload = json.loads(qboxconf.read_text(encoding="utf-8"))
+
+    # When: the QVP runner resolves artifacts from qboxconf metadata.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-debug-symbols",
+            "SSH_PORT_START": "25000",
+            "SSH_PORT_END": "25099",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the explicit debug manifest remains part of the child command.
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_command_argv(result.stdout)
+    assert argv[argv.index("--rse-symbols") + 1] == payload["debug_symbols"]
+
+
 def test_run_qbox_yocto_qvp_allows_explicit_efi_override(tmp_path: Path) -> None:
     # Given: a QVP deploy tree with an explicit compatibility artifact override.
     yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
         build_dir_name="build",
-        include_qbox_bundle=True,
+        include_qboxconf=True,
     )
     qvp_efi = deploy / "efi-capsule-update-disk-image-apollo-qvp.img"
     qvp_efi.unlink()
@@ -299,8 +460,8 @@ def test_run_qbox_yocto_qvp_allows_explicit_efi_override(tmp_path: Path) -> None
     assert str(explicit_efi) in result.stdout
 
 
-def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None:
-    # Given: QVP image artifacts without the Yocto-deployed QBox bundle.
+def test_run_qbox_yocto_qvp_rejects_missing_qboxconf(tmp_path: Path) -> None:
+    # Given: QVP image artifacts without a deployed qboxconf.
     yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
         machine="apollo-qvp",
@@ -321,7 +482,7 @@ def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None
         cwd=ROOT,
         env={
             **os.environ,
-            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-missing-bundle",
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-missing-qboxconf",
             "SSH_PORT_START": "25100",
             "SSH_PORT_END": "25199",
         },
@@ -331,9 +492,249 @@ def test_run_qbox_yocto_qvp_rejects_missing_yocto_bundle(tmp_path: Path) -> None
         stderr=subprocess.PIPE,
     )
 
-    # Then: it fails on the missing QVP bundle instead of falling back to local FVP QBox.
+    # Then: it fails on the missing qboxconf instead of falling back to local FVP QBox.
     assert result.returncode != 0
-    assert f"QBox Yocto bundle not found: {deploy / 'qbox-apollo-qvp'}" in result.stderr
+    assert "missing required QBox qboxconf" in result.stderr
+    assert str(deploy / "nexios-image-apollo-qvp.qboxconf") in result.stderr
+
+
+def test_run_qbox_yocto_qvp_rejects_malformed_qboxconf(tmp_path: Path) -> None:
+    # Given: QVP image artifacts and a malformed qboxconf.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+    )
+    qboxconf = deploy / "nexios-image-apollo-qvp.qboxconf"
+    touch_file(qboxconf, '{"provider": ')
+
+    # When: the QVP runner parses qboxconf before resolving provider paths.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-bad-qboxconf",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: malformed JSON is reported clearly and no stale provider fallback is used.
+    assert result.returncode != 0
+    assert f"invalid qboxconf JSON: {qboxconf}" in result.stderr
+
+
+def test_run_qbox_yocto_qvp_rejects_provider_path_outside_build(
+    tmp_path: Path,
+) -> None:
+    # Given: an otherwise valid QVP qboxconf whose provider paths point outside the Yocto build.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qboxconf=True,
+    )
+    qboxconf = deploy / "nexios-image-apollo-qvp.qboxconf"
+    payload = json.loads(qboxconf.read_text(encoding="utf-8"))
+    evil_root = tmp_path / "evil/qbox-apollo-qvp-native/usr"
+    touch_file(evil_root / "bin/platforms-vp")
+    (evil_root / "bin/platforms-vp").chmod(0o755)
+    touch_file(evil_root / "share/qbox/platforms/apollo/apollo-qvp.lua", "return {}\n")
+    (evil_root / "lib/qbox").mkdir(parents=True)
+    payload["provider"]["bindir"] = str(evil_root / "bin")
+    payload["provider"]["libdir"] = str(evil_root / "lib")
+    payload["provider"]["module_dir"] = str(evil_root / "lib/qbox")
+    payload["provider"]["data_dir"] = str(evil_root / "share/qbox")
+    rewrite_qboxconf(qboxconf, payload)
+
+    # When: the QVP runner parses qboxconf before command emission.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-evil-provider",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the qboxconf is rejected before the child runner command is printed.
+    assert result.returncode != 0
+    assert "qboxconf trust error" in result.stderr
+    assert "provider.bindir" in result.stderr
+    assert "Headless QBox runner command:" not in result.stdout
+
+
+def test_run_qbox_yocto_qvp_rejects_provider_symlink_escape(
+    tmp_path: Path,
+) -> None:
+    # Given: provider paths appear under sysroots-components but resolve outside via symlink.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qboxconf=True,
+    )
+    component_root = (
+        yocto_build
+        / "tmp_baremetal/sysroots-components/x86_64/qbox-apollo-qvp-native"
+    )
+    evil_component = tmp_path / "evil-component"
+    touch_file(evil_component / "usr/bin/platforms-vp")
+    (evil_component / "usr/bin/platforms-vp").chmod(0o755)
+    touch_file(evil_component / "usr/share/qbox/platforms/apollo/apollo-qvp.lua", "return {}\n")
+    (evil_component / "usr/lib/qbox").mkdir(parents=True)
+    shutil.rmtree(component_root)
+    component_root.symlink_to(evil_component, target_is_directory=True)
+
+    # When: the QVP runner parses qboxconf before command emission.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-symlink-provider",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: realpath validation rejects the symlink escape before command print.
+    assert result.returncode != 0
+    assert "qboxconf trust error" in result.stderr
+    assert "provider.bindir" in result.stderr
+    assert "Headless QBox runner command:" not in result.stdout
+
+
+def test_run_qbox_yocto_qvp_rejects_sysroot_path_outside_build(
+    tmp_path: Path,
+) -> None:
+    # Given: an otherwise valid QVP qboxconf with a recipe sysroot outside tmp_baremetal/work.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qboxconf=True,
+    )
+    qboxconf = deploy / "nexios-image-apollo-qvp.qboxconf"
+    payload = json.loads(qboxconf.read_text(encoding="utf-8"))
+    evil_sysroot = tmp_path / "evil-recipe-sysroot-native"
+    evil_sysroot.mkdir()
+    payload["sysroot"]["recipe_sysroot_native"] = str(evil_sysroot)
+    rewrite_qboxconf(qboxconf, payload)
+
+    # When: the QVP runner parses qboxconf before command emission.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-evil-sysroot",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: sysroot trust validation rejects it before the child runner command is printed.
+    assert result.returncode != 0
+    assert "qboxconf trust error" in result.stderr
+    assert "sysroot.recipe_sysroot_native" in result.stderr
+    assert "Headless QBox runner command:" not in result.stdout
+
+
+def test_run_qbox_yocto_qvp_rejects_missing_provider_executable(
+    tmp_path: Path,
+) -> None:
+    # Given: QVP deploy artifacts with a qboxconf whose provider executable is missing.
+    yocto_build, deploy, _work, _local_build, _conf = create_yocto_tree(
+        tmp_path,
+        machine="apollo-qvp",
+        build_dir_name="build",
+        include_qboxconf=True,
+    )
+    qboxconf = deploy / "nexios-image-apollo-qvp.qboxconf"
+    payload = json.loads(qboxconf.read_text(encoding="utf-8"))
+    provider_exe = Path(payload["provider"]["bindir"]) / payload["exe"]
+    provider_exe.unlink()
+
+    # When: the QVP runner resolves provider paths from qboxconf.
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--machine",
+            "apollo-qvp",
+            "--build-dir",
+            str(yocto_build),
+            "--headless",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-missing-provider",
+            "SSH_PORT_START": "25100",
+            "SSH_PORT_END": "25199",
+        },
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the missing sysroot provider is fatal before the runner command is emitted.
+    assert result.returncode != 0
+    assert "QBox executable not found or not executable" in result.stderr
+    assert str(provider_exe) in result.stderr
 
 
 def test_run_qbox_yocto_qvp_rejects_empty_rse_otp(tmp_path: Path) -> None:
@@ -341,7 +742,7 @@ def test_run_qbox_yocto_qvp_rejects_empty_rse_otp(tmp_path: Path) -> None:
         tmp_path,
         machine="apollo-qvp",
         build_dir_name="build",
-        include_qbox_bundle=True,
+        include_qboxconf=True,
     )
     (deploy / "rse-otp-image.img").write_bytes(b"")
 
@@ -485,7 +886,7 @@ def test_run_qbox_yocto_qvp_tmux_preserves_machine_console_prompts(
         tmp_path,
         machine="apollo-qvp",
         build_dir_name="build",
-        include_qbox_bundle=True,
+        include_qboxconf=True,
     )
     fake_bin_dir = tmp_path / "bin"
     tmux_log = tmp_path / "tmux.log"

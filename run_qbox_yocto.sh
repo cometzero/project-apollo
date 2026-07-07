@@ -24,8 +24,9 @@ Options:
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
   --image-basename NAME       Yocto image recipe basename (default: nexios-image)
+  --qboxconf FILE             Yocto-deployed QBox JSON configuration
   --local-build-dir DIR       Local-build directory used for QBox build/debug files
-  --qbox-tool-dir DIR         Yocto-deployed QBox tool bundle
+  --qbox-tool-dir DIR         Yocto QBox provider executable directory
   --qbox-build-dir DIR        QBox platform build directory
   --conf FILE                 QBox Lua configuration
   --session NAME              tmux session name
@@ -63,8 +64,8 @@ Artifact overrides:
 
 Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
-  LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF, OUT_DIR,
-  TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT
+  QBOX_CONF_FILE, LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
+  OUT_DIR, TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT
 EOF
 }
 
@@ -142,6 +143,360 @@ resolve_file_with_glob() {
     exit 1
 }
 
+resolve_file_with_two_globs() {
+    local label="$1"
+    local fixed_primary="$2"
+    local pattern_primary="$3"
+    local fixed_fallback="$4"
+    local pattern_fallback="$5"
+
+    if [[ -n "${fixed_primary}" && -f "${fixed_primary}" ]]; then
+        printf '%s\n' "${fixed_primary}"
+        return 0
+    fi
+
+    local latest=""
+    local pattern
+    for pattern in "${pattern_primary}"; do
+        if [[ -z "${pattern}" ]]; then
+            continue
+        fi
+        latest="$(latest_glob "${pattern}" || true)"
+        if [[ -n "${latest}" ]]; then
+            printf '%s\n' "${latest}"
+            return 0
+        fi
+    done
+
+    if [[ -n "${fixed_fallback}" && -f "${fixed_fallback}" ]]; then
+        printf '%s\n' "${fixed_fallback}"
+        return 0
+    fi
+
+    for pattern in "${pattern_fallback}"; do
+        if [[ -z "${pattern}" ]]; then
+            continue
+        fi
+        latest="$(latest_glob "${pattern}" || true)"
+        if [[ -n "${latest}" ]]; then
+            printf '%s\n' "${latest}"
+            return 0
+        fi
+    done
+
+    {
+        echo "missing required ${label}"
+        [[ -n "${fixed_primary}" ]] && echo "  tried: ${fixed_primary}"
+        [[ -n "${pattern_primary}" ]] && echo "  tried glob: ${pattern_primary}"
+        [[ -n "${fixed_fallback}" ]] && echo "  tried: ${fixed_fallback}"
+        [[ -n "${pattern_fallback}" ]] && echo "  tried glob: ${pattern_fallback}"
+    } >&2
+    exit 1
+}
+
+resolve_qboxconf_default() {
+    local fixed="${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.qboxconf"
+    if [[ -f "${fixed}" ]]; then
+        printf '%s\n' "${fixed}"
+        return 0
+    fi
+
+    local latest=""
+    latest="$(latest_glob "${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.qboxconf" || true)"
+    if [[ -n "${latest}" ]]; then
+        printf '%s\n' "${latest}"
+        return 0
+    fi
+
+    local imgdeploy_pattern="${YOCTO_BUILD_DIR}/tmp_baremetal/work/${WORK_PREFIX}-poky-linux/${IMAGE_BASENAME}/*/deploy-${IMAGE_BASENAME}-image-complete"
+    latest="$(latest_glob "${imgdeploy_pattern}/${IMAGE_BASENAME}-${MACHINE}.qboxconf" || true)"
+    if [[ -n "${latest}" ]]; then
+        printf '%s\n' "${latest}"
+        return 0
+    fi
+
+    latest="$(latest_glob "${imgdeploy_pattern}/${IMAGE_BASENAME}-${MACHINE}-*.qboxconf" || true)"
+    if [[ -n "${latest}" ]]; then
+        printf '%s\n' "${latest}"
+        return 0
+    fi
+
+    {
+        echo "missing required QBox qboxconf"
+        echo "  tried: ${fixed}"
+        echo "  tried glob: ${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.qboxconf"
+        echo "  tried glob: ${imgdeploy_pattern}/${IMAGE_BASENAME}-${MACHINE}.qboxconf"
+        echo "  tried glob: ${imgdeploy_pattern}/${IMAGE_BASENAME}-${MACHINE}-*.qboxconf"
+    } >&2
+    exit 1
+}
+
+read_qboxconf_shell_assignments() {
+    local qboxconf="$1"
+    local current_ld_library_path="${LD_LIBRARY_PATH:-}"
+
+    "${PYTHON:-python3}" - "${qboxconf}" "${current_ld_library_path}" "${YOCTO_BUILD_DIR}" <<'PY'
+from __future__ import annotations
+
+import json
+from pathlib import Path, PurePosixPath
+import shlex
+import sys
+from typing import TypeAlias
+
+
+class QBoxConfError(Exception):
+    pass
+
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+JsonObject: TypeAlias = dict[str, JsonValue]
+EXPECTED_PROVIDER = "qbox-apollo-qvp-native"
+
+
+def fail(message: str) -> None:
+    print(message, file=sys.stderr)
+    raise SystemExit(1)
+
+
+def require_object(value: JsonObject, field: str) -> JsonObject:
+    item = value.get(field)
+    if not isinstance(item, dict):
+        raise QBoxConfError(f"qboxconf field {field} must be an object")
+    return item
+
+
+def require_string(value: JsonObject, field: str) -> str:
+    item = value.get(field)
+    if not isinstance(item, str) or item == "":
+        raise QBoxConfError(f"qboxconf field {field} must be a non-empty string")
+    return item
+
+
+def require_safe_relative(value: str, field: str) -> str:
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or "\x00" in value:
+        raise QBoxConfError(f"qboxconf field {field} must be a safe relative path")
+    return value
+
+
+def resolve_existing_dir(value: str, field: str) -> Path:
+    try:
+        resolved = Path(value).resolve(strict=True)
+    except OSError as error:
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} must resolve to an existing directory: {value}: {error}"
+        ) from error
+    if not resolved.is_dir():
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} must resolve to an existing directory: {value}"
+        )
+    return resolved
+
+
+def relative_to_trusted(path: Path, root: Path, field: str) -> tuple[str, ...]:
+    try:
+        return path.relative_to(root).parts
+    except ValueError as error:
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} resolves outside trusted Yocto path {root}: {path}"
+        ) from error
+
+
+def validate_provider_dir(
+    value: str,
+    field: str,
+    components_root: Path,
+    provider_usr: Path | None,
+) -> tuple[Path, Path]:
+    resolved = resolve_existing_dir(value, field)
+    relative_parts = relative_to_trusted(resolved, components_root, field)
+    if (
+        len(relative_parts) < 4
+        or relative_parts[1] != EXPECTED_PROVIDER
+        or relative_parts[2] != "usr"
+    ):
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} must be under "
+            f"{components_root}/<arch>/{EXPECTED_PROVIDER}/usr: {resolved}"
+        )
+    candidate_provider_usr = components_root.joinpath(
+        relative_parts[0],
+        EXPECTED_PROVIDER,
+        "usr",
+    )
+    if provider_usr is not None and candidate_provider_usr != provider_usr:
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} must use provider subtree {provider_usr}: {resolved}"
+        )
+    return resolved, candidate_provider_usr
+
+
+def require_exact_path(path: Path, expected: Path, field: str) -> None:
+    if path != expected:
+        raise QBoxConfError(
+            f"qboxconf trust error: {field} must resolve to {expected}: {path}"
+        )
+
+
+def require_under(path: Path, root: Path, field: str) -> None:
+    relative_to_trusted(path, root, field)
+
+
+def validate_trusted_paths(
+    provider: JsonObject,
+    sysroot: JsonObject,
+    yocto_build_dir: Path,
+) -> tuple[Path, Path, Path, Path, Path]:
+    provider_name = require_string(provider, "name")
+    if provider_name != EXPECTED_PROVIDER:
+        raise QBoxConfError(
+            f"qboxconf trust error: provider.name must be {EXPECTED_PROVIDER}: {provider_name}"
+        )
+
+    tmpdir = yocto_build_dir / "tmp_baremetal"
+    expected_components_root = (tmpdir / "sysroots-components").resolve(strict=True)
+    expected_work_root = (tmpdir / "work").resolve(strict=True)
+    configured_components_root = resolve_existing_dir(
+        require_string(sysroot, "components_dir"),
+        "sysroot.components_dir",
+    )
+    require_exact_path(
+        configured_components_root,
+        expected_components_root,
+        "sysroot.components_dir",
+    )
+
+    provider_usr: Path | None = None
+    bindir, provider_usr = validate_provider_dir(
+        require_string(provider, "bindir"),
+        "provider.bindir",
+        expected_components_root,
+        provider_usr,
+    )
+    libdir, provider_usr = validate_provider_dir(
+        require_string(provider, "libdir"),
+        "provider.libdir",
+        expected_components_root,
+        provider_usr,
+    )
+    module_dir, provider_usr = validate_provider_dir(
+        require_string(provider, "module_dir"),
+        "provider.module_dir",
+        expected_components_root,
+        provider_usr,
+    )
+    data_dir, provider_usr = validate_provider_dir(
+        require_string(provider, "data_dir"),
+        "provider.data_dir",
+        expected_components_root,
+        provider_usr,
+    )
+    require_exact_path(bindir, provider_usr / "bin", "provider.bindir")
+    require_exact_path(libdir, provider_usr / "lib", "provider.libdir")
+    require_under(module_dir, provider_usr / "lib" / "qbox", "provider.module_dir")
+    require_exact_path(data_dir, provider_usr / "share" / "qbox", "provider.data_dir")
+
+    recipe_sysroot_native = resolve_existing_dir(
+        require_string(sysroot, "recipe_sysroot_native"),
+        "sysroot.recipe_sysroot_native",
+    )
+    require_under(
+        recipe_sysroot_native,
+        expected_work_root,
+        "sysroot.recipe_sysroot_native",
+    )
+    return bindir, libdir, module_dir, data_dir, recipe_sysroot_native
+
+
+def quote_assignment(name: str, value: str) -> str:
+    return f"{name}={shlex.quote(value)}"
+
+
+def image_path(images: JsonObject, qboxconf_dir: Path, *keys: str) -> str:
+    for key in keys:
+        item = images.get(key)
+        if isinstance(item, str) and item:
+            return str(qboxconf_dir / require_safe_relative(item, f"images.{key}"))
+    return ""
+
+
+raw_qboxconf = Path(sys.argv[1])
+current_ld_library_path = sys.argv[2]
+raw_yocto_build_dir = Path(sys.argv[3])
+if not raw_qboxconf.is_file():
+    fail(f"qboxconf not found: {raw_qboxconf}")
+qboxconf = raw_qboxconf.resolve()
+try:
+    yocto_build_dir = raw_yocto_build_dir.resolve(strict=True)
+except OSError as error:
+    fail(f"Yocto build directory not found: {raw_yocto_build_dir}: {error}")
+
+try:
+    loaded = json.loads(qboxconf.read_text(encoding="utf-8"))
+except json.JSONDecodeError as error:
+    fail(f"invalid qboxconf JSON: {qboxconf}: line {error.lineno} column {error.colno}: {error.msg}")
+except OSError as error:
+    fail(f"unable to read qboxconf: {qboxconf}: {error}")
+
+if not isinstance(loaded, dict):
+    fail(f"invalid qboxconf schema: {qboxconf}: root must be an object")
+
+try:
+    provider = require_object(loaded, "provider")
+    sysroot = require_object(loaded, "sysroot")
+    bindir_path, libdir_path, module_dir_path, data_dir_path, recipe_sysroot_native_path = (
+        validate_trusted_paths(provider, sysroot, yocto_build_dir)
+    )
+    bindir = str(bindir_path)
+    libdir = str(libdir_path)
+    module_dir = str(module_dir_path)
+    data_dir = str(data_dir_path)
+    recipe_sysroot_native = str(recipe_sysroot_native_path)
+    exe = require_safe_relative(require_string(loaded, "exe"), "exe")
+    config = require_safe_relative(require_string(loaded, "config"), "config")
+except QBoxConfError as error:
+    fail(f"invalid qboxconf schema: {qboxconf}: {error}")
+
+debug_symbols_value = loaded.get("debug_symbols")
+debug_symbols = debug_symbols_value if isinstance(debug_symbols_value, str) else ""
+images_value = loaded.get("images")
+images = images_value if isinstance(images_value, dict) else {}
+qboxconf_dir = qboxconf.parent
+ld_entries = [libdir, module_dir]
+if current_ld_library_path:
+    ld_entries.append(current_ld_library_path)
+
+assignments = {
+    "QBOXCONF_PROVIDER_BINDIR": bindir,
+    "QBOXCONF_PROVIDER_LIBDIR": libdir,
+    "QBOXCONF_PROVIDER_MODULE_DIR": module_dir,
+    "QBOXCONF_PROVIDER_DATA_DIR": data_dir,
+    "QBOXCONF_RECIPE_SYSROOT_NATIVE": recipe_sysroot_native,
+    "QBOXCONF_EXE": str(Path(bindir) / exe),
+    "QBOXCONF_CONFIG": str(Path(data_dir) / config),
+    "QBOXCONF_DEBUG_SYMBOLS": debug_symbols,
+    "QBOXCONF_LD_LIBRARY_PATH": ":".join(ld_entries),
+    "QBOXCONF_IMAGE_ROOTFS_WIC": image_path(images, qboxconf_dir, "rootfs_wic", "wic"),
+    "QBOXCONF_IMAGE_EFI_CAPSULE_DISK": image_path(images, qboxconf_dir, "efi_capsule_disk"),
+    "QBOXCONF_IMAGE_RSE_ROM": image_path(images, qboxconf_dir, "rse_rom"),
+    "QBOXCONF_IMAGE_RSE_FLASH": image_path(images, qboxconf_dir, "rse_flash"),
+    "QBOXCONF_IMAGE_RSE_OTP": image_path(images, qboxconf_dir, "rse_otp"),
+    "QBOXCONF_IMAGE_AP_FLASH": image_path(images, qboxconf_dir, "ap_flash"),
+    "QBOXCONF_IMAGE_AP_BL2_ELF": image_path(images, qboxconf_dir, "ap_bl2_elf"),
+    "QBOXCONF_IMAGE_RSE_BL1_2_ELF": image_path(images, qboxconf_dir, "rse_bl1_2_elf"),
+    "QBOXCONF_IMAGE_RSE_BL2_ELF": image_path(images, qboxconf_dir, "rse_bl2_elf"),
+    "QBOXCONF_IMAGE_PROVISIONING_BUNDLE": image_path(images, qboxconf_dir, "provisioning_bundle"),
+    "QBOXCONF_IMAGE_AP_DTB": image_path(images, qboxconf_dir, "ap_dtb", "dtb"),
+    "QBOXCONF_IMAGE_SI_CL0": image_path(images, qboxconf_dir, "si_cl0_image", "si0_ramfw"),
+    "QBOXCONF_IMAGE_SI_CL1": image_path(images, qboxconf_dir, "si_cl1_image", "si_cl1"),
+    "QBOXCONF_IMAGE_SI_CL1_SYMBOLS": image_path(images, qboxconf_dir, "si_cl1_symbols"),
+}
+for name, value in assignments.items():
+    print(quote_assignment(name, value))
+PY
+}
+
 copy_sparse() {
     local src="$1"
     local dst="$2"
@@ -202,6 +557,7 @@ YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-}"
 DEPLOY_DIR="${DEPLOY_DIR:-}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-}"
 IMAGE_BASENAME="${IMAGE_BASENAME:-nexios-image}"
+QBOX_CONF_FILE="${QBOX_CONF_FILE:-}"
 
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-}"
 QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
@@ -210,6 +566,18 @@ QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-}}"
 QBOX_CONF="${QBOX_CONF:-}"
 export QBOX_CORE_DIR QBOX_PLATFORM_DIR
+
+LOCAL_BUILD_DIR_EXPLICIT=0
+QBOX_TOOL_DIR_EXPLICIT=0
+QBOX_BUILD_DIR_EXPLICIT=0
+QBOX_CONF_EXPLICIT=0
+RSE_SYMBOLS_EXPLICIT=0
+[[ -n "${LOCAL_BUILD_DIR}" ]] && LOCAL_BUILD_DIR_EXPLICIT=1
+[[ -n "${QBOX_TOOL_DIR}" ]] && QBOX_TOOL_DIR_EXPLICIT=1
+[[ -n "${QBOX_BUILD_DIR}" ]] && QBOX_BUILD_DIR_EXPLICIT=1
+[[ -n "${QBOX_CONF}" ]] && QBOX_CONF_EXPLICIT=1
+[[ -n "${RSE_SYMBOLS:-}" ]] && RSE_SYMBOLS_EXPLICIT=1
+
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-}"
 SI_MODE="${SI_MODE:-live-cl0-cl1}"
@@ -277,24 +645,33 @@ while (($#)); do
             IMAGE_BASENAME="$2"
             shift 2
             ;;
+        --qboxconf)
+            [[ $# -ge 2 ]] || die "--qboxconf requires a value"
+            QBOX_CONF_FILE="$2"
+            shift 2
+            ;;
         --local-build-dir)
             [[ $# -ge 2 ]] || die "--local-build-dir requires a value"
             LOCAL_BUILD_DIR="$2"
+            LOCAL_BUILD_DIR_EXPLICIT=1
             shift 2
             ;;
         --qbox-tool-dir)
             [[ $# -ge 2 ]] || die "--qbox-tool-dir requires a value"
             QBOX_TOOL_DIR="$2"
+            QBOX_TOOL_DIR_EXPLICIT=1
             shift 2
             ;;
         --qbox-build-dir)
             [[ $# -ge 2 ]] || die "--qbox-build-dir requires a value"
             QBOX_BUILD_DIR="$2"
+            QBOX_BUILD_DIR_EXPLICIT=1
             shift 2
             ;;
         --conf)
             [[ $# -ge 2 ]] || die "--conf requires a value"
             QBOX_CONF="$2"
+            QBOX_CONF_EXPLICIT=1
             shift 2
             ;;
         --session)
@@ -417,6 +794,7 @@ while (($#)); do
         --rse-symbols)
             [[ $# -ge 2 ]] || die "--rse-symbols requires a value"
             RSE_SYMBOLS_OVERRIDE="$2"
+            RSE_SYMBOLS_EXPLICIT=1
             shift 2
             ;;
         --si-cl0-image)
@@ -458,10 +836,26 @@ WORK_PREFIX="$(machine_to_work_prefix "${MACHINE}")"
 DEPLOY_DIR="${DEPLOY_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/images/${MACHINE}}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/work/${WORK_PREFIX}-poky-linux}"
 if [[ "${MACHINE}" == "apollo-qvp" ]]; then
-    QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-${DEPLOY_DIR}/qbox-apollo-qvp}"
-    LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${QBOX_TOOL_DIR}}"
-    QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_TOOL_DIR}}"
-    QBOX_CONF="${QBOX_CONF:-${QBOX_TOOL_DIR}/platforms/apollo/apollo-qvp.lua}"
+    QBOX_CONF_FILE="${QBOX_CONF_FILE:-$(resolve_qboxconf_default)}"
+    qboxconf_assignments="$(read_qboxconf_shell_assignments "${QBOX_CONF_FILE}")" ||
+        die "failed to read qboxconf: ${QBOX_CONF_FILE}"
+    eval "${qboxconf_assignments}"
+    if [[ "${QBOX_TOOL_DIR_EXPLICIT}" == "0" ]]; then
+        QBOX_TOOL_DIR="${QBOXCONF_PROVIDER_BINDIR}"
+    fi
+    if [[ "${LOCAL_BUILD_DIR_EXPLICIT}" == "0" ]]; then
+        LOCAL_BUILD_DIR="${QBOXCONF_RECIPE_SYSROOT_NATIVE}"
+    fi
+    if [[ "${QBOX_BUILD_DIR_EXPLICIT}" == "0" ]]; then
+        QBOX_BUILD_DIR="${QBOXCONF_PROVIDER_BINDIR}"
+    fi
+    if [[ "${QBOX_CONF_EXPLICIT}" == "0" ]]; then
+        QBOX_CONF="${QBOXCONF_CONFIG}"
+    fi
+    if [[ "${RSE_SYMBOLS_EXPLICIT}" == "0" && -n "${QBOXCONF_DEBUG_SYMBOLS}" ]]; then
+        RSE_SYMBOLS_OVERRIDE="${QBOXCONF_DEBUG_SYMBOLS}"
+    fi
+    export LD_LIBRARY_PATH="${QBOXCONF_LD_LIBRARY_PATH}"
     OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-qvp/yocto-${MACHINE}-${RUN_STAMP}}"
 else
     LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
@@ -474,12 +868,12 @@ export QBOX_TOOL_DIR
 
 [[ -d "${DEPLOY_DIR}" ]] || die "Yocto deploy directory not found: ${DEPLOY_DIR}"
 [[ -d "${YOCTO_WORK_DIR}" ]] || die "Yocto work directory not found: ${YOCTO_WORK_DIR}"
-if [[ "${MACHINE}" == "apollo-qvp" && ! -d "${QBOX_TOOL_DIR}" ]]; then
-    die "QBox Yocto bundle not found: ${QBOX_TOOL_DIR}. Build qbox-apollo-qvp-native or set --qbox-tool-dir."
-fi
 [[ -d "${LOCAL_BUILD_DIR}" ]] || die "local build directory not found: ${LOCAL_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --local-build-dir."
 [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
 [[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
+if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+    [[ -x "${QBOXCONF_EXE}" ]] || die "QBox executable not found or not executable: ${QBOXCONF_EXE}"
+fi
 
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-$(default_ap_cpu_count || true)}"
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-4}"
@@ -489,62 +883,138 @@ export QBOX_APOLLO_NUM_CPUS
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
 
-ROOTFS="$(resolve_file_with_glob \
-    "Yocto rootfs WIC image" \
-    "${ROOTFS_OVERRIDE:-${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.wic}" \
-    "${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.wic")"
+ROOTFS_DEFAULT="${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.wic"
+ROOTFS_GLOB="${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.wic"
+ROOTFS_QBOXCONF_DEFAULT=""
+ROOTFS_QBOXCONF_GLOB=""
+if [[ "${MACHINE}" == "apollo-qvp" && -n "${QBOXCONF_IMAGE_ROOTFS_WIC:-}" ]]; then
+    ROOTFS_QBOXCONF_DEFAULT="${QBOXCONF_IMAGE_ROOTFS_WIC}"
+    ROOTFS_QBOXCONF_GLOB="${QBOXCONF_IMAGE_ROOTFS_WIC%.wic}-*.wic"
+fi
+if [[ -n "${ROOTFS_OVERRIDE}" ]]; then
+    ROOTFS="$(resolve_file "Yocto rootfs WIC image" "${ROOTFS_OVERRIDE}")"
+else
+    ROOTFS="$(resolve_file_with_two_globs \
+        "Yocto rootfs WIC image" \
+        "${ROOTFS_QBOXCONF_DEFAULT}" \
+        "${ROOTFS_QBOXCONF_GLOB}" \
+        "${ROOTFS_DEFAULT}" \
+        "${ROOTFS_GLOB}")"
+fi
 if [[ "${MACHINE}" == "apollo-qvp" ]]; then
-    EFI_CAPSULE_DISK="$(resolve_file \
-        "EFI capsule update disk" \
-        "${EFI_CAPSULE_DISK_OVERRIDE:-${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img}")"
+    if [[ -n "${EFI_CAPSULE_DISK_OVERRIDE}" ]]; then
+        EFI_CAPSULE_DISK="$(resolve_file "EFI capsule update disk" "${EFI_CAPSULE_DISK_OVERRIDE}")"
+    else
+        EFI_CAPSULE_DISK="$(resolve_file \
+            "EFI capsule update disk" \
+            "${QBOXCONF_IMAGE_EFI_CAPSULE_DISK:-}" \
+            "${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img")"
+    fi
 else
     EFI_CAPSULE_DISK="$(resolve_file \
         "EFI capsule update disk" \
         "${EFI_CAPSULE_DISK_OVERRIDE:-${DEPLOY_DIR}/efi-capsule-update-disk-image-${MACHINE}.img}" \
         "${DEPLOY_DIR}/efi-capsule-update-disk-image-fvp-rd-aspen.img")"
 fi
-RSE_ROM="$(resolve_file \
-    "RSE ROM image" \
-    "${RSE_ROM_OVERRIDE:-${DEPLOY_DIR}/rse-rom-image.img}")"
-RSE_FLASH="$(resolve_file \
-    "RSE flash image" \
-    "${RSE_FLASH_OVERRIDE:-${DEPLOY_DIR}/rse-flash-image.img}")"
-RSE_OTP="$(resolve_file \
-    "RSE OTP image" \
-    "${RSE_OTP_OVERRIDE:-${DEPLOY_DIR}/rse-otp-image.img}")"
-AP_FLASH="$(resolve_file \
-    "AP flash image" \
-    "${AP_FLASH_OVERRIDE:-${DEPLOY_DIR}/ap-flash-image.img}")"
-AP_BL2_ELF="$(resolve_file_with_glob \
-    "AP TF-A BL2 ELF" \
-    "${AP_BL2_ELF_OVERRIDE:-${DEPLOY_DIR}/bl2.elf}" \
-    "${YOCTO_WORK_DIR}/trusted-firmware-a/*/build/${WORK_PREFIX}/debug/bl2/bl2.elf")"
-RSE_BL1_2_ELF="$(resolve_file_with_glob \
-    "RSE TF-M BL1_2 ELF" \
-    "${RSE_BL1_2_ELF_OVERRIDE}" \
-    "${YOCTO_WORK_DIR}/trusted-firmware-m/*/build/bin/bl1_2.elf")"
-RSE_BL2_ELF="$(resolve_file_with_glob \
-    "RSE TF-M BL2 ELF" \
-    "${RSE_BL2_ELF_OVERRIDE}" \
-    "${YOCTO_WORK_DIR}/trusted-firmware-m/*/build/bin/bl2.elf")"
-PROVISIONING_BUNDLE="$(resolve_file \
-    "combined provisioning bundle" \
-    "${PROVISIONING_BUNDLE_OVERRIDE:-${DEPLOY_DIR}/combined_provisioning_message.bin}")"
-AP_DTB="$(resolve_file \
-    "AP device tree" \
-    "${AP_DTB_OVERRIDE:-${DEPLOY_DIR}/${MACHINE}.dtb}")"
-RSE_SYMBOLS="$(resolve_file \
-    "QBox RSE debug symbol manifest" \
-    "${RSE_SYMBOLS_OVERRIDE:-${LOCAL_BUILD_DIR}/debug/symbols.json}")"
-SI_CL0_IMAGE="$(resolve_file \
-    "Safety Island CL0 SCP image" \
-    "${SI_CL0_IMAGE_OVERRIDE:-${DEPLOY_DIR}/si0_ramfw.bin}")"
-SI_CL1_IMAGE="$(resolve_file \
-    "Safety Island CL1 Zephyr image" \
-    "${SI_CL1_IMAGE_OVERRIDE:-${DEPLOY_DIR}/zephyr-demos-cl1.bin}")"
-SI_CL1_SYMBOLS="$(resolve_file \
-    "Safety Island CL1 Zephyr symbols" \
-    "${SI_CL1_SYMBOLS_OVERRIDE:-${DEPLOY_DIR}/zephyr-demos-cl1.elf}")"
+if [[ -n "${RSE_ROM_OVERRIDE}" ]]; then
+    RSE_ROM="$(resolve_file "RSE ROM image" "${RSE_ROM_OVERRIDE}")"
+else
+    RSE_ROM="$(resolve_file "RSE ROM image" "${QBOXCONF_IMAGE_RSE_ROM:-}" "${DEPLOY_DIR}/rse-rom-image.img")"
+fi
+if [[ -n "${RSE_FLASH_OVERRIDE}" ]]; then
+    RSE_FLASH="$(resolve_file "RSE flash image" "${RSE_FLASH_OVERRIDE}")"
+else
+    RSE_FLASH="$(resolve_file "RSE flash image" "${QBOXCONF_IMAGE_RSE_FLASH:-}" "${DEPLOY_DIR}/rse-flash-image.img")"
+fi
+if [[ -n "${RSE_OTP_OVERRIDE}" ]]; then
+    RSE_OTP="$(resolve_file "RSE OTP image" "${RSE_OTP_OVERRIDE}")"
+else
+    RSE_OTP="$(resolve_file "RSE OTP image" "${QBOXCONF_IMAGE_RSE_OTP:-}" "${DEPLOY_DIR}/rse-otp-image.img")"
+fi
+if [[ -n "${AP_FLASH_OVERRIDE}" ]]; then
+    AP_FLASH="$(resolve_file "AP flash image" "${AP_FLASH_OVERRIDE}")"
+else
+    AP_FLASH="$(resolve_file "AP flash image" "${QBOXCONF_IMAGE_AP_FLASH:-}" "${DEPLOY_DIR}/ap-flash-image.img")"
+fi
+AP_BL2_DEFAULT="${DEPLOY_DIR}/bl2.elf"
+AP_BL2_GLOB="${YOCTO_WORK_DIR}/trusted-firmware-a/*/build/${WORK_PREFIX}/debug/bl2/bl2.elf"
+if [[ "${MACHINE}" == "apollo-qvp" && -n "${QBOXCONF_IMAGE_AP_BL2_ELF:-}" ]]; then
+    AP_BL2_DEFAULT="${QBOXCONF_IMAGE_AP_BL2_ELF}"
+    AP_BL2_GLOB=""
+fi
+if [[ -n "${AP_BL2_ELF_OVERRIDE}" ]]; then
+    AP_BL2_ELF="$(resolve_file "AP TF-A BL2 ELF" "${AP_BL2_ELF_OVERRIDE}")"
+else
+    AP_BL2_ELF="$(resolve_file_with_glob \
+        "AP TF-A BL2 ELF" \
+        "${AP_BL2_DEFAULT}" \
+        "${AP_BL2_GLOB}")"
+fi
+RSE_BL1_2_DEFAULT="${RSE_BL1_2_ELF_OVERRIDE}"
+RSE_BL1_2_GLOB="${YOCTO_WORK_DIR}/trusted-firmware-m/*/build/bin/bl1_2.elf"
+if [[ "${MACHINE}" == "apollo-qvp" && -n "${QBOXCONF_IMAGE_RSE_BL1_2_ELF:-}" ]]; then
+    RSE_BL1_2_DEFAULT="${QBOXCONF_IMAGE_RSE_BL1_2_ELF}"
+    RSE_BL1_2_GLOB=""
+fi
+if [[ -n "${RSE_BL1_2_ELF_OVERRIDE}" ]]; then
+    RSE_BL1_2_ELF="$(resolve_file "RSE TF-M BL1_2 ELF" "${RSE_BL1_2_ELF_OVERRIDE}")"
+else
+    RSE_BL1_2_ELF="$(resolve_file_with_glob \
+        "RSE TF-M BL1_2 ELF" \
+        "${RSE_BL1_2_DEFAULT}" \
+        "${RSE_BL1_2_GLOB}")"
+fi
+RSE_BL2_DEFAULT="${RSE_BL2_ELF_OVERRIDE}"
+RSE_BL2_GLOB="${YOCTO_WORK_DIR}/trusted-firmware-m/*/build/bin/bl2.elf"
+if [[ "${MACHINE}" == "apollo-qvp" && -n "${QBOXCONF_IMAGE_RSE_BL2_ELF:-}" ]]; then
+    RSE_BL2_DEFAULT="${QBOXCONF_IMAGE_RSE_BL2_ELF}"
+    RSE_BL2_GLOB=""
+fi
+if [[ -n "${RSE_BL2_ELF_OVERRIDE}" ]]; then
+    RSE_BL2_ELF="$(resolve_file "RSE TF-M BL2 ELF" "${RSE_BL2_ELF_OVERRIDE}")"
+else
+    RSE_BL2_ELF="$(resolve_file_with_glob \
+        "RSE TF-M BL2 ELF" \
+        "${RSE_BL2_DEFAULT}" \
+        "${RSE_BL2_GLOB}")"
+fi
+if [[ -n "${PROVISIONING_BUNDLE_OVERRIDE}" ]]; then
+    PROVISIONING_BUNDLE="$(resolve_file "combined provisioning bundle" "${PROVISIONING_BUNDLE_OVERRIDE}")"
+else
+    PROVISIONING_BUNDLE="$(resolve_file "combined provisioning bundle" "${QBOXCONF_IMAGE_PROVISIONING_BUNDLE:-}" "${DEPLOY_DIR}/combined_provisioning_message.bin")"
+fi
+if [[ -n "${AP_DTB_OVERRIDE}" ]]; then
+    AP_DTB="$(resolve_file "AP device tree" "${AP_DTB_OVERRIDE}")"
+else
+    AP_DTB="$(resolve_file "AP device tree" "${QBOXCONF_IMAGE_AP_DTB:-}" "${DEPLOY_DIR}/${MACHINE}.dtb")"
+fi
+RSE_SYMBOLS=""
+if [[ -n "${RSE_SYMBOLS_OVERRIDE:-}" ]]; then
+    RSE_SYMBOLS="$(resolve_file \
+        "QBox RSE debug symbol manifest" \
+        "${RSE_SYMBOLS_OVERRIDE}")"
+elif [[ "${MACHINE}" != "apollo-qvp" ]]; then
+    RSE_SYMBOLS="$(resolve_file \
+        "QBox RSE debug symbol manifest" \
+        "${LOCAL_BUILD_DIR}/debug/symbols.json")"
+elif [[ -f "${LOCAL_BUILD_DIR}/debug/symbols.json" ]]; then
+    RSE_SYMBOLS="${LOCAL_BUILD_DIR}/debug/symbols.json"
+fi
+if [[ -n "${SI_CL0_IMAGE_OVERRIDE}" ]]; then
+    SI_CL0_IMAGE="$(resolve_file "Safety Island CL0 SCP image" "${SI_CL0_IMAGE_OVERRIDE}")"
+else
+    SI_CL0_IMAGE="$(resolve_file "Safety Island CL0 SCP image" "${QBOXCONF_IMAGE_SI_CL0:-}" "${DEPLOY_DIR}/si0_ramfw.bin")"
+fi
+if [[ -n "${SI_CL1_IMAGE_OVERRIDE}" ]]; then
+    SI_CL1_IMAGE="$(resolve_file "Safety Island CL1 Zephyr image" "${SI_CL1_IMAGE_OVERRIDE}")"
+else
+    SI_CL1_IMAGE="$(resolve_file "Safety Island CL1 Zephyr image" "${QBOXCONF_IMAGE_SI_CL1:-}" "${DEPLOY_DIR}/zephyr-demos-cl1.bin")"
+fi
+if [[ -n "${SI_CL1_SYMBOLS_OVERRIDE}" ]]; then
+    SI_CL1_SYMBOLS="$(resolve_file "Safety Island CL1 Zephyr symbols" "${SI_CL1_SYMBOLS_OVERRIDE}")"
+else
+    SI_CL1_SYMBOLS="$(resolve_file "Safety Island CL1 Zephyr symbols" "${QBOXCONF_IMAGE_SI_CL1_SYMBOLS:-}" "${DEPLOY_DIR}/zephyr-demos-cl1.elf")"
+fi
 
 RUN_ROOTFS="${ROOTFS}"
 RUN_EFI_CAPSULE_DISK="${EFI_CAPSULE_DISK}"
@@ -662,11 +1132,13 @@ RUNNER_CMD+=(
     --efi-capsule-disk "${RUN_EFI_CAPSULE_DISK}"
     --provisioning-bundle "${PROVISIONING_BUNDLE}"
     --ap-dtb "${AP_DTB}"
-    --rse-symbols "${RSE_SYMBOLS}"
     --si-cl0-image "${SI_CL0_IMAGE}"
     --si-cl1-image "${SI_CL1_IMAGE}"
     --si-cl1-symbols "${SI_CL1_SYMBOLS}"
 )
+if [[ -n "${RSE_SYMBOLS}" ]]; then
+    RUNNER_CMD+=(--rse-symbols "${RSE_SYMBOLS}")
+fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
 
@@ -678,6 +1150,7 @@ Apollo QBox Yocto launch
   output dir:    ${OUT_DIR}
   session:       ${TMUX_SESSION}
   headless:      ${HEADLESS}
+  qboxconf:      ${QBOX_CONF_FILE:-}
   qbox tools:    ${QBOX_TOOL_DIR}
   qbox conf:     ${QBOX_CONF}
   ap cpus:       ${QBOX_APOLLO_NUM_CPUS}

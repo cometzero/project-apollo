@@ -92,18 +92,24 @@ QVP deploy-visible names use `apollo-qvp`, including
 `firmware-apollo-qvp`, `uefi-capsule-apollo-qvp`, and
 `efi-capsule-update-disk-image-apollo-qvp.img`.
 
-For the Yocto-built QBox host bundle, build the native recipes from an
-initialized `build/` shell:
+For Yocto-built QBox host artifacts, build the native provider and generate
+the image `.qboxconf` from an initialized `build/` shell:
 
 ```bash
-MACHINE=apollo-qvp bitbake qbox-libqemu-native -c deploy
-MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c deploy
+MACHINE=apollo-qvp bitbake qbox-libqemu-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake qbox-apollo-qvp-native -c populate_sysroot
+MACHINE=apollo-qvp bitbake nexios-image -c do_write_qboxboot_conf
 ```
 
-Those recipes deploy the QBox runtime under:
+The deploy contract is the generated `.qboxconf` plus the native sysroot
+provider, not a copied runtime directory. The provider installs
+`platforms-vp`, `libqbox.so`, Apollo QBox modules, libqemu, and Lua platform
+data into native sysroot components; `qboxboot` writes the executable, config,
+provider paths, sysroot paths, environment passthrough, and image artifact
+names into:
 
 ```text
-build/tmp_baremetal/deploy/images/apollo-qvp/qbox-apollo-qvp/
+build/tmp_baremetal/deploy/images/apollo-qvp/nexios-image-apollo-qvp.qboxconf
 ```
 
 See [doc/apollo-qvp-yocto-qbox-runbook.md](doc/apollo-qvp-yocto-qbox-runbook.md)
@@ -135,7 +141,8 @@ The wrapper uses
 by default, starts an interactive tmux session, and mirrors subsystem UARTs to
 `build/fvp-tmux/apollo-fvp-<timestamp>/`.
 
-To run the default Apollo QVP Yocto deploy image and Yocto-built QBox bundle:
+To run the default Apollo QVP Yocto deploy image with its generated
+`.qboxconf` and native sysroot provider:
 
 ```bash
 ./run_qbox_yocto.sh
@@ -150,12 +157,11 @@ For Apollo FVP images and a local QBox build, use:
 The wrapper resolves the Apollo Yocto WIC image, RSE/AP firmware images,
 TF-A/TF-M ELFs, DTB, and Safety Island images from
 `build/tmp_baremetal/deploy/images/apollo-qvp/` plus the matching Yocto
-workdir, then launches the Apollo full-system QBox runner with the deployed
-`qbox-apollo-qvp/` bundle. Treat QVP runtime as blocked until the image
-artifacts, `qbox-apollo-qvp/qbox-apollo-qvp-env.sh`,
-`qbox-apollo-qvp/qbox-apollo-qvp-manifest.json`, and file-backed QBox logs are
-present. In FVP mode, QBox itself must already be built, for example with
-`./local_build.sh qbox`.
+workdir, then launches the Apollo full-system QBox runner using the generated
+`.qboxconf` and native sysroot provider paths. Treat QVP runtime as blocked
+until the image artifacts, `.qboxconf`, native sysroot provider artifacts, and
+file-backed QBox logs are present. In FVP mode, QBox itself must already be
+built, for example with `./local_build.sh qbox`.
 
 `yocto_build.sh` writes `build/conf/apollo-bitbake-resources.conf` by default and
 caps `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. This keeps clean
@@ -324,9 +330,9 @@ Runtime evidence is written under `build/qbox-apollo-fvp/`. Inspect
 Island CL0/CL1, TF-A/U-Boot/Linux, and the QBox platform.
 
 Apollo QVP runtime evidence should be written under `build/qbox-apollo-qvp/`
-after the QVP deploy image and `qbox-apollo-qvp/` bundle exist. Do not treat a
-QVP build or dry-run as runtime success without `result.json`, `summary.txt`,
-and per-UART logs from that output root.
+after the QVP deploy image, generated `.qboxconf`, and native sysroot provider
+exist. Do not treat a QVP build or dry-run as runtime success without
+`result.json`, `summary.txt`, and per-UART logs from that output root.
 
 If `build/local-apollo-fvp/work/qbox-platform/` has not been configured yet,
 the runner configures `hsoc-stack/tools/qbox-platform` with checkout-local
