@@ -72,12 +72,15 @@ build_linux()
                 --enable GDB_SCRIPTS \
                 --enable KALLSYMS_ALL
         fi
-        LOCAL_LINUX_DM_VERITY=y
-        "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
-            --enable BLK_DEV_DM \
-            --enable DM_BUFIO \
-            --enable DM_VERITY \
-            --enable CRYPTO_SHA256
+        if [[ "${LOCAL_LINUX_DM_VERITY:-0}" == "1" ]]; then
+            "${LINUX_SRC}/scripts/config" --file "${LINUX_BUILD_DIR}/.config" \
+                --enable BLK_DEV_DM \
+                --enable DM_BUFIO \
+                --enable DM_VERITY \
+                --enable CRYPTO_SHA256
+        elif [[ "${LOCAL_LINUX_DM_VERITY:-0}" != "0" ]]; then
+            die "LOCAL_LINUX_DM_VERITY must be 0 or 1: ${LOCAL_LINUX_DM_VERITY}"
+        fi
         make -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" ARCH=arm64 \
             CROSS_COMPILE="${AARCH64_PREFIX}" "${kbuild_ccache_args[@]}" \
             LOCALVERSION= olddefconfig

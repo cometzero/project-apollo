@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}"
+source "${ROOT_DIR}/scripts/run/qbox_qboxconf_common.sh"
 
 die() {
     echo "run_qbox_yocto.sh: error: $*" >&2
@@ -156,33 +157,26 @@ resolve_file_with_two_globs() {
     fi
 
     local latest=""
-    local pattern
-    for pattern in "${pattern_primary}"; do
-        if [[ -z "${pattern}" ]]; then
-            continue
-        fi
-        latest="$(latest_glob "${pattern}" || true)"
+    if [[ -n "${pattern_primary}" ]]; then
+        latest="$(latest_glob "${pattern_primary}" || true)"
         if [[ -n "${latest}" ]]; then
             printf '%s\n' "${latest}"
             return 0
         fi
-    done
+    fi
 
     if [[ -n "${fixed_fallback}" && -f "${fixed_fallback}" ]]; then
         printf '%s\n' "${fixed_fallback}"
         return 0
     fi
 
-    for pattern in "${pattern_fallback}"; do
-        if [[ -z "${pattern}" ]]; then
-            continue
-        fi
-        latest="$(latest_glob "${pattern}" || true)"
+    if [[ -n "${pattern_fallback}" ]]; then
+        latest="$(latest_glob "${pattern_fallback}" || true)"
         if [[ -n "${latest}" ]]; then
             printf '%s\n' "${latest}"
             return 0
         fi
-    done
+    fi
 
     {
         echo "missing required ${label}"
@@ -831,6 +825,8 @@ while (($#)); do
 done
 
 reject_removed_env
+
+source "${ROOT_DIR}/scripts/run/qbox_qboxconf_common.sh"
 
 if [[ -z "${YOCTO_BUILD_DIR}" ]]; then
     YOCTO_BUILD_DIR="${ROOT_DIR}/build"

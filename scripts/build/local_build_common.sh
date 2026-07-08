@@ -8,7 +8,31 @@ LOCAL_BUILD_SCRIPT_DIR="${LOCAL_BUILD_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE
 LOCAL_BUILD_MODULE_DIR="${LOCAL_BUILD_MODULE_DIR:-${LOCAL_BUILD_SCRIPT_DIR}/modules}"
 ROOT_DIR="${ROOT_DIR:-$(cd "${LOCAL_BUILD_SCRIPT_DIR}/../.." && pwd)}"
 APOLLO_LOCAL_BUILD_USE_YOCTO_VARS="${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}"
-APOLLO_LOCAL_BUILD_YOCTO_VARS="${APOLLO_LOCAL_BUILD_YOCTO_VARS:-${ROOT_DIR}/build/local-apollo-fvp/yocto-local-build-vars.json}"
+YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
+
+apollo_local_build_active_machine()
+{
+    if [[ -n "${MACHINE:-}" ]]; then
+        printf '%s\n' "${MACHINE}"
+        return 0
+    fi
+    local local_conf="${YOCTO_BUILD_DIR}/conf/local.conf"
+    local machine
+    if [[ -f "${local_conf}" ]]; then
+        machine="$(
+            sed -nE 's/^[[:space:]]*MACHINE[[:space:]]*(\?\?=|\?=|:=|\+=|=)[[:space:]]*"([^"]+)".*/\2/p' \
+                "${local_conf}" | tail -n 1
+        )"
+        if [[ -n "${machine}" ]]; then
+            printf '%s\n' "${machine}"
+            return 0
+        fi
+    fi
+    printf 'apollo-fvp\n'
+}
+
+APOLLO_LOCAL_BUILD_DEFAULT_MACHINE="$(apollo_local_build_active_machine)"
+APOLLO_LOCAL_BUILD_YOCTO_VARS="${APOLLO_LOCAL_BUILD_YOCTO_VARS:-${YOCTO_BUILD_DIR}/local-${APOLLO_LOCAL_BUILD_DEFAULT_MACHINE}/yocto-local-build-vars.json}"
 if [[ "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" != /* ]]; then
     APOLLO_LOCAL_BUILD_YOCTO_VARS="${ROOT_DIR}/${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
 fi
@@ -39,7 +63,7 @@ apollo_local_build_apply_default()
     local value="$2"
 
     case "${name}" in
-        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM) ;;
+        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM|QBOX_APOLLO_BUILD_TARGET|QBOX_CORE_DIR|QBOX_PLATFORM_DIR|QBOX_QEMU_DIR) ;;
         *) return 0 ;;
     esac
     if [[ -z "${!name+x}" ]]; then
@@ -77,6 +101,10 @@ MAPPINGS: Final = (
     ("LINUX_DEFCONFIG", "linux-yocto-rt", "KBUILD_DEFCONFIG"),
     ("BOOTLOADER_LINUX_APPEND", "nexios-image", "BOOTLOADER_LINUX_APPEND"),
     ("OPTEE_PLATFORM", "optee-os", "PLATFORM"),
+    ("QBOX_APOLLO_BUILD_TARGET", "qbox-apollo-qvp-native", "QBOX_APOLLO_BUILD_TARGET"),
+    ("QBOX_CORE_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_SRC"),
+    ("QBOX_PLATFORM_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_PLATFORM_SRC"),
+    ("QBOX_QEMU_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QEMU_SRC"),
 )
 
 
@@ -137,7 +165,6 @@ VARIANT="${VARIANT:-${RD_ASPEN_VARIANT}}"
 JOBS="${JOBS:-}"
 HOST_PATH="${HOST_PATH:-${PATH}}"
 
-YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
 YOCTO_TMP="${YOCTO_TMP:-${YOCTO_BUILD_DIR}/tmp_baremetal}"
 YOCTO_DEPLOY_DIR="${YOCTO_DEPLOY_DIR:-${YOCTO_TMP}/deploy/images/${MACHINE}}"
 

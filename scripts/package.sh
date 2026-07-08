@@ -9,8 +9,11 @@ source "${ROOT_DIR}/scripts/build/local_build_common.sh"
 
 PACKAGE_DIR="${PACKAGE_DIR:-${LOCAL_BUILD_DIR}/package/qbox}"
 PACKAGE_LOCAL_BUILD_DIR="${PACKAGE_LOCAL_BUILD_DIR:-${PACKAGE_DIR}/local-build}"
+IMAGE_BASENAME="${IMAGE_BASENAME:-nexios-image}"
 QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
+QBOX_CONF_FILE="${QBOX_CONF_FILE:-${YOCTO_DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.qboxconf}"
 PACKAGE_RECORDS=()
+PACKAGE_RUN_COMMAND=()
 
 usage()
 {
@@ -23,7 +26,7 @@ Default output:
   ${PACKAGE_LOCAL_BUILD_DIR}
 
 Run packaged images:
-  ./run_qbox_local.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
+  $(package_run_command_text)
 
 Useful overrides:
   PACKAGE_DIR=/path/to/package ./local_build.sh --package
@@ -56,13 +59,13 @@ write_package_readme()
     write_file_if_changed "${PACKAGE_DIR}/README.md" <<EOF
 # Apollo FVP QBox Image Package
 
-This package mirrors the subset of \`build/local-apollo-fvp\` that the Apollo
+This package mirrors the subset of \`${LOCAL_BUILD_DIR}\` that the Apollo
 QBox full-system runner consumes.
 
 Run it from the workspace top directory:
 
 \`\`\`bash
-./run_qbox_local.sh --local-build-dir ${PACKAGE_LOCAL_BUILD_DIR} --qbox-build-dir ${QBOX_PLATFORM_BUILD_DIR}
+$(package_run_command_text)
 \`\`\`
 
 The artifact manifest is \`manifest.json\`.
@@ -80,6 +83,8 @@ write_package_manifest()
         "${QBOX_QEMU_DIR}" \
         "${QBOX_PLATFORM_BUILD_DIR}" \
         "${QBOX_CONF}" \
+        "${MACHINE}" \
+        "${QBOX_CONF_FILE}" \
         "${PACKAGE_RECORDS[@]}" <<'PY'
 import hashlib
 import json
@@ -95,6 +100,8 @@ qbox_platform_dir = pathlib.Path(sys.argv[5]).resolve()
 qbox_qemu_dir = pathlib.Path(sys.argv[6]).resolve()
 qbox_platform_build_dir = pathlib.Path(sys.argv[7]).resolve()
 qbox_conf = pathlib.Path(sys.argv[8]).resolve()
+machine = sys.argv[9]
+qbox_conf_file = pathlib.Path(sys.argv[10]).resolve()
 
 
 def file_record(path: pathlib.Path) -> dict[str, object]:
@@ -135,8 +142,22 @@ def git_record(path: pathlib.Path) -> dict[str, object]:
         record["status"] = status.stdout.splitlines()
     return record
 
+run_command = [
+    "./run_qbox_local.sh",
+    "--machine",
+    machine,
+    "--local-build-dir",
+    str(package_local_build_dir),
+    "--qbox-build-dir",
+    str(qbox_platform_build_dir),
+    "--conf",
+    str(qbox_conf),
+]
+if qbox_conf_file.is_file():
+    run_command.extend(["--qboxconf", str(qbox_conf_file)])
+
 artifacts = {}
-for record in sys.argv[9:]:
+for record in sys.argv[11:]:
     name, rel, requirement = record.split("|", 2)
     path = package_local_build_dir / rel
     artifact = file_record(path)
@@ -156,13 +177,7 @@ manifest = {
     "package_dir": str(package_dir),
     "local_build_dir": str(package_local_build_dir),
     "source_local_build_dir": str(source_local_build_dir),
-    "run_command": [
-        "./run_qbox_local.sh",
-        "--local-build-dir",
-        str(package_local_build_dir),
-        "--qbox-build-dir",
-        str(qbox_platform_build_dir),
-    ],
+    "run_command": run_command,
     "artifacts": artifacts,
     "qbox": {
         "core": git_record(qbox_core_dir),
@@ -179,6 +194,28 @@ manifest = {
     encoding="utf-8",
 )
 PY
+}
+
+package_run_command_array()
+{
+    PACKAGE_RUN_COMMAND=(
+        ./run_qbox_local.sh
+        --machine "${MACHINE}"
+        --local-build-dir "${PACKAGE_LOCAL_BUILD_DIR}"
+        --qbox-build-dir "${QBOX_PLATFORM_BUILD_DIR}"
+        --conf "${QBOX_CONF}"
+    )
+    if [[ -f "${QBOX_CONF_FILE}" ]]; then
+        PACKAGE_RUN_COMMAND+=(--qboxconf "${QBOX_CONF_FILE}")
+    fi
+}
+
+package_run_command_text()
+{
+    package_run_command_array
+    local command_text
+    command_text="$(printf '%q ' "${PACKAGE_RUN_COMMAND[@]}")"
+    printf '%s\n' "${command_text% }"
 }
 
 package_qbox_images()

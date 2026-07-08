@@ -28,8 +28,8 @@ DEFAULT_RECIPES: Final = (
     "trusted-firmware-a",
     "optee-os",
     "zephyr-demos-cl1",
+    "qbox-apollo-qvp-native",
 )
-DEFAULT_OUTPUT: Final = Path("build/local-apollo-fvp/yocto-local-build-vars.json")
 ALLOWLISTED_VARIABLES: Final = frozenset(
     {
         "MACHINE",
@@ -66,6 +66,12 @@ ALLOWLISTED_VARIABLES: Final = frozenset(
         "UEFI_SECURE_BOOT",
         "UKI_SB_KEY",
         "UKI_SB_CERT",
+        "QBOX_APOLLO_BUILD_TARGET",
+        "HSOC_APOLLO_QBOX_SRC",
+        "HSOC_APOLLO_QBOX_PLATFORM_SRC",
+        "HSOC_APOLLO_QEMU_SRC",
+        "EXTERNALSRC",
+        "EXTERNALSRC_BUILD",
     }
 )
 BITBAKE_VARIABLE_ALIASES: Final = {
@@ -84,6 +90,9 @@ RECIPE_REQUIRED_VARIABLES: Final = {
 CONFIG_FILES: Final = ("local.conf", "bblayers.conf", "templateconf.cfg")
 ASSIGNMENT_RE: Final = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$")
 RECIPE_RE: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+_.:-]*$")
+MACHINE_RE: Final = re.compile(
+    r'^\s*MACHINE\s*(?:\?\?=|\?=|:=|\+=|=)\s*"([^"]+)"'
+)
 
 
 class CollectVarsError(RuntimeError):
@@ -273,6 +282,29 @@ def build_dir_path(root: Path, build_dir_arg: Path) -> Path:
     return root / build_dir_arg
 
 
+def machine_from_build_dir(build_dir: Path) -> str:
+    local_conf = build_dir / "conf" / "local.conf"
+    try:
+        lines = local_conf.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return "apollo-fvp"
+    machine = ""
+    for line in lines:
+        match = MACHINE_RE.match(line)
+        if match:
+            machine = match.group(1).strip()
+    return machine or "apollo-fvp"
+
+
+def default_output_path(build_dir_arg: Path) -> Path:
+    root = workspace_root()
+    build_dir = build_dir_path(root, build_dir_arg)
+    machine = machine_from_build_dir(build_dir)
+    if build_dir_arg.is_absolute():
+        return build_dir_arg / f"local-{machine}/yocto-local-build-vars.json"
+    return build_dir_arg / f"local-{machine}/yocto-local-build-vars.json"
+
+
 def write_collection(args: argparse.Namespace) -> Path:
     root = workspace_root()
     recipes = parse_recipe_list(args.recipes)
@@ -297,10 +329,13 @@ def write_collection(args: argparse.Namespace) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--recipes", default=",".join(DEFAULT_RECIPES))
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--build-dir", type=Path, default=Path("build"))
     parser.add_argument("--timeout", type=int, default=600)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.output is None:
+        args.output = default_output_path(args.build_dir)
+    return args
 
 
 def main() -> int:

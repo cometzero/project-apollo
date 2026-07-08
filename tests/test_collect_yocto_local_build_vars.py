@@ -23,6 +23,14 @@ REQUIRED_UKI_VARIABLES = {
     "UKI_SB_KEY",
     "UKI_SB_CERT",
 }
+REQUIRED_QBOX_VARIABLES = {
+    "QBOX_APOLLO_BUILD_TARGET",
+    "HSOC_APOLLO_QBOX_SRC",
+    "HSOC_APOLLO_QBOX_PLATFORM_SRC",
+    "HSOC_APOLLO_QEMU_SRC",
+    "EXTERNALSRC",
+    "EXTERNALSRC_BUILD",
+}
 
 
 def load_module() -> ModuleType:
@@ -107,6 +115,32 @@ def test_parse_bitbake_env_keeps_auto_ad_nexios_uki_package_values() -> None:
     }
 
 
+def test_parse_bitbake_env_keeps_qbox_provider_values() -> None:
+    module = load_module()
+    raw = (
+        'MACHINE="apollo-qvp"\n'
+        'QBOX_APOLLO_BUILD_TARGET="apollo_fvp_full_system"\n'
+        'HSOC_APOLLO_QBOX_SRC="/repo/hsoc-stack/tools/qbox"\n'
+        'HSOC_APOLLO_QBOX_PLATFORM_SRC="/repo/hsoc-stack/tools/qbox-platform"\n'
+        'HSOC_APOLLO_QEMU_SRC="/repo/hsoc-stack/tools/qemu"\n'
+        'EXTERNALSRC="/repo/hsoc-stack/tools/qbox-platform"\n'
+        'EXTERNALSRC_BUILD="/work/qbox-apollo-qvp-native/build"\n'
+        'SECRET_TOKEN="do-not-capture"\n'
+    )
+
+    variables = module.parse_bitbake_env(raw)
+
+    assert variables == {
+        "EXTERNALSRC": "/repo/hsoc-stack/tools/qbox-platform",
+        "EXTERNALSRC_BUILD": "/work/qbox-apollo-qvp-native/build",
+        "HSOC_APOLLO_QBOX_PLATFORM_SRC": "/repo/hsoc-stack/tools/qbox-platform",
+        "HSOC_APOLLO_QBOX_SRC": "/repo/hsoc-stack/tools/qbox",
+        "HSOC_APOLLO_QEMU_SRC": "/repo/hsoc-stack/tools/qemu",
+        "MACHINE": "apollo-qvp",
+        "QBOX_APOLLO_BUILD_TARGET": "apollo_fvp_full_system",
+    }
+
+
 def test_parse_bitbake_env_rejects_unterminated_assignment() -> None:
     module = load_module()
 
@@ -142,9 +176,25 @@ def test_parse_args_uses_default_output_when_omitted(monkeypatch: pytest.MonkeyP
 
     args = module.parse_args()
 
-    assert args.output == Path("build/local-apollo-fvp/yocto-local-build-vars.json")
+    assert args.output == Path("build/local-apollo-qvp/yocto-local-build-vars.json")
     assert args.build_dir == Path("build")
     assert args.timeout == 600
+
+
+def test_parse_args_derives_default_output_from_explicit_build_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_module()
+    build_dir = tmp_path / "custom-build"
+    conf_dir = build_dir / "conf"
+    conf_dir.mkdir(parents=True)
+    (conf_dir / "local.conf").write_text('MACHINE ??= "apollo-qvp"\n', encoding="utf-8")
+    monkeypatch.setattr("sys.argv", [str(SCRIPT), "--build-dir", str(build_dir)])
+
+    args = module.parse_args()
+
+    assert args.output == build_dir / "local-apollo-qvp/yocto-local-build-vars.json"
 
 
 def test_default_recipes_match_apollo_parity_scope() -> None:
@@ -160,6 +210,7 @@ def test_default_recipes_match_apollo_parity_scope() -> None:
         "trusted-firmware-a",
         "optee-os",
         "zephyr-demos-cl1",
+        "qbox-apollo-qvp-native",
     )
 
 
@@ -191,6 +242,7 @@ def test_allowlisted_variables_match_contract() -> None:
         "ZEPHYR_BOARD",
         "ZEPHYR_APPLICATION",
         *REQUIRED_UKI_VARIABLES,
+        *REQUIRED_QBOX_VARIABLES,
     }
 
 
@@ -201,6 +253,12 @@ def test_allowlist_includes_only_explicit_auto_ad_nexios_uki_variables() -> None
     assert "SECRET_TOKEN" not in module.ALLOWLISTED_VARIABLES
     assert "AUTH_HEADER" not in module.ALLOWLISTED_VARIABLES
     assert "COOKIE" not in module.ALLOWLISTED_VARIABLES
+
+
+def test_allowlist_includes_qbox_provider_variables() -> None:
+    module = load_module()
+
+    assert REQUIRED_QBOX_VARIABLES <= module.ALLOWLISTED_VARIABLES
 
 
 def test_parse_recipe_list_rejects_malformed_recipe_name() -> None:

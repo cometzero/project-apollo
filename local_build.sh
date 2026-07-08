@@ -2,8 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
-QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_qbox.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
@@ -14,10 +12,14 @@ source "${ROOT_DIR}/scripts/build/modules/build_optee.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_uboot.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_tfa.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_linux.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_buildroot.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_flash_images.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_boot_disk.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_fvpconf.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_debug_manifest.sh"
 source "${ROOT_DIR}/scripts/build/modules/package_fvp_local.sh"
 
-COMPONENTS=(qbox tf-m scp-firmware zephyr optee u-boot tf-a linux)
+COMPONENTS=(qbox tf-m scp-firmware zephyr optee u-boot tf-a linux buildroot flash-images boot-disk fvpconf debug-manifest)
 ACTIONS=(build clean clean-build defconfig menuconfig savedefconfig)
 KCONFIG_COMPONENTS=(u-boot linux zephyr)
 
@@ -52,10 +54,11 @@ usage()
     cat <<EOF
 Usage: ./local_build.sh [OPTIONS] [COMPONENT ...] [ACTION]
 
-Build and package the Apollo FVP local component set.
+Build the Apollo local component set and generated QBox boot artifacts.
 
 Components:
   qbox tf-m scp-firmware zephyr optee u-boot tf-a linux
+  buildroot flash-images boot-disk fvpconf debug-manifest
 
 Actions:
   build clean clean-build defconfig menuconfig savedefconfig
@@ -195,6 +198,11 @@ component_function()
         u-boot) printf 'build_uboot\n' ;;
         tf-a) printf 'build_tfa\n' ;;
         linux) printf 'build_linux\n' ;;
+        buildroot) printf 'build_buildroot_initramfs\n' ;;
+        flash-images) printf 'package_flash_images\n' ;;
+        boot-disk) printf 'create_boot_disk\n' ;;
+        fvpconf) printf 'create_fvpconf\n' ;;
+        debug-manifest) printf 'generate_debug_manifest\n' ;;
         *) return 1 ;;
     esac
 }
@@ -210,6 +218,11 @@ component_work_dir()
         u-boot) printf '%s\n' "${UBOOT_BUILD_DIR}" ;;
         tf-a) printf '%s\n' "${TFA_BUILD_DIR}" ;;
         linux) printf '%s\n' "${LINUX_BUILD_DIR}" ;;
+        buildroot) printf '%s\n' "${BUILDROOT_BUILD_DIR}" ;;
+        flash-images) printf '%s\n' "${SIGN_DIR}" ;;
+        boot-disk) printf '%s\n' "${BOOT_DIR}" ;;
+        fvpconf) printf '%s\n' "${DEPLOY_DIR}/${MACHINE}-local.fvpconf" ;;
+        debug-manifest) printf '%s\n' "${LOCAL_BUILD_DIR}/debug" ;;
         *) return 1 ;;
     esac
 }
@@ -225,6 +238,8 @@ component_ccache_method()
         u-boot) printf 'Kbuild CC and HOSTCC overrides\n' ;;
         tf-a) printf 'TF-A CC and HOSTCC overrides\n' ;;
         linux) printf 'Kbuild CC and HOSTCC overrides\n' ;;
+        buildroot) printf 'Buildroot external toolchain wrappers\n' ;;
+        flash-images|boot-disk|fvpconf|debug-manifest) printf 'generated artifact step; no compiler cache\n' ;;
         *) return 1 ;;
     esac
 }
@@ -296,6 +311,27 @@ print_component_dry_run()
                     printf '    note: requires existing local U-Boot and OP-TEE artifacts\n'
                     printf '    inputs: %s %s\n' "${DEPLOY_DIR}/u-boot/u-boot.bin" "${DEPLOY_DIR}/optee/tee-pager_v2.bin"
                     ;;
+                buildroot)
+                    printf '    output: %s\n' "${BOOT_DIR}/initramfs.cpio.gz"
+                    printf '    work: %s\n' "${BUILDROOT_BUILD_DIR#"${ROOT_DIR}"/}"
+                    ;;
+                flash-images)
+                    printf '    outputs: %s %s %s\n' \
+                        "${FW_DIR}/rse-rom-image.img" \
+                        "${FW_DIR}/rse-flash-image.img" \
+                        "${FW_DIR}/ap-flash-image.img"
+                    ;;
+                boot-disk)
+                    printf '    outputs: %s %s\n' \
+                        "${BOOT_DIR}/apollo-fvp-local-disk.img" \
+                        "${BOOT_DIR}/boot-fat.img"
+                    ;;
+                fvpconf)
+                    printf '    output: %s\n' "${DEPLOY_DIR}/${MACHINE}-local.fvpconf"
+                    ;;
+                debug-manifest)
+                    printf '    output: %s\n' "${LOCAL_BUILD_DIR}/debug/symbols.json"
+                    ;;
             esac
             ;;
         clean)
@@ -308,7 +344,7 @@ print_component_dry_run()
                     printf '    remove qbox platform build directory\n'
                     return 0
                     ;;
-                tf-m|scp-firmware|zephyr|optee|u-boot|tf-a)
+                tf-m|scp-firmware|zephyr|optee|u-boot|tf-a|buildroot|flash-images|boot-disk|fvpconf|debug-manifest)
                     printf '    remove local deploy outputs for %s only\n' "${component}"
                     ;;
             esac
@@ -424,6 +460,44 @@ run_clean()
         die "refusing to clean through work root symlink: ${WORK_DIR}"
     [[ ! -L "${work_dir}" ]] ||
         die "refusing to clean component work symlink: ${work_dir}"
+    case "${component}" in
+        buildroot)
+            rm -rf "${BUILDROOT_BUILD_DIR}" "${BUILDROOT_EXTERNAL}" \
+                "${BUILDROOT_OVERLAY}" "${BUILDROOT_TOOLCHAIN_DIR}"
+            validate_local_build_write_dir "boot dir" "${BOOT_DIR}"
+            rm -f "${BOOT_DIR}/initramfs.cpio.gz"
+            return 0
+            ;;
+        flash-images)
+            rm -rf "${SIGN_DIR}"
+            validate_local_build_write_dir "firmware dir" "${FW_DIR}"
+            rm -f "${FW_DIR}/rse-rom-image.img" \
+                "${FW_DIR}/rse-flash-image.img" \
+                "${FW_DIR}/rse-otp-image.img" \
+                "${FW_DIR}/ap-flash-image.img" \
+                "${FW_DIR}/init_fwu_metadata.bin" \
+                "${FW_DIR}/.apollo-flash-images.manifest"
+            return 0
+            ;;
+        boot-disk)
+            validate_local_build_write_dir "boot dir" "${BOOT_DIR}"
+            rm -f "${BOOT_DIR}/boot.cmd" \
+                "${BOOT_DIR}/boot.scr" \
+                "${BOOT_DIR}/boot-fat.img" \
+                "${BOOT_DIR}/apollo-fvp-local-disk.img"
+            return 0
+            ;;
+        fvpconf)
+            validate_local_build_write_dir "deploy root" "${DEPLOY_DIR}"
+            rm -f "${DEPLOY_DIR}/${MACHINE}-local.fvpconf" \
+                "${DEPLOY_DIR}/apollo-fvp-local.fvpconf"
+            return 0
+            ;;
+        debug-manifest)
+            rm -rf "${LOCAL_BUILD_DIR}/debug"
+            return 0
+            ;;
+    esac
     if [[ "${component}" == qbox ]]; then
         local work_root_real
         local work_dir_parent_real
@@ -572,12 +646,7 @@ if [[ "${COMPONENT_SET}" == 0 ]]; then
 fi
 
 if [[ "${PACKAGE_MODE}" == auto ]]; then
-    if [[ "${COMPONENT_SET}" == 1 && "${#SELECTED_COMPONENTS[@]}" == 1 &&
-        "${SELECTED_COMPONENTS[0]}" == qbox ]]; then
-        PACKAGE_MODE=disabled
-    else
-        PACKAGE_MODE=enabled
-    fi
+    PACKAGE_MODE=disabled
 fi
 
 for component in "${SELECTED_COMPONENTS[@]}"; do

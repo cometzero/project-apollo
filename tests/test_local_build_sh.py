@@ -18,6 +18,11 @@ COMPONENTS: Final[tuple[str, ...]] = (
     "u-boot",
     "tf-a",
     "linux",
+    "buildroot",
+    "flash-images",
+    "boot-disk",
+    "fvpconf",
+    "debug-manifest",
 )
 KCONFIG_ACTIONS: Final[tuple[str, ...]] = (
     "defconfig",
@@ -85,7 +90,6 @@ def test_help_documents_local_fvp_contract() -> None:
         assert component in output
     for action in ("build", "clean", "clean-build", *KCONFIG_ACTIONS):
         assert action in output
-    assert "buildroot" not in output.lower()
 
 
 def test_help_includes_operational_examples_with_existing_script_paths() -> None:
@@ -123,14 +127,14 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     # When: a dry-run build is requested.
     result = run_local_build("--dry-run")
 
-    # Then: the default plan builds every supported component and packages FVP.
+    # Then: the default plan builds every supported component needed by QBox local boot.
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
     assert component_step_lines(output) == [
         f"{component}: build" for component in COMPONENTS
     ]
-    assert "package" in output
-    assert "buildroot" not in output.lower()
+    assert "order: qbox tf-m scp-firmware zephyr optee u-boot tf-a linux buildroot flash-images boot-disk fvpconf debug-manifest" in output
+    assert "package: local FVP deploy" not in output
 
 
 def test_ccache_report_covers_every_component_when_available(tmp_path: Path) -> None:
@@ -338,7 +342,41 @@ def test_no_package_removes_default_package_step() -> None:
     output = output_of(result)
     for component in COMPONENTS:
         assert component in output
-    assert "package" not in output.lower()
+    assert "package: local FVP deploy" not in output
+
+
+def test_buildroot_dry_run_resolves_initramfs_output() -> None:
+    result = run_local_build("buildroot", "--dry-run")
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert component_step_lines(output) == ["buildroot: build"]
+    assert "function: build_buildroot_initramfs" in output
+    assert "initramfs.cpio.gz" in output
+    assert "build/local-apollo-fvp/deploy/boot" in output
+
+
+def test_boot_artifact_components_dry_run_resolve_existing_module_functions() -> None:
+    result = run_local_build(
+        "flash-images",
+        "boot-disk",
+        "fvpconf",
+        "debug-manifest",
+        "--dry-run",
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert component_step_lines(output) == [
+        "flash-images: build",
+        "boot-disk: build",
+        "fvpconf: build",
+        "debug-manifest: build",
+    ]
+    assert "function: package_flash_images" in output
+    assert "function: create_boot_disk" in output
+    assert "function: create_fvpconf" in output
+    assert "function: generate_debug_manifest" in output
 
 
 def test_component_stage_logs_start_and_completion(tmp_path: Path) -> None:
@@ -2693,19 +2731,17 @@ def test_package_exports_inspector_required_uboot_artifacts(tmp_path: Path) -> N
     )
 
 
-def test_linux_build_config_policy_requires_builtin_dm_verity() -> None:
-    # Given: local Linux boots a Yocto dm-verity rootfs from the initramfs.
+def test_linux_build_config_policy_does_not_force_dm_verity_by_default() -> None:
+    # Given: local Linux boots from the Buildroot initramfs path by default.
     script = (ROOT / "scripts/build/modules/build_linux.sh").read_text(
         encoding="utf-8"
     )
 
     # When: the local kernel config is generated.
-    # Then: dm-verity is forced built-in and tracked in the config marker.
-    assert "LOCAL_LINUX_DM_VERITY=y" in script
-    assert "--enable BLK_DEV_DM" in script
-    assert "--enable DM_BUFIO" in script
-    assert "--enable DM_VERITY" in script
-    assert "--enable CRYPTO_SHA256" in script
+    # Then: dm-verity is not unconditionally forced built-in.
+    assert "LOCAL_LINUX_DM_VERITY=y" not in script
+    assert 'LOCAL_LINUX_DM_VERITY:-0}" == "1"' in script
+    assert 'LOCAL_LINUX_DM_VERITY:-0}" != "0"' in script
     assert "LOCALVERSION=" in script
 
 

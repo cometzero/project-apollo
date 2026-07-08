@@ -1057,7 +1057,7 @@ start_tmux()
     require_command "${PYTHON_BIN}"
 
     [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
-    [[ -d "${LOCAL_BUILD_DIR}" ]] ||
+    ((DRY_RUN)) || [[ -d "${LOCAL_BUILD_DIR}" ]] ||
         die "local build directory not found: ${LOCAL_BUILD_DIR}. Run ./local_build.sh build first."
 
     ROOT_DIR="$(abspath "${ROOT_DIR}")"
