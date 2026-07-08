@@ -146,6 +146,9 @@ REQUIRED_QBOX_HEADLESS_REMOVAL_SNIPPETS: Final = {
 }
 
 REQUIRED_QBOX_NATIVE_RUNTIME_SNIPPETS: Final = {
+    AUTO_SOLUTIONS / "classes/qboxboot.bbclass": (
+        "addtask do_write_qboxboot_conf after do_rootfs before do_image",
+    ),
     Path("run_qbox_yocto.sh"): (
         'recipe_sysroot_native_path / "usr" / "lib"',
         "ld_entries.append(str(recipe_sysroot_native_libdir))",
