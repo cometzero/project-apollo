@@ -47,6 +47,31 @@ QVP_DEPLOY_VISIBLE_PATHS: Final = (
     BSP / "wic/apollo-qvp-auto-ad-nexios-ab-plain.wks.in",
 )
 
+QBOX_NATIVE_UI_PATHS: Final = (
+    BSP / "recipes-devtools/qbox/qbox-libqemu-native.bb",
+    BSP / "recipes-graphics/libepoxy/libepoxy_%.bbappend",
+    BSP / "recipes-graphics/mesa/mesa.bbappend",
+)
+
+QBOX_HEADLESS_REMOVAL_PATHS: Final = (
+    Path("hsoc-stack/tools/qbox/CMakeLists.txt"),
+    Path("hsoc-stack/tools/qbox/qemu-components/CMakeLists.txt"),
+    Path("hsoc-stack/tools/qbox/qemu-components/common/include/libqemu-cxx/libqemu-cxx.h"),
+    Path("hsoc-stack/tools/qbox/qemu-components/common/src/libqemu-cxx/console.cc"),
+    Path("hsoc-stack/tools/qbox/qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc"),
+    Path("hsoc-stack/tools/qemu/qemu.cmake"),
+    Path("hsoc-stack/tools/qemu/libqemu/exports.py"),
+    Path("hsoc-stack/tools/qemu/libqemu/wrappers/console.c"),
+    Path("hsoc-stack/tools/qemu/libqemu/wrappers/meson.build"),
+    Path("hsoc-stack/tools/qemu/scripts/libqemu-wrappers.py"),
+    BSP / "recipes-devtools/qbox/qbox-libqemu-native.bb",
+)
+
+QBOX_NATIVE_RUNTIME_PATHS: Final = (
+    Path("run_qbox_yocto.sh"),
+    BSP / "recipes-devtools/qbox/qbox-apollo-qvp-native.bb",
+)
+
 REQUIRED_SNIPPETS: Final = {
     AUTO_SOLUTIONS
     / "conf/templates/apollo-qvp/local.conf.sample": (
@@ -91,6 +116,68 @@ REQUIRED_SNIPPETS: Final = {
         'HSOC_APOLLO_QBOX_PLATFORM_SRC ?= "${HSOC_APOLLO_BASE}/tools/qbox-platform"',
     ),
 }
+
+REQUIRED_QBOX_NATIVE_UI_SNIPPETS: Final = {
+    BSP / "recipes-devtools/qbox/qbox-libqemu-native.bb": (
+        'QBOX_LIBQEMU_NATIVE_PACKAGECONFIG ?= "opengl sdl vnc vnc-jpeg"',
+        'PACKAGECONFIG ??= "${QBOX_LIBQEMU_NATIVE_PACKAGECONFIG}"',
+        'PACKAGECONFIG[opengl] = ",,libepoxy-native"',
+        'PACKAGECONFIG[sdl] = ",,libsdl2-native"',
+        'PACKAGECONFIG[vnc-jpeg] = ",,jpeg-native"',
+    ),
+    BSP / "recipes-graphics/libepoxy/libepoxy_%.bbappend": (
+        'DISTRO_FEATURES:append:class-native = " opengl"',
+        'PACKAGECONFIG:class-native = "egl"',
+    ),
+    BSP / "recipes-graphics/mesa/mesa.bbappend": (
+        'DISTRO_FEATURES:append:class-native = " opengl"',
+        'PACKAGECONFIG:class-native = "opengl egl gallium"',
+        'PACKAGECONFIG:remove:class-native = "gallium-llvm r600"',
+    ),
+}
+
+REQUIRED_QBOX_HEADLESS_REMOVAL_SNIPPETS: Final = {
+    Path("hsoc-stack/tools/qemu/qemu.cmake"): (
+        "--enable-opengl",
+        "--enable-sdl",
+        "--enable-vnc",
+        "--enable-vnc-jpeg",
+    ),
+}
+
+REQUIRED_QBOX_NATIVE_RUNTIME_SNIPPETS: Final = {
+    Path("run_qbox_yocto.sh"): (
+        'recipe_sysroot_native_path / "usr" / "lib"',
+        "ld_entries.append(str(recipe_sysroot_native_libdir))",
+    ),
+    BSP / "recipes-devtools/qbox/qbox-apollo-qvp-native.bb": (
+        "qbox_apollo_install_runtime_libraries",
+        '${B}/_deps/report-build',
+        '${B}/_deps/systemclanguage-build/src',
+        "libreporting.so",
+        "libsystemc.so.3.0",
+        "librpc.so",
+    ),
+}
+
+FORBIDDEN_QBOX_HEADLESS_SNIPPETS: Final = (
+    "QBOX_LIBQEMU_HAS_SDL",
+    "LIBQEMU_HEADLESS",
+    "SDL_COND",
+    "cond = SDL_COND",
+    "cond=SDL_COND",
+    "#ifdef CONFIG_SDL",
+    "#ifndef CONFIG_OPENGL",
+    "-DLIBQEMU_ENABLE_OPENGL=ON",
+    "-DLIBQEMU_ENABLE_OPENGL=OFF",
+    "-DLIBQEMU_ENABLE_SDL=ON",
+    "-DLIBQEMU_ENABLE_SDL=OFF",
+    "-DLIBQEMU_ENABLE_VNC=ON",
+    "-DLIBQEMU_ENABLE_VNC=OFF",
+    "-DLIBQEMU_ENABLE_VNC_JPEG=ON",
+    "-DLIBQEMU_ENABLE_VNC_JPEG=OFF",
+    "libqemu_ss.add(when: 'CONFIG_SDL'",
+)
 
 REQUIRED_DOC_SNIPPETS: Final = {
     Path("README.md"): (
@@ -174,7 +261,13 @@ def fvp_rd_aspen_occurrences(root: Path) -> list[tuple[Path, str]]:
 
 
 def test_required_qvp_and_fvp_metadata_files_exist() -> None:
-    missing = missing_paths(ROOT, REQUIRED_QVP_PATHS + APOLLO_FVP_ORIGINAL_PATHS)
+    missing = missing_paths(
+        ROOT,
+        REQUIRED_QVP_PATHS
+        + APOLLO_FVP_ORIGINAL_PATHS
+        + QBOX_NATIVE_UI_PATHS
+        + QBOX_NATIVE_RUNTIME_PATHS,
+    )
 
     assert missing == []
 
@@ -189,6 +282,32 @@ def test_missing_qvp_wic_is_reported_by_helper(tmp_path: Path) -> None:
 
 def test_qvp_identity_and_source_variable_snippets_are_present() -> None:
     missing = missing_snippets(ROOT, REQUIRED_SNIPPETS)
+
+    assert missing == []
+
+
+def test_qbox_native_ui_options_are_native_scoped() -> None:
+    missing = missing_snippets(ROOT, REQUIRED_QBOX_NATIVE_UI_SNIPPETS)
+
+    assert missing == []
+
+
+def test_qbox_libqemu_headless_build_mode_is_removed() -> None:
+    missing = missing_snippets(ROOT, REQUIRED_QBOX_HEADLESS_REMOVAL_SNIPPETS)
+    assert missing == []
+
+    offenders = [
+        (path, snippet)
+        for path in QBOX_HEADLESS_REMOVAL_PATHS
+        for snippet in FORBIDDEN_QBOX_HEADLESS_SNIPPETS
+        if snippet in (ROOT / path).read_text(encoding="utf-8")
+    ]
+
+    assert offenders == []
+
+
+def test_qbox_native_runtime_libraries_are_resolved_from_provider_and_sysroot() -> None:
+    missing = missing_snippets(ROOT, REQUIRED_QBOX_NATIVE_RUNTIME_SNIPPETS)
 
     assert missing == []
 

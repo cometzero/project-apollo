@@ -464,6 +464,9 @@ images_value = loaded.get("images")
 images = images_value if isinstance(images_value, dict) else {}
 qboxconf_dir = qboxconf.parent
 ld_entries = [libdir, module_dir]
+recipe_sysroot_native_libdir = recipe_sysroot_native_path / "usr" / "lib"
+if recipe_sysroot_native_libdir.is_dir():
+    ld_entries.append(str(recipe_sysroot_native_libdir))
 if current_ld_library_path:
     ld_entries.append(current_ld_library_path)
 
