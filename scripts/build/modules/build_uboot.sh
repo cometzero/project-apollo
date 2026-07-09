@@ -37,9 +37,10 @@ build_uboot()
         {
             printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
             printf 'VARIANT=%s\n' "${VARIANT}"
+            printf 'UBOOT_MACHINE=%s\n' "${UBOOT_MACHINE}"
             printf 'EFI_CAPSULE_CRT_FILE=%s\n' "${crt_rel}"
             fingerprint_file_hash "${key}" u-boot-capsule-key
-            fingerprint_file_hash "${UBOOT_SRC}/configs/apollo_fvp_defconfig" u-boot-defconfig
+            fingerprint_file_hash "${UBOOT_SRC}/configs/${UBOOT_MACHINE}" u-boot-defconfig
             find "${UBOOT_SRC}" \( -name Kconfig -o -name 'Kconfig.*' \) \
                 -type f -printf 'u-boot-kconfig/%P|%s|%T@\n' | LC_ALL=C sort
         } | sha256sum | awk '{print $1}'
@@ -53,7 +54,7 @@ build_uboot()
         run_logged u-boot-defconfig make -C "${UBOOT_SRC}" \
             O="${UBOOT_BUILD_DIR}" ARCH=arm CROSS_COMPILE="${AARCH64_PREFIX}" \
             "${kbuild_ccache_args[@]}" \
-            RD_ASPEN_VARIANT="${VARIANT}" apollo_fvp_defconfig
+            RD_ASPEN_VARIANT="${VARIANT}" "${UBOOT_MACHINE}"
         "${UBOOT_SRC}/scripts/config" --file "${UBOOT_BUILD_DIR}/.config" \
             --set-str EFI_CAPSULE_CRT_FILE "${crt_rel}"
         run_logged u-boot-olddefconfig make -C "${UBOOT_SRC}" \

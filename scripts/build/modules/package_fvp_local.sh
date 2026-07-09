@@ -32,47 +32,6 @@ package_local_flash_images()
     package_flash_images
 }
 
-validate_local_build_write_dir()
-{
-    local label="$1"
-    local path="$2"
-    local root="${LOCAL_BUILD_DIR%/}"
-    local target="${path%/}"
-    local root_real
-    local target_real
-    local rel
-    local current
-    local part
-
-    [[ "${target}" == "${root}" || "${target}" == "${root}/"* ]] ||
-        die "refusing to use ${label} outside local build root: ${path}"
-    root_real="$(realpath -m -- "${root}")"
-    target_real="$(realpath -m -- "${target}")"
-    case "${target_real}" in
-        "${root_real}"|"${root_real}"/*) ;;
-        *) die "refusing to use ${label} outside local build root: ${path}" ;;
-    esac
-
-    current="${root}"
-    [[ ! -L "${current}" ]] ||
-        die "refusing to use local build root symlink: ${current}"
-    if [[ -e "${current}" && ! -d "${current}" ]]; then
-        die "refusing to use non-directory local build root: ${current}"
-    fi
-
-    rel="${target#${root}/}"
-    [[ "${target}" != "${root}" ]] || return 0
-    IFS=/ read -r -a parts <<<"${rel}"
-    for part in "${parts[@]}"; do
-        current="${current}/${part}"
-        [[ ! -L "${current}" ]] ||
-            die "refusing to use ${label} symlink: ${current}"
-        if [[ -e "${current}" && ! -d "${current}" ]]; then
-            die "refusing to use non-directory ${label} path: ${current}"
-        fi
-    done
-}
-
 validate_local_fvp_deploy_root()
 {
     validate_local_build_write_dir "deploy root" "${DEPLOY_DIR}"
@@ -93,7 +52,7 @@ preflight_local_fvp_package_tools()
             ;;
     esac
 
-    if [[ -f "${BOOT_DIR}/Image" && -f "${BOOT_DIR}/apollo-fvp.dtb" ]]; then
+    if [[ -f "${BOOT_DIR}/Image" && -f "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}" ]]; then
         require_command sgdisk
         require_command mdir
         require_command mmd
@@ -113,6 +72,7 @@ package_local_fvp_outputs()
     package_local_flash_images
     export YOCTO_TMP
     python3 - "$YOCTO_DEPLOY_DIR" "$LOCAL_BUILD_DIR" "$MACHINE" \
+        "$LOCAL_BUILD_DTB_BASENAME" \
         "$APOLLO_LOCAL_BUILD_YOCTO_VARS" <<'PY'
 from __future__ import annotations
 
@@ -129,7 +89,8 @@ from pathlib import Path
 yocto_deploy = Path(sys.argv[1])
 local_build = Path(sys.argv[2])
 machine = sys.argv[3]
-vars_path = Path(sys.argv[4])
+local_dtb_basename = sys.argv[4]
+vars_path = Path(sys.argv[5])
 deploy = local_build / "deploy"
 images = deploy / "images"
 firmware = deploy / "firmware"
@@ -459,7 +420,7 @@ wic_src = latest_or_stable(
 cfg = json.loads(fvpconf_src.read_text(encoding="utf-8"))
 wic = images / f"nexios-image-{machine}.wic"
 local_image = deploy / "boot" / "Image"
-local_dtb = deploy / "boot" / "apollo-fvp.dtb"
+local_dtb = deploy / "boot" / local_dtb_basename
 local_linux_inputs_present = local_image.exists() and local_dtb.exists()
 if not local_linux_inputs_present:
     copy_artifact(wic_src, wic, "yocto-copied")
@@ -714,7 +675,7 @@ if local_linux_inputs_present:
     except subprocess.CalledProcessError:
         wic.unlink(missing_ok=True)
         wic_patch_marker(wic).unlink(missing_ok=True)
-        (deploy / "apollo-fvp-local.fvpconf").unlink(missing_ok=True)
+        (deploy / f"{machine}-local.fvpconf").unlink(missing_ok=True)
         raise
     modules_order = local_build / "work" / "linux" / "modules.order"
     release_file = local_build / "work" / "linux" / "include" / "config" / "kernel.release"
@@ -749,9 +710,9 @@ local_uboot = deploy / "u-boot" / "u-boot.bin"
 if local_uboot.exists():
     copy_local(local_uboot, images / f"u-boot-{machine}-local.bin", "local-u-boot-overlay")
 
-local_fvpconf = deploy / "apollo-fvp-local.fvpconf"
+local_fvpconf = deploy / f"{machine}-local.fvpconf"
 manifest_path = deploy / "local-package-manifest.json"
-pending_fvpconf = deploy / "apollo-fvp-local.fvpconf.tmp"
+pending_fvpconf = deploy / f"{machine}-local.fvpconf.tmp"
 pending_manifest = deploy / "local-package-manifest.json.tmp"
 pending_digest_cache = deploy / ".apollo-package-digests.json.tmp"
 for path in (

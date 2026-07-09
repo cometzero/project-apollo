@@ -288,7 +288,7 @@ print_component_dry_run()
             case "${component}" in
                 tf-m)
                     printf '    cmake: -DTFM_PLATFORM=%s -DCROSS_COMPILE=%s\n' \
-                        "${TFM_PLATFORM:-arm/rse/automotive_rd/apollo-fvp}" \
+                        "${TFM_PLATFORM}" \
                         "${ARM_NONE_EABI_PREFIX%-}"
                     ;;
                 qbox)
@@ -322,8 +322,9 @@ print_component_dry_run()
                         "${FW_DIR}/ap-flash-image.img"
                     ;;
                 boot-disk)
+                    validate_local_build_file_under_dir "boot disk" "${LOCAL_BUILD_BOOT_DISK}" "${BOOT_DIR}"
                     printf '    outputs: %s %s\n' \
-                        "${BOOT_DIR}/apollo-fvp-local-disk.img" \
+                        "${LOCAL_BUILD_BOOT_DISK}" \
                         "${BOOT_DIR}/boot-fat.img"
                     ;;
                 fvpconf)
@@ -338,13 +339,18 @@ print_component_dry_run()
             printf '    remove work: %s\n' "$(component_work_dir "${component}")"
             case "${component}" in
                 linux)
-                    printf '    remove deploy: %s %s\n' "${BOOT_DIR}/Image" "${BOOT_DIR}/apollo-fvp.dtb"
+                    printf '    remove deploy: %s %s\n' "${BOOT_DIR}/Image" "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}"
                     ;;
                 qbox)
                     printf '    remove qbox platform build directory\n'
                     return 0
                     ;;
-                tf-m|scp-firmware|zephyr|optee|u-boot|tf-a|buildroot|flash-images|boot-disk|fvpconf|debug-manifest)
+                boot-disk)
+                    validate_local_build_file_under_dir "boot disk" "${LOCAL_BUILD_BOOT_DISK}" "${BOOT_DIR}"
+                    validate_local_build_file_under_dir "legacy boot disk" "${LOCAL_BUILD_LEGACY_BOOT_DISK}" "${BOOT_DIR}"
+                    printf '    remove local deploy outputs for %s only\n' "${component}"
+                    ;;
+                tf-m|scp-firmware|zephyr|optee|u-boot|tf-a|buildroot|flash-images|fvpconf|debug-manifest)
                     printf '    remove local deploy outputs for %s only\n' "${component}"
                     ;;
             esac
@@ -359,8 +365,8 @@ print_component_dry_run()
         defconfig|menuconfig|savedefconfig)
             case "${component}" in
                 u-boot)
-                    printf '    command: make -C %s O=%s ARCH=arm CROSS_COMPILE=%s RD_ASPEN_VARIANT=%s apollo_fvp_defconfig %s\n' \
-                        "${UBOOT_SRC#"${ROOT_DIR}"/}" "${UBOOT_BUILD_DIR#"${ROOT_DIR}"/}" "${AARCH64_PREFIX}" "${RD_ASPEN_VARIANT}" "${action}"
+                    printf '    command: make -C %s O=%s ARCH=arm CROSS_COMPILE=%s RD_ASPEN_VARIANT=%s %s %s\n' \
+                        "${UBOOT_SRC#"${ROOT_DIR}"/}" "${UBOOT_BUILD_DIR#"${ROOT_DIR}"/}" "${AARCH64_PREFIX}" "${RD_ASPEN_VARIANT}" "${UBOOT_MACHINE}" "${action}"
                     ;;
                 linux)
                     printf '    command: make -C %s O=%s ARCH=arm64 CROSS_COMPILE=%s %s\n' \
@@ -481,10 +487,13 @@ run_clean()
             ;;
         boot-disk)
             validate_local_build_write_dir "boot dir" "${BOOT_DIR}"
+            validate_local_build_file_under_dir "boot disk" "${LOCAL_BUILD_BOOT_DISK}" "${BOOT_DIR}"
+            validate_local_build_file_under_dir "legacy boot disk" "${LOCAL_BUILD_LEGACY_BOOT_DISK}" "${BOOT_DIR}"
             rm -f "${BOOT_DIR}/boot.cmd" \
                 "${BOOT_DIR}/boot.scr" \
                 "${BOOT_DIR}/boot-fat.img" \
-                "${BOOT_DIR}/apollo-fvp-local-disk.img"
+                "${LOCAL_BUILD_BOOT_DISK}" \
+                "${LOCAL_BUILD_LEGACY_BOOT_DISK}"
             return 0
             ;;
         fvpconf)
@@ -532,7 +541,7 @@ run_clean()
     case "${component}" in
         linux)
             validate_local_build_write_dir "boot dir" "${BOOT_DIR}"
-            rm -f "${BOOT_DIR}/Image" "${BOOT_DIR}/apollo-fvp.dtb"
+            rm -f "${BOOT_DIR}/Image" "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}"
             ;;
     esac
     rm -f "${DEPLOY_DIR}/local-package-manifest.json" \

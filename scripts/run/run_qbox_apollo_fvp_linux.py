@@ -344,6 +344,13 @@ def qbox_env(
     lib_paths = [
         build_dir,
         build_dir / "_deps/libqemu-build/qemu-prefix/lib",
+        build_dir / "qbox-core",
+        build_dir / "_deps/report-build",
+        build_dir / "_deps/fmt-build",
+        build_dir / "_deps/systemccci-build/configuration/src",
+        build_dir / "_deps/systemccci-build/inspection/src",
+        build_dir / "_deps/systemclanguage-build/src",
+        build_dir / "_deps/rpclib-build",
     ]
     current = env.get("LD_LIBRARY_PATH")
     if current:

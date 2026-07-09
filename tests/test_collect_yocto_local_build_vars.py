@@ -197,7 +197,7 @@ def test_parse_args_derives_default_output_from_explicit_build_dir(
     assert args.output == build_dir / "local-apollo-qvp/yocto-local-build-vars.json"
 
 
-def test_default_recipes_match_apollo_parity_scope() -> None:
+def test_default_recipes_match_apollo_fvp_parity_scope() -> None:
     module = load_module()
 
     assert module.DEFAULT_RECIPES == (
@@ -212,6 +212,24 @@ def test_default_recipes_match_apollo_parity_scope() -> None:
         "zephyr-demos-cl1",
         "qbox-apollo-qvp-native",
     )
+
+
+def test_parse_args_uses_machine_specific_firmware_recipe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_module()
+    build_dir = tmp_path / "custom-build"
+    conf_dir = build_dir / "conf"
+    conf_dir.mkdir(parents=True)
+    (conf_dir / "local.conf").write_text('MACHINE ??= "apollo-qvp"\n', encoding="utf-8")
+    monkeypatch.setattr("sys.argv", [str(SCRIPT), "--build-dir", str(build_dir)])
+
+    args = module.parse_args()
+
+    recipes = module.parse_recipe_list(args.recipes)
+    assert "firmware-apollo-qvp" in recipes
+    assert "firmware-apollo-fvp" not in recipes
 
 
 def test_allowlisted_variables_match_contract() -> None:

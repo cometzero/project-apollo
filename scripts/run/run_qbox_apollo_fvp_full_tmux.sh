@@ -1136,6 +1136,9 @@ start_tmux()
         if [[ -n "${QBOX_APOLLO_NUM_CPUS:-}" ]]; then
             printf 'QBOX_APOLLO_NUM_CPUS=%q ' "${QBOX_APOLLO_NUM_CPUS}"
         fi
+        if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+            printf 'LD_LIBRARY_PATH=%q ' "${LD_LIBRARY_PATH}"
+        fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
         printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \

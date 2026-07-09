@@ -31,7 +31,7 @@ build_linux()
     local_build_kbuild_ccache_args kbuild_ccache_args "${AARCH64_PREFIX}"
 
     local modsign_key
-    modsign_key="$(find "${YOCTO_TMP}/work/apollo_fvp-poky-linux/linux-yocto-rt" \
+    modsign_key="$(find "${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/linux-yocto-rt" \
         -path '*/build/modsign_key.pem' -type f -print -quit 2>/dev/null || true)"
 
     local config_marker="${LINUX_BUILD_DIR}/.apollo-config.sha256"
@@ -42,6 +42,7 @@ build_linux()
             printf 'KERNEL_DEBUG_INFO=%s\n' "${KERNEL_DEBUG_INFO}"
             printf 'LINUX_DEFCONFIG=%s\n' "${LINUX_DEFCONFIG}"
             printf 'LINUX_CONFIG=%s\n' "${LINUX_CONFIG:-}"
+            printf 'KERNEL_DEVICETREE=%s\n' "${KERNEL_DEVICETREE}"
             fingerprint_file_hash "${config}" linux-input-config
             [[ -z "${modsign_key}" ]] || fingerprint_file_hash "${modsign_key}" linux-input-modsign-key
             find "${LINUX_SRC}" \( -name Kconfig -o -name 'Kconfig.*' \) \
@@ -113,10 +114,18 @@ build_linux()
         "${kbuild_ccache_args[@]}" \
         Image dtbs modules -j "${JOBS}"
 
+    run_logged linux-build-selected-dtb env \
+        KBUILD_BUILD_TIMESTAMP="${APOLLO_KBUILD_BUILD_TIMESTAMP:-Thu Jan 1 00:00:00 UTC 1970}" \
+        KBUILD_BUILD_VERSION="${APOLLO_KBUILD_BUILD_VERSION:-1}" \
+        make -C "${LINUX_SRC}" \
+        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        "${kbuild_ccache_args[@]}" \
+        "${KERNEL_DEVICETREE}" -j "${JOBS}"
+
     local image="${LINUX_BUILD_DIR}/arch/arm64/boot/Image"
-    local dtb="${LINUX_BUILD_DIR}/arch/arm64/boot/dts/arm/apollo-fvp.dtb"
+    local dtb="${LINUX_BUILD_DIR}/arch/arm64/boot/dts/${KERNEL_DEVICETREE}"
     require_file "${image}"
     require_file "${dtb}"
     install_artifact "${image}" "${BOOT_DIR}/Image"
-    install_artifact "${dtb}" "${BOOT_DIR}/apollo-fvp.dtb"
+    install_artifact "${dtb}" "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}"
 }

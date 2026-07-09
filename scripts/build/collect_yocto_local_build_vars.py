@@ -18,11 +18,12 @@ SCHEMA_VERSION: Final = 1
 DESCRIPTION: Final = (
     "Collect allowlisted Yocto variables from recipe-specific BitBake environments."
 )
+DEFAULT_MACHINE: Final = "apollo-fvp"
 DEFAULT_RECIPES: Final = (
     "nexios-image",
     "u-boot",
     "linux-yocto-rt",
-    "firmware-apollo-fvp",
+    f"firmware-{DEFAULT_MACHINE}",
     "trusted-firmware-m",
     "scp-firmware",
     "trusted-firmware-a",
@@ -287,22 +288,22 @@ def machine_from_build_dir(build_dir: Path) -> str:
     try:
         lines = local_conf.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return "apollo-fvp"
+        return DEFAULT_MACHINE
     machine = ""
     for line in lines:
         match = MACHINE_RE.match(line)
         if match:
             machine = match.group(1).strip()
-    return machine or "apollo-fvp"
+    return machine or DEFAULT_MACHINE
 
 
-def default_output_path(build_dir_arg: Path) -> Path:
-    root = workspace_root()
-    build_dir = build_dir_path(root, build_dir_arg)
-    machine = machine_from_build_dir(build_dir)
-    if build_dir_arg.is_absolute():
-        return build_dir_arg / f"local-{machine}/yocto-local-build-vars.json"
-    return build_dir_arg / f"local-{machine}/yocto-local-build-vars.json"
+def default_recipes_for_machine(machine: str) -> tuple[str, ...]:
+    default_firmware_recipe = f"firmware-{DEFAULT_MACHINE}"
+    active_firmware_recipe = f"firmware-{machine}"
+    return tuple(
+        active_firmware_recipe if recipe == default_firmware_recipe else recipe
+        for recipe in DEFAULT_RECIPES
+    )
 
 
 def write_collection(args: argparse.Namespace) -> Path:
@@ -328,13 +329,17 @@ def write_collection(args: argparse.Namespace) -> Path:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument("--recipes", default=",".join(DEFAULT_RECIPES))
+    parser.add_argument("--recipes")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--build-dir", type=Path, default=Path("build"))
     parser.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args()
+    build_dir = build_dir_path(workspace_root(), args.build_dir)
+    machine = machine_from_build_dir(build_dir)
+    if args.recipes is None:
+        args.recipes = ",".join(default_recipes_for_machine(machine))
     if args.output is None:
-        args.output = default_output_path(args.build_dir)
+        args.output = args.build_dir / f"local-{machine}/yocto-local-build-vars.json"
     return args
 
 

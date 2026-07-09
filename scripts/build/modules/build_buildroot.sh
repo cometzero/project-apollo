@@ -125,13 +125,21 @@ prepare_buildroot_overlay()
 {
     mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d,usr/bin}
     chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
+    local login_prompt="${LOCAL_BUILD_LOGIN_PROMPT:-${MACHINE} login:}"
+    local login_prompt_sed="${login_prompt//\\/\\\\}"
+    login_prompt_sed="${login_prompt_sed//&/\\&}"
+    login_prompt_sed="${login_prompt_sed//|/\\|}"
+    local banner="${MACHINE} local Buildroot initramfs"
+    local banner_sed="${banner//\\/\\\\}"
+    banner_sed="${banner_sed//&/\\&}"
+    banner_sed="${banner_sed//|/\\|}"
 
     local module
     {
         for module in ${KERNEL_MODULES_AUTOLOAD}; do
             printf '%s\n' "${module}"
         done
-    } | write_file_if_changed "${BUILDROOT_OVERLAY}/etc/modules-load.d/apollo-fvp.conf"
+    } | write_file_if_changed "${BUILDROOT_OVERLAY}/etc/modules-load.d/${MACHINE}.conf"
 
     write_file_if_changed "${BUILDROOT_OVERLAY}/init" <<'EOF'
 #!/bin/sh
@@ -143,7 +151,7 @@ mount -t proc proc /proc
 mount -t sysfs sysfs /sys
 mount -t tmpfs tmpfs /run 2>/dev/null || true
 
-echo "Apollo FVP local Buildroot initramfs"
+echo "@LOCAL_BUILD_BANNER@"
 echo "local-initramfs: booted"
 cat /proc/cmdline
 
@@ -185,9 +193,13 @@ if [ -x /usr/bin/pfdi-local-agent ]; then
     echo "local-initramfs: pfdi-local-agent pid $!"
 fi
 
-echo "apollo-fvp login:"
+echo "@LOCAL_BUILD_LOGIN_PROMPT@"
 exec /bin/sh -i
 EOF
+    sed -i "s|@LOCAL_BUILD_LOGIN_PROMPT@|${login_prompt_sed}|g" \
+        "${BUILDROOT_OVERLAY}/init"
+    sed -i "s|@LOCAL_BUILD_BANNER@|${banner_sed}|g" \
+        "${BUILDROOT_OVERLAY}/init"
     chmod 0755 "${BUILDROOT_OVERLAY}/init"
 
     write_file_if_changed "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" <<'EOF'
@@ -310,7 +322,7 @@ write_buildroot_defconfig()
 {
     mkdir -p "${BUILDROOT_BUILD_DIR}"
     local tuple="${AARCH64_PREFIX%-}"
-    local defconfig="${BUILDROOT_BUILD_DIR}/apollo-fvp-buildroot_defconfig"
+    local defconfig="${BUILDROOT_BUILD_DIR}/${MACHINE}-buildroot_defconfig"
     local headers_major
     local headers_patchlevel
     headers_major="$(sed -n 's/^#define LINUX_VERSION_MAJOR //p' \
@@ -339,8 +351,8 @@ BR2_DEBUG_2=y
 # BR2_STRIP_strip is not set
 BR2_OPTIMIZE_G=y
 # BR2_TOOLCHAIN_EXTERNAL_INET_RPC is not set
-BR2_TARGET_GENERIC_HOSTNAME="apollo-fvp"
-BR2_TARGET_GENERIC_ISSUE="Apollo FVP Buildroot"
+BR2_TARGET_GENERIC_HOSTNAME="${MACHINE}"
+BR2_TARGET_GENERIC_ISSUE="${MACHINE} Buildroot"
 BR2_INIT_NONE=y
 BR2_SYSTEM_BIN_SH_BUSYBOX=y
 BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y

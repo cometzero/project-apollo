@@ -32,7 +32,7 @@ normalize_image_version()
 pv_version()
 {
     local name="$1"
-    local f="${YOCTO_TMP}/work/apollo_fvp-poky-linux/firmware-apollo-fvp/1.0/recipe-sysroot/pv_tracker/${name}.pv"
+    local f="${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/firmware-${MACHINE}/1.0/recipe-sysroot/pv_tracker/${name}.pv"
     if [[ -f "${f}" ]]; then
         normalize_image_version "$(tr -d '\n' < "${f}")"
     else
@@ -42,7 +42,7 @@ pv_version()
 
 firmware_recipe_workdir()
 {
-    first_existing_glob "${YOCTO_TMP}/work/apollo_fvp-poky-linux/firmware-apollo-fvp/*"
+    first_existing_glob "${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/firmware-${MACHINE}"/*
 }
 
 sign_host_image()

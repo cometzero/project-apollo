@@ -312,7 +312,7 @@ build_zephyr()
     reset_zephyr_build_if_hsoc_source_changed
     mkdir -p "${ZEPHYR_BUILD_DIR}" "${FW_DIR}"
 
-    local board="apollo_fvp_safety_island_c1"
+    local board="${ZEPHYR_BOARD}"
     local zephyr_sdk
     local zephyr_base="${ZEPHYRPROJECT_SRC}/zephyr"
     local zephyr_dir="${zephyr_base}/share/zephyr-package/cmake"

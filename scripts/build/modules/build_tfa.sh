@@ -11,7 +11,7 @@ fi
 tfa_recipe_workdir()
 {
     local root
-    root="$(first_existing_glob "${YOCTO_TMP}/work/apollo_fvp-poky-linux/trusted-firmware-a"/* || true)"
+    root="$(first_existing_glob "${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/trusted-firmware-a"/* || true)"
     [[ -n "${root}" ]] || die "could not find TF-A Yocto workdir under ${YOCTO_TMP}"
     printf '%s\n' "${root}"
 }
@@ -29,6 +29,7 @@ build_tfa()
         {
             printf 'AARCH64_PREFIX=%s\n' "${AARCH64_PREFIX}"
             printf 'PC_CPUS_COUNT=%s\n' "${PC_CPUS_COUNT}"
+            printf 'TF_A_PLATFORM=%s\n' "${TF_A_PLATFORM}"
             printf 'LINUX_DTS=%s\n' "${TFA_LINUX_DTS}"
             printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
             printf 'PFDI_SUPPORT=%s\n' "${PFDI_SUPPORT}"
@@ -43,24 +44,28 @@ build_tfa()
         } | sha256sum | awk '{print $1}'
     )"
     if [[ "${APOLLO_TFA_REFRESH:-0}" != "1" ]] &&
-        [[ -f "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" ]] &&
-        [[ -f "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" ]] &&
+        [[ -f "${TFA_PLATFORM_BUILD_DIR}/debug/bl2.bin" ]] &&
+        [[ -f "${TFA_PLATFORM_BUILD_DIR}/debug/fip.bin" ]] &&
         [[ -f "${tfa_marker}" ]] &&
         [[ "$(cat "${tfa_marker}")" == "${tfa_digest}" ]]; then
         log "TF-A build outputs are up to date"
-        install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" "${FW_DIR}/bl2.bin"
-        install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" "${FW_DIR}/fip.bin"
+        install_artifact "${TFA_PLATFORM_BUILD_DIR}/debug/bl2.bin" "${FW_DIR}/bl2.bin"
+        install_artifact "${TFA_PLATFORM_BUILD_DIR}/debug/fip.bin" "${FW_DIR}/fip.bin"
         return 0
     fi
-    case "${TFA_BUILD_DIR}/apollo_fvp" in
-        "${LOCAL_BUILD_DIR}/work/trusted-firmware-a/apollo_fvp") ;;
-        *) die "refusing to reset TF-A build outside local build root: ${TFA_BUILD_DIR}/apollo_fvp" ;;
+    local tfa_build_root_real
+    local tfa_platform_parent_real
+    tfa_build_root_real="$(canonical_dir "${TFA_BUILD_DIR}")"
+    tfa_platform_parent_real="$(canonical_dir "$(dirname "${TFA_PLATFORM_BUILD_DIR}")")"
+    case "${tfa_platform_parent_real}/$(basename "${TFA_PLATFORM_BUILD_DIR}")" in
+        "${tfa_build_root_real}"/*) ;;
+        *) die "refusing to reset TF-A build outside TF-A work root: ${TFA_PLATFORM_BUILD_DIR}" ;;
     esac
     [[ ! -L "${TFA_BUILD_DIR}" ]] ||
         die "refusing to reset TF-A build through symlink: ${TFA_BUILD_DIR}"
-    [[ ! -L "${TFA_BUILD_DIR}/apollo_fvp" ]] ||
-        die "refusing to reset TF-A platform build symlink: ${TFA_BUILD_DIR}/apollo_fvp"
-    rm -rf "${TFA_BUILD_DIR}/apollo_fvp"
+    [[ ! -L "${TFA_PLATFORM_BUILD_DIR}" ]] ||
+        die "refusing to reset TF-A platform build symlink: ${TFA_PLATFORM_BUILD_DIR}"
+    rm -rf "${TFA_PLATFORM_BUILD_DIR}"
 
     local tfa_work
     tfa_work="$(tfa_recipe_workdir)"
@@ -78,7 +83,7 @@ build_tfa()
         LD="${AARCH64_PREFIX}ld" \
         "${tfa_ccache_args[@]}" \
         BUILD_BASE="${TFA_BUILD_DIR}" \
-        PLAT=apollo_fvp \
+        PLAT="${TF_A_PLATFORM}" \
         SPD=spmd \
         SPMD_SPM_AT_SEL2=0 \
         DEBUG=1 \
@@ -105,6 +110,7 @@ build_tfa()
         PSA_FWU_SUPPORT=1 \
         RD_ASPEN_VARIANT="${VARIANT}" \
         APOLLO_FVP_VARIANT="${VARIANT}" \
+        APOLLO_QVP_VARIANT="${VARIANT}" \
         bl2 fip
 
     PATH="${saved_path}"
@@ -114,7 +120,7 @@ build_tfa()
     else
         unset PYTHONPATH
     fi
-    install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/bl2.bin" "${FW_DIR}/bl2.bin"
-    install_artifact "${TFA_BUILD_DIR}/apollo_fvp/debug/fip.bin" "${FW_DIR}/fip.bin"
+    install_artifact "${TFA_PLATFORM_BUILD_DIR}/debug/bl2.bin" "${FW_DIR}/bl2.bin"
+    install_artifact "${TFA_PLATFORM_BUILD_DIR}/debug/fip.bin" "${FW_DIR}/fip.bin"
     printf '%s\n' "${tfa_digest}" > "${tfa_marker}"
 }

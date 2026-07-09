@@ -10,6 +10,21 @@ ROOT_DIR="${ROOT_DIR:-$(cd "${LOCAL_BUILD_SCRIPT_DIR}/../.." && pwd)}"
 APOLLO_LOCAL_BUILD_USE_YOCTO_VARS="${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
 
+apollo_local_build_config_error()
+{
+    printf 'error: %s\n' "$*" >&2
+    return 1 2>/dev/null || exit 1
+}
+
+apollo_local_build_require_safe_token()
+{
+    local name="$1"
+    local value="$2"
+
+    [[ "${value}" =~ ^[A-Za-z0-9_-]+$ ]] ||
+        apollo_local_build_config_error "${name} must be a safe token containing only letters, digits, '_' or '-': ${value}"
+}
+
 apollo_local_build_active_machine()
 {
     if [[ -n "${MACHINE:-}" ]]; then
@@ -32,6 +47,7 @@ apollo_local_build_active_machine()
 }
 
 APOLLO_LOCAL_BUILD_DEFAULT_MACHINE="$(apollo_local_build_active_machine)"
+apollo_local_build_require_safe_token MACHINE "${APOLLO_LOCAL_BUILD_DEFAULT_MACHINE}"
 APOLLO_LOCAL_BUILD_YOCTO_VARS="${APOLLO_LOCAL_BUILD_YOCTO_VARS:-${YOCTO_BUILD_DIR}/local-${APOLLO_LOCAL_BUILD_DEFAULT_MACHINE}/yocto-local-build-vars.json}"
 if [[ "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" != /* ]]; then
     APOLLO_LOCAL_BUILD_YOCTO_VARS="${ROOT_DIR}/${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
@@ -63,7 +79,7 @@ apollo_local_build_apply_default()
     local value="$2"
 
     case "${name}" in
-        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM|QBOX_APOLLO_BUILD_TARGET|QBOX_CORE_DIR|QBOX_PLATFORM_DIR|QBOX_QEMU_DIR) ;;
+        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|KERNEL_DEVICETREE|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM|UBOOT_MACHINE|TF_A_PLATFORM|TFM_PLATFORM|SCP_PLATFORM|ZEPHYR_BOARD|QBOX_APOLLO_BUILD_TARGET|QBOX_CORE_DIR|QBOX_PLATFORM_DIR|QBOX_QEMU_DIR) ;;
         *) return 0 ;;
     esac
     if [[ -z "${!name+x}" ]]; then
@@ -98,9 +114,15 @@ MAPPINGS: Final = (
     ("MACHINE", "nexios-image", "MACHINE"),
     ("RD_ASPEN_VARIANT", "nexios-image", "RD_ASPEN_VARIANT"),
     ("PC_CPUS_COUNT", "nexios-image", "PC_CPUS_COUNT_DEFAULT"),
+    ("UBOOT_MACHINE", "u-boot", "UBOOT_MACHINE"),
     ("LINUX_DEFCONFIG", "linux-yocto-rt", "KBUILD_DEFCONFIG"),
+    ("KERNEL_DEVICETREE", "linux-yocto-rt", "KERNEL_DEVICETREE"),
     ("BOOTLOADER_LINUX_APPEND", "nexios-image", "BOOTLOADER_LINUX_APPEND"),
     ("OPTEE_PLATFORM", "optee-os", "PLATFORM"),
+    ("TF_A_PLATFORM", "trusted-firmware-a", "TF_A_PLATFORM"),
+    ("TFM_PLATFORM", "trusted-firmware-m", "TFM_PLATFORM"),
+    ("SCP_PLATFORM", "scp-firmware", "SCP_PLATFORM"),
+    ("ZEPHYR_BOARD", "zephyr-demos-cl1", "ZEPHYR_BOARD"),
     ("QBOX_APOLLO_BUILD_TARGET", "qbox-apollo-qvp-native", "QBOX_APOLLO_BUILD_TARGET"),
     ("QBOX_CORE_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_SRC"),
     ("QBOX_PLATFORM_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_PLATFORM_SRC"),
@@ -160,6 +182,8 @@ if ! apollo_local_build_load_yocto_vars "${1:-}"; then
     return 1 2>/dev/null || exit 1
 fi
 MACHINE="${MACHINE:-apollo-fvp}"
+apollo_local_build_require_safe_token MACHINE "${MACHINE}"
+LOCAL_MACHINE_WORK_PREFIX="${MACHINE//-/_}"
 RD_ASPEN_VARIANT="${RD_ASPEN_VARIANT:-cfg2}"
 VARIANT="${VARIANT:-${RD_ASPEN_VARIANT}}"
 JOBS="${JOBS:-}"
@@ -168,7 +192,7 @@ HOST_PATH="${HOST_PATH:-${PATH}}"
 YOCTO_TMP="${YOCTO_TMP:-${YOCTO_BUILD_DIR}/tmp_baremetal}"
 YOCTO_DEPLOY_DIR="${YOCTO_DEPLOY_DIR:-${YOCTO_TMP}/deploy/images/${MACHINE}}"
 
-SDK_DIR="${SDK_DIR:-${YOCTO_BUILD_DIR}/local-sdk}"
+SDK_DIR="${SDK_DIR:-${YOCTO_BUILD_DIR}/local-sdk-${MACHINE}}"
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${YOCTO_BUILD_DIR}/local-${MACHINE}}"
 WORK_DIR="${LOCAL_BUILD_DIR}/work"
 DEPLOY_DIR="${LOCAL_BUILD_DIR}/deploy"
@@ -196,7 +220,24 @@ TFA_SRC="${TFA_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/trusted-fi
 OPTEE_SRC="${OPTEE_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/optee_os}"
 UBOOT_SRC="${UBOOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/u-boot}"
 LINUX_SRC="${LINUX_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/linux}"
-LINUX_DEFCONFIG="${LINUX_DEFCONFIG:-apollo_fvp_defconfig}"
+LINUX_DEFCONFIG="${LINUX_DEFCONFIG:-${LOCAL_MACHINE_WORK_PREFIX}_defconfig}"
+UBOOT_MACHINE="${UBOOT_MACHINE:-${LOCAL_MACHINE_WORK_PREFIX}_defconfig}"
+KERNEL_DEVICETREE="${KERNEL_DEVICETREE:-arm/${MACHINE}.dtb}"
+LOCAL_BUILD_DTB_BASENAME="${KERNEL_DEVICETREE##*/}"
+TF_A_PLATFORM="${TF_A_PLATFORM:-${LOCAL_MACHINE_WORK_PREFIX}}"
+apollo_local_build_require_safe_token TF_A_PLATFORM "${TF_A_PLATFORM}"
+TFM_PLATFORM="${TFM_PLATFORM:-arm/rse/automotive_rd/${MACHINE}}"
+SCP_PLATFORM="${SCP_PLATFORM:-${MACHINE}}"
+if [[ -z "${LOCAL_PLATFORM_VARIANT:-}" ]]; then
+    if [[ "${RD_ASPEN_VARIANT}" == "rtl" ]]; then
+        LOCAL_PLATFORM_VARIANT="rtl"
+    else
+        LOCAL_PLATFORM_VARIANT="fvp"
+    fi
+fi
+TFM_PLATFORM_VARIANT="${TFM_PLATFORM_VARIANT:-${LOCAL_PLATFORM_VARIANT}}"
+SCP_PLATFORM_VARIANT="${SCP_PLATFORM_VARIANT:-${LOCAL_PLATFORM_VARIANT}}"
+ZEPHYR_BOARD="${ZEPHYR_BOARD:-${LOCAL_MACHINE_WORK_PREFIX}_safety_island_c1}"
 BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/buildroot}"
 ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src}"
 RPMSG_NET_SRC="${RPMSG_NET_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src}"
@@ -239,6 +280,9 @@ PFDI_LOCAL_AGENT_BUILD_DIR="${WORK_DIR}/pfdi-local-agent"
 SIGN_DIR="${WORK_DIR}/signing"
 FW_DIR="${DEPLOY_DIR}/firmware"
 BOOT_DIR="${DEPLOY_DIR}/boot"
+TFA_PLATFORM_BUILD_DIR="${TFA_BUILD_DIR}/${TF_A_PLATFORM}"
+LOCAL_BUILD_BOOT_DISK="${LOCAL_BUILD_BOOT_DISK:-${BOOT_DIR}/${MACHINE}-local-disk.img}"
+LOCAL_BUILD_LEGACY_BOOT_DISK="${BOOT_DIR}/apollo-fvp-local-disk.img"
 
 TFM_BL2_IMAGE_GUID="4b312051-850a-5b17-a3cf-2995baa4bed4"
 TFM_RUNTIME_IMAGE_GUID="b181e748-c362-55e6-852c-662d1544f414"
@@ -676,6 +720,64 @@ source_local_build_modules()
 canonical_dir()
 {
     (cd "$1" && pwd -P)
+}
+
+validate_local_build_write_dir()
+{
+    local label="$1"
+    local path="$2"
+    local root="${LOCAL_BUILD_DIR%/}"
+    local target="${path%/}"
+    local root_real
+    local target_real
+    local rel
+    local current
+    local part
+
+    [[ "${target}" == "${root}" || "${target}" == "${root}/"* ]] ||
+        die "refusing to use ${label} outside local build root: ${path}"
+    root_real="$(realpath -m -- "${root}")"
+    target_real="$(realpath -m -- "${target}")"
+    case "${target_real}" in
+        "${root_real}"|"${root_real}"/*) ;;
+        *) die "refusing to use ${label} outside local build root: ${path}" ;;
+    esac
+
+    current="${root}"
+    [[ ! -L "${current}" ]] ||
+        die "refusing to use local build root symlink: ${current}"
+    if [[ -e "${current}" && ! -d "${current}" ]]; then
+        die "refusing to use non-directory local build root: ${current}"
+    fi
+
+    rel="${target#${root}/}"
+    [[ "${target}" != "${root}" ]] || return 0
+    IFS=/ read -r -a parts <<<"${rel}"
+    for part in "${parts[@]}"; do
+        current="${current}/${part}"
+        [[ ! -L "${current}" ]] ||
+            die "refusing to use ${label} symlink: ${current}"
+        if [[ -e "${current}" && ! -d "${current}" ]]; then
+            die "refusing to use non-directory ${label} path: ${current}"
+        fi
+    done
+}
+
+validate_local_build_file_under_dir()
+{
+    local label="$1"
+    local path="$2"
+    local root="$3"
+    local root_real
+    local path_real
+
+    root_real="$(realpath -m -- "${root}")"
+    path_real="$(realpath -m -- "${path}")"
+    case "${path_real}" in
+        "${root_real}"/*) ;;
+        *) die "refusing to use ${label} outside ${root}: ${path}" ;;
+    esac
+    validate_local_build_write_dir "${label} parent" "$(dirname "${path}")"
 }
 
 reset_cmake_build_if_source_changed()

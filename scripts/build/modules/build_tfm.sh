@@ -145,8 +145,8 @@ tfm_build_manifest()
     printf 'ARM_NONE_EABI_PREFIX=%s\n' "${ARM_NONE_EABI_PREFIX}"
     printf 'ARM_NONE_EABI_GCC=%s\n' "$(command -v "${ARM_NONE_EABI_PREFIX}gcc")"
     printf 'NR_IMAGES_PER_FWU_BANK=%s\n' "${NR_IMAGES_PER_FWU_BANK}"
-    printf 'TFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp\n'
-    printf 'TFM_PLATFORM_VARIANT=fvp\n'
+    printf 'TFM_PLATFORM=%s\n' "${TFM_PLATFORM}"
+    printf 'TFM_PLATFORM_VARIANT=%s\n' "${TFM_PLATFORM_VARIANT}"
     printf 'TFM_RTL_VARIANT=emu\n'
     local_build_ccache_manifest
     git_tree_manifest "${TFM_SRC}" tfm-src
@@ -166,7 +166,7 @@ tfm_build_manifest()
 tfm_recipe_workdir()
 {
     local root
-    root="$(first_existing_glob "${YOCTO_TMP}/work/apollo_fvp-poky-linux/trusted-firmware-m"/* || true)"
+    root="$(first_existing_glob "${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/trusted-firmware-m"/* || true)"
     [[ -n "${root}" ]] || die "could not find TF-M Yocto workdir under ${YOCTO_TMP}"
     printf '%s\n' "${root}"
 }
@@ -253,7 +253,7 @@ build_tfm()
         -DCROSS_COMPILE="${tfm_cross_compile}" \
         -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
         -DPython3_EXECUTABLE="${tfm_work}/recipe-sysroot-native/usr/bin/python3-native/python3" \
-        -DTFM_PLATFORM=arm/rse/automotive_rd/apollo-fvp \
+        -DTFM_PLATFORM="${TFM_PLATFORM}" \
         -DTFM_TOOLCHAIN_FILE="${TFM_SRC}/toolchain_GNUARM.cmake" \
         -DMBEDCRYPTO_PATH="${tfm_deps}/mbedtls" \
         -DTFM_TEST_REPO_PATH="${tfm_deps}/tf-m-tests" \
@@ -267,7 +267,7 @@ build_tfm()
         -DCONFIG_TFM_FWU_GEN_TEST_IMAGES=ON \
         -DRSE_ENABLE_TRAM:BOOL=ON \
         -DNR_OF_IMAGES_IN_FW_BANK="${NR_IMAGES_PER_FWU_BANK}" \
-        -DTFM_PLATFORM_VARIANT=fvp \
+        -DTFM_PLATFORM_VARIANT="${TFM_PLATFORM_VARIANT}" \
         -DTFM_RTL_VARIANT=emu \
         -DPLATFORM_HAS_STRATA_FLASH=ON \
         -DTFM_BL1_2_CM_SIGNING_KEY_PATH="${TFM_BUILD_DIR}/externalsrc-keys/bl1_dummy_rotpk.pub" \

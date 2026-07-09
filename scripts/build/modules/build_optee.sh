@@ -10,7 +10,7 @@ fi
 
 resolve_optee_yocto_workdir()
 {
-    local root="${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os"
+    local root="${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/optee-os"
     local candidate
 
     [[ -d "${root}" ]] || return 1
@@ -37,7 +37,7 @@ build_optee()
     mkdir -p "${OPTEE_BUILD_DIR}" "${DEPLOY_DIR}/optee"
     local optee_work
     optee_work="$(resolve_optee_yocto_workdir)" ||
-        die "could not find Yocto optee-os workdir under ${YOCTO_TMP}/work/apollo_fvp-poky-linux/optee-os"
+        die "could not find Yocto optee-os workdir under ${YOCTO_TMP}/work/${LOCAL_MACHINE_WORK_PREFIX}-poky-linux/optee-os"
     local optee_sysroot="${optee_work}/recipe-sysroot"
     local optee_native_python="${optee_work}/recipe-sysroot-native/usr/bin/python3-native/python3"
     require_file "${optee_native_python}"

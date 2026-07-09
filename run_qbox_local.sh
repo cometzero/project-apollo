@@ -27,6 +27,7 @@ LEGACY_FILE_BACKED_SRAM=0
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
 PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
+QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-}"
 
 QBOX_BUILD_DIR_EXPLICIT=0
 QBOX_CONF_EXPLICIT=0
@@ -66,6 +67,15 @@ die()
 {
     printf 'error: %s\n' "$*" >&2
     exit 1
+}
+
+require_safe_token()
+{
+    local name="$1"
+    local value="$2"
+
+    [[ "${value}" =~ ^[A-Za-z0-9_-]+$ ]] ||
+        die "${name} must be a safe token containing only letters, digits, '_' or '-': ${value}"
 }
 
 usage()
@@ -423,6 +433,44 @@ artifact_path()
     die "missing ${label}: ${local_path}"
 }
 
+read_yocto_local_build_var()
+{
+    local recipe="$1"
+    local variable="$2"
+    local cache="${LOCAL_BUILD_DIR}/yocto-local-build-vars.json"
+
+    [[ -f "${cache}" ]] || return 1
+    "${PYTHON:-python3}" - "${cache}" "${recipe}" "${variable}" <<'PY'
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+cache = Path(sys.argv[1])
+recipe = sys.argv[2]
+variable = sys.argv[3]
+try:
+    data = json.loads(cache.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+recipes = data.get("recipes")
+if not isinstance(recipes, dict):
+    raise SystemExit(1)
+entry = recipes.get(recipe)
+if not isinstance(entry, dict):
+    raise SystemExit(1)
+variables = entry.get("variables")
+if not isinstance(variables, dict):
+    raise SystemExit(1)
+value = str(variables.get(variable, "")).strip()
+if not value:
+    raise SystemExit(1)
+print(value)
+PY
+}
+
 copy_image()
 {
     local src="$1"
@@ -436,6 +484,7 @@ main()
 {
     reject_removed_environment_overrides
     parse_args "$@"
+    require_safe_token MACHINE "${MACHINE}"
 
     YOCTO_BUILD_DIR="$(abspath "${YOCTO_BUILD_DIR}")"
     WORK_PREFIX="$(machine_to_work_prefix "${MACHINE}")"
@@ -446,6 +495,12 @@ main()
     OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-${MACHINE}/full-user-demo-${RUN_STAMP}}"
     OUT_DIR="$(abspath "${OUT_DIR}")"
     QBOX_PLATFORM_DIR="$(abspath "${QBOX_PLATFORM_DIR}")"
+    LOCAL_QBOX_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox-platform"
+    LOCAL_QBOX_CONF="${QBOX_PLATFORM_DIR}/platforms/apollo/${MACHINE}.lua"
+    LOCAL_QBOX_AVAILABLE=0
+    if [[ -x "${LOCAL_QBOX_BUILD_DIR}/platforms-vp" ]]; then
+        LOCAL_QBOX_AVAILABLE=1
+    fi
 
     if [[ "${MACHINE}" == "apollo-qvp" ]]; then
         QBOX_CONF_FILE="${QBOX_CONF_FILE:-$(resolve_qboxconf_default)}"
@@ -453,15 +508,25 @@ main()
             die "failed to read qboxconf: ${QBOX_CONF_FILE}"
         eval "${qboxconf_assignments}"
         if [[ "${QBOX_BUILD_DIR_EXPLICIT}" == "0" ]]; then
-            QBOX_BUILD_DIR="${QBOXCONF_PROVIDER_BINDIR}"
+            if [[ "${LOCAL_QBOX_AVAILABLE}" == "1" ]]; then
+                QBOX_BUILD_DIR="${LOCAL_QBOX_BUILD_DIR}"
+            else
+                QBOX_BUILD_DIR="${QBOXCONF_PROVIDER_BINDIR}"
+            fi
         fi
         if [[ "${QBOX_CONF_EXPLICIT}" == "0" ]]; then
-            QBOX_CONF="${QBOXCONF_CONFIG}"
+            if [[ "${QBOX_BUILD_DIR}" == "${LOCAL_QBOX_BUILD_DIR}" && -f "${LOCAL_QBOX_CONF}" ]]; then
+                QBOX_CONF="${LOCAL_QBOX_CONF}"
+            else
+                QBOX_CONF="${QBOXCONF_CONFIG}"
+            fi
         fi
-        export LD_LIBRARY_PATH="${QBOXCONF_LD_LIBRARY_PATH}"
+        if [[ -n "${QBOXCONF_LD_LIBRARY_PATH:-}" ]]; then
+            export LD_LIBRARY_PATH="${QBOXCONF_LD_LIBRARY_PATH}"
+        fi
     else
         QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
-        QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}"
+        QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${LOCAL_QBOX_BUILD_DIR}}"
     fi
 
     QBOX_CONF="$(abspath "${QBOX_CONF}")"
@@ -476,16 +541,27 @@ main()
     [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
     if [[ "${DRY_RUN}" != "1" ]]; then
         [[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
+        [[ -x "${QBOX_BUILD_DIR}/platforms-vp" ]] ||
+            die "QBox executable not found or not executable: ${QBOX_BUILD_DIR}/platforms-vp"
     fi
-    if [[ "${MACHINE}" == "apollo-qvp" ]]; then
-        [[ -x "${QBOXCONF_EXE}" ]] ||
-            die "QBox executable not found or not executable: ${QBOXCONF_EXE}"
+
+    if [[ -z "${QBOX_APOLLO_NUM_CPUS}" ]]; then
+        QBOX_APOLLO_NUM_CPUS="$(
+            read_yocto_local_build_var nexios-image PC_CPUS_COUNT_DEFAULT || true
+        )"
+    fi
+    if [[ -n "${QBOX_APOLLO_NUM_CPUS}" ]]; then
+        [[ "${QBOX_APOLLO_NUM_CPUS}" =~ ^[0-9]+$ ]] ||
+            die "QBOX_APOLLO_NUM_CPUS must be numeric: ${QBOX_APOLLO_NUM_CPUS}"
+        ((QBOX_APOLLO_NUM_CPUS >= 1 && QBOX_APOLLO_NUM_CPUS <= 16)) ||
+            die "QBOX_APOLLO_NUM_CPUS must be in range 1..16: ${QBOX_APOLLO_NUM_CPUS}"
+        export QBOX_APOLLO_NUM_CPUS
     fi
 
     PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
     PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
 
-    local rootfs_src="${LOCAL_BUILD_DIR}/deploy/boot/apollo-fvp-local-disk.img"
+    local rootfs_src="${LOCAL_BUILD_DIR}/deploy/boot/${MACHINE}-local-disk.img"
     local efi_src="${LOCAL_BUILD_DIR}/deploy/boot/boot-fat.img"
     RUN_ROOTFS="$(artifact_path "local Buildroot boot disk" "${ROOTFS_OVERRIDE}" "${rootfs_src}" "")"
     RUN_EFI_CAPSULE_DISK="$(artifact_path "local EFI capsule disk" "${EFI_CAPSULE_DISK_OVERRIDE}" "${efi_src}" "${QBOXCONF_IMAGE_EFI_CAPSULE_DISK:-}")"
@@ -493,11 +569,11 @@ main()
     RSE_FLASH="$(artifact_path "RSE flash image" "${RSE_FLASH_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/rse-flash-image.img" "${QBOXCONF_IMAGE_RSE_FLASH:-}")"
     RSE_OTP="$(artifact_path "RSE OTP image" "${RSE_OTP_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/rse-otp-image.img" "${QBOXCONF_IMAGE_RSE_OTP:-}")"
     AP_FLASH="$(artifact_path "AP flash image" "${AP_FLASH_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/ap-flash-image.img" "${QBOXCONF_IMAGE_AP_FLASH:-}")"
-    AP_BL2_ELF="$(artifact_path "AP TF-A BL2 ELF" "${AP_BL2_ELF_OVERRIDE}" "${LOCAL_BUILD_DIR}/work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf" "${QBOXCONF_IMAGE_AP_BL2_ELF:-}")"
+    AP_BL2_ELF="$(artifact_path "AP TF-A BL2 ELF" "${AP_BL2_ELF_OVERRIDE}" "${LOCAL_BUILD_DIR}/work/trusted-firmware-a/${WORK_PREFIX}/debug/bl2/bl2.elf" "${QBOXCONF_IMAGE_AP_BL2_ELF:-}")"
     RSE_BL1_2_ELF="$(artifact_path "RSE TF-M BL1_2 ELF" "${RSE_BL1_2_ELF_OVERRIDE}" "${LOCAL_BUILD_DIR}/work/trusted-firmware-m/bin/bl1_2.elf" "${QBOXCONF_IMAGE_RSE_BL1_2_ELF:-}")"
     RSE_BL2_ELF="$(artifact_path "RSE TF-M BL2 ELF" "${RSE_BL2_ELF_OVERRIDE}" "${LOCAL_BUILD_DIR}/work/trusted-firmware-m/bin/bl2.elf" "${QBOXCONF_IMAGE_RSE_BL2_ELF:-}")"
     PROVISIONING_BUNDLE="$(artifact_path "combined provisioning bundle" "${PROVISIONING_BUNDLE_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/combined_provisioning_message.bin" "${QBOXCONF_IMAGE_PROVISIONING_BUNDLE:-}")"
-    AP_DTB="$(artifact_path "AP device tree" "${AP_DTB_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/boot/apollo-fvp.dtb" "${QBOXCONF_IMAGE_AP_DTB:-}")"
+    AP_DTB="$(artifact_path "AP device tree" "${AP_DTB_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/boot/${MACHINE}.dtb" "${QBOXCONF_IMAGE_AP_DTB:-}")"
     SI_CL0_IMAGE="$(artifact_path "Safety Island CL0 SCP image" "${SI_CL0_IMAGE_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/si0_ramfw.bin" "${QBOXCONF_IMAGE_SI_CL0:-}")"
     SI_CL1_IMAGE="$(artifact_path "Safety Island CL1 Zephyr image" "${SI_CL1_IMAGE_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/zephyr-demos-cl1.bin" "${QBOXCONF_IMAGE_SI_CL1:-}")"
     SI_CL1_SYMBOLS="$(artifact_path "Safety Island CL1 Zephyr symbols" "${SI_CL1_SYMBOLS_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/zephyr-demos-cl1.elf" "${QBOXCONF_IMAGE_SI_CL1_SYMBOLS:-}")"
@@ -538,6 +614,7 @@ main()
     printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
     printf '  qbox_conf: %s\n' "${QBOX_CONF}"
     printf '  qbox_build_dir: %s\n' "${QBOX_BUILD_DIR}"
+    printf '  ap_cpus: %s\n' "${QBOX_APOLLO_NUM_CPUS:-default}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
     printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"

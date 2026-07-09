@@ -117,11 +117,15 @@ def create_qvp_qboxconf(yocto_build: Path, deploy: Path) -> Path:
     return qboxconf
 
 
-def create_local_artifacts(local_build_dir: Path) -> None:
+def create_local_artifacts(
+    local_build_dir: Path,
+    *,
+    local_qbox_executable: bool = True,
+) -> None:
     for path in (
-        local_build_dir / "deploy/boot/apollo-fvp-local-disk.img",
+        local_build_dir / "deploy/boot/apollo-qvp-local-disk.img",
         local_build_dir / "deploy/boot/boot-fat.img",
-        local_build_dir / "deploy/boot/apollo-fvp.dtb",
+        local_build_dir / "deploy/boot/apollo-qvp.dtb",
         local_build_dir / "deploy/firmware/rse-rom-image.img",
         local_build_dir / "deploy/firmware/rse-flash-image.img",
         local_build_dir / "deploy/firmware/rse-otp-image.img",
@@ -130,24 +134,54 @@ def create_local_artifacts(local_build_dir: Path) -> None:
         local_build_dir / "deploy/firmware/si0_ramfw.bin",
         local_build_dir / "deploy/firmware/zephyr-demos-cl1.bin",
         local_build_dir / "deploy/firmware/zephyr-demos-cl1.elf",
-        local_build_dir / "work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf",
+        local_build_dir / "work/trusted-firmware-a/apollo_qvp/debug/bl2/bl2.elf",
         local_build_dir / "work/trusted-firmware-m/bin/bl1_2.elf",
         local_build_dir / "work/trusted-firmware-m/bin/bl2.elf",
         local_build_dir / "debug/symbols.json",
     ):
         touch_file(path)
+    if local_qbox_executable:
+        executable = local_build_dir / "work/qbox-platform/platforms-vp"
+        touch_file(executable)
+        executable.chmod(0o755)
+    else:
+        (local_build_dir / "work/qbox-platform").mkdir(parents=True, exist_ok=True)
+
+
+def create_local_build_vars(local_build_dir: Path, pc_cpus_count: str = "4") -> None:
+    payload = {
+        "schema_version": 1,
+        "recipes": {
+            "nexios-image": {
+                "variables": {
+                    "MACHINE": "apollo-qvp",
+                    "PC_CPUS_COUNT_DEFAULT": pc_cpus_count,
+                }
+            }
+        },
+    }
+    local_build_dir.mkdir(parents=True, exist_ok=True)
+    (local_build_dir / "yocto-local-build-vars.json").write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
 
 
 def run_qvp_local_dry_run(
     tmp_path: Path,
     extra_args: list[str] | None = None,
     extra_env: dict[str, str] | None = None,
+    local_qbox_executable: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     yocto_build = tmp_path / "build"
     deploy = yocto_build / "tmp_baremetal/deploy/images/apollo-qvp"
     local_build_dir = yocto_build / "local-apollo-qvp"
     create_qvp_qboxconf(yocto_build, deploy)
-    create_local_artifacts(local_build_dir)
+    create_local_artifacts(
+        local_build_dir,
+        local_qbox_executable=local_qbox_executable,
+    )
+    create_local_build_vars(local_build_dir)
 
     env = os.environ.copy()
     for name in (
@@ -207,6 +241,20 @@ def test_run_qbox_dry_run_omits_removed_remote_surfaces(tmp_path: Path) -> None:
         assert surface not in result.stderr
 
 
+def test_run_qbox_local_rejects_unsafe_machine_before_deriving_paths(
+    tmp_path: Path,
+) -> None:
+    result = run_dry_run(
+        tmp_path,
+        extra_env={"MACHINE": "../../escape"},
+    )
+
+    assert result.returncode != 0
+    output = f"{result.stdout}\n{result.stderr}"
+    assert "MACHINE must be a safe token" in output
+    assert "qbox-../../escape" not in output
+
+
 @pytest.mark.parametrize(
     ("args", "message"),
     [
@@ -261,7 +309,7 @@ def test_run_qbox_rejects_unrelated_invalid_option(tmp_path: Path) -> None:
     assert "unknown argument: --not-a-real-option" in result.stderr
 
 
-def test_run_qbox_local_qvp_uses_qboxconf_provider_and_local_initramfs_disk(
+def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     tmp_path: Path,
 ) -> None:
     result = run_qvp_local_dry_run(tmp_path)
@@ -269,19 +317,18 @@ def test_run_qbox_local_qvp_uses_qboxconf_provider_and_local_initramfs_disk(
     assert result.returncode == 0, result.stderr
     yocto_build = tmp_path / "build"
     local_build_dir = yocto_build / "local-apollo-qvp"
-    provider_root = (
-        yocto_build
-        / "tmp_baremetal/sysroots-components/x86_64/qbox-apollo-qvp-native/usr"
-    )
     argv = dry_run_command_argv(result.stdout)
     assert f"qboxconf: {yocto_build / 'tmp_baremetal/deploy/images/apollo-qvp/nexios-image-apollo-qvp.qboxconf'}" in result.stdout
-    assert argv[argv.index("--qbox-build-dir") + 1] == str(provider_root / "bin")
+    assert argv[argv.index("--qbox-build-dir") + 1] == str(
+        local_build_dir / "work/qbox-platform"
+    )
     assert argv[argv.index("--conf") + 1] == str(
-        provider_root / "share/qbox/platforms/apollo/apollo-qvp.lua"
+        ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua"
     )
     assert argv[argv.index("--rootfs") + 1] == str(
-        local_build_dir / "deploy/boot/apollo-fvp-local-disk.img"
+        local_build_dir / "deploy/boot/apollo-qvp-local-disk.img"
     )
+    assert "  ap_cpus: 4" in result.stdout
     assert "nexios-image-apollo-qvp.wic" not in result.stdout
     assert ".verity" not in result.stdout
     assert "tmux_layout: fvp-like" in result.stdout
@@ -299,6 +346,42 @@ def test_run_qbox_local_qvp_uses_qboxconf_provider_and_local_initramfs_disk(
     assert "--si-cl1-image" in argv
     assert "--si-cl1-symbols" in argv
     assert "--rse-symbols" in argv
+
+
+def test_run_qbox_local_qvp_falls_back_to_provider_for_incomplete_local_qbox(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_local_dry_run(tmp_path, local_qbox_executable=False)
+
+    assert result.returncode == 0, result.stderr
+    yocto_build = tmp_path / "build"
+    local_build_dir = yocto_build / "local-apollo-qvp"
+    provider_root = (
+        yocto_build
+        / "tmp_baremetal/sysroots-components/x86_64/qbox-apollo-qvp-native/usr"
+    )
+    assert (local_build_dir / "work/qbox-platform").is_dir()
+    assert not (local_build_dir / "work/qbox-platform/platforms-vp").exists()
+    argv = dry_run_command_argv(result.stdout)
+    assert argv[argv.index("--qbox-build-dir") + 1] == str(provider_root / "bin")
+    assert argv[argv.index("--conf") + 1] == str(
+        provider_root / "share/qbox/platforms/apollo/apollo-qvp.lua"
+    )
+    assert argv[argv.index("--rootfs") + 1].endswith(
+        "build/local-apollo-qvp/deploy/boot/apollo-qvp-local-disk.img"
+    )
+
+
+def test_run_qbox_local_qvp_preserves_explicit_ap_cpu_count(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_local_dry_run(
+        tmp_path,
+        extra_env={"QBOX_APOLLO_NUM_CPUS": "2"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "  ap_cpus: 2" in result.stdout
 
 
 def test_run_qbox_local_qvp_rejects_missing_qboxconf(tmp_path: Path) -> None:

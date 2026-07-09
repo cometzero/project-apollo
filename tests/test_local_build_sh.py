@@ -137,6 +137,33 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     assert "package: local FVP deploy" not in output
 
 
+def test_sdk_dir_defaults_to_active_machine(tmp_path: Path) -> None:
+    # Given: local_build_common.sh is sourced for the active apollo-qvp machine.
+    command = (
+        "set -euo pipefail; "
+        "source scripts/build/local_build_common.sh; "
+        "printf '%s\\n' \"${SDK_DIR}\""
+    )
+    result = subprocess.run(
+        ("bash", "-lc", command),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "MACHINE": "apollo-qvp",
+            "PATH": "/usr/bin:/bin",
+            "YOCTO_BUILD_DIR": str(tmp_path / "build"),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: the default SDK install root cannot reuse another machine's SDK.
+    assert result.returncode == 0, output_of(result)
+    assert result.stdout.strip() == str(tmp_path / "build/local-sdk-apollo-qvp")
+
+
 def test_ccache_report_covers_every_component_when_available(tmp_path: Path) -> None:
     tools_dir = tmp_path / "tools"
     write_file(
@@ -641,7 +668,7 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
         "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
         "sdk_deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
         "mkdir -p \"${sdk_deploy}\"\n"
-        "installer=\"${sdk_deploy}/apollo-test-sdk.sh\"\n"
+        "installer=\"${sdk_deploy}/auto-ad-nexios-apollo-fvp-toolchain-test.sh\"\n"
         "cat > \"${installer}\" <<'SDK'\n"
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
@@ -698,6 +725,145 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
     assert "defconfig" in make_args
 
 
+def test_build_sdk_selects_installer_for_active_machine(tmp_path: Path) -> None:
+    # Given: an old apollo-fvp SDK installer exists before an apollo-qvp SDK build.
+    tools_dir = tmp_path / "host-tools"
+    sdk_dir = tmp_path / "sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    deploy_sdk = yocto_build / "tmp_baremetal/deploy/sdk"
+    bitbake_log = tmp_path / "bitbake.log"
+    for path in (tools_dir, deploy_sdk):
+        path.mkdir(parents=True)
+    write_file(
+        deploy_sdk / "auto-ad-nexios-apollo-fvp-toolchain-test.sh",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in -d) dest=\"$2\"; shift 2 ;; *) shift ;; esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "printf 'old-fvp\\n' > \"${dest}/environment-setup-old-fvp\"\n",
+    )
+    (deploy_sdk / "auto-ad-nexios-apollo-fvp-toolchain-test.sh").chmod(0o755)
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
+        "installer=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk/"
+        "auto-ad-nexios-apollo-qvp-toolchain-test.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in -d) dest=\"$2\"; shift 2 ;; *) shift ;; esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "printf 'qvp\\n' > \"${dest}/environment-setup-apollo-qvp\"\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
+
+    command = "source scripts/build/local_build_common.sh; source scripts/build/modules/build_sdk.sh; build_sdk"
+    result = subprocess.run(
+        ("bash", "-lc", command),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
+            "BITBAKE": str(tools_dir / "bitbake"),
+            "HOME": str(tmp_path),
+            "MACHINE": "apollo-qvp",
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+            "SDK_DIR": str(sdk_dir),
+            "YOCTO_BUILD_DIR": str(yocto_build),
+            "LOCAL_BUILD_DIR": str(local_build),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: build_sdk ignores the stale fvp installer and installs qvp.
+    assert result.returncode == 0, output_of(result)
+    assert (sdk_dir / "environment-setup-apollo-qvp").read_text(
+        encoding="utf-8"
+    ) == "qvp\n"
+    assert not (sdk_dir / "environment-setup-old-fvp").exists()
+    assert "nexios-image -c populate_sdk" in bitbake_log.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_build_sdk_forces_populate_sdk_when_stamp_kept_but_installer_deleted(
+    tmp_path: Path,
+) -> None:
+    # Given: populate_sdk is stamped complete, but its deploy/sdk installer was removed.
+    tools_dir = tmp_path / "host-tools"
+    sdk_dir = tmp_path / "sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    bitbake_log = tmp_path / "bitbake.log"
+    tools_dir.mkdir(parents=True)
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
+        "case \" $* \" in\n"
+        "    *' -f '*) ;;\n"
+        "    *) exit 0 ;;\n"
+        "esac\n"
+        "sdk_deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
+        "mkdir -p \"${sdk_deploy}\"\n"
+        "installer=\"${sdk_deploy}/auto-ad-nexios-apollo-qvp-toolchain-forced.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in -d) dest=\"$2\"; shift 2 ;; *) shift ;; esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "printf 'forced-qvp\\n' > \"${dest}/environment-setup-apollo-qvp\"\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
+
+    command = "source scripts/build/local_build_common.sh; source scripts/build/modules/build_sdk.sh; build_sdk"
+    result = subprocess.run(
+        ("bash", "-lc", command),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
+            "BITBAKE": str(tools_dir / "bitbake"),
+            "HOME": str(tmp_path),
+            "MACHINE": "apollo-qvp",
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+            "SDK_DIR": str(sdk_dir),
+            "YOCTO_BUILD_DIR": str(yocto_build),
+            "LOCAL_BUILD_DIR": str(local_build),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: build_sdk retries with -f and installs the regenerated qvp SDK.
+    assert result.returncode == 0, output_of(result)
+    assert (sdk_dir / "environment-setup-apollo-qvp").read_text(
+        encoding="utf-8"
+    ) == "forced-qvp\n"
+    bitbake_calls = bitbake_log.read_text(encoding="utf-8").splitlines()
+    assert bitbake_calls[0].endswith("nexios-image -c populate_sdk")
+    assert bitbake_calls[1].endswith("nexios-image -c populate_sdk -f")
+
+
 def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
     # Given: QBox is requested and the Yocto SDK is not installed yet.
     tools_dir = tmp_path / "host-tools"
@@ -739,7 +905,7 @@ def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
         "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
         "sdk_deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
         "mkdir -p \"${sdk_deploy}\"\n"
-        "installer=\"${sdk_deploy}/apollo-test-sdk.sh\"\n"
+        "installer=\"${sdk_deploy}/auto-ad-nexios-apollo-fvp-toolchain-test.sh\"\n"
         "cat > \"${installer}\" <<'SDK'\n"
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
@@ -1206,9 +1372,14 @@ def test_tfm_build_dry_run_rejects_unresolved_platform() -> None:
     assert "trusted-firmware-m" in output
 
 
-def add_local_linux_fixture(local_build: Path, *, modules: bool = True) -> None:
+def add_local_linux_fixture(
+    local_build: Path,
+    *,
+    dtb_name: str = "apollo-fvp.dtb",
+    modules: bool = True,
+) -> None:
     write_file(local_build / "deploy" / "boot" / "Image", b"local-linux-image\n")
-    write_file(local_build / "deploy" / "boot" / "apollo-fvp.dtb", b"local-dtb\n")
+    write_file(local_build / "deploy" / "boot" / dtb_name, b"local-dtb\n")
     if modules:
         linux_build = local_build / "work" / "linux"
         write_file(linux_build / "include" / "config" / "kernel.release", "6.6.1-local\n")
@@ -1838,6 +2009,65 @@ def test_linux_clean_rejects_boot_dir_symlink_without_deleting_outside_image(
     assert boot_image.read_bytes() == b"outside Image\n"
 
 
+def test_boot_disk_clean_rejects_boot_disk_path_outside_boot_dir(
+    tmp_path: Path,
+) -> None:
+    # Given: LOCAL_BUILD_BOOT_DISK points outside the generated boot directory.
+    local_build = tmp_path / "local-build"
+    outside_disk = tmp_path / "outside-disk.img"
+    write_file(outside_disk, b"outside disk\n")
+    (local_build / "work").mkdir(parents=True)
+    (local_build / "deploy" / "boot").mkdir(parents=True)
+
+    # When: boot-disk clean is requested.
+    result = run_local_build(
+        "boot-disk",
+        "clean",
+        "--no-package",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "LOCAL_BUILD_DIR": str(local_build),
+            "LOCAL_BUILD_BOOT_DISK": str(outside_disk),
+            "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
+        },
+    )
+
+    # Then: it rejects the override before deleting the outside file.
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "boot disk" in output
+    assert str(outside_disk) in output
+    assert outside_disk.read_bytes() == b"outside disk\n"
+
+
+def test_boot_disk_clean_dry_run_rejects_boot_disk_path_outside_boot_dir(
+    tmp_path: Path,
+) -> None:
+    # Given: LOCAL_BUILD_BOOT_DISK points outside the generated boot directory.
+    local_build = tmp_path / "local-build"
+    outside_disk = tmp_path / "outside-disk.img"
+
+    # When: boot-disk clean dry-run is requested.
+    result = run_local_build(
+        "boot-disk",
+        "clean",
+        "--dry-run",
+        "--no-package",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "LOCAL_BUILD_DIR": str(local_build),
+            "LOCAL_BUILD_BOOT_DISK": str(outside_disk),
+            "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
+        },
+    )
+
+    # Then: it rejects the unsafe override before rendering a misleading plan.
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "boot disk" in output
+    assert str(outside_disk) in output
+
+
 def test_linux_clean_rejects_work_symlink_without_deleting_outside_data(
     tmp_path: Path,
 ) -> None:
@@ -1868,6 +2098,57 @@ def test_linux_clean_rejects_work_symlink_without_deleting_outside_data(
     assert "work root" in output
     assert str(local_build / "work") in output
     assert sentinel.read_text(encoding="utf-8") == "outside component data\n"
+
+
+def test_tfa_rejects_unsafe_platform_token_before_build(
+    tmp_path: Path,
+) -> None:
+    # Given: TF_A_PLATFORM contains a parent traversal segment.
+    local_build = tmp_path / "local-build"
+
+    # When: local_build.sh resolves configuration.
+    result = run_local_build(
+        "tf-a",
+        "build",
+        "--dry-run",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "LOCAL_BUILD_DIR": str(local_build),
+            "TF_A_PLATFORM": "../../outside",
+            "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
+        },
+    )
+
+    # Then: it fails before a TF-A clean/build path can be formed.
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "TF_A_PLATFORM must be a safe token" in output
+    assert "../../outside" in output
+
+
+def test_rejects_unsafe_machine_token_before_deriving_paths(
+    tmp_path: Path,
+) -> None:
+    # Given: MACHINE contains a parent traversal segment.
+    local_build = tmp_path / "local-build"
+
+    # When: local_build.sh resolves configuration.
+    result = run_local_build(
+        "--dry-run",
+        extra_env={
+            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+            "LOCAL_BUILD_DIR": str(local_build),
+            "MACHINE": "../../escape",
+            "TF_A_PLATFORM": "apollo_qvp",
+            "YOCTO_BUILD_DIR": str(tmp_path / "yocto-build"),
+        },
+    )
+
+    # Then: it rejects the machine before deriving build/deploy paths.
+    assert result.returncode != 0
+    output = output_of(result)
+    assert "MACHINE must be a safe token" in output
+    assert "local-../../escape" not in output
 
 
 def test_package_rejects_nested_parent_symlink_before_mkdir(
@@ -2185,6 +2466,36 @@ def test_package_local_linux_generates_slot_ukis_and_manifest(tmp_path: Path) ->
     wic_lines = wic_log.read_text(encoding="utf-8").splitlines()
     assert any("boot_a" in line or "@@1048576" in line for line in wic_lines)
     assert any("boot_b" in line or "@@135266304" in line for line in wic_lines)
+
+
+def test_package_local_linux_uses_kernel_devicetree_basename(
+    tmp_path: Path,
+) -> None:
+    yocto_deploy, local_build, env = make_package_fixture(tmp_path)
+    add_local_linux_fixture(local_build, dtb_name="custom-apollo.dtb")
+    add_uki_source_fixture(yocto_deploy)
+    tools_dir, ukify_log, wic_log = add_stub_uki_tools(tmp_path)
+    vars_path = tmp_path / "yocto-vars.json"
+    write_yocto_vars(vars_path, default_uki_variables(tools_dir / "ukify"))
+
+    result = run_local_build(
+        "--package",
+        extra_env=with_fixture_flash_hook(
+            local_uki_env(env, vars_path, tools_dir, ukify_log, wic_log)
+            | {"KERNEL_DEVICETREE": "arm/custom-apollo.dtb"},
+            tmp_path / "package-flash-hook.log",
+        ),
+    )
+
+    assert result.returncode == 0, output_of(result)
+    local_deploy = local_build / "deploy"
+    ukify_lines = ukify_log.read_text(encoding="utf-8").splitlines()
+    assert "--devicetree " + str(
+        local_deploy / "boot" / "custom-apollo.dtb"
+    ) in ukify_lines[0]
+    assert "--devicetree " + str(
+        local_deploy / "boot" / "custom-apollo.dtb"
+    ) in ukify_lines[1]
 
 
 def test_package_local_linux_rejects_unsafe_uki_and_initrd_names(

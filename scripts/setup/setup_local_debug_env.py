@@ -71,7 +71,10 @@ COMPONENTS = (
         "SCP-firmware SI0 RAMFW",
         "safety_island_cl0",
         SI_CL0_TARGET,
-        ("work/scp-firmware/bin/apollo-fvp-si0-bl2.elf",),
+        (
+            "work/scp-firmware/bin/apollo-qvp-si0-bl2.elf",
+            "work/scp-firmware/bin/apollo-fvp-si0-bl2.elf",
+        ),
         ("arch_exception_reset", "platform_init_hook", "fwk_arch_init"),
         ("hsoc-stack/components/system_mgmt/scp-firmware",),
     ),
@@ -81,8 +84,9 @@ COMPONENTS = (
         "safety_island_cl1",
         SI_CL1_TARGET,
         (
-            "../tmp_baremetal/deploy/images/apollo-fvp/zephyr-demos-cl1.elf",
             "deploy/firmware/zephyr-demos-cl1.elf",
+            "../tmp_baremetal/deploy/images/apollo-qvp/zephyr-demos-cl1.elf",
+            "../tmp_baremetal/deploy/images/apollo-fvp/zephyr-demos-cl1.elf",
         ),
         ("z_cstart", "main"),
         (
@@ -95,7 +99,10 @@ COMPONENTS = (
         "TF-A BL2",
         "tf_a",
         AP_TARGET,
-        ("work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf",),
+        (
+            "work/trusted-firmware-a/apollo_qvp/debug/bl2/bl2.elf",
+            "work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf",
+        ),
         ("bl2_main", "_start"),
         ("hsoc-stack/components/primary_compute/trusted-firmware-a",),
     ),
@@ -104,7 +111,10 @@ COMPONENTS = (
         "TF-A BL31",
         "tf_a",
         AP_TARGET,
-        ("work/trusted-firmware-a/apollo_fvp/debug/bl31/bl31.elf",),
+        (
+            "work/trusted-firmware-a/apollo_qvp/debug/bl31/bl31.elf",
+            "work/trusted-firmware-a/apollo_fvp/debug/bl31/bl31.elf",
+        ),
         ("bl31_main", "_start"),
         ("hsoc-stack/components/primary_compute/trusted-firmware-a",),
     ),
