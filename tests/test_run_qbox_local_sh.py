@@ -232,6 +232,13 @@ def dry_run_command_argv(output: str) -> list[str]:
     raise AssertionError(output)
 
 
+def dry_run_out_dir(output: str) -> Path:
+    for line in output.splitlines():
+        if line.strip().startswith("out_dir: "):
+            return Path(line.split("out_dir: ", maxsplit=1)[1])
+    raise AssertionError(output)
+
+
 def test_run_qbox_dry_run_omits_removed_remote_surfaces(tmp_path: Path) -> None:
     result = run_dry_run(tmp_path)
 
@@ -317,6 +324,7 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     assert result.returncode == 0, result.stderr
     yocto_build = tmp_path / "build"
     local_build_dir = yocto_build / "local-apollo-qvp"
+    out_dir = dry_run_out_dir(result.stdout)
     argv = dry_run_command_argv(result.stdout)
     assert f"qboxconf: {yocto_build / 'tmp_baremetal/deploy/images/apollo-qvp/nexios-image-apollo-qvp.qboxconf'}" in result.stdout
     assert argv[argv.index("--qbox-build-dir") + 1] == str(
@@ -326,9 +334,13 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
         ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua"
     )
     assert argv[argv.index("--rootfs") + 1] == str(
-        local_build_dir / "deploy/boot/apollo-qvp-local-disk.img"
+        out_dir / "input-images/apollo-qvp-local-disk.img"
+    )
+    assert argv[argv.index("--efi-capsule-disk") + 1] == str(
+        out_dir / "input-images/boot-fat.img"
     )
     assert "  ap_cpus: 4" in result.stdout
+    assert f"rootfs: {out_dir / 'input-images/apollo-qvp-local-disk.img'}" in result.stdout
     assert "nexios-image-apollo-qvp.wic" not in result.stdout
     assert ".verity" not in result.stdout
     assert "tmux_layout: fvp-like" in result.stdout
@@ -346,6 +358,23 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     assert "--si-cl1-image" in argv
     assert "--si-cl1-symbols" in argv
     assert "--rse-symbols" in argv
+
+
+def test_run_qbox_local_qvp_no_copy_disks_uses_base_local_boot_disk(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_local_dry_run(tmp_path, extra_args=["--no-copy-disks"])
+
+    assert result.returncode == 0, result.stderr
+    yocto_build = tmp_path / "build"
+    local_build_dir = yocto_build / "local-apollo-qvp"
+    argv = dry_run_command_argv(result.stdout)
+    assert argv[argv.index("--rootfs") + 1] == str(
+        local_build_dir / "deploy/boot/apollo-qvp-local-disk.img"
+    )
+    assert argv[argv.index("--efi-capsule-disk") + 1] == str(
+        local_build_dir / "deploy/boot/boot-fat.img"
+    )
 
 
 def test_run_qbox_local_qvp_falls_back_to_provider_for_incomplete_local_qbox(
@@ -367,8 +396,9 @@ def test_run_qbox_local_qvp_falls_back_to_provider_for_incomplete_local_qbox(
     assert argv[argv.index("--conf") + 1] == str(
         provider_root / "share/qbox/platforms/apollo/apollo-qvp.lua"
     )
-    assert argv[argv.index("--rootfs") + 1].endswith(
-        "build/local-apollo-qvp/deploy/boot/apollo-qvp-local-disk.img"
+    out_dir = dry_run_out_dir(result.stdout)
+    assert argv[argv.index("--rootfs") + 1] == str(
+        out_dir / "input-images/apollo-qvp-local-disk.img"
     )
 
 
@@ -436,5 +466,10 @@ def test_run_qbox_local_explicit_rootfs_and_efi_override_qboxconf_defaults(
 
     assert result.returncode == 0, result.stderr
     argv = dry_run_command_argv(result.stdout)
-    assert argv[argv.index("--rootfs") + 1] == str(explicit_rootfs)
-    assert argv[argv.index("--efi-capsule-disk") + 1] == str(explicit_efi)
+    out_dir = dry_run_out_dir(result.stdout)
+    assert argv[argv.index("--rootfs") + 1] == str(
+        out_dir / "input-images/explicit-rootfs.img"
+    )
+    assert argv[argv.index("--efi-capsule-disk") + 1] == str(
+        out_dir / "input-images/explicit-efi.img"
+    )
