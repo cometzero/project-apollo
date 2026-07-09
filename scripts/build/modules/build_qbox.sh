@@ -21,6 +21,7 @@ build_qbox()
     local qbox_cmake_args=()
     local qbox_libqemu_args=()
     local qbox_build_testing
+    local qbox_run_unit_tests
     local qbox_use_system_libqemu
     local qbox_libqemu_dir
     local qbox_libqemu_prefix
@@ -30,9 +31,14 @@ build_qbox()
     cmake_cmd="$(command -v cmake)" ||
         die "missing required command: cmake"
 
+    qbox_run_unit_tests="${QBOX_RUN_UNIT_TESTS:-0}"
+    if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+        qbox_run_unit_tests=1
+    fi
+
     qbox_build_testing="${QBOX_BUILD_TESTING:-}"
     if [[ -z "${qbox_build_testing}" ]]; then
-        if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+        if [[ "${qbox_run_unit_tests}" == 1 ]]; then
             qbox_build_testing=ON
         else
             qbox_build_testing=OFF
@@ -107,14 +113,14 @@ build_qbox()
         --target "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}" \
         --parallel "${JOBS}"
 
-    if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
-        run_logged qbox-systemc-component-test-build \
+    if [[ "${qbox_run_unit_tests}" == 1 ]]; then
+        run_logged qbox-unit-test-build \
             "${cmake_cmd}" \
             --build "${QBOX_PLATFORM_BUILD_DIR}" \
             --target qbox_platform_systemc_component_tests \
             --parallel "${JOBS}"
 
-        run_logged qbox-systemc-component-tests \
+        run_logged qbox-unit-tests \
             ctest \
             --test-dir "${QBOX_PLATFORM_BUILD_DIR}" \
             -L qbox-platform-systemc-components \

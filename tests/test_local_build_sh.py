@@ -84,6 +84,7 @@ def test_help_documents_local_fvp_contract() -> None:
     assert "--dry-run" in output
     assert "--package" in output
     assert "--no-package" in output
+    assert "--qbox-unit-tests" in output
     assert "--qbox-systemc-tests" in output
     assert "--ccache-report" in output
     for component in COMPONENTS:
@@ -103,8 +104,8 @@ def test_help_includes_operational_examples_with_existing_script_paths() -> None
     for example in (
         "./local_build.sh",
         "./local_build.sh qbox",
-        "./local_build.sh qbox --qbox-systemc-tests",
-        "./local_build.sh --qbox-systemc-tests",
+        "./local_build.sh qbox --qbox-unit-tests",
+        "./local_build.sh --qbox-unit-tests",
         "./local_build.sh linux clean-build --no-package",
         "./local_build.sh linux menuconfig --no-package",
         "./local_build.sh --package",
@@ -441,14 +442,24 @@ def test_qbox_build_dry_run_resolves_qbox_target() -> None:
     assert "package: local FVP deploy" not in output
 
 
-def test_qbox_systemc_tests_dry_run_selects_qbox_only() -> None:
+def test_qbox_unit_tests_dry_run_selects_qbox_only() -> None:
+    result = run_local_build("--qbox-unit-tests", "--dry-run")
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert component_step_lines(output) == ["qbox: build"]
+    assert "test target: qbox_platform_systemc_component_tests" in output
+    assert "ctest: -L qbox-platform-systemc-components" in output
+    assert "package: local FVP deploy" not in output
+
+
+def test_qbox_systemc_tests_dry_run_remains_alias() -> None:
     result = run_local_build("--qbox-systemc-tests", "--dry-run")
 
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
     assert component_step_lines(output) == ["qbox: build"]
-    assert "ctest: -L qbox-platform-systemc-components" in output
-    assert "package: local FVP deploy" not in output
+    assert "test target: qbox_platform_systemc_component_tests" in output
 
 
 def test_unknown_action_fails_with_actionable_error() -> None:
@@ -1003,7 +1014,7 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
 
     result = run_local_build(
         "qbox",
-        "--qbox-systemc-tests",
+        "--qbox-unit-tests",
         extra_env={
             "APOLLO_TEST_CALL_LOG": str(call_log),
             "PATH": f"{tools_dir}:/usr/bin:/bin",
@@ -1021,6 +1032,7 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
     assert f"-DCMAKE_C_COMPILER_LAUNCHER={tools_dir / 'ccache'}" in calls
     assert f"-DCMAKE_CXX_COMPILER_LAUNCHER={tools_dir / 'ccache'}" in calls
     assert "--target apollo_fvp_full_system" in calls
+    assert "--target qbox_platform_systemc_component_tests" in calls
     assert "--test-dir" in calls
     assert "-L qbox-platform-systemc-components" in calls
     assert calls.index("--target apollo_fvp_full_system") < calls.index("ctest ")
@@ -1030,6 +1042,8 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
     assert "kind\tname\tstatus\tseconds\telapsed\tlog" in timing
     rows = [line.split("\t") for line in timing.splitlines()[1:]]
     assert ["command", "qbox-build", "0"] in [row[:3] for row in rows]
+    assert ["command", "qbox-unit-test-build", "0"] in [row[:3] for row in rows]
+    assert ["command", "qbox-unit-tests", "0"] in [row[:3] for row in rows]
     assert ["step", "qbox-build", "0"] in [row[:3] for row in rows]
 
 

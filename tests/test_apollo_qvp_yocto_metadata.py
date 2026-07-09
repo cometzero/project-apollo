@@ -147,7 +147,7 @@ REQUIRED_QBOX_HEADLESS_REMOVAL_SNIPPETS: Final = {
 
 REQUIRED_QBOX_NATIVE_RUNTIME_SNIPPETS: Final = {
     AUTO_SOLUTIONS / "classes/qboxboot.bbclass": (
-        "addtask do_write_qboxboot_conf after do_rootfs before do_image",
+        "addtask do_write_qboxboot_conf after do_image before do_image_complete",
     ),
     Path("run_qbox_yocto.sh"): (
         'recipe_sysroot_native_path / "usr" / "lib"',
@@ -160,6 +160,12 @@ REQUIRED_QBOX_NATIVE_RUNTIME_SNIPPETS: Final = {
         "libreporting.so",
         "libsystemc.so.3.0",
         "librpc.so",
+        'QBOX_APOLLO_RUN_UNIT_TESTS ?= "0"',
+        'PACKAGECONFIG[unit-tests] = "-DBUILD_TESTING=ON,-DBUILD_TESTING=OFF"',
+        "do_check",
+        "cmake_runcmake_build --target ${QBOX_APOLLO_UNIT_TEST_TARGET}",
+        'ctest --test-dir "${B}" -L "${QBOX_APOLLO_UNIT_TEST_LABEL}" --output-on-failure',
+        "addtask check after do_compile before do_install",
     ),
 }
 

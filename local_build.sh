@@ -66,7 +66,8 @@ Actions:
 Options:
   --component NAME     select a component; may be repeated
   --action ACTION      action for selected components (default: build)
-  --qbox-systemc-tests run qbox-platform SystemC component CTests after qbox build
+  --qbox-unit-tests    run qbox-platform unit tests after qbox build
+  --qbox-systemc-tests alias for --qbox-unit-tests
   --package           package local FVP deploy output; package-only if no component is selected
   --no-package        skip the default package step
   --jobs N            parallel build jobs (default: ${JOBS})
@@ -78,8 +79,8 @@ Options:
 Examples:
   ./local_build.sh
   ./local_build.sh qbox
-  ./local_build.sh qbox --qbox-systemc-tests
-  ./local_build.sh --qbox-systemc-tests
+  ./local_build.sh qbox --qbox-unit-tests
+  ./local_build.sh --qbox-unit-tests
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
   ./local_build.sh --package
@@ -119,7 +120,8 @@ parse_args()
                 set_action "$2"
                 shift 2
                 ;;
-            --qbox-systemc-tests)
+            --qbox-unit-tests|--qbox-systemc-tests)
+                QBOX_RUN_UNIT_TESTS=1
                 QBOX_RUN_SYSTEMC_COMPONENT_TESTS=1
                 if [[ "${COMPONENT_SET}" == 0 ]]; then
                     add_component qbox
@@ -298,7 +300,8 @@ print_component_dry_run()
                     printf '    qbox core: %s\n' \
                         "${QBOX_CORE_DIR#"${ROOT_DIR}"/}"
                     printf '    target: %s\n' "${QBOX_APOLLO_BUILD_TARGET:-apollo_fvp_full_system}"
-                    if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+                    if [[ "${QBOX_RUN_UNIT_TESTS:-0}" == 1 ||
+                        "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
                         printf '    test target: qbox_platform_systemc_component_tests\n'
                         printf '    ctest: -L qbox-platform-systemc-components\n'
                     fi
@@ -662,11 +665,12 @@ for component in "${SELECTED_COMPONENTS[@]}"; do
     validate_action_component "${component}" "${ACTION}"
 done
 
-if [[ "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
+if [[ "${QBOX_RUN_UNIT_TESTS:-0}" == 1 ||
+    "${QBOX_RUN_SYSTEMC_COMPONENT_TESTS:-0}" == 1 ]]; then
     contains_word qbox "${SELECTED_COMPONENTS[@]}" ||
-        die "--qbox-systemc-tests requires the qbox component"
+        die "--qbox-unit-tests requires the qbox component"
     [[ "${ACTION}" == build || "${ACTION}" == clean-build ]] ||
-        die "--qbox-systemc-tests requires qbox build or clean-build"
+        die "--qbox-unit-tests requires qbox build or clean-build"
 fi
 
 if [[ "${ACTION}" == build && "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}" == 0 &&

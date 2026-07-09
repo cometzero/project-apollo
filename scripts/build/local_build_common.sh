@@ -518,7 +518,8 @@ Actions:
   build clean clean-build defconfig menuconfig savedefconfig
 
 Options:
-  --qbox-systemc-tests run qbox-platform SystemC component CTests after qbox build
+  --qbox-unit-tests    run qbox-platform unit tests after qbox build
+  --qbox-systemc-tests alias for --qbox-unit-tests
   --package           package local FVP deploy output; package-only if no component is selected
   --no-package        skip the default package step
   --jobs N            parallel build jobs
@@ -527,7 +528,7 @@ Options:
 Useful overrides:
   SDK_DIR=/path/to/sdk LOCAL_BUILD_DIR=/path/to/output QBOX_PLATFORM_BUILD_DIR=/path/to/qbox-platform-build JOBS=16 ./local_build.sh
   QBOX_BUILD_DIR=/path/to/qbox-platform-build ./local_build.sh qbox
-  ./local_build.sh qbox --qbox-systemc-tests
+  ./local_build.sh qbox --qbox-unit-tests
   QBOX_CORE_DIR=/path/to/qbox QBOX_PLATFORM_DIR=/path/to/qbox-platform ./local_build.sh qbox
   ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk ./local_build.sh zephyr
   ZEPHYR_DEPS_SRC=/path/to/yocto/work/.../sources-unpack/git ./local_build.sh zephyr
