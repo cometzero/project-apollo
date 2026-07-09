@@ -833,6 +833,20 @@ write_fifo_line()
     fi
 }
 
+write_fifo_bytes()
+{
+    (($# == 2)) || die "write_fifo_bytes requires FIFO_PATH BYTES"
+
+    local fifo_path="$1"
+    local bytes="$2"
+
+    if command -v timeout >/dev/null 2>&1; then
+        printf '%s' "${bytes}" | timeout 1 tee "${fifo_path}" >/dev/null
+    else
+        printf '%s' "${bytes}" >"${fifo_path}"
+    fi
+}
+
 interactive_uart_console()
 {
     (($# == 3)) || die "--uart-console requires DOMAIN TITLE LOG_PATH"
@@ -878,6 +892,20 @@ interactive_uart_console()
         fifo_keeper_pid=$!
     }
 
+    # shellcheck disable=SC2317  # invoked indirectly by the INT trap.
+    forward_uart_interrupt()
+    {
+        if [[ ! -p "${fifo_path}" ]]; then
+            printf '\nUART input FIFO is not ready; ignored Ctrl+C.\n'
+            return 0
+        fi
+
+        start_uart_fifo_keeper || true
+        if ! write_fifo_bytes "${fifo_path}" $'\003'; then
+            printf '\nUART input FIFO write timed out; dropped Ctrl+C.\n'
+        fi
+    }
+
     mkdir -p "$(dirname "${log_path}")"
     : >>"${log_path}"
 
@@ -889,7 +917,7 @@ interactive_uart_console()
     tail -n +1 -F "${log_path}" &
     tail_pid=$!
     trap 'cleanup_uart_console $?' EXIT
-    trap 'cleanup_uart_console 130' INT
+    trap 'forward_uart_interrupt' INT
     trap 'cleanup_uart_console 143' TERM HUP
 
     printf '\nWaiting for UART input FIFO. F12 stops QBox.\n'
