@@ -152,7 +152,7 @@ COMPONENTS = (
         AP_TARGET,
         ("work/buildroot/build/busybox-*/busybox_unstripped",),
         ("main", "run_applet_no_and_exit"),
-        ("hsoc-stack/components/primary_compute/buildroot",),
+        ("hsoc-stack/tools/buildroot",),
     ),
 )
 

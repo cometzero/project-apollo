@@ -238,7 +238,7 @@ fi
 TFM_PLATFORM_VARIANT="${TFM_PLATFORM_VARIANT:-${LOCAL_PLATFORM_VARIANT}}"
 SCP_PLATFORM_VARIANT="${SCP_PLATFORM_VARIANT:-${LOCAL_PLATFORM_VARIANT}}"
 ZEPHYR_BOARD="${ZEPHYR_BOARD:-${LOCAL_MACHINE_WORK_PREFIX}_safety_island_c1}"
-BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-stack/components/primary_compute/buildroot}"
+BUILDROOT_SRC="${BUILDROOT_SRC:-${ROOT_DIR}/hsoc-stack/tools/buildroot}"
 ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/arm_si_rproc_mod/src}"
 RPMSG_NET_SRC="${RPMSG_NET_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/rpmsg_net_mod/src}"
 PFDI_MISC_SRC="${PFDI_MISC_SRC:-${ROOT_DIR}/sw-ref-stack/components/primary_compute/linux_drivers/pfdi_misc_mod/src}"

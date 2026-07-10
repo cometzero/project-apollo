@@ -15,7 +15,7 @@ Main source areas:
 | --- | --- |
 | `arm-zena-css/` | Arm Zena CSS BSP, RD-Aspen FVP documentation, Safety Island integration, and upstream Arm platform metadata. |
 | `sw-ref-stack/` | Arm Automotive Solutions reference stack with images, demos, CI fragments, test automation, HIPC/PFDI integration, and EWAOL metadata. |
-| `hsoc-stack/components/primary_compute/` | Local primary-compute source submodules: Linux, U-Boot, TF-A, OP-TEE, and Buildroot. |
+| `hsoc-stack/components/primary_compute/` | Local primary-compute source submodules: Linux, U-Boot, TF-A, and OP-TEE. |
 | `hsoc-stack/components/system_mgmt/` | Local system-management source submodules: TF-M, SCP-firmware, and the Apollo Zephyr workspace. |
 | `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Apollo distro/template layer and dynamic-layer metadata. |
 | `hsoc-stack/yocto/meta-hsoc-bsp/` | Apollo BSP layer for `apollo-fvp`, firmware recipes, kernel metadata, module signing, and OP-TEE integration. |
@@ -23,6 +23,7 @@ Main source areas:
 | `hsoc-stack/tools/qbox/` | Active upstream-friendly QBox core: `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, and examples. |
 | `hsoc-stack/tools/qbox-platform/` | Active Apollo/RD-Aspen platform overlay: Apollo and RD-Aspen Lua entrypoints, Zena/RSE SystemC models, Apollo-specific QEMU wrappers, platform tests, and the `apollo_fvp_full_system` aggregate target. |
 | `hsoc-stack/tools/qemu/` | Active local QEMU/libqemu source used by QBox. |
+| `hsoc-stack/tools/buildroot/` | Buildroot source used by local initramfs/rootfs generation. |
 | `scripts/` | Categorized build, run, setup, debug, inspect, analyze, and test helpers. See `scripts/README.md`. |
 | `tests/` | Repository-local tests for helper scripts and QBox runner behavior. |
 | `doc/` | Project architecture notes, hardware analysis, plans, runbooks, and verification reports. |

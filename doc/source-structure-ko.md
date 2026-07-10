@@ -40,7 +40,6 @@ Primary Compute 소스는 `hsoc-stack/components/primary_compute/` 아래에 있
 | `hsoc-stack/components/primary_compute/u-boot/` | Apollo FVP용 U-Boot source와 local build 대상. |
 | `hsoc-stack/components/primary_compute/trusted-firmware-a/` | Apollo FVP용 TF-A source와 platform 포팅. |
 | `hsoc-stack/components/primary_compute/optee_os/` | Apollo FVP용 OP-TEE OS source. |
-| `hsoc-stack/components/primary_compute/buildroot/` | 로컬 initramfs/rootfs 생성을 위한 Buildroot source. |
 
 System Management와 Safety Island 소스는
 `hsoc-stack/components/system_mgmt/` 아래에 있다.
@@ -113,10 +112,11 @@ components에 설치한다. 실행 deploy contract는 복사된 bundle이 아니
 `hsoc-stack/yocto/meta-hsoc-auto-solutions/dynamic-layers/` 또는
 `hsoc-stack/yocto/meta-hsoc-bsp/`로 옮긴다.
 
-## QBox와 QEMU
+## Tool Source
 
 | 경로 | 역할 |
 | --- | --- |
+| `hsoc-stack/tools/buildroot/` | 로컬 initramfs/rootfs 생성을 위한 Buildroot source submodule. |
 | `hsoc-stack/tools/qbox/` | active upstream-friendly QBox core submodule. `platforms-vp`, libqbox/libqemu integration, reusable SystemC/TLM components, reusable QEMU-backed components, tests, examples를 소유한다. |
 | `hsoc-stack/tools/qbox-platform/` | active Apollo/RD-Aspen platform overlay submodule. Apollo/RD-Aspen Lua, Zena/RSE SystemC model, Apollo-specific QEMU wrapper, platform tests, `apollo_fvp_full_system` aggregate target을 소유한다. |
 | `hsoc-stack/tools/qbox-platform/platforms/apollo/` | Apollo full-system QVP, primary-compute direct boot, SI CL1 isolated boot Lua entrypoint. |

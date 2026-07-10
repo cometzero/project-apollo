@@ -48,7 +48,7 @@ hardware models over register-only stubs.
 - `sw-ref-stack/`: Arm Automotive Solutions images, demos, test automation,
   and CI fragments.
 - `hsoc-stack/components/primary_compute/`: Apollo primary-compute local
-  source submodules: Linux, U-Boot, TF-A, OP-TEE, and Buildroot.
+  source submodules: Linux, U-Boot, TF-A, and OP-TEE.
 - `hsoc-stack/components/system_mgmt/`: Apollo system-management and safety
   local source submodules: TF-M, SCP-firmware, and the Zephyr workspace
   containing `zephyr/` plus `safety_island/`.
@@ -72,6 +72,8 @@ hardware models over register-only stubs.
   checked-out `hsoc-stack/tools/qbox/` source unless a task explicitly requests
   applying one of those patches.
 - `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
+- `hsoc-stack/tools/buildroot/`: Buildroot source used by local initramfs and
+  rootfs generation.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
   `yocto_build.sh`, `local_build.sh`, and `run_qbox_local.sh` call into these
   helpers.

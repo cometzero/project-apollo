@@ -82,8 +82,8 @@
 	path = hsoc-stack/components/primary_compute/optee_os
 	url = git@github.com:cometzero/optee_os.git
 	branch = apollo-fvp-optee-4.7
-[submodule "hsoc-stack/components/primary_compute/buildroot"]
-	path = hsoc-stack/components/primary_compute/buildroot
+[submodule "hsoc-stack/tools/buildroot"]
+	path = hsoc-stack/tools/buildroot
 	url = https://gitlab.com/buildroot.org/buildroot.git
 	branch = 2026.02.x
 [submodule "hsoc-stack/components/system_mgmt/zephyrproject/zephyr"]
