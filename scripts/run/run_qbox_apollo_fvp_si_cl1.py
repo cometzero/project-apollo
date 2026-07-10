@@ -192,6 +192,9 @@ def write_result(
         "task": "QAP-FULL-020",
         "boot_mode": "apollo-si-cl1-isolated",
         "safety_island_mode": "live-cl1",
+        "si_cl1_tcg_mode": os.environ.get(
+            "QBOX_APOLLO_SI_CL1_TCG_MODE", "SINGLE"
+        ).upper(),
         "completion_gate_effect": "isolated_milestone_only",
         "input_artifacts": {
             "si_cl1_image": artifact_record(args.image),
@@ -223,6 +226,7 @@ def write_result(
         f"passed: {result['passed']}",
         f"verdict: {result['verdict']}",
         f"task: {result['task']}",
+        f"si_cl1_tcg_mode: {result['si_cl1_tcg_mode']}",
         f"blocker: {blocker or 'none'}",
         f"timed_out: {timed_out}",
         f"duration_s: {result['duration_s']}",

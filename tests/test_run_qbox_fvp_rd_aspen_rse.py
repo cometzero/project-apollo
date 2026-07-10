@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib.util
+import os
 from types import SimpleNamespace
 import sys
 
@@ -10,6 +11,7 @@ SCRIPT = ROOT / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"
 
 def load_runner():
     spec = importlib.util.spec_from_file_location("rd_aspen_runner", SCRIPT)
+    assert spec is not None
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     sys.modules[spec.name] = module
@@ -38,6 +40,72 @@ def test_required_targets_use_local_rse_cpu_only():
 
     assert "cpu_arm_cortexM55" in runner.REQUIRED_TARGETS
     assert all("remote" not in target.lower() for target in runner.REQUIRED_TARGETS)
+
+
+def test_missing_required_pass_markers_reports_incomplete_file(tmp_path):
+    runner = load_runner()
+    cl1_log = tmp_path / "qbox-safety-island-cl1.log"
+    cl1_log.write_text("Booting Zephyr OS\n", encoding="utf-8")
+    requirements = [
+        [str(cl1_log), "Booting Zephyr OS"],
+        [str(cl1_log), "PFDI service ready"],
+    ]
+
+    missing = runner.missing_required_pass_markers(requirements)
+
+    assert missing == [f"{cl1_log}:PFDI service ready"]
+
+
+def test_missing_required_pass_markers_rejects_special_files(tmp_path):
+    runner = load_runner()
+    fifo = tmp_path / "cl1.fifo"
+    os.mkfifo(fifo)
+
+    missing = runner.missing_required_pass_markers(
+        [[str(fifo), "PFDI service ready"]]
+    )
+
+    assert missing == [f"{fifo}:PFDI service ready"]
+
+
+def test_missing_required_pass_markers_does_not_follow_symlinks(tmp_path):
+    runner = load_runner()
+    target = tmp_path / "cl1.log"
+    target.write_text("PFDI service ready\n", encoding="utf-8")
+    symlink = tmp_path / "cl1-link.log"
+    symlink.symlink_to(target)
+
+    missing = runner.missing_required_pass_markers(
+        [[str(symlink), "PFDI service ready"]]
+    )
+
+    assert missing == [f"{symlink}:PFDI service ready"]
+
+
+def test_required_pass_marker_arguments_reject_control_characters():
+    runner = load_runner()
+
+    error = runner.required_pass_marker_argument_error(
+        [["cl1.log", "PFDI service ready\nforged"]]
+    )
+
+    assert error == "--required-pass-marker arguments must not contain control characters"
+
+    error = runner.required_pass_marker_argument_error(
+        [["cl1.log", "PFDI service ready\u0085forged"]]
+    )
+
+    assert error == "--required-pass-marker arguments must not contain control characters"
+
+
+def test_required_pass_marker_blocker_needs_base_pass():
+    runner = load_runner()
+    missing = ["cl1.log:PFDI service ready"]
+
+    assert runner.required_pass_marker_blocker(False, missing, True) is None
+    assert runner.required_pass_marker_blocker(True, missing, True) == (
+        "qbox_required_pass_marker_timeout:cl1.log:PFDI service ready"
+    )
 
 
 def make_qbox_env_args(tmp_path):

@@ -14,6 +14,7 @@ import re
 import shlex
 import shutil
 import signal
+import stat
 import struct
 import subprocess
 import sys
@@ -77,6 +78,10 @@ RSE_STRATA_STATS = "rse-strata-stats.json"
 AP_STRATA_STATS = "ap-strata-stats.json"
 RSE_CC3XX_STATS = "rse-cc3xx-stats.json"
 QBOX_PERF_PROFILE_DIR = "qbox-perf-profile"
+MAX_REQUIRED_PASS_MARKERS = 32
+MAX_REQUIRED_PASS_MARKER_FILES = 8
+MAX_REQUIRED_PASS_MARKER_BYTES = 1024 * 1024
+MAX_REQUIRED_PASS_MARKER_LENGTH = 512
 QEMU_INITIATOR_PROFILE_DIR = "qemu-initiator"
 CC3XX_PROFILE = "qemu-cc3xx-profile.json"
 RSE_HOTPATH_PROFILE = "rse-hotpath-profile.json"
@@ -2035,6 +2040,72 @@ def read_console_logs(out_dir: Path) -> dict[str, str]:
     return logs
 
 
+def read_required_pass_marker_file(path: Path) -> str:
+    flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        return ""
+    try:
+        file_stat = os.fstat(fd)
+        if not stat.S_ISREG(file_stat.st_mode):
+            return ""
+        data = os.read(fd, MAX_REQUIRED_PASS_MARKER_BYTES)
+    except OSError:
+        return ""
+    finally:
+        os.close(fd)
+    return data.decode("utf-8", errors="replace")
+
+
+def required_pass_marker_argument_error(requirements: list[list[str]]) -> str | None:
+    if len(requirements) > MAX_REQUIRED_PASS_MARKERS:
+        return f"--required-pass-marker may be used at most {MAX_REQUIRED_PASS_MARKERS} times"
+    filenames = {filename for filename, _marker in requirements}
+    if len(filenames) > MAX_REQUIRED_PASS_MARKER_FILES:
+        return (
+            "--required-pass-marker may reference at most "
+            f"{MAX_REQUIRED_PASS_MARKER_FILES} files"
+        )
+    for filename, marker in requirements:
+        if not marker or len(marker) > MAX_REQUIRED_PASS_MARKER_LENGTH:
+            return (
+                "--required-pass-marker MARKER must contain 1 to "
+                f"{MAX_REQUIRED_PASS_MARKER_LENGTH} characters"
+            )
+        if not all(char.isprintable() for char in filename + marker):
+            return "--required-pass-marker arguments must not contain control characters"
+    return None
+
+
+def missing_required_pass_markers(requirements: list[list[str]]) -> list[str]:
+    texts: dict[Path, str] = {}
+    missing: list[str] = []
+    for filename, marker in requirements:
+        path = Path(filename)
+        if path not in texts:
+            texts[path] = read_required_pass_marker_file(path)
+        if marker not in texts[path]:
+            missing.append(f"{path}:{marker}")
+    return missing
+
+
+def required_pass_marker_blocker(
+    base_passed: bool,
+    missing: list[str],
+    timed_out: bool,
+) -> str | None:
+    if not base_passed or not missing:
+        return None
+    prefix = (
+        "qbox_required_pass_marker_timeout:"
+        if timed_out
+        else "qbox_required_pass_marker_missing:"
+    )
+    return prefix + ",".join(missing)
+
+
 def parse_qemu_trace(out_dir: Path, enabled: bool) -> dict[str, str] | None:
     if not enabled:
         return None
@@ -3615,8 +3686,12 @@ def run_platform(
                     live_logs,
                     rse_sram_dmi_smoke=args.rse_sram_dmi_smoke,
                 )
+                required_markers_missing = missing_required_pass_markers(
+                    args.required_pass_marker
+                )
                 pass_condition_hit = (
                     status["passed"]
+                    and not required_markers_missing
                     and not args.keep_running_after_pass
                 )
                 if pass_condition_hit:
@@ -4492,6 +4567,17 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--required-pass-marker",
+        action="append",
+        nargs=2,
+        default=[],
+        metavar=("FILE", "MARKER"),
+        help=(
+            "Require MARKER to appear in FILE before the normal pass "
+            "condition may stop QBox. May be specified more than once."
+        ),
+    )
+    parser.add_argument(
         "--rse-sram-dmi-smoke-grace-s",
         type=float,
         default=5.0,
@@ -5106,6 +5192,11 @@ def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = build_parser()
     args = parser.parse_args()
+    required_marker_error = required_pass_marker_argument_error(
+        args.required_pass_marker
+    )
+    if required_marker_error:
+        parser.error(required_marker_error)
     if args.qbox_build_dir is not None:
         resolved_qbox_build_dir = str(args.qbox_build_dir.resolve())
         os.environ["QBOX_PLATFORM_BUILD_DIR"] = resolved_qbox_build_dir
@@ -5547,6 +5638,14 @@ def main() -> int:
     if first_fault is None:
         first_fault = parse_platform_translation_error(args.out_dir)
     current_status = evaluate(logs, rse_sram_dmi_smoke=args.rse_sram_dmi_smoke)
+    required_markers_missing = missing_required_pass_markers(
+        args.required_pass_marker
+    )
+    required_marker_blocker = required_pass_marker_blocker(
+        bool(current_status["passed"]),
+        required_markers_missing,
+        timed_out,
+    )
     known_runtime_blocker = classify_known_runtime_blocker(logs)
     pc_trace_blocker = classify_pc_trace_blocker(root, rse_pc_trace, timed_out)
     boot_enc_trace_blocker = classify_boot_enc_trace_blocker(logs, boot_enc_trace)
@@ -5610,6 +5709,8 @@ def main() -> int:
         runtime_blocker = "qbox_post_login_probe_incomplete_timeout"
     elif post_login_probe_incomplete:
         runtime_blocker = "qbox_post_login_probe_incomplete"
+    elif required_marker_blocker:
+        runtime_blocker = required_marker_blocker
     elif current_status["passed"]:
         runtime_blocker = None
     elif first_fault and first_fault.get("fault_address"):

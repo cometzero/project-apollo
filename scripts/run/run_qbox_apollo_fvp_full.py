@@ -103,11 +103,6 @@ LIVE_CL1_REQUIRED_MARKERS = {
     "pfdi_service": "PFDI service ready",
     "network_configured": "si_net_init: Network interface configured",
 }
-LIVE_CL1_BOOT_GATE_OPTIONAL_MARKERS = {
-    "pfdi_agent",
-    "pfdi_service",
-    "network_configured",
-}
 LIVE_CL0_REQUIRED_MARKERS = {
     "scp_started": "[SI0_PLATFORM] SCP started",
     "module_init_complete": "[FWK] Module initialization complete!",
@@ -232,7 +227,7 @@ def clean_console_text(text: str) -> str:
 
 def keep_running_child_logs(out_dir: Path) -> dict[str, str]:
     return {
-        role: read_log(out_dir / filename)
+        role: rse_runner.read_required_pass_marker_file(out_dir / filename)
         for role, filename in CHILD_LOG_ALIASES.items()
     }
 
@@ -326,6 +321,22 @@ def synthesize_keep_running_child_status(
         args.primary_login_prompt: args.primary_login_prompt in combined,
         args.primary_shell_marker: args.primary_shell_marker in combined,
     }
+    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
+        cl1_log = rse_runner.read_required_pass_marker_file(
+            args.out_dir / CONSOLE_LOGS["si_cl1"]
+        )
+        marker_groups["si_cl1"] = {
+            marker: marker in cl1_log
+            for marker in LIVE_CL1_REQUIRED_MARKERS.values()
+        }
+    if args.si_mode == "live-cl0-cl1":
+        cl0_log = rse_runner.read_required_pass_marker_file(
+            args.out_dir / CONSOLE_LOGS["si_cl0"]
+        )
+        marker_groups["si_cl0"] = {
+            marker: marker in cl0_log
+            for marker in LIVE_CL0_REQUIRED_MARKERS.values()
+        }
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
     probe = keep_running_probe_state(
         logs.get("primary_console", ""),
@@ -799,7 +810,9 @@ def build_marker_groups(
         args.primary_login_prompt,
         args.primary_shell_marker,
     )
-    cl1_log = read_log(args.out_dir / CONSOLE_LOGS["si_cl1"])
+    cl1_log = rse_runner.read_required_pass_marker_file(
+        args.out_dir / CONSOLE_LOGS["si_cl1"]
+    )
 
     groups["rse"] = {
         "tfm_bl1_1": marker_from_child(groups, "rse_boot", "Starting TF-M BL1_1"),
@@ -844,7 +857,9 @@ def build_marker_groups(
             for name, marker in LIVE_CL1_REQUIRED_MARKERS.items()
         }
     else:
-        cl0_log = read_log(args.out_dir / CONSOLE_LOGS["si_cl0"])
+        cl0_log = rse_runner.read_required_pass_marker_file(
+            args.out_dir / CONSOLE_LOGS["si_cl0"]
+        )
         child_scp = (child_status or {}).get("scp_service_model", {})
         live_scp_cpu = (
             isinstance(child_scp, dict)
@@ -890,11 +905,7 @@ def live_cl1_gate_blocker(
         cl0_missing = missing_markers(marker_groups.get("si_cl0", {}))
         if cl0_missing:
             return f"{prefix}_marker_blocked:" + ",".join(cl0_missing)
-    cl1_missing = [
-        name
-        for name in missing_markers(marker_groups.get("si_cl1", {}))
-        if name not in LIVE_CL1_BOOT_GATE_OPTIONAL_MARKERS
-    ]
+    cl1_missing = missing_markers(marker_groups.get("si_cl1", {}))
     if cl1_missing:
         return f"{prefix}_marker_blocked:" + ",".join(cl1_missing)
     return None
@@ -979,6 +990,9 @@ def write_result(
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "safety_island_mode": args.si_mode,
+        "si_cl1_tcg_mode": os.environ.get(
+            "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE", "SINGLE"
+        ).upper(),
         "smmu_backend": args.smmu_backend,
         "mhu_backend": "systemc-mhu320ae",
         "qbox_conf": str(args.conf),
@@ -1359,6 +1373,10 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--rse-fast-boot-sram-dmi")
     if getattr(args, "provision_blank_rse_otp", False):
         cmd.append("--allow-blank-rse-otp")
+    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
+        cl1_log = (args.out_dir / "qbox-safety-island-cl1.log").resolve()
+        for marker in LIVE_CL1_REQUIRED_MARKERS.values():
+            cmd.extend(["--required-pass-marker", str(cl1_log), marker])
     if args.keep_running_after_pass:
         cmd.append("--keep-running-after-pass")
     if args.build_only:

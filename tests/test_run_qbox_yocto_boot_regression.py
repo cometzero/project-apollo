@@ -328,7 +328,7 @@ def test_record_baseline_keeps_nul_prefixed_stage_untimed(tmp_path: Path) -> Non
     assert stage["elapsed_s"] is None
 
 
-def test_record_baseline_allows_missing_optional_si_cl1_markers(tmp_path: Path) -> None:
+def test_record_baseline_rejects_missing_required_si_cl1_markers(tmp_path: Path) -> None:
     result = result_tree(tmp_path / "result")
     baseline = tmp_path / "baseline.json"
     write(
@@ -350,19 +350,11 @@ def test_record_baseline_allows_missing_optional_si_cl1_markers(tmp_path: Path) 
         str(result),
     )
 
-    assert checked.returncode == 0, checked.stderr
-    data = json.loads(baseline.read_text(encoding="utf-8"))
-    for name in (
-        "si_cl1_pfdi_agent",
-        "si_cl1_pfdi_service",
-        "si_cl1_network_configured",
-    ):
-        stage = next(item for item in data["stages"] if item["name"] == name)
-        assert stage["optional"] is True
-        assert stage["seen"] is False
+    assert checked.returncode == 1
+    assert "si_cl1_pfdi_agent" in checked.stderr
 
 
-def test_current_run_may_omit_optional_si_cl1_markers(tmp_path: Path) -> None:
+def test_current_run_must_include_required_si_cl1_markers(tmp_path: Path) -> None:
     baseline_result = result_tree(tmp_path / "baseline")
     current_result = result_tree(tmp_path / "current")
     baseline = tmp_path / "baseline.json"
@@ -390,11 +382,11 @@ def test_current_run_may_omit_optional_si_cl1_markers(tmp_path: Path) -> None:
 
     checked = run_cli("--baseline", str(baseline), "--result-dir", str(current_result))
 
-    assert checked.returncode == 0, checked.stderr
-    assert '"passed": true' in checked.stdout
+    assert checked.returncode == 1
+    assert "si_cl1_pfdi_agent" in checked.stderr
 
 
-def test_current_run_may_have_slow_optional_si_cl1_markers(tmp_path: Path) -> None:
+def test_current_run_rejects_slow_required_si_cl1_markers(tmp_path: Path) -> None:
     baseline_result = result_tree(tmp_path / "baseline")
     current_result = result_tree(tmp_path / "current")
     baseline = tmp_path / "baseline.json"
@@ -425,8 +417,8 @@ def test_current_run_may_have_slow_optional_si_cl1_markers(tmp_path: Path) -> No
 
     checked = run_cli("--baseline", str(baseline), "--result-dir", str(current_result))
 
-    assert checked.returncode == 0, checked.stderr
-    assert '"passed": true' in checked.stdout
+    assert checked.returncode == 1
+    assert "si_cl1_pfdi_service" in checked.stderr
 
 
 def test_run_qbox_yocto_boot_regression_fails_fast_on_timing(tmp_path: Path) -> None:

@@ -138,7 +138,6 @@ LOG_STAGE_DEFS = [
         "label": "SI CL1 PFDI agent ready",
         "log": "qbox-safety-island-cl1.log",
         "marker": "PFDI Agent setup complete",
-        "optional": True,
     },
     {
         "name": "si_cl1_pfdi_service",
@@ -146,7 +145,6 @@ LOG_STAGE_DEFS = [
         "label": "SI CL1 PFDI service ready",
         "log": "qbox-safety-island-cl1.log",
         "marker": "PFDI service ready",
-        "optional": True,
     },
     {
         "name": "si_cl1_network_configured",
@@ -154,7 +152,6 @@ LOG_STAGE_DEFS = [
         "label": "SI CL1 network configured",
         "log": "qbox-safety-island-cl1.log",
         "marker": "si_net_init: Network interface configured",
-        "optional": True,
     },
     {
         "name": "secure_bl2_console",

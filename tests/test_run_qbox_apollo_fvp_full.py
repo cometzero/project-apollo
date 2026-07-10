@@ -6,11 +6,18 @@ import subprocess
 from types import SimpleNamespace
 import sys
 
-import pytest
+import pytest  # pyright: ignore[reportMissingImports]
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
+SI_CL1_LUA = (
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua"
+)
+SI_CL1_ISOLATED_LUA = (
+    ROOT
+    / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1_isolated.lua"
+)
 APOLLO_QVP_CONFIG = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
 )
@@ -125,6 +132,54 @@ def test_child_command_omits_removed_rse_remote_flags(tmp_path):
         assert flag not in cmd
     assert "--rse-hotpath-accel" in cmd
     assert "--rse-lms-accel" in cmd
+
+
+def test_child_command_requires_live_cl1_readiness(tmp_path):
+    runner = load_runner()
+
+    cmd = runner.child_command(
+        make_child_command_args(tmp_path),
+        make_child_artifacts(tmp_path),
+    )
+
+    cl1_log = str((tmp_path / "qbox-safety-island-cl1.log").resolve())
+    assert cmd.count("--required-pass-marker") == len(
+        runner.LIVE_CL1_REQUIRED_MARKERS
+    )
+    assert cl1_log in cmd
+    for marker in runner.LIVE_CL1_REQUIRED_MARKERS.values():
+        assert marker in cmd
+
+
+def test_live_cl1_defaults_to_single_thread_tcg():
+    text = SI_CL1_LUA.read_text(encoding="utf-8")
+
+    assert (
+        'tcg_mode = ctx.getenv_or("QBOX_APOLLO_FULL_SI_CL1_TCG_MODE", "SINGLE")'
+        in text
+    )
+    isolated_text = SI_CL1_ISOLATED_LUA.read_text(encoding="utf-8")
+    assert 'getenv_or("QBOX_APOLLO_SI_CL1_TCG_MODE", "SINGLE")' in isolated_text
+
+
+def test_live_cl1_gate_requires_pfdi_readiness():
+    runner = load_runner()
+    marker_groups = {
+        "maps_and_interrupts": {"map_ok": True},
+        "si_cl0": {"cl0_ok": True},
+        "si_cl1": {
+            name: name != "pfdi_agent"
+            for name in runner.LIVE_CL1_REQUIRED_MARKERS
+        },
+    }
+
+    blocker = runner.live_cl1_gate_blocker(
+        SimpleNamespace(si_mode="live-cl0-cl1"),
+        marker_groups,
+        {"passed": True},
+    )
+
+    assert blocker == "live_cl0_cl1_marker_blocked:pfdi_agent"
 
 
 def test_apollo_qvp_config_rejects_enabled_zero_ap_cpus():
@@ -255,9 +310,77 @@ def write_passing_logs(tmp_path):
         encoding="utf-8",
     )
     (tmp_path / "qbox-safety-island-cl0.log").write_text(
-        "[SI0_PLATFORM] SCP started\n",
+        "\n".join(
+            [
+                "[SI0_PLATFORM] SCP started",
+                "[FWK] Module initialization complete!",
+                "GIC-multiview configured successfully",
+            ]
+        )
+        + "\n",
         encoding="utf-8",
     )
+    (tmp_path / "qbox-safety-island-cl1.log").write_text(
+        "\n".join(
+            [
+                "Out of Reset (OoR) completed on CPU: 0",
+                "Booting Zephyr OS",
+                "PFDI Agent setup complete",
+                "PFDI service ready",
+                "si_net_init: Network interface configured",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_keep_running_child_status_waits_for_live_cl1(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    (tmp_path / "qbox-safety-island-cl1.log").unlink()
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["passed"] is False
+    assert not all(status["marker_hits"]["si_cl1"].values())
+
+
+def test_keep_running_child_status_does_not_read_cl1_fifo(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    cl1_log = tmp_path / "qbox-safety-island-cl1.log"
+    cl1_log.unlink()
+    os.mkfifo(cl1_log)
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["passed"] is False
+
+
+def test_keep_running_child_status_does_not_follow_cl1_symlink(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    cl1_log = tmp_path / "qbox-safety-island-cl1.log"
+    target = tmp_path / "complete-cl1.log"
+    cl1_log.rename(target)
+    cl1_log.symlink_to(target)
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["passed"] is False
 
 
 def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tmp_path):
