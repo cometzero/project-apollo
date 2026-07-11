@@ -1,4 +1,4 @@
 interface:
   display_name: "QBox Dev"
-  short_description: "QBox virtual platform workflow"
-  default_prompt: "Use $qbox-dev to inspect and update this QBox virtual platform safely."
+  short_description: "Develop and validate the Apollo QBox platform"
+  default_prompt: "Use $qbox-dev with agent_type=qbox_dev to inspect the owning QBox repository and validate the smallest Apollo target first."

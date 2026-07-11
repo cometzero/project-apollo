@@ -1,60 +1,69 @@
 ---
 name: yocto-review
-description: Yocto/OpenEmbedded metadata review workflow for this project. Use whenever a prompt mentions Yocto, OpenEmbedded, BitBake, layers, recipes, .bb/.bbappend/.bbclass files, layer.conf, machine/distro/image configuration, bblayers.conf, local.conf, PACKAGECONFIG, SRC_URI, FILES, RDEPENDS/RRECOMMENDS, do_install, patches, bbmask, sstate, package QA, yocto-check-layer, 로컬 패치, 레이어/레시피 리뷰, or when the yocto-auto-review hook reports pending Yocto metadata review.
+description: Review Yocto/OpenEmbedded metadata for this Apollo project. Use for layers, recipes, bbappend, bbclass, layer.conf, machine/distro/image config, PACKAGECONFIG, dependencies, tasks, patches, QA, licenses, sstate, or auto-review findings.
 ---
 
 # Yocto Review
 
-Use this skill for focused review of Yocto metadata from the current project
-top directory. Use relative paths in commands and reports.
+This is a findings-first review workflow. Use
+`agent_type = "yocto-expert"` for read-only diagnosis and review
+(`gpt-5.6-sol`, high), and route accepted implementation with
+`agent_type = "yocto_dev"` (`gpt-5.6-sol`, high). If `agent_type` is
+unavailable, use the project leader and do not claim specialist selection.
 
-## Intake
+## Intake And Ownership
 
-1. Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
-   `build/conf/templateconf.cfg`.
-2. If the request came from the auto-review hook, inspect
-   `.omx/state/hooks/plugins/yocto-auto-review/data.json` for pending paths.
-3. Read `doc/yocto-layer-recipe-review.md` for the full project checklist.
-4. Keep source ownership boundaries:
-   - `arm-zena-css/yocto/meta-zena-css-bsp`
-   - `arm-zena-css/yocto/meta-zena-css-safety-island`
-   - `sw-ref-stack/yocto/meta-arm-auto-solutions`
-   - `layers/*` only when direct external-layer edits were explicitly made.
+Read:
 
-## Review Workflow
+```text
+build/conf/local.conf
+build/conf/bblayers.conf
+build/conf/templateconf.cfg
+```
 
-For layer changes:
+Active product layers:
+
+- `hsoc-stack/yocto/meta-hsoc-auto-solutions`
+- `hsoc-stack/yocto/meta-hsoc-bsp`
+
+Also inspect `sw-ref-stack/yocto/meta-arm-auto-solutions` or `arm-zena-css/yocto`
+when the change reaches those owners. Treat `layers/*` as external unless a
+direct edit was explicitly requested.
+
+If invoked from an automatic review hook, inspect the corresponding pending
+state before reviewing. Use `doc/yocto-layer-recipe-review.md` and
+`references/review-checklist.md` for the detailed checklist.
+
+## Review Checks
+
+For layers, inspect collection/pattern, priority, dependencies, compatible
+series, dynamic layers, BBMASK, and QA policy. For recipes, inspect identity,
+license checksums, source revision, patch status/order, inherited classes,
+dependency scope, package contents, services, users, permissions, and
+package-scoped QA exceptions.
+
+Prove claims with final BitBake values rather than metadata text alone. Check
+whether a changed task is reachable for active `apollo-qvp` and `nexios-image`.
+
+## Validation
 
 ```bash
 source layers/poky/oe-init-build-env build
 bitbake-layers show-layers
 bitbake-layers show-appends
 bitbake-layers show-overlayed
-yocto-check-layer -- <layer>
-```
-
-For recipe changes:
-
-```bash
-source layers/poky/oe-init-build-env build
 bitbake <recipe> -c fetch
 bitbake <recipe> -c patch
 bitbake <recipe> -c compile
-bitbake <recipe> -c install
 bitbake <recipe> -c package_qa
 bitbake <recipe> -c populate_lic
 ```
 
-Use `references/review-checklist.md` for a compact checklist during review.
-Use `oelint-adv --release walnascar ...` only as optional static lint.
+Use `yocto-check-layer -- <layer>` for new or compatibility-sensitive layers
+when available. `oelint-adv --release walnascar` is optional static evidence;
+BitBake parse/task results are stronger.
 
-## Output
-
-Report findings first, ordered by severity, with file and line references.
-Then report:
-
-- review paths,
-- exact commands run,
-- static, parse, task, image, and runtime evidence separately,
-- skipped checks and blockers,
-- whether the auto-review hook state still has pending paths.
+Report findings first by severity with file/line, reachable failure path, and
+why the issue is not a false positive. Then list reviewed paths, commands,
+static/parse/task/image/runtime evidence separately, skipped checks, and
+remaining hook state.

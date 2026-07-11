@@ -1,4 +1,4 @@
 interface:
   display_name: "Yocto Review"
-  short_description: "Review Yocto layers and recipes"
-  default_prompt: "Use $yocto-review to review newly created Yocto layer and recipe metadata in this workspace."
+  short_description: "Review Apollo product and BSP metadata"
+  default_prompt: "Use $yocto-review with agent_type=yocto-expert to review Apollo Yocto changes against the active apollo-qvp configuration."

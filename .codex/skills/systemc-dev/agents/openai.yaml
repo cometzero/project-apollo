@@ -1,4 +1,4 @@
 interface:
   display_name: "SystemC Dev"
-  short_description: "SystemC/TLM modeling workflow"
-  default_prompt: "Use $systemc-dev to inspect and update this SystemC model safely."
+  short_description: "Implement and verify Apollo SystemC/TLM models"
+  default_prompt: "Use $systemc-dev with agent_type=systemc_dev to trace the QBox module and TLM bindings, make the minimum change, and run the narrowest test."

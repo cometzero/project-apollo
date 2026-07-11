@@ -1,4 +1,4 @@
 interface:
   display_name: "Linux Kernel Review"
-  short_description: "Review Linux kernel source changes"
-  default_prompt: "Use $linux-kernel-review to review newly created Linux kernel source or kernel metadata in this workspace."
+  short_description: "Review Apollo Linux source and BSP metadata"
+  default_prompt: "Use $linux-kernel-review with agent_type=linux-kernel-expert to inspect the active Apollo kernel and report only proven findings."

@@ -1,67 +1,51 @@
-# Arm Auto Solutions Compact Project Map
+# Apollo Project Map
 
-## Current Configuration
+## Active Configuration
 
-The active Yocto configuration is the traditional build directory under
-`build/conf/`:
+The traditional Yocto build directory is initialized under `build/`:
 
 - `build/conf/local.conf`
 - `build/conf/bblayers.conf`
 - `build/conf/templateconf.cfg`
-- `hsoc-stack/yocto/meta-hsoc-apollo/conf/templates/apollo-fvp/`
+- `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/`
 - top-level `yocto_build.sh`
 
-Current selected values:
+Current selected values are `MACHINE = "apollo-qvp"`, cfg2, four Primary
+Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and image target
+`nexios-image`. Poky is pinned to the Yocto 5.2.4 baseline.
 
-- `MACHINE = "apollo-fvp"`
-- `RD_ASPEN_VARIANT = "cfg2"`
-- `PC_CPUS_COUNT_DEFAULT = "4"`
-- `ARM_FVP_EULA_ACCEPT = "1"`
-- baremetal enabled, virtualization disabled
-- demos enabled, tests disabled
+## Source Zones
 
-## Main Source Zones
+| Zone | Ownership |
+| --- | --- |
+| `arm-zena-css/` | Reference architecture, firmware, FVP behavior, design docs |
+| `sw-ref-stack/` | Shared automotive images, demos, tests, CI |
+| `hsoc-stack/components/primary_compute/` | Linux, U-Boot, TF-A, OP-TEE |
+| `hsoc-stack/components/system_mgmt/` | TF-M, SCP-firmware, Zephyr workspace |
+| `hsoc-stack/yocto/meta-hsoc-auto-solutions/` | Product/template/image policy |
+| `hsoc-stack/yocto/meta-hsoc-bsp/` | BSP, firmware, kernel, signing policy |
+| `hsoc-stack/tools/qbox/` | Reusable QBox core |
+| `hsoc-stack/tools/qbox-platform/` | Apollo QBox platform overlay |
+| `hsoc-stack/tools/qemu/` | QBox-local QEMU/libqemu |
+| `hsoc-stack/tools/buildroot/` | Local initramfs/rootfs source |
+| `layers/` | Pinned external Yocto layers |
 
-`arm-zena-css/`:
+## Generated Evidence
 
-- RD-Aspen machine and BSP metadata
-- TF-A, TF-M, U-Boot, OP-TEE, SCP firmware integration
-- Safety Island Zephyr module and Yocto layer
-- Zena design/user documentation
+- Yocto task and deploy state: `build/tmp_baremetal/`
+- QVP deploy images: `build/tmp_baremetal/deploy/images/apollo-qvp/`
+- local component build: `build/local-${MACHINE}/`
+- QBox full-system runtime: `build/qbox-apollo-qvp/full-<timestamp>/`
+- explicit FVP runtime: `build/local-apollo-fvp/fvp-boot/`
 
-`sw-ref-stack/`:
+Generated evidence can be stale relative to source. Record the command and
+timestamp that produced it before using it as proof.
 
-- shared Arm Automotive Solutions images
-- EWAOL architecture selection
-- PFDI/HIPC Linux integration recipes
-- pytest-based test automation
-- GitLab CI build/test fragments
+## Validation Boundaries
 
-`layers/`:
-
-- pinned third-party and upstream Yocto layers
-- avoid direct edits unless explicitly requested
-
-`build/`:
-
-- generated BitBake output
-- current local evidence only
-
-## Build Validation vs Runtime Validation
-
-Build validation proves BitBake task success and artifacts.
-Runtime validation proves FVP boot, console readiness, networking, and tests.
-Do not infer runtime success from build success.
-
-Current local build evidence is under:
-
-- `build/tmp_baremetal/log/cooker/apollo-fvp/`
-- `build/tmp_baremetal/deploy/images/apollo-fvp/`
-
-Runtime validation needs:
-
-- FVP binary, usually `FVP_Zena_CSS_Cfg2`
-- Crypto plugin path
-- deploy images
-- console/terminal mappings
-- SSH/user networking port availability
+- Static validation proves metadata, maps, syntax, or source structure.
+- Targeted build validation proves one configured task or target.
+- Image build validation proves the requested image completed.
+- QBox runtime validation proves the selected virtual platform booted.
+- FVP runtime validation is separate comparison evidence.
+- Coverage audit proves only the assertions encoded by the audit script.

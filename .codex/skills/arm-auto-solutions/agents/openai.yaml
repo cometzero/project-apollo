@@ -1,4 +1,4 @@
 interface:
   display_name: "Arm Auto Solutions"
-  short_description: "RD-Aspen Yocto project workflow"
-  default_prompt: "Use $arm-auto-solutions to analyze the current Apollo FVP Yocto build state and report evidence."
+  short_description: "Route Apollo QVP, Yocto, QBox, and firmware work"
+  default_prompt: "Use $arm-auto-solutions with agent_type=arm-auto-solutions-expert for fast intake, then select the matching registered gpt-5.6-sol specialist by agent_type."

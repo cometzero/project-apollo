@@ -1,4 +1,4 @@
 interface:
   display_name: "Yocto Dev"
-  short_description: "Yocto/OE BitBake workflow"
-  default_prompt: "Use $yocto-dev to inspect and fix this Yocto metadata task safely."
+  short_description: "Develop Apollo Yocto metadata on the 5.2.4 baseline"
+  default_prompt: "Use $yocto-dev with agent_type=yocto_dev to identify the owning Apollo layer and validate the narrowest BitBake task first."

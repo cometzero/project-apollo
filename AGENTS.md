@@ -8,22 +8,26 @@ changes at the owning repository boundary.
 
 ## Project Mission
 
-Implement the Arm Zena CSS RD-Aspen/Apollo FVP behavior in QBox with
-SystemC/TLM/QEMU so the QBox virtual platform is functionally equivalent to Arm
-FVP for the active `apollo-fvp` configuration. The target is high-fidelity
-emulation, not driver-only shims: prefer real SystemC/TLM or libqemu-backed
-hardware models over register-only stubs.
+Implement the Arm Zena CSS RD-Aspen/Apollo reference behavior in QBox with
+SystemC/TLM/QEMU so the active Apollo QVP is functionally comparable to Arm
+FVP. The target is high-fidelity emulation, not driver-only shims: prefer real
+SystemC/TLM or libqemu-backed hardware models over register-only stubs.
 
 ## Active Baseline
 
 - Active Yocto build directory: `build/`
-- Active Yocto template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp/`
+- Active Yocto template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/`
 - Build entrypoint: `./yocto_build.sh`
-- Current machine: `apollo-fvp`
+- Current machine: `apollo-qvp`
+- Current image target: `nexios-image`
+- Current BitBake TMPDIR: `build/tmp_baremetal`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`
 - Current configured CPU count: `PC_CPUS_COUNT_DEFAULT = "4"`
+- Arm FVP role: explicit reference, comparison, and source-level debug only;
+  it is not the active Yocto machine.
 - Apollo Safety Island Zephyr workspace:
-  `hsoc-stack/components/system_mgmt/zephyrproject/`
+  `hsoc-stack/components/system_mgmt/zephyrproject/` containing `zephyr/` and
+  `zephyr_hsoc_src/`
 - QBox core under active development:
   `hsoc-stack/tools/qbox/`
 - QBox platform under active development:
@@ -51,7 +55,7 @@ hardware models over register-only stubs.
   source submodules: Linux, U-Boot, TF-A, and OP-TEE.
 - `hsoc-stack/components/system_mgmt/`: Apollo system-management and safety
   local source submodules: TF-M, SCP-firmware, and the Zephyr workspace
-  containing `zephyr/` plus `safety_island/`.
+  containing `zephyr/` plus `zephyr_hsoc_src/`.
 - `hsoc-stack/yocto/meta-hsoc-auto-solutions/`: project-owned Apollo distro,
   template, and dynamic-layer metadata.
 - `hsoc-stack/yocto/meta-hsoc-bsp/`: project-owned Apollo BSP metadata,
@@ -96,6 +100,11 @@ hardware models over register-only stubs.
    - `$yocto-dev` / `$yocto-review` for Yocto metadata work.
    - `$linux-kernel-review` for kernel, DTS, Kconfig, driver, HIPC, RPMsg,
      remoteproc, or PFDI Linux work.
+   When delegating, pass the exact registered role as `agent_type`; a
+   `task_name` or role name in the message does not select its TOML model.
+   The registrations and default model are in `.codex/config.toml`. If the
+   active spawn surface has no `agent_type` field, keep the work in the
+   `gpt-5.6-sol` project leader and do not claim that a specialist model ran.
 3. Keep changes scoped to the owning repository or project-local docs. For
    example, kernel source changes belong in
    `hsoc-stack/components/primary_compute/linux`, QBox model changes belong in
@@ -113,7 +122,7 @@ hardware models over register-only stubs.
    memory maps, register maps, boot flows, firmware/domain responsibilities,
    and other hardware/software interface details before changing code.
 
-## Apollo FVP Debugging
+## Explicit Apollo FVP Debugging
 
 Use the local debug helpers when a component needs source symbols,
 breakpoints, or precise handoff analysis. The local build enables debug
@@ -250,11 +259,11 @@ Use the narrowest meaningful command first, then broaden only when needed.
    - Use `bitbake-layers show-layers` when layer order changes.
    - Use targeted tasks first, such as
      `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
-   - Use `./yocto_build.sh` for the configured `baremetal-image` build.
+   - Use `./yocto_build.sh` for the configured `nexios-image` build.
 3. QBox build checks:
    - Prefer `./local_build.sh qbox` for the Apollo overlay build contract.
    - Targeted overlay builds use
-     `cmake --build build/local-apollo-fvp/work/qbox-platform --target
+     `cmake --build build/local-${MACHINE}/work/qbox-platform --target
      <target> --parallel <n>`.
    - Build `platforms-vp` from the qbox-platform build directory when Lua
      platform wiring changes.

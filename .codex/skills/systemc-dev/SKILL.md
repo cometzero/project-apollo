@@ -1,66 +1,66 @@
 ---
 name: systemc-dev
-description: SystemC and TLM-2.0 development workflow for C++ hardware modeling. Use whenever a prompt mentions SystemC, TLM-2.0, sc_main, sc_module, SC_MODULE, SC_CTOR, SC_THREAD, SC_METHOD, SC_CTHREAD, sc_signal, sc_fifo, sc_event, sc_clock, reset behavior, delta cycles, sc_time, sc_stop, initiator/target sockets, b_transport, nb_transport, DMI, payload lifetime, hardware modeling, co-simulation, producer/consumer FIFO examples, or SystemC/TLM 구현/디버깅/리뷰/테스트.
+description: SystemC and TLM-2.0 development workflow for this Apollo QBox project. Use for sc_module, sc_main, SC_THREAD/SC_METHOD, ports, events, reset, sc_time, delta cycles, TLM sockets, transport, DMI, payload lifetime, hardware models, co-simulation, review, debugging, or tests.
 ---
 
-# SystemC Development Skill
+# SystemC Development
 
-## Workflow
+## Ownership And Intake
 
-1. Inspect the repository before editing.
-   - Find the build system: `CMakeLists.txt`, `Makefile`, `meson.build`,
-     Bazel files, or scripts.
-   - Find SystemC dependency setup: include paths, libraries, `pkg-config`,
-     environment variables, or Dockerfiles.
-   - Find entry points: `sc_main`, examples, tests, and simulation binaries.
+- reusable QBox components: `hsoc-stack/tools/qbox`
+- Apollo-specific components: `hsoc-stack/tools/qbox-platform/systemc-components`
+- active overlay build: `build/local-${MACHINE}/work/qbox-platform`
 
-2. Map the simulation structure.
-   - Identify the `sc_module` hierarchy.
-   - Identify processes: `SC_METHOD`, `SC_THREAD`, and `SC_CTHREAD`.
-   - Identify ports, exports, channels, `sc_signal`, `sc_fifo`, `sc_event`,
-     clocks, and resets.
-   - For TLM, identify initiator/target sockets, transport interfaces,
-     payload ownership, and timing annotation.
+Read `build/conf/local.conf`, the owning repository README/CMake files, module
+header and implementation, construction site, Lua binding, and tests before
+editing. Use `$qbox-dev` as well when the change touches QEMU, Lua, CCI, the
+platform map, or a full-system runner.
 
-3. Before changing code, state the intended minimal edit.
-   - Avoid broad rewrites.
-   - Keep existing naming, formatting, C++ standard, and build conventions.
-   - Prefer small compileable increments.
+Use `agent_type = "systemc_dev"` (`gpt-5.6-sol`, high) for model
+implementation and route QBox/QEMU integration with
+`agent_type = "qbox_dev"` (`gpt-5.6-sol`, high). If `agent_type` is
+unavailable, use the project leader and do not claim specialist selection.
 
-4. Check implementation safety.
-   - Include correct SystemC headers.
-   - Avoid unsafe lifetime of payloads, events, references, and dynamically
-     allocated modules.
-   - Preserve simulation timing and delta-cycle semantics.
-   - Use `sc_time` for simulation time; do not substitute wall-clock time.
-   - Avoid hidden races from process sensitivity or reset handling.
+## Model Checklist
 
-5. Verify with the narrowest useful command.
-   - Build the smallest target first.
-   - Run the relevant simulation or test.
-   - Capture the command, result, failure output, and next step.
-   - If build/test commands are unknown, infer from existing docs/scripts and
-     ask only when blocked.
+1. Map module hierarchy, ports, exports, channels, events, clocks, and resets.
+2. Map every `SC_METHOD`, `SC_THREAD`, and `SC_CTHREAD`, including sensitivity
+   and blocking behavior.
+3. For TLM, map initiator/target sockets, binding cardinality, address
+   translation, payload ownership, extensions, timing, DMI, and debug access.
+4. State the minimal behavior change and its observable test before editing.
+5. Preserve existing C++14 and QBox conventions.
 
-## Typical Commands
+## Correctness Rules
+
+- Preserve delta-cycle and event ordering; do not replace simulation time with
+  wall-clock time.
+- `SC_METHOD` must not block. Confirm initialization and dynamic sensitivity.
+- `SC_THREAD`/`SC_CTHREAD` waits and reset behavior must match the protocol.
+- Annotate `b_transport` delay and set response status on every path.
+- Keep payloads, extensions, callbacks, and module references alive for their
+  required lifetime.
+- Validate DMI invalidation and address ranges when DMI is supported.
+- Do not invent APIs or add broad abstractions for one component.
+
+## Validation
+
+Build the smallest owning target first:
 
 ```bash
-find . -name 'CMakeLists.txt' -o -name 'Makefile' -o -name '*.cpp' -o -name '*.h' | head -100
-rg -n "int sc_main|sc_main\\(" .
-rg -n "SC_MODULE|SC_CTOR|SC_THREAD|SC_METHOD|SC_CTHREAD|tlm::" src include test tests examples 2>/dev/null
-cmake --build build -j
-ctest --test-dir build --output-on-failure
+cmake --build build/local-${MACHINE}/work/qbox-platform \
+  --target <target> --parallel <jobs>
+ctest --test-dir build/local-${MACHINE}/work/qbox-platform \
+  -R <test-name> --output-on-failure
 ```
 
-## Review Focus
+Then run the project contract when the component is integrated:
 
-- Check process sensitivity, reset handling, and event ordering before
-  changing behavior.
-- For `SC_THREAD` and `SC_CTHREAD`, confirm blocking waits and reset behavior
-  match the intended protocol.
-- For `SC_METHOD`, confirm static/dynamic sensitivity and avoid accidental
-  blocking calls.
-- For `sc_fifo`, confirm bounded depth, blocking/non-blocking access, and
-  termination behavior.
-- For TLM-2.0, confirm socket binding, `b_transport` timing annotation,
-  response status, DMI handling, payload extension lifetime, and ownership.
+```bash
+./local_build.sh qbox
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
+```
+
+Runtime claims require the relevant generated logs and result JSON. Report the
+changed component, owning repository, command, test observation, timing
+assumptions, and any unimplemented protocol behavior.

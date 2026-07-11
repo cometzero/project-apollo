@@ -1,0 +1,35 @@
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+
+[agents.arm-auto-solutions-expert]
+config_file = "./agents/arm-auto-solutions-expert.toml"
+
+[agents.arm-expert]
+config_file = "./agents/arm-expert.toml"
+
+[agents.debug-expert]
+config_file = "./agents/debug-expert.toml"
+
+[agents.linux-kernel-expert]
+config_file = "./agents/linux-kernel-expert.toml"
+
+[agents.qbox_dev]
+config_file = "./agents/qbox_dev.toml"
+
+[agents.systemc_dev]
+config_file = "./agents/systemc_dev.toml"
+
+[agents.test-expert]
+config_file = "./agents/test-expert.toml"
+
+[agents.yocto-expert]
+config_file = "./agents/yocto-expert.toml"
+
+[agents.yocto_dev]
+config_file = "./agents/yocto_dev.toml"
+
+[agents.zephyr-expert]
+config_file = "./agents/zephyr-expert.toml"
+
+[features.multi_agent_v2]
+max_concurrent_threads_per_session = 1000

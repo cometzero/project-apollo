@@ -10,7 +10,7 @@ const INTERESTING_EVENTS = new Set([
 const PROJECT_CONTEXT = Object.freeze({
   project: "arm-auto-solutions",
   root: PROJECT_ROOT,
-  current_config: ".config.yaml",
+  current_config: "build/conf/local.conf",
   docs: [
     "doc/README.md",
     "doc/project-architecture.md",
@@ -28,9 +28,12 @@ const PROJECT_CONTEXT = Object.freeze({
     agents: {
       general: ".codex/agents/arm-auto-solutions-expert.toml",
       yocto: ".codex/agents/yocto-expert.toml",
+      yocto_dev: ".codex/agents/yocto_dev.toml",
       zephyr: ".codex/agents/zephyr-expert.toml",
       linux_kernel: ".codex/agents/linux-kernel-expert.toml",
       arm: ".codex/agents/arm-expert.toml",
+      qbox: ".codex/agents/qbox_dev.toml",
+      systemc: ".codex/agents/systemc_dev.toml",
       test: ".codex/agents/test-expert.toml",
       debug: ".codex/agents/debug-expert.toml",
     },
@@ -43,10 +46,11 @@ const PROJECT_CONTEXT = Object.freeze({
     linux_kernel_auto_review_hook: ".omx/hooks/linux-kernel-auto-review.mjs",
   },
   guardrails: [
-    "Root is a kas workspace, not a Git repository.",
-    "Use git -C for nested source repositories.",
+    "Root is a Git superproject with nested source submodules.",
+    "Read build/conf before Yocto build or runtime claims.",
     "Treat build/ as generated evidence, not source.",
-    "Separate static, build, and runtime/FVP validation claims.",
+    "Use Apollo QVP as the active target and FVP only for explicit comparison.",
+    "Separate static, build, QBox runtime, and FVP comparison claims.",
   ],
 });
 

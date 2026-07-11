@@ -1,139 +1,89 @@
 ---
 name: qbox-dev
-description: Use for qbox, Qualcomm/QUIC QBox, SystemC, TLM-2.0, QEMU co-simulation, virtual platform development, Lua platform configuration, QemuInstance, QemuInstanceManager, CCI parameters, qbox monitor, UART/character backends, biflow_socket, backend_socket, target_socket, initiator_socket, memory map, IRQ wiring, Graphviz/DOT object graph generation, CMake presets, build/test debugging, and qbox SystemC/QEMU integration tasks. Trigger when the user asks to implement, debug, review, refactor, test, analyze, diagram, document, or inspect qbox/SystemC/QEMU virtual platform code or configuration.
+description: QBox/SystemC/QEMU co-simulation workflow for Apollo. Use for QBox C++ components, QEMU/libqemu integration, Lua platforms, CCI parameters, TLM sockets, memory maps, IRQs, UART backends, monitor/debugging, build/test failures, runtime boot, or FVP-equivalence analysis.
 ---
 
-# QBox Development Skill
+# QBox Development
 
-## Purpose
+## Ownership
 
-Use this skill for QBox development tasks involving:
+- reusable QBox core: `hsoc-stack/tools/qbox`
+- Apollo/RD-Aspen overlay: `hsoc-stack/tools/qbox-platform`
+- Apollo platform entrypoints: `hsoc-stack/tools/qbox-platform/platforms/apollo`
+- local QEMU/libqemu: `hsoc-stack/tools/qemu`
+- local build tree: `build/local-${MACHINE}/work/qbox-platform`
+- full-system evidence: `build/qbox-apollo-qvp`
 
-- QBox / qbox virtual platform development
-- SystemC / TLM-2.0 modeling
-- QEMU co-simulation through `libqbox` and `libqemu-cxx`
-- qbox `systemc-components`, `qemu-components`, `platforms`, tests, and docs
-- Lua platform configuration, CCI parameters, and QEMU instance setup
-- CPU, memory, interrupt-controller, UART, backend, and monitor wiring
-- Runtime object inspection and Graphviz/DOT/Mermaid architecture diagrams
-- CMake preset build, test, runtime, and boot debugging workflows
+Archived candidates in `hsoc-stack/tools/qbox-platform/patch-qbox` are not
+applied by normal builds. Change the owning repository directly unless the user
+explicitly requests an archived patch.
 
-For detailed checklists and patterns, read
-`references/qbox-workflows.md` only when the task needs the extra detail.
+Read `build/conf/local.conf`, relevant QBox READMEs, CMake files, Lua
+entrypoints, and existing tests before editing. Delegate deep implementation
+with `agent_type = "qbox_dev"` (`gpt-5.6-sol`, high); use
+`agent_type = "systemc_dev"` (`gpt-5.6-sol`, high) for reusable
+timing/component work. If `agent_type` is unavailable, use the project leader
+and do not claim specialist selection.
 
-## Core Behavior
+## Fidelity Rules
 
-1. Inspect before editing.
-2. Do not guess qbox APIs. Search source, examples, docs, tests, and Lua
-   platform files first.
-3. Preserve SystemC timing, TLM socket direction, CCI parameter behavior,
-   QEMU argument conventions, synchronization policy, and Lua object names
-   unless the task requires a deliberate change.
-4. Prefer small, focused edits and narrow build/test/simulation commands.
-5. For diagrams, distinguish parsed relationships from inferred
-   relationships.
-6. Report files inspected, files changed, commands run, results, and
-   remaining risks.
+- Prefer a real SystemC/TLM or libqemu-backed model over a register-only stub.
+- Preserve C++14, QBox component patterns, CCI keys, Lua names, socket
+  direction, address decode, IRQ topology, reset, simulation time, and QEMU
+  ownership.
+- Keep CPU-internal generic timers in QEMU CPU models. Model AP REFCLK through
+  the Arm MMIO generic timer path and preserve secure/non-secure frame IRQs.
+- Compare memory maps, interrupts, DT expectations, firmware handoffs, and
+  driver probe evidence with the reference platform.
+- Record temporary fidelity debt and a replacement plan.
 
-## First Inspection
-
-Start with lightweight inspection:
-
-```bash
-pwd
-git status --short
-find . -maxdepth 3 -name 'README.md' -o -name 'CMakePresets.json' -o -name 'CMakeLists.txt'
-find . -maxdepth 3 -type d | sort | sed -n '1,160p'
-find . -maxdepth 4 -name '*.lua' | sort | sed -n '1,160p'
-```
-
-Search relevant qbox patterns:
+## Inspection
 
 ```bash
-rg -n "QemuInstanceManager|QemuInstance|moduletype|dylib_path|backend_socket|biflow_socket|target_socket|initiator_socket" README.md docs examples platforms tests libqbox libqemu-cxx systemc-components qemu-components 2>/dev/null
-rg -n "SC_MODULE|SC_CTOR|SC_HAS_PROCESS|SC_THREAD|SC_METHOD|sc_module|sc_time|tlm::|tlm_utils" . 2>/dev/null
-rg -n "monitor|server_port|qk_status|transport_dbg|char_backend|stdio|socket|sigquit|expect" README.md docs examples platforms tests systemc-components qemu-components libqbox 2>/dev/null
+git -C hsoc-stack/tools/qbox status --short --branch
+git -C hsoc-stack/tools/qbox-platform status --short --branch
+git -C hsoc-stack/tools/qemu status --short --branch
+rg -n "QemuInstance|moduletype|dylib_path|target_socket|initiator_socket|backend_socket|biflow_socket" \
+  hsoc-stack/tools/qbox hsoc-stack/tools/qbox-platform
+rg -n "SC_MODULE|SC_THREAD|SC_METHOD|b_transport|sc_time" \
+  hsoc-stack/tools/qbox hsoc-stack/tools/qbox-platform
 ```
 
-## Build and Test
+Read `references/qbox-workflows.md` for focused component, Lua, QEMU, and
+runtime checklists.
 
-Prefer project presets when available:
+## Build And Static Validation
+
+Use the project entrypoint first:
 
 ```bash
-cmake --list-presets
-cmake --preset gcc
-cmake --build --preset gcc --parallel
-ctest --preset gcc --output-on-failure
+./local_build.sh qbox
 ```
 
-For focused checks:
+For a narrow overlay target:
 
 ```bash
-cmake --build --preset <preset> --target <target>
-ctest --preset <preset> -R <test-name> --output-on-failure
+cmake --build build/local-${MACHINE}/work/qbox-platform \
+  --target <target> --parallel <jobs>
+ctest --test-dir build/local-${MACHINE}/work/qbox-platform \
+  -R <test-name> --output-on-failure
 ```
 
-Use fallback `cmake -B build ...` only after checking project docs and
-available presets. Do not delete build artifacts or perform broad rebuilds
-without a reason.
+Run applicable map and ownership checks:
 
-## QBox Platform Checks
+```bash
+git -C hsoc-stack/tools/qbox diff --check
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
+python3 scripts/test/audit_qbox_core_boundary.py
+```
 
-When inspecting or modifying a platform, identify:
+## Runtime
 
-- Platform entry file and Lua configuration files
-- `QemuInstanceManager`, `QemuInstance`, QEMU target, CPU models, and QEMU args
-- Router/address decoder, memory map, memories, ROM/RAM, and loaders
-- Interrupt controller, IRQ lines, timer devices, UARTs, and backends
-- Monitor server/endpoints, CCI parameters, and TLM socket bindings
+```bash
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 --timeout 600
+```
 
-For Lua platform files, validate:
-
-- Unique object names
-- Existing `moduletype` and `dylib_path`
-- Valid constructor `args`
-- Valid `qemu_inst` references
-- Correct target/initiator/backend/biflow socket binding
-- Non-overlapping address/size regions
-- Correct IRQ line mapping and device tree consistency when Linux boots
-- QEMU args, GDB ports, monitor ports, and host socket conflicts
-
-Read `references/qbox-workflows.md` for detailed Lua, memory map, IRQ,
-UART/backend, monitor, graph, boot, and runtime debugging workflows.
-
-## SystemC/TLM and QEMU Rules
-
-- Preserve initiator/target socket direction and TLM response status.
-- Preserve address decoding, timing annotation, delta-cycle behavior,
-  `sc_time`, and intentional `sc_stop` behavior.
-- Avoid unsafe payload, extension, event, or dynamic module lifetimes.
-- Do not introduce host wall-clock timing where simulation time is required.
-- Do not change QEMU execution mode, `icount`, TCG threading, GDB ports, or
-  networking without explaining determinism/performance implications.
-- Handle `qemu_args` and CCI parameters according to existing repository
-  conventions.
-
-## Diagrams and Object Graphs
-
-For qbox platform diagrams:
-
-- Prefer runtime qbox monitor hierarchy when available.
-- Otherwise parse Lua configuration, then C++ construction code, then logs.
-- Output Graphviz DOT first; Mermaid is optional.
-- Label inferred edges explicitly.
-- If runtime monitor data is unavailable, state that the analysis is static.
-
-## Output Format
-
-Return:
-
-- Summary
-- Detected qbox context
-- Files inspected
-- Files changed
-- Commands run
-- Build/test/simulation result
-- Root cause, if debugging
-- Generated artifacts, if any
-- Remaining risks
-- Next recommended command
+Inspect the generated `result.json`, per-domain UART logs, and coverage audit.
+Do not use tmux screen contents alone as proof. Report files changed, owning
+repositories, commands, build/runtime results, and unresolved fidelity gaps.

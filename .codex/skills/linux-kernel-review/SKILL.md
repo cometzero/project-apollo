@@ -1,88 +1,70 @@
 ---
 name: linux-kernel-review
-description: Linux kernel review workflow for this project. Use whenever a prompt mentions reviewing or changing Linux kernel source, kernel modules, drivers, patches, DTS/DTB/devicetree bindings, Kconfig, Kbuild, kernel Makefiles, defconfig/config fragments, PREEMPT_RT, platform drivers, IRQ/DMA/MMIO, sysfs/debugfs, dmesg kernel failures, HIPC, RPMsg, remoteproc, PFDI kernel code, 커널/드라이버/디바이스트리 리뷰, or when the linux-kernel-auto-review hook reports pending kernel review.
+description: Linux kernel review and implementation workflow for this Apollo project. Use for kernel source, modules, drivers, patches, DTS/bindings, Kconfig/Kbuild, config fragments, PREEMPT_RT, MMIO/IRQ/DMA, HIPC, RPMsg, remoteproc, PFDI, or kernel boot failures.
 ---
 
 # Linux Kernel Review
 
-Use this skill for focused Linux kernel source and kernel metadata review from
-the current project top directory. Use relative paths in commands and reports.
+Use this skill for kernel work owned by:
 
-## Intake
+- `hsoc-stack/components/primary_compute/linux`: active Apollo kernel source.
+- `hsoc-stack/yocto/meta-hsoc-bsp`: kernel recipes, config, device tree,
+  signing, modules, and BSP integration.
+- `sw-ref-stack/yocto/meta-arm-auto-solutions`: shared automotive kernel
+  integration when the task reaches that layer.
 
-1. Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
-   `build/conf/templateconf.cfg`.
-2. If the request came from the auto-review hook, inspect
-   `.omx/state/hooks/plugins/linux-kernel-auto-review/data.json`.
-3. Read `doc/linux-kernel-source-review.md` for the full project checklist.
-4. Route unclear kernel behavior or cross-layer boot issues to
-   `linux-kernel-expert` first, then `debug-expert` if runtime evidence is
-   needed.
+Read `build/conf/local.conf`, `build/conf/bblayers.conf`, and
+`build/conf/templateconf.cfg` first. Route architecture/firmware questions to
+`arm-expert` and runtime root-cause work to `debug-expert`.
 
-## Sashiko-Style Review Workflow
+Use `agent_type = "linux-kernel-expert"` (`gpt-5.6-sol`, high) for the review
+and any accepted implementation. Escalate cross-domain boot root-cause work
+with `agent_type = "debug-expert"` (`gpt-5.6-sol`, xhigh). If the spawn surface
+does not expose `agent_type`, keep the work in the project leader and do not
+claim specialist selection.
 
-Use a Sashiko-inspired deep regression analysis, not a quick style pass:
+## Review Method
 
-1. Identify the diff or pending hook paths and read every changed hunk.
-2. State the intended behavior of the change before judging correctness.
-3. Gather full function/type context for changed code. Do not reason only from
-   diff fragments.
-4. Split the change into fine-grained categories such as control flow, return
-   values, resource management, locking, ABI, hardware access, and config.
-5. Apply a reachability gate: prove the changed code path can execute for the
-   configured workload or report the blocked path.
-6. Review each category through implementation matching, execution flow,
-   resource lifetime, locking/synchronization, security, and hardware/driver
-   constraints.
-7. Eliminate false positives before reporting. If you cannot prove an issue with
-   a concrete execution path, do not report it as a bug.
+1. Read the complete diff and state intended behavior.
+2. Gather the changed function, type, callers, configuration, DTS, and firmware
+   interface context.
+3. Prove the changed path is reachable on active `apollo-qvp` cfg2.
+4. Review control flow, return values, resource lifetime, locking, ABI,
+   hardware access, and error cleanup separately.
+5. Eliminate findings that lack a concrete execution path.
+6. Check coupling across Kconfig, Kbuild/Makefile, DTS bindings, config
+   fragments, Yocto recipes, and patches.
 
-Read `references/sashiko-protocol.md` for the compact local protocol and
-`references/review-checklist.md` for project-specific checks.
+Use `references/sashiko-protocol.md` and `references/review-checklist.md` for
+the detailed review checklist. Preserve user changes and repository ownership.
 
-Start with source and diff context:
+## Kernel-Specific Checks
 
-```bash
-git -C sw-ref-stack status --short
-git -C arm-zena-css status --short
-git -C sw-ref-stack diff -- <paths>
-git -C arm-zena-css diff -- <paths>
-rg -n "TODO|FIXME|XXX|BUG_ON|panic\\(|msleep\\(|udelay\\(" <paths>
-```
+- lifetime and every error/unwind path
+- lock ordering, sleepability, IRQ context, and PREEMPT_RT behavior
+- MMIO ordering, register width, endianness, IRQ and DMA semantics
+- user pointer handling, ioctl ABI, sysfs/debugfs lifetime and permissions
+- module reference/unload behavior
+- devicetree schema, compatible strings, address/size cells, IRQs, clocks,
+  resets, and reserved memory
+- patch ordering, commit message claims, and `Upstream-Status`
 
-For module or kernel build validation:
+## Validation
+
+Start with source checks appropriate to the touched tree. Use targeted BitBake
+tasks for integrated metadata:
 
 ```bash
 source layers/poky/oe-init-build-env build
-bitbake <module-recipe> -c compile
-bitbake <module-recipe> -c package_qa
 bitbake virtual/kernel -c kernel_configcheck
 bitbake virtual/kernel -c compile
+bitbake <module-recipe> -c compile
+bitbake <module-recipe> -c package_qa
 ```
 
-Use kernel tree tools only when the prepared source tree is available:
+Use `scripts/checkpatch.pl`, sparse, or Coccinelle only when the prepared kernel
+tree supports them. Runtime claims require QBox or explicit FVP console, probe,
+and driver evidence.
 
-```bash
-scripts/checkpatch.pl --strict <patch-or-source>
-make C=1 <target>
-make W=1 <target>
-make coccicheck MODE=report
-```
-
-## Output
-
-Lead with proven findings only, ordered by severity, with file and line
-references. For every finding include the concrete path that reaches the bug and
-the reason it is not a false positive. Then report:
-
-- reviewed paths,
-- change categories,
-- reachability result,
-- exact commands run,
-- static, kernel-tooling, BitBake task, image, and runtime evidence separately,
-- skipped checks and blockers,
-- whether pending hook state remains.
-
-For LKML/upstream-style patch review, optionally create `review-inline.txt` in
-the current working directory using polite inline-comment style. Do not create
-that file for ordinary local project reviews unless the user asks for it.
+Report findings first by severity with file/line and reachable execution path,
+then list reviewed paths, commands, results, skipped checks, and residual risk.
