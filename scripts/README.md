@@ -6,7 +6,7 @@ automation and documentation should call the categorized paths directly.
 ## Directories
 
 - `analyze/`: log, trace, and boot timing analysis helpers.
-- `build/`: local Apollo FVP build stage entrypoints and sourceable component
+- `build/`: local Apollo source-build stage entrypoints and sourceable component
   modules.
 - `debug/`: GDB, Iris, and debug-session helpers.
 - `inspect/`: source, image, firmware, and environment inspection helpers.
@@ -46,7 +46,10 @@ not execute module files directly.
 
 Use `./local_build.sh --package` or `scripts/package.sh` to package existing
 local build outputs into a QBox-runnable local-build tree under
-`build/local-apollo-fvp/package/qbox/local-build`.
+`build/local-${MACHINE}/package/qbox/local-build`. Without an explicit
+override, the local build reads the active Yocto configuration and currently
+resolves to `MACHINE=apollo-qvp`. `apollo-fvp` is the built-in fallback when
+Yocto-variable loading is intentionally disabled or no active machine exists.
 
 ## Run Scripts
 

@@ -1,8 +1,9 @@
-# Apollo FVP Zephyr Project
+# Apollo QVP/FVP Zephyr Project
 
-This directory is the local Zephyr workspace used for Apollo FVP Safety Island
-CL1 builds. It keeps the Apollo-owned Zephyr integration tree and records how
-the common Arm Zena CSS Safety Island source is combined with it:
+This directory is the local Zephyr workspace used for Apollo QVP and explicit
+FVP Safety Island CL1 builds. It keeps the Apollo-owned Zephyr integration tree
+and records how the common Arm Zena CSS Safety Island source is combined with
+it:
 
 - `zephyr/`: Zephyr RTOS core with the Apollo/RD-Aspen patch stack applied.
 - `zephyr_hsoc_src/`: Apollo-owned Safety Island CL1 board, DTS, Kconfig,
