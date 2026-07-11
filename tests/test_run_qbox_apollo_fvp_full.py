@@ -11,6 +11,9 @@ import pytest  # pyright: ignore[reportMissingImports]
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
+AP_COMPUTE_LUA = (
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
+)
 SI_CL1_LUA = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua"
 )
@@ -151,13 +154,44 @@ def test_child_command_requires_live_cl1_readiness(tmp_path):
         assert marker in cmd
 
 
-def test_live_cl1_defaults_to_single_thread_tcg():
-    text = SI_CL1_LUA.read_text(encoding="utf-8")
+def test_child_command_presets_full_system_qemu_modes(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
 
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert "platform.ap_qemu_inst.tcg_mode=MULTI" in cmd
+    assert "platform.si_cl1_qemu_inst.tcg_mode=MULTI" in cmd
+    assert "platform.si_cl1_qemu_inst.sync_policy=multithread-quantum" in cmd
+
+
+def test_child_command_preserves_explicit_qemu_mode_override(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.platform_param = ["platform.ap_qemu_inst.tcg_mode=SINGLE"]
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert "platform.ap_qemu_inst.tcg_mode=SINGLE" in cmd
+    assert "platform.ap_qemu_inst.tcg_mode=MULTI" not in cmd
+
+
+def test_full_system_qemu_defaults_use_per_cpu_wake_conditions():
+    ap_text = AP_COMPUTE_LUA.read_text(encoding="utf-8")
     assert (
-        'tcg_mode = ctx.getenv_or("QBOX_APOLLO_FULL_SI_CL1_TCG_MODE", "SINGLE")'
+        'tcg_mode = ctx.getenv_or("QBOX_APOLLO_FULL_AP_TCG_MODE", "MULTI")'
+        in ap_text
+    )
+
+    text = SI_CL1_LUA.read_text(encoding="utf-8")
+    assert (
+        'tcg_mode = ctx.getenv_or("QBOX_APOLLO_FULL_SI_CL1_TCG_MODE", "MULTI")'
         in text
     )
+    assert '"QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY", "multithread-quantum"' in text
+    assert "managed_start_in_reset_release = true" in ap_text
+    assert "managed_start_in_reset_release = true" in text
+
     isolated_text = SI_CL1_ISOLATED_LUA.read_text(encoding="utf-8")
     assert 'getenv_or("QBOX_APOLLO_SI_CL1_TCG_MODE", "SINGLE")' in isolated_text
 

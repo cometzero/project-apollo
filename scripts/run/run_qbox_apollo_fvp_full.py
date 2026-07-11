@@ -108,6 +108,23 @@ LIVE_CL0_REQUIRED_MARKERS = {
     "module_init_complete": "[FWK] Module initialization complete!",
     "gic_multiview_configured": "GIC-multiview configured successfully",
 }
+FULL_SYSTEM_QEMU_DEFAULTS = (
+    (
+        "platform.ap_qemu_inst.tcg_mode",
+        "QBOX_APOLLO_FULL_AP_TCG_MODE",
+        "MULTI",
+    ),
+    (
+        "platform.si_cl1_qemu_inst.tcg_mode",
+        "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE",
+        "MULTI",
+    ),
+    (
+        "platform.si_cl1_qemu_inst.sync_policy",
+        "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY",
+        "multithread-quantum",
+    ),
+)
 MARKER_GROUP_PRIORITY = [
     "rse",
     "si_cl0",
@@ -990,9 +1007,24 @@ def write_result(
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "safety_island_mode": args.si_mode,
-        "si_cl1_tcg_mode": os.environ.get(
-            "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE", "SINGLE"
+        "ap_tcg_mode": effective_platform_param(
+            args,
+            "platform.ap_qemu_inst.tcg_mode",
+            "QBOX_APOLLO_FULL_AP_TCG_MODE",
+            "MULTI",
         ).upper(),
+        "si_cl1_tcg_mode": effective_platform_param(
+            args,
+            "platform.si_cl1_qemu_inst.tcg_mode",
+            "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE",
+            "MULTI",
+        ).upper(),
+        "si_cl1_sync_policy": effective_platform_param(
+            args,
+            "platform.si_cl1_qemu_inst.sync_policy",
+            "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY",
+            "multithread-quantum",
+        ),
         "smmu_backend": args.smmu_backend,
         "mhu_backend": "systemc-mhu320ae",
         "qbox_conf": str(args.conf),
@@ -1045,6 +1077,9 @@ def write_result(
         f"verdict: {status['verdict']}",
         f"boot_mode: {status['boot_mode']}",
         f"safety_island_mode: {args.si_mode}",
+        f"ap_tcg_mode: {status['ap_tcg_mode']}",
+        f"si_cl1_tcg_mode: {status['si_cl1_tcg_mode']}",
+        f"si_cl1_sync_policy: {status['si_cl1_sync_policy']}",
         f"smmu_backend: {status['smmu_backend']}",
         f"mhu_backend: {status['mhu_backend']}",
         f"qbox_performance_preset: {status['qbox_performance_preset']}",
@@ -1247,6 +1282,32 @@ def wait_for_keep_running_child_pass(
         time.sleep(0.2)
 
 
+def env_or_default(name: str, default: str) -> str:
+    return os.environ.get(name) or default
+
+
+def full_system_platform_params(args: argparse.Namespace) -> list[str]:
+    params = list(args.platform_param)
+    explicit_keys = {param.partition("=")[0] for param in params}
+    defaults = []
+    for key, env_name, default in FULL_SYSTEM_QEMU_DEFAULTS:
+        if args.build_only or ("si_cl1" in key and args.si_mode == "service-model"):
+            continue
+        if key not in explicit_keys:
+            defaults.append(f"{key}={env_or_default(env_name, default)}")
+    return defaults + params
+
+
+def effective_platform_param(
+    args: argparse.Namespace, key: str, env_name: str, default: str
+) -> str:
+    prefix = key + "="
+    for param in reversed(args.platform_param):
+        if param.startswith(prefix):
+            return param[len(prefix) :]
+    return env_or_default(env_name, default)
+
+
 def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[str]:
     root = workspace_root()
     scp_strategy = "service-model"
@@ -1381,7 +1442,7 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--keep-running-after-pass")
     if args.build_only:
         cmd.append("--check-only")
-    for param in args.platform_param:
+    for param in full_system_platform_params(args):
         cmd.extend(["--platform-param", param])
     return cmd + args.forward_args
 
