@@ -43,7 +43,13 @@ def run_git(repo: Path, args: list[str], *, check: bool = True) -> subprocess.Co
 
 def project_root() -> Path:
     result = run_git(Path.cwd(), ["rev-parse", "--show-toplevel"])
-    return Path(result.stdout.strip()).resolve()
+    root = Path(result.stdout.strip()).resolve()
+    while True:
+        result = run_git(root, ["rev-parse", "--show-superproject-working-tree"], check=False)
+        parent = result.stdout.strip()
+        if result.returncode != 0 or not parent:
+            return root
+        root = Path(parent).resolve()
 
 
 def relpath(root: Path, path: Path) -> str:
@@ -158,8 +164,6 @@ def main() -> int:
     root = project_root()
     repos = discover_repos(root)
     action = "push" if args.push else "dry-run" if args.dry_run else "audit"
-    failures = 0
-
     print(f"project_root={relpath(root, root)}")
     print(f"owner={args.owner}")
     print(f"action={action}")
@@ -207,9 +211,9 @@ def main() -> int:
                 print(f"    {line}")
         if result.returncode != 0:
             print(f"  failed: exit {result.returncode}")
-            failures += 1
+            return 1
 
-    return 1 if failures else 0
+    return 0
 
 
 if __name__ == "__main__":

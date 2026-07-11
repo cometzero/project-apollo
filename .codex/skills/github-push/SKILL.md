@@ -1,62 +1,66 @@
 ---
 name: github-push
-description: Push this project's top Git repository and recursive submodules to the user's own GitHub remotes. Use when the user asks for $github-push, asks to push committed changes to GitHub, asks to upload changed submodules, or asks to publish all eligible project repositories while avoiding upstream/non-user remotes.
+description: Push this project's top-level Git repository and recursive submodules to user-owned GitHub remotes. Use for $github-push, publishing committed project refs, auditing eligible remotes, or pushing changed submodules without touching upstream remotes.
 ---
 
 # GitHub Push
 
-## Core Rule
+Push only remote URLs owned by the requested GitHub account. The default owner
+is `cometzero`. Never push Arm, Yocto, Qualcomm, Zephyr, upstream, GitLab, or
+other third-party remotes unless the user explicitly changes the owner and the
+URL matches it.
 
-Push only repositories whose selected remote URL belongs to the user's GitHub
-owner. For this project, default the owner to `cometzero`. Never push to
-upstream, GitLab, Yocto, Arm, Qualcomm, Zephyr, TF-A, or other third-party
-remotes unless the user explicitly changes the owner and the remote URL
-matches that owner.
+The helper resolves the top-level superproject even when invoked from inside a
+recursive submodule. It pushes recursive submodules before the top-level
+repository and stops on the first failed push.
 
-Use `scripts/github_push.py` from this skill to enumerate the top repository
-and recursive submodules. The helper chooses a GitHub-owned remote by URL, not
-by remote name. It prefers `github`, then `origin`, then any other owned remote.
+## Model Routing
+
+Run this external-write workflow with the project default `gpt-5.6-sol` at
+high reasoning effort. Do not delegate the final push decision to a lightweight
+read-only or QA agent.
 
 ## Workflow
 
-1. Confirm the current directory is the project top or inside this project.
-2. Inspect status before pushing:
+1. Inspect the top-level repository and recursive submodules:
+
    ```bash
    git status --short --branch
    git submodule foreach --recursive 'git status --short --branch'
    ```
-3. Ensure intended changes are committed. Do not push dirty repositories unless
-   the user explicitly asks to push committed refs while leaving local worktree
-   changes untouched.
-4. Run an audit first:
+
+2. Ensure intended refs are committed. Dirty repositories are skipped unless
+   the user explicitly accepts `--allow-dirty`.
+
+3. Audit selected remotes and branches:
+
    ```bash
    python3 .codex/skills/github-push/scripts/github_push.py
    ```
-5. If the audit shows only intended eligible repositories, run a remote dry-run:
+
+4. Prove the remote operation without updating refs:
+
    ```bash
    python3 .codex/skills/github-push/scripts/github_push.py --dry-run
    ```
-6. Push only after the dry-run succeeds:
+
+5. Push after the dry-run succeeds:
+
    ```bash
    python3 .codex/skills/github-push/scripts/github_push.py --push
    ```
-7. Report each pushed repository, branch, remote name, and remote URL. Also
-   report skipped repositories and the reason, especially `dirty`,
-   `no-owned-remote`, or `detached-head`.
 
-## Safety Rules
+## Safety Contract
 
-- Push submodules before the top repository so recorded submodule commits are
-  available on GitHub before the superproject commit is published.
-- Treat dirty repositories as blockers by default. Use `--allow-dirty` only
-  when the user explicitly accepts that uncommitted changes remain local.
-- Do not change remote URLs in this skill. If a repository lacks a GitHub-owned
-  remote, skip it and report the current remotes.
-- Do not use `git push --all` or `git push --mirror`. Push only the current
-  branch with `HEAD:<branch>`.
-- If a push fails, stop and report the failing repository and exact command.
+- Remote ownership is determined from the URL, not the remote name.
+- Preferred owned remotes are `github`, then `origin`, then another matching
+  remote.
+- Push only `HEAD:<current-branch>`; never use `--all` or `--mirror`.
+- Skip detached heads, dirty repositories, and repositories with no owned
+  remote, reporting the reason.
+- Stop immediately on the first failed dry-run or push.
+- Do not rewrite remote URLs.
+- Use `--owner` or `GITHUB_OWNER` only when the user requests another owner.
 
-## Owner Override
-
-Use `GITHUB_OWNER=<owner>` or `--owner <owner>` only when the user explicitly
-requests a different GitHub account or organization.
+Report repository path, branch, selected remote and URL, result, and every
+skipped repository with its reason.

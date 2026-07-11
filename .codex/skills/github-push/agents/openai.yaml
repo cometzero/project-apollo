@@ -1,4 +1,4 @@
 interface:
   display_name: "GitHub Push"
-  short_description: "Push owned repos to GitHub"
-  default_prompt: "Use $github-push to push this project and eligible submodules to my GitHub remotes."
+  short_description: "Safely push the superproject and owned submodules"
+  default_prompt: "Use $github-push under the project gpt-5.6-sol default to audit, dry-run, and push eligible committed refs to my GitHub remotes."
