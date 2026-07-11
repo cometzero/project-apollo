@@ -1096,7 +1096,13 @@ def test_tmux_uart_console_filters_terminal_status_response() -> None:
 
     assert "is_terminal_status_response_line" in script_text
     assert "sanitize_uart_input_line" in script_text
-    assert r"^\[{1,2}[0-9]{1,5}\;[0-9]{1,5}R$" in script_text
+    assert "is_raw_terminal_status_response_prefix" in script_text
+    assert "stdin_tty_state" in script_text
+    assert "stty -echo -icanon" in script_text
+    assert "read -r -s -N 1" in script_text
+    assert '"${clean_line}" != "$1"' in script_text
+    assert r"^[[:space:]]*$" in script_text
+    assert r"\^\[\[{0,1}[0-9]{1,5};[0-9]{1,5}R" in script_text
     assert r"\[{1,2}[0-9]{1,5};[0-9]{1,5}R" in script_text
     assert 'line="$(sanitize_uart_input_line "${line}")"' in script_text
     assert "write_fifo_line \"${fifo_path}\" \"${line}\"" in script_text

@@ -795,9 +795,10 @@ is_terminal_status_response_line()
 {
     (($# == 1)) || die "is_terminal_status_response_line requires LINE"
 
-    local clean_line="${1//$'\033'/}"
+    local clean_line
 
-    [[ "${clean_line}" =~ ^\[{1,2}[0-9]{1,5}\;[0-9]{1,5}R$ ]]
+    clean_line="$(sanitize_uart_input_line "$1")"
+    [[ "${clean_line}" != "$1" && "${clean_line}" =~ ^[[:space:]]*$ ]]
 }
 
 sanitize_uart_input_line()
@@ -806,9 +807,13 @@ sanitize_uart_input_line()
 
     local sanitized="$1"
     local csi_response_re=$'\033''\[{1,2}[0-9]{1,5};[0-9]{1,5}R'
+    local caret_response_re='\^\[\[{0,1}[0-9]{1,5};[0-9]{1,5}R'
     local bracket_response_re='\[{1,2}[0-9]{1,5};[0-9]{1,5}R'
 
     while [[ "${sanitized}" =~ ${csi_response_re} ]]; do
+        sanitized="${sanitized/${BASH_REMATCH[0]}/}"
+    done
+    while [[ "${sanitized}" =~ ${caret_response_re} ]]; do
         sanitized="${sanitized/${BASH_REMATCH[0]}/}"
     done
     while [[ "${sanitized}" =~ ${bracket_response_re} ]]; do
@@ -816,6 +821,18 @@ sanitize_uart_input_line()
     done
 
     printf '%s\n' "${sanitized}"
+}
+
+is_raw_terminal_status_response_prefix()
+{
+    (($# == 1)) || die "is_raw_terminal_status_response_prefix requires FRAGMENT"
+
+    local fragment="$1"
+    local esc=$'\033'
+
+    [[ "${fragment}" == "${esc}" ]] ||
+        [[ "${fragment}" =~ ^${esc}\[{1,2}[0-9]{0,5}$ ]] ||
+        [[ "${fragment}" =~ ^${esc}\[{1,2}[0-9]{1,5}\;[0-9]{0,5}$ ]]
 }
 
 write_fifo_line()
@@ -859,7 +876,11 @@ interactive_uart_console()
     local fifo_keeper_pid=""
     local line
     local raw_line
+    local input_char
+    local tty_input_buffer=""
     local fifo_ready=0
+    local stdin_is_tty=0
+    local stdin_tty_state=""
 
     fifo_path="$(uart_fifo_for_domain "${domain}")" ||
         die "domain does not have UART input: ${domain}"
@@ -876,6 +897,10 @@ interactive_uart_console()
         if [[ -n "${fifo_keeper_pid}" ]]; then
             kill "${fifo_keeper_pid}" 2>/dev/null || true
             wait "${fifo_keeper_pid}" 2>/dev/null || true
+        fi
+        if [[ -n "${stdin_tty_state}" ]]; then
+            stty "${stdin_tty_state}" 2>/dev/null || true
+            stdin_tty_state=""
         fi
         exit "${status}"
     }
@@ -909,6 +934,14 @@ interactive_uart_console()
     mkdir -p "$(dirname "${log_path}")"
     : >>"${log_path}"
 
+    if [[ -t 0 ]]; then
+        stdin_is_tty=1
+        stdin_tty_state="$(stty -g 2>/dev/null || true)"
+        if [[ -n "${stdin_tty_state}" ]]; then
+            stty -echo -icanon min 0 time 0 2>/dev/null || true
+        fi
+    fi
+
     printf 'Subsystem: %s\n' "${title}"
     printf 'Domain: %s\n' "${domain}"
     printf 'Log: %s\n' "${log_path}"
@@ -938,7 +971,42 @@ interactive_uart_console()
             fifo_ready=0
         fi
 
-        if IFS= read -r -t 0.2 line; then
+        if ((stdin_is_tty)); then
+            if IFS= read -r -s -N 1 -t 0.2 input_char; then
+                if [[ ! -p "${fifo_path}" ]]; then
+                    tty_input_buffer=""
+                    printf 'UART input FIFO is not ready; dropped input byte.\n'
+                    continue
+                fi
+                if [[ -n "${tty_input_buffer}" ||
+                    "${input_char}" == $'\033' ]]; then
+                    tty_input_buffer+="${input_char}"
+                    if is_terminal_status_response_line "${tty_input_buffer}"; then
+                        tty_input_buffer=""
+                        continue
+                    fi
+                    if is_raw_terminal_status_response_prefix \
+                        "${tty_input_buffer}"; then
+                        continue
+                    fi
+                    write_fifo_bytes "${fifo_path}" "${tty_input_buffer}" ||
+                        printf 'UART input FIFO write timed out; dropped input bytes.\n'
+                    tty_input_buffer=""
+                    continue
+                fi
+                write_fifo_bytes "${fifo_path}" "${input_char}" ||
+                    printf 'UART input FIFO write timed out; dropped input byte.\n'
+            elif [[ -n "${tty_input_buffer}" ]]; then
+                if [[ ! -p "${fifo_path}" ]]; then
+                    tty_input_buffer=""
+                    printf 'UART input FIFO is not ready; dropped input bytes.\n'
+                    continue
+                fi
+                write_fifo_bytes "${fifo_path}" "${tty_input_buffer}" ||
+                    printf 'UART input FIFO write timed out; dropped input bytes.\n'
+                tty_input_buffer=""
+            fi
+        elif IFS= read -r -t 0.2 line; then
             if [[ ! -p "${fifo_path}" ]]; then
                 printf 'UART input FIFO is not ready; dropped input line.\n'
                 continue
@@ -948,7 +1016,9 @@ interactive_uart_console()
             fi
             raw_line="${line}"
             line="$(sanitize_uart_input_line "${line}")"
-            if [[ -z "${line}" && -n "${raw_line}" ]]; then
+            if [[ -n "${raw_line}" &&
+                "${line}" != "${raw_line}" &&
+                "${line}" =~ ^[[:space:]]*$ ]]; then
                 continue
             fi
             write_fifo_line "${fifo_path}" "${line}" ||
