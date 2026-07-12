@@ -51,13 +51,15 @@ class FakeTerminal:
 
 def load_module(monkeypatch: pytest.MonkeyPatch):
     pexpect_module = ModuleType("pexpect")
-    pexpect_module.TIMEOUT = FakeTimeout
+    setattr(pexpect_module, "TIMEOUT", FakeTimeout)
 
     oeqa_module = ModuleType("oeqa")
     controllers_module = ModuleType("oeqa.controllers")
     fvp_module = ModuleType("oeqa.controllers.fvp")
 
     class OEFVPTarget:
+        DEFAULT_CONSOLE = "default"
+
         def transition(self, state, timeout=10 * 60):
             self.transition_calls.append((state, timeout))
 
@@ -70,9 +72,10 @@ def load_module(monkeypatch: pytest.MonkeyPatch):
     class OEFVPTargetState:
         OFF = "off"
         ON = "on"
+        LINUX = "linux"
 
-    fvp_module.OEFVPTarget = OEFVPTarget
-    fvp_module.OEFVPTargetState = OEFVPTargetState
+    setattr(fvp_module, "OEFVPTarget", OEFVPTarget)
+    setattr(fvp_module, "OEFVPTargetState", OEFVPTargetState)
 
     monkeypatch.setitem(sys.modules, "pexpect", pexpect_module)
     monkeypatch.setitem(sys.modules, "oeqa", oeqa_module)
@@ -209,3 +212,64 @@ def test_transition_on_resets_writable_flash_from_read_images(
         writable_dir / "rse-otp-image.img"
     )
     assert target.transition_calls == [(module.OEFVPTargetState.ON, 42)]
+
+
+def test_single_session_target_does_not_restart_when_linux_is_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_module(monkeypatch)
+    target = module.HSOCSingleSessionFVPTarget.__new__(
+        module.HSOCSingleSessionFVPTarget
+    )
+    target.state = module.OEFVPTargetState.LINUX
+    target._hsoc_linux_shell_ready = True
+    target.logger = FakeLogger()
+    target.transition_calls = []
+
+    target.transition(module.OEFVPTargetState.ON, timeout=42)
+
+    assert target.state == module.OEFVPTargetState.LINUX
+    assert target.transition_calls == []
+
+
+def test_single_session_linux_transition_waits_for_root_shell(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_module(monkeypatch)
+    target = module.HSOCSingleSessionFVPTarget.__new__(
+        module.HSOCSingleSessionFVPTarget
+    )
+    target.state = module.OEFVPTargetState.OFF
+    target.logger = FakeLogger()
+    target.transition_calls = []
+    sent: list[tuple[str, str]] = []
+    expected: list[tuple[str, str, int]] = []
+    target.sendline = lambda terminal, text: sent.append((terminal, text))
+    target.expect = lambda terminal, pattern, timeout: expected.append(
+        (terminal, pattern, timeout)
+    )
+
+    target.transition(module.OEFVPTargetState.LINUX, timeout=42)
+
+    assert target.transition_calls == [(module.OEFVPTargetState.LINUX, 42)]
+    assert sent == [(target.DEFAULT_CONSOLE, "root")]
+    assert expected == [(target.DEFAULT_CONSOLE, module.ROOT_SHELL_PROMPT_RE, 42)]
+    assert target._hsoc_linux_shell_ready is True
+
+
+def test_single_session_target_still_stops_during_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = load_module(monkeypatch)
+    target = module.HSOCSingleSessionFVPTarget.__new__(
+        module.HSOCSingleSessionFVPTarget
+    )
+    target.state = module.OEFVPTargetState.LINUX
+    target._hsoc_linux_shell_ready = True
+    target.logger = FakeLogger()
+    target.transition_calls = []
+
+    target.transition(module.OEFVPTargetState.OFF, timeout=42)
+
+    assert target.transition_calls == [(module.OEFVPTargetState.OFF, 42)]
+    assert "_hsoc_linux_shell_ready" not in target.__dict__

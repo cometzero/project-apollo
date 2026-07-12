@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import json
 from pathlib import Path
 import threading
 
@@ -131,3 +132,49 @@ def test_primary_console_accepts_systemd_multi_user_as_boot_ready() -> None:
     )
 
     assert status["passed"]
+
+
+def test_empty_terminal_configuration_cannot_pass_boot() -> None:
+    module = load_module()
+
+    status = module.build_status(set(), {}, {}, "all")
+
+    assert not status["passed"]
+    assert status["missing_required_patterns"]
+
+
+def test_default_fvpconf_skips_incomplete_stable_config(tmp_path: Path) -> None:
+    module = load_module()
+    deploy = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    deploy.mkdir(parents=True)
+    stable = deploy / "nexios-image-apollo-fvp.fvpconf"
+    valid = deploy / "nexios-image-apollo-fvp-20260712000000.fvpconf"
+    stable.write_text(json.dumps({"terminals": {}}), encoding="utf-8")
+    valid.write_text(
+        json.dumps(
+            {
+                "terminals": {
+                    f"css.{terminal}": terminal
+                    for terminal in module.CHECKS
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    selected = module.resolve_default_fvpconf(tmp_path, "apollo-fvp", "all")
+
+    assert selected == valid
+
+
+def test_runtime_configuration_rejects_small_wic(tmp_path: Path) -> None:
+    module = load_module()
+    wic = tmp_path / "nexios-image-apollo-fvp.wic"
+    wic.write_text("not a disk image\n", encoding="utf-8")
+
+    errors = module.runtime_configuration_errors(
+        {"parameters": {"ros.virtio_block0.image_path": str(wic)}}
+    )
+
+    assert len(errors) == 1
+    assert "implausibly small" in errors[0]

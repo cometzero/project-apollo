@@ -26,16 +26,16 @@ usage()
     cat <<EOF
 Usage: ./run_fvp.sh [options] [-- extra FVP args]
 
-Run the Yocto-built or local-packaged Apollo FVP image in tmux and mirror
-subsystem UARTs to file-backed logs.
+Run the Yocto-built Apollo FVP target in tmux and mirror subsystem UARTs to
+file-backed logs.
 
 Options:
-  --machine NAME       Yocto machine (default: ${MACHINE})
-  --local              run the local FVP package from build/local-apollo-fvp/deploy
+  --machine NAME       apollo-fvp or apollo-qvp (default: ${MACHINE})
+  --local              run the local Apollo FVP package (apollo-fvp only)
   --build-dir PATH     Yocto build directory (default: ${YOCTO_BUILD_DIR})
   --deploy-dir PATH    image deploy directory
                        (default: <build-dir>/tmp_baremetal/deploy/images/<machine>)
-  --fvpconf PATH       FVP config to run
+  --fvpconf PATH       Arm FVP config to run
                        (default: <deploy-dir>/nexios-image-<machine>.fvpconf)
   --session NAME       tmux session name
                        (default: apollo-fvp-yocto-<timestamp>)
@@ -55,6 +55,7 @@ Examples:
   ./local_build.sh --package
   Missing local package recovery: ./local_build.sh --package first.
   ./run_fvp.sh
+  ./run_fvp.sh --machine apollo-qvp
   ./run_fvp.sh --local
   ./run_fvp.sh --no-attach
   ./run_fvp.sh --dry-run
@@ -159,20 +160,102 @@ resolve_fvpconf()
         return 0
     fi
 
-    if [[ -f "${stable}" ]]; then
+    if [[ -f "${stable}" ]] && fvpconf_has_target_terminals "${stable}"; then
         printf '%s\n' "${stable}"
         return 0
     fi
 
-    latest="$(
+    while IFS= read -r latest; do
+        [[ -n "${latest}" ]] || continue
+        if fvpconf_has_target_terminals "${latest}"; then
+            printf '%s\n' "${latest}"
+            return 0
+        fi
+    done < <(
         find "${deploy_dir}" -maxdepth 1 -type f \
             -name "nexios-image-${MACHINE}-*.fvpconf" \
             -printf '%T@ %p\n' 2>/dev/null |
             sort -nr |
-            sed -n '1s/^[^ ]* //p'
-    )"
-    [[ -n "${latest}" ]] || return 1
-    printf '%s\n' "${latest}"
+            sed 's/^[^ ]* //'
+    )
+    return 1
+}
+
+fvpconf_has_target_terminals()
+{
+    python3 - "$1" <<'PY' >/dev/null 2>&1
+import json
+import pathlib
+import sys
+
+try:
+    config = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+terminals = config.get("terminals")
+raise SystemExit(0 if isinstance(terminals, dict) and terminals else 1)
+PY
+}
+
+validate_fvp_config()
+{
+    python3 - "$1" <<'PY'
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    config = json.loads(path.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError) as error:
+    print(f"error: invalid FVP config {path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+terminals = config.get("terminals")
+if not isinstance(terminals, dict) or not terminals:
+    print(f"error: FVP config has no target terminals: {path}", file=sys.stderr)
+    raise SystemExit(1)
+
+bindir = config.get("fvp-bindir")
+exe = config.get("exe")
+if bindir and exe:
+    model = pathlib.Path(str(exe))
+    if not model.is_absolute():
+        model = pathlib.Path(str(bindir)) / model
+    try:
+        magic = model.read_bytes()[:4]
+    except OSError as error:
+        print(f"error: unable to read FVP provider model {model}: {error}", file=sys.stderr)
+        raise SystemExit(1)
+    if magic != b"\x7fELF":
+        print(f"error: FVP provider model is not an ELF executable: {model}", file=sys.stderr)
+        raise SystemExit(1)
+
+minimum_sizes = {
+    "rse-rom-image.img": 4096,
+    "rse-flash-image.img": 65536,
+    "ap-flash-image.img": 65536,
+    "combined_provisioning_message.bin": 1024,
+    "efi-capsule-update-disk-image-fvp-rd-aspen.img": 1024 * 1024,
+}
+artifacts = []
+for key, value in config.get("parameters", {}).items():
+    if key.endswith(".fnameWrite") or not isinstance(value, str):
+        continue
+    artifacts.append(pathlib.Path(value))
+for entry in config.get("data", []):
+    if isinstance(entry, str) and "=" in entry:
+        artifacts.append(pathlib.Path(entry.split("=", 1)[1].split("@", 1)[0]))
+for artifact in artifacts:
+    minimum = minimum_sizes.get(artifact.name, 1024 * 1024 if artifact.suffix == ".wic" else 0)
+    if minimum and (not artifact.is_file() or artifact.stat().st_size < minimum):
+        print(
+            f"error: FVP runtime artifact is missing or implausibly small: "
+            f"{artifact} (minimum {minimum} bytes)",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+PY
 }
 
 prepare_auto_fvp_args()
@@ -641,6 +724,7 @@ start_tmux()
     [[ -x "${RUNFVP_BIN}" ]] || die "runfvp not executable: ${RUNFVP_BIN}"
     [[ -f "${FVP_CONF}" ]] ||
         die "FVP config not found: ${FVP_CONF}. Run ./yocto_build.sh first or pass --fvpconf."
+    validate_fvp_config "${FVP_CONF}" || die "invalid FVP boot configuration: ${FVP_CONF}"
 
     FVP_CONF="$(abspath "${FVP_CONF}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"
@@ -816,6 +900,10 @@ if [[ -n "${FVP_CONF}" ]]; then
 fi
 
 YOCTO_BUILD_DIR="$(abspath "${YOCTO_BUILD_DIR}")"
+case "${MACHINE}" in
+    apollo-fvp|apollo-qvp) ;;
+    *) die "unsupported machine: ${MACHINE} (expected apollo-fvp or apollo-qvp)" ;;
+esac
 DEPLOY_DIR="$(abspath "$(resolve_deploy_dir)")"
 resolved_fvpconf="$(resolve_fvpconf "${DEPLOY_DIR}" || true)"
 if [[ -n "${resolved_fvpconf}" ]]; then

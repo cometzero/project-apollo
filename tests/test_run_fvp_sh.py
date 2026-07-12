@@ -52,7 +52,6 @@ def run_dry_run(
             "TMUX_BIN": str(make_executable(fake_bin_dir / "tmux")),
         }
     )
-
     command = [
         str(SCRIPT),
         "--dry-run",
@@ -143,6 +142,87 @@ def test_run_fvp_falls_back_to_latest_timestamped_fvpconf(tmp_path: Path) -> Non
     assert f"fvpconf: {newer}" in result.stdout
 
 
+def test_run_fvp_skips_stable_config_without_target_terminals(tmp_path: Path) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    flash_image = deploy_dir / "ap-flash.img"
+    stable = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    valid = deploy_dir / "nexios-image-apollo-fvp-20260202000000.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    flash_image.write_bytes(b"flash")
+    stable.write_text(json.dumps({"terminals": {}}), encoding="utf-8")
+    write_fvpconf(valid, flash_image)
+
+    result = run_dry_run(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert f"fvpconf: {valid}" in result.stdout
+
+
+def test_run_fvp_rejects_non_elf_provider_model(tmp_path: Path) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    provider = tmp_path / "provider"
+    flash_image = deploy_dir / "ap-flash.img"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    provider.mkdir()
+    flash_image.write_bytes(b"flash")
+    model = provider / "FVP_Zena_CSS_Cfg2"
+    model.write_text("model\n", encoding="utf-8")
+    model.chmod(0o755)
+    fvpconf.write_text(
+        json.dumps(
+            {
+                "exe": model.name,
+                "fvp-bindir": str(provider),
+                "terminals": {"css.rse.terminal_uart": "RSE"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_dry_run(tmp_path)
+
+    assert result.returncode != 0
+    assert "not an ELF executable" in result.stderr
+
+
+def test_run_fvp_rejects_implausibly_small_runtime_image(tmp_path: Path) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
+    fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    broken_wic = deploy_dir / "nexios-image-apollo-fvp.wic"
+    broken_wic.write_text("fixture overwrote image\n", encoding="utf-8")
+    fvpconf.write_text(
+        json.dumps(
+            {
+                "parameters": {"ros.virtio_block0.image_path": str(broken_wic)},
+                "terminals": {"css.rse.terminal_uart": "RSE"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_dry_run(tmp_path)
+
+    assert result.returncode != 0
+    assert "implausibly small" in result.stderr
+
+
+def test_run_fvp_qvp_uses_arm_fvp_backend(tmp_path: Path) -> None:
+    deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-qvp"
+    flash_image = deploy_dir / "ap-flash.img"
+    fvpconf = deploy_dir / "nexios-image-apollo-qvp.fvpconf"
+    deploy_dir.mkdir(parents=True)
+    flash_image.write_bytes(b"flash")
+    write_fvpconf(fvpconf, flash_image)
+
+    result = run_dry_run(tmp_path, extra_args=["--machine", "apollo-qvp"])
+
+    assert result.returncode == 0, result.stderr
+    assert f"fvpconf: {fvpconf}" in result.stdout
+    assert "runfvp -t none" in result.stdout
+
+
 def test_run_fvp_forwards_extra_fvp_args(tmp_path: Path) -> None:
     deploy_dir = tmp_path / "build/tmp_baremetal/deploy/images/apollo-fvp"
     flash_image = deploy_dir / "ap-flash.img"
@@ -170,7 +250,8 @@ def test_run_fvp_copies_writable_flash_from_read_image_when_write_path_is_missin
     missing_write_image = tmp_path / "build/tmp_baremetal/fvp-writable/rse-flash-image.img"
     fvpconf = deploy_dir / "nexios-image-apollo-fvp.fvpconf"
     deploy_dir.mkdir(parents=True)
-    read_image.write_bytes(b"clean-read-flash")
+    flash_payload = b"clean-read-flash" + bytes(65536 - len(b"clean-read-flash"))
+    read_image.write_bytes(flash_payload)
     fvpconf.write_text(
         json.dumps(
             {
@@ -193,7 +274,7 @@ def test_run_fvp_copies_writable_flash_from_read_image_when_write_path_is_missin
     # fname, not the missing fnameWrite path.
     writable = tmp_path / "build/fvp-tmux/apollo-fvp-pytest/writable-images/rse-flash-image.img"
     assert result.returncode == 0, result.stderr
-    assert writable.read_bytes() == b"clean-read-flash"
+    assert writable.read_bytes() == flash_payload
     assert f"css.rse.flash_loader.fnameWrite={writable}" in result.stdout
     assert str(missing_write_image) not in result.stdout
 

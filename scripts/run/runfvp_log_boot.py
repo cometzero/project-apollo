@@ -124,6 +124,14 @@ CRITICAL_TERMS = {
     "terminal_ns_uart0",
 }
 
+MINIMUM_RUNTIME_ARTIFACT_SIZES = {
+    "rse-rom-image.img": 4096,
+    "rse-flash-image.img": 65536,
+    "ap-flash-image.img": 65536,
+    "combined_provisioning_message.bin": 1024,
+    "efi-capsule-update-disk-image-fvp-rd-aspen.img": 1024 * 1024,
+}
+
 LOGIN_READY_PATTERNS = [
     re.compile(r"[\w.-]+ login:"),
     re.compile(r"Started .*Serial Getty on ttyAMA0"),
@@ -276,6 +284,63 @@ def terminal_metadata(config: dict) -> tuple[set[str], dict[str, str], dict[str,
     return expected, labels, roles
 
 
+def resolve_default_fvpconf(root: Path, machine: str, require: str) -> Path:
+    deploy_dir = root / "build/tmp_baremetal/deploy/images" / machine
+    stable = deploy_dir / f"nexios-image-{machine}.fvpconf"
+    timestamped = sorted(
+        deploy_dir.glob(f"nexios-image-{machine}-*.fvpconf"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for candidate in (stable, *timestamped):
+        if not candidate.is_file():
+            continue
+        try:
+            expected, _, _ = terminal_metadata(load_fvpconf(candidate))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if expected and (require != "all" or set(CHECKS) <= expected):
+            return candidate
+    return stable
+
+
+def runtime_configuration_errors(config: dict) -> list[str]:
+    errors: list[str] = []
+    bindir = config.get("fvp-bindir")
+    exe = config.get("exe")
+    if bindir and exe:
+        model = Path(str(exe))
+        if not model.is_absolute():
+            model = Path(str(bindir)) / model
+        try:
+            magic = model.read_bytes()[:4]
+        except OSError as error:
+            errors.append(f"unable to read FVP provider model {model}: {error}")
+        else:
+            if magic != b"\x7fELF":
+                errors.append(f"FVP provider model is not an ELF executable: {model}")
+
+    artifacts: list[Path] = []
+    for key, value in config.get("parameters", {}).items():
+        if key.endswith(".fnameWrite") or not isinstance(value, str):
+            continue
+        artifacts.append(Path(value))
+    for entry in config.get("data", []):
+        if isinstance(entry, str) and "=" in entry:
+            artifacts.append(Path(entry.split("=", 1)[1].split("@", 1)[0]))
+    for artifact in artifacts:
+        minimum = MINIMUM_RUNTIME_ARTIFACT_SIZES.get(
+            artifact.name,
+            1024 * 1024 if artifact.suffix == ".wic" else 0,
+        )
+        if minimum and (not artifact.is_file() or artifact.stat().st_size < minimum):
+            errors.append(
+                "FVP runtime artifact is missing or implausibly small: "
+                f"{artifact} (minimum {minimum} bytes)"
+            )
+    return errors
+
+
 def copy_writable_flash(config: dict, out_dir: Path) -> list[str]:
     extra_args: list[str] = []
     image_dir = out_dir / "writable-images"
@@ -420,7 +485,7 @@ def build_status(
     elif require == "critical":
         required_terms = CRITICAL_TERMS
     else:
-        required_terms = expected_terms
+        required_terms = expected_terms | set(CHECKS)
 
     missing_required_patterns = []
     for term in sorted(required_terms):
@@ -435,9 +500,9 @@ def build_status(
         for term, status in console_status.items()
         if status["error_pattern_found"]
     ]
-    passed = not missing_terms and not missing_required_patterns and not error_terms
+    passed = bool(expected_terms) and not missing_terms and not missing_required_patterns and not error_terms
     if require == "none":
-        passed = not missing_terms and not error_terms
+        passed = bool(expected_terms) and not missing_terms and not error_terms
 
     return {
         "passed": passed,
@@ -557,12 +622,16 @@ def write_summary(
                 lines.append(f"  - {command_line}")
     if progress_marker_first_hits:
         lines.append("progress_marker_first_hits:")
+        def elapsed_s(hit: dict[str, object]) -> float:
+            value = hit.get("elapsed_s", 0.0)
+            return float(value) if isinstance(value, int | float) else 0.0
+
         for name, hit in sorted(
             progress_marker_first_hits.items(),
-            key=lambda item: float(item[1].get("elapsed_s", 0.0)),
+            key=lambda item: elapsed_s(item[1]),
         ):
             lines.append(
-                f"  - {name}: {float(hit['elapsed_s']):.3f}s"
+                f"  - {name}: {elapsed_s(hit):.3f}s"
                 f" ({hit['marker']})"
                 f" term={hit['term']}"
             )
@@ -657,12 +726,7 @@ def main() -> int:
     args = parse_args()
     root = workspace_root()
     if args.fvpconf is None:
-        args.fvpconf = (
-            root
-            / "build/tmp_baremetal/deploy/images"
-            / args.machine
-            / f"nexios-image-{args.machine}.fvpconf"
-        )
+        args.fvpconf = resolve_default_fvpconf(root, args.machine, args.require)
     if args.out_dir is None:
         args.out_dir = root / "build/fvp-boot-logs" / f"{args.machine}-{timestamp()}"
     args.fvpconf = args.fvpconf.resolve()
@@ -683,7 +747,26 @@ def main() -> int:
         return 2
 
     config = load_fvpconf(args.fvpconf)
+    configuration_errors = runtime_configuration_errors(config)
+    if configuration_errors:
+        for error in configuration_errors:
+            print(f"error: {error}", file=sys.stderr)
+        return 2
     expected_terms, labels, roles = terminal_metadata(config)
+    if not expected_terms:
+        print(
+            f"error: FVP config has no target terminals: {args.fvpconf}",
+            file=sys.stderr,
+        )
+        return 2
+    missing_config_terms = sorted(set(CHECKS) - expected_terms)
+    if args.require == "all" and missing_config_terms:
+        print(
+            "error: FVP config is missing required target terminals: "
+            + ", ".join(missing_config_terms),
+            file=sys.stderr,
+        )
+        return 2
     args.out_dir.mkdir(parents=True, exist_ok=True)
     boot_log = args.out_dir / "fvp_stdout.log"
     extra_args = enable_terminal_telnet_args(config)
