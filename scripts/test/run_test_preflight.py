@@ -201,6 +201,10 @@ def _dedupe(paths: list[Path]) -> list[Path]:
     return unique
 
 
+def _json_values(values: list[JsonObject]) -> list[JsonValue]:
+    return [value for value in values]
+
+
 def _port_in_use(target_ip: str) -> bool:
     host, _, raw_port = target_ip.partition(":")
     if host != "127.0.0.1" or not raw_port.isdigit():
@@ -255,5 +259,5 @@ def run_preflight(inputs: PreflightInputs) -> JsonObject:
         "fvpconf": str(fvpconf_path),
         "testdata": str(testdata_path),
         "checks": [asdict(check) for check in checks],
-        "blockers": blockers,
+        "blockers": _json_values(blockers),
     }

@@ -62,6 +62,7 @@ def test_write_conf_current_when_run_dir_is_safe(tmp_path: Path) -> None:
     assert f'OEQA_JSON_RESULT_DIR = "{run_dir.resolve()}/oeqa/current/results"' in text
     assert f'OEQA_ARTEFACT_DIR = "{run_dir.resolve()}/oeqa/current/artifacts"' in text
     assert 'TEST_OVERALL_TIMEOUT = "' in text
+    assert 'MACHINE = "apollo-fvp"' in text
     assert 'TEST_FVP_DEVICES = "rtc watchdog networking virtiorng"' in text
     assert (
         'TEST_FVP_DEVICES:apollo-fvp:auto-ad-nexios = '
@@ -92,7 +93,12 @@ def test_write_conf_functional_pins_single_boot_suite(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     text = (run_dir / "conf/oeqa-functional.conf").read_text(encoding="utf-8")
     assert 'TEST_SUITES = "' in text
+    assert 'TEST_TARGET = "HSOCSingleSessionFVPTarget"' in text
     assert "test_00_rse.RseTest.test_normal_boot" in text
+    assert "test_10_linuxlogin" in text
+    assert text.index("test_10_linuxboot") < text.index("test_10_linuxlogin")
+    assert "test_configured_pc_cpus_in_linux" in text
+    assert "test_configured_pc_cpus_in_tf_a" not in text
     assert "test_00_rse.RseTest.test_measured_boot" not in text
     assert "test_00_rse.RseTest.test_scmi_poweroff" not in text
     assert "test_00_rse.RseTest.test_scmi_reboot" not in text

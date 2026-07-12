@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import sys
-
 
 USAGE = "\n".join(
     (
         "Usage: ./run_test.sh [options]",
         "",
         "Run the Apollo FVP validation wrapper and save logs under build/tests/<stamp>.",
-        "Default behavior: inspect the active Apollo Yocto config, then run",
-        "the selected validation category. The default category is basic.",
+        "Default behavior is headless: inspect the active Apollo Yocto config,",
+        "then run the selected validation category. The default category is basic.",
         "",
         "Options:",
         "  --build-dir PATH          Yocto build directory (default: build)",
@@ -21,6 +19,11 @@ USAGE = "\n".join(
         "  --stamp STAMP             Run stamp (default: date +%Y%m%d-%H%M%S)",
         "  --category CATEGORY       Select category for run/list; default: basic",
         "                            choices: basic, functional, power, extended, stress",
+        "  --test TEST               Run one named test; its transitive dependency tests",
+        "                            are resolved and run first in dependency order",
+        "  --tui                     Show test progress beside live FVP target UART logs",
+        "                            in tmux panes; F12 stops the test session",
+        "                            and returns the child exit status",
         "  --list                    List all suites, or selected category only",
         "  --dry-run                 Plan and summarize without runtime execution",
         "  --preflight-only          Run runtime prerequisite preflight only",
@@ -35,8 +38,10 @@ USAGE = "\n".join(
         "  SUMMARY: build/tests/<stamp>/summary.json",
         "",
         "Result paths:",
-        "  manifest.json, suite.json, commands.jsonl, summary.json",
+        "  manifest.json, suite.json, selection.json, commands.jsonl, summary.json",
         "  and per-lane logs are written under build/tests/<stamp>.",
+        "  TUI runs preserve tui/command.txt, console.log, layout.json, and status,",
+        "  while following boot and OEQA target logs for all five FVP domains.",
         "  build/tests/latest points at the most recent run directory.",
         "",
         "Exclusions:",

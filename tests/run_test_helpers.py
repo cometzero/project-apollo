@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,6 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "run_test.sh"
 LATEST = ROOT / "build/tests/latest"
+RUN_TEST_TIMESTAMP_RE = re.compile(
+    r"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\] (?=\[run_test\])"
+)
 
 
 def run_runner(*args: str, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -31,7 +35,11 @@ def run_runner(*args: str, extra_env: dict[str, str] | None = None) -> subproces
 
 
 def nonempty_lines(text: str) -> list[str]:
-    return [line for line in text.splitlines() if line.strip()]
+    return [
+        RUN_TEST_TIMESTAMP_RE.sub("", line)
+        for line in text.splitlines()
+        if line.strip()
+    ]
 
 
 def load_json(path: Path) -> dict:

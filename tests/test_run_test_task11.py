@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,7 +29,10 @@ def run_runner(*args: str, extra_env: dict[str, str] | None = None) -> subproces
 
 
 def nonempty_lines(text: str) -> list[str]:
-    return [line for line in text.splitlines() if line.strip()]
+    timestamp = re.compile(
+        r"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\] (?=\[run_test\])"
+    )
+    return [timestamp.sub("", line) for line in text.splitlines() if line.strip()]
 
 
 def load_json(path: Path) -> dict:
@@ -143,7 +147,7 @@ def write_fake_timeout(path: Path) -> None:
 
 
 def test_functional_category_pass_refreshes_latest() -> None:
-    # Given: a functional category request with fake boot and OEQA commands.
+    # Given: a functional category request with fake preflight and OEQA commands.
     fake_bin = Path("build/tests/task-11-functional-category-fake-bin")
     shutil.rmtree(ROOT / fake_bin, ignore_errors=True)
     (ROOT / fake_bin).mkdir(parents=True)
@@ -152,7 +156,7 @@ def test_functional_category_pass_refreshes_latest() -> None:
     out_dir = Path("build/tests/task-11-functional-category")
     shutil.rmtree(ROOT / out_dir, ignore_errors=True)
 
-    # When: the root runner executes boot before functional OEQA lanes.
+    # When: the root runner validates prerequisites before one functional OEQA session.
     result = run_runner(
         "--category",
         "functional",
@@ -167,10 +171,10 @@ def test_functional_category_pass_refreshes_latest() -> None:
         },
     )
 
-    # Then: it reports PASS, records boot and OEQA lanes, and refreshes latest.
+    # Then: it reports PASS, omits a separate boot, and refreshes latest.
     assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
-    assert "[run_test] START basic-boot" in lines
+    assert "[run_test] START basic-boot" not in lines
     assert "[run_test] START host-python" in lines
     assert "[run_test] START oeqa-functional" in lines
     assert lines[-2:] == [
@@ -180,7 +184,8 @@ def test_functional_category_pass_refreshes_latest() -> None:
     summary = load_json(ROOT / out_dir / "summary.json")
     assert summary["status"] == "PASS"
     command_names = {record["name"] for record in summary["records"]}
-    assert {"basic-boot", "host-python", "oeqa-functional"}.issubset(command_names)
+    assert {"runtime-preflight", "host-python", "oeqa-functional"}.issubset(command_names)
+    assert "basic-boot" not in command_names
     assert os.readlink(ROOT / "build/tests/latest") == "task-11-functional-category"
 
 

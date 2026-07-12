@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import os
 from pathlib import Path
 import sys
 from typing import Final, Protocol
@@ -12,6 +14,7 @@ type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, J
 type JsonObject = dict[str, JsonValue]
 
 DEFAULT_TEST_OVERALL_TIMEOUT: Final = "10800"
+SELECTED_SUITES_ENV: Final = "APOLLO_VALIDATION_TEST_SUITES"
 
 
 class WriteConfArgs(Protocol):
@@ -120,15 +123,22 @@ def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
         case "current" | "extra":
             return None
         case "functional" | "power" | "extended":
-            plan = resolve_plan(manifest)
-            included = plan.get("included", {})
-            if not isinstance(included, dict):
-                return ""
-            suite_key = f"validation_{kind}" if kind != "functional" else "validation_current"
-            suite = included.get(suite_key, [])
-            if not isinstance(suite, list):
-                return ""
-            tests = [item for item in suite if isinstance(item, str)]
+            selected = os.environ.get(SELECTED_SUITES_ENV)
+            if selected is not None:
+                loaded = json.loads(selected)
+                if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
+                    raise ValueError(f"{SELECTED_SUITES_ENV} must be a JSON string list")
+                tests = loaded
+            else:
+                plan = resolve_plan(manifest)
+                included = plan.get("included", {})
+                if not isinstance(included, dict):
+                    return ""
+                suite_key = f"validation_{kind}" if kind != "functional" else "validation_current"
+                suite = included.get(suite_key, [])
+                if not isinstance(suite, list):
+                    return ""
+                tests = [item for item in suite if isinstance(item, str)]
             suite_value = " ".join(tests)
             assignments = [f'TEST_SUITES = "{suite_value}"']
             machine = manifest.get("machine", "")
@@ -171,8 +181,17 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
         f'OEQA_JSON_RESULT_DIR = "{oeqa_dir / "results"}"',
         f'OEQA_ARTEFACT_DIR = "{oeqa_dir / "artifacts"}"',
         f'TEST_OVERALL_TIMEOUT = "{request.test_overall_timeout}"',
+        f'MACHINE = "{request.machine}"',
     ]
     lines.extend(_device_assignments(manifest))
+    if request.kind == "functional":
+        lines.extend(
+            _scoped_assignments(
+                "TEST_TARGET",
+                "HSOCSingleSessionFVPTarget",
+                manifest,
+            )
+        )
     suite = _suite_assignment(request.kind, manifest)
     if suite is not None:
         lines.append(suite)

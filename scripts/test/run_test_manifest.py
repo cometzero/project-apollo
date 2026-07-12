@@ -196,7 +196,7 @@ def inspect_manifest(inputs: ManifestInputs) -> JsonObject:
     fvpconf = load_fvpconf(fvpconf_path)
     return {
         "status": "ok",
-        "machine": local_conf.get("MACHINE", str_field(testdata, "MACHINE")),
+        "machine": inputs.machine,
         "distro": distro,
         "rd_aspen_variant": local_conf.get("RD_ASPEN_VARIANT", str_field(testdata, "RD_ASPEN_VARIANT")),
         "pc_cpus_count_default": int(

@@ -68,11 +68,23 @@ EXCLUDED_TEST_NAMES: Final = {
     "test_40_virtualization",
     "test_41_rt_patch_presence",
 }
-SINGLE_BOOT_REPLACEMENTS: Final = {
-    "test_00_rse": ["test_00_rse.RseTest.test_normal_boot"],
-    "test_02_safety_boot": [],
-    "fvp_boot": [],
-}
+FUNCTIONAL_SINGLE_BOOT_SUITE: Final = [
+    "test_00_rse.RseTest.test_normal_boot",
+    "test_00_secure_partition",
+    "test_10_linuxboot",
+    "test_10_linuxlogin",
+    "ping",
+    "ssh",
+    "test_10_ping",
+    "test_10_ssh",
+    "test_01_auto_ad_nexios_uki_boot",
+    "test_10_safety_island",
+    "test_10_safetydiagnostics_ssu_fmu",
+    "test_20_aspen_ap_dsu",
+    "test_20_fvp_devices",
+    "test_30_configurable_pc_cores.ConfiguredPCCPUSTest."
+    "test_configured_pc_cpus_in_linux",
+]
 BIST_EXTENDED_SUITE: Final = [
     "test_02_safety_boot.TestSafetyBoot.test_lbist",
     "test_02_safety_boot.TestSafetyBoot.test_mbist",
@@ -170,16 +182,11 @@ def _hsoc_exclusions(names: list[str], reason: str, source: str) -> list[JsonObj
 def _current_suite(manifest: JsonObject) -> list[str]:
     skipped = set(EXCLUDED_TEST_NAMES) | set(_hsoc_skip_suites(manifest))
     skip_bases = _skip_base_names(list(skipped))
-    tests: list[str] = []
-    for test in _str_list(manifest.get("test_suites")):
-        if test in skipped:
-            continue
-        replacements = SINGLE_BOOT_REPLACEMENTS.get(test)
-        if replacements is None:
-            tests.append(test)
-            continue
-        tests.extend(replacement for replacement in replacements if replacement.split(".")[0] not in skip_bases)
-    return tests
+    return [
+        test
+        for test in FUNCTIONAL_SINGLE_BOOT_SUITE
+        if test not in skipped and test.split(".")[0] not in skip_bases
+    ]
 
 
 def _power_reboot_suite(manifest: JsonObject) -> list[str]:

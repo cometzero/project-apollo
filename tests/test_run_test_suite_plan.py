@@ -22,15 +22,21 @@ SPEC.loader.exec_module(RUN_TEST_SUITE_PLAN)
 resolve_plan = RUN_TEST_SUITE_PLAN.resolve_plan
 
 CURRENT_SUITE = [
-    "ping",
-    "ssh",
     "test_00_rse.RseTest.test_normal_boot",
     "test_00_secure_partition",
-    "test_01_auto_ad_nexios_uki_boot",
     "test_10_linuxboot",
+    "test_10_linuxlogin",
+    "ping",
+    "ssh",
+    "test_10_ping",
+    "test_10_ssh",
+    "test_01_auto_ad_nexios_uki_boot",
+    "test_10_safety_island",
+    "test_10_safetydiagnostics_ssu_fmu",
     "test_20_aspen_ap_dsu",
-    "test_30_configurable_pc_cores",
-    "fvp_devices",
+    "test_20_fvp_devices",
+    "test_30_configurable_pc_cores.ConfiguredPCCPUSTest."
+    "test_configured_pc_cpus_in_linux",
 ]
 POWER_SUITE = {
     "test_00_rse.RseTest.test_measured_boot",
@@ -87,6 +93,8 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
     assert result.returncode == 0, result.stderr
     plan = load_json(out)
     assert plan["included"]["validation_current"] == CURRENT_SUITE
+    current = plan["included"]["validation_current"]
+    assert current.index("test_10_linuxboot") < current.index("test_10_linuxlogin")
     assert POWER_SUITE.issubset(plan["included"]["validation_power"])
     assert EXTENDED_REQUIRED.issubset(plan["included"]["validation_extended"])
     assert EXTENDED_SKIPPED.isdisjoint(plan["included"]["validation_extended"])
@@ -103,6 +111,36 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
         "qbox-full-check-only",
         "qbox-full-live-cl0-cl1",
     }.issubset(plan["included"]["extra"])
+
+
+def test_functional_plan_excludes_tests_that_restart_or_stop_fvp() -> None:
+    manifest = {
+        "status": "ok",
+        "machine": "apollo-qvp",
+        "distro": "auto-ad-nexios",
+        "rd_aspen_variant": "cfg2",
+        "pc_cpus_count_default": 4,
+        "test_suites": [
+            "test_00_rse",
+            "test_00_secure_partition",
+            "test_10_linuxboot",
+            "test_10_linuxlogin",
+            "test_10_ping",
+            "test_10_ssh",
+            "test_90_ap_warm_reset",
+            "test_99_linuxshutdown",
+            "test_30_configurable_pc_cores",
+            "fvp_boot",
+        ],
+    }
+
+    plan = resolve_plan(manifest)
+
+    functional = plan["included"]["validation_current"]
+    assert "test_90_ap_warm_reset" not in functional
+    assert "test_99_linuxshutdown" not in functional
+    assert "fvp_boot" not in functional
+    assert functional == CURRENT_SUITE
 
 
 def test_plan_xen_exclusion_when_virtualization_is_incompatible(tmp_path: Path) -> None:

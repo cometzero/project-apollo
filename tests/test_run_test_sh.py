@@ -9,7 +9,6 @@ from pathlib import Path
 from run_test_helpers import (
     LATEST,
     ROOT,
-    command_texts,
     latest_target,
     load_commands,
     load_json,
@@ -50,6 +49,8 @@ def test_help_documents_runner_options() -> None:
         "--preflight-only",
         "--skip-runtime",
         "--category",
+        "--test",
+        "--tui",
         "--include-qbox-runtime",
         "--timeout-oeqa",
         "--timeout-fvp",
@@ -70,8 +71,32 @@ def test_help_documents_runner_options() -> None:
         "FVP executable",
         "Crypto",
         "port",
+        "headless",
+        "dependency",
+        "F12",
     ):
         assert required_text in result.stdout
+
+
+def test_default_mode_is_headless() -> None:
+    # Given: no interactive display option is requested.
+    out_dir = Path("build/tests/ulw-pytest-headless")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
+
+    # When: a category that completes without launching FVP is run.
+    result = run_runner(
+        "--category",
+        "extended",
+        "--stamp",
+        "ulw-pytest-headless",
+        "--out-dir",
+        str(out_dir),
+    )
+
+    # Then: the direct runner identifies headless mode and returns its result.
+    assert result.returncode == 0, result.stderr
+    assert "[run_test]   mode: headless" in nonempty_lines(result.stdout)
+    assert load_json(ROOT / out_dir / "summary.json")["status"] == "PASS"
 
 
 def test_list_prints_pass_and_summary_as_final_lines() -> None:
@@ -174,7 +199,7 @@ def test_dry_run_records_oeqa_bitbake_commands() -> None:
     for name in ("manifest.json", "commands.jsonl", "summary.json"):
         assert (run_dir / name).is_file()
     command_names = {command["name"] for command in load_commands(run_dir)}
-    assert {"context", "basic-preflight", "basic-boot"}.issubset(command_names)
+    assert {"context", "runtime-preflight", "basic-boot"}.issubset(command_names)
 
 
 def test_dry_run_rejects_project_root_out_dir_before_writing_artifacts() -> None:
@@ -280,6 +305,7 @@ def test_latest_snapshot_helper_restores_after_runner_invocation() -> None:
 def test_basic_dry_run_records_skipped_boot_lane() -> None:
     # Given: an explicit basic category dry-run output directory.
     out_dir = Path("build/tests/task-7-pytest-dry")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
 
     # When: dry-run mode plans the selected category.
     result = run_runner("--dry-run", "--stamp", "task-7-pytest-dry", "--out-dir", str(out_dir))
@@ -290,6 +316,38 @@ def test_basic_dry_run_records_skipped_boot_lane() -> None:
     boot_record = next(command for command in load_commands(run_dir) if command["name"] == "basic-boot")
     assert boot_record["status"] == "skipped"
     assert "planned_command" in str(boot_record["artifacts"])
+    assert "--min-runtime" in boot_record["argv"]
+    assert "70" in boot_record["argv"]
+    assert "--no-login" not in boot_record["argv"]
+    assert ["--post-login-command", "true"] == boot_record["argv"][-2:]
+
+
+def test_qvp_basic_boot_uses_headless_fvp_runtime() -> None:
+    out_dir = Path("build/tests/task-qvp-basic-dry-run")
+    shutil.rmtree(ROOT / out_dir, ignore_errors=True)
+
+    result = run_runner(
+        "--machine",
+        "apollo-qvp",
+        "--category",
+        "basic",
+        "--dry-run",
+        "--stamp",
+        "task-qvp-basic-dry-run",
+        "--out-dir",
+        str(out_dir),
+    )
+
+    assert result.returncode == 0, result.stderr
+    boot_record = next(
+        command
+        for command in load_commands(ROOT / out_dir)
+        if command["name"] == "basic-boot"
+    )
+    assert boot_record["argv"][:2] == ["python3", "scripts/run/runfvp_log_boot.py"]
+    assert ["--machine", "apollo-qvp"] == boot_record["argv"][2:4]
+    assert "--min-runtime" in boot_record["argv"]
+    assert str(ROOT / out_dir / "fvp") in boot_record["argv"]
 
 
 def test_functional_dry_run_records_boot_and_oeqa_lanes() -> None:
@@ -308,12 +366,12 @@ def test_functional_dry_run_records_boot_and_oeqa_lanes() -> None:
         str(out_dir),
     )
 
-    # Then: the runner records boot preflight, skipped boot, and skipped OEQA lanes.
+    # Then: it plans preflight plus one OEQA-owned FVP session, without a separate boot.
     assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
     assert "[run_test] START category-functional" in lines
-    assert "[run_test] START basic-preflight" in lines
-    assert "[run_test] SKIP basic-boot (dry-run)" in lines
+    assert "[run_test] START runtime-preflight" in lines
+    assert "[run_test] SKIP basic-boot (dry-run)" not in lines
     assert "[run_test] START oeqa-lanes" in lines
     assert "[run_test] SKIP oeqa-functional (dry-run)" in lines
     assert "[run_test] DONE category-functional (pass)" in lines
@@ -321,7 +379,8 @@ def test_functional_dry_run_records_boot_and_oeqa_lanes() -> None:
     summary = load_json(run_dir / "summary.json")
     assert summary["status"] == "PASS"
     command_names = {command["name"] for command in load_commands(run_dir)}
-    assert {"basic-preflight", "basic-boot", "oeqa-functional"}.issubset(command_names)
+    assert {"runtime-preflight", "oeqa-functional"}.issubset(command_names)
+    assert "basic-boot" not in command_names
 
 
 def test_power_dry_run_records_power_oeqa_lane() -> None:
@@ -344,7 +403,7 @@ def test_power_dry_run_records_power_oeqa_lane() -> None:
     assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
     assert "[run_test] START category-power" in lines
-    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] START runtime-preflight" in lines
     assert "[run_test] START oeqa-lanes" in lines
     assert "[run_test] SKIP oeqa-power (dry-run)" in lines
     assert "[run_test] DONE category-power (pass)" in lines
@@ -352,7 +411,7 @@ def test_power_dry_run_records_power_oeqa_lane() -> None:
     summary = load_json(run_dir / "summary.json")
     assert summary["status"] == "PASS"
     command_names = {command["name"] for command in load_commands(run_dir)}
-    assert {"basic-preflight", "oeqa-power"}.issubset(command_names)
+    assert {"runtime-preflight", "oeqa-power"}.issubset(command_names)
 
 
 def test_power_preflight_only_stops_before_oeqa() -> None:
@@ -375,11 +434,11 @@ def test_power_preflight_only_stops_before_oeqa() -> None:
     assert result.returncode == 0, result.stderr
     lines = nonempty_lines(result.stdout)
     assert "[run_test] START category-power" in lines
-    assert "[run_test] START basic-preflight" in lines
+    assert "[run_test] START runtime-preflight" in lines
     assert "[run_test] START oeqa-lanes" not in lines
     run_dir = ROOT / out_dir
     command_names = {command["name"] for command in load_commands(run_dir)}
-    assert "basic-preflight" in command_names
+    assert "runtime-preflight" in command_names
     assert "oeqa-power" not in command_names
 
 

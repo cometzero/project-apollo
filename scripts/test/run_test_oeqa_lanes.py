@@ -35,6 +35,16 @@ OEQA_STATUS_LABELS: Final[dict[str, str]] = {
 }
 TEST_START_RE: Final = re.compile(r"^NOTE: (?P<method>test_\S+) \((?P<class>[^)]+)\)")
 TEST_DONE_RE: Final = re.compile(r"^NOTE:\s+\.\.\. (?P<status>ok|FAIL|ERROR|skipped.*)\s*$")
+LINUX_BOOT_TEST: Final = "test_10_linuxboot.LinuxBootTest.test_linux_boot"
+BITBAKE_PROGRESS_PREFIXES: Final[tuple[str, ...]] = (
+    "Loading cache",
+    "Loaded ",
+    "Parsing recipes",
+    "Parsing of ",
+    "Initialising tasks",
+    "NOTE: Executing Tasks",
+    "NOTE: Running task",
+)
 
 @dataclass(frozen=True, slots=True)
 class OeqaInputs:
@@ -47,6 +57,7 @@ class OeqaInputs:
     dry_run: bool
     host_python_bin: Path | None = None
     kinds: tuple[str, ...] = ("current", "extended")
+    machine: str = "apollo-fvp"
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +81,7 @@ class OeqaProgressTail:
     offset: int = 0
     active_test: str | None = None
     completed: set[str] = field(default_factory=set)
+    bitbake_offset: int = 0
 
 
 class OeqaConfRejectedError(RuntimeError):
@@ -79,7 +91,11 @@ class OeqaConfRejectedError(RuntimeError):
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _log(message: str) -> None:
+    print(f"[{_now()}] [run_test] {message}", flush=True)
 
 
 def _rel(path: Path, base: Path) -> str:
@@ -117,7 +133,7 @@ def _conf_path(inputs: OeqaInputs, kind: str, manifest: JsonObject) -> Path:
         ConfRequest(
             inputs.root,
             inputs.build_dir,
-            "apollo-fvp",
+            inputs.machine,
             inputs.run_dir,
             kind,
             str(inputs.timeout_oeqa),
@@ -152,7 +168,12 @@ def _bitbake_env_script(inputs: OeqaInputs, command: str) -> str:
     host_python_prefix = ""
     if inputs.host_python_bin is not None:
         host_python_prefix = f"export PATH={shlex.quote(str(inputs.host_python_bin.parent))}:$PATH && "
-    return f"{host_python_prefix}source layers/poky/oe-init-build-env {shlex.quote(str(inputs.build_dir))} >/dev/null && {command}"
+    return (
+        f"{host_python_prefix}"
+        f"source layers/poky/oe-init-build-env "
+        f"{shlex.quote(str(inputs.build_dir))} >/dev/null && "
+        f"export MACHINE={shlex.quote(inputs.machine)} && {command}"
+    )
 
 
 def build_lanes(inputs: OeqaInputs) -> list[OeqaLane]:
@@ -209,11 +230,16 @@ def _iter_oeqa_result_tests(data: JsonObject) -> list[tuple[str, str]]:
 
 
 def _emit_test_start(lane: OeqaLane, test_name: str) -> None:
-    print(f"[run_test] START {lane.name}:{test_name}", flush=True)
+    if lane.kind == "functional" and test_name.endswith(LINUX_BOOT_TEST):
+        _log("START basic-boot")
+        _log("PROGRESS basic-boot: waiting for FVP Linux root shell")
+    _log(f"START {lane.name}:{test_name}")
 
 
 def _emit_test_done(lane: OeqaLane, test_name: str, status: str) -> None:
-    print(f"[run_test] DONE {lane.name}:{test_name} ({status})", flush=True)
+    _log(f"DONE {lane.name}:{test_name} ({status})")
+    if lane.kind == "functional" and test_name.endswith(LINUX_BOOT_TEST):
+        _log(f"DONE basic-boot ({status})")
 
 
 def _emit_result_progress(
@@ -273,13 +299,36 @@ def _emit_do_testimage_line(progress: OeqaProgressTail, line: str) -> None:
     progress.active_test = None
 
 
-def _poll_progress(progress: OeqaProgressTail) -> None:
+def _poll_bitbake_progress(progress: OeqaProgressTail) -> None:
+    try:
+        with progress.lane.stdout_log.open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
+            stream.seek(progress.bitbake_offset)
+            while line := stream.readline():
+                if not line.endswith("\n"):
+                    stream.seek(progress.bitbake_offset)
+                    break
+                progress.bitbake_offset = stream.tell()
+                message = line.strip()
+                if message.startswith(BITBAKE_PROGRESS_PREFIXES) or (
+                    message.startswith("NOTE: recipe ")
+                    and "task do_testimage:" in message
+                ):
+                    _log(f"PROGRESS {progress.lane.name}: {message}")
+    except OSError:
+        return
+
+
+def _poll_testimage_progress(progress: OeqaProgressTail) -> None:
     if progress.log_path is None:
         progress.log_path = _latest_testimage_log(progress.inputs, progress.min_mtime)
     if progress.log_path is None:
         return
     try:
-        with progress.log_path.open("r", encoding="utf-8", errors="replace") as stream:
+        with progress.log_path.open(
+            "r", encoding="utf-8", errors="replace"
+        ) as stream:
             stream.seek(progress.offset)
             for line in stream:
                 _emit_do_testimage_line(progress, line.rstrip("\n"))
@@ -288,9 +337,14 @@ def _poll_progress(progress: OeqaProgressTail) -> None:
         return
 
 
+def _poll_progress(progress: OeqaProgressTail) -> None:
+    _poll_bitbake_progress(progress)
+    _poll_testimage_progress(progress)
+
+
 def _record_dry_run(inputs: OeqaInputs, lane: OeqaLane) -> None:
     now = _now()
-    print(f"[run_test] SKIP {lane.name} (dry-run)", flush=True)
+    _log(f"SKIP {lane.name} (dry-run)")
     _append(
         inputs,
         {
@@ -319,9 +373,10 @@ def _kill_bitbake_server(inputs: OeqaInputs, lane: OeqaLane) -> None:
     cleanup_log = lane.output_dir / "logs" / "bitbake-kill-server.log"
     cleanup_log.parent.mkdir(parents=True, exist_ok=True)
     script = _bitbake_env_script(inputs, "bitbake -m")
-    print(f"[run_test] START {lane.name} bitbake-kill-server", flush=True)
+    start_message = f"[{_now()}] [run_test] START {lane.name} bitbake-kill-server"
+    _log(f"START {lane.name} bitbake-kill-server")
     with cleanup_log.open("a", encoding="utf-8") as stream:
-        stream.write(f"[run_test] START {lane.name} bitbake-kill-server\n")
+        stream.write(f"{start_message}\n")
         stream.flush()
         result = subprocess.run(
             ["timeout", "60", "bash", "-lc", script],
@@ -331,8 +386,11 @@ def _kill_bitbake_server(inputs: OeqaInputs, lane: OeqaLane) -> None:
             stdout=stream,
             stderr=subprocess.STDOUT,
         )
-        stream.write(f"[run_test] DONE {lane.name} bitbake-kill-server ({result.returncode})\n")
-    print(f"[run_test] DONE {lane.name} bitbake-kill-server ({result.returncode})", flush=True)
+        stream.write(
+            f"[{_now()}] [run_test] DONE {lane.name} "
+            f"bitbake-kill-server ({result.returncode})\n"
+        )
+    _log(f"DONE {lane.name} bitbake-kill-server ({result.returncode})")
 
 
 def _run_command(inputs: OeqaInputs, lane: OeqaLane) -> tuple[int, set[str]]:
@@ -375,7 +433,7 @@ def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
     lane.stderr_log.parent.mkdir(parents=True, exist_ok=True)
     started_at = _now()
     started = monotonic()
-    print(f"[run_test] START {lane.name}", flush=True)
+    _log(f"START {lane.name}")
     returncode, live_tests = _run_command(inputs, lane)
     result_paths = _result_paths(lane)
     _emit_result_progress(lane, result_paths, live_tests)
@@ -418,7 +476,7 @@ def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
         record["exit_code"] = 0
         state = "pass"
     _append(inputs, record)
-    print(f"[run_test] DONE {lane.name} ({state})", flush=True)
+    _log(f"DONE {lane.name} ({state})")
     return state
 
 
@@ -445,6 +503,7 @@ def run_lanes(inputs: OeqaInputs) -> int:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Apollo OEQA validation lanes.")
     parser.add_argument("--build-dir", type=Path, default=Path("build"))
+    parser.add_argument("--machine", choices=("apollo-fvp", "apollo-qvp"), default="apollo-fvp")
     parser.add_argument("--image", default="nexios-image")
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--commands-file", type=Path, required=True)
@@ -463,15 +522,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     return run_lanes(
         OeqaInputs(
-            Path.cwd(),
-            args.build_dir,
-            args.image,
-            args.run_dir,
-            args.commands_file,
-            _int_positive(args.timeout_oeqa),
-            args.dry_run,
-            args.host_python_bin,
-            tuple(args.kind or ("current", "extended")),
+            root=Path.cwd(),
+            build_dir=args.build_dir,
+            image=args.image,
+            run_dir=args.run_dir,
+            commands_file=args.commands_file,
+            timeout_oeqa=_int_positive(args.timeout_oeqa),
+            dry_run=args.dry_run,
+            host_python_bin=args.host_python_bin,
+            kinds=tuple(args.kind or ("current", "extended")),
+            machine=args.machine,
         )
     )
 

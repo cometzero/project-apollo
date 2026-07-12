@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from run_test_helpers import nonempty_lines, run_runner
 
@@ -26,9 +27,18 @@ def test_preflight_prints_environment_and_step_progress() -> None:
     assert "[run_test]   category: basic" in lines
     assert "[run_test] START context" in lines
     assert "[run_test] DONE context (pass)" in lines
-    assert "[run_test] START basic-preflight" in lines
-    assert "[run_test] DONE basic-preflight (pass)" in lines
+    assert "[run_test] START runtime-preflight" in lines
+    assert "[run_test] DONE runtime-preflight (pass)" in lines
     assert lines[-2:] == [
         "RESULT: PASS",
         "SUMMARY: build/tests/task-progress-preflight/summary.json",
     ]
+
+    run_test_lines = [
+        line for line in result.stdout.splitlines() if "[run_test]" in line
+    ]
+    assert run_test_lines
+    timestamp = re.compile(
+        r"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\] \[run_test\]"
+    )
+    assert all(timestamp.match(line) for line in run_test_lines)

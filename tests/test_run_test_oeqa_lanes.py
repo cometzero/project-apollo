@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -11,6 +12,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/test"))
 
+import run_test_oeqa_lanes as oeqa_lanes
 from run_test_oeqa_lanes import OeqaInputs, run_lanes
 
 
@@ -97,7 +99,10 @@ def test_dry_run_plans_current_and_extended_bitbake_commands(tmp_path: Path) -> 
         run_dir / "conf/oeqa-extended.conf"
     ).read_text(encoding="utf-8")
     command_text = "\n".join(" ".join(record["argv"]) for record in load_commands(commands_file))
-    assert "timeout 42 bash -lc source layers/poky/oe-init-build-env build >/dev/null && bitbake -R " in command_text
+    assert (
+        "timeout 42 bash -lc source layers/poky/oe-init-build-env build >/dev/null "
+        "&& export MACHINE=apollo-fvp && bitbake -R "
+    ) in command_text
     assert "oeqa-current.conf nexios-image -c testimage" in command_text
     assert "oeqa-extended.conf nexios-image -c testimage" in command_text
 
@@ -348,6 +353,145 @@ def test_do_testimage_log_progress_is_printed_while_lane_runs(tmp_path: Path) ->
     assert result.returncode == 0, result.stderr
     assert "[run_test] START oeqa-current:ping.PingTest.test_ping" in result.stdout
     assert "[run_test] DONE oeqa-current:ping.PingTest.test_ping (pass)" in result.stdout
+
+
+def test_bitbake_setup_progress_is_printed_before_testimage_starts(
+    tmp_path: Path,
+) -> None:
+    # Given: BitBake emits setup phases before creating log.do_testimage.
+    run_dir = tmp_path / "bitbake-setup-progress"
+    commands_file = make_run_dir(run_dir)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    write_fake_timeout(
+        fake_bin / "timeout",
+        "printf 'Loading cache...done.\\n'; "
+        "sleep 1; "
+        "printf 'Parsing recipes...done.\\n'; "
+        "sleep 1; "
+        "printf 'NOTE: Executing Tasks\\n'; "
+        "exit 0",
+    )
+
+    # When: the OEQA lane waits for BitBake to reach testimage.
+    result = run_oeqa(
+        "--run-dir",
+        str(run_dir),
+        "--commands-file",
+        str(commands_file),
+        "--build-dir",
+        "build",
+        "--image",
+        "nexios-image",
+        extra_env={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+    )
+
+    # Then: setup phases are visible in run_test output instead of a silent wait.
+    assert result.returncode == 0, result.stderr
+    assert "[run_test] PROGRESS oeqa-current: Loading cache...done." in result.stdout
+    assert "[run_test] PROGRESS oeqa-current: Parsing recipes...done." in result.stdout
+    assert "[run_test] PROGRESS oeqa-current: NOTE: Executing Tasks" in result.stdout
+
+
+def test_progress_does_not_emit_periodic_waiting_heartbeat(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Given: an OEQA lane has produced no new phase or test output for a while.
+    run_dir = tmp_path / "no-heartbeat"
+    lane = oeqa_lanes.OeqaLane(
+        name="oeqa-functional",
+        kind="functional",
+        argv=[],
+        command=[],
+        conf_path=run_dir / "conf",
+        stdout_log=run_dir / "stdout.log",
+        stderr_log=run_dir / "stderr.log",
+        output_dir=run_dir,
+    )
+    inputs = oeqa_lanes.OeqaInputs(
+        root=tmp_path,
+        build_dir=Path("build"),
+        image="nexios-image",
+        run_dir=run_dir,
+        commands_file=run_dir / "commands.jsonl",
+        timeout_oeqa=300,
+        dry_run=False,
+    )
+    progress = oeqa_lanes.OeqaProgressTail(inputs, lane, 0.0)
+    monkeypatch.setattr(oeqa_lanes, "monotonic", lambda: 1_000_000_000.0)
+
+    # When: progress polling finds no new BitBake or do_testimage lines.
+    oeqa_lanes._poll_progress(progress)
+
+    # Then: run_test remains quiet instead of printing a periodic waiting line.
+    assert capsys.readouterr().out == ""
+
+
+def test_functional_linux_boot_is_exposed_as_the_basic_boot_gate(
+    tmp_path: Path,
+) -> None:
+    # Given: a functional OEQA result whose Linux boot test reached a root shell.
+    run_dir = tmp_path / "functional-basic-boot"
+    commands_file = make_run_dir(run_dir)
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    result_path = run_dir / "oeqa/functional/results/testresults.json"
+    oeqa_result = {
+        "nexios-image-apollo-fvp": {
+            "result": {
+                "test_10_linuxboot.LinuxBootTest.test_linux_boot": {
+                    "status": "PASSED"
+                }
+            }
+        }
+    }
+    write_fake_timeout(
+        fake_bin / "timeout",
+        f"mkdir -p {result_path.parent}; "
+        f"cat > {result_path} <<'JSON'\n{json.dumps(oeqa_result)}\nJSON\nexit 0",
+    )
+
+    # When: the functional lane completes.
+    result = run_oeqa(
+        "--run-dir",
+        str(run_dir),
+        "--commands-file",
+        str(commands_file),
+        "--build-dir",
+        "build",
+        "--image",
+        "nexios-image",
+        "--kind",
+        "functional",
+        extra_env={"PATH": f"{fake_bin}:{os.environ['PATH']}"},
+    )
+
+    # Then: basic-boot wraps the real OEQA Linux boot test and every log is timed.
+    assert result.returncode == 0, result.stderr
+    lines = result.stdout.splitlines()
+    basic_start = next(i for i, line in enumerate(lines) if "[run_test] START basic-boot" in line)
+    test_start = next(
+        i
+        for i, line in enumerate(lines)
+        if "[run_test] START oeqa-functional:test_10_linuxboot" in line
+    )
+    test_done = next(
+        i
+        for i, line in enumerate(lines)
+        if "[run_test] DONE oeqa-functional:test_10_linuxboot" in line
+    )
+    basic_done = next(
+        i
+        for i, line in enumerate(lines)
+        if "[run_test] DONE basic-boot (pass)" in line
+    )
+    assert basic_start < test_start < test_done < basic_done
+    timestamp = re.compile(
+        r"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z\] \[run_test\]"
+    )
+    assert all(timestamp.match(line) for line in lines if "[run_test]" in line)
 
 
 @pytest.mark.parametrize("return_code", [0, 124])
