@@ -26,6 +26,10 @@ separate.
 - [Apollo QBox Hardware KR](apollo-qbox-hardware-ko.md) - Korean mapping from
   Apollo FVP hardware blocks to current QBox/QEMU emulation paths, including
   Lua instances, SystemC modules, QEMU modules, and fidelity status.
+- [Apollo FVP-QVP Hardware Comparison KR](apollo-fvp-qvp-hardware-comparison-ko.md) -
+  Korean subsystem-by-subsystem comparison of the Arm Zena CSS FVP memory map
+  and Apollo QVP Lua, SystemC, and QEMU implementation modules, including
+  explicit partial-model, placeholder, and missing-IP gaps.
 - [Apollo QBox Full Model Promotion](apollo-qbox-full-model/index.md) -
   Korean PRD/spec/design/task/verification document set for promoting
   safety, security, reset, power, access-control, and interrupt placeholders
