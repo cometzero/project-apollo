@@ -1,9 +1,12 @@
 If:
   PathMatch: ^hsoc-stack/tools/qbox(-platform)?/.*
 CompileFlags:
-  CompilationDatabase: build/local-apollo-fvp/work/qbox-platform
+  CompilationDatabase: build/local-apollo-qvp/work/qbox-platform
 ---
 If:
   PathMatch: ^hsoc-stack/tools/qemu/.*
 CompileFlags:
-  CompilationDatabase: build/local-apollo-fvp/work/qbox-platform/_deps/libqemu-build/qemu-prefix/src/qemu-build
+  CompilationDatabase: build/local-apollo-qvp/work/qbox-platform/_deps/libqemu-build/qemu-prefix/src/qemu-build
+  Add:
+    - -I.
+    - -Iinclude

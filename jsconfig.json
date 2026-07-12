@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false
+  },
+  "exclude": [
+    "build",
+    "build-apollo-qvp*",
+    "arm-zena-css/build",
+    "hsoc-stack/tools/qbox/build",
+    "hsoc-stack/tools/qbox/examples/hello-qbox/build",
+    "hsoc-stack/tools/qemu/rust/target",
+    ".work",
+    ".omo",
+    "**/.git",
+    "**/node_modules"
+  ]
+}

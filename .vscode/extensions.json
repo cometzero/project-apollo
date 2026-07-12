@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    "detachhead.basedpyright",
+    "llvm-vs-code-extensions.vscode-clangd",
+    "charliermarsh.ruff",
+    "yocto-project.yocto-bitbake",
+    "ms-vscode.cmake-tools",
+    "redhat.vscode-yaml",
+    "sumneko.lua",
+    "mads-hartmann.bash-ide-vscode",
+    "rust-lang.rust-analyzer",
+    "trond-snekvik.devicetree",
+    "redhat.java",
+    "bmewburn.vscode-intelephense-client",
+    "ms-azuretools.vscode-docker",
+    "shopify.ruby-lsp"
+  ]
+}

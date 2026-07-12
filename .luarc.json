@@ -1,0 +1,16 @@
+{
+  "workspace.ignoreDir": [
+    ".git",
+    ".omo",
+    ".work",
+    "build",
+    "arm-zena-css/build",
+    "hsoc-stack/tools/qbox/build",
+    "hsoc-stack/tools/qbox/examples/hello-qbox/build",
+    "hsoc-stack/tools/qemu/rust/target",
+    "downloads",
+    "node_modules",
+    "sstate-cache"
+  ],
+  "workspace.checkThirdParty": false
+}

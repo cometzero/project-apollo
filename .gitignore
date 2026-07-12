@@ -1,6 +1,8 @@
 /build/
 /build-apollo-qvp*/
-/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/extensions.json
 /.work/
 
 __pycache__/

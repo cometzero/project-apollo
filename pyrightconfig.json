@@ -1,0 +1,29 @@
+{
+  "typeCheckingMode": "basic",
+  "extraPaths": [
+    "layers/poky/bitbake/lib",
+    "layers/poky/meta/lib",
+    "hsoc-stack/yocto/meta-hsoc-auto-solutions/lib",
+    "hsoc-stack/yocto/meta-hsoc-bsp/lib"
+  ],
+  "exclude": [
+    "build",
+    "build-apollo-qvp*",
+    "arm-zena-css/build",
+    "hsoc-stack/tools/qbox/build",
+    "hsoc-stack/tools/qbox/examples/hello-qbox/build",
+    "hsoc-stack/tools/qemu/rust/target",
+    ".work",
+    ".omo",
+    "**/.git",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.mypy_cache",
+    "**/.ruff_cache",
+    "**/.tox",
+    "**/.venv",
+    "**/node_modules",
+    "**/downloads",
+    "**/sstate-cache"
+  ]
+}

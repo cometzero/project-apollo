@@ -1,0 +1,49 @@
+{
+  "lsp": {
+    "basedpyright": {
+      "priority": 120
+    },
+    "ruff": {
+      "priority": 110
+    },
+    "pyright": {
+      "disabled": true
+    },
+    "clangd": {
+      "priority": 100
+    },
+    "typescript": {
+      "priority": 100
+    },
+    "bash": {
+      "priority": 100
+    },
+    "bash-ls": {
+      "disabled": true
+    },
+    "rust": {
+      "priority": 100
+    },
+    "lua-ls": {
+      "priority": 100
+    },
+    "yaml-ls": {
+      "priority": 100
+    },
+    "jdtls": {
+      "priority": 100
+    },
+    "php": {
+      "priority": 100
+    },
+    "dockerfile": {
+      "priority": 100
+    },
+    "ruby-lsp": {
+      "priority": 100
+    },
+    "haskell-language-server": {
+      "disabled": true
+    }
+  }
+}
