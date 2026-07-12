@@ -108,17 +108,34 @@ def write_json(path: Path, data: JsonObject) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def ensure_default_fvp_context() -> None:
-    deploy_dir = ROOT / "build/tmp_baremetal/deploy/images/apollo-fvp"
+def ensure_default_fvp_context(base: Path) -> Path:
+    build_dir = base / "build"
+    deploy_dir = build_dir / "tmp_baremetal/deploy/images/apollo-fvp"
     fvp_bin = (
-        ROOT
-        / "build/tmp_baremetal/sysroots-components/x86_64/fvp-rd-aspen-native/usr/bin"
+        build_dir
+        / "tmp_baremetal/sysroots-components/x86_64/fvp-rd-aspen-native/usr/bin"
     )
     image_rootfs = (
-        ROOT / "build/tmp_baremetal/work/apollo_fvp-poky-linux/nexios-image/1.0/rootfs"
+        build_dir / "tmp_baremetal/work/apollo_fvp-poky-linux/nexios-image/1.0/rootfs"
     )
-    for path in (deploy_dir, fvp_bin, image_rootfs):
+    conf_dir = build_dir / "conf"
+    for path in (deploy_dir, fvp_bin, image_rootfs, conf_dir):
         path.mkdir(parents=True, exist_ok=True)
+    (conf_dir / "local.conf").write_text(
+        '\n'.join(
+            (
+                'MACHINE = "apollo-fvp"',
+                'DISTRO = "auto-ad-nexios"',
+                'TMPDIR = "${TOPDIR}/tmp_baremetal"',
+                'RD_ASPEN_VARIANT = "cfg2"',
+                'PC_CPUS_COUNT_DEFAULT = "4"',
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (conf_dir / "bblayers.conf").write_text('BBLAYERS = ""\n', encoding="utf-8")
+    (conf_dir / "templateconf.cfg").write_text("fixture\n", encoding="utf-8")
     (fvp_bin / "FVP_Zena_CSS_Cfg2").write_text("model\n", encoding="utf-8")
     (fvp_bin / "Crypto.so").write_text("plugin\n", encoding="utf-8")
     for name in (
@@ -182,6 +199,7 @@ def ensure_default_fvp_context() -> None:
             ],
         },
     )
+    return build_dir
 
 
 def ensure_default_qbox_build_context() -> None:
@@ -276,16 +294,24 @@ def patch_qbox_lanes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, check_mode
     )
 
 
-def test_qbox_lanes_are_planned() -> None:
+def test_qbox_lanes_are_planned(tmp_path: Path) -> None:
     # Given: the default Apollo validation dry-run output directory.
-    ensure_default_fvp_context()
+    build_dir = ensure_default_fvp_context(tmp_path)
     ensure_default_qbox_build_context()
     out_dir = Path("build/tests/task-8-pytest-dry")
     stamp = "task-8-pytest-dry"
     reset_run_dir(out_dir)
 
     # When: dry-run mode plans extra QBox lanes.
-    result = run_runner("--dry-run", "--stamp", stamp, "--out-dir", str(out_dir))
+    result = run_runner(
+        "--dry-run",
+        "--build-dir",
+        str(build_dir),
+        "--stamp",
+        stamp,
+        "--out-dir",
+        str(out_dir),
+    )
     extra_result = run_extra_lanes(out_dir, stamp)
 
     # Then: QBox static, CTest, and runtime command records are present.
@@ -302,9 +328,9 @@ def test_qbox_lanes_are_planned() -> None:
     assert any("run_qbox_apollo_fvp_full.py --skip-build --si-mode live-cl0-cl1" in command for command in commands)
 
 
-def test_timeout_fvp_updates_planned_qbox_live_command() -> None:
+def test_timeout_fvp_updates_planned_qbox_live_command(tmp_path: Path) -> None:
     # Given: a dry-run with a non-default FVP timeout.
-    ensure_default_fvp_context()
+    build_dir = ensure_default_fvp_context(tmp_path)
     ensure_default_qbox_build_context()
     out_dir = Path("build/tests/task-8-pytest-timeout-fvp")
     stamp = "task-8-pytest-timeout-fvp"
@@ -313,6 +339,8 @@ def test_timeout_fvp_updates_planned_qbox_live_command() -> None:
     # When: dry-run mode plans extra QBox lanes.
     result = run_runner(
         "--dry-run",
+        "--build-dir",
+        str(build_dir),
         "--timeout-fvp",
         "321",
         "--stamp",
@@ -378,7 +406,6 @@ def test_extra_lanes_plumb_qvp_machine_into_yocto_regression(
 ) -> None:
     # Given: public extra-lanes CLI dry-run is asked to plan Apollo QVP lanes.
     monkeypatch.setenv("RUN_TEST_QBOX_YOCTO_BOOT_REGRESSION", "1")
-    ensure_default_fvp_context()
     ensure_default_qbox_build_context()
     out_dir = Path("build/tests/task-8-pytest-qvp-extra")
     stamp = "task-8-pytest-qvp-extra"
@@ -395,9 +422,9 @@ def test_extra_lanes_plumb_qvp_machine_into_yocto_regression(
     assert not any("build/qbox-apollo-fvp/run_qbox_yocto_baseline.json" in command for command in commands)
 
 
-def test_include_qbox_runtime_missing_build_blocks() -> None:
+def test_include_qbox_runtime_missing_build_blocks(tmp_path: Path) -> None:
     # Given: an explicit QBox runtime request with the QBox build directory forced missing.
-    ensure_default_fvp_context()
+    build_dir = ensure_default_fvp_context(tmp_path)
     out_dir = Path("build/tests/task-8-pytest-missing-qbox")
     stamp = "task-8-pytest-missing-qbox"
     reset_run_dir(out_dir)
@@ -406,6 +433,8 @@ def test_include_qbox_runtime_missing_build_blocks() -> None:
     # When: dry-run mode evaluates the QBox runtime prerequisite.
     result = run_runner(
         "--dry-run",
+        "--build-dir",
+        str(build_dir),
         "--stamp",
         stamp,
         "--out-dir",
