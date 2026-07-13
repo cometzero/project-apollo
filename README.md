@@ -174,6 +174,10 @@ selects `BB_NUMBER_THREADS` / `PARALLEL_MAKE` from host memory. Hosts with more
 than 16 GiB use the detected CPU count; hosts at or below that threshold use 6
 jobs. On a 16-core host with about 13 GiB RAM this selects `-j6`.
 
+By default, `yocto_build.sh` removes `BUILD_DIR/conf` before initializing the
+build directory so the selected Apollo `TEMPLATECONF` is applied cleanly. Use
+`./yocto_build.sh --keep-conf` to preserve an existing configuration.
+
 Useful resource overrides for larger hosts:
 
 ```bash

@@ -118,6 +118,33 @@ def test_yocto_build_sh_uses_default_qvp_without_dm_verity_option(
     ).exists()
 
 
+def test_yocto_build_sh_keeps_network_sandbox_by_default(
+    tmp_path: Path,
+) -> None:
+    result = run_build_dry_run(tmp_path, [])
+
+    assert result.returncode == 0, result.stderr
+    assert "apollo-bitbake-host.conf" not in result.stdout
+    assert "network sandbox" not in result.stderr
+    assert not (tmp_path / "build/conf/apollo-bitbake-host.conf").exists()
+
+
+def test_yocto_build_sh_ignores_removed_network_sandbox_env(
+    tmp_path: Path,
+) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        [],
+        {"APOLLO_BITBAKE_DISABLE_NETWORK_SANDBOX": "1"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    host_conf = tmp_path / "build/conf/apollo-bitbake-host.conf"
+    assert str(host_conf) not in result.stdout
+    assert "network sandbox" not in result.stderr
+    assert not host_conf.exists()
+
+
 def test_yocto_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, ["--dm-verity=off"])
 
@@ -157,51 +184,86 @@ def test_yocto_build_sh_selects_qvp_no_dm_verity_multiconfig(
     )
 
 
-def test_yocto_build_sh_defaults_qvp_to_shared_build_dir(
+def test_yocto_build_sh_uses_requested_build_dir(
     tmp_path: Path,
 ) -> None:
     result = run_build_dry_run(
         tmp_path,
         [],
-        {"APOLLO_AUTO_RESOURCE_LIMITS": "1", "BUILD_DIR": ""},
+        {"APOLLO_AUTO_RESOURCE_LIMITS": "1"},
     )
 
     assert result.returncode == 0, result.stderr
-    expected = ROOT / "build/conf/apollo-bitbake-resources.conf"
+    expected = tmp_path / "build/conf/apollo-bitbake-resources.conf"
     assert str(expected) in result.stderr
 
 
-def test_yocto_build_sh_relaxes_legacy_machine_assignment(
+def test_yocto_build_sh_recreates_conf_from_qvp_template(
     tmp_path: Path,
 ) -> None:
-    init_result = run_build_dry_run(tmp_path, [])
-    assert init_result.returncode == 0, init_result.stderr
+    conf_dir = tmp_path / "build/conf"
+    conf_dir.mkdir(parents=True)
+    stale_file = conf_dir / "stale.conf"
+    stale_file.write_text("stale\n", encoding="utf-8")
 
-    local_conf = tmp_path / "build/conf/local.conf"
-    local_conf.write_text('MACHINE = "apollo-fvp"\n', encoding="utf-8")
-
-    result = run_build_dry_run(tmp_path, ["--machine", "apollo-qvp"])
+    result = run_build_dry_run(tmp_path, [])
 
     assert result.returncode == 0, result.stderr
-    assert "set default MACHINE to 'apollo-qvp'" in result.stderr
-    assert 'MACHINE ??= "apollo-qvp"' in local_conf.read_text(encoding="utf-8")
-    assert "MACHINE=apollo-qvp bitbake " in result.stdout
+    assert not stale_file.exists()
+    assert 'MACHINE ??= "apollo-qvp"' in (
+        conf_dir / "local.conf"
+    ).read_text(encoding="utf-8")
+    assert (conf_dir / "bblayers.conf").is_file()
+    assert (conf_dir / "templateconf.cfg").read_text(encoding="utf-8").strip() == (
+        str(
+            ROOT
+            / "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp"
+        )
+    )
+    assert "recreating it from TEMPLATECONF" in result.stderr
 
 
-def test_yocto_build_sh_explicit_fvp_keeps_qvp_default(
+def test_yocto_build_sh_recreates_conf_from_fvp_template(
     tmp_path: Path,
 ) -> None:
-    init_result = run_build_dry_run(tmp_path, [])
-    assert init_result.returncode == 0, init_result.stderr
-
-    local_conf = tmp_path / "build/conf/local.conf"
-    local_conf.write_text('MACHINE = "apollo-fvp"\n', encoding="utf-8")
+    conf_dir = tmp_path / "build/conf"
+    conf_dir.mkdir(parents=True)
+    (conf_dir / "local.conf").write_text(
+        'MACHINE ??= "apollo-qvp"\n', encoding="utf-8"
+    )
 
     result = run_build_dry_run(tmp_path, ["--machine", "apollo-fvp"])
 
     assert result.returncode == 0, result.stderr
     assert "MACHINE=apollo-fvp bitbake " in result.stdout
-    assert 'MACHINE ??= "apollo-qvp"' in local_conf.read_text(encoding="utf-8")
+    assert 'MACHINE ??= "apollo-fvp"' in (
+        conf_dir / "local.conf"
+    ).read_text(encoding="utf-8")
+    assert (conf_dir / "templateconf.cfg").read_text(encoding="utf-8").strip() == (
+        str(
+            ROOT
+            / "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-fvp"
+        )
+    )
+
+
+def test_yocto_build_sh_keep_conf_preserves_existing_configuration(
+    tmp_path: Path,
+) -> None:
+    init_result = run_build_dry_run(tmp_path, [])
+    assert init_result.returncode == 0, init_result.stderr
+
+    local_conf = tmp_path / "build/conf/local.conf"
+    local_conf.write_text("# user configuration\n", encoding="utf-8")
+    sentinel = tmp_path / "build/conf/user.conf"
+    sentinel.write_text("preserve\n", encoding="utf-8")
+
+    result = run_build_dry_run(tmp_path, ["--keep-conf"])
+
+    assert result.returncode == 0, result.stderr
+    assert local_conf.read_text(encoding="utf-8") == "# user configuration\n"
+    assert sentinel.read_text(encoding="utf-8") == "preserve\n"
+    assert "preserving existing configuration" in result.stderr
 
 
 def test_yocto_build_sh_selects_qvp_dm_verity_multiconfig(
