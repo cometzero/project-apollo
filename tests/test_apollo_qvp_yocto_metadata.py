@@ -100,15 +100,25 @@ REQUIRED_SNIPPETS: Final = {
         'ARM_SYSTEMREADY_FIRMWARE = "firmware-apollo-qvp:do_deploy"',
     ),
     BSP / "recipes-bsp/images/firmware-apollo-qvp.bb": (
-        'SUMMARY = "The firmware images for apollo-qvp"',
-        'COMPATIBLE_MACHINE = "apollo-qvp"',
+        'APOLLO_FIRMWARE_MACHINE = "apollo-qvp"',
+        "require firmware-apollo-common.inc",
         "do_generate_rse_otp_image",
         "provision_rse_otp_image.py",
         "rse-otp-image.img",
     ),
+    BSP / "recipes-bsp/images/firmware-apollo-common.inc": (
+        "require recipes-bsp/images/firmware-fvp-rd-aspen.bb",
+        'SUMMARY = "The firmware images for ${APOLLO_FIRMWARE_MACHINE}"',
+        'COMPATIBLE_MACHINE = "${APOLLO_FIRMWARE_MACHINE}"',
+    ),
     BSP / "recipes-bsp/images/uefi-capsule-apollo-qvp.bb": (
-        'SUMMARY = "The UEFI capsule generation for apollo-qvp"',
-        'COMPATIBLE_MACHINE = "apollo-qvp"',
+        'APOLLO_UEFI_CAPSULE_MACHINE = "apollo-qvp"',
+        "require uefi-capsule-apollo-common.inc",
+    ),
+    BSP / "recipes-bsp/images/uefi-capsule-apollo-common.inc": (
+        "require recipes-bsp/images/uefi-capsule-fvp-rd-aspen.bb",
+        'SUMMARY = "The UEFI capsule generation for ${APOLLO_UEFI_CAPSULE_MACHINE}"',
+        'COMPATIBLE_MACHINE = "${APOLLO_UEFI_CAPSULE_MACHINE}"',
     ),
     BSP / "conf/layer.conf": (
         'HSOC_APOLLO_QEMU_SRC ?= "${HSOC_APOLLO_BASE}/tools/qemu"',
@@ -232,14 +242,6 @@ FVP_RD_ASPEN_ALLOWLIST: Final = (
         BSP / "conf/machine/include/apollo-qvp-cassini-extra-settings.inc",
         "require conf/machine/include/fvp-rd-aspen-cassini-extra-settings.inc",
     ),
-    (
-        BSP / "recipes-bsp/images/firmware-apollo-qvp.bb",
-        "require recipes-bsp/images/firmware-fvp-rd-aspen.bb",
-    ),
-    (
-        BSP / "recipes-bsp/images/uefi-capsule-apollo-qvp.bb",
-        "require recipes-bsp/images/uefi-capsule-fvp-rd-aspen.bb",
-    ),
 )
 
 
@@ -293,6 +295,33 @@ def test_qvp_identity_and_source_variable_snippets_are_present() -> None:
     missing = missing_snippets(ROOT, REQUIRED_SNIPPETS)
 
     assert missing == []
+
+
+def test_apollo_kernel_defconfig_preserves_yocto_fragments() -> None:
+    # Given an explicit defconfig task shared by the Apollo kernel recipes.
+    metadata = (
+        ROOT / BSP / "recipes-kernel/linux/linux-yocto-apollo-common.inc"
+    ).read_text(encoding="utf-8")
+    task = metadata.split("do_defconfig() {", 1)[1].split("\n}", 1)[0]
+
+    # When the task prepares the kernel configuration.
+    uses_kernel_configme = "do_kernel_configme" in task
+    applies_raw_defconfig = (
+        "oe_runmake -C ${S} O=${B} ${APOLLO_KERNEL_DEFCONFIG}" in task
+    )
+
+    # Then it must retain kernel-yocto features such as dm-verity.
+    assert uses_kernel_configme
+    assert not applies_raw_defconfig
+
+
+def test_auto_ad_nexios_uki_tracks_deployed_kernel_content() -> None:
+    metadata = (
+        ROOT / AUTO_SOLUTIONS / "classes/auto-ad-nexios-uki-ab.bbclass"
+    ).read_text(encoding="utf-8")
+
+    assert "do_uki[file-checksums]" in metadata
+    assert "${DEPLOY_DIR_IMAGE}/${UKI_KERNEL_FILENAME}" in metadata
 
 
 def test_qbox_native_ui_options_are_native_scoped() -> None:
