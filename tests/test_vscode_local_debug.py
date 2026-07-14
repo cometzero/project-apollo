@@ -39,7 +39,11 @@ def test_vscode_configs_match_local_debug_endpoints() -> None:
         assert configs[name]["preLaunchTask"] == "Apollo QBox: wait for AP safe point"
 
     compounds = {item["name"]: item for item in launch["compounds"]}
-    assert set(compounds["Apollo QBox: all domains"]["configurations"]) == set(expected)
+    expected_compound = set(expected) - {"Apollo QBox: host"}
+    expected_compound.add("Apollo QBox: host run")
+    assert set(compounds["Apollo QBox: all domains"]["configurations"]) == (
+        expected_compound
+    )
 
 
 def test_vscode_recommends_cpp_debugger_and_start_task() -> None:
@@ -91,3 +95,48 @@ def test_vscode_tmux_console_task_is_interactive() -> None:
         "focus": True,
         "clear": True,
     }
+
+
+def test_vscode_compound_starts_servers_before_domain_attach() -> None:
+    # Given: the repository VS Code launch configuration.
+    launch = json.loads((ROOT / ".vscode/launch.json").read_text())
+
+    # When: the all-domain compound and host configuration are selected.
+    compound = next(
+        item
+        for item in launch["compounds"]
+        if item["name"] == "Apollo QBox: all domains"
+    )
+    host = next(
+        item
+        for item in launch["configurations"]
+        if item["name"] == "Apollo QBox: host"
+    )
+
+    # Then: one compound barrier starts QBox before any child can attach.
+    assert compound["preLaunchTask"] == "Apollo QBox: start debug servers"
+    assert "preLaunchTask" not in host
+
+
+def test_vscode_compound_host_does_not_block_domain_startup() -> None:
+    # Given: the all-domain compound and its host debugger configuration.
+    launch = json.loads((ROOT / ".vscode/launch.json").read_text())
+    configs = {item["name"]: item for item in launch["configurations"]}
+    compound = next(
+        item
+        for item in launch["compounds"]
+        if item["name"] == "Apollo QBox: all domains"
+    )
+
+    # When: the host configuration used by the compound is inspected.
+    compound_host = configs["Apollo QBox: host run"]
+    setup_commands = [item["text"] for item in compound_host["setupCommands"]]
+
+    # Then: compound startup removes entry breakpoints before continuing QBox.
+    assert "Apollo QBox: host run" in compound["configurations"]
+    assert "Apollo QBox: host" not in compound["configurations"]
+    assert "delete breakpoints" in setup_commands
+    assert all(
+        item["text"] != "delete breakpoints"
+        for item in configs["Apollo QBox: host"]["setupCommands"]
+    )

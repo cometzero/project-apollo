@@ -90,6 +90,8 @@ TF-A BL2/BL31, OP-TEE `_start`, 또는 RSE/SCP/Zephyr entry를 먼저 확인하�
 `run_qbox_local_debug.sh --vscode`로 동일한 QBox를 시작하고, host/RSE/SI0/
 SI1/AP debugger를 각 포트에 연결한다. 단일 domain만 선택할 때는 먼저 VS Code
 task `Apollo QBox: start debug servers`를 실행한 뒤 해당 debugger를 선택한다.
+`all domains` compound는 이 start task가 debug manifest와 domain GDB script를
+모두 생성하고 새 runtime log를 준비한 뒤에만 개별 debugger를 시작한다.
 이 start task는 이전 `apollo-qbox-debug-vscode` tmux 세션이 남아 있으면 먼저
 종료하고 새 세션으로 교체하므로, 실패한 실행 뒤에도 별도 정리 없이 재시작할 수
 있다.
@@ -98,14 +100,14 @@ task `Apollo QBox: start debug servers`를 실행한 뒤 해당 debugger를 선�
 전용 통합 터미널에서 확인할 수 있다. `Ctrl+b`, `d`는 QBox를 종료하지 않고
 터미널만 tmux에서 분리한다.
 compound의 RSE/SI/AP 구성은 모두 PFDI core 3 성공 로그까지 기다리는 기본
-지연 연결 모드다. 초기 entry만 확인하려면 compound 대신 `RSE early`,
-`SI0 early (SCP)`, `SI1 early (Zephyr)`, `AP early (TF-A)` 중 필요한 구성을
-선택한다.
+지연 연결 모드다. compound의 `host run` debugger는 QBox가 domain GDB server를
+생성하도록 host entry breakpoint를 제거하고 자동으로 실행한다. 모든 debugger가
+연결된 뒤에는 host debugger를 Pause하고 QBox/libqemu breakpoint를 추가할 수 있다.
 
-QBox가 host entry breakpoint에서 멈추면 먼저 host debugger를 Continue한다.
-이후 생성되는 RSE/SI/AP GDB endpoint에 나머지 debugger가 순서대로 연결되어
-각 CPU의 초기 PC를 보여준다. 각 domain debugger를 Continue하면 미리 설정된
-firmware entry breakpoint에서 다시 멈춘다. 수동으로 서버만 시작하려면 다음
+QBox `sc_main`부터 확인하려면 먼저 task `Apollo QBox: start debug servers`를
+실행하고 `Apollo QBox: host`를 단독으로 선택한다. RSE/SI/AP의 초기 entry는
+compound 대신 `RSE early`, `SI0 early (SCP)`, `SI1 early (Zephyr)`,
+`AP early (TF-A)` 중 필요한 구성을 선택한다. 수동으로 서버만 시작하려면 다음
 명령을 사용한다.
 
 ```bash

@@ -19,8 +19,31 @@
       ],
       "sourceFileMap": {
         "/build/arm/arm-auto-solutions": "${workspaceFolder}"
-      },
-      "preLaunchTask": "Apollo QBox: start debug servers"
+      }
+    },
+    {
+      "name": "Apollo QBox: host run",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/qbox-platform/platforms-vp",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "miDebuggerServerAddress": "127.0.0.1:12339",
+      "launchCompleteCommand": "exec-continue",
+      "setupCommands": [
+        {
+          "description": "Load QBox and libqemu symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/qbox-host.gdb"
+        },
+        {
+          "description": "Let QBox create the domain GDB servers",
+          "text": "delete breakpoints"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      }
     },
     {
       "name": "Apollo QBox: RSE",
@@ -194,8 +217,9 @@
   "compounds": [
     {
       "name": "Apollo QBox: all domains",
+      "preLaunchTask": "Apollo QBox: start debug servers",
       "configurations": [
-        "Apollo QBox: host",
+        "Apollo QBox: host run",
         "Apollo QBox: RSE",
         "Apollo QBox: SI0",
         "Apollo QBox: SI1",
