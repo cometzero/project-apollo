@@ -90,6 +90,13 @@ TF-A BL2/BL31, OP-TEE `_start`, 또는 RSE/SCP/Zephyr entry를 먼저 확인하�
 `run_qbox_local_debug.sh --vscode`로 동일한 QBox를 시작하고, host/RSE/SI0/
 SI1/AP debugger를 각 포트에 연결한다. 단일 domain만 선택할 때는 먼저 VS Code
 task `Apollo QBox: start debug servers`를 실행한 뒤 해당 debugger를 선택한다.
+이 start task는 이전 `apollo-qbox-debug-vscode` tmux 세션이 남아 있으면 먼저
+종료하고 새 세션으로 교체하므로, 실패한 실행 뒤에도 별도 정리 없이 재시작할 수
+있다.
+실행 중인 QBox의 모든 UART와 platform pane은 VS Code 명령 팔레트에서
+`Tasks: Run Task`를 선택한 뒤 `Apollo QBox: open tmux console`을 실행하면
+전용 통합 터미널에서 확인할 수 있다. `Ctrl+b`, `d`는 QBox를 종료하지 않고
+터미널만 tmux에서 분리한다.
 compound의 RSE/SI/AP 구성은 모두 PFDI core 3 성공 로그까지 기다리는 기본
 지연 연결 모드다. 초기 entry만 확인하려면 compound 대신 `RSE early`,
 `SI0 early (SCP)`, `SI1 early (Zephyr)`, `AP early (TF-A)` 중 필요한 구성을

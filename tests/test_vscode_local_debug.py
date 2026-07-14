@@ -51,6 +51,13 @@ def test_vscode_recommends_cpp_debugger_and_start_task() -> None:
     assert "Apollo QBox: start debug servers" in labels
     assert "Apollo QBox: wait for AP safe point" in labels
 
+    start = next(
+        task
+        for task in tasks["tasks"]
+        if task["label"] == "Apollo QBox: start debug servers"
+    )
+    assert "--replace-session" in start["args"]
+
     ap_wait = next(
         task
         for task in tasks["tasks"]
@@ -58,3 +65,29 @@ def test_vscode_recommends_cpp_debugger_and_start_task() -> None:
     )
     assert "--wait-log-marker-only" in ap_wait["args"]
     assert "PFDI: OoR tests on core 3 succeeded." in ap_wait["args"]
+
+
+def test_vscode_tmux_console_task_is_interactive() -> None:
+    # Given: the repository VS Code task configuration.
+    tasks = json.loads((ROOT / ".vscode/tasks.json").read_text())
+
+    # When: the QBox tmux console task is selected.
+    console = next(
+        task
+        for task in tasks["tasks"]
+        if task["label"] == "Apollo QBox: open tmux console"
+    )
+
+    # Then: VS Code opens the fixed debug session in a focused terminal.
+    assert console["command"] == "tmux"
+    assert console["args"] == [
+        "attach-session",
+        "-t",
+        "apollo-qbox-debug-vscode",
+    ]
+    assert console["presentation"] == {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": True,
+        "clear": True,
+    }

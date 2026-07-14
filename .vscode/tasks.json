@@ -7,11 +7,25 @@
       "command": "${workspaceFolder}/run_qbox_local_debug.sh",
       "args": [
         "--vscode",
+        "--replace-session",
         "--session",
         "apollo-qbox-debug-vscode",
         "--out-dir",
         "${workspaceFolder}/build/qbox-apollo-fvp/debug-vscode"
       ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: open tmux console",
+      "type": "process",
+      "command": "tmux",
+      "args": ["attach-session", "-t", "apollo-qbox-debug-vscode"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "clear": true
+      },
       "problemMatcher": []
     },
     {

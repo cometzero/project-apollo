@@ -108,3 +108,48 @@ def test_debug_launcher_help_is_available() -> None:
     assert "--vscode" in result.stdout
     assert "--ap-early-attach" in result.stdout
     assert "--firmware-early-attach" in result.stdout
+
+
+def test_debug_launcher_replaces_existing_session(tmp_path: Path) -> None:
+    runner = tmp_path / "runner"
+    tmux = tmp_path / "tmux"
+    tmux_log = tmp_path / "tmux.log"
+    manifest = tmp_path / "symbols.json"
+    manifest.write_text(json.dumps({"components": {}}))
+    make_tool(runner, 'exit 0\n')
+    make_tool(
+        tmux,
+        f'printf "%s\\n" "$@" >>"{tmux_log}"\n'
+        'if [[ "${1:-}" == "has-session" ]]; then exit 0; fi\n'
+        'if [[ "${1:-}" == "list-panes" ]]; then printf "%%7 shell\\n"; fi\n'
+        'if [[ "${1:-}" == "new-window" ]]; then printf "%%8\\n"; fi\n'
+        'if [[ "${1:-}" == "split-window" ]]; then printf "%%9\\n"; fi\n',
+    )
+    env = os.environ | {
+        "RUN_QBOX_LOCAL_SH": str(runner),
+        "TMUX_BIN": str(tmux),
+        "LOCAL_DEBUG_SKIP_MANIFEST": "1",
+        "LOCAL_DEBUG_SKIP_PORT_CHECK": "1",
+        "LOCAL_DEBUG_MANIFEST": str(manifest),
+    }
+
+    result = subprocess.run(
+        [
+            str(SCRIPT),
+            "--replace-session",
+            "--session",
+            "debug-test",
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--no-attach",
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Replacing existing tmux session: debug-test" in result.stdout
+    assert "kill-session\n-t\ndebug-test\n" in tmux_log.read_text()
