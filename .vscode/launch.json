@@ -1,0 +1,207 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Apollo QBox: host",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/qbox-platform/platforms-vp",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "miDebuggerServerAddress": "127.0.0.1:12339",
+      "launchCompleteCommand": "exec-continue",
+      "setupCommands": [
+        {
+          "description": "Load QBox and libqemu symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/qbox-host.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: start debug servers"
+    },
+    {
+      "name": "Apollo QBox: RSE",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/trusted-firmware-m/bin/bl1_1.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12340",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load all staged RSE firmware symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-rse.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for AP safe point"
+    },
+    {
+      "name": "Apollo QBox: SI0",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/scp-firmware/bin/apollo-qvp-si0-bl2.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12341",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load Safety Island cluster 0 symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si0.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for AP safe point"
+    },
+    {
+      "name": "Apollo QBox: SI1",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/deploy/firmware/zephyr-demos-cl1.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12342",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load Safety Island cluster 1 Zephyr symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si1.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for AP safe point"
+    },
+    {
+      "name": "Apollo QBox: RSE early",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/trusted-firmware-m/bin/bl1_1.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12340",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load all staged RSE firmware symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-rse.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for RSE GDB"
+    },
+    {
+      "name": "Apollo QBox: SI0 early (SCP)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/scp-firmware/bin/apollo-qvp-si0-bl2.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12341",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load Safety Island cluster 0 symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si0.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for SI0 GDB"
+    },
+    {
+      "name": "Apollo QBox: SI1 early (Zephyr)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/deploy/firmware/zephyr-demos-cl1.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12342",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load Safety Island cluster 1 Zephyr symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si1.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for SI1 GDB"
+    },
+    {
+      "name": "Apollo QBox: AP",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/trusted-firmware-a/apollo_qvp/debug/bl2/bl2.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12343",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load TF-A, OP-TEE, U-Boot, and Linux symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-ap.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for AP safe point"
+    },
+    {
+      "name": "Apollo QBox: AP early (TF-A)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/local-apollo-qvp/work/trusted-firmware-a/apollo_qvp/debug/bl2/bl2.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "miDebuggerServerAddress": "127.0.0.1:12343",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Load TF-A, OP-TEE, U-Boot, and Linux symbols",
+          "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-ap.gdb"
+        }
+      ],
+      "sourceFileMap": {
+        "/build/arm/arm-auto-solutions": "${workspaceFolder}"
+      },
+      "preLaunchTask": "Apollo QBox: wait for AP GDB"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Apollo QBox: all domains",
+      "configurations": [
+        "Apollo QBox: host",
+        "Apollo QBox: RSE",
+        "Apollo QBox: SI0",
+        "Apollo QBox: SI1",
+        "Apollo QBox: AP"
+      ],
+      "stopAll": true
+    }
+  ]
+}

@@ -2,6 +2,7 @@
   "recommendations": [
     "detachhead.basedpyright",
     "llvm-vs-code-extensions.vscode-clangd",
+    "ms-vscode.cpptools",
     "charliermarsh.ruff",
     "yocto-project.yocto-bitbake",
     "ms-vscode.cmake-tools",

@@ -1,0 +1,71 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Apollo QBox: start debug servers",
+      "type": "shell",
+      "command": "${workspaceFolder}/run_qbox_local_debug.sh",
+      "args": [
+        "--vscode",
+        "--session",
+        "apollo-qbox-debug-vscode",
+        "--out-dir",
+        "${workspaceFolder}/build/qbox-apollo-fvp/debug-vscode"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: wait for RSE GDB",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
+      "args": ["--wait-remote-only", "127.0.0.1:12340", "--wait-seconds", "600"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: wait for SI0 GDB",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
+      "args": ["--wait-remote-only", "127.0.0.1:12341", "--wait-seconds", "600"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: wait for SI1 GDB",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
+      "args": ["--wait-remote-only", "127.0.0.1:12342", "--wait-seconds", "600"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: wait for AP safe point",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
+      "args": [
+        "--wait-log-marker-only",
+        "${workspaceFolder}/build/qbox-apollo-fvp/debug-vscode/qbox-secure-console.log",
+        "PFDI: OoR tests on core 3 succeeded.",
+        "--wait-seconds",
+        "600"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: wait for AP GDB",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
+      "args": ["--wait-remote-only", "127.0.0.1:12343", "--wait-seconds", "600"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Apollo QBox: stop debug servers",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh",
+      "args": ["--stop-session", "apollo-qbox-debug-vscode"],
+      "options": {
+        "env": {
+          "OUT_DIR": "${workspaceFolder}/build/qbox-apollo-fvp/debug-vscode"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}
