@@ -94,7 +94,7 @@ build_qbox()
         -S "${QBOX_PLATFORM_DIR}" \
         -B "${QBOX_PLATFORM_BUILD_DIR}" \
         "${cmake_ccache_args[@]}" \
-        -DCMAKE_BUILD_TYPE="${QBOX_CMAKE_BUILD_TYPE:-Release}" \
+        -DCMAKE_BUILD_TYPE="${QBOX_CMAKE_BUILD_TYPE:-RelWithDebInfo}" \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DCMAKE_INSTALL_PREFIX="${QBOX_PLATFORM_BUILD_DIR}/install" \
         -DQBOX_CORE_SOURCE_DIR="${QBOX_CORE_DIR}" \

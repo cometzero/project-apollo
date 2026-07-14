@@ -76,12 +76,14 @@ Options:
   --dry-run           print resolved actions without changing files
   --ccache-report     print ccache status for every component and exit
   APOLLO_LOCAL_BUILD_CCACHE=0 disables ccache; default is auto-detect
+  QBOX_CMAKE_BUILD_TYPE overrides QBox type; default is RelWithDebInfo
   -h, --help          show this help
 
 Examples:
   ./local_build.sh
   ./local_build.sh qbox
   ./local_build.sh qbox --qbox-unit-tests
+  ./local_build.sh qbox debug-manifest --no-package
   ./local_build.sh --qbox-unit-tests
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
