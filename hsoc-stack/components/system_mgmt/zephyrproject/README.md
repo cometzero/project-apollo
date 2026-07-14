@@ -8,9 +8,9 @@ it:
 - `zephyr/`: Zephyr RTOS core with the Apollo/RD-Aspen patch stack applied.
 - `zephyr_hsoc_src/`: Apollo-owned Safety Island CL1 board, DTS, Kconfig,
   overlays, and HSOC-specific Zephyr integration sources.
-- `apollo-modules.list`: module order used by the local build script. The
-  `arm_zena_safety_island` token resolves to the common source under
-  `arm-zena-css/components/safety_island/zephyr/src/`, and the
+- `zephyr_hsoc_src/config/apollo-cl1-modules.list`: module order used by the
+  local build script. The `arm_zena_safety_island` token resolves to the common
+  source under `arm-zena-css/components/safety_island/zephyr/src/`, and the
   `zephyr_hsoc_src` token resolves to this workspace's Apollo HSOC module.
 
 Yocto builds use this directory through `EXTERNALSRC`, so local edits under
@@ -23,5 +23,5 @@ tree.
 
 Local builds follow the same model: `./local_build.sh zephyr` uses the Yocto
 `zephyr-demos-cl1` unpack tree for the modules listed in
-`apollo-modules.list`. Set `ZEPHYR_DEPS_SRC` only when using a custom
-Yocto-unpacked dependency root.
+`zephyr_hsoc_src/config/apollo-cl1-modules.list`. Set `ZEPHYR_DEPS_SRC` only
+when using a custom Yocto-unpacked dependency root.

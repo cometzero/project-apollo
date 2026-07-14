@@ -51,7 +51,7 @@ System Management와 Safety Island 소스는
 | `hsoc-stack/components/system_mgmt/zephyrproject/zephyr/` | Zephyr RTOS source submodule. |
 | `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/` | Apollo Safety Island CL1 Zephyr board, DTS, Kconfig, overlays, HSOC integration source. |
 | `arm-zena-css/components/safety_island/zephyr/src/` | 공통 Safety Island Zephyr drivers, libraries, subsystems, sample app source. |
-| `hsoc-stack/components/system_mgmt/zephyrproject/apollo-modules.list` | local build가 Yocto-unpacked Zephyr dependency tree, 공통 `arm_zena_safety_island` module, Apollo `zephyr_hsoc_src` module을 조합할 때 사용하는 module 목록. |
+| `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/config/apollo-cl1-modules.list` | local build가 Yocto-unpacked Zephyr dependency tree, 공통 `arm_zena_safety_island` module, Apollo `zephyr_hsoc_src` module을 조합할 때 사용하는 module 목록. |
 
 ## Apollo Yocto 메타데이터
 
