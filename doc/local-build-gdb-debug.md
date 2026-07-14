@@ -28,6 +28,88 @@ GDB 설정을 한 곳에서 관리한다.
   비-strip 심볼 ELF 연결
 - `build/local-apollo-qvp/debug/README.md`: 현재 빌드 결과에서 생성한 요약
 
+## 전체 QBox 디버그 세션
+
+다음 명령은 `run_qbox_local.sh`와 같은 `fvp-like` tmux 창을 열고, 기존
+interactive shell pane을 QBox host GDB로 교체한다.
+
+```bash
+./run_qbox_local_debug.sh
+```
+
+`qbox` window의 `gdb-host` pane은 `platforms-vp`를 `gdbserver`로 시작해
+`main`, `sc_main`, `libqemu_init`에 breakpoint를 설정한다. 별도의
+`gdb-targets` window에는 다음 네 GDB가 열린다.
+
+- RSE `127.0.0.1:12340`: TF-M BL1_1, BL1_2, BL2, secure runtime
+- SI0 `127.0.0.1:12341`: SCP-firmware
+- SI1 `127.0.0.1:12342`: Zephyr
+- AP `127.0.0.1:12343`: TF-A BL2/BL31, OP-TEE, U-Boot, Linux symbols
+
+각 domain command file은 단계별 ELF를 한 GDB에 함께 로드하고 각 컴포넌트의
+첫 entry symbol 주소에 breakpoint를 설정한다. 시작할 때 `info symbol`과
+`info line` 결과가 출력된다. 단계별 이미지가 주소 공간을 재사용하더라도
+breakpoint에 도달하면 해당 ELF가 active symbol file로 자동 전환된다.
+이후 `list`, `info source`, `bt` 같은 일반 GDB 명령으로 소스와 호출 경로를
+확인할 수 있다. QBox host는 `127.0.0.1:12339`를 사용한다. 이 다섯 포트는
+실행 전에 비어 있어야 한다.
+
+target이 실행 중일 때 GDB pane에서 `Ctrl+C`를 누르면 target만 interrupt하고
+같은 pane의 GDB prompt로 돌아온다. GDB와 pane을 종료할 때만 `quit`을 사용한다.
+
+기본 RSE/SI/AP pane은 4코어 PFDI 검사가 끝났음을 나타내는
+`PFDI: OoR tests on core 3 succeeded.` 로그를 기다린 뒤 GDB를 연결한다. AP
+또는 system-management GDB를 부팅 초기에 연결하면 QEMU의 stop 상태와
+SystemC secondary CPU reset release가 충돌해 PFDI poll에서 멈출 수 있기
+때문이다. 이 기본 모드에서는 실행 중인 OP-TEE의 심볼/소스와 U-Boot, Linux
+entry breakpoint를 자연 부팅 중에 사용할 수 있다. OP-TEE `_start` 자체는
+조기 AP 연결 모드에서 확인한다.
+U-Boot ELF는 `0x88000000`에 link되어 있지만 TF-A가 BL33을
+`0xe0000000`에 적재하므로, 생성된 domain script가 `0x58000000` offset을
+자동 적용한다.
+
+TF-A BL2/BL31, OP-TEE `_start`, 또는 RSE/SCP/Zephyr entry를 먼저 확인하려면
+별도 실행에서 필요한 조기 연결 옵션을 쓴다.
+
+```bash
+./run_qbox_local_debug.sh --ap-early-attach
+./run_qbox_local_debug.sh --firmware-early-attach
+```
+
+두 옵션을 함께 지정하면 모든 target GDB가 조기에 연결된다. 조기 연결 세션은
+초기 firmware entry 확인용이다. PFDI와 후속 OS까지 계속 디버깅하려면 세션을
+종료하고 기본 지연 연결 모드로 다시 실행한다.
+
+세션만 띄우고 나중에 attach하려면 `--no-attach`를 사용한다. F12는 기존
+`run_qbox_local.sh`와 동일하게 QBox와 tmux session을 종료한다.
+
+## VS Code
+
+권장 extension의 `Microsoft C/C++` 디버거를 설치한 뒤 Run and Debug에서
+`Apollo QBox: all domains`를 선택한다. VS Code는
+`run_qbox_local_debug.sh --vscode`로 동일한 QBox를 시작하고, host/RSE/SI0/
+SI1/AP debugger를 각 포트에 연결한다. 단일 domain만 선택할 때는 먼저 VS Code
+task `Apollo QBox: start debug servers`를 실행한 뒤 해당 debugger를 선택한다.
+compound의 RSE/SI/AP 구성은 모두 PFDI core 3 성공 로그까지 기다리는 기본
+지연 연결 모드다. 초기 entry만 확인하려면 compound 대신 `RSE early`,
+`SI0 early (SCP)`, `SI1 early (Zephyr)`, `AP early (TF-A)` 중 필요한 구성을
+선택한다.
+
+QBox가 host entry breakpoint에서 멈추면 먼저 host debugger를 Continue한다.
+이후 생성되는 RSE/SI/AP GDB endpoint에 나머지 debugger가 순서대로 연결되어
+각 CPU의 초기 PC를 보여준다. 각 domain debugger를 Continue하면 미리 설정된
+firmware entry breakpoint에서 다시 멈춘다. 수동으로 서버만 시작하려면 다음
+명령을 사용한다.
+
+```bash
+./run_qbox_local_debug.sh --vscode --no-attach
+```
+
+종료는 VS Code task `Apollo QBox: stop debug servers`를 실행하거나 tmux에서
+F12를 누른다. `.vscode/launch.json`은 기본
+`build/local-apollo-qvp` 경로를 사용하므로 다른 `--local-build-dir`을 쓰면
+해당 `program`과 GDB command file 경로도 맞춰야 한다.
+
 ## 컴포넌트 확인과 심볼 검사
 
 ```bash
@@ -68,9 +150,9 @@ scripts/debug/run_local_gdb.py libqemu-aarch64 \
   --break libqemu_init
 ```
 
-## AP CPU의 TF-A, OP-TEE, U-Boot, Linux
+## 개별 AP CPU의 TF-A, OP-TEE, U-Boot, Linux
 
-이 네 컴포넌트는 같은 AP CPU GDB stub에 각 단계의 ELF를 선택해 연결한다.
+이 컴포넌트들은 같은 AP CPU GDB stub에 각 단계의 ELF를 선택해 연결한다.
 직접 부팅 runner에서 CPU 0의 stub을 연 예시는 다음과 같다.
 
 터미널 1:
@@ -106,11 +188,10 @@ python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
 개별 RSE 포트가 열려 있으면 `tfm-bl1_1`, `tfm-bl1_2`, `tfm-bl2`, `tfm-s`를
 `run_local_gdb.py COMPONENT --remote HOST:PORT`로 연결할 수 있다.
 
-현재 QBox의 기본 SCP `service-model` 경로는 실제 SCP CPU GDB target을 만들지
-않으므로 `scp-si0`는 심볼/소스 검사만 가능하다. SI CL1도 현재 full-system
-경로에는 CPU `gdb_port`가 연결되지 않아 `si-cl1-zephyr`는 심볼/소스 검사만
-가능하다. 해당 CPU 모델의 GDB port가 platform에 연결되면 생성된 ELF/GDB
-설정은 그대로 `--remote`에 사용할 수 있다.
+`run_qbox_local_debug.sh`는 `live-cl0-cl1` 경로를 사용하고 SI0/SI1 CPU의
+`gdb_port`를 명시적으로 열기 때문에 SCP-firmware와 Zephyr도 실시간
+breakpoint를 사용할 수 있다. 기본 `run_qbox_local.sh`의 GDB port는 계속
+비활성 상태다.
 
 FVP는 GDB remote stub 대신 Iris를 제공한다. FVP의 실시간 breakpoint는
 `scripts/debug/run_local_fvp_debug.sh`와

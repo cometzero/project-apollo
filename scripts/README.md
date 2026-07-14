@@ -25,7 +25,8 @@ scripts/test/validate_qbox_apollo_fvp_full_map.py
 ```
 
 The workspace still keeps user-facing root entrypoints such as
-`./yocto_build.sh`, `./local_build.sh`, `./run_fvp.sh`, and `./run_qbox_local.sh`.
+`./yocto_build.sh`, `./local_build.sh`, `./run_fvp.sh`, `./run_qbox_local.sh`,
+and `./run_qbox_local_debug.sh`.
 
 Use `./local_build.sh qbox` for QBox target builds. The former dedicated build
 shortcut wrappers were replaced by stage entrypoints under `scripts/build/`.
