@@ -25,6 +25,7 @@ KCONFIG_COMPONENTS=(u-boot linux zephyr)
 
 DRY_RUN=0
 CCACHE_REPORT_ONLY=0
+REFRESH_SDK=0
 PACKAGE_MODE=auto
 ACTION=build
 JOBS_ARG="${JOBS}"
@@ -70,6 +71,7 @@ Options:
   --qbox-systemc-tests alias for --qbox-unit-tests
   --package           package local FVP deploy output; package-only if no component is selected
   --no-package        skip the default package step
+  --refresh-sdk       force-populate and reinstall the Yocto SDK; SDK-only if no component is selected
   --jobs N            parallel build jobs (default: ${JOBS})
   --dry-run           print resolved actions without changing files
   --ccache-report     print ccache status for every component and exit
@@ -83,6 +85,7 @@ Examples:
   ./local_build.sh --qbox-unit-tests
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
+  ./local_build.sh --refresh-sdk
   ./local_build.sh --package
   ./local_build.sh --dry-run
 EOF
@@ -138,6 +141,10 @@ parse_args()
                 [[ "${PACKAGE_MODE}" != "enabled" ]] ||
                     die "--package and --no-package are mutually exclusive"
                 PACKAGE_MODE=disabled
+                shift
+                ;;
+            --refresh-sdk)
+                REFRESH_SDK=1
                 shift
                 ;;
             --jobs)
@@ -388,15 +395,25 @@ print_component_dry_run()
 
 dry_run()
 {
+    local order="${SELECTED_COMPONENTS[*]}"
+    if ((REFRESH_SDK)); then
+        order="sdk-refresh${order:+ ${order}}"
+    fi
     cat <<EOF
 DRY-RUN: ./local_build.sh
 jobs: ${JOBS_ARG}
 pc cpus: ${PC_CPUS_COUNT}
 tfa linux dts: ${TFA_LINUX_DTS}
 bootargs tail: ${BOOTLOADER_LINUX_APPEND}
-order: ${SELECTED_COMPONENTS[*]}$([[ "${PACKAGE_MODE}" != disabled ]] && printf ' package')
+order: ${order}$([[ "${PACKAGE_MODE}" != disabled ]] && printf ' package')
 component steps:
 EOF
+    if ((REFRESH_SDK)); then
+        printf '  sdk-refresh: force populate and reinstall\n'
+        printf '    command: bitbake nexios-image -c populate_sdk -f\n'
+        printf '    install: %s\n' "${SDK_DIR}"
+        printf '    warning: Yocto SDK generation can take a long time\n'
+    fi
     local component
     for component in "${SELECTED_COMPONENTS[@]}"; do
         print_component_dry_run "${component}" "${ACTION}"
@@ -650,7 +667,7 @@ PY
 fi
 
 if [[ "${COMPONENT_SET}" == 0 ]]; then
-    if [[ "${PACKAGE_MODE}" == enabled ]]; then
+    if [[ "${PACKAGE_MODE}" == enabled || "${REFRESH_SDK}" == 1 ]]; then
         SELECTED_COMPONENTS=()
     else
         SELECTED_COMPONENTS=("${COMPONENTS[@]}")
@@ -688,7 +705,10 @@ if ((DRY_RUN)); then
     exit 0
 fi
 
-if needs_initial_sdk_check; then
+if ((REFRESH_SDK)); then
+    run_step "sdk-refresh" refresh_sdk
+    SDK_INSTALL_CHECKED=1
+elif needs_initial_sdk_check; then
     run_step "sdk-check" ensure_yocto_sdk_installed
 fi
 

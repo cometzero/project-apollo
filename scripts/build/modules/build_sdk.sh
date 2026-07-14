@@ -36,6 +36,55 @@ build_sdk()
     sh "${installer}" -y -d "${SDK_DIR}" 2>&1 | tee "${LOG_DIR}/yocto-sdk-install.log"
 }
 
+refresh_sdk()
+{
+    local bitbake_cmd="${BITBAKE:-bitbake}"
+    local installer
+
+    mkdir -p "${LOG_DIR}"
+    run_populate_sdk_task "${bitbake_cmd}" 1
+    installer="$(find_sdk_installer)"
+    require_file "${installer}"
+    reinstall_sdk "${installer}"
+}
+
+reinstall_sdk()
+{
+    local installer="$1"
+    local backup="${SDK_DIR}.refresh-backup.$$"
+    local had_existing=0
+    local status
+
+    [[ -n "${SDK_DIR}" && "${SDK_DIR}" != / ]] ||
+        die "refusing to replace unsafe SDK directory: ${SDK_DIR}"
+    [[ ! -e "${backup}" && ! -L "${backup}" ]] ||
+        die "SDK refresh backup already exists: ${backup}"
+
+    if [[ -e "${SDK_DIR}" || -L "${SDK_DIR}" ]]; then
+        log "Preserving existing Yocto SDK until the refreshed SDK is installed: ${backup}"
+        mv -- "${SDK_DIR}" "${backup}"
+        had_existing=1
+    fi
+
+    log "Reinstalling Yocto SDK: ${installer} -> ${SDK_DIR}"
+    if sh "${installer}" -y -d "${SDK_DIR}" 2>&1 |
+        tee "${LOG_DIR}/yocto-sdk-install.log"; then
+        if ((had_existing)); then
+            rm -rf -- "${backup}"
+        fi
+        return 0
+    else
+        status=$?
+    fi
+
+    log "ERROR: Yocto SDK reinstall failed; restoring the previous SDK."
+    rm -rf -- "${SDK_DIR}"
+    if ((had_existing)); then
+        mv -- "${backup}" "${SDK_DIR}"
+    fi
+    return "${status}"
+}
+
 run_populate_sdk_task()
 {
     local bitbake_cmd="$1"
@@ -46,9 +95,11 @@ run_populate_sdk_task()
     if [[ "${force}" == 1 ]]; then
         force_args=(-f)
         tee_args=(-a "${LOG_DIR}/yocto-populate-sdk.log")
+        log "Forcing Yocto SDK regeneration with bitbake nexios-image -c populate_sdk -f"
     else
         log "Creating Yocto SDK with bitbake nexios-image -c populate_sdk"
     fi
+    log "WARNING: Yocto SDK generation can take a long time."
 
     (
         cd "${ROOT_DIR}" || exit

@@ -87,6 +87,7 @@ def test_help_documents_local_fvp_contract() -> None:
     assert "--qbox-unit-tests" in output
     assert "--qbox-systemc-tests" in output
     assert "--ccache-report" in output
+    assert "--refresh-sdk" in output
     for component in COMPONENTS:
         assert component in output
     for action in ("build", "clean", "clean-build", *KCONFIG_ACTIONS):
@@ -108,6 +109,7 @@ def test_help_includes_operational_examples_with_existing_script_paths() -> None
         "./local_build.sh --qbox-unit-tests",
         "./local_build.sh linux clean-build --no-package",
         "./local_build.sh linux menuconfig --no-package",
+        "./local_build.sh --refresh-sdk",
         "./local_build.sh --package",
     ):
         assert example in output
@@ -136,6 +138,18 @@ def test_dry_run_defaults_to_all_components_plus_package() -> None:
     ]
     assert "order: qbox tf-m scp-firmware zephyr optee u-boot tf-a linux buildroot flash-images boot-disk fvpconf debug-manifest" in output
     assert "package: local FVP deploy" not in output
+
+
+def test_refresh_sdk_dry_run_is_sdk_only() -> None:
+    result = run_local_build("--refresh-sdk", "--dry-run")
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "order: sdk-refresh" in output
+    assert "sdk-refresh: force populate and reinstall" in output
+    assert "bitbake nexios-image -c populate_sdk -f" in output
+    assert "Yocto SDK generation can take a long time" in output
+    assert "qbox: build" not in output
 
 
 def test_sdk_dir_defaults_to_active_machine(tmp_path: Path) -> None:
@@ -873,6 +887,120 @@ def test_build_sdk_forces_populate_sdk_when_stamp_kept_but_installer_deleted(
     bitbake_calls = bitbake_log.read_text(encoding="utf-8").splitlines()
     assert bitbake_calls[0].endswith("nexios-image -c populate_sdk")
     assert bitbake_calls[1].endswith("nexios-image -c populate_sdk -f")
+
+
+def test_refresh_sdk_forces_populate_and_clean_reinstall(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "host-tools"
+    sdk_dir = tmp_path / "sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    bitbake_log = tmp_path / "bitbake.log"
+    tools_dir.mkdir(parents=True)
+    sdk_dir.mkdir()
+    write_file(sdk_dir / "environment-setup-old", "old-sdk\n")
+    write_file(sdk_dir / "stale-sdk-file", "stale\n")
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "printf '%s\\n' \"$*\" >> \"${APOLLO_TEST_BITBAKE_LOG}\"\n"
+        "deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
+        "mkdir -p \"${deploy}\"\n"
+        "installer=\"${deploy}/auto-ad-nexios-apollo-qvp-toolchain-refresh.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "dest=''\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in -d) dest=\"$2\"; shift 2 ;; *) shift ;; esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "printf 'refreshed-sdk\\n' > \"${dest}/environment-setup-refreshed\"\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
+
+    result = run_local_build(
+        "--refresh-sdk",
+        extra_env={
+            "APOLLO_AUTO_RESOURCE_LIMITS": "0",
+            "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
+            "BITBAKE": str(tools_dir / "bitbake"),
+            "MACHINE": "apollo-qvp",
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+            "SDK_DIR": str(sdk_dir),
+            "YOCTO_BUILD_DIR": str(yocto_build),
+            "LOCAL_BUILD_DIR": str(local_build),
+        },
+    )
+
+    assert result.returncode == 0, output_of(result)
+    output = output_of(result)
+    assert "Yocto SDK generation can take a long time" in output
+    assert "Reinstalling Yocto SDK" in output
+    assert "Starting qbox-build" not in output
+    assert bitbake_log.read_text(encoding="utf-8").strip().endswith(
+        "nexios-image -c populate_sdk -f"
+    )
+    assert (sdk_dir / "environment-setup-refreshed").read_text(
+        encoding="utf-8"
+    ) == "refreshed-sdk\n"
+    assert not (sdk_dir / "environment-setup-old").exists()
+    assert not (sdk_dir / "stale-sdk-file").exists()
+    assert not list(tmp_path.glob("sdk.refresh-backup.*"))
+
+
+def test_refresh_sdk_restores_previous_sdk_when_install_fails(tmp_path: Path) -> None:
+    tools_dir = tmp_path / "host-tools"
+    sdk_dir = tmp_path / "sdk"
+    yocto_build = tmp_path / "yocto-build"
+    local_build = tmp_path / "local-build"
+    tools_dir.mkdir(parents=True)
+    sdk_dir.mkdir()
+    write_file(sdk_dir / "environment-setup-old", "old-sdk\n")
+    write_file(
+        tools_dir / "bitbake",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "deploy=\"${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/sdk\"\n"
+        "mkdir -p \"${deploy}\"\n"
+        "installer=\"${deploy}/auto-ad-nexios-apollo-qvp-toolchain-refresh.sh\"\n"
+        "cat > \"${installer}\" <<'SDK'\n"
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "dest=''\n"
+        "while (($# > 0)); do\n"
+        "    case \"$1\" in -d) dest=\"$2\"; shift 2 ;; *) shift ;; esac\n"
+        "done\n"
+        "mkdir -p \"${dest}\"\n"
+        "printf 'partial-sdk\\n' > \"${dest}/partial\"\n"
+        "exit 42\n"
+        "SDK\n"
+        "chmod +x \"${installer}\"\n",
+    )
+    (tools_dir / "bitbake").chmod(0o755)
+
+    result = run_local_build(
+        "--refresh-sdk",
+        extra_env={
+            "APOLLO_AUTO_RESOURCE_LIMITS": "0",
+            "BITBAKE": str(tools_dir / "bitbake"),
+            "MACHINE": "apollo-qvp",
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
+            "SDK_DIR": str(sdk_dir),
+            "YOCTO_BUILD_DIR": str(yocto_build),
+            "LOCAL_BUILD_DIR": str(local_build),
+        },
+    )
+
+    assert result.returncode == 42, output_of(result)
+    assert "restoring the previous SDK" in output_of(result)
+    assert (sdk_dir / "environment-setup-old").read_text(encoding="utf-8") == (
+        "old-sdk\n"
+    )
+    assert not (sdk_dir / "partial").exists()
+    assert not list(tmp_path.glob("sdk.refresh-backup.*"))
 
 
 def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
