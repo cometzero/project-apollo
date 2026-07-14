@@ -124,6 +124,9 @@ buildroot_env()
 prepare_buildroot_overlay()
 {
     mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d,usr/bin}
+    rm -f "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent" \
+        "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-local-agent"
+    rm -rf "${WORK_DIR}/pfdi-local-agent"
     chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
     local login_prompt="${LOCAL_BUILD_LOGIN_PROMPT:-${MACHINE} login:}"
     local login_prompt_sed="${login_prompt//\\/\\\\}"
@@ -180,17 +183,6 @@ lsmod 2>/dev/null || true
 if [ -x /usr/bin/apollo-network-setup ]; then
     echo "local-initramfs: starting apollo-network-setup"
     /usr/bin/apollo-network-setup
-fi
-
-if [ -x /usr/bin/pfdi-local-agent ]; then
-    echo "local-initramfs: starting pfdi-local-agent"
-    /usr/bin/pfdi-local-agent \
-        -c "${PFDI_CPU_COUNT:-0}" \
-        -s "${PFDI_TEST_START:-0}" \
-        -e "${PFDI_TEST_END:-40}" \
-        -p "${PFDI_PERIOD_MS:-60}" \
-        >/run/pfdi-local-agent.log 2>&1 &
-    echo "local-initramfs: pfdi-local-agent pid $!"
 fi
 
 echo "@LOCAL_BUILD_LOGIN_PROMPT@"
@@ -441,10 +433,6 @@ validate_buildroot_runtime_files()
             die "Buildroot target is missing runtime dependency: ${lib}"
     done
 
-    if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
-        require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-local-agent"
-    fi
-
     log "Validated Buildroot Arm Zena CSS runtime files"
 }
 
@@ -550,23 +538,6 @@ kernel_modules_overlay_manifest()
     fingerprint_tree_metadata "${ARM_SI_RPROC_SRC}" arm-si-rproc-src
     fingerprint_tree_metadata "${RPMSG_NET_SRC}" rpmsg-net-src
     fingerprint_tree_metadata "${PFDI_MISC_SRC}" pfdi-misc-src
-    fingerprint_file_hash "${PFDI_LOCAL_AGENT_SRC}" pfdi-local-agent-src
-}
-
-build_pfdi_local_agent()
-{
-    require_file "${PFDI_LOCAL_AGENT_SRC}"
-    rm -rf "${PFDI_LOCAL_AGENT_BUILD_DIR}"
-    mkdir -p "${PFDI_LOCAL_AGENT_BUILD_DIR}"
-
-    run_logged pfdi-local-agent-build "${AARCH64_PREFIX}gcc" \
-        --sysroot="${SDK_TARGET_SYSROOT}" \
-        -O2 -g -Wall -Wextra -pthread \
-        -o "${PFDI_LOCAL_AGENT_BUILD_DIR}/pfdi-local-agent" \
-        "${PFDI_LOCAL_AGENT_SRC}"
-
-    install -D -m 0755 "${PFDI_LOCAL_AGENT_BUILD_DIR}/pfdi-local-agent" \
-        "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent"
 }
 
 install_kernel_modules_overlay()
@@ -604,9 +575,6 @@ install_kernel_modules_overlay()
     fi
     if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" pfdi_misc "* ]]; then
         build_pfdi_misc_module "${release}"
-        if [[ "${PFDI_MONITOR_SUPPORT}" == "1" ]]; then
-            build_pfdi_local_agent
-        fi
     fi
 
     run_logged linux-depmod depmod -b "${BUILDROOT_OVERLAY}" "${release}"

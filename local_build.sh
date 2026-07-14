@@ -491,7 +491,8 @@ run_clean()
     case "${component}" in
         buildroot)
             rm -rf "${BUILDROOT_BUILD_DIR}" "${BUILDROOT_EXTERNAL}" \
-                "${BUILDROOT_OVERLAY}" "${BUILDROOT_TOOLCHAIN_DIR}"
+                "${BUILDROOT_OVERLAY}" "${BUILDROOT_TOOLCHAIN_DIR}" \
+                "${WORK_DIR}/pfdi-local-agent"
             validate_local_build_write_dir "boot dir" "${BOOT_DIR}"
             rm -f "${BOOT_DIR}/initramfs.cpio.gz"
             return 0
