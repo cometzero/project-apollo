@@ -16,6 +16,7 @@ class Component:
     source_roots: tuple[str, ...]
     debugger: str = "gdb-multiarch"
     workspace_candidates: tuple[str, ...] = ()
+    runtime_text_address: int | None = None
 
 
 class ComponentRecord(TypedDict):
@@ -31,9 +32,16 @@ class ComponentRecord(TypedDict):
     has_debug_line: bool
     default_symbol: str | None
     symbols: dict[str, str]
+    text_address: str
+    source_locations: dict[str, str]
+    source_roots: list[str]
+    linked_text_address: NotRequired[str]
+    load_offset: NotRequired[str]
     build_id: NotRequired[str]
     runtime_elf: NotRequired[str]
     debug_file: NotRequired[str]
+    members: NotRequired[list[str]]
+    remote: NotRequired[str]
 
 
 AP_TARGET = "RD_ASD.css.app00.cluster.cpu0"
@@ -108,6 +116,7 @@ COMPONENTS = (
         "u-boot", "U-Boot", "u_boot_linux", AP_TARGET,
         ("work/u-boot/u-boot",), ("_start", "board_init_f", "main_loop"),
         ("hsoc-stack/components/primary_compute/u-boot",),
+        runtime_text_address=0xE0000000,
     ),
     Component(
         "linux", "Linux kernel", "u_boot_linux", AP_TARGET,

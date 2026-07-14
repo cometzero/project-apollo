@@ -1237,6 +1237,13 @@ start_tmux()
         if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
             printf 'LD_LIBRARY_PATH=%q ' "${LD_LIBRARY_PATH}"
         fi
+        if [[ -n "${QBOX_HOST_GDB_EXEC:-}" ]]; then
+            printf 'QBOX_HOST_GDB_EXEC=%q ' "${QBOX_HOST_GDB_EXEC}"
+        fi
+        if [[ -n "${QBOX_HOST_GDBSERVER_ENDPOINT:-}" ]]; then
+            printf 'QBOX_HOST_GDBSERVER_ENDPOINT=%q ' \
+                "${QBOX_HOST_GDBSERVER_ENDPOINT}"
+        fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
         printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \

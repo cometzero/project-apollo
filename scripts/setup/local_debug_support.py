@@ -85,6 +85,29 @@ def elf_build_id(elf: Path) -> str | None:
     return match.group(1).lower() if match else None
 
 
+def elf_text_address(elf: Path) -> str:
+    try:
+        output = run_text(["readelf", "-WS", str(elf)])
+    except (OSError, subprocess.CalledProcessError):
+        return "0x0"
+    match = re.search(r"\]\s+\.text\s+\S+\s+([0-9a-fA-F]+)\s+", output)
+    return f"0x{int(match.group(1), 16):x}" if match else "0x0"
+
+
+def symbol_source_locations(
+    elf: Path, symbols: Mapping[str, str]
+) -> dict[str, str]:
+    locations: dict[str, str] = {}
+    for name, address in symbols.items():
+        try:
+            output = run_text(["addr2line", "-e", str(elf), address]).strip()
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        if output and not output.startswith("??"):
+            locations[name] = output
+    return locations
+
+
 def gdb_quote(path: Path) -> str:
     escaped = str(path).replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -141,9 +164,11 @@ def write_gdb_script(
     lines.extend((f"file {gdb_quote(elf)}", "info files"))
     for name in component.default_symbols:
         if name in symbols:
-            lines.extend((f"info address {name}", f"break {name}"))
+            lines.extend(
+                (f"info address {name}", f"info line {name}", f"break {name}")
+            )
     if component.name == "qbox-host":
-        lines.append("break libqemu_init")
+        lines.append("tbreak libqemu_init")
     if component.debugger == "gdb-multiarch":
         lines.extend(("", "# Use --remote HOST:PORT for a QEMU GDB stub."))
     else:

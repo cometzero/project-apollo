@@ -20,15 +20,18 @@ from local_debug_components import (  # noqa: E402
     ComponentRecord,
     qbox_plugin_components,
 )
+from local_debug_domains import add_domain_records  # noqa: E402
 from local_debug_support import (  # noqa: E402
     defined_symbols,
     elf_arch,
     elf_build_id,
     elf_sections,
+    elf_text_address,
     first_existing,
     install_build_id_debug_file,
     resolve_elf,
     shared_library_paths,
+    symbol_source_locations,
     write_gdb_script,
     write_readme,
 )
@@ -68,13 +71,16 @@ def select_symbols(component: Component, elf: Path) -> tuple[dict[str, int], dic
 
 
 def component_record(
+    root: Path,
     component: Component,
     elf: Path,
     script_path: Path,
     selected: dict[str, str],
 ) -> ComponentRecord:
     sections = elf_sections(elf)
-    return {
+    linked_text_address = elf_text_address(elf)
+    source_locations = symbol_source_locations(elf, selected)
+    record: ComponentRecord = {
         "label": component.label,
         "domain": component.domain,
         "target": component.target,
@@ -87,7 +93,24 @@ def component_record(
         "has_debug_line": sections["debug_line"],
         "default_symbol": next(iter(selected), None),
         "symbols": selected,
+        "text_address": linked_text_address,
+        "source_locations": source_locations,
+        "source_roots": [
+            str((root / source).resolve())
+            for source in component.source_roots
+            if (root / source).exists()
+        ],
     }
+    if component.runtime_text_address is not None:
+        load_offset = component.runtime_text_address - int(linked_text_address, 16)
+        record["linked_text_address"] = linked_text_address
+        record["load_offset"] = f"0x{load_offset:x}"
+        record["text_address"] = f"0x{component.runtime_text_address:x}"
+        record["symbols"] = {
+            name: f"0x{int(address, 16) + load_offset:x}"
+            for name, address in selected.items()
+        }
+    return record
 
 
 def add_libqemu_debug_file(
@@ -140,10 +163,12 @@ def generate_manifest(root: Path, local_build: Path, out_dir: Path) -> DebugMani
             symbols,
             solib_paths,
         )
-        record = component_record(component, elf, script_path, selected)
+        record = component_record(root, component, elf, script_path, selected)
         if component.name == "libqemu-aarch64":
             add_libqemu_debug_file(root, out_dir, elf, record)
         components[component.name] = record
+
+    add_domain_records(out_dir, components)
 
     return {
         "workspace": str(root),

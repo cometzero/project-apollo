@@ -3629,7 +3629,7 @@ def run_platform(
         cmd.extend(["-p", qbox_platform_param_value(param)])
     if args.host_gdb_script:
         cmd = [
-            "gdb",
+            os.environ.get("QBOX_HOST_GDB_EXEC", "gdb"),
             "-q",
             "-iex",
             "set debuginfod enabled off",
@@ -5567,7 +5567,7 @@ def main() -> int:
         command.extend(["-p", qbox_platform_param_value(param)])
     if args.host_gdb_script:
         command = [
-            "gdb",
+            os.environ.get("QBOX_HOST_GDB_EXEC", "gdb"),
             "-q",
             "-iex",
             "set debuginfod enabled off",
