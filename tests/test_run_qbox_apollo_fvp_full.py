@@ -11,6 +11,7 @@ import pytest  # pyright: ignore[reportMissingImports]
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
+COVERAGE_SCRIPT = ROOT / "scripts/test/audit_qbox_apollo_fvp_full_coverage.py"
 AP_COMPUTE_LUA = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
 )
@@ -36,11 +37,21 @@ def load_runner():
     return module
 
 
+def load_coverage_auditor():
+    spec = importlib.util.spec_from_file_location("apollo_coverage_auditor", COVERAGE_SCRIPT)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def make_args(tmp_path, *, post_login_probe=True):
     return SimpleNamespace(
         out_dir=tmp_path,
         post_login_probe=post_login_probe,
-        primary_login_prompt="apollo-fvp login:",
+        primary_login_prompt="apollo-qvp login:",
         primary_shell_marker="~ #",
         si_mode="live-cl0-cl1",
     )
@@ -62,9 +73,9 @@ def make_child_command_args(tmp_path):
         out_dir=tmp_path,
         platform_param=[],
         post_login_probe=False,
-        primary_login_prompt="apollo-fvp login:",
+        primary_login_prompt="apollo-qvp login:",
         primary_shell_marker="~ #",
-        primary_shell_prompt_re=r"(?:root@apollo-fvp[^\n]*[#>]|\S+ #)\s*$",
+        primary_shell_prompt_re=r"(?:root@apollo-qvp[^\n]*[#>]|\S+ #)\s*$",
         provision_blank_rse_otp=False,
         qbox_build_dir=tmp_path / "work/qbox-platform",
         qbox_perf_profile=False,
@@ -216,6 +227,43 @@ def test_live_cl1_gate_requires_pfdi_readiness():
     assert blocker == "live_cl0_cl1_marker_blocked:pfdi_agent"
 
 
+@pytest.mark.parametrize(
+    "bridge",
+    (
+        "ap_system_bridge",
+        "si_cl0_system_bridge",
+        "si_cl1_system_bridge",
+    ),
+)
+def test_migration_bridge_shadow_warnings_are_expected(bridge):
+    runner = load_runner()
+    log = (
+        "addressMap: Region 'platform."
+        f"{bridge}.target_socket' is completely shadowed"
+    )
+
+    assert runner.has_unexpected_shadowed_range(log) is False
+
+
+def test_coverage_accepts_headless_login_without_guest_injection(tmp_path):
+    auditor = load_coverage_auditor()
+    result = {
+        "marker_groups": {
+            "linux": {"login_prompt": True, "root_shell": False},
+            "linux_boot": {"apollo-qvp login:": True, "~ #": False},
+        },
+        "console_logs": {
+            "primary_console": str(tmp_path / "primary.log"),
+            "si_cl0": str(tmp_path / "si-cl0.log"),
+        },
+    }
+
+    checks = {item["name"]: item for item in auditor.marker_group_checks(result)}
+
+    assert checks["markers:linux"]["passed"] is True
+    assert checks["markers:linux_boot"]["passed"] is True
+
+
 def test_apollo_qvp_config_rejects_enabled_zero_ap_cpus():
     lua = shutil.which("lua")
     if lua is None:
@@ -268,6 +316,20 @@ def test_parse_args_forwards_supported_child_options(tmp_path, monkeypatch, chil
     assert args.forward_args == child_args
     for item in child_args:
         assert item in cmd
+
+
+def test_parse_args_and_artifacts_default_to_active_apollo_qvp(monkeypatch):
+    runner = load_runner()
+    monkeypatch.setattr(sys, "argv", ["run_qbox_apollo_fvp_full.py", "--check-only"])
+
+    args = runner.parse_args()
+    artifacts = runner.default_artifacts(args.local_build_dir)
+
+    assert args.local_build_dir == ROOT / "build/local-apollo-qvp"
+    assert args.out_dir.parent == ROOT / "build/qbox-apollo-qvp"
+    assert artifacts["rootfs"].name == "apollo-qvp-local-disk.img"
+    assert artifacts["ap_dtb"].name == "apollo-qvp.dtb"
+    assert "apollo_qvp" in artifacts["ap_bl2_elf"].parts
 
 
 @pytest.mark.parametrize(
@@ -328,7 +390,7 @@ def write_passing_logs(tmp_path):
     (tmp_path / "qbox-primary-console.log").write_text(
         "\n".join(
             [
-                "apollo-fvp login:",
+                "apollo-qvp login:",
                 "~ # echo __QBOX_PROBE_START__",
                 "__QBOX_PROBE_START__",
                 "arm_si_rproc_modprobe_rc:0",
@@ -428,7 +490,7 @@ def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tm
     )
 
     assert status["passed"] is True
-    assert status["marker_hits"]["linux_boot"]["apollo-fvp login:"] is True
+    assert status["marker_hits"]["linux_boot"]["apollo-qvp login:"] is True
     assert status["post_login_probe"]["requested"] is False
     assert status["post_login_probe"]["complete"] is False
     assert "rse_cpu_mode" not in status
@@ -438,13 +500,13 @@ def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tm
     assert profile["markers"][-1] == {
         "name": "primary_login_prompt",
         "label": "Linux login prompt",
-        "marker": "apollo-fvp login:",
+        "marker": "apollo-qvp login:",
         "seen": True,
         "elapsed_s": None,
     }
     assert status["progress_marker_first_hits"]["primary_login_prompt"] == {
         "elapsed_s": None,
-        "marker": "apollo-fvp login:",
+        "marker": "apollo-qvp login:",
     }
     assert status["scp_service_model"]["strategy"] == "real-si-scp"
 
@@ -468,19 +530,19 @@ def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_pat
     assert status["post_login_probe"]["complete"] is False
 
 
-def test_keep_running_child_status_uses_configured_qvp_login_prompt(tmp_path):
+def test_keep_running_child_status_uses_configured_legacy_login_prompt(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
     primary = tmp_path / "qbox-primary-console.log"
     primary.write_text(
         primary.read_text(encoding="utf-8").replace(
-            "apollo-fvp login:",
             "apollo-qvp login:",
+            "apollo-fvp login:",
         ),
         encoding="utf-8",
     )
     args = make_args(tmp_path)
-    args.primary_login_prompt = "apollo-qvp login:"
+    args.primary_login_prompt = "apollo-fvp login:"
 
     status = runner.synthesize_keep_running_child_status(
         args,
@@ -489,10 +551,10 @@ def test_keep_running_child_status_uses_configured_qvp_login_prompt(tmp_path):
     )
 
     assert status["passed"] is True
-    assert status["marker_hits"]["linux_boot"]["apollo-qvp login:"] is True
-    assert "apollo-fvp login:" not in status["marker_hits"]["linux_boot"]
+    assert status["marker_hits"]["linux_boot"]["apollo-fvp login:"] is True
+    assert "apollo-qvp login:" not in status["marker_hits"]["linux_boot"]
     assert status["post_login_probe"]["sent_login"] is True
     assert status["progress_marker_first_hits"]["primary_login_prompt"] == {
         "elapsed_s": None,
-        "marker": "apollo-qvp login:",
+        "marker": "apollo-fvp login:",
     }

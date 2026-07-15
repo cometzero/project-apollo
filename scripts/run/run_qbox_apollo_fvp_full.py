@@ -36,8 +36,8 @@ RSE_LCS_CM = "0xcccc3c3c"
 RSE_LCS_SE = 0xEEEEA5A5
 
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-DEFAULT_EXPECTED_AP_CPUS = 16
-APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-fvp login:"
+DEFAULT_EXPECTED_AP_CPUS = 4
+APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-qvp login:"
 APOLLO_PRIMARY_SHELL_MARKER = "~ #"
 CHILD_FAIL_PATTERNS = [
     "Kernel panic",
@@ -142,7 +142,14 @@ def has_unexpected_shadowed_range(platform_log: str) -> bool:
             continue
         if "_atu_check_" in lowered:
             continue
-        if "platform.ap_view_passthrough.target_socket" in lowered:
+        if any(
+            f"platform.{bridge}.target_socket" in lowered
+            for bridge in (
+                "ap_system_bridge",
+                "si_cl0_system_bridge",
+                "si_cl1_system_bridge",
+            )
+        ):
             continue
         return True
     return False
@@ -425,6 +432,13 @@ def write_text(path: Path, text: str) -> None:
 
 
 def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
+    local_name = local_build_dir.name
+    machine = (
+        local_name.removeprefix("local-")
+        if local_name.startswith("local-")
+        else "apollo-qvp"
+    )
+    machine_work = machine.replace("-", "_")
     deploy = local_build_dir / "deploy"
     boot = deploy / "boot"
     firmware = deploy / "firmware"
@@ -437,14 +451,15 @@ def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
         "signed_ap_bl2": local_build_dir / "work/signing/deploy/signed_bl2.bin",
         "init_fwu_metadata": firmware / "init_fwu_metadata.bin",
         "ap_bl2_elf": (
-            local_build_dir / "work/trusted-firmware-a/apollo_fvp/debug/bl2/bl2.elf"
+            local_build_dir
+            / f"work/trusted-firmware-a/{machine_work}/debug/bl2/bl2.elf"
         ),
         "rse_bl1_2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl1_2.elf",
         "rse_bl2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl2.elf",
-        "rootfs": boot / "apollo-fvp-local-disk.img",
+        "rootfs": boot / f"{machine}-local-disk.img",
         "efi_capsule_disk": boot / "boot-fat.img",
         "provisioning_bundle": firmware / "combined_provisioning_message.bin",
-        "ap_dtb": boot / "apollo-fvp.dtb",
+        "ap_dtb": boot / f"{machine}.dtb",
         "rse_symbols": local_build_dir / "debug/symbols.json",
         "si_cl0_image": firmware / "si0_ramfw.bin",
         "si_cl1_image": firmware / "zephyr-demos-cl1.bin",
@@ -1535,7 +1550,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--local-build-dir",
         type=Path,
-        default=root / "build/local-apollo-fvp",
+        default=root / "build/local-apollo-qvp",
     )
     parser.add_argument(
         "--qbox-build-dir",
@@ -1553,7 +1568,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=root / "build/qbox-apollo-fvp" / f"full-{timestamp()}",
+        default=root / "build/qbox-apollo-qvp" / f"full-{timestamp()}",
     )
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
@@ -1603,7 +1618,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--primary-shell-marker", default=APOLLO_PRIMARY_SHELL_MARKER)
     parser.add_argument(
         "--primary-shell-prompt-re",
-        default=r"(?:root@apollo-fvp[^\n]*[#>]|\S+ #)\s*$",
+        default=r"(?:root@apollo-qvp[^\n]*[#>]|\S+ #)\s*$",
     )
     perf_group = parser.add_mutually_exclusive_group()
     perf_group.add_argument(

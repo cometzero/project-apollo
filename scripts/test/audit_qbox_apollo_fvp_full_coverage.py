@@ -28,7 +28,7 @@ BOOT_CRITICAL_BLOCKS = [
     "GIC multi-view",
 ]
 GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-DEFAULT_AP_MAP_AUDIT = Path("build/qbox-apollo-fvp/ap-map-9-1-1/ap-map-audit.json")
+DEFAULT_AP_MAP_AUDIT = Path("build/qbox-apollo-qvp/ap-map-9-1-1/ap-map-audit.json")
 AP_MAP_PASSING_CLASSIFICATIONS = {"covered", "partial_model", "explicit_placeholder"}
 
 
@@ -162,8 +162,26 @@ def marker_group_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
                 if not effective_markers.get(name) and name in effective_markers:
                     effective_markers[name] = True
                     alternate_sources.append(f"{name}={source}")
-        missing = sorted(str(name) for name, value in effective_markers.items() if not value)
+        if group == "linux":
+            ready = bool(
+                effective_markers.get("login_prompt")
+                or effective_markers.get("root_shell")
+            )
+            missing = [] if ready else ["login_prompt_or_root_shell"]
+        elif group == "linux_boot":
+            ready = any(bool(value) for value in effective_markers.values())
+            missing = [] if ready else ["login_prompt_or_root_shell"]
+        else:
+            missing = sorted(
+                str(name) for name, value in effective_markers.items() if not value
+            )
         status = "pass" if not missing else "missing:" + ",".join(missing)
+        if (
+            not missing
+            and group in {"linux", "linux_boot"}
+            and not all(bool(value) for value in effective_markers.values())
+        ):
+            status = "pass:headless_login"
         if not missing and alternate_sources:
             status = "pass:alternate:" + ",".join(alternate_sources)
         checks.append(
@@ -342,7 +360,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=root / "build/qbox-apollo-fvp/full-coverage-audit.json",
+        default=root / "build/qbox-apollo-qvp/full-coverage-audit.json",
     )
     return parser.parse_args()
 

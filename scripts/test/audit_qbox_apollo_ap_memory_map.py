@@ -197,14 +197,13 @@ WATCHED_OBJECTS: Final[set[str]] = {
     "host_ap_si_ns_scmi_mhu_pbx", "host_ap_si_ns_scmi_mhu_mbx",
     "host_ap_si_scmi_mhu_pbx", "host_ap_si_scmi_mhu_mbx", "host_ap_si_cl1_mhu_pbx",
     "host_ap_si_cl1_mhu_mbx", "host_ap_si_pfdi_monitor_mhu_pbx", "host_ap_rse_mhu_pbx",
-    "host_ap_rse_mhu_mbx", "ap_sid", "ap_secure_timer_frame", "ap_rgic2lgic_messreg",
+    "host_ap_rse_mhu_mbx", "ap_sid", "ap_rgic2lgic_messreg",
     "ap_cl0_ni710ae_fmu", "ap_cl1_ni710ae_fmu", "ap_cl2_ni710ae_fmu",
     "ap_cl3_ni710ae_fmu", "ap_fmu_region",
 }
 EXPLICIT_PLACEHOLDERS: Final[dict[str, set[str]]] = {
     "AP0_S_WDOG CONTROL": {"ap_secure_wdog"},
     "AP0_S_WDOG REFRESH": {"ap_secure_wdog_refresh"},
-    "AP0_REFCLK_S_CNTBase1": {"ap_secure_timer_frame"},
     "RGIC2LGIC_MESSREG": {"ap_rgic2lgic_messreg"},
 }
 REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
@@ -216,8 +215,8 @@ REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
     "AP0_S_WDOG REFRESH": (("ap_secure_wdog_refresh", "target_socket"),),
     "SID": (("ap_sid", "target_socket"),),
     "AP0_REFCLK_CNTCTL": (("ap_timer_mem", "mem"),),
-    "AP0_REFCLK_S_CNTBase1": (("ap_secure_timer_frame", "target_socket"),),
-    "AP0_REFCLK_NS_CNTBase0": (("ap_timer_mem", "mem_view"),),
+    "AP0_REFCLK_S_CNTBase1": (("ap_timer_mem", "mem"),),
+    "AP0_REFCLK_NS_CNTBase0": (("ap_timer_mem", "mem"),),
     "FMU Region": (
         ("ap_cl0_ni710ae_fmu", "target_socket"),
         ("ap_cl1_ni710ae_fmu", "target_socket"),
@@ -457,7 +456,7 @@ def parse_ap_compute_bindings(text: str) -> list[ApViewBinding]:
         bindings.append(ApViewBinding("ap_compute.lua", match.group(1), match.group(2), "bind_ap_socket"))
     direct_assignment = re.search(
         r"platform\.host_ap_atu\.translation_socket\.bind\s*=\s*"
-        r'"&ap_view_router\.initiator_socket"',
+        r'"&ap_router\.initiator_socket"',
         clean_text,
     )
     if direct_assignment:
@@ -466,7 +465,7 @@ def parse_ap_compute_bindings(text: str) -> list[ApViewBinding]:
                 "ap_compute.lua",
                 "host_ap_atu",
                 "translation_socket",
-                "direct_ap_view_router_bind",
+                "direct_ap_router_bind",
             )
         )
     if re.search(r"for\s+i\s*=\s*0\s*,\s*15\s+do.*?redist_iface_.*?end", clean_text, re.S):
