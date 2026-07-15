@@ -1,6 +1,6 @@
 # Arm Auto Solutions Analysis
 
-Updated: 2026-06-18
+Updated: 2026-07-15
 
 This directory contains Codex-facing analysis notes for the current
 `/build/arm/arm-auto-solutions` workspace. The workspace is now a top-level Git
@@ -30,6 +30,14 @@ separate.
   Korean subsystem-by-subsystem comparison of the Arm Zena CSS FVP memory map
   and Apollo QVP Lua, SystemC, and QEMU implementation modules, including
   explicit partial-model, placeholder, and missing-IP gaps.
+- [Apollo QVP Machine Architecture KR](apollo-qvp-machine-architecture-ko.md) -
+  Korean architecture comparison of current Apollo QVP and Arm Zena CSS/FVP,
+  covering address views, buses, memory, hardware blocks, routing gaps, and
+  the target domain-separated virtual-platform structure.
+- [Apollo QVP Machine Improvement Plan KR](apollo-qvp-machine-improvement-plan-ko.md) -
+  Korean phased implementation plan for declarative topology, AP/SMD/RSE/SI
+  router separation, ATU/APU policy, memory and signal routing, and FVP/QVP
+  differential validation gates.
 - [Apollo QBox Full Model Promotion](apollo-qbox-full-model/index.md) -
   Korean PRD/spec/design/task/verification document set for promoting
   safety, security, reset, power, access-control, and interrupt placeholders
