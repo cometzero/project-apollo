@@ -6,12 +6,13 @@ Initialized: 2026-05-20
 
 Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox using
 SystemC/TLM/QEMU with a target of near-FVP functional equivalence for the active
-`apollo-fvp` configuration. The project should model hardware behavior as
+`apollo-qvp` configuration, using FVP as the explicit reference. The project
+should model hardware behavior as
 closely as practical instead of accumulating compatibility-only stubs.
 
-The current workspace baseline is `MACHINE = "apollo-fvp"`,
-`RD_ASPEN_VARIANT = "cfg2"`, baremetal architecture, demos enabled, and
-`PC_CPUS_COUNT_DEFAULT = "16"` as recorded in `.config.yaml`.
+The current workspace baseline is `MACHINE = "apollo-qvp"`,
+`RD_ASPEN_VARIANT = "cfg2"`, baremetal architecture, `nexios-image`, and
+`PC_CPUS_COUNT_DEFAULT = "4"` as recorded in `build/conf/local.conf`.
 
 ## Non-Goals
 
@@ -62,6 +63,28 @@ Use these labels for each block:
 model, upstream SystemC model, or local SystemC/TLM model based on the TRM.
 
 ## Current Implemented Surface
+
+The Apollo full-system machine now loads a declarative Lua contract for
+topology, address ranges, transactions, signals, boot/control ownership, and
+software ABI before constructing the platform. The root fabric is named
+`system_router`; AP, RSE, SI CL0, and the FVP CFG2 SI CL1 extension have
+separate runtime address-view routers. AP/SI HIPC and CL0-to-CL1 SCMI use
+explicit bridges. A repository validator exports nine JSON evidence files and
+checks view widths, overlap/backing rules, references, and routes. Full-system
+AP CPU default is four, matching active Yocto configuration.
+
+This is an A2/A3 migration state, not completed isolation. AP and both SI
+routers retain low-priority broad system bridges for boot compatibility, and
+the SMD router is contract-only. A4 must replace those bridges with RSE-owned
+ATU/APU allow-list windows and enforce reset default-deny. Requester/StreamID,
+debug/DMI policy, negative access, and complete ABI error paths remain open.
+
+The QBox `addrtr` component also fixes descending DMI address translation and
+has a regression for source `0x1000` mapped to downstream `0x100`. Local-source
+and Yocto `nexios-image` full-system runs both pass through RSE, live SI
+CL0/CL1, TF-A, OP-TEE, U-Boot, and Linux login. See
+`doc/apollo-qvp-machine-implementation-validation-2026-07-15.md` for exact
+commands and evidence paths.
 
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
@@ -289,15 +312,18 @@ For each IP:
 Use these before claiming progress:
 
 ```bash
-python3 -m py_compile scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/test/validate_qbox_fvp_rd_aspen_map.py scripts/test/audit_qbox_fvp_rd_aspen_coverage.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/test/validate_qbox_apollo_topology.py
 git -C hsoc-stack/tools/qbox-platform diff --check
 git -C hsoc-stack/tools/qbox diff --check
-QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-fvp/work/qbox-platform}"
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
+python3 scripts/test/validate_qbox_apollo_topology.py
+python3 scripts/test/audit_qbox_core_boundary.py
+QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-qvp/work/qbox-platform}"
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target <target> --parallel 8
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target platforms-vp --parallel 8
-./scripts/test/validate_qbox_fvp_rd_aspen_map.py
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py --skip-build --timeout 240 --out-dir build/qbox-fvp-rd-aspen/<run-id> --post-login-probe
-./scripts/test/audit_qbox_fvp_rd_aspen_coverage.py --runtime-result build/qbox-fvp-rd-aspen/<run-id>/result.json --runtime-log build/qbox-fvp-rd-aspen/<run-id>/qbox-fvp-rd-aspen.log --output build/qbox-fvp-rd-aspen/coverage-audit-<run-id>.json
+./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
+python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
+python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-qvp/<run-id>/result.json --output build/qbox-apollo-qvp/<run-id>/full-coverage-audit.json
 ```
 
 For Arm FVP comparison, use non-interactive, file-backed FVP logging rather
@@ -315,13 +341,16 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
-1. Convert remaining compatibility stubs into tracked fidelity debt with owner,
+1. Instantiate the SMD router and replace the three A3 broad compatibility
+   bridges with RSE-owned ATU/APU allow-list windows and reset default-deny.
+2. Carry CPU and GPEX requester/domain/StreamID through QEMU/TLM, SMMU, and APU;
+   add denied-access and guest-fault evidence for regular/debug/DMI paths.
+3. Convert remaining compatibility stubs into tracked fidelity debt with owner,
    missing behavior, and replacement path.
-2. Add an IP evidence ledger for MHUv3, RAS FFH, DSU PMU, PFDI, and Safety
+4. Extend signal and ABI coverage to IRQ/reset/power/fault injection and
+   SCMI/PFDI/HIPC/FF-A malformed, denied, peer-offline, and timeout paths.
+5. Add an IP evidence ledger for MHUv3, RAS FFH, DSU PMU, PFDI, and Safety
    Island CL1.
-3. Extend coverage beyond Linux-visible primary-compute nodes to RSE, Safety
-   Island, safety diagnostics, and firmware-observable side effects.
-4. Add automated FVP-vs-QBox log comparison for boot banners, memory maps,
-   interrupt maps, device probes, remoteproc/RPMsg, and failed services.
-5. Add component-level SystemC/TLM tests for any newly modeled IP before
-   relying on full platform boot.
+6. Add automated same-artifact FVP-vs-QBox comparison for boot, maps, access
+   policy, interrupt routes, device probes, remoteproc/RPMsg, and failed
+   services.

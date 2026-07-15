@@ -2,9 +2,11 @@
 
 작성일: 2026-07-15
 
-상태: 설계 기준안
+상태: QBox / system hardware / system software / QEMU 및 Arm Zena CSS
+하드웨어 블록 다이어그램 리뷰 반영, A0/A1 기반과 A2/A3 전환 구현·검증 완료
 
-대상: `apollo-qvp` / RD-Aspen CFG2
+대상: active `apollo-qvp` / RD-Aspen CFG2 / current Zena CSS architecture와
+FVP CFG2 extension
 
 연계 계획: [Apollo QVP Machine Architecture 개선 계획](apollo-qvp-machine-improvement-plan-ko.md)
 
@@ -20,6 +22,8 @@ CFG2의 문서상 하드웨어 아키텍처와 Arm FVP `FVP_Zena_CSS_Cfg2`가 �
 - interconnect, bus, ATU/APU와 주소 routing
 - SRAM, DRAM, flash와 공유 메모리 view
 - interrupt, reset, clock, power 및 안전 신호 routing
+- QBox/SystemC TLM transaction, QEMU lifecycle와 memory ownership
+- firmware, DT와 OS가 공유하는 boot/control 및 software ABI
 
 이 문서의 결론은 단순히 누락된 레지스터 블록을 나열하는 데 있지 않다.
 현재 부팅 중심의 평탄한 QBox machine을 Zena CSS의 도메인 경계와 접근 정책이
@@ -28,28 +32,41 @@ CFG2의 문서상 하드웨어 아키텍처와 Arm FVP `FVP_Zena_CSS_Cfg2`가 �
 ## 2. 결론 요약
 
 현재 QVP는 RSE, SI CL0/CL1, AP를 한 프로세스에서 함께 실행하고 주요 firmware
-handoff를 재현할 수 있는 기능적 기반을 갖추었다. 특히 AP CPU/GIC, RSE 로컬
-주소 공간, MHU, ATU, Safety Island GIC view, FMU/SSU, REFCLK timer와 주요
-메모리 backing은 단순 register-only skeleton보다 진전된 상태다.
+handoff를 재현한다. 이번 전환에서 기존 root `host_router`는 52-bit
+`system_router`로 명확히 이름을 바꾸고 AP, SI CL0, SI CL1에 각각 52/40/40-bit
+로컬 router를 추가했다. RSE의 기존 32-bit router와 함께 initiator별 address
+view가 실제 runtime binding에 반영됐으며, active AP CPU 기본값도 Yocto와 같은
+4로 정렬했다.
 
-그러나 machine의 중심 interconnect는 아직 Zena CSS 구조와 다르다.
+단일 Lua source로 topology, address, transaction, signal, boot/control 및
+software ABI contract를 선언하고 정렬된 JSON evidence를 생성한다. validator는
+address width와 overlap, backing, cross-domain reference, route, signal 및 boot/ABI
+참조를 검사한다. AP↔SI HIPC와 SI CL0→SI CL1 SCMI는 명시적 bridge로 분리됐고,
+QBox `addrtr`의 낮은 주소로 내려가는 DMI 역변환 결함도 component regression과
+함께 수정했다. local source image와 Yocto `nexios-image` 양쪽에서 4-core AP,
+RSE, live SI CL0/CL1, TF-A, OP-TEE, U-Boot, Linux login까지 통과했다.
 
-1. `host_router` 하나가 52-bit 시스템 주소 공간, AP 로컬 주소, SI 로컬 주소를
-   함께 수용한다.
-2. AP와 SI의 겹치는 로컬 주소는 별도 address view가 아니라 decode priority와
-   alias로 구분한다.
-3. AP view router는 독립된 AP bus의 기본 구조가 아니라 live CL0 통합 시점에
-   사후 삽입된다.
-4. SMD의 NI-710AE APU가 규정하는 default-deny 접근 정책과 RSE 소유권이
-   routing 구조 자체로 강제되지 않는다.
-5. 메모리 크기와 CPU topology 일부가 active Yocto/FVP 설정과 독립적으로
-   Lua 기본값에 고정되어 있다.
+다만 이는 목표 architecture 전체 완료가 아니라 A2/A3 전환 상태다.
+
+1. AP/SI local router에는 A4 APU/ATU 정책 구현 전 boot 호환성을 위한 낮은
+   우선순위의 broad 1:1 `system_router` bridge가 남아 있다.
+2. `smd_router`는 contract에는 존재하지만 runtime hierarchy에는 아직 생성되지
+   않으며 SMD target은 `system_router`에 남아 있다.
+3. SMD NI-710AE APU의 reset default-deny와 RSE programming ownership은 아직
+   transaction routing 자체로 강제되지 않는다.
+4. QEMU→TLM 경계는 secure/debug 속성과 오류 변환을 제공하지만, CPU 외 GPEX
+   DMA의 domain/requester/StreamID가 SMMU/APU까지 전달되는 계약은 선언 수준이다.
+5. `transport_dbg`, direct/reentrant access와 DMI의 trusted bypass 정책 및
+   negative access 시험은 아직 G1/G2 acceptance로 닫히지 않았다.
+6. SCMI/PSCI/PFDI/HIPC/FF-A/RAS contract는 정적으로 표현됐지만 전체 success,
+   deny, malformed, timeout side effect 시험은 후속 단계다.
 
 따라서 최우선 개선은 주변장치를 더 추가하는 것이 아니라 address view를
 `AP`, `SMD/system`, `RSE`, `SI CL0`, `SI CL1`로 분리하고, 도메인 사이를
-명시적인 ATU/APU bridge로만 연결하는 것이다. QBox core의 기존 `router`와
-`addrtr`로 이를 구현할 수 있으므로, Apollo 전용 동작은 계속
-`qbox-platform` 소유로 유지한다.
+명시적인 ATU/APU bridge로만 연결하는 것이다. 여기에 transaction, signal,
+boot/control, software ABI와 artifact provenance contract를 같은 설계의 일부로
+둔다. QBox core의 기존 `router`, `addrtr`, QEMU MemTx bridge를 우선 재사용하고,
+Apollo 전용 map과 policy는 계속 `qbox-platform` 소유로 유지한다.
 
 ## 3. 분석 기준과 판정 원칙
 
@@ -57,7 +74,7 @@ handoff를 재현할 수 있는 기능적 기반을 갖추었다. 특히 AP CPU/
 
 | 저장소 | revision |
 | --- | --- |
-| 최상위 `arm-auto-solutions` | `8ed21e4fdf2b` |
+| 최상위 `arm-auto-solutions` | `a049040e56b7` |
 | `hsoc-stack/tools/qbox-platform` | `2bcd02c4e192` |
 | `hsoc-stack/tools/qbox` | `5b44f50ff3d8` |
 | `hsoc-stack/tools/qemu` | `ca30c1782ea0` |
@@ -80,17 +97,20 @@ revision이 바뀌면 주소, module type, 기본값과 fidelity 판정도 다�
 | `PC_CPUS_COUNT_DEFAULT` | `4` |
 | FVP 역할 | architecture/FVP 비교 및 source-level debug 기준 |
 
-현재 QBox Lua의 AP CPU 기본값은 16이므로 build 설정과 source 기본값이 다르다.
-실행 도구가 이를 명시적으로 resolve하고 증거에 기록해야 한다.
+full-system QBox Lua와 runner의 AP CPU 기본값은 active Yocto 설정과 같은 4다.
+직접 부팅 전용 `apollo-pc.lua`는 16-core 실험 기본값을 유지하므로 full-system
+evidence와 혼동하지 않고 resolved CPU 수를 `result.json`에 기록한다.
 
 ### 3.3 기준 자료의 우선순위
 
-1. `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md`
-2. `arm-zena-css/documentation/design/components.rst`
-3. `doc/arm_zena_css_dev_guide/05-functional-blocks-in-zena-css.md`
-4. `doc/arm_zena_css_dev_guide/08-fixed-virtual-platform.md`
-5. `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/` 아래 FVP 설정
-6. 현재 `qbox-platform/platforms/apollo/` Lua와 QBox/SystemC/QEMU 소스
+1. `doc/arm_zena_css_dev_guide/02-block-diagram-for-zena-css.md`
+2. `doc/arm_zena_css_dev_guide/06-boot-flow-of-zena-css.md`
+3. `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md`
+4. `arm-zena-css/documentation/design/components.rst`와 safety/software design 문서
+5. `doc/arm_zena_css_dev_guide/05-functional-blocks-in-zena-css.md`
+6. `doc/arm_zena_css_dev_guide/08-fixed-virtual-platform.md`
+7. `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/` 아래 FVP 설정
+8. 현재 `qbox-platform/platforms/apollo/` Lua와 QBox/SystemC/QEMU 소스
 
 문서상 architecture contract와 FVP 구현은 동일한 개념이 아니다. FVP도
 CoreSight 등 일부 실제 하드웨어를 생략하는 functional model이다. 따라서 본
@@ -115,20 +135,26 @@ placeholder다.
 
 ### 4.1 시스템 도메인
 
-RD-Aspen CFG2의 주요 도메인은 다음과 같다.
+RD-Aspen CFG2 reference platform의 주요 도메인은 다음과 같다. 단, current
+Zena CSS architecture와 FVP-only 확장을 같은 범위로 취급하지 않는다.
 
-| 도메인 | 주요 구성 | 기준 동작 |
-| --- | --- | --- |
-| AP / Primary Compute | 4 cluster × 4 Cortex-A720AE, DSU-120AE, GIC-720AE, MMU-720AE, CMN/NI | Linux와 rich OS 실행, coherent memory와 I/O 접근 |
-| SMD | shared SRAM, system PPU, reset/clock/power control, ATU, MHU, system counter, expansion | 도메인 연결과 공용 자원 제공 |
-| RSE | Cortex-M55, secure boot, DMA/crypto/KMU/LCM/SAM, ATU/APU 정책 | Root of Trust, 모든 ATU 설정 소유 |
-| SI CL0 | dual lock-step 성격의 Cortex-R82AE safety cluster | bootstrap, safety control, CL1 관리 |
-| SI CL1 | 4-way SMP Cortex-R82AE cluster | Zephyr와 safety workload 실행 |
+| 도메인 | 주요 구성 | 기준 동작 | scope |
+| --- | --- | --- | --- |
+| AP / Primary Compute | 4 cluster × 4 Cortex-A720AE, DSU-120AE, GIC-720AE, MMU-720AE, CMN/NI | Linux와 rich OS 실행, coherent memory와 I/O 접근 | Zena CSS architecture |
+| SMD | shared SRAM, system PPU, reset/clock/power control, ATU, MHU, system counter, expansion | 도메인 연결과 공용 자원 제공 | Zena CSS architecture |
+| RSE | Cortex-M55, secure boot, DMA/crypto/KMU/LCM/SAM, ATU/APU 정책 | Root of Trust, 모든 ATU 설정 소유 | Zena CSS architecture |
+| SI CL0 | dual lock-step 성격의 Cortex-R82AE safety cluster | bootstrap, safety control, runtime safety service | Zena CSS architecture |
+| SI CL1 | 4-way SMP Cortex-R82AE cluster | Zephyr와 safety workload 실행 | `FVP_Zena_CSS_Cfg2` extension; current Zena CSS configuration에는 없음 |
 
 Safety Island GIC는 bootstrap/configuration용 view 0, CL0 OS용 view 1, CL1
 OS용 view 2를 제공한다. 이는 단순히 같은 GIC MMIO를 여러 주소에 alias하는
 문제가 아니라 각 initiator가 보아야 하는 제어 면과 interrupt 소유권의
 문제다.
+
+`FVP_Zena_CSS_Cfg2`의 두 번째 Safety Island cluster는 추가 real-time processing을
+위한 reference-platform 확장이다. 따라서 QVP full-system 호환에는 CL1이
+필요하지만, architecture manifest에서는 `fvp_cfg2_extension` scope로 표시하고
+current Zena CSS hardware 필수 블록으로 판정하지 않는다.
 
 ### 4.2 계층적 주소 공간
 
@@ -167,35 +193,97 @@ SMD는 별도의 52-bit map 안에 `0x2_0000_6000_0000` shared SRAM,
 `0x2_0000_d000_0000` CSS control, Reset Generation Manager, ATU, REFCLK,
 SYSTOP/DBGTOP power integration, UART/GPIO/SID와 FMU 구간을 가진다.
 
+### 4.4 하드웨어 블록 연결 구조
+
+Zena CSS high-level 및 RD-Aspen System Management Block 그림은 AP, RSE,
+Safety Island와 Debug/System Control이 하나의 평면 bus에 연결된 구조가 아님을
+보여준다.
+
+| 계층 | 하드웨어 경계 | QVP에서 보존할 contract |
+| --- | --- | --- |
+| AP compute | processor cluster/DSU, GIC-720AE, CMN coherent mesh | CPU-local timer PPI, coherent DRAM visibility, GIC/ITS와 AP physical view |
+| AP I/O | PCIe/GPEX, I/O TBU/TCU, ITS와 NI | DMA requester/StreamID, SMMU translation/fault, MSI→ITS→LPI route |
+| system fabric | CMN/NI와 52-bit domain region decode | address width, initiator domain, security, translation과 error response |
+| SMD | SMD NCI, shared SRAM, system PPU/peripheral, RGM | 공용 backing, reset/clock/power owner와 AP/SI/RSE bridge |
+| RSE | RSE local interconnect/NCI, ATU, secure memory/peripheral | Root of Trust view, image/APU/ATU authority와 default-deny policy |
+| Safety Island | SI NCI, CL0, GIC multiple view, ATU, MHU, local SRAM | 40-bit local view, CL0 safety owner, FVP CFG2 CL1 extension 분리 |
+| sideband | Debug, System Control expansion, FMU/SSU/ESM | trusted debug capability와 별도 reset/fault signal graph |
+
+QVP가 CMN/CHI packet이나 NCI arbitration을 cycle-accurate하게 모델링할 필요는
+없다. 그러나 각 경계에서 주소 폭, initiator identity, security, translation,
+interrupt 및 fault ownership이 사라져서는 안 된다.
+
+### 4.5 Boot 및 control ownership
+
+Arm boot sequence는 RSE가 모든 system management를 단독 수행하는 구조가 아니라
+RSE와 SI CL0가 책임을 나누는 구조다.
+
+| 단계/owner | 필수 동작 | 실패 시 contract |
+| --- | --- | --- |
+| RSE BL2 | SI CL0 image 인증·적재, SI reset release, AP BL2와 RSE runtime 적재, NI-710AE APU 설정 | 인증/설정 실패 시 다음 domain을 release하지 않음 |
+| RSE-owned firmware | 모든 ATU configuration과 lock 관리 | owner가 아닌 write는 실패하고 설정값을 read-back 가능해야 함 |
+| SI CL0 | Primary Compute self-test, CMN/GIC/peripheral 설정 | 완료 전 AP CPU가 실행되지 않음 |
+| SI CL0 safety verification | RSE ATU access와 SCR expected value 검증 | mismatch 시 boot를 halt하고 AP reset을 유지함 |
+| SI CL0 final handoff | primary AP reset release와 runtime safety service 시작 | release 원인과 순서를 trace에 남김 |
+| TF-A/Linux/SCP | PSCI와 SCMI를 통한 secondary CPU, system power/reset, performance control | timeout/error가 caller까지 전달되고 무한 대기하지 않음 |
+
+RGM은 RSE, Safety Island, Primary Compute가 공유하는 block이므로 reset은 단순
+CPU input wire가 아니다. cold/warm, CPU/cluster/domain, watchdog 및 safety
+escalation별로 보존·초기화되는 memory, IRQ와 device state를 별도 정의해야 한다.
+
+### 4.6 System software가 관찰하는 하드웨어 계약
+
+주소와 IRQ가 같아도 producer와 consumer가 공유하는 ABI가 다르면 FVP 호환으로
+판정할 수 없다.
+
+| 계약 | producer / consumer | architecture 요구사항 |
+| --- | --- | --- |
+| Device Tree | TF-A가 생성·FIP에 포함, U-Boot/Linux가 소비 | CPU/memory/GIC/SMMU/MHU/shared-memory가 동일 artifact와 일치하고 SystemReady DT 요구를 검사 |
+| SCMI/PSCI | RSE, SCP-firmware, TF-A/Linux | boot confirmation, AP primary/secondary power, system power/reset와 notification channel의 ID·owner·error 정의 |
+| PFDI | AP/SI CL1 agent ↔ SI CL0 monitor | agent별 전용 MHU/shared memory, per-CPU watchdog, vendor protocol `0x90`, FDTI와 timeout 정의 |
+| HIPC/RPMsg | AP Linux ↔ SI CL1 Zephyr | MHUv3와 512 KiB 단일 SRAM backing; resource table 128 KiB, vring 2개 각 128 KiB, buffer 128 KiB |
+| remoteproc | AP Linux ↔ independently booted SI CL1 | AP가 CL1을 부팅하지 않으며 초기 상태는 `RPROC_DETACHED` |
+| FF-A | TF-A/OP-TEE/Linux endpoints | endpoint, shared-memory descriptor, interrupt와 denied/invalid response 정의 |
+| RAS | AP TF-A/Linux FFH, SI firmware | AP corrected/deferred software notification SPI 89와 SI uncorrected ERI 경로를 분리 |
+
+이 계약은 register coverage가 아니라 message, shared-memory layout, state
+transition, interrupt/reset side effect와 error termination으로 검증한다.
+
 ## 5. 현재 Apollo QVP machine 구조
 
 ### 5.1 조립 흐름
 
-`platforms/apollo/apollo-qvp.lua`는 `fabric.create()`로 root container와
-`host_router`를 만든 뒤 RoS, system management, RSE, AP, SI 블록을 순서대로
-정의한다. live CL0 모드에서 `prepare_live_cl0_integration()`을 호출한 뒤 CL0를
-활성화하며, live CL1은 다시 같은 root 구조에 추가된다.
+`platforms/apollo/apollo-qvp.lua`는 먼저 `machine_contract.lua`로 여섯 contract를
+적재·검증한 뒤 `fabric.create()`에서 `system_router`를 생성한다. AP router는
+SI mode와 무관하게 구성되고, live SI CL0/CL1을 사용할 때 각각의 local router와
+bridge가 추가된다. 조립 도중 기존 target의 우선순위를 일괄 낮추던
+`prepare_live_cl0_integration()` 경로는 제거됐다.
 
 ```text
-                         +------------------------------+
- AP CPUs / GPEX / DMA -->| ap_view_router               |
-   (live CL0일 때 삽입)   |  + AP passthrough            |
-                         +---------------+--------------+
-                                         |
-                                  host_ap_atu / 1:1
-                                         |
- RSE CPU --> rse_router --> RSE ATU ------+
- SI CL0 CPU/DMA --------------------------+--> host_router --> 모든 target
- SI CL1 CPU/DMA --------------------------+       ^
- loaders/debug initiators ------------------------+
+ AP CPUs / GPEX / loaders --> ap_router --+--> AP local targets
+                                          +--> AP HIPC alias
+                                          +--[A3 broad 1:1]--> system_router
 
- 중첩 주소 해소: target priority 변경 + alias
+ RSE CPU --> rse_router --> RSE ATU -----------------------> system_router
+
+ SI CL0 CPU/loaders --> si_cl0_router --+--> CL0 local targets
+                                        +--> AP HIPC bridge
+                                        +--> SI CL1 SCMI bridge
+                                        +--[A3 broad 1:1]--> system_router
+
+ SI CL1 CPUs/loaders --> si_cl1_router --+--> CL1 local targets
+                                         +--> AP HIPC bridge
+                                         +--[A3 broad 1:1]--> system_router
+
+ SMD targets ------------------------------------------------> system_router
+                 (smd_router는 A4 runtime 전환 전 contract-only)
 ```
 
-RSE만 `rse_router`를 통해 명확한 local map을 갖는다. AP는 live CL0 통합 시
-`ap_view_router`가 뒤늦게 삽입되며, SI CL0/CL1은 별도 local router 없이
-`host_router`에 직접 연결된다. `si_cl1.lua`도 이를 "temporary merged bus"로
-명시한다.
+각 broad bridge는 local target보다 낮은 decode 우선순위 100을 사용하며 contract의
+`compatibility_debt`에 이름이 고정돼 있다. 따라서 겹치는 AP/SI 로컬 주소는 각
+local router에서 먼저 decode되고, 아직 별도 window로 옮기지 못한 system-wide
+접근만 root로 전달된다. 최종 목표는 A4에서 이 broad 경로를 RSE가 관리하는
+명시적 ATU/APU window로 대체하는 것이다.
 
 ### 5.2 현재 구성의 장점
 
@@ -205,7 +293,7 @@ RSE만 `rse_router`를 통해 명확한 local map을 갖는다. AP는 live CL0 �
 - AP는 QEMU Cortex-A720AE CPU, GICv3/ITS, PCIe, VirtIO, PL031, UART를 사용한다.
 - SI CL0은 Cortex-R82, GIC, `gicx00_multiview`, `zena_ssu`, `zena_fmu`,
   `host_gtimer`, CMN/NI discovery 모델을 결합한다.
-- SI CL1은 4-core SMP, GIC, UART, MHU, SRAM/SCMI 경로를 제공한다.
+- FVP CFG2 SI CL1은 4-core SMP, GIC, UART, MHU, SRAM/SCMI 경로를 제공한다.
 - AP MMIO generic timer는 125 MHz REFCLK와 secure SPI 48, non-secure SPI 49를
   사용하고, CPU generic timer PPI는 CPU 내부 경로에 남겨 둔다.
 
@@ -213,34 +301,38 @@ RSE만 `rse_router`를 통해 명확한 local map을 갖는다. AP는 live CL0 �
 
 | 영역 | 현재 QVP | 판정 및 개선점 |
 | --- | --- | --- |
-| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core | 최대 topology는 맞지만 Lua 기본 16과 active Yocto 기본 4가 불일치 |
-| AP GIC/ITS | QEMU `arm_gicv3`, ITS, RGIC message model | 기능 기반 양호, GIC-720AE safety/fault/multiview 의미는 부분적 |
-| AP MMU-720AE | `mmu720ae` 또는 SMMUv3 fallback | boot/I/O functional subset, TBU/RAS/safety 동작은 별도 추적 필요 |
+| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core, full-system 기본 4 | active Yocto 기본 4와 정렬됨; 16-core correctness/performance는 별도 G6 항목 |
+| AP GIC/ITS | QEMU `arm_gicv3`, ITS, LPI/DirectLPI, RGIC message model | 기능 기반 양호, MSI→ITS→LPI와 GIC-720AE safety/fault 의미의 end-to-end 증거는 부족 |
+| AP MMU-720AE | 기본 `systemc-mmu720ae`, 선택 `qemu-arm-smmuv3` | boot/I/O functional subset, 두 backend의 requester/StreamID·fault 동등성 기준 필요 |
+| AP PCIe/GPEX DMA | GPEX bus master와 legacy SPI 300–303 | AP view에 bind되지만 payload customization이 비어 있어 requester/StreamID가 SMMU/APU까지 보존되지 않음 |
 | CMN/NI-710AE | `host_cmn_cyprus`, `host_ni710ae_nci` | discovery/register 호환 모델이며 CHI coherency·실제 NoC arbitration 모델은 아님 |
 | AP timer/UART/RoS | MMIO timer, PL011, VirtIO, PL031 | 주요 software contract 제공 |
 | AP secure watchdog | `gs_memory` control/refresh | 주소만 유지하는 placeholder, timeout/reset/IRQ 효과 필요 |
-| SMD | PPU/SCR, ATU, MHU, shared SRAM, system counters | 주요 boot service 존재, RGM/APU/default-deny 및 power/reset graph가 불완전 |
+| SMD | PPU/SCR, ATU, MHU, shared SRAM, system counters | 주요 boot service와 contract 존재; `smd_router`, RGM/APU/default-deny 및 power/reset graph runtime 구현은 A4/A6 |
 | RSE | M55 wrapper, TCM/VM/flash, DMA350, crypto/KMU/LCM/SAM, protection, ATU, MHU | 폭넓은 기능 모델 보유 |
 | RSE OTP/control/integration | 일부 `gs_memory` | OTP, identity, power/security control과 DCLS 의미 보강 필요 |
-| SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view | boot/safety path는 기능적, local bus 분리와 DCLS/fault propagation 보강 필요 |
-| SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM | 기능 path 존재, 독립 local address view가 없음 |
+| SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view, 40-bit local router | local view와 boot/safety path는 기능적; broad system bridge 제거와 DCLS/fault propagation 보강 필요 |
+| SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM, 40-bit local router | FVP CFG2 extension scope와 local view가 명시됨; broad system bridge는 A4 전환 부채 |
+| QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, CPU hint와 MemTx/TLM 오류 변환 | secure/debug와 decode error 기반은 존재하나 domain/requester/StreamID 및 debug policy가 불완전 |
+| QEMU CPU lifecycle | managed reset, BQL/DMI reset, async job tracking, MTTCG quantum/WFI wake | 기능 기반은 존재하나 Apollo reset/power/fault graph와 연계한 acceptance가 부족 |
 | RoS | VirtIO block/net/rng, PL031 | system register, p9, VSI, RoS UART 항목은 부재 또는 범위 밖 |
 
 ### 5.4 Memory map 차이
 
 | 항목 | Zena CSS/FVP 기준 | 현재 QVP | 의미 |
 | --- | --- | --- | --- |
-| system fabric | 상위 nibble로 AP/SMD/RSE/SI 분리 | 하나의 `host_router`에 system/local map 혼재 | 가장 큰 구조 차이 |
+| system fabric | 상위 nibble로 AP/SMD/RSE/SI 분리 | `system_router`와 AP/RSE/SI local router 분리, SMD는 아직 root에 있고 broad 호환 bridge 3개 존재 | A2/A3 전환 완료, A4 policy/window 전환 필요 |
 | AP shared SRAM | 128 MiB aperture | `0x0000_0000`의 1 MiB backing과 별도 boot용 SRAM | boot에는 충분할 수 있으나 aperture와 보호 의미가 축소됨 |
 | AP low DRAM | 2 GiB aperture | `0x8000_0000`, `0x7f00_0000` + SPMC/통신 buffer 분할 | 배치 의도는 있으나 선언적 bank 검증이 없음 |
 | AP high DRAM | single/multichip 규칙에 따라 배치 | `0x200_0000_0000`, 2 GiB | 현재 DT/deploy 산출물과의 자동 일치 확인 필요 |
 | RSE local map | 독립 32-bit 공간 | 독립 `rse_router` | 목표 구조에 가장 가까움 |
-| SI local map | 독립 40-bit 공간과 ATU | root router에 직접 등록 | 같은 숫자 주소의 AP target과 충돌 가능 |
-| SMD | 독립 52-bit system management map | root target들의 집합 | 영역·APU·소유권이 명시적 hierarchy가 아님 |
+| SI local map | 독립 40-bit 공간과 ATU | CL0/CL1 각각 40-bit router, HIPC/SCMI explicit bridge와 system 호환 bridge | local 충돌은 분리됐으나 ATU/APU allow-list는 미완성 |
+| SMD | 독립 52-bit system management map | contract에는 52-bit view/router가 있고 runtime target은 root에 유지 | 영역·APU·소유권의 runtime hierarchy는 A4 |
 
-현재 map validator가 많은 주소 상수와 binding 존재를 확인하지만, 이는 접근
-주체별 view와 negative access, 보안 속성, 실제 side effect가 동일함을 뜻하지
-않는다.
+full-map validator와 topology validator가 주소 상수, 실제 binding, view width,
+overlap, backing 및 route reference를 확인한다. 이는 접근 주체별 negative access,
+보안 속성 또는 실제 side effect까지 동일함을 뜻하지 않으며 해당 항목은 G1/G2
+후속 시험 대상이다.
 
 ### 5.5 Bus 및 routing 차이
 
@@ -256,12 +348,58 @@ width, 보안 속성, access control, error response와 관리 소유권을 규�
 - unmapped 접근의 `DECERR`, reserved register의 RAZ/WI 구분
 - bridge별 DMI 허용 범위와 invalidate 전파
 
+현재 QBox–QEMU 경계가 완전히 비어 있는 것은 아니다.
+
+- `QemuInitiatorSocket::qemu_io_access()`는 QEMU `MemTxAttrs`를
+  `QemuMemTxAttrsTlmExtension`으로 붙이고 TLM response를 `MemTxOK`,
+  `MemTxDecodeError`, `MemTxError`로 되돌린다.
+- 현재 wrapper `MemTxAttrs`가 노출하는 필드는 `secure`와 `debug`뿐이다. CPU는
+  CPU hint를 추가하지만 domain/requester/StreamID를 표현하지 않는다.
+- router의 `b_transport`는 initiator ID를 stamp하고 unmapped access에
+  `TLM_ADDRESS_ERROR_RESPONSE`를 반환한다. 반면 `transport_dbg`는 같은
+  initiator stamping path 없이 decode/forward한다.
+- `addrtr`는 동일 payload를 주소 변환해 전달하고 DMI range를 역변환하며
+  invalidate를 전달한다. 그러나 이것만으로 APU deny 또는 trusted debug policy가
+  보장되지는 않는다.
+- GPEX `initiator_customize_tlm_payload()`는 비어 있어 PCIe/DMA request가 CPU와
+  같은 수준의 identity 정보를 전달하지 못한다.
+
+따라서 새 오류 adapter를 중복 구현할 필요는 없다. 기존 MemTx/TLM 변환과
+extension 수명을 검증하고, 누락된 domain/requester/StreamID 및 access kind만
+재사용 가능한 최소 request-context로 보강해야 한다.
+
 낮은 숫자가 높은 decode priority인 QBox router 규칙은 한 address view 안의
 의도적인 subwindow overlay에는 적합하다. 그러나 다른 도메인의 동일 숫자
 주소를 구분하는 수단으로 사용하면 platform 조립 순서에 따라 잘못된 target이
 선택될 수 있다.
 
-### 5.6 Interrupt, reset, clock, power routing 차이
+### 5.6 QEMU instance, memory ownership 및 lifecycle 차이
+
+Apollo full-system은 AP, RSE, SI에 서로 다른 QEMU/SystemC 실행 경계를 사용한다.
+각 instance의 architecture, CPU model, TCG mode, sync policy, RAM/AddressSpace
+owner를 한 manifest에서 확인할 수 있어야 하지만 현재는 Lua, CCI, runner와
+wrapper에 분산되어 있다.
+
+- AP와 FVP CFG2 SI CL1은 multi-thread TCG를 사용하고, CL1은
+  `multithread-quantum`으로 SystemC보다 최대 한 global quantum 앞서 실행한다.
+- managed CPU는 reset 중 quantum keeper를 중지하고 release 후 WFI 동안 유지해
+  QEMU deadline timer가 CPU를 깨울 수 있게 한다.
+- QEMU CPU wrapper에는 `start_reset → hold_reset → finish_reset` state,
+  SystemC-thread reset callback, BQL 구간의 DMI flush, async job tracking과 QEMU
+  kick이 이미 존재한다.
+- exclusive와 reentrant QEMU I/O는 direct, debug request는 debug, 나머지는
+  regular TLM access로 갈라진다. 이 경로들이 일반 functional policy를
+  우회하는지 명시돼 있지 않다.
+- QEMU `MemoryRegion`/`AddressSpace`, QBox `gs_memory`와 file-backed IPC 중 어느
+  객체가 각 RAM의 canonical backing owner인지 생성된 evidence에서 바로 알 수
+  없다.
+
+목표 구조는 이 lifecycle을 새로 복제하지 않고 Apollo reset/power graph와
+연결한다. reset, BQL, async completion, quantum/WFI 및 DMI invalidation의 순서를
+architecture acceptance로 승격하고, 하나의 backing은 정확히 한 component가
+소유하도록 한다.
+
+### 5.7 Interrupt, reset, clock, power routing 차이
 
 현재 interrupt는 QEMU GIC/NVIC와 Lua signal binding으로 기능한다. FMU critical
 및 non-critical 경로, MHU receiver IRQ, AP timer SPI와 CPU PPI도 상당 부분
@@ -277,17 +415,40 @@ reset/power는 MHU service와 `host_ppu` 신호를 통해 boot에 필요한 효�
 제공하지만, RGM부터 power domain, CPU reset, clock enable로 이어지는 독립된
 signal topology로 표현되지 않는다.
 
+AP GIC는 ITS, LPI와 GICv4.1 DirectLPI 기능을 노출하고 GPEX legacy interrupt는
+SPI 300–303에 연결된다. 그러나 PCIe MSI→ITS→LPI, SMMU event/fault, AP RAS
+software notification SPI 89와 SI ERI까지를 하나의 source-to-vCPU route로
+검증하는 manifest는 없다. FMU도 register/IRQ 존재보다 threshold,
+critical/non-critical output, SCP serialization queue, SSU FSM과 ESM status의
+event 순서가 핵심이다.
+
+### 5.8 Evidence root 명명 차이
+
+프로젝트 contract, full-system runner, coverage audit와 신규 QVP evidence의
+표준 root는 `build/qbox-apollo-qvp/`로 이전됐다. topology bundle, local source
+runtime과 Yocto image runtime도 이 경로 아래 서로 다른 run directory를 사용한다.
+직접 부팅용 legacy runner의 `build/qbox-apollo-fvp/` 기본값은 아직 호환 부채로
+남아 있으므로 full-system/FVP reference와 혼동하지 않게 실제 path, command와
+revision을 result에 보존한다.
+
 ## 6. 구조적 위험과 우선순위
 
 | 우선순위 | 구조적 gap | 실패 양상 |
 | --- | --- | --- |
-| P0 | AP/SMD/RSE/SI address view가 분리되지 않음 | 잘못된 target 선택, 불가능해야 할 cross-domain 접근 허용 |
-| P0 | decode priority가 도메인 구분을 대신함 | 새 MMIO 추가 시 기존 boot path가 순서 의존적으로 회귀 |
+| P0→P1 | AP/RSE/SI local view는 분리됐으나 SMD runtime view와 broad bridge가 남음 | A4 전까지 허용 범위가 과도해 불가능해야 할 cross-domain 접근 허용 가능 |
+| 완화 | 조립 중 priority mutation 대신 local router와 고정 bridge priority 사용 | local address 충돌은 해소됐지만 broad bridge 제거 전 negative policy는 미완성 |
 | P0 | ATU/APU 정책과 initiator identity가 routing에 강제되지 않음 | 보안/안전 negative test가 거짓 통과 |
-| P1 | CPU/DRAM topology가 build artifact와 자동 동기화되지 않음 | DT와 machine 간 CPU/메모리 불일치 |
+| P0 | debug/direct/DMI access의 trusted policy가 없음 | functional access가 차단돼도 우회 경로로 side effect 발생 |
+| P0 | RSE 설정, SI 검증과 AP release ownership이 topology와 분리됨 | 잘못된 순서 또는 검증 실패에도 AP가 실행됨 |
+| P1 | full-system CPU 기본 4는 정렬됐으나 CPU/DRAM artifact 자동 동기화는 부분적 | DT와 machine 간 CPU/메모리 불일치 가능 |
+| P1 | GPEX requester/StreamID와 SMMU/ITS route가 불완전 | DMA가 policy를 우회하거나 fault/MSI가 잘못된 vCPU로 전달됨 |
 | P1 | IRQ/reset/power route manifest 부재 | 연결 누락과 잘못된 ID를 정적 검증하기 어려움 |
 | P1 | shared backing과 address view 구분이 불명확 | 동일 메모리 복제, DMI alias incoherency 가능 |
+| P1 | QEMU RAM owner와 reset/BQL/async/quantum contract 부재 | double mapping, deadlock, orphan job, WFI/timer 정지 가능 |
+| P1 | firmware/DT/OS software ABI가 별도 검증되지 않음 | SCMI/PFDI/HIPC/FF-A가 boot 후 timeout 또는 silent corruption |
+| 완화 | full-system QVP evidence root를 `qbox-apollo-qvp`로 이전 | direct-boot legacy 경로는 별도 정리 필요 |
 | P2 | 일부 control/fault 블록이 placeholder | 정상 boot는 통과해도 fault/reset 검증 불가 |
+| P2 | FVP CFG2 CL1 scope가 hardware contract와 섞임 | reference 확장을 current silicon 필수 기능으로 오판 |
 | P3 | CHI/NoC timing·contention 미모델링 | 성능·타이밍 분석에는 사용할 수 없음 |
 
 ## 7. 목표 QBox machine architecture
@@ -295,30 +456,33 @@ signal topology로 표현되지 않는다.
 ### 7.1 목표 topology
 
 ```text
- AP CPU / AP DMA / PCIe
-          |
-     +----v-----+       AP->SMD ATU/APU
-     | ap_router|--------------+
-     +----+-----+              |
-          | region 0 bridge    |
-          v                    v
- +--------+--------------------+-------------------------------+
- | system_router (52-bit, system physical address only)        |
- | region 0: AP    region 1: AP/TCU    region 2: SMD           |
- | region 3: RSE   region 4: SI        others: DECERR          |
- +---+----------------+-------------------+---------------------+
-     |                |                   |
- +---v------+    +----v-----+       +-----v----------------+
- |smd_router|    |rse bridge|       | SI system bridge/APU |
- +---+------+    +----+-----+       +-----+----------------+
-     |                |                   |
- SMD devices      +---v------+      +-----v------+  +----------+
- shared SRAM      |rse_router|      |si_cl0_router| |si_cl1_router|
- RGM/PPU/ATU      +----------+      +------------+ +------------+
+ AP CPU(QEMU) ------ QEMU/TLM bridge --------+
+ PCIe/GPEX DMA -- requester/StreamID -- SMMU +--> ap_router
+ loader/debug ------- trusted capability ----+      |
+                                                    +--> AP local targets
+                                                    |
+                                              AP->SMD ATU/APU
+                                                    |
+ +--------------------------------------------------v-----------+
+ | system_router (52-bit system physical address only)          |
+ | region 0: AP   region 1: AP/TCU   region 2: SMD              |
+ | region 3: RSE  region 4: SI       others: DECERR             |
+ +-----------+----------------+------------------+---------------+
+             |                |                  |
+       +-----v----+      +----v-----+      +-----v-------------+
+       |smd_router|      |rse bridge|      |SI system bridge/APU|
+       +-----+----+      +----+-----+      +-----+-------------+
+             |                |                  |
+       SMD NCI/devices   +----v-----+      +-----v------+ +----------+
+       SRAM/RGM/PPU      |rse_router|      |si_cl0_router| |si_cl1_router|
+                         +----------+      +------------+ +----------+
+                                                          FVP CFG2 scope
 
- 별도 signal fabric:
-   IRQ source -> domain GIC/NVIC view
-   RGM/PPU/FMU/SSU -> reset, clock, power, safety escalation
+ 병렬 contract:
+   signal: IRQ/MSI/LPI/fault -> GIC/NVIC/SSU/RGM/reset sink
+   control: RSE configure -> SI verify/init -> AP release
+   software: DT/SCMI/PSCI/PFDI/HIPC/FF-A/RAS producer <-> consumer
+   evidence: source revision + artifact hash + CCI/backend + route/result
 ```
 
 ### 7.2 핵심 설계 원칙
@@ -331,52 +495,107 @@ signal topology로 표현되지 않는다.
    주소를 한 table에 넣지 않는다.
 4. **priority의 제한적 사용**: 같은 view 안의 명시적 subwindow에만 허용하고,
    모든 overlap은 manifest에 이유와 소유자를 기록한다.
-5. **RSE 소유권 강제**: boot reset 상태에서 cross-domain access는 RSE만
-   허용하며, ATU/APU programming 후에만 다른 initiator를 연다.
+5. **boot ownership 강제**: reset 상태의 configuration authority는 RSE에 두고,
+   RSE의 APU/ATU 설정과 SI CL0의 ATU/SCR read-back 및 CMN/GIC/peripheral
+   초기화가 끝난 뒤에만 AP를 release한다.
 6. **backing과 view 분리**: 하나의 SRAM/DRAM/flash backing을 여러 address view가
    공유하며, alias별 복제 메모리를 만들지 않는다.
 7. **오류 응답 보존**: unmapped는 `DECERR`, reserved register는 요구에 따라
-   RAZ/WI 또는 `SLVERR`로 구분한다.
+   RAZ/WI 또는 `SLVERR`로 구분하고 TLM response, QEMU `MemTxResult`와 guest
+   syndrome까지 대응시킨다.
 8. **설정 단일화**: CPU 수, memory bank와 enabled device는 active build
    manifest 또는 명시적 runner option에서 한 번 결정하고 result에 남긴다.
 9. **QBox core 경계 보존**: 범용 router/translation 기능만 QBox core에 두고,
    Zena CSS map/policy는 `qbox-platform`에 둔다.
 10. **부팅과 fidelity를 분리 판정**: Linux/Zephyr boot 성공만으로 접근 제어,
     fault, reset 또는 safety parity를 완료로 판정하지 않는다.
+11. **기존 QEMU/TLM bridge 우선**: `QemuMemTxAttrsTlmExtension`, router initiator
+    stamping과 MemTx/TLM error 변환을 재사용하고 중복 adapter를 만들지 않는다.
+12. **request context 보존**: secure/debug, domain, initiator/requester, StreamID,
+    privilege와 access kind를 CPU/DMA부터 target과 fault sink까지 전달한다.
+13. **trusted access 명시**: loader/debug/direct/reentrant access는 일반 functional
+    access와 구분하고 capability가 없는 `transport_dbg` policy bypass를 금지한다.
+14. **QEMU/SystemC owner 단일화**: QEMU `MemoryRegion`/`AddressSpace`, `gs_memory`,
+    file-backed memory 중 하나만 canonical backing을 소유한다.
+15. **lifecycle을 architecture로 취급**: qdev/CPU reset, BQL, async completion,
+    DMI flush, MTTCG quantum와 WFI wake ordering을 signal/reset contract에 포함한다.
+16. **software ABI 동등성**: DT, SCMI/PSCI/MHU/PFDI/HIPC/FF-A/RAS의 producer와
+    consumer 값, state transition 및 error termination을 검증한다.
+17. **scope와 provenance 명시**: current Zena CSS, RD-Aspen variant, FVP-only
+    extension과 QVP abstraction을 구분하고 모든 결과에 source/artifact hash를
+    연결한다.
 
-### 7.3 선언적 topology contract
+### 7.3 선언적 machine contract 집합
 
-Lua 블록이 전역 table을 조립 순서대로 직접 변경하는 방식 대신 다음 정보를
-하나의 machine-readable contract로 만든다.
+Lua 블록이 전역 table을 조립 순서대로 변경하거나 사람이 Lua와 JSON 사본을
+각각 유지하지 않는다. 하나의 source model에서 runtime binding과 정렬된 JSON을
+생성하거나, 기존 Lua를 source로 유지할 경우 동일 Lua를 읽는 extractor로 다음
+resolved contract를 만든다.
+
+| contract | 핵심 내용 | 대표 evidence |
+| --- | --- | --- |
+| topology/address | domain/view, local/system range, target/backing, bridge, width, overlap | `topology.json`, `address-routes.json` |
+| transaction | initiator, secure/debug/domain, requester/StreamID, access kind, SMMU/APU와 response | `transaction-routes.json` |
+| signal | PPI/SPI/MSI/LPI, reset, clock, power, FMU/SSU/RAS source/sink | `irq-routes.json`, `reset-routes.json` |
+| boot/control | RSE/SI/AP owner, configure/verify/lock/release 순서 | `boot-routes.json` |
+| software ABI | DT와 firmware 상수, SCMI/PSCI/PFDI/HIPC/FF-A/RAS endpoint와 shared memory | `software-routes.json` |
+| artifact/runtime | source revision, artifact hash, QEMU backend/CPU/TCG, CCI, memory owner와 command | `artifacts.json`, `result.json` |
+
+모든 block/range/route는 최소한 다음 공통 metadata를 가진다.
 
 | 필드 | 내용 |
 | --- | --- |
+| `scope` | current Zena CSS, RD-Aspen variant, FVP-only extension, QVP abstraction |
 | `domain` / `view` | AP, SMD, RSE, SI_CL0, SI_CL1, SYSTEM |
-| `initiators` | CPU, DMA, PCIe, loader, debug 등 허용 출발점 |
-| `local_base`, `size` | initiator가 보는 주소 |
-| `system_base` | system-wide 주소, 로컬 전용이면 없음 |
-| `target` / `backing` | 실제 SystemC/QEMU target과 저장공간 |
-| `bridge` | 통과해야 하는 ATU/TCU/alias 경로 |
-| `access` | secure/non-secure, read/write, APU policy |
-| `owner` | reset 시 정책과 runtime programming 소유자 |
-| `irq`, `reset`, `clock`, `power` | 관련 signal route ID |
-| `dmi` | 허용 여부, translated range와 invalidate 정책 |
-| `fidelity` | 기능 모델, 호환 모델, backing, placeholder, 미구현 |
-| `source` | Zena CSS 문서 table/section 또는 FVP 설정 근거 |
+| `initiator` / `owner` | CPU, DMA, PCIe, loader/debug 및 boot/runtime programming owner |
+| `local_base`, `system_base`, `size`, `width` | initiator view와 system-wide address constraint |
+| `target` / `backing` | 실제 SystemC/QEMU target과 유일한 canonical memory owner |
+| `bridge` / `access` | ATU/TCU/SMMU/APU, secure/privilege/read/write/debug policy |
+| `requester` / `stream_id` | DMA/IOMMU 및 fault attribution identity |
+| `response` | RAZ/WI, `DECERR`, `SLVERR`, TLM status, `MemTxResult`, guest syndrome |
+| `irq`, `reset`, `clock`, `power`, `fault` | signal route와 reset-state policy |
+| `dmi` / `debug` | DMI grant/clip/invalidate 및 trusted access capability |
+| `fidelity` / `source` | 구현 등급과 Zena CSS 문서/FVP/source 근거 |
 
-machine 조립은 `구성 해석 → instance 생성 → route binding → overlap/policy 검증
-→ topology freeze` 순서로 고정한다. 조립이 끝난 뒤 다른 블록이 기존 target의
-priority를 변경하지 못하게 한다.
+machine 조립은 `구성 해석 → instance 생성 → route binding → socket/signal
+cardinality와 policy 검증 → topology freeze` 순서로 고정한다. SystemC elaboration
+종료 시 unbound/multiply-bound socket을 실패시키고, 조립 뒤 다른 block이 기존
+target priority나 stable CCI path를 변경하지 못하게 한다.
 
-### 7.4 도메인별 목표
+### 7.4 QBox–QEMU transaction boundary
+
+QEMU CPU/device access는 기존 `QemuInitiatorSocket`과
+`QemuMemTxAttrsTlmExtension`을 통해 TLM으로 변환한다. 목표 boundary는 다음과
+같다.
+
+1. CPU hint, secure/debug와 새 request context의 lifetime을 payload 전송 동안
+   보존하고 completion 후 안전하게 정리한다.
+2. router와 `addrtr`는 `b_transport`, `transport_dbg`, DMI에서 extension과
+   original address를 보존한다. functional/debug policy 차이는 명시적
+   capability로만 발생한다.
+3. byte enable, streaming width, unaligned/exclusive access와 endian semantics를
+   bridge가 조용히 축소하지 않는다.
+4. `TLM_OK_RESPONSE`, `TLM_ADDRESS_ERROR_RESPONSE`와 기타 error를 기존
+   `MemTxOK`, `MemTxDecodeError`, `MemTxError` 및 guest abort로 일관되게 전달한다.
+5. GPEX/DMA는 requester/StreamID를 붙여 SMMU translation과 APU policy를 통과하고
+   fault/interrupt trace에도 같은 identity가 남는다.
+6. direct/reentrant/debug path는 side effect와 blocking 제한을 문서화하고 일반
+   CPU/DMA가 접근 제어 우회 수단으로 사용할 수 없게 한다.
+
+### 7.5 도메인별 목표
 
 #### AP
 
 - `ap_router`를 AP CPU 유무와 무관한 AP physical view의 정식 root로 만든다.
 - CPU, GIC, SMMU, PCIe, DRAM, flash, AP peripheral과 RoS를 AP view에 등록한다.
+- GPEX DMA는 requester/StreamID를 갖고 normative SMMU backend를 통과하며,
+  alternate backend는 compatibility matrix로 검증한다.
+- GPEX legacy SPI 300–303과 MSI→ITS→LPI route를 별도로 검증한다.
 - AP→SMD `0x4000_0000` window는 ATU가 열린 범위만 전달한다.
 - `ap_view_passthrough`의 broad 1:1 mapping을 제거한다.
 - CPU 수 4/16과 memory bank를 deploy DTB/manifest와 대조한다.
+- CPU 내부 generic timer PPI와 AP REFCLK 125 MHz MMIO frame의 secure SPI 48,
+  non-secure SPI 49 소유권을 중복 없이 유지한다.
 
 #### SMD / system fabric
 
@@ -385,11 +604,14 @@ priority를 변경하지 못하게 한다.
   소유한다.
 - NI-710AE APU의 initiator별 default-deny와 RSE override를 기능 모델로 둔다.
 - SMD의 shared SRAM은 하나의 backing을 AP/RSE/SI view로 노출한다.
+- SMD NCI와 SI/RSE system bridge를 manifest hierarchy에 남기고 한 router로
+  flatten하지 않는다.
 
 #### RSE
 
 - 기존 `rse_router`를 유지하고 system bridge의 width와 access policy를 명시한다.
-- 모든 ATU/APU programming authority를 RSE reset state와 연결한다.
+- RSE BL2의 image 인증·적재와 NI-710AE APU 설정, RSE-owned firmware의 모든
+  ATU configuration을 서로 구분해 reset state와 연결한다.
 - OTP, identity, integration, power/security control의 placeholder를 firmware가
   관찰하는 순서대로 기능 모델로 승격한다.
 
@@ -399,42 +621,106 @@ priority를 변경하지 못하게 한다.
 - SI system bridge는 40-bit 범위와 ATU window만 허용한다.
 - GIC view 0/1/2의 register visibility와 interrupt owner를 명시적으로 검증한다.
 - FMU→SSU→GIC/reset escalation, CL0 DCLS와 CL1 SMP 차이를 signal graph에 담는다.
+- SI CL0가 ATU/SCR을 read-back하고 CMN/GIC/peripheral 초기화 후 AP reset을
+  release하는 control state를 모델링한다.
+- FVP CFG2 CL1의 AP↔SI HIPC SRAM은 512 KiB 단일 backing과 고정
+  resource-table/vring/buffer layout을 가지며 Linux는 CL1을
+  `RPROC_DETACHED`로 관찰한다.
+- CL1 block과 route는 `fvp_cfg2_extension` scope로 표시하고 architecture-only
+  configuration에서도 validator가 동작하게 한다.
 - `temporary merged bus`와 이를 위한 `lower_decode_priority()` 호출을 제거한다.
 
-### 7.5 Memory와 DMI 원칙
+### 7.6 Memory, DMA/IOMMU와 DMI 원칙
 
 - architectural aperture와 실제 allocated backing 크기를 별도 필드로 기록한다.
-- 같은 shared SRAM을 view별 `gs_memory`로 복제하지 않는다.
+- QEMU `MemoryRegion`/`AddressSpace`, `gs_memory`, file-backed memory 중 canonical
+  owner를 하나만 지정하고 같은 shared SRAM을 view별로 복제하지 않는다.
+- CPU/DMA가 같은 DRAM/SRAM write를 관찰하는 순서와 barrier semantics를 1차
+  functional coherency contract로 정의한다.
+- GPEX requester/StreamID, IOVA translation/permission과 SMMU fault attribution을
+  같은 transaction ID로 연결한다.
+- `systemc-mmu720ae` 또는 `qemu-arm-smmuv3` 중 normative backend를 지정하고
+  alternate backend의 호환 범위를 manifest에 기록한다.
 - ATU/alias를 통과한 DMI는 반환 범위를 local window로 clip하고 주소를 역변환한다.
-- backing write 또는 remap 시 모든 관련 alias에 DMI invalidation을 전파한다.
+- backing write, APU/ATU reprogram, reset 또는 remap 시 모든 관련 alias에 DMI
+  invalidation을 전파하고 deny 영역에는 DMI를 발급하지 않는다.
+- `b_transport`와 DMI의 data/side effect는 같아야 하며 `transport_dbg` 차이는
+  명시된 debug semantics로만 허용한다.
 - DRAM controller timing/ECC를 구현하지 않은 경우에도 이를 `backing`과 구분해
   fidelity ledger에 남긴다.
 - single-chip과 multichip DRAM map은 하나의 고정 상수가 아니라 topology
   configuration에서 선택한다.
 
-### 7.6 IRQ 및 sideband topology 원칙
+### 7.7 IRQ, lifecycle 및 safety topology 원칙
 
 주소 map과 별도로 다음 route manifest를 생성한다.
 
 - `source → sink controller → interrupt ID → security/group → owner`
 - AP generic timer PPI와 AP REFCLK SPI를 별도 계층으로 유지
+- GPEX INTx SPI 300–303, MSI→ITS→LPI와 SMMU event/fault route
 - MHU sender/receiver와 receiver IRQ의 peer 관계
 - SI GIC view별 visible frame과 CL0/CL1 interrupt 소유권
-- FMU critical/non-critical output, SSU input과 escalation output
-- RGM/PPU의 reset request, reset output, clock/power dependency
+- AP corrected/deferred RAS의 TF-A/Linux FFH SPI 89와 SI uncorrected ERI 경로
+- FMU input/threshold, critical/non-critical output, SCP queue, SSU FSM/ESM과
+  escalation output
+- RGM/PPU의 reset request/output, clock/power dependency와 cold/warm/CPU/cluster/
+  domain/watchdog/fault reset state
+- QEMU CPU reset state, BQL/DMI flush, async completion, quantum/WFI wake와
+  simulated-time ordering
 
 정적 검증은 중복 ID, dangling source/sink, 잘못된 controller view와 reset 후
-초기 상태를 검사한다.
+초기 상태를 검사한다. Runtime trace는 transaction/event ID, source/sink,
+simulated timestamp와 wall timestamp를 bounded form으로 기록한다.
+
+### 7.8 System software contract
+
+hardware contract는 firmware와 OS repository의 상수를 수동으로 복제하지 않고
+producer와 consumer를 함께 검사한다.
+
+- TF-M, SCP-firmware, TF-A, OP-TEE, U-Boot, Linux, Zephyr와 deploy DTB의 주소,
+  IRQ, endpoint/channel 및 shared-memory layout을 resolved contract와 대조한다.
+- RSE↔SCP boot confirmation/AP primary power, TF-A↔SCP secondary CPU/system
+  power/reset, SCP→RSE notification을 SCMI owner와 channel별로 구분한다.
+- Linux cpuidle/cpufreq→TF-A PSCI→SCP SCMI→PPU/clock/power의 request, ack,
+  timeout과 error 전파를 유지한다.
+- PFDI의 agent별 MHU/shared memory, watchdog와 FDTI, HIPC의 MHUv3/vring/RPMsg,
+  FF-A endpoint/descriptor 및 RAS FFH/ERI를 success와 failure 양쪽에서 시험한다.
+- secure boot image provenance, 인증/measurement와 AP/SI release condition을
+  artifact hash 및 event log에 연결한다.
+- DT는 TF-A가 FIP에 포함한 동일 artifact를 U-Boot/Linux가 소비해야 하며 주요
+  driver probe와 SystemReady DT v3.1/ACS 결과를 보존한다.
+
+malformed descriptor, duplicate notification, peer-offline, timeout, power/reset
+중 request도 architecture test vector다. 실패는 guest/firmware가 관찰 가능한
+error로 종료되어야 하며 무한 대기로 남아서는 안 된다.
+
+### 7.9 관측성, 성능 및 evidence architecture
+
+신규 QVP evidence의 표준 root는 `build/qbox-apollo-qvp/`로 한다.
+
+| evidence | 필수 내용 |
+| --- | --- |
+| topology bundle | address/transaction/IRQ/reset/boot/software route와 source scope |
+| artifact manifest | source/submodule revision, firmware/DTB/kernel/rootfs SHA-256와 provenance |
+| runtime manifest | QEMU instance/backend/CPU/TCG/quantum, CCI, memory owner, command와 environment |
+| bounded trace | router hit/miss/deny/error, DMI grant/invalidate, boot/control 및 fault event |
+| performance | 4/16 CPU, DMI on/off와 SMMU backend별 simulated time, wall time, RSS, transaction 수 |
+| differential | 동일 hash artifact의 FVP/QVP milestone, policy, ABI, fault와 scope-aware verdict |
+
+full-system runner/README/audit 기본값은 `build/qbox-apollo-qvp/`로 이전했다.
+기존 결과를 rename해 현재 증거처럼 만들지 않으며, 모든 bundle은 실제 root,
+schema version, 생성 command와 timestamp를 기록한다.
 
 ## 8. 목표 fidelity와 비목표
 
 ### 8.1 1차 목표
 
 - software-visible memory map 및 domain별 address view 일치
-- ATU/APU access 허용·차단과 오류 응답
-- interrupt, reset, power, MHU와 safety fault의 관찰 가능한 side effect
-- FVP와 같은 firmware/OS boot handoff 및 driver probe
-- 재현 가능한 topology/route/result JSON 증거
+- CPU/GPEX DMA의 transaction identity, SMMU/ATU/APU 허용·차단과 guest 오류 응답
+- interrupt/MSI/LPI, reset, power, MHU, RAS와 safety fault의 관찰 가능한 side effect
+- RSE configure→SI verify/init→AP release ownership과 QEMU lifecycle ordering
+- FVP와 같은 firmware/OS boot handoff, software ABI와 driver probe
+- artifact provenance, topology/route/result와 performance JSON 증거
 
 ### 8.2 명시적 비목표
 
@@ -442,55 +728,157 @@ priority를 변경하지 못하게 한다.
 - 실제 DRAM PHY, analog PLL 또는 PMIC의 전기적 동작
 - FVP 자체가 모델링하지 않는 모든 CoreSight/trace block
 - silicon 성능 수치의 예측
+- ISO 26262 safety certification 또는 실제 fault coverage 수치의 대체
 
 이 비목표는 주소를 broad memory로 채워도 된다는 뜻이 아니다. software가
 접근하는 register와 fault/interrupt effect는 별도의 fidelity 상태로 관리한다.
 
 ## 9. Architecture 완료 조건
 
-다음 조건을 모두 만족해야 목표 machine architecture 전환이 완료된 것으로
-판정한다.
+다음 G0–G7을 모두 만족해야 목표 machine architecture 전환이 완료된 것으로
+판정한다. 각 gate의 실행 순서와 세부 task는 연계 plan을 따른다.
 
-- AP, SMD, RSE, SI CL0, SI CL1 initiator가 독립 address view를 가진다.
-- 도메인 간 접근은 manifest에 등록된 ATU/APU bridge로만 성공한다.
-- 문서화되지 않은 overlap과 broad pass-through가 정적 검사에서 실패한다.
-- reset 직후 RSE 외 cross-domain 접근이 차단되고, programming 후 선택적으로
-  허용되는 negative/positive test가 있다.
-- CPU 수와 DRAM bank가 active build artifact와 일치하며 result JSON에 기록된다.
-- IRQ/reset/power route에 dangling 또는 중복 binding이 없다.
-- full-system QBox boot와 FVP boot를 동일한 관찰 항목으로 비교한다.
-- placeholder와 미구현 블록이 이름, 주소, 영향, 대체 계획과 함께 ledger에 남는다.
+| Gate | Architecture 완료 조건 |
+| --- | --- |
+| G0 contract/static | single-source contract가 address/transaction/signal/boot/software/artifact JSON을 생성하고 overlap, scope, socket/signal, ABI drift와 core boundary 검사가 통과 |
+| G1 QBox/TLM | payload extension과 response mapping, `b_transport`/`transport_dbg`/DMI policy, stable CCI 및 bounded trace가 단위 검증됨 |
+| G2 domain/boot | AP/SMD/RSE/SI view가 분리되고 reset default-deny, RSE APU/ATU 설정, SI read-back/init와 AP release 순서가 positive/negative test로 증명됨 |
+| G3 memory/DMA/IOMMU/QEMU | canonical backing owner, DMI invalidation, GPEX requester/StreamID, SMMU translation/fault와 guest syndrome이 일치 |
+| G4 signal/lifecycle/safety | PPI/SPI/MSI/LPI, qdev reset/BQL/async/quantum, power, FMU/SSU/RAS 상태 전이와 reset-state 검증이 통과 |
+| G5 system software/ABI | DT, SCMI/PSCI/MHU/PFDI/HIPC/FF-A/RAS의 producer-consumer 및 success/error path가 일치 |
+| G6 QBox full-system/performance | RSE, SI, AP boot, 4/16 CPU correctness, coverage audit와 정의된 performance budget이 통과 |
+| G7 FVP differential | 동일 hash artifact로 FVP/QVP를 비교하고 architecture와 CFG2 extension scope를 분리한 gap ledger가 남음 |
+
+추가로 다음 조건은 gate 결과와 무관하게 필수다.
+
+- broad AP passthrough, `temporary merged bus`와 도메인 충돌 해소용 runtime
+  priority 변경이 소스에 남아 있지 않다.
+- placeholder와 미구현 블록이 이름, 주소, software 영향, scope와 대체 계획을
+  fidelity ledger에 가진다.
+- 신규 QVP evidence는 `build/qbox-apollo-qvp/`에 있고 기존
+  `build/qbox-apollo-fvp/` 결과와 provenance로 구분된다.
+- source revision, command, artifact hash, resolved CCI/backend, logs와 verdict가
+  하나의 evidence bundle에 연결된다.
 
 ## 10. 근거 파일
 
-### Arm Zena CSS / FVP
+### 10.1 Arm Zena CSS block/boot/software architecture
 
-- `arm-zena-css/documentation/design/components.rst:96-160,196-210,363-397`
-- `doc/arm_zena_css_dev_guide/05-functional-blocks-in-zena-css.md`
-- `doc/arm_zena_css_dev_guide/08-fixed-virtual-platform.md`
-- `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:75-154`
-- `doc/arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md:247-335`
-- `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf:22-23`
-- `arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/include/fvp/fvp.inc:49`
+| 근거 | 이 문서에서 사용한 항목 |
+| --- | --- |
+| [`02-block-diagram-for-zena-css.md`](arm_zena_css_dev_guide/02-block-diagram-for-zena-css.md), [`figure-2-1`](arm_zena_css_dev_guide/assets/figure-2-1-zena-css-high-level-block-diagram.png) | AP/RSE/SI/Debug와 CMN/NCI/NI 및 외부 memory/I/O 경계 |
+| [`aspen_high_level_arch.png`](../arm-zena-css/documentation/images/aspen_high_level_arch.png), [`aspen_system_management_block.png`](../arm-zena-css/documentation/images/aspen_system_management_block.png), [`aspen_compute_complex.png`](../arm-zena-css/documentation/images/aspen_compute_complex.png) | SMD/SI NCI, GIC/ATU, I/O TCU/TBU/ITS 및 계층형 fabric |
+| [`components.rst`](../arm-zena-css/documentation/design/components.rst), [`09-programmers-model-for-zena-css.md`](arm_zena_css_dev_guide/09-programmers-model-for-zena-css.md) | system-wide map, domain address width, RSE ATU ownership과 register contract |
+| [`06-boot-flow-of-zena-css.md`](arm_zena_css_dev_guide/06-boot-flow-of-zena-css.md), [`rse_oriented_boot_flow.png`](../arm-zena-css/documentation/images/rse_oriented_boot_flow.png), [`safety_boot.rst`](../arm-zena-css/documentation/design/safety_boot.rst), [`boot_process.rst`](../arm-zena-css/documentation/design/boot_process.rst) | RSE image/APU/ATU, SI verify/init와 AP reset release ownership |
+| [`scmi_comm_rse_tfa_scp.png`](../arm-zena-css/documentation/images/scmi_comm_rse_tfa_scp.png), [`power_and_performance_control.rst`](../arm-zena-css/documentation/design/power_and_performance_control.rst) | SCMI/PSCI power/reset/performance control 경로 |
+| [`si_gic_multiple_view.png`](../arm-zena-css/documentation/images/si_gic_multiple_view.png), [`pc_domain_reset.png`](../arm-zena-css/documentation/images/pc_domain_reset.png) | SI GIC view와 AP reset state graph |
+| [`fmu.rst`](../arm-zena-css/documentation/design/fmu.rst), [`ssu.rst`](../arm-zena-css/documentation/design/ssu.rst), [`ras.rst`](../arm-zena-css/documentation/design/ras.rst), [`fmu_ssu_integration.png`](../arm-zena-css/documentation/images/fmu_ssu_integration.png) | FMU threshold/queue, SSU FSM/ESM, AP FFH SPI 89와 SI ERI |
+| [`platform_fault_detection_interface.rst`](../arm-zena-css/documentation/design/platform_fault_detection_interface.rst), [`platform_fault_detection_interface.png`](../arm-zena-css/documentation/images/platform_fault_detection_interface.png) | PFDI MHU/shared memory, watchdog, SCMI `0x90`와 FDTI |
+| [`hipc.rst`](../arm-zena-css/documentation/design/hipc.rst), [`systemready_devicetree.rst`](../arm-zena-css/documentation/design/systemready_devicetree.rst) | HIPC 512 KiB ABI, detached remoteproc와 DT/SystemReady 계약 |
+| [`08-fixed-virtual-platform.md`](arm_zena_css_dev_guide/08-fixed-virtual-platform.md) | FVP CFG2 SI CL1 extension scope |
 
-### 활성 build 설정
+FVP 구성 근거는
+[`fvp-rd-aspen.conf`](../arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/fvp-rd-aspen.conf)와
+[`fvp.inc`](../arm-zena-css/yocto/meta-zena-css-bsp/conf/machine/include/fvp/fvp.inc)을
+함께 사용한다.
 
-- `build/conf/local.conf`
-- `build/conf/bblayers.conf`
-- `build/conf/templateconf.cfg`
+### 10.2 활성 build 설정
 
-### 현재 QVP
+- [`build/conf/local.conf`](../build/conf/local.conf)
+- [`build/conf/bblayers.conf`](../build/conf/bblayers.conf)
+- [`build/conf/templateconf.cfg`](../build/conf/templateconf.cfg)
 
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua:42-56`
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/fabric.lua:3-19`
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua:555-655`
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua:506-521`
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua:96-107`
-- `hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua:423-460`
-- `hsoc-stack/tools/qbox/systemc-components/router/`
-- `hsoc-stack/tools/qbox/systemc-components/addrtr/`
+### 10.3 현재 QVP platform
+
+- [`apollo-qvp.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua)
+- [`fabric.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/fabric.lua)
+- [`ap_compute.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua)
+- [`system_mgmt.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua)
+- [`si_cl0.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua)와
+  [`si_cl1.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua)
+- [`config.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua)
+- [`machine_contract.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/machine_contract.lua),
+  [`topology.lua`](../hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/topology.lua)와
+  address/transaction/signal/boot/software contract
+- [Apollo platform README](../hsoc-stack/tools/qbox-platform/platforms/apollo/README.md)
+- [`run_qbox_apollo_fvp_full.py`](../scripts/run/run_qbox_apollo_fvp_full.py)와
+  [`audit_qbox_apollo_fvp_full_coverage.py`](../scripts/test/audit_qbox_apollo_fvp_full_coverage.py)
+- [`validate_qbox_apollo_topology.py`](../scripts/test/validate_qbox_apollo_topology.py)
+
+### 10.4 QBox/SystemC/QEMU boundary
+
+- QBox [`router.h`](../hsoc-stack/tools/qbox/systemc-components/router/include/router.h)와
+  [`addrtr.h`](../hsoc-stack/tools/qbox/systemc-components/addrtr/include/addrtr.h)
+- [`qemu-memtx-attrs.h`](../hsoc-stack/tools/qbox/qemu-components/common/include/tlm-extensions/qemu-memtx-attrs.h)
+- QEMU initiator [`initiator.h`](../hsoc-stack/tools/qbox/qemu-components/common/include/ports/initiator.h)와
+  [`libqemu-cxx.h`](../hsoc-stack/tools/qbox/qemu-components/common/include/libqemu-cxx/libqemu-cxx.h)
+- CPU [`cpu.h`](../hsoc-stack/tools/qbox/qemu-components/common/include/cpu.h)와
+  QEMU instance [`qemu-instance.h`](../hsoc-stack/tools/qbox/qemu-components/common/include/qemu-instance.h)
+- GPEX [`qemu_gpex.h`](../hsoc-stack/tools/qbox/qemu-components/pci/qemu_gpex/include/qemu_gpex.h)
 
 기존 [Apollo FVP-QVP Hardware Comparison KR](apollo-fvp-qvp-hardware-comparison-ko.md)와
 [Apollo QBox Hardware KR](apollo-qbox-hardware-ko.md)은 subsystem별 상세 목록을
 제공한다. 다만 현재 source revision과 다른 설명이 있을 수 있으므로 구현 상태는
 위 revision의 Lua/SystemC/QEMU 소스를 최종 기준으로 삼는다.
+
+## 11. Improvement plan 정합 및 검증 상태
+
+Architecture 문서는 목표 구조와 불변 contract를 정의하고, 연계 plan은 이를
+구현하는 순서, task와 gate를 정의한다.
+
+### 11.1 A0–A8 traceability
+
+| plan phase | architecture 근거 |
+| --- | --- |
+| A0 기준선 | 3장 revision/build 기준, 5.8 evidence root, 7.9 artifact/runtime provenance |
+| A1 contract/QBox-TLM | 7.3 contract 집합, 7.4 transaction boundary와 elaboration/topology freeze |
+| A2 AP view | 7.1 AP/QEMU/GPEX 경로와 7.5 AP 목표 |
+| A3 SI view | 4.1 CFG2 scope, 7.5 Safety Island local view/HIPC/GIC 목표 |
+| A4 system/SMD/APU/ATU | 4.4 fabric, 4.5 boot ownership, 7.5 SMD/RSE/SI 목표 |
+| A5 memory/DMA/IOMMU/QEMU | 5.6 current lifecycle gap과 7.6 owner/SMMU/DMI 원칙 |
+| A6 IRQ/reset/timing/safety | 5.7 current route gap과 7.7 signal/lifecycle/safety topology |
+| A7 model/software ABI | 4.6 software-visible contract, 7.8 protocol/error contract와 8장 fidelity |
+| A8 differential/완료 | 7.9 evidence, 8장 scope, 9장 G0–G7 완료 조건 |
+
+Architecture 또는 plan 중 하나를 변경하면 이 traceability, G0–G7 이름, evidence
+root와 scope classification을 함께 검사한다.
+
+### 11.2 2026-07-15 구현 및 검증
+
+```text
+python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
+  -> passed: true
+
+python3 scripts/test/validate_qbox_apollo_topology.py
+  -> status: pass; 9 JSON evidence files generated
+
+python3 scripts/test/audit_qbox_core_boundary.py
+  -> QBox core boundary audit passed
+
+ctest --test-dir build/qbox-core-tests -R '^addrtr-tests$'
+  -> 1/1 passed
+
+./local_build.sh qbox --qbox-unit-tests --no-package --jobs 6
+  -> QBox/QBox-platform build passed; SystemC component tests 33/33 passed
+
+./local_build.sh --jobs 6
+  -> firmware, Linux, Buildroot, image and debug manifest build passed
+
+python3 scripts/run/run_qbox_apollo_fvp_full.py ... \
+  --out-dir build/qbox-apollo-qvp/local-20260715-1540
+  -> passed: true; RSE/SI CL0/SI CL1/AP/Linux login observed
+
+./yocto_build.sh --machine apollo-qvp --keep-conf
+  -> 7,290 tasks attempted, 7,250 cached, all succeeded
+
+./run_qbox_yocto.sh --headless --exit-after-pass --copy-disks \
+  --timeout 900 --out-dir build/qbox-apollo-qvp/yocto-20260715-1550
+  -> passed: true; coverage audit passed: true
+```
+
+상세 command, artifact와 판정은
+[Apollo QVP Machine 구현·검증 보고서](apollo-qvp-machine-implementation-validation-2026-07-15.md)에
+기록한다. 이 결과는 A0/A1 기반과 A2/A3 전환 및 두 image 계열의 정상 boot를
+증명한다. broad bridge 제거, SMD runtime router, request context/APU negative
+access, 전체 software ABI error path 및 FVP differential G7은 완료로 판정하지
+않는다.
