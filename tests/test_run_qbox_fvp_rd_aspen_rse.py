@@ -201,6 +201,37 @@ def test_qbox_env_omits_removed_remote_fields_and_keeps_accelerators(
     assert "QBOX_RDASPEN_RSE_HOTPATH_PROFILE_FILE" in env
 
 
+def test_qbox_env_adds_installed_libqemu_from_cmake_cache(tmp_path, monkeypatch):
+    runner = load_runner()
+    build_dir = tmp_path / "qbox-build"
+    libqemu_dir = (
+        tmp_path
+        / "tmp/sysroots-components/x86_64/qbox-libqemu-native/usr/lib"
+    )
+    dependency_dir = (
+        tmp_path
+        / "tmp/work/x86_64-linux/qbox-libqemu-native/1.0/"
+        "recipe-sysroot-native/usr/lib"
+    )
+    (libqemu_dir / "cmake/libqemu").mkdir(parents=True)
+    dependency_dir.mkdir(parents=True)
+    build_dir.mkdir()
+    (build_dir / "CMakeCache.txt").write_text(
+        f"libqemu_DIR:UNINITIALIZED={libqemu_dir}/cmake/libqemu\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("QBOX_PLATFORM_BUILD_DIR", str(build_dir))
+
+    env = runner.qbox_env(
+        tmp_path,
+        make_qbox_env_args(tmp_path),
+        make_qbox_env_artifacts(tmp_path),
+    )
+
+    assert str(libqemu_dir) in env["LD_LIBRARY_PATH"].split(":")
+    assert str(dependency_dir) in env["LD_LIBRARY_PATH"].split(":")
+
+
 def test_qbox_perf_profile_result_omits_remotepass_fields(tmp_path):
     runner = load_runner()
     result = runner.parse_qbox_perf_profile(make_qbox_env_args(tmp_path))

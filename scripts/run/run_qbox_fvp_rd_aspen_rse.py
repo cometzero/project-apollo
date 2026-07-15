@@ -589,6 +589,35 @@ def qbox_platform_dir(root: Path) -> Path:
     ).resolve()
 
 
+def installed_libqemu_library_paths(build_dir: Path) -> list[Path]:
+    cache = build_dir / "CMakeCache.txt"
+    try:
+        lines = cache.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+    paths: list[Path] = []
+    for line in lines:
+        if not line.startswith("libqemu_DIR:") or "=" not in line:
+            continue
+        cmake_dir = Path(line.split("=", 1)[1]).expanduser()
+        lib_dir = cmake_dir.parent.parent
+        if lib_dir.is_dir() and lib_dir not in paths:
+            paths.append(lib_dir)
+        for parent in lib_dir.parents:
+            if parent.name != "sysroots-components":
+                continue
+            dependency_glob = (
+                "work/x86_64-linux/qbox-libqemu-native/*/"
+                "recipe-sysroot-native/usr/lib"
+            )
+            for dependency_dir in sorted(parent.parent.glob(dependency_glob)):
+                if dependency_dir.is_dir() and dependency_dir not in paths:
+                    paths.append(dependency_dir)
+            break
+    return paths
+
+
 def timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -3209,6 +3238,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         build_dir / "_deps/systemclanguage-build/src",
         build_dir / "_deps/rpclib-build",
         build_dir / "_deps/libqemu-build/qemu-prefix/lib",
+        *installed_libqemu_library_paths(build_dir),
     ]
     current = env.get("LD_LIBRARY_PATH")
     if current:
