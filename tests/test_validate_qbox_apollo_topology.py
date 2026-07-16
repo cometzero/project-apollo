@@ -18,6 +18,11 @@ ADDRESS_MAP_SOURCE = CONTRACT_DIR / "address_map.lua"
 TOPOLOGY_SOURCE = CONTRACT_DIR / "topology.lua"
 FABRIC_SOURCE = CONTRACT_DIR / "fabric.lua"
 AP_SOURCE = CONTRACT_DIR / "ap_compute.lua"
+OPTEE_PLATFORM_CONFIG = (
+    ROOT
+    / "hsoc-stack/components/primary_compute/optee_os/core/arch/arm"
+    / "plat-automotive_rd/platform_config.h"
+)
 RSE_SOURCE = CONTRACT_DIR / "rse.lua"
 SYSTEM_MGMT_SOURCE = CONTRACT_DIR / "system_mgmt.lua"
 SI_CL0_SOURCE = CONTRACT_DIR / "si_cl0.lua"
@@ -568,6 +573,7 @@ def test_ap_gic_view0_control_plane_and_view1_address_contract() -> None:
     config = CONFIG_SOURCE.read_text(encoding="utf-8")
     address_map = ADDRESS_MAP_SOURCE.read_text(encoding="utf-8")
     ap = AP_SOURCE.read_text(encoding="utf-8")
+    optee = OPTEE_PLATFORM_CONFIG.read_text(encoding="utf-8")
 
     assert "AP_GIC_VIEW0_DIST_BASE = 0x20000000" in config
     assert "AP_GIC_VIEW0_DIST_SIZE = 0x00080000" in config
@@ -575,9 +581,15 @@ def test_ap_gic_view0_control_plane_and_view1_address_contract() -> None:
     assert "AP_GIC_VIEW0_REDIST_SIZE = 0x00040000" in config
     assert "platform.ap_gic_multiview = {" in ap
     assert 'bind = "&ap_router.initiator_socket"' in ap
+    assert 'backend_socket = {bind = "&ap_router.target_socket"}' in ap
+    assert "backend_dist_base = AP_GIC_DIST_BASE" in ap
+    assert "backend_redist_base = AP_GIC_REDIST_BASE" in ap
     assert "optee_secure_view" not in ap
     assert 'name = "ap_gic_dist"; base = 0x20800000' in address_map
     assert 'name = "ap_gic_redist"; base = 0x20880000' in address_map
+    assert "GICD_BASE\t\t\tUL(0x20000000)" in optee
+    assert "GICR_BASE\t\t\tUL(0x200C0000)" in optee
+    assert "GICR_SIZE\t\t\tUL(0xF00000)" in optee
 
 
 def test_ap_gic_inactive_redistributor_tail_is_explicit_razwi() -> None:
