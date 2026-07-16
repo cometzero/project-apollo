@@ -27,7 +27,7 @@ CONTRACT_FILES = (
     "machine_contract.lua",
     "export_machine_contract.lua",
 )
-POLICY_BRIDGES = {"atu", "apu", "atu_apu"}
+POLICY_BRIDGES = {"atu", "apu", "atu_apu", "static_window"}
 
 
 def load_json(path: Path) -> dict[str, Any]:

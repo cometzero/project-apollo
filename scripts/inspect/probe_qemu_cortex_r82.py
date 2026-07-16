@@ -97,6 +97,12 @@ def probe_sources(source_root: Path) -> list[str]:
     require(qbox_header, '"cortex-r82-arm"', "QBox CPU")
     require(qbox_header, "set_aarch64_mode(true)", "QBox CPU")
     require(qbox_header, "mp_affinity", "QBox CPU")
+    for signal in ("irq_in", "fiq_in", "virq_in", "vfiq_in"):
+        require(
+            qbox_header,
+            f"m_external_ev |= {signal}->default_event();",
+            "QBox CPU IRQ wakeup",
+        )
     require(qbox_cmake, "gs_create_dymod(cpu_arm_cortexR82)", "QBox CPU")
     checks.append("qbox-cpu-wrapper")
 

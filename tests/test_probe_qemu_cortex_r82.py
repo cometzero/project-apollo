@@ -75,6 +75,10 @@ def make_source_tree(root: Path) -> None:
         class cpu_arm_cortexR82 : public QemuCpuArm {
             cpu_arm_cortexR82(sc_core::sc_module_name name, QemuInstance& inst)
                 : QemuCpuArm(name, inst, "cortex-r82-arm") {
+                m_external_ev |= irq_in->default_event();
+                m_external_ev |= fiq_in->default_event();
+                m_external_ev |= virq_in->default_event();
+                m_external_ev |= vfiq_in->default_event();
                 cpu.set_aarch64_mode(true);
                 if (!p_mp_affinity.is_default_value()) {}
             }
@@ -109,4 +113,21 @@ def test_probe_sources_reports_missing_cpu(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ProbeError, match="QEMU CPU model"):
+        probe_sources(tmp_path)
+
+
+def test_probe_sources_reports_missing_r82_irq_wakeup(tmp_path: Path) -> None:
+    make_source_tree(tmp_path)
+    header = (
+        tmp_path
+        / "hsoc-stack/tools/qbox-platform/qemu-components/cpu_arm/cpu_arm_cortex_r82/include/cortex-r82.h"
+    )
+    header.write_text(
+        header.read_text(encoding="utf-8").replace(
+            "m_external_ev |= irq_in->default_event();", ""
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ProbeError, match="QBox CPU IRQ wakeup"):
         probe_sources(tmp_path)
