@@ -115,6 +115,11 @@ FULL_SYSTEM_QEMU_DEFAULTS = (
         "MULTI",
     ),
     (
+        "platform.si_cl0_qemu_inst.tcg_mode",
+        "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
+        "MULTI",
+    ),
+    (
         "platform.si_cl1_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE",
         "MULTI",
@@ -139,17 +144,6 @@ def has_unexpected_shadowed_range(platform_log: str) -> bool:
     for line in platform_log.splitlines():
         lowered = line.lower()
         if "shadowed" not in lowered:
-            continue
-        if "_atu_check_" in lowered:
-            continue
-        if any(
-            f"platform.{bridge}.target_socket" in lowered
-            for bridge in (
-                "ap_system_bridge",
-                "si_cl0_system_bridge",
-                "si_cl1_system_bridge",
-            )
-        ):
             continue
         return True
     return False
@@ -1028,6 +1022,12 @@ def write_result(
             "QBOX_APOLLO_FULL_AP_TCG_MODE",
             "MULTI",
         ).upper(),
+        "si_cl0_tcg_mode": effective_platform_param(
+            args,
+            "platform.si_cl0_qemu_inst.tcg_mode",
+            "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
+            "MULTI",
+        ).upper(),
         "si_cl1_tcg_mode": effective_platform_param(
             args,
             "platform.si_cl1_qemu_inst.tcg_mode",
@@ -1093,6 +1093,7 @@ def write_result(
         f"boot_mode: {status['boot_mode']}",
         f"safety_island_mode: {args.si_mode}",
         f"ap_tcg_mode: {status['ap_tcg_mode']}",
+        f"si_cl0_tcg_mode: {status['si_cl0_tcg_mode']}",
         f"si_cl1_tcg_mode: {status['si_cl1_tcg_mode']}",
         f"si_cl1_sync_policy: {status['si_cl1_sync_policy']}",
         f"smmu_backend: {status['smmu_backend']}",
@@ -1367,6 +1368,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         args.smmu_backend,
         "--rootfs-bootargs-profile",
         args.rootfs_bootargs_profile,
+        "--rootfs-maxcpus",
+        str(expected_ap_cpus()),
         "--primary-login-prompt",
         args.primary_login_prompt,
         "--primary-shell-marker",
@@ -1380,6 +1383,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--no-copy-writable-flash")
     if args.range_limited_flash_dmi:
         cmd.append("--range-limited-flash-dmi")
+    else:
+        cmd.append("--no-range-limited-flash-dmi")
     if args.cc3xx_stats:
         cmd.append("--cc3xx-stats")
         cmd.extend(["--cc3xx-stats-interval", str(args.cc3xx_stats_interval)])

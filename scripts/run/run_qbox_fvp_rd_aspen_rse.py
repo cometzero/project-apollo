@@ -590,13 +590,26 @@ def qbox_platform_dir(root: Path) -> Path:
 
 
 def installed_libqemu_library_paths(build_dir: Path) -> list[Path]:
+    paths: list[Path] = []
+
+    installed_libqemu_dir = build_dir.parent / "lib/libqemu"
+    if installed_libqemu_dir.is_dir():
+        paths.append(installed_libqemu_dir)
+
+    for parent in build_dir.parents:
+        if parent.parent.name != "sysroots-components":
+            continue
+        component_lib_dir = parent / "qbox-libqemu-native/usr/lib"
+        if component_lib_dir.is_dir() and component_lib_dir not in paths:
+            paths.append(component_lib_dir)
+        break
+
     cache = build_dir / "CMakeCache.txt"
     try:
         lines = cache.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
-        return []
+        return paths
 
-    paths: list[Path] = []
     for line in lines:
         if not line.startswith("libqemu_DIR:") or "=" not in line:
             continue
@@ -615,6 +628,31 @@ def installed_libqemu_library_paths(build_dir: Path) -> list[Path]:
                 if dependency_dir.is_dir() and dependency_dir not in paths:
                     paths.append(dependency_dir)
             break
+    return paths
+
+
+def installed_provider_library_paths(build_dir: Path) -> list[Path]:
+    if build_dir.name != "bin":
+        return []
+
+    provider_root = build_dir.parent.parent
+    components_arch_dir = provider_root.parent
+    sysroots_components_dir = components_arch_dir.parent
+    if sysroots_components_dir.name != "sysroots-components":
+        return []
+
+    paths: list[Path] = []
+    provider_lib_dir = build_dir.parent / "lib"
+    for path in (provider_lib_dir, provider_lib_dir / "qbox/modules"):
+        if path.is_dir():
+            paths.append(path)
+
+    recipe_lib_glob = (
+        f"work/*/{provider_root.name}/*/recipe-sysroot-native/usr/lib"
+    )
+    for path in sorted(sysroots_components_dir.parent.glob(recipe_lib_glob)):
+        if path.is_dir() and path not in paths:
+            paths.append(path)
     return paths
 
 
@@ -764,7 +802,9 @@ def write_boot_entry(image: Path, text: str, tmp_dir: Path) -> None:
         raise RuntimeError("mcopy_boot_entry_failed:" + result.stderr.strip())
 
 
-def patched_bootargs(old_options: str, *, profile: str) -> str:
+def patched_bootargs(
+    old_options: str, *, profile: str, maxcpus: int | None = None
+) -> str:
     tokens = [
         token
         for token in old_options.split()
@@ -774,6 +814,8 @@ def patched_bootargs(old_options: str, *, profile: str) -> str:
         and not token.startswith("maxcpus=")
     ]
     tokens.append("console=ttyAMA0,115200")
+    if maxcpus is not None:
+        tokens.append(f"maxcpus={maxcpus}")
     if profile == "verbose-console":
         tokens.extend(
             [
@@ -785,7 +827,9 @@ def patched_bootargs(old_options: str, *, profile: str) -> str:
     return " ".join(tokens)
 
 
-def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]:
+def patch_boot_entry_options(
+    text: str, *, profile: str, maxcpus: int | None = None
+) -> tuple[str, str, str]:
     old_options = ""
     new_options = ""
     new_lines: list[str] = []
@@ -793,7 +837,9 @@ def patch_boot_entry_options(text: str, *, profile: str) -> tuple[str, str, str]
     for line in text.splitlines():
         if not patched and line.startswith("options "):
             old_options = line[len("options ") :].strip()
-            new_options = patched_bootargs(old_options, profile=profile)
+            new_options = patched_bootargs(
+                old_options, profile=profile, maxcpus=maxcpus
+            )
             new_lines.append("options " + new_options)
             patched = True
             continue
@@ -809,7 +855,9 @@ def extract_uboot_script_payload(data: bytes) -> bytes:
     return data
 
 
-def patch_uboot_script_options(text: str, *, profile: str) -> tuple[str, str, str]:
+def patch_uboot_script_options(
+    text: str, *, profile: str, maxcpus: int | None = None
+) -> tuple[str, str, str]:
     old_options = ""
     new_options = ""
     new_lines: list[str] = []
@@ -822,7 +870,9 @@ def patch_uboot_script_options(text: str, *, profile: str) -> tuple[str, str, st
             if len(old_options) >= 2 and old_options[0] == old_options[-1] == '"':
                 old_options = old_options[1:-1]
                 quote = '"'
-            new_options = patched_bootargs(old_options, profile=profile)
+            new_options = patched_bootargs(
+                old_options, profile=profile, maxcpus=maxcpus
+            )
             new_lines.append(prefix + quote + new_options + quote)
             patched = True
             continue
@@ -832,7 +882,13 @@ def patch_uboot_script_options(text: str, *, profile: str) -> tuple[str, str, st
     return "\n".join(new_lines) + "\n", old_options, new_options
 
 
-def patch_uboot_script(image: Path, tmp_dir: Path, *, profile: str) -> tuple[str, str]:
+def patch_uboot_script(
+    image: Path,
+    tmp_dir: Path,
+    *,
+    profile: str,
+    maxcpus: int | None = None,
+) -> tuple[str, str]:
     ensure_mtools()
     for tool in ["dumpimage", "mkimage"]:
         if shutil.which(tool) is None:
@@ -864,7 +920,7 @@ def patch_uboot_script(image: Path, tmp_dir: Path, *, profile: str) -> tuple[str
 
     script = extract_uboot_script_payload(extracted.read_bytes()).decode("utf-8")
     patched, old_options, new_options = patch_uboot_script_options(
-        script, profile=profile
+        script, profile=profile, maxcpus=maxcpus
     )
     patched_text.write_text(patched, encoding="utf-8")
     result = subprocess.run(
@@ -902,7 +958,11 @@ def patch_uboot_script(image: Path, tmp_dir: Path, *, profile: str) -> tuple[str
 
 
 def prepare_rootfs_for_qbox(
-    src: Path, dst_dir: Path, *, profile: str
+    src: Path,
+    dst_dir: Path,
+    *,
+    profile: str,
+    maxcpus: int | None = None,
 ) -> tuple[Path, dict[str, object]]:
     info: dict[str, object] = {
         "input": str(src),
@@ -920,7 +980,7 @@ def prepare_rootfs_for_qbox(
     try:
         boot_entry = read_boot_entry(dst)
         patched, old_options, new_options = patch_boot_entry_options(
-            boot_entry, profile=profile
+            boot_entry, profile=profile, maxcpus=maxcpus
         )
         write_boot_entry(dst, patched, dst_dir)
         boot_entry_name = WIC_BOOT_ENTRY
@@ -928,7 +988,9 @@ def prepare_rootfs_for_qbox(
     except RuntimeError as exc:
         if not str(exc).startswith("mtype_boot_entry_failed:"):
             raise
-        old_options, new_options = patch_uboot_script(dst, dst_dir, profile=profile)
+        old_options, new_options = patch_uboot_script(
+            dst, dst_dir, profile=profile, maxcpus=maxcpus
+        )
         boot_entry_name = WIC_UBOOT_SCRIPT
         state = "copied_and_patched_uboot_script"
     info.update(
@@ -3227,8 +3289,8 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         for name in SRAM_DMI_FORBIDDEN_ENV:
             env.pop(name, None)
     build_dir = qbox_build_dir(root)
-    lib_paths = [
-        build_dir,
+    lib_paths = [build_dir, *installed_provider_library_paths(build_dir)]
+    lib_paths.extend([
         build_dir / "lib",
         build_dir / "qbox-core",
         build_dir / "_deps/report-build",
@@ -3239,7 +3301,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         build_dir / "_deps/rpclib-build",
         build_dir / "_deps/libqemu-build/qemu-prefix/lib",
         *installed_libqemu_library_paths(build_dir),
-    ]
+    ])
     current = env.get("LD_LIBRARY_PATH")
     if current:
         lib_paths.append(Path(current))
@@ -4434,6 +4496,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--rootfs-maxcpus",
+        type=int,
+        help=(
+            "Replace any maxcpus= boot argument when patching the rootfs "
+            "boot entry. Omit to retain the lower-level runner's legacy "
+            "behavior of removing maxcpus=."
+        ),
+    )
+    parser.add_argument(
         "--efi-capsule-disk",
         type=Path,
         default=deploy / "efi-capsule-update-disk-image-fvp-rd-aspen.img",
@@ -4658,8 +4729,10 @@ def build_parser() -> argparse.ArgumentParser:
             "directory for RSE boot flash and AP flash."
         ),
     )
-    parser.add_argument(
+    flash_dmi_group = parser.add_mutually_exclusive_group()
+    flash_dmi_group.add_argument(
         "--range-limited-flash-dmi",
+        dest="range_limited_flash_dmi",
         action="store_true",
         help=(
             "Enable the storage-safe fast path: ATU DMI, host-memory DMI, "
@@ -4668,6 +4741,16 @@ def build_parser() -> argparse.ArgumentParser:
             "avoided because it can break TF-M ITS initialization."
         ),
     )
+    flash_dmi_group.add_argument(
+        "--no-range-limited-flash-dmi",
+        dest="range_limited_flash_dmi",
+        action="store_false",
+        help=(
+            "Disable range-limited flash, ATU, and host-memory DMI even when "
+            "the RSE SRAM-DMI preset is selected."
+        ),
+    )
+    parser.set_defaults(range_limited_flash_dmi=None)
     parser.add_argument(
         "--flash-stats-interval",
         type=int,
@@ -5263,6 +5346,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--cc3xx-stats-interval must be positive")
     if args.qbox_perf_profile and args.qbox_perf_profile_interval <= 0:
         parser.error("--qbox-perf-profile-interval must be positive")
+    if args.rootfs_maxcpus is not None and not 1 <= args.rootfs_maxcpus <= 16:
+        parser.error("--rootfs-maxcpus must be 1..16")
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
     if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:
@@ -5342,8 +5427,11 @@ def parse_args() -> argparse.Namespace:
                 "environment overrides: "
                 + ", ".join(ambient_conflicts)
             )
-        args.range_limited_flash_dmi = True
+        if args.range_limited_flash_dmi is None:
+            args.range_limited_flash_dmi = True
         args.rse_storage_direct_fastpath = True
+    if args.range_limited_flash_dmi is None:
+        args.range_limited_flash_dmi = False
     if args.rse_fast_boot_aliases:
         args.rse_direct_si_sram_alias = True
         args.rse_direct_ap_bl2_alias = True
@@ -5454,6 +5542,7 @@ def main() -> int:
             artifacts["rootfs"],
             image_dir,
             profile=args.rootfs_bootargs_profile,
+            maxcpus=args.rootfs_maxcpus,
         )
     except RuntimeError as exc:
         blocker = str(exc)

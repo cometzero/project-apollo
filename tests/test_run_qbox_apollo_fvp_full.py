@@ -15,6 +15,9 @@ COVERAGE_SCRIPT = ROOT / "scripts/test/audit_qbox_apollo_fvp_full_coverage.py"
 AP_COMPUTE_LUA = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
 )
+SI_CL0_LUA = (
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua"
+)
 SI_CL1_LUA = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua"
 )
@@ -172,8 +175,25 @@ def test_child_command_presets_full_system_qemu_modes(tmp_path):
     cmd = runner.child_command(args, make_child_artifacts(tmp_path))
 
     assert "platform.ap_qemu_inst.tcg_mode=MULTI" in cmd
+    assert "platform.si_cl0_qemu_inst.tcg_mode=MULTI" in cmd
     assert "platform.si_cl1_qemu_inst.tcg_mode=MULTI" in cmd
     assert "platform.si_cl1_qemu_inst.sync_policy=multithread-quantum" in cmd
+    maxcpus_index = cmd.index("--rootfs-maxcpus")
+    assert cmd[maxcpus_index + 1] == "4"
+
+
+def test_child_command_aligns_rootfs_maxcpus_with_environment(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    monkeypatch.setenv("QBOX_APOLLO_NUM_CPUS", "8")
+
+    cmd = runner.child_command(
+        make_child_command_args(tmp_path), make_child_artifacts(tmp_path)
+    )
+
+    maxcpus_index = cmd.index("--rootfs-maxcpus")
+    assert cmd[maxcpus_index + 1] == "8"
 
 
 def test_child_command_preserves_explicit_qemu_mode_override(tmp_path):
@@ -185,6 +205,17 @@ def test_child_command_preserves_explicit_qemu_mode_override(tmp_path):
 
     assert "platform.ap_qemu_inst.tcg_mode=SINGLE" in cmd
     assert "platform.ap_qemu_inst.tcg_mode=MULTI" not in cmd
+
+
+def test_child_command_forwards_range_limited_flash_dmi_disable(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.range_limited_flash_dmi = False
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert "--no-range-limited-flash-dmi" in cmd
+    assert "--range-limited-flash-dmi" not in cmd
 
 
 def test_full_system_qemu_defaults_use_per_cpu_wake_conditions():
@@ -202,6 +233,11 @@ def test_full_system_qemu_defaults_use_per_cpu_wake_conditions():
     assert '"QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY", "multithread-quantum"' in text
     assert "managed_start_in_reset_release = true" in ap_text
     assert "managed_start_in_reset_release = true" in text
+
+    si_cl0_text = SI_CL0_LUA.read_text(encoding="utf-8")
+    assert (
+        '"QBOX_APOLLO_FULL_SI_CL0_TCG_MODE", "MULTI"' in si_cl0_text
+    )
 
     isolated_text = SI_CL1_ISOLATED_LUA.read_text(encoding="utf-8")
     assert 'getenv_or("QBOX_APOLLO_SI_CL1_TCG_MODE", "SINGLE")' in isolated_text
@@ -235,14 +271,24 @@ def test_live_cl1_gate_requires_pfdi_readiness():
         "si_cl1_system_bridge",
     ),
 )
-def test_migration_bridge_shadow_warnings_are_expected(bridge):
+def test_removed_migration_bridge_shadow_warnings_are_rejected(bridge):
     runner = load_runner()
     log = (
         "addressMap: Region 'platform."
         f"{bridge}.target_socket' is completely shadowed"
     )
 
-    assert runner.has_unexpected_shadowed_range(log) is False
+    assert runner.has_unexpected_shadowed_range(log) is True
+
+
+def test_removed_atu_check_shadow_warnings_are_rejected():
+    runner = load_runner()
+    log = (
+        "addressMap: Region 'platform.ap_atu_check_0.target_socket' "
+        "is completely shadowed"
+    )
+
+    assert runner.has_unexpected_shadowed_range(log) is True
 
 
 def test_coverage_accepts_headless_login_without_guest_injection(tmp_path):

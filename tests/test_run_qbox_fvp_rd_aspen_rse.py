@@ -42,6 +42,39 @@ def test_required_targets_use_local_rse_cpu_only():
     assert all("remote" not in target.lower() for target in runner.REQUIRED_TARGETS)
 
 
+def test_patched_bootargs_replaces_maxcpus_for_modeled_topology():
+    runner = load_runner()
+
+    options = runner.patched_bootargs(
+        "root=/dev/ram0 maxcpus=16 console=ttyAMA1,115200",
+        profile="quiet-console",
+        maxcpus=4,
+    )
+
+    assert options.split().count("maxcpus=4") == 1
+    assert "maxcpus=16" not in options.split()
+    assert "console=ttyAMA0,115200" in options.split()
+
+
+def test_fast_boot_sram_dmi_preserves_explicit_flash_dmi_disable(monkeypatch):
+    runner = load_runner()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_qbox_fvp_rd_aspen_rse.py",
+            "--build-only",
+            "--rse-fast-boot-sram-dmi",
+            "--no-range-limited-flash-dmi",
+        ],
+    )
+
+    args = runner.parse_args()
+
+    assert args.rse_fast_boot_sram_dmi is True
+    assert args.range_limited_flash_dmi is False
+
+
 def test_missing_required_pass_markers_reports_incomplete_file(tmp_path):
     runner = load_runner()
     cl1_log = tmp_path / "qbox-safety-island-cl1.log"
@@ -230,6 +263,39 @@ def test_qbox_env_adds_installed_libqemu_from_cmake_cache(tmp_path, monkeypatch)
 
     assert str(libqemu_dir) in env["LD_LIBRARY_PATH"].split(":")
     assert str(dependency_dir) in env["LD_LIBRARY_PATH"].split(":")
+
+
+def test_qbox_env_adds_libqemu_for_installed_yocto_provider(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    components_dir = tmp_path / "tmp/sysroots-components/x86_64"
+    build_dir = components_dir / "qbox-apollo-qvp-native/usr/bin"
+    provider_lib_dir = build_dir.parent / "lib"
+    module_dir = provider_lib_dir / "qbox/modules"
+    libqemu_dir = components_dir / "qbox-libqemu-native/usr/lib"
+    recipe_lib_dir = (
+        tmp_path
+        / "tmp/work/x86_64-linux/qbox-apollo-qvp-native/1.0/"
+        "recipe-sysroot-native/usr/lib"
+    )
+    build_dir.mkdir(parents=True)
+    module_dir.mkdir(parents=True)
+    libqemu_dir.mkdir(parents=True)
+    recipe_lib_dir.mkdir(parents=True)
+    monkeypatch.setenv("QBOX_PLATFORM_BUILD_DIR", str(build_dir))
+
+    env = runner.qbox_env(
+        tmp_path,
+        make_qbox_env_args(tmp_path),
+        make_qbox_env_artifacts(tmp_path),
+    )
+
+    library_paths = env["LD_LIBRARY_PATH"].split(":")
+    assert str(provider_lib_dir) in library_paths
+    assert str(module_dir) in library_paths
+    assert str(recipe_lib_dir) in library_paths
+    assert str(libqemu_dir) in library_paths
 
 
 def test_qbox_perf_profile_result_omits_remotepass_fields(tmp_path):
