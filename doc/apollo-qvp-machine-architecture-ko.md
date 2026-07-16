@@ -17,6 +17,12 @@ FVP CFG2 extension
 - [아키텍처 부채 구현·검증 계획](apollo-qvp-architecture-debt-implementation-plan-ko.md)
 - [2026-07-16 구현·검증 보고서](apollo-qvp-architecture-debt-validation-2026-07-16.md)
 
+4 CPU 우선 fidelity 후속 단계:
+
+- [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
+- [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)
+- [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)
+
 ## 1. 목적
 
 이 문서는 현재 QBox `apollo-qvp` machine 구현을 Arm Zena CSS RD-Aspen
@@ -95,12 +101,13 @@ SI0가 소비할 때까지 보존하며, trace/quantum 변경 없이 local/Yocto
 1. NI-710AE APU의 완전한 register/permission 및 initiator별 deny matrix.
 2. MMU-720AE page-table walk, GPEX requester/StreamID 전 access-kind와
    MSI→ITS→LPI.
-3. debug/direct/reentrant/DMI trusted capability, invalidation과 guest syndrome의
-   전체 negative matrix.
+3. debug/direct/reentrant trusted capability와 대표 allow/deny. 전체 negative 및
+   DMI matrix는 extended validation.
 4. FMU/SSU/RAS/DCLS fault injection, power/reset recovery와 timing.
-5. SCMI/PSCI/MHU/PFDI/HIPC/FF-A의 malformed, denied, peer-offline, timeout 및
-   recovery side effect.
-6. 16 CPU 성능 budget과 동일 hash artifact 기반 FVP/QVP differential.
+5. 변경한 SCMI/PSCI/MHU/PFDI/HIPC/FF-A 경로의 대표 오류와 recovery. 전체 조합은
+   extended validation.
+6. 4 CPU focused FVP/QVP functional comparison. 동일 artifact 전체 differential은
+   후속이며 emulator 성능 budget은 두지 않는다.
 
 따라서 A4의 구조적 address-policy 부채는 폐쇄됐지만 Arm Zena CSS/FVP 전체
 functional 또는 safety equivalence를 완료로 판정하지 않는다. Apollo 전용
@@ -339,8 +346,8 @@ overlay에만 사용한다.
 
 | 영역 | 현재 QVP | 판정 및 개선점 |
 | --- | --- | --- |
-| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core, full-system 기본 4 | active Yocto 기본과 local `maxcpus=4`가 정렬됨; 16-core correctness/performance는 별도 G6 항목 |
-| AP GIC/ITS | QEMU `arm_gicv3`, ITS, LPI/DirectLPI, RGIC message model | 기능 기반 양호, MSI→ITS→LPI와 GIC-720AE safety/fault 의미의 end-to-end 증거는 부족 |
+| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core 지원, full-system 기본 4 | active Yocto 기본과 local `maxcpus=4`가 정렬됨; 이번 fidelity gate는 CPU0–CPU3만 대상으로 하고 16-core enablement/lifecycle은 후속 범위 |
+| AP GIC/ITS | SystemC `gicx00_multiview` view 0 overlay와 QEMU `arm_gicv3` canonical backend, ITS, LPI/DirectLPI, RGIC message model | 표준 GIC access의 단일 functional owner는 QEMU이고 multiview 확장만 SystemC가 소유함; MSI→ITS→LPI와 GIC-720AE safety/fault 의미의 end-to-end 증거는 부족 |
 | AP MMU-720AE | 기본 `systemc-mmu720ae`, 선택 `qemu-arm-smmuv3` | boot/I/O functional subset, 두 backend의 requester/StreamID·fault 동등성 기준 필요 |
 | AP PCIe/GPEX DMA | GPEX bus master, MMU-720AE LTI00 TBU와 legacy SPI 300–303 | SystemC backend routing은 완료; explicit requester/StreamID와 MSI/LPI end-to-end 증거는 부족 |
 | CMN/NI-710AE | `host_cmn_cyprus`, `host_ni710ae_nci` | discovery/register 호환 모델이며 CHI coherency·실제 NoC arbitration 모델은 아님 |
@@ -352,7 +359,7 @@ overlay에만 사용한다.
 | SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view, 40-bit local router와 ATU | broad bridge 없이 정상 boot; DCLS/fault propagation 보강 필요 |
 | SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM, 40-bit local router | FVP CFG2 extension scope, static SCMI/HIPC allow-list와 local view가 명시됨 |
 | QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, CPU hint와 MemTx/TLM 오류 변환 | secure/debug와 decode error 기반은 존재하나 domain/requester/StreamID 및 debug policy가 불완전 |
-| QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 50회 reset 회귀, 기준 full boot 8회, post-review acceptance 2회와 최종 trace-off 6회 통과; KVM/16 CPU/fault stress는 후속 |
+| QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 50회 reset 회귀, 기준 full boot 8회, post-review acceptance 2회와 최종 trace-off 6회 통과; 신규 fault는 대표 smoke만 필수이며 stress/KVM/16 CPU는 후속 |
 | RoS | VirtIO block/net/rng, PL031 | system register, p9, VSI, RoS UART 항목은 부재 또는 범위 밖 |
 
 ### 5.4 Memory map 차이
@@ -367,6 +374,24 @@ overlay에만 사용한다.
 | RSE local map | 독립 32-bit 공간 | 독립 `rse_router` | 목표 구조에 가장 가까움 |
 | SI local map | 독립 40-bit 공간과 ATU | CL0/CL1 각각 40-bit router, SI/SMDEXP ATU와 HIPC/SCMI static window | 구조적 allow-list와 SI ATU region 14 SCMI backing 확인, 완전한 APU 권한표는 후속 |
 | SMD | 독립 52-bit system management map | runtime `smd_router`, NCI prefix decode와 canonical SMD target | 영역·소유권 hierarchy 완료, cycle/APU fidelity는 후속 |
+
+#### AP GIC view 소유권 불변조건
+
+AP GIC의 RD-Aspen software view와 QEMU functional view는 서로 다른 GIC
+인스턴스가 아니다. 다음과 같이 하나의 기능 상태에 도달하는 두 programming
+view로 모델링한다.
+
+| view | software-visible 주소/간격 | QVP 소유권과 routing |
+| --- | --- | --- |
+| RD-Aspen secure/legacy view 0 | GICD `0x2000_0000`, GICR scan 시작 `0x200c_0000`, 128 KiB 간격 | `gicx00_multiview`가 `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR/VIEWR/FLUSHR`만 처리하고 표준 GICD/GICR access는 canonical backend로 변환 |
+| canonical functional view 1 | GICD `0x2080_0000`, GICR `0x2088_0000`, CPU당 256 KiB 간격 | QEMU `arm_gicv3`가 distributor, CPU0–CPU3 redistributor와 interrupt 상태를 단일 소유 |
+
+view 0의 256 KiB frame 안에는 128 KiB redistributor 두 개가 연속 배치되므로
+QVP는 OP-TEE가 사용하는 128 KiB scan을 CPU0–CPU3 canonical redistributor로
+변환한다. OP-TEE의 RD-Aspen `GICD_BASE`, `GICR_BASE`, `GICR_SIZE`를 view 1 주소에
+맞춰 변경해서는 안 된다. 그런 변경은 software ABI를 QBox 내부 구현에 종속시키고
+FVP와의 주소 계약을 깨뜨린다. 표준 register 상태를 SystemC 배열과 QEMU 양쪽에
+복제하는 것도 금지하며, 기능 상태의 유일한 owner는 QEMU로 유지한다.
 
 full-map validator와 topology validator가 주소 상수, 실제 binding, view width,
 overlap, backing 및 route reference를 확인한다. 이는 접근 주체별 negative access,
@@ -485,7 +510,7 @@ revision을 result에 보존한다.
 | P1 | GPEX requester/StreamID와 SMMU/ITS route가 불완전 | DMA가 policy를 우회하거나 fault/MSI가 잘못된 vCPU로 전달됨 |
 | P1 | IRQ/reset/power route manifest 부재 | 연결 누락과 잘못된 ID를 정적 검증하기 어려움 |
 | P1 | shared backing과 address view 구분이 불명확 | 동일 메모리 복제, DMI alias incoherency 가능 |
-| P1 | reset-held QK 교착은 수정됐으나 QEMU RAM owner와 KVM/16 CPU lifecycle matrix가 부분적 | double mapping, backend별 reset/WFI 차이 가능 |
+| P1 | reset-held QK 교착은 수정됐으나 QEMU RAM owner와 4 CPU fault/reset lifecycle matrix가 부분적; KVM/16 CPU는 후속 | double mapping, backend별 reset/WFI 차이 가능 |
 | P1 | firmware/DT/OS software ABI가 별도 검증되지 않음 | SCMI/PFDI/HIPC/FF-A가 boot 후 timeout 또는 silent corruption |
 | 완화 | full-system QVP evidence root를 `qbox-apollo-qvp`로 이전 | direct-boot legacy 경로는 별도 정리 필요 |
 | P2 | 일부 control/fault 블록이 placeholder | 정상 boot는 통과해도 fault/reset 검증 불가 |
@@ -634,7 +659,8 @@ QEMU CPU/device access는 기존 `QemuInitiatorSocket`과
 - GPEX legacy SPI 300–303과 MSI→ITS→LPI route를 별도로 검증한다.
 - AP→SMD `0x4000_0000` window는 ATU가 열린 범위만 전달한다.
 - `ap_view_passthrough`의 broad 1:1 mapping을 제거한다.
-- CPU 수 4/16과 memory bank를 deploy DTB/manifest와 대조한다.
+- CPU 수 4와 memory bank를 deploy DTB/manifest와 대조하고 CPU4–CPU15가
+  enable되지 않았음을 검사한다.
 - CPU 내부 generic timer PPI와 AP REFCLK 125 MHz MMIO frame의 secure SPI 48,
   non-secure SPI 49 소유권을 중복 없이 유지한다.
 
@@ -735,7 +761,7 @@ malformed descriptor, duplicate notification, peer-offline, timeout, power/reset
 중 request도 architecture test vector다. 실패는 guest/firmware가 관찰 가능한
 error로 종료되어야 하며 무한 대기로 남아서는 안 된다.
 
-### 7.9 관측성, 성능 및 evidence architecture
+### 7.9 관측성 및 evidence architecture
 
 신규 QVP evidence의 표준 root는 `build/qbox-apollo-qvp/`로 한다.
 
@@ -745,8 +771,8 @@ error로 종료되어야 하며 무한 대기로 남아서는 안 된다.
 | artifact manifest | source/submodule revision, firmware/DTB/kernel/rootfs SHA-256와 provenance |
 | runtime manifest | QEMU instance/backend/CPU/TCG/quantum, CCI, memory owner, command와 environment |
 | bounded trace | router hit/miss/deny/error, DMI grant/invalidate, boot/control 및 fault event |
-| performance | 4/16 CPU, DMI on/off와 SMMU backend별 simulated time, wall time, RSS, transaction 수 |
-| differential | 동일 hash artifact의 FVP/QVP milestone, policy, ABI, fault와 scope-aware verdict |
+| optional telemetry | simulated/wall time은 hang 진단용이며 성능 acceptance에 사용하지 않음 |
+| focused comparison | artifact hash 차이와 FVP/QVP boot 및 변경 marker의 scope-aware verdict |
 
 full-system runner/README/audit 기본값은 `build/qbox-apollo-qvp/`로 이전했다.
 기존 결과를 rename해 현재 증거처럼 만들지 않으며, 모든 bundle은 실제 root,
@@ -761,7 +787,7 @@ schema version, 생성 command와 timestamp를 기록한다.
 - interrupt/MSI/LPI, reset, power, MHU, RAS와 safety fault의 관찰 가능한 side effect
 - RSE configure→SI verify/init→AP release ownership과 QEMU lifecycle ordering
 - FVP와 같은 firmware/OS boot handoff, software ABI와 driver probe
-- artifact provenance, topology/route/result와 performance JSON 증거
+- artifact provenance, topology/route/result와 UART log 증거
 
 ### 8.2 명시적 비목표
 
@@ -776,8 +802,8 @@ schema version, 생성 command와 timestamp를 기록한다.
 
 ## 9. Architecture 완료 조건
 
-다음 G0–G7을 모두 만족해야 목표 machine architecture 전환이 완료된 것으로
-판정한다. 각 gate의 실행 순서와 세부 task는 연계 plan을 따른다.
+MVP 완료에는 G0–G6을 요구한다. G7은 수행하거나 `deferred` 사유를 기록한다.
+각 gate의 실행 순서와 세부 task는 연계 plan을 따른다.
 
 | Gate | Architecture 완료 조건 |
 | --- | --- |
@@ -787,8 +813,8 @@ schema version, 생성 command와 timestamp를 기록한다.
 | G3 memory/DMA/IOMMU/QEMU | canonical backing owner, DMI invalidation, GPEX requester/StreamID, SMMU translation/fault와 guest syndrome이 일치 |
 | G4 signal/lifecycle/safety | PPI/SPI/MSI/LPI, qdev reset/BQL/async/quantum, power, FMU/SSU/RAS 상태 전이와 reset-state 검증이 통과 |
 | G5 system software/ABI | DT, SCMI/PSCI/MHU/PFDI/HIPC/FF-A/RAS의 producer-consumer 및 success/error path가 일치 |
-| G6 QBox full-system/performance | RSE, SI, AP boot, 4/16 CPU correctness, coverage audit와 정의된 performance budget이 통과 |
-| G7 FVP differential | 동일 hash artifact로 FVP/QVP를 비교하고 architecture와 CFG2 extension scope를 분리한 gap ledger가 남음 |
+| G6 QBox full-system smoke | RSE, SI, AP boot, 4 CPU correctness와 coverage audit가 local/Yocto에서 각각 한 번 통과 |
+| G7 focused FVP comparison | boot milestone과 변경한 대표 marker를 비교하거나 실행 제약과 `deferred` 사유를 기록 |
 
 추가로 다음 조건은 gate 결과와 무관하게 필수다.
 
@@ -935,3 +961,20 @@ route, reset-held CPU lifecycle과 두 image 계열의 정상 boot를 증명한�
 APU/request context, 전체 software ABI error path, safety fault injection과 동일
 artifact 전체 FVP differential G7은 완료로 판정하지 않는다. 다만 secondary
 SCMI protocol은 기존 FVP log와 focused differential을 완료했다.
+
+## 12. 4 CPU Fidelity 후속 단계
+
+구조적 A4 전환 뒤 남은 기능 부채는 다음 세 문서를 단일 실행 계약으로 사용한다.
+
+1. [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)는
+   request identity, NI-710AE APU, MMU-720AE/SMMUv3, MSI/ITS/LPI, fault plane과
+   software ABI의 목표 구조와 불변 조건을 정의한다.
+2. [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)은
+   I0–I8 수직 slice, owning repository, atomic commit과 중단 기준을 정의한다.
+3. [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)은
+   V0–V9 최소 smoke gate, 대표 오류/recovery와 단일 실행 evidence를 정의한다.
+
+이번 후속 단계의 AP acceptance는 active Yocto와 같은 CPU0–CPU3, 총 4 CPU다.
+CPU4–CPU15 online, 16 CPU lifecycle과 KVM은 완료 조건에 포함하지 않는다. 4 CPU의
+대표 보안·DMA·interrupt·fault·ABI 경로와 local/Yocto smoke를 먼저 닫고, 전체
+matrix와 FVP differential은 extended validation으로 관리한다.

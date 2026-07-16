@@ -7,6 +7,12 @@
 
 상위 설계: [Apollo QVP Machine Architecture 비교 및 개선안](apollo-qvp-machine-architecture-ko.md)
 
+4 CPU 우선 후속 fidelity 계획:
+
+- [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
+- [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)
+- [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)
+
 ## 1. 목표
 
 Apollo QVP의 기존 단일 `host_router` 중심 구조를 Arm Zena CSS의 AP, SMD,
@@ -50,17 +56,17 @@ interrupt/reset/fault side effect와 software error ABI를 닫는 것이다.
 4. ATU/APU programming 후 허용된 window만 접근할 수 있다.
 5. active Yocto 설정의 CPU 수와 deploy DTB의 memory bank가 QVP result와 같다.
 6. AP, RSE, SI CL0/CL1 boot와 주요 MHU/SCMI/PFDI handoff가 유지된다.
-7. IRQ, reset, power, safety fault의 source-to-sink route가 machine-readable
-   evidence로 남는다.
-8. FVP/QVP 비교 결과가 memory map, 접근 정책, IRQ와 boot milestone별로 기록된다.
-9. QBox의 `b_transport`, `transport_dbg`, DMI와 QEMU direct/reentrant access가
-   동일한 보안·도메인 정책을 따르거나, 신뢰된 bypass로 명시되고 시험된다.
+7. 구현한 IRQ, reset, power 또는 safety fault의 source-to-sink smoke evidence가
+   남는다.
+8. FVP/QVP focused marker를 비교하거나 `deferred` 사유를 기록한다.
+9. 변경한 QBox/QEMU access path가 대표 allow/deny에서 동일한 보안·도메인 정책을
+   따른다.
 10. CPU뿐 아니라 PCIe/GPEX DMA initiator의 requester/StreamID가 SMMU와 APU
     정책까지 보존되고 MSI/LPI/ITS 경로가 검증된다.
 11. RSE가 설정하는 ATU/APU와 SI CL0가 설정·검증하는 CMN/GIC/peripheral의
     소유권 및 순서가 boot contract와 runtime trace에서 일치한다.
-12. SCMI, PSCI, MHU, PFDI, HIPC, FF-A와 RAS 경로가 register 존재가 아니라
-    firmware/OS가 관찰하는 ABI와 side effect 기준으로 통과한다.
+12. 변경한 software protocol의 대표 오류와 다음 정상 request가 firmware/OS-visible
+    ABI와 side effect 기준으로 통과한다.
 
 ## 4. 네 관점 및 하드웨어 다이어그램 리뷰 결과
 
@@ -116,8 +122,8 @@ multiple-view, boot/reset, FMU/SSU 및 PFDI 그림은 다음 제약을 공통으
 
 ## 5. 산출물 구조
 
-아래 contract와 validator 경로는 이번 전환에서 구현됐다. performance,
-differential 및 fidelity ledger는 후속 단계 산출물이다.
+아래 contract와 validator 경로는 이번 전환에서 구현됐다. focused comparison과
+fidelity ledger는 후속 단계 산출물이다.
 
 | 산출물 | 제안 경로 | 역할 |
 | --- | --- | --- |
@@ -131,7 +137,6 @@ differential 및 fidelity ledger는 후속 단계 산출물이다.
 | generated manifest | `build/qbox-apollo-qvp/topology/topology.json` | resolved machine topology 증거 |
 | route evidence | `build/qbox-apollo-qvp/topology/{address,transaction,irq,reset,boot,software}-routes.json` | runtime/static route 증거 |
 | artifact manifest | `build/qbox-apollo-qvp/topology/artifacts.json` | source revision, image hash, QEMU backend, CCI와 runtime option |
-| performance baseline | `build/qbox-apollo-qvp/performance/<timestamp>/` | simulated/wall time, transaction, memory와 CPU topology |
 | differential report | `build/qbox-apollo-qvp/comparison/<timestamp>/` | FVP/QVP 비교 결과 |
 | fidelity ledger | 기존 `doc/apollo-qbox-full-model/coverage-ledger.md` 갱신 | 기능/호환/backing/placeholder 상태 |
 
@@ -156,7 +161,7 @@ A6 IRQ/reset/timing/power/safety route
   |
 A7 기능 gap + system software ABI
   |
-A8 FVP differential + 완료 gate
+A8 local/Yocto smoke + focused FVP/완료 gate
 ```
 
 A2와 A3의 준비 작업은 병렬 가능하지만, `host_router`의 broad 경로를 제거하는
@@ -183,8 +188,8 @@ A2와 A3의 준비 작업은 병렬 가능하지만, `host_router`의 broad 경�
   rootfs의 path, revision, SHA-256 및 provenance를 artifact manifest에 남긴다.
 - `ARCH-005`: 각 QEMU instance의 target architecture, machine/device, CPU model,
   acceleration, MTTCG/quantum, RAM/AddressSpace owner와 CCI parameter를 기록한다.
-- `ARCH-006`: 4/16 CPU 구성의 simulated time, wall time, RSS, transaction 수와
-  UART milestone을 측정해 topology 변경 전 performance 기준선을 만든다.
+- `ARCH-006`: 4 CPU UART milestone과 종료 사유를 기록한다. simulated/wall time은
+  hang 진단용 telemetry로만 남기고 performance 기준선이나 budget을 만들지 않는다.
 - `ARCH-007`: 현재 runner/README/audit의 `build/qbox-apollo-fvp/` 기본값을
   `build/qbox-apollo-qvp/`로 이전하는 범위와 기존 evidence 보존 규칙을 고정한다.
 
@@ -370,7 +375,8 @@ A2와 A3의 준비 작업은 병렬 가능하지만, `host_router`의 broad 경�
 - `ARCH-505`: active Yocto `PC_CPUS_COUNT_DEFAULT=4`와 full-system QBox source
   기본값을 4로 정렬한다. direct-boot 16-core 실험값과 구분하고 runner가 결정한
   값을 result JSON과 local guest `maxcpus=`에 기록한다. 기본/override bootargs
-  정렬은 완료됐고 artifact 자동 대조는 계속 보강한다.
+  정렬은 완료됐고 artifact 자동 대조는 계속 보강한다. direct-boot 16-core
+  profile은 이번 fidelity acceptance에서 실행하지 않는다.
 - `ARCH-506`: DT CPU node, GIC redistributor 수, PPU/reset signal 수의 일관성을
   정적 검사한다.
 - `ARCH-507`: QEMU `MemoryRegion`/`AddressSpace`, QBox `gs_memory`와 file-backed
@@ -387,8 +393,8 @@ A2와 A3의 준비 작업은 병렬 가능하지만, `host_router`의 broad 경�
   ordering barrier와 DMA/CPU 관찰 순서로 정의한다.
 - `ARCH-513`: SMMU translation/permission fault가 guest driver, GIC와 QVP trace에
   같은 requester/StreamID 및 syndrome으로 나타나는지 검증한다.
-- `ARCH-514`: 4/16 CPU, DMI on/off, 두 SMMU backend에 대해 memory correctness와
-  performance 회귀를 기록한다.
+- `ARCH-514`: 4 CPU에서 선택한 SMMU backend의 mapped DMA 하나와 fault 하나를
+  확인한다. DMI/backend 조합 matrix는 extended validation으로 미룬다.
 
 #### 완료 조건
 
@@ -496,37 +502,37 @@ side effect를 acceptance criterion으로 삼는다.
 - 모든 software ABI는 producer/consumer 양쪽 상수와 runtime evidence가
   일치하고, error path가 무한 대기 없이 종료된다.
 
-### A8. FVP differential validation과 완료 판정
+### A8. Focused FVP comparison과 완료 판정
 
 #### 작업
 
-- `ARCH-800`: 동일한 build artifact로 FVP와 QVP를 실행하고 topology/config
-  manifest를 함께 보존한다.
+- `ARCH-800`: FVP와 QVP의 실제 artifact hash와 topology/config manifest를 함께
+  보존한다.
 - `ARCH-801`: UART milestone, MHU/SCMI/PFDI handoff, CPU 수, DT probe를 비교한다.
-- `ARCH-802`: 주소별 read/write/error, ATU/APU allow/deny와 IRQ/fault injection
-  test vector를 양쪽에서 실행한다.
+- `ARCH-802`: 변경한 기능의 대표 allow/deny 또는 IRQ/fault marker 하나를
+  비교한다.
 - `ARCH-803`: 차이를 `동등`, `의도된 추상화`, `부분 모델`, `blocker`로 분류한다.
 - `ARCH-804`: coverage ledger와 roadmap을 최신 evidence에 맞춰 갱신한다.
 - `ARCH-805`: broad pass-through, temporary merged bus와 undocumented priority가
   소스에서 사라졌음을 검사한다.
-- `ARCH-806`: FVP/QVP가 같은 hash의 firmware, DTB, kernel과 rootfs를 사용했는지
-  comparison 시작 전에 강제한다.
+- `ARCH-806`: firmware, DTB, kernel과 rootfs hash 차이를 기록한다. 동일 hash는
+  MVP comparison의 선행 조건으로 강제하지 않는다.
 - `ARCH-807`: CMN/NCI/NI hierarchy를 cycle timing이 아닌 initiator/target,
   translation, security와 signal route 관점에서 비교한다.
-- `ARCH-808`: SCMI/PSCI/PFDI/HIPC/FF-A/RAS의 message, state transition,
-  interrupt와 error 결과를 protocol별로 비교한다.
-- `ARCH-809`: 동일 milestone까지 simulated time, wall time, RSS와 transaction
-  수를 비교하고 성능 회귀 budget을 적용한다.
+- `ARCH-808`: 이번 구현에서 변경한 protocol의 대표 message/state marker만
+  비교한다.
+- `ARCH-809`: elapsed time은 hang 진단용으로만 기록하고 성능 판정에는 사용하지
+  않는다.
 - `ARCH-810`: architecture contract와 FVP CFG2-only CL1 extension 결과를 별도
   열로 보고해 FVP 전용 동작을 hardware parity로 오판하지 않는다.
-- `ARCH-811`: QVP의 `DECERR`/`SLVERR`, SMMU fault와 abort가 FVP에서 관찰 가능한
-  syndrome/side effect와 일치하는지 negative vector로 비교한다.
+- `ARCH-811`: injection interface가 양쪽에 있을 때 대표 QVP 오류 하나를 FVP의
+  syndrome/side effect와 비교한다.
 - `ARCH-812`: final bundle에 command, environment, source/submodule revision,
   artifact hash, resolved CCI, route manifest, logs와 verdict를 포함한다.
 
 #### 완료 조건
 
-- 아래 G0–G7 gate가 모두 통과한다.
+- 아래 G0–G6 최소 gate가 통과한다. G7은 수행하거나 `deferred` 사유를 기록한다.
 - 남은 fidelity gap은 주소, 영향, 근거, 대체 계획과 함께 문서화된다.
 - source revision, command, result JSON, log와 판정이 한 evidence bundle에 있다.
 
@@ -535,13 +541,13 @@ side effect를 acceptance criterion으로 삼는다.
 | Gate | 범위 | 필수 증거 |
 | --- | --- | --- |
 | G0 | contract/static | map/topology/software ABI validator, source scope, artifact hash와 core boundary audit |
-| G1 | QBox/TLM 기반 | payload extension, response mapping, debug/DMI policy, CCI naming과 trace unit test |
+| G1 | QBox/TLM 기반 | 변경한 request path의 context 보존과 대표 allow/deny unit test |
 | G2 | domain/boot policy | AP/SI/RSE isolation, RSE APU/ATU 설정, SI read-back, AP reset release trace |
-| G3 | memory/DMA/IOMMU/QEMU | single backing, DMI, GPEX requester/StreamID, SMMU backend와 guest fault evidence |
-| G4 | signal/lifecycle/safety | PPI/SPI/MSI/LPI, qdev reset/BQL/quantum, power, FMU/SSU/RAS injection evidence |
-| G5 | system software/ABI | SCMI/PSCI/MHU/PFDI/HIPC/FF-A/DT producer-consumer 및 error-path evidence |
-| G6 | QBox full-system/performance | RSE, SI, AP boot, coverage audit, 4/16 CPU correctness와 performance budget |
-| G7 | FVP comparison | 동일 hash artifact의 FVP/QVP differential report와 scope-aware gap ledger |
+| G3 | memory/DMA/IOMMU/QEMU | single backing, mapped GPEX DMA 하나와 SMMU fault 하나 |
+| G4 | signal/lifecycle/safety | 구현한 IRQ/fault 수직 slice의 source→sink→clear smoke |
+| G5 | system software/ABI | 변경한 protocol의 대표 오류와 다음 정상 request |
+| G6 | QBox full-system smoke | local과 Yocto에서 RSE/SI/AP/4 CPU boot 및 coverage 각 1회 |
+| G7 | focused FVP comparison | 변경한 marker를 한 번 비교하거나 `deferred` 사유 기록 |
 
 ### 8.1 단계별 명령
 
@@ -591,26 +597,20 @@ python3 scripts/run/runfvp_log_boot.py \
 build directory 이름은 실제 `local_build.sh` 산출물에서 확인하고 사용한다.
 존재하지 않는 경로를 고정값으로 가정하지 않는다.
 
-## 9. Test matrix
+## 9. MVP smoke matrix
 
-| 축 | 최소 조합 |
+| 축 | 필수 조합 |
 | --- | --- |
-| AP CPU | active 기본 4, 최대 topology 16 |
-| variant/scope | current Zena CSS architecture(CL0), active RD-Aspen/FVP CFG2, CFG2 CL1 extension |
-| Safety Island | CL0 only, CL1 only, live CL0+CL1; architecture-only에서 CL1 제외 |
-| address | local hit, local miss, cross-domain allow, cross-domain deny, width overflow |
-| initiator | AP/RSE/SI CPU, secure loader/debug, GPEX/DMA, firmware proxy |
-| transaction | `b_transport`, `transport_dbg`, DMI, QEMU direct/reentrant |
-| attributes | secure/non-secure, debug, domain, requester/StreamID, byte enable, unaligned/exclusive |
-| ATU | reset, programmed, locked, out-of-window |
-| memory | low/high DRAM, shared SRAM/HIPC, DMI on/off, CPU/DMA visibility와 ordering |
-| SMMU | normative backend, alternate backend, translated/denied IOVA와 fault IRQ |
-| interrupt | AP PPI/SPI/MSI/LPI/ITS, SI GIC view 0/1/2, RSE NVIC, MHU, SMMU, RAS |
-| lifecycle | cold/warm/CPU/cluster/domain reset, power-off, WFI wake, watchdog/fault expiry |
-| software ABI | SCMI, PSCI, MHU, PFDI, HIPC/RPMsg, FF-A, RAS, DT/driver probe |
-| failure | deny, malformed/duplicate message, timeout, peer-offline, reset 중 transaction |
-| runtime | AP direct boot, RSE-focused, full-system, FVP reference |
-| performance | 4/16 CPU, DMI on/off, simulated/wall time, RSS와 transaction 수 |
+| AP CPU | CPU0–CPU3, 총 4 |
+| policy | 변경한 경로의 allow 하나와 deny 하나 |
+| SMMU | mapped DMA 하나와 unmapped IOVA fault 하나 |
+| interrupt | endpoint MSI→CPU0 LPI 하나와 legacy INTx 하나 |
+| fault | 구현한 source→sink→clear 한 번 |
+| software ABI | 변경한 protocol 오류 하나와 다음 정상 request 하나 |
+| runtime | local build/boot 한 번, Yocto build/boot 한 번 |
+
+나머지 CPU topology, initiator/attribute 조합, DMI/backend matrix, reset stress,
+protocol 전체 오류와 FVP 전체 differential은 extended validation backlog다.
 
 ## 10. 위험과 대응
 
@@ -688,17 +688,16 @@ build directory 이름은 실제 `local_build.sh` 산출물에서 확인하고 �
 - [x] architecture/RD-Aspen/FVP CFG2 extension scope가 구분되어 있다.
 - [x] 기본 4 CPU, GIC, PPU와 DT topology가 정상 boot에서 일치한다.
 - [x] A4 범위의 memory backing/view와 ATU DMI test가 통과한다.
-- [ ] QEMU/SystemC RAM owner가 하나이며 CPU/DMA/debug path의 TLM 속성과
-      `MemTxResult`/guest syndrome이 보존된다.
-- [ ] GPEX requester/StreamID, SMMU translation/fault 및 MSI→ITS→LPI가 검증된다.
-- [ ] IRQ/reset/power/fault route와 FMU/SSU/RAS 상태 전이가 machine-readable
-      evidence로 생성된다.
+- [ ] QEMU/SystemC RAM owner가 하나이며 변경한 CPU/DMA/debug 대표 경로의 TLM
+      속성과 `MemTxResult`/guest syndrome이 보존된다.
+- [ ] GPEX requester/StreamID, mapped/unmapped SMMU와 MSI→CPU0 LPI smoke가 통과한다.
+- [ ] 구현한 IRQ/reset/power/fault route의 source→sink→clear evidence가 생성된다.
 - [x] TCG 기본 경로의 qdev reset, BQL, async job, MTTCG quantum와 WFI wake
       회귀 및 full boot가 통과한다.
-- [ ] SCMI/PSCI/MHU/PFDI/HIPC/FF-A/DT ABI의 success와 error test가 통과한다.
+- [ ] 변경한 software ABI의 대표 error와 다음 정상 request가 통과한다.
 - [ ] AP secure watchdog, SMD RGM 등 P1 placeholder가 기능 모델로 승격된다.
-- [ ] QBox full-system G0–G6와 performance budget이 통과한다.
-- [ ] FVP differential G7이 통과하고 남은 gap이 scope와 함께 명시되어 있다.
+- [ ] QBox G0–G6 최소 smoke가 통과한다.
+- [ ] focused FVP G7을 수행하거나 `deferred` 사유와 남은 gap을 기록한다.
 - [x] 신규 evidence가 `build/qbox-apollo-qvp/`에 있고 기존
       `build/qbox-apollo-fvp/` 결과와 provenance로 구분된다.
 - [x] roadmap, Apollo platform README와 fidelity ledger가 최신 상태다.
@@ -735,9 +734,9 @@ current runner/README의 evidence path도 포함했다.
 | A3 | 전환 완료 | 40-bit SI CL0/CL1 router, AP HIPC bridge, CL0→CL1 SCMI bridge, local target/CPU/loader rebinding | 완료 상태 유지 |
 | A4 | 구조 완료 | runtime SMD router, broad bridge 제거, SI/AP/SMDEXP ATU 실경로, canonical backing, GPEX TBU route | 완전한 APU permission은 A5/A7 fidelity로 분리 |
 | A5 | 부분 | full-system CPU 기본과 local `maxcpus=4`, `addrtr` DMI 회귀, GPEX LTI00와 reset-state ATU deny | requester/StreamID, SMMU fault와 전 access-kind DMI 정책 |
-| A6 | 부분 | signal/reset/fault contract, MHU/GIC/PPU route, reset-held CPU QK lifecycle 50회, SMD-owned mailbox AP-reset 보존 | FMU/SSU/RAS source-to-sink injection, KVM/16 CPU matrix와 전체 reset taxonomy |
+| A6 | 부분 | signal/reset/fault contract, MHU/GIC/PPU route, reset-held CPU QK lifecycle 50회, SMD-owned mailbox AP-reset 보존 | 구현한 FMU/SSU/RAS source-to-sink 대표 smoke; 전체 taxonomy와 KVM/16 CPU는 후속 |
 | A7 | 부분 | 정상 boot ABI, mailbox reset/startup ordering, secure pending request 보존, QVP/FVP secondary SCMI v2.0 focused differential | malformed/deny/timeout/error side effect와 placeholder 승격 |
-| A8 | 부분 | local 5회·Yocto 3회 기준 boot/coverage, acceptance 2회와 최종 trace-off local/Yocto 각 3회 | performance budget, 4/16 CPU matrix와 동일 hash 전체 FVP differential G7 |
+| A8 | 부분 | local 5회·Yocto 3회 기준 boot/coverage, acceptance 2회와 최종 trace-off local/Yocto 각 3회 | 신규 fidelity 변경의 local/Yocto smoke 각 1회와 focused FVP G7 또는 `deferred` 사유 |
 
 현재 contract의 migration phase는 `A4_policy_routing`이다.
 `forbid_broad_passthrough=true`이며 compatibility debt는 빈 목록이다. 후속 fidelity
@@ -793,7 +792,7 @@ RSE BL1/BL2/runtime, live SI CL0 SCP-firmware, 4-core SI CL1 Zephyr/PFDI/network
 
 ```text
 architecture-debt-qk-fix-local-maxcpus-r1-20260716
-  -> Linux 4 CPUs online, CPU4-15 PSCI failure 없음, coverage 49/49
+  -> Linux 4 CPUs online, CPU4–CPU15 PSCI release 시도 없음, coverage 49/49
 
 architecture-debt-review-scmi-reset-owner-r1-20260716
   -> SMD-owned mailbox AP reset 보존, SCMI v2.0 marker, coverage 49/49
@@ -831,3 +830,22 @@ Yocto WIC는
 [2026-07-16 아키텍처 부채 구현·검증 보고서](apollo-qvp-architecture-debt-validation-2026-07-16.md)에
 기록한다. 이번 결과를 완전한 APU permission, 전체 IRQ/fault side effect 또는
 FVP functional parity 완료로 해석하지 않는다.
+
+## 16. 4 CPU Fidelity 후속 계획
+
+A0–A4 구조 전환과 P1–P10 구현 결과를 기준선으로 유지하면서 남은 부채는 다음
+연계 문서에 따라 진행한다.
+
+- [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
+- [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)
+- [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)
+
+구현 순서는 I0 4 CPU contract, I1 request context, I2 NI-710AE APU, I3
+MMU-720AE/SMMUv3, I4 MSI/ITS/LPI, I5 fault plane, I6 software ABI recovery, I7
+local/Yocto smoke와 focused FVP comparison, I8 closeout이다. 검증은 V0–V9 최소
+gate로 추적한다.
+
+모든 gate의 CPU scope는 CPU0–CPU3이다. CPU4–CPU15가 online되거나 16 CPU 결과가
+4 CPU evidence와 혼합되면 실패한다. 반복 stress, soak, 16 CPU
+enablement/lifecycle과 전체 FVP differential은 MVP 완료 조건이 아니다. emulator
+성능 budget은 별도 acceptance로 추가하지 않는다.
