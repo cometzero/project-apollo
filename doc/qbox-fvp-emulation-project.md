@@ -67,24 +67,43 @@ model, upstream SystemC model, or local SystemC/TLM model based on the TRM.
 The Apollo full-system machine now loads a declarative Lua contract for
 topology, address ranges, transactions, signals, boot/control ownership, and
 software ABI before constructing the platform. The root fabric is named
-`system_router`; AP, RSE, SI CL0, and the FVP CFG2 SI CL1 extension have
-separate runtime address-view routers. AP/SI HIPC and CL0-to-CL1 SCMI use
-explicit bridges. A repository validator exports nine JSON evidence files and
-checks view widths, overlap/backing rules, references, and routes. Full-system
-AP CPU default is four, matching active Yocto configuration.
+`system_router`; AP, SMD, RSE, SI CL0, and the FVP CFG2 SI CL1 extension have
+separate runtime address-view routers. The SMD high-nibble uses an explicit NCI
+decode, AP/SI/SMDEXP use the RSE-programmed ATU data paths, and HIPC/SCMI use
+narrow static windows. The three A3 broad system bridges are removed. A
+repository validator exports nine JSON evidence files and checks view widths,
+overlap/backing rules, references, routes, reset default-deny, and the absence
+of broad passthrough. Full-system AP CPU default is four, matching active
+Yocto configuration. Local full-system rootfs patching also writes the resolved
+CPU count as `maxcpus=`, so guest topology cannot silently retain the separate
+16-core direct-boot experiment value.
 
-This is an A2/A3 migration state, not completed isolation. AP and both SI
-routers retain low-priority broad system bridges for boot compatibility, and
-the SMD router is contract-only. A4 must replace those bridges with RSE-owned
-ATU/APU allow-list windows and enforce reset default-deny. Requester/StreamID,
-debug/DMI policy, negative access, and complete ABI error paths remain open.
+The structural migration phase is now `A4_policy_routing`; compatibility debt
+is empty. Complete NI-710AE APU permissions, requester/StreamID propagation,
+debug/direct/DMI policy, negative guest-fault evidence, and complete ABI error
+paths remain fidelity work rather than boot-compatibility bridges.
 
-The QBox `addrtr` component also fixes descending DMI address translation and
-has a regression for source `0x1000` mapped to downstream `0x100`. Local-source
-and Yocto `nexios-image` full-system runs both pass through RSE, live SI
-CL0/CL1, TF-A, OP-TEE, U-Boot, and Linux login. See
-`doc/apollo-qvp-machine-implementation-validation-2026-07-15.md` for exact
-commands and evidence paths.
+The QBox `addrtr` component fixes descending DMI address translation and has a
+regression for source `0x1000` mapped to downstream `0x100`. QBox CPU lifecycle
+also keeps reset-held CPUs out of the SystemC quantum-keeper suspend set and
+completes reset release on the target vCPU. The reset regression passed 50
+consecutive runs; local-source full-system boot/coverage passed 5/5 and Yocto
+`nexios-image` boot/coverage passed 3/3 through RSE, live SI CL0/CL1, TF-A,
+OP-TEE, U-Boot, and Linux login. See
+`doc/apollo-qvp-architecture-debt-validation-2026-07-16.md` for exact commands
+and evidence paths.
+
+The AP/SI non-secure MHU shared SRAM is address-visible in the AP view but
+owned and initialized by SMD/SI0 before AP release. Its machine contract now
+uses `preserve_on_ap_reset`, and AP reset fan-out does not clear that backing.
+The post-review acceptance boot reaches Linux login and probes SCMI v2.0 with
+the same vendor and firmware marker as the recorded FVP boot, without the
+earlier `shmem_tx_prepare` warning and secondary SCMI response timeout.
+SI0 secure transport initialization also preserves a valid request that AP or
+SI CL1 posted before the completer started. This closes the trace-sensitive
+first-PFDI-request race without changing the global quantum. SCP module tests
+passed 77/77; trace-off local and rebuilt Yocto full-system runs each passed
+3/3 with PFDI ready, four AP CPUs, SCMI v2.0, Linux login, and 49/49 coverage.
 
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
@@ -273,7 +292,7 @@ management, or all IP registers.
 | Safety Island CL0/CL1 | Partial AP-visible remoteproc/RPMsg surface | Model boot, shared memory, MHU, Zephyr/OpenAMP interactions, and CL1 runtime behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
 | RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now bridges AP->RSE and RSE->AP doorbells, routes RSE MHU receiver IRQs to TF-M-visible IRQ numbers, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, and service-models SI CL1 RPMsg name service far enough for Linux to create `ethsi1`. | Keep boot-flash DMI disabled for TF-M storage debug, replace the service-modeled SI CL1 RPMsg endpoint with a real SI CL1 CPU/Zephyr peer, add secure-service userspace tests, and preserve host SCR/PPU/MHU/shared-memory semantics before any ATU/host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
 | FMU / SSU / SBISTC / SMCF / RAS | Some AP-visible RAS evidence; other safety IP mostly not modeled | Implement documented register and interrupt behavior needed for diagnostics and tests | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
-| PFDI | Linux/Zephyr integration evidence exists | Replace pass-through/stub behavior with documented agent/device behavior where needed | Zena PFDI docs, Linux/Zephyr code, runtime logs |
+| PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, and secure pending-mailbox startup preservation are covered by local/Yocto runtime | Add malformed, peer-offline, timeout/recovery and fault-injection behavior | Zena PFDI docs, Linux/Zephyr/SCP code, runtime logs |
 | Power/performance control | AP-visible behavior only | Model SCMI-visible power/performance contracts before low-level PPU fidelity | Zena power/performance docs, SCMI logs |
 
 ## Implementation Workflow
@@ -322,6 +341,8 @@ QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-qvp/work/
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target <target> --parallel 8
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target platforms-vp --parallel 8
 ./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
+make -C hsoc-stack/components/system_mgmt/scp-firmware -f Makefile.cmake \
+  mod_test BUILD_PATH=<repo>/build/tests/scp-firmware-unit
 python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-qvp/<run-id>/result.json --output build/qbox-apollo-qvp/<run-id>/full-coverage-audit.json
 ```
@@ -341,8 +362,8 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
-1. Instantiate the SMD router and replace the three A3 broad compatibility
-   bridges with RSE-owned ATU/APU allow-list windows and reset default-deny.
+1. Implement the complete NI-710AE APU permission/lock model on top of the A4
+   ATU/static-window structure and add secure/domain deny evidence.
 2. Carry CPU and GPEX requester/domain/StreamID through QEMU/TLM, SMMU, and APU;
    add denied-access and guest-fault evidence for regular/debug/DMI paths.
 3. Convert remaining compatibility stubs into tracked fidelity debt with owner,
