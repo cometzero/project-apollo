@@ -470,10 +470,36 @@ def write_passing_logs(tmp_path):
                 "PFDI Agent setup complete",
                 "PFDI service ready",
                 "si_net_init: Network interface configured",
+                "RPMSG Endpoint: ATTACHED",
             ]
         )
         + "\n",
         encoding="utf-8",
+    )
+
+
+def test_keep_running_child_status_requires_live_cl1_rpmsg_endpoint(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    cl1_log = tmp_path / "qbox-safety-island-cl1.log"
+    cl1_log.write_text(
+        cl1_log.read_text(encoding="utf-8").replace(
+            "RPMSG Endpoint: ATTACHED\n",
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["passed"] is False
+    assert (
+        status["marker_hits"]["si_cl1"]["RPMSG Endpoint: ATTACHED"]
+        is False
     )
 
 

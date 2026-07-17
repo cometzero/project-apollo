@@ -102,6 +102,7 @@ LIVE_CL1_REQUIRED_MARKERS = {
     "pfdi_agent": "PFDI Agent setup complete",
     "pfdi_service": "PFDI service ready",
     "network_configured": "si_net_init: Network interface configured",
+    "rpmsg_endpoint": "RPMSG Endpoint: ATTACHED",
 }
 LIVE_CL1_FAIL_PATTERNS = {
     "pfdi_status_timeout": "PFDI status timed out",
