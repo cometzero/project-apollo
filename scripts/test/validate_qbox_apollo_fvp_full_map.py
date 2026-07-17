@@ -37,6 +37,11 @@ CHECKS = {
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
         ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"function ap_compute\.enable_ap_router"),
         ("platform:ap-atu-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_router\.initiator_socket\""),
+        ("platform:system-to-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.system_to_ap_flash_bridge"),
+        ("map:system-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua", r'name\s*=\s*"system_ap_flash"[^\n]*alias_of\s*=\s*"ap_flash"'),
+        ("platform:ap-to-system-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.ap_to_system_rse_carveout_bridge"),
+        ("map:ap-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua", r'name\s*=\s*"ap_rse_carveout"[^\n]*backing\s*=\s*"ap-rse-carveout"'),
+        ("platform:live-ap-rse-default", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r'QBOX_RDASPEN_RSE_PS_PROXY",\s*false'),
         ("platform:ap-dram-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
         ("platform:ap-gic-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
         ("platform:ap-gpex-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_target\(platform\.ap_gpex_0\.ecam_iface\)"),
@@ -63,6 +68,21 @@ CHECKS = {
         ("irq:si0-header", "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h", r"IRQ"),
         ("irq:cl1-dts", "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts", r"gic"),
         ("irq:multiview-task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-029"),
+        (
+            "irq:ap-to-live-cl1-mhu-pair",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r'pair\s*=\s*ctx\.apollo_live_cl1\s+and\s+"apollo_ap_to_si_cl1"\s+or\s+"ap_si_cl1"',
+        ),
+        (
+            "irq:live-cl1-to-ap-mhu-pair",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r'pair\s*=\s*ctx\.apollo_live_cl1\s+and\s+"apollo_si_cl1_to_ap"\s+or\s+"ap_si_cl1"',
+        ),
+        (
+            "irq:live-cl1-real-doorbell-bridge",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r'protocol\s*=\s*ctx\.apollo_live_cl1\s+and\s+"doorbell-bridge"\s+or\s+"doorbell"',
+        ),
     ],
     "atu": [
         ("atu:analysis", "doc/qbox-apollo-fvp-map-analysis.md", r"ATU|ATW"),
@@ -70,6 +90,16 @@ CHECKS = {
         ("atu:task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-043"),
     ],
     "reset": [
+        (
+            "reset:hipc-shared-memory-preserved",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"platform\.host_ap_bl2_header_sram\s*=\s*\{[\s\S]*?init_mem\s*=\s*false",
+        ),
+        (
+            "reset:hipc-contract-preserved",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua",
+            r'name\s*=\s*"ap_bl2_header_sram"[^\n]*reset_policy\s*=\s*"preserve_on_ap_reset"',
+        ),
         (
             "reset:ap-cpu-count-default",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
