@@ -1,7 +1,8 @@
 # Apollo QVP 잔여 Fidelity 부채 아키텍처 설계
 
-- 상태: 구현 전 설계 기준선
+- 상태: I0~I7 구현·검증 완료, I8 종결 반영 중
 - 기준일: 2026-07-16
+- 구현 검증일: 2026-07-17
 - 대상: active `apollo-qvp`, RD-Aspen CFG2
 - AP CPU 범위: CPU0–CPU3, 총 4 CPU
 - 선행 기준: A4 policy-routing 구조 폐쇄 및 2026-07-16 반복 부팅 검증
@@ -25,7 +26,8 @@
 4. debug, direct, reentrant, DMI가 기능 접근 정책을 우회하지 않는다.
 5. FMU, SSU, RAS, DCLS, watchdog과 reset이 source-to-sink 상태 전이를 만든다.
 6. software ABI의 오류가 무한 대기 대신 명시적 상태와 복구 결과로 끝난다.
-7. QVP와 FVP가 같은 artifact hash와 4 CPU 조건으로 비교된다.
+7. QVP/FVP 비교가 가능한 경우 artifact provenance와 4 CPU 조건을 기록하고,
+   실행 환경이 없으면 비교를 성공으로 합성하지 않고 `deferred`로 남긴다.
 
 ## 2. 기준선과 범위
 
@@ -42,7 +44,7 @@
 활성 설정은 `MACHINE = "apollo-qvp"`, `RD_ASPEN_VARIANT = "cfg2"`,
 `PC_CPUS_COUNT_DEFAULT = "4"`, `TMPDIR = "build/tmp_baremetal"`이다.
 
-### 2.2 현재 구현에서 확인한 경계
+### 2.2 구현 착수 전 확인한 경계
 
 | 영역 | 현재 동작 | 잔여 부채 |
 | --- | --- | --- |
@@ -54,7 +56,19 @@
 | FMU/SSU | software error, critical/non-critical IRQ와 SSU 입력이 존재 | 실제 source와 recovery/reset sink의 수직 경로가 부분적 |
 | software ABI | 정상 SCMI/PFDI/PSCI/MHU 경로가 부팅됨 | malformed, denied, peer-offline, timeout 복구가 부분적 |
 
-### 2.3 현재 범위
+### 2.3 구현 후 상태
+
+| 영역 | 2026-07-17 결과 | 제한 |
+| --- | --- | --- |
+| request context | QEMU CPU/GPEX, loader와 router/SMMU 경로에서 origin/domain/requester/security/access path를 전달 | privilege/instruction/ATS의 exhaustive 조합은 후속 |
+| NI-710AE | SI CL0 primary ASNI 0의 reset owner, region permission, lock, normal/debug와 policy-aware DMI 적용 | 다른 ASNI/AMNI ingress와 exhaustive DMI matrix는 후속 |
+| MMU-720AE/SMMUv3 | 공용 SMMUv3 owner와 LTI00 TBU, SID `0x40`, mapped DMA, EVTQ/IRQ와 TLBI 회귀 검증 | stage-2/two-level STE/translated DMI 전체 조합은 후속 |
+| GIC/ITS | 동일 virtio-net-pci endpoint의 MSI-X→ITS/LPI와 `pci=nomsi` INTx 증거 완료 | affinity/invalid ID matrix는 후속 |
+| FMU/SSU | opt-in SMMU event fanout, FMU record/IRQ, SSU sink와 clear/recovery JSON 완료 | watchdog/DCLS/APU source 전체 수직 slice는 후속 |
+| software ABI | malformed SCMI/PFDI와 invalid HIPC descriptor의 bounded error/channel recovery 완료 | PSCI/FF-A와 peer-offline/reset-time matrix는 후속 |
+| 통합 | local/Yocto artifact별 RSE/SI/AP/Linux와 CPU0~CPU3 smoke 및 coverage/contract pass | 새 FVP focused differential은 환경 부재로 deferred |
+
+### 2.4 현재 범위
 
 이번 fidelity 단계는 AP CPU0–CPU3만 활성화한다.
 
@@ -63,7 +77,7 @@
 - RSE와 Safety Island CPU 구성은 현재 CFG2 기준을 유지한다.
 - FVP가 물리적으로 추가 AP core를 노출하더라도 비교 대상은 활성 CPU0–CPU3다.
 
-### 2.4 비목표와 후속 범위
+### 2.5 비목표와 후속 범위
 
 - 16 AP CPU enablement, correctness와 lifecycle 검증
 - KVM backend 검증
@@ -193,8 +207,12 @@ reset 정책은 RSE origin만 허용한다. RSE가 공식 register sequence를 �
 전에는 AP, SI, DMA와 일반 debug 접근을 차단한다. lock 뒤의 write, 잘못된
 security state와 권한 없는 initiator는 side effect 없이 오류로 끝난다.
 
-첫 구현은 APU를 통과하는 DMI를 모두 거부한다. permission 변경과 invalidation
-시험이 끝난 뒤 read-only DMI부터 단계적으로 허용한다.
+최종 구현은 reset owner/trusted context 또는 programmed policy가 downstream DMI
+전체 범위를 허용할 때만 DMI를 반환한다. 하나의 region이 range 전체를 포함하고
+요청된 read/write permission을 모두 만족해야 한다. APU enable 또는 실행 중
+policy 변경은 현재 MMIO instruction이 끝난 다음 SystemC delta에 protected DMI를
+한 번만 무효화한다. 여러 region에 걸치거나 부분 permission만 맞는 DMI는
+거부한다.
 
 ### FD-03. MMU-720AE와 SMMUv3 기능 모델의 합성
 
@@ -254,7 +272,8 @@ contract의 capability를 가진다.
 - 일반 `transport_dbg`는 normal access와 같은 APU/SMMU 판정을 받는다.
 - direct/reentrant는 blocking 제한만 다르고 permission은 동일하다.
 - trusted loader는 허용된 boot aperture와 boot phase에서만 접근한다.
-- policy deny, translation fault 또는 reset 상태에서는 DMI를 반환하지 않는다.
+- policy deny, translation fault 또는 reset 상태의 비-owner 요청에는 DMI를
+  반환하지 않는다.
 - DMI invalidate는 translated alias와 QEMU `MemoryRegion` alias까지 전파한다.
 
 ### FD-07. 오류 응답과 guest-visible 결과
@@ -292,6 +311,11 @@ SCMI, PSCI, MHU, PFDI, HIPC/RPMsg와 FF-A는 공통 오류 원칙을 따른다.
 - reset 중 request는 owner 정책에 따라 보존 또는 명시적으로 취소한다.
 - 오류 뒤 다음 정상 request가 성공해야 한다.
 
+I6 구현은 이 원칙 중 QBox가 직접 소유하는 경계를 먼저 고정했다. SCMI/PFDI는
+malformed length에 `SCMI_PROTOCOL_ERROR`와 channel FREE를 게시하고, HIPC/RPMsg
+host service는 invalid descriptor poll을 유한하게 끝낸 뒤 다음 doorbell에서
+회복한다. PSCI와 FF-A negative semantics는 각각 TF-A와 OP-TEE 소유로 유지한다.
+
 ### FD-10. evidence와 FVP differential
 
 모든 실행은 source revision, resolved 4-CPU topology, CCI, backend와 artifact
@@ -304,7 +328,9 @@ SHA-256을 하나의 manifest에 기록한다. MVP의 QVP/FVP 비교는 boot mil
 - `blocker`
 
 전체 transaction, IRQ/fault, guest state와 recovery differential은 extended
-validation으로 남긴다. 성능 수치는 acceptance에 사용하지 않는다.
+validation으로 남긴다. 성능 수치는 acceptance에 사용하지 않는다. 2026-07-17
+local/Yocto manifest와 smoke는 완료했으며, 새 FVP 비교는 comparison script,
+실행 binary와 local FVP bundle이 없어 `deferred`다.
 
 ## 7. 구현 소유권
 
@@ -337,3 +363,8 @@ SystemC/QBox interface로 표현할 수 없는 generic 결함이 재현된 경�
 - focused FVP comparison을 수행하거나 실행 제약과 `deferred` 사유를 기록한다.
 
 상세 구현 순서와 검증 횟수는 연계 계획 문서를 따른다.
+
+2026-07-17 결과는 위 완료 조건의 4 CPU MVP 범위를 충족한다. 단, fault 조건은
+SMMU→FMU→SSU 대표 slice, software ABI는 SCMI/PFDI/HIPC 대표 recovery 범위다.
+watchdog/DCLS/APU fault source 전체, PSCI/FF-A negative matrix, 16 CPU와 전체 FVP
+differential은 완료 주장에 포함하지 않는다.

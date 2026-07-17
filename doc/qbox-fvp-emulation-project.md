@@ -78,10 +78,25 @@ Yocto configuration. Local full-system rootfs patching also writes the resolved
 CPU count as `maxcpus=`, so guest topology cannot silently retain the separate
 16-core direct-boot experiment value.
 
-The structural migration phase is now `A4_policy_routing`; compatibility debt
-is empty. Complete NI-710AE APU permissions, requester/StreamID propagation,
-debug/direct/DMI policy, negative guest-fault evidence, and complete ABI error
-paths remain fidelity work rather than boot-compatibility bridges.
+The structural migration phase remains `A4_policy_routing`; compatibility
+debt is empty. The following four-CPU fidelity phase now implements common
+request context, SI CL0 primary NI-710AE permissions and policy-aware DMI,
+MMU-720AE/SMMUv3 LTI00 translation, a PCIe MSI-X/ITS/LPI and INTx test profile,
+an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
+recovery. Unimplemented combinations remain explicit extended-validation
+debt rather than boot-compatibility bridges.
+
+The 2026-07-17 acceptance used the same `smoke` contract for local and Yocto
+artifacts. `./local_build.sh qbox --qbox-unit-tests` passed all 33
+QBox-platform component tests; `./yocto_build.sh` completed all 7,293 tasks.
+Both full-system runs reached RSE, live SI CL0/CL1, Linux login and exactly
+CPU0 through CPU3, with artifact-family validation, coverage audit, and
+fidelity contract all passing. Evidence is under
+`build/qbox-apollo-qvp/fidelity-4cpu-local-20260717/` and
+`build/qbox-apollo-qvp/fidelity-4cpu-yocto-20260717/`. At that acceptance point
+the planned same-artifact FVP differential was deferred because its automation
+and executable/local FVP bundle were unavailable; it was not reported as a
+pass.
 
 The QBox `addrtr` component fixes descending DMI address translation and has a
 regression for source `0x1000` mapped to downstream `0x100`. QBox CPU lifecycle
@@ -104,6 +119,20 @@ SI CL1 posted before the completer started. This closes the trace-sensitive
 first-PFDI-request race without changing the global quantum. SCP module tests
 passed 77/77; trace-off local and rebuilt Yocto full-system runs each passed
 3/3 with PFDI ready, four AP CPUs, SCMI v2.0, Linux login, and 49/49 coverage.
+
+A subsequent 2026-07-17 focused comparison used the recorded FVP and QBox
+RSE/SI0/SI1 logs. It fixed CC3XX identification-register writes so RSE keeps
+`PIDR0=0xc1`, and traced the remaining SI1 PFDI timeout to virtual-time skew
+between the separate SI0 and SI1 QEMU instances. The SI1 PFDI postbox now uses
+the propagated TLM requester identity to hold only the issuing vCPU and its
+quantum keeper until the real SI0 firmware marks the shared-memory channel
+FREE. The channel slot is not treated as a CPU ID because CPU0 issues all four
+initial setup requests. Two trace-off local runs and one Yocto provider/image
+run passed without the four PFDI failure markers; coverage also passed. The
+focused non-AP differential is complete, while the automated same-artifact
+whole-system comparison remains backlog. The SI0 CMN discovery model still
+reports a reduced topology and remains explicit fidelity debt. See
+`doc/apollo-qvp-fvp-qbox-non-ap-pfdi-analysis-2026-07-17-ko.md`.
 
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
@@ -276,6 +305,30 @@ covered by current checks. It does not prove full FVP equivalence for reset
 behavior, firmware side effects, safety diagnostics, error injection, power
 management, or all IP registers.
 
+The 2026-07-16 four-CPU fidelity sequence has completed I0 through I6. The
+active GPEX test profile now proves one `virtio-net-pci` endpoint at
+`0000:00:01.0` through both interrupt modes: MSI-X writes retain PCI requester
+ID `0x0008`, reach the ITS translator, and increment a CPU0 LPI; the same
+endpoint under `pci=nomsi` increments GIC SPI input 301 (architectural INTID
+333) on CPU0. The profile uses a single endpoint-only RID-to-SID mapping
+(`0x0008` to `0x0040`) and is opt-in, so it does not add a test device to the
+default machine. Exact commands and evidence are recorded in
+`doc/apollo-qvp-fidelity-stages/i4-gpex-msi-lpi-completion-2026-07-16-ko.md`.
+I5 adds an opt-in QBox test profile that fans the real SMMU event-queue line
+to its existing GIC sink and a separate FMU observer. Component evidence
+proves FMU record/IRQ, SSU escalation, write-one-to-clear, recovery, disabled
+no-side-effect behavior, and ordered JSON output. This observer is explicitly
+test instrumentation; it is not a claim that RD-Aspen physically routes the
+SMMU event queue into a NI-710AE cluster FMU.
+I6 closes the selected model-owned ABI recovery slice. The MHUv3 SCMI/PFDI
+completer now rejects a message shorter than the SCMI header or larger than the
+channel capacity with `SCMI_PROTOCOL_ERROR`, returns the channel to FREE, and
+does not execute protocol side effects. The same component test proves that a
+valid PFDI request succeeds immediately afterward. It also proves bounded
+handling of an invalid RPMsg descriptor followed by a successful corrected
+descriptor and doorbell. PSCI and FF-A negative semantics remain firmware-owned
+and are not synthesized in QBox.
+
 ## Initial IP Matrix
 
 | IP / Block | Current QBox Direction | Fidelity Target | Primary Evidence |
@@ -292,7 +345,7 @@ management, or all IP registers.
 | Safety Island CL0/CL1 | Partial AP-visible remoteproc/RPMsg surface | Model boot, shared memory, MHU, Zephyr/OpenAMP interactions, and CL1 runtime behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
 | RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now bridges AP->RSE and RSE->AP doorbells, routes RSE MHU receiver IRQs to TF-M-visible IRQ numbers, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, and service-models SI CL1 RPMsg name service far enough for Linux to create `ethsi1`. | Keep boot-flash DMI disabled for TF-M storage debug, replace the service-modeled SI CL1 RPMsg endpoint with a real SI CL1 CPU/Zephyr peer, add secure-service userspace tests, and preserve host SCR/PPU/MHU/shared-memory semantics before any ATU/host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
 | FMU / SSU / SBISTC / SMCF / RAS | Some AP-visible RAS evidence; other safety IP mostly not modeled | Implement documented register and interrupt behavior needed for diagnostics and tests | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
-| PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, and secure pending-mailbox startup preservation are covered by local/Yocto runtime | Add malformed, peer-offline, timeout/recovery and fault-injection behavior | Zena PFDI docs, Linux/Zephyr/SCP code, runtime logs |
+| PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, secure pending-mailbox preservation, malformed-length recovery, and requester-aware cross-instance deadline hold until the real SI0 response releases the channel | Add peer-offline, reset-time cancellation and fault-injection behavior | Zena PFDI docs, Linux/Zephyr/SCP code, FVP/QBox differential and component/runtime logs |
 | Power/performance control | AP-visible behavior only | Model SCMI-visible power/performance contracts before low-level PPU fidelity | Zena power/performance docs, SCMI logs |
 
 ## Implementation Workflow
@@ -362,10 +415,10 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
-1. Implement the complete NI-710AE APU permission/lock model on top of the A4
-   ATU/static-window structure and add secure/domain deny evidence.
-2. Carry CPU and GPEX requester/domain/StreamID through QEMU/TLM, SMMU, and APU;
-   add denied-access and guest-fault evidence for regular/debug/DMI paths.
+1. Add one software-visible malformed/denied transaction followed by a normal
+   recovery transaction without changing firmware or kernel sources.
+2. Ground and implement the next hardware safety source, with APU violation,
+   DCLS, and secure watchdog remaining separate architecture decisions.
 3. Convert remaining compatibility stubs into tracked fidelity debt with owner,
    missing behavior, and replacement path.
 4. Extend signal and ABI coverage to IRQ/reset/power/fault injection and

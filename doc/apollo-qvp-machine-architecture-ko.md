@@ -1,9 +1,10 @@
 # Apollo QVP Machine Architecture 비교 및 개선안
 
-작성일: 2026-07-15, 최종 갱신 2026-07-16
+작성일: 2026-07-15, 최종 갱신 2026-07-17
 
 상태: QBox / system hardware / system software / QEMU 및 Arm Zena CSS
-하드웨어 블록 다이어그램 리뷰 반영, A0–A4 구조 전환 구현·재리뷰·검증 완료
+하드웨어 블록 다이어그램 리뷰 반영, A0–A4 구조 전환과 I0–I7 4 CPU fidelity
+구현·리뷰·local/Yocto 검증 완료
 
 대상: active `apollo-qvp` / RD-Aspen CFG2 / current Zena CSS architecture와
 FVP CFG2 extension
@@ -22,6 +23,7 @@ FVP CFG2 extension
 - [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
 - [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)
 - [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)
+- [I7 local/Yocto 완료 보고서](apollo-qvp-fidelity-stages/i7-integration-validation-completion-2026-07-17-ko.md)
 
 ## 1. 목적
 
@@ -80,6 +82,15 @@ init이 BUSY/payload를 지우던 startup race를 닫았다. 유효한 pending m
 SI0가 소비할 때까지 보존하며, trace/quantum 변경 없이 local/Yocto를 각각 3회
 반복해 PFDI ready, 4 CPU, SCMI v2.0과 Linux login을 확인했다.
 
+2026-07-17 비-AP FVP/QBox 로그 비교에서는 별도 QEMU instance인 SI1 requester가
+SI0 응답보다 virtual deadline을 먼저 진행해 PFDI timeout이 발생하는 두 번째
+경계를 확인했다. SI1 PFDI PBX가 TLM `requester_id`로 실제 발행 vCPU와 quantum
+keeper만 정지하고, 실제 SI0 firmware가 shared-memory channel을 `FREE`로 만든
+뒤 재개하도록 보강했다. channel 2~5의 초기 setup을 모두 CPU0가 발행하므로
+channel 번호는 CPU identity로 사용하지 않는다. local 반복 및 Yocto provider/image
+부팅에서 PFDI timeout 4종이 사라졌고, RSE CC3XX `PIDR0`도 FVP와 같은 `0xc1`로
+보존됐다.
+
 ### 2.1 완료한 A4 구조 전환
 
 1. `smd_router`와 `system_to_smd_nci`를 runtime에 생성했다.
@@ -95,6 +106,10 @@ SI0가 소비할 때까지 보존하며, trace/quantum 변경 없이 local/Yocto
 9. full-system rootfs의 `maxcpus`를 resolved AP CPU topology와 일치시켰다.
 10. AP/CL1 PFDI를 포함한 secure completer transport init이 먼저 게시된 유효한
     mailbox를 보존하도록 startup ownership contract를 추가했다.
+11. QBox가 소유하는 SCMI/PFDI completer에 message length 경계,
+    `SCMI_PROTOCOL_ERROR`, channel FREE와 다음 정상 요청 recovery를 추가했다.
+12. HIPC/RPMsg host service의 invalid descriptor poll을 bounded하게 유지하고,
+    다음 doorbell의 정상 descriptor를 소비하는 recovery를 검증했다.
 
 ### 2.2 구조 폐쇄 뒤 남은 기능 충실도 부채
 
@@ -104,8 +119,9 @@ SI0가 소비할 때까지 보존하며, trace/quantum 변경 없이 local/Yocto
 3. debug/direct/reentrant trusted capability와 대표 allow/deny. 전체 negative 및
    DMI matrix는 extended validation.
 4. FMU/SSU/RAS/DCLS fault injection, power/reset recovery와 timing.
-5. 변경한 SCMI/PSCI/MHU/PFDI/HIPC/FF-A 경로의 대표 오류와 recovery. 전체 조합은
-   extended validation.
+5. PSCI/FF-A firmware-owned 오류, SCMI/PFDI peer-offline/reset-time 오류와
+   HIPC duplicate notification. I6의 model-owned malformed/recovery slice는
+   완료했고 전체 조합은 extended validation이다.
 6. 4 CPU focused FVP/QVP functional comparison. 동일 artifact 전체 differential은
    후속이며 emulator 성능 budget은 두지 않는다.
 
@@ -286,7 +302,7 @@ escalation별로 보존·초기화되는 memory, IRQ와 device state를 별도 �
 | --- | --- | --- |
 | Device Tree | TF-A가 생성·FIP에 포함, U-Boot/Linux가 소비 | CPU/memory/GIC/SMMU/MHU/shared-memory가 동일 artifact와 일치하고 SystemReady DT 요구를 검사 |
 | SCMI/PSCI | RSE, SCP-firmware, TF-A/Linux | boot confirmation, AP primary/secondary power, system power/reset와 notification channel의 ID·owner·error 정의 |
-| PFDI | AP/SI CL1 agent ↔ SI CL0 monitor | agent별 전용 MHU/shared memory, per-CPU watchdog, vendor protocol `0x90`, FDTI와 timeout 정의 |
+| PFDI | AP/SI CL1 agent ↔ SI CL0 monitor | agent별 전용 MHU/shared memory, per-CPU watchdog, vendor protocol `0x90`, FDTI와 timeout 정의; 별도 QEMU instance 사이에서는 실제 requester의 virtual deadline을 SI0 channel FREE까지 보존 |
 | HIPC/RPMsg | AP Linux ↔ SI CL1 Zephyr | MHUv3와 512 KiB 단일 SRAM backing; resource table 128 KiB, vring 2개 각 128 KiB, buffer 128 KiB |
 | remoteproc | AP Linux ↔ independently booted SI CL1 | AP가 CL1을 부팅하지 않으며 초기 상태는 `RPROC_DETACHED` |
 | FF-A | TF-A/OP-TEE/Linux endpoints | endpoint, shared-memory descriptor, interrupt와 denied/invalid response 정의 |
@@ -357,8 +373,8 @@ overlay에만 사용한다.
 | RSE | M55 wrapper, TCM/VM/flash, DMA350, crypto/KMU/LCM/SAM, protection, ATU, MHU | 폭넓은 기능 모델 보유 |
 | RSE OTP/control/integration | 일부 `gs_memory` | OTP, identity, power/security control과 DCLS 의미 보강 필요 |
 | SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view, 40-bit local router와 ATU | broad bridge 없이 정상 boot; DCLS/fault propagation 보강 필요 |
-| SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM, 40-bit local router | FVP CFG2 extension scope, static SCMI/HIPC allow-list와 local view가 명시됨 |
-| QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, CPU hint와 MemTx/TLM 오류 변환 | secure/debug와 decode error 기반은 존재하나 domain/requester/StreamID 및 debug policy가 불완전 |
+| SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM, 40-bit local router | FVP CFG2 extension scope, static SCMI/HIPC allow-list와 local view, requester-aware PFDI scheduler hold가 명시됨 |
+| QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, `RequestContextTlmExtension`과 MemTx/TLM 오류 변환 | domain/requester/substream/access path 기반은 구현됐으며 미지원 initiator 조합과 전체 debug/DMI policy matrix는 후속 |
 | QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 50회 reset 회귀, 기준 full boot 8회, post-review acceptance 2회와 최종 trace-off 6회 통과; 신규 fault는 대표 smoke만 필수이며 stress/KVM/16 CPU는 후속 |
 | RoS | VirtIO block/net/rng, PL031 | system register, p9, VSI, RoS UART 항목은 부재 또는 범위 밖 |
 
@@ -404,34 +420,35 @@ Zena CSS에서 CMN/NI/AXI/AHB/APB 경계는 단순 성능 topology만이 아니�
 width, 보안 속성, access control, error response와 관리 소유권을 규정한다.
 현재 QVP는 A4에서 local/system view와 ATU를 통과하지 않은 cross-domain 접근의
 금지를 runtime router로 복원했다. unmapped는 address error로 종료하고 GIC/timer
-allocated frame의 reserved tail은 RAZ/WI로 구분한다. 다음 정보는 여전히 payload와
-fault path에서 불완전하다.
+allocated frame의 reserved tail은 RAZ/WI로 구분한다. 공통 request context를
+추가했지만 다음 조합의 전체 coverage와 fault attribution은 여전히 불완전하다.
 
-- transaction의 세부 initiator/requester identity와 privilege
+- 미지원 initiator의 세부 requester identity와 privilege
 - NI-710AE APU의 RSE-only register/lock/permission 전체 의미
-- GPEX StreamID와 SMMU/APU fault syndrome의 end-to-end 보존
-- debug/direct/reentrant access capability
+- GPEX 외 DMA의 StreamID와 SMMU/APU fault syndrome end-to-end 보존
+- debug/direct/reentrant access capability의 전체 조합
 - bridge/alias별 DMI invalidate 전파의 전체 matrix
 
 현재 QBox–QEMU 경계가 완전히 비어 있는 것은 아니다.
 
-- `QemuInitiatorSocket::qemu_io_access()`는 QEMU `MemTxAttrs`를
-  `QemuMemTxAttrsTlmExtension`으로 붙이고 TLM response를 `MemTxOK`,
+- `QemuInitiatorSocket::qemu_io_access()`는 QEMU `MemTxAttrs`와 공통
+  `RequestContextTlmExtension`을 붙이고 TLM response를 `MemTxOK`,
   `MemTxDecodeError`, `MemTxError`로 되돌린다.
-- 현재 wrapper `MemTxAttrs`가 노출하는 필드는 `secure`와 `debug`뿐이다. CPU는
-  CPU hint를 추가하지만 domain/requester/StreamID를 표현하지 않는다.
+- CPU, loader와 GPEX는 origin/domain/requester/substream, capability 및 access
+  path를 context에 기록한다. SI1 PFDI trace는 같은 channel에서도 실제 발행
+  vCPU가 requester로 보존됨을 확인했다.
 - router의 `b_transport`는 initiator ID를 stamp하고 unmapped access에
   `TLM_ADDRESS_ERROR_RESPONSE`를 반환한다. 반면 `transport_dbg`는 같은
   initiator stamping path 없이 decode/forward한다.
 - `addrtr`는 동일 payload를 주소 변환해 전달하고 DMI range를 역변환하며
   invalidate를 전달한다. 그러나 이것만으로 APU deny 또는 trusted debug policy가
   보장되지는 않는다.
-- GPEX DMA는 MMU-720AE LTI00 port의 기본 SID를 사용하지만 explicit requester
-  extension과 모든 fault attribution은 후속이다.
+- GPEX DMA는 explicit PCI requester와 SID를 붙여 MMU-720AE LTI00를 통과한다.
+  지원하지 않은 DMA initiator와 모든 fault attribution 조합은 후속이다.
 
-따라서 새 오류 adapter를 중복 구현할 필요는 없다. 기존 MemTx/TLM 변환과
-extension 수명을 검증하고, 누락된 domain/requester/StreamID 및 access kind만
-재사용 가능한 최소 request-context로 보강해야 한다.
+따라서 새 오류 adapter를 중복 구현할 필요는 없다. 기존 MemTx/TLM 변환과 공통
+request context를 유지하고, 누락된 initiator/path 조합만 같은 extension으로
+확장해야 한다.
 
 낮은 숫자가 높은 decode priority인 QBox router 규칙은 한 address view 안의
 의도적인 subwindow overlay에는 적합하다. 그러나 다른 도메인의 동일 숫자
@@ -503,17 +520,17 @@ revision을 result에 보존한다.
 | 우선순위 | 구조적 gap | 실패 양상 |
 | --- | --- | --- |
 | 완료 | AP/SMD/RSE/SI runtime view와 broad bridge 제거 | A4 contract/source/unit/runtime으로 구조 폐쇄 |
-| P0 | ATU allow-list는 강제되지만 완전한 APU 정책과 initiator identity가 미완성 | 보안/안전 negative matrix가 부분적으로만 검증됨 |
-| P0 | debug/direct/DMI access의 trusted policy가 없음 | functional access가 차단돼도 우회 경로로 side effect 발생 |
-| P0 | RSE 설정, SI 검증과 AP release ownership이 topology와 분리됨 | 잘못된 순서 또는 검증 실패에도 AP가 실행됨 |
+| 완료 | 공통 request identity와 SI CL0 primary NI-710AE APU 정책 | reset/program/lock, normal/debug와 policy-aware DMI 및 protected-path boot로 폐쇄 |
+| P1 | debug/direct/reentrant/DMI 대표 정책은 구현됐으나 전체 조합은 미검증 | 지원하지 않은 initiator/path 조합의 exhaustive negative matrix 필요 |
+| P1 | RSE 설정, SI 검증과 AP release 정상 ownership은 연결됨 | 실패 주입별 release 차단 matrix는 후속 |
 | P1 | full-system CPU 기본 4는 정렬됐으나 CPU/DRAM artifact 자동 동기화는 부분적 | DT와 machine 간 CPU/메모리 불일치 가능 |
-| P1 | GPEX requester/StreamID와 SMMU/ITS route가 불완전 | DMA가 policy를 우회하거나 fault/MSI가 잘못된 vCPU로 전달됨 |
-| P1 | IRQ/reset/power route manifest 부재 | 연결 누락과 잘못된 ID를 정적 검증하기 어려움 |
+| 완료 | GPEX requester/StreamID, LTI00 SMMUv3와 MSI/ITS route | mapped/fault DMA 및 동일 endpoint MSI-X/LPI와 INTx 증거 완료 |
+| 완료 | IRQ/reset/power route manifest | topology validator와 machine contract에서 정적 검사 |
 | P1 | shared backing과 address view 구분이 불명확 | 동일 메모리 복제, DMI alias incoherency 가능 |
 | P1 | reset-held QK 교착은 수정됐으나 QEMU RAM owner와 4 CPU fault/reset lifecycle matrix가 부분적; KVM/16 CPU는 후속 | double mapping, backend별 reset/WFI 차이 가능 |
-| P1 | firmware/DT/OS software ABI가 별도 검증되지 않음 | SCMI/PFDI/HIPC/FF-A가 boot 후 timeout 또는 silent corruption |
+| P1 | SCMI/PFDI/HIPC 대표 오류/recovery는 검증됐으나 PSCI/FF-A matrix는 미검증 | peer-offline/reset-time 또는 추가 descriptor 조합의 timeout 가능 |
 | 완화 | full-system QVP evidence root를 `qbox-apollo-qvp`로 이전 | direct-boot legacy 경로는 별도 정리 필요 |
-| P2 | 일부 control/fault 블록이 placeholder | 정상 boot는 통과해도 fault/reset 검증 불가 |
+| P2 | SMMU→FMU→SSU 대표 fault는 완료됐으나 watchdog/DCLS/APU source 전체 수직 경로는 부분적 | 미구현 source의 fault/reset 검증 불가 |
 | P2 | FVP CFG2 CL1 scope가 hardware contract와 섞임 | reference 확장을 current silicon 필수 기능으로 오판 |
 | P3 | CHI/NoC timing·contention 미모델링 | 성능·타이밍 분석에는 사용할 수 없음 |
 
@@ -636,6 +653,9 @@ QEMU CPU/device access는 기존 `QemuInitiatorSocket`과
 
 1. CPU hint, secure/debug와 새 request context의 lifetime을 payload 전송 동안
    보존하고 completion 후 안전하게 정리한다.
+   platform이 `secure_valid=true`로 고정한 CPU context는 QEMU attribute가 해당
+   의미를 제공하지 않는 경로에서 우선하며, validity가 없을 때만
+   `MemTxAttrs.secure`로 정규화한다.
 2. router와 `addrtr`는 `b_transport`, `transport_dbg`, DMI에서 extension과
    original address를 보존한다. functional/debug policy 차이는 명시적
    capability로만 발생한다.
@@ -711,6 +731,9 @@ QEMU CPU/device access는 기존 `QemuInitiatorSocket`과
 - ATU/alias를 통과한 DMI는 반환 범위를 local window로 clip하고 주소를 역변환한다.
 - backing write, APU/ATU reprogram, reset 또는 remap 시 모든 관련 alias에 DMI
   invalidation을 전파하고 deny 영역에는 DMI를 발급하지 않는다.
+- NI-710AE protected DMI는 하나의 허용 region이 downstream range 전체와 모든
+  요청 permission을 포함할 때만 발급하고, APU enable/live reprogram은 현재
+  MMIO transaction 뒤 다음 SystemC delta에 invalidation을 병합한다.
 - `b_transport`와 DMI의 data/side effect는 같아야 하며 `transport_dbg` 차이는
   명시된 debug semantics로만 허용한다.
 - DRAM controller timing/ECC를 구현하지 않은 경우에도 이를 `backing`과 구분해
@@ -815,6 +838,15 @@ MVP 완료에는 G0–G6을 요구한다. G7은 수행하거나 `deferred` 사�
 | G5 system software/ABI | DT, SCMI/PSCI/MHU/PFDI/HIPC/FF-A/RAS의 producer-consumer 및 success/error path가 일치 |
 | G6 QBox full-system smoke | RSE, SI, AP boot, 4 CPU correctness와 coverage audit가 local/Yocto에서 각각 한 번 통과 |
 | G7 focused FVP comparison | boot milestone과 변경한 대표 marker를 비교하거나 실행 제약과 `deferred` 사유를 기록 |
+
+2026-07-17 현재 판정은 G0/G1/G2/G3/G6 `pass`, G4/G5 `partial`, G7
+`pass(non-AP focused scope)`다. G4는 선택한 SMMU→FMU→SSU와 PCIe interrupt
+slice를 통과했지만 watchdog/DCLS/APU fault source 전체가 아니며, G5는
+SCMI/PFDI/HIPC 대표 recovery를 통과했지만 PSCI/FF-A 전체 error matrix가 아니다.
+G7은 기록된 RSE/SI0/SI1 로그와 변경 marker 비교를 완료했지만 AP는 요청 범위에서
+제외했고 자동 same-artifact whole-system differential은 extended gate다. 따라서
+이번 4 CPU MVP는 완료했으나 Apollo FVP 전체 safety/software equivalence를
+주장하지 않는다.
 
 추가로 다음 조건은 gate 결과와 무관하게 필수다.
 
@@ -957,14 +989,115 @@ secure pending-mailbox fix trace-off Yocto runtime x3
 상세 command, artifact와 판정은
 [2026-07-16 아키텍처 부채 구현·검증 보고서](apollo-qvp-architecture-debt-validation-2026-07-16.md)에
 기록한다. 이 결과는 A4 broad bridge 제거, SMD runtime router, 실제 ATU/TBU
-route, reset-held CPU lifecycle과 두 image 계열의 정상 boot를 증명한다. 완전한
-APU/request context, 전체 software ABI error path, safety fault injection과 동일
-artifact 전체 FVP differential G7은 완료로 판정하지 않는다. 다만 secondary
-SCMI protocol은 기존 FVP log와 focused differential을 완료했다.
+route, reset-held CPU lifecycle과 두 image 계열의 정상 boot를 증명한다. 당시
+미완료였던 APU/request context, 대표 software ABI error와 safety fault slice는
+아래 I0~I7 단계에서 보강했다. 동일 artifact 전체 FVP differential G7은 여전히
+완료로 판정하지 않는다. secondary SCMI protocol은 기존 FVP log와 focused
+differential을 완료했다.
 
-## 12. 4 CPU Fidelity 후속 단계
+### 11.3 2026-07-17 I0~I7 구현 및 검증
 
-구조적 A4 전환 뒤 남은 기능 부채는 다음 세 문서를 단일 실행 계약으로 사용한다.
+I0~I6은 다음 최소 수직 slice를 닫았다.
+
+| 단계 | 구현 결과 | 검증 결과 |
+| --- | --- | --- |
+| I0 | CFG2 4 CPU와 artifact provenance contract | CPU0~CPU3, CPU4 이상 비활성 validator pass |
+| I1 | 공통 TLM request context와 QEMU/loader/router 전달 | request-context CTest pass |
+| I2 | primary NI-710AE reset/program/lock/permission과 DMI | component CTest 및 protected-path full boot pass |
+| I3 | MMU-720AE LTI00를 공용 SMMUv3 owner와 결합 | mapped DMA, EVTQ/IRQ와 TLBI pass |
+| I4 | endpoint requester `0x0008`, SID `0x40`, ITS/LPI와 INTx | 같은 endpoint의 MSI-X와 `pci=nomsi` runtime pass |
+| I5 | opt-in SMMU event fanout, FMU record/IRQ와 SSU sink | clear/recovery JSON 및 component test pass |
+| I6 | malformed SCMI/PFDI와 invalid HIPC descriptor | channel FREE/bounded poll 뒤 정상 재시도 pass |
+
+통합 gate는 다음 두 artifact family를 독립적으로 실행했다.
+
+```text
+./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
+  -> QBox-platform SystemC component tests 33/33 passed
+
+scripts/run/run_qbox_apollo_fidelity.py --artifacts local --cpus 4
+  -> build/qbox-apollo-qvp/fidelity-4cpu-local-20260717
+  -> runtime/coverage/contract pass, Linux CPU IDs [0,1,2,3]
+
+./yocto_build.sh
+  -> 7,293 tasks attempted, all succeeded
+
+scripts/run/run_qbox_apollo_fidelity.py --artifacts yocto --cpus 4
+  -> build/qbox-apollo-qvp/fidelity-4cpu-yocto-20260717
+  -> runtime/coverage/contract pass, Linux CPU IDs [0,1,2,3]
+```
+
+두 manifest의 `artifact_family_errors`는 빈 배열이다. 이 I0~I7 acceptance
+시점에는 계획한 comparison script와 실행 binary가 없어 focused FVP 비교를
+`deferred`로 기록했다. 이후 확보한 기록 로그로 수행한 비-AP differential과
+PFDI 수정 결과는 11.4에서 별도로 판정한다. 상세 근거는
+[I7 완료 보고서](apollo-qvp-fidelity-stages/i7-integration-validation-completion-2026-07-17-ko.md)에
+기록한다.
+
+### 11.4 2026-07-17 비-AP FVP/QBox differential과 PFDI timing closure
+
+사용자가 지정한 FVP
+`build/fvp-tmux/apollo-qvp-20260717-091507/uarts/`와 수정 전 QBox
+`build/qbox-apollo-qvp/yocto-apollo-qvp-20260717-091350/`의 RSE, SI0,
+SI1 로그를 비교했다. AP 오류는 이 판정에서 제외했다.
+
+| domain | FVP | 수정 전 QBox | 수정 후 QBox |
+| --- | --- | --- | --- |
+| RSE | CC3XX `PIDR0=0xc1` 유지 | BL2 이후 `PIDR0=0x0` | read-only ID write 보호 뒤 `0xc1` 유지 |
+| SI0 | PFDI monitor가 SI1 core 0~3 감시 | 같은 monitor/service 동작 | 같은 동작 유지 |
+| SI1 | OoR 0~3, PFDI ready 4 CPUs, network ready, 오류 없음 | core 1/3 status timeout과 `ret=-116` | 같은 정상 marker, timeout 4종 없음 |
+
+원인은 PFDI register나 SI0 service 누락이 아니라 별도 SI0/SI1 QEMU instance의
+virtual-time 진행 차이였다. SI1이 PBX doorbell을 게시한 뒤 SI0 firmware response가
+shared memory에 반영되기 전에 requester의 guest timeout deadline이 진행했다.
+계측 결과 초기 protocol setup의 channel 2~5는 모두 CPU0가 발행하고, 이후
+steady-state status만 channel 2/3/4/5와 CPU 0/1/2/3이 대응했다.
+
+수정된 timing boundary는 다음과 같다.
+
+```text
+SI1 vCPU --RequestContext(requester_id)--> PFDI PBX
+        --doorbell/shared memory---------> SI0 SCP-firmware
+        --sync_hold(requester)----------> 요청 vCPU/QK 정지
+
+SI0 response: channel FREE
+        --requester release-------------> 같은 SI1 vCPU/QK 재개
+```
+
+`sync_hold`는 architectural halt/reset/power 신호가 아니며 guest-visible state를
+변경하지 않는다. MHU model도 response를 합성하지 않고 실제 SI0 firmware가
+channel을 `FREE`로 전이할 때만 requester를 해제한다. 이 설계는 service ownership,
+doorbell, IRQ와 firmware ABI를 보존하면서 cross-instance deadline만 정렬한다.
+
+검증 결과는 다음과 같다.
+
+```text
+./local_build.sh qbox --qbox-unit-tests --no-package --jobs 16
+  -> QBox-platform component tests 33/33 passed
+
+local full-system trace-off runtime r2/r3
+  -> 2/2 passed; SI1 PFDI error gates all false
+  -> r3 full coverage audit passed
+
+bitbake qbox-apollo-qvp-native
+  -> 1,056 tasks attempted; all succeeded; do_check passed
+
+run_qbox_yocto.sh ... pfdi-requester-context-yocto-20260717-r1
+  -> provider executable/Lua + nexios-image WIC boot passed
+  -> SI1 PFDI error gates all false; coverage passed
+```
+
+SI0 CMN discovery는 FVP의 RN-SAM/HN-S/RN-D/RN-F/RN-I `21/8/3/8/8`과
+CCG RA/HA/LA `2/2/2` 대신 QBox에서 `1/8/0/1/0`, `0/0/0`을 보고한다.
+이는 이번 PFDI timeout의 원인은 아니지만 CMN topology/revision fidelity 부채로
+남긴다. 상세 로그, 구현 파일과 명령은
+[비-AP 로그 비교 및 PFDI 수정 보고서](apollo-qvp-fvp-qbox-non-ap-pfdi-analysis-2026-07-17-ko.md)에
+기록한다.
+
+## 12. 4 CPU Fidelity 단계와 후속 범위
+
+구조적 A4 전환 뒤 기능 부채는 다음 세 문서를 단일 실행 계약으로 사용했으며,
+I0~I7 최소 범위는 완료했다.
 
 1. [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)는
    request identity, NI-710AE APU, MMU-720AE/SMMUv3, MSI/ITS/LPI, fault plane과
@@ -976,5 +1109,6 @@ SCMI protocol은 기존 FVP log와 focused differential을 완료했다.
 
 이번 후속 단계의 AP acceptance는 active Yocto와 같은 CPU0–CPU3, 총 4 CPU다.
 CPU4–CPU15 online, 16 CPU lifecycle과 KVM은 완료 조건에 포함하지 않는다. 4 CPU의
-대표 보안·DMA·interrupt·fault·ABI 경로와 local/Yocto smoke를 먼저 닫고, 전체
-matrix와 FVP differential은 extended validation으로 관리한다.
+대표 보안·DMA·interrupt·fault·ABI 경로와 local/Yocto smoke는 완료했다. 전체
+matrix, watchdog/DCLS/APU fault source 확대, PSCI/FF-A negative matrix와 FVP
+differential은 extended validation으로 관리한다.

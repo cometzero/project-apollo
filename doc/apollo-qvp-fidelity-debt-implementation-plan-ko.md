@@ -1,7 +1,8 @@
 # Apollo QVP 잔여 Fidelity 부채 구현 계획
 
-- 상태: 구현 착수 전 승인 기준
+- 상태: I0~I7 완료, I8 종결 반영 중
 - 기준일: 2026-07-16
+- 실행일: 2026-07-16~2026-07-17
 - 대상: `apollo-qvp`, RD-Aspen CFG2, AP 4 CPU
 - 상위 설계: [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
 - 검증 기준: [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)
@@ -66,6 +67,20 @@ I2와 I3는 I1 뒤에 병렬 개발할 수 있다. I5도 I0 뒤에 독립적으�
 있다. 한 작업이 다른 repository의 미완성 commit을 전제로 하지 않도록 integration
 commit은 각 단계 끝에서 별도로 만든다.
 
+구현 결과는 다음과 같다.
+
+| 단계 | 상태 | 대표 증거 |
+| --- | --- | --- |
+| I0 | `complete` | 4 CPU fidelity contract와 machine-readable JSON |
+| I1 | `complete` | request-context CTest와 QBox build |
+| I2 | `complete` | NI-710AE allow/deny/lock/DMI CTest와 protected-path full boot |
+| I3 | `complete` | mapped DMA, EVTQ/IRQ, TLBI 및 SMMUv3/TBU binding |
+| I4 | `complete` | 동일 endpoint MSI-X/LPI와 INTx runtime |
+| I5 | `complete` | SMMU event→FMU→SSU와 clear/recovery JSON |
+| I6 | `complete` | malformed SCMI/PFDI/HIPC 뒤 정상 재시도 |
+| I7 | `complete` | local/Yocto 4 CPU fidelity bundle |
+| I8 | `complete` | architecture/roadmap/ledger와 최종 report |
+
 ## 4. 상세 구현 단계
 
 ### I0. 4 CPU contract와 fidelity ledger 고정
@@ -85,7 +100,7 @@ commit은 각 단계 끝에서 별도로 만든다.
 
 예상 top-level 산출물:
 
-- `[신규 예정] scripts/test/validate_qbox_apollo_fidelity_contract.py`
+- `[구현 완료] scripts/test/validate_qbox_apollo_fidelity_contract.py`
 - topology/transaction/signal/software contract schema 확장
 - 현재 모델과 공식 근거를 연결하는 fidelity ledger
 
@@ -137,8 +152,10 @@ Apollo integration:
 6. RSE boot programming과 lock 뒤 data-path 결과를 검증한다.
 7. deny/error record와 FMU 입력을 연결한다.
 
-초기 구현에서는 APU DMI를 허용하지 않는다. permission 변경 시 전체 protected
-aperture invalidate를 발생시키는 시험 뒤 read-only DMI를 별도 commit으로 연다.
+초기에는 APU DMI를 거부했다. I7에서 Cortex-R82 protected code path가 DMI 없이는
+진행되지 않는 것을 A/B로 확인해, reset owner 또는 programmed policy가 downstream
+range 전체를 허용할 때만 DMI를 연다. APU enable과 live policy 변경은 다음
+SystemC delta에 병합 invalidation을 발생시킨다.
 
 완료 조건:
 
@@ -244,6 +261,11 @@ firmware가 실제로 생성해야 하는 오류는 host model에서 합성하�
 - firmware와 OS 양쪽의 error code가 contract와 일치한다.
 - 오류 뒤 재부팅 없이 다음 정상 transaction이 성공한다.
 
+구현 상태(2026-07-16): QBox-owned SCMI/PFDI malformed length와 channel
+release/next-request recovery, HIPC/RPMsg invalid descriptor의 bounded poll과
+next-doorbell retry를 완료했다. PSCI/FF-A 및 peer-offline/reset-time matrix는
+firmware-owned 또는 extended validation으로 유지한다.
+
 ### I7. 4 CPU local, Yocto smoke와 focused FVP comparison
 
 소유 repository: top-level runner와 validator
@@ -266,6 +288,10 @@ CPU4–CPU15는 비교에서 제외한다.
 - 변경한 slice의 대표 allow/deny 또는 fault/recovery가 한 번 통과한다.
 - FVP comparison을 수행하거나 환경 제약과 `deferred` 사유를 기록한다.
 
+구현 상태(2026-07-17): local과 Yocto build/full-system smoke, CPU0~CPU3,
+artifact-family 분리, coverage와 fidelity contract가 모두 통과했다. 새 FVP 비교는
+비교 script, 실행 binary와 local FVP bundle이 없어 `deferred`로 기록했다.
+
 ### I8. closeout
 
 - architecture, implementation, validation과 roadmap 상태를 갱신한다.
@@ -273,6 +299,10 @@ CPU4–CPU15는 비교에서 제외한다.
 - temporary compatibility path가 새로 생겼다면 owner와 제거 조건을 남긴다.
 - 각 owning repository에서 atomic DCO commit을 만든다.
 - 최종 source와 remote revision을 evidence manifest에 기록한다.
+
+구현 상태(2026-07-17): architecture, implementation, validation, platform README,
+roadmap과 ledger를 실제 local/Yocto 결과에 맞춰 갱신했다. commit/push는 별도의
+명시적 release 작업이며 이 검증 단계의 pass를 대체하지 않는다.
 
 ## 5. Atomic commit 경계
 

@@ -1,7 +1,8 @@
 # Apollo QVP 잔여 Fidelity 부채 검증 계획
 
-- 상태: 구현 착수 전 검증 계약
+- 상태: V0~V8 완료, V9 deferred
 - 기준일: 2026-07-16
+- 실행일: 2026-07-16~2026-07-17
 - 대상: `apollo-qvp`, RD-Aspen CFG2, AP 4 CPU
 - 상위 설계: [Fidelity 부채 아키텍처 설계](apollo-qvp-fidelity-debt-architecture-design-ko.md)
 - 구현 계획: [Fidelity 부채 구현 계획](apollo-qvp-fidelity-debt-implementation-plan-ko.md)
@@ -95,7 +96,7 @@ git -C hsoc-stack/tools/qbox diff --check
 git -C hsoc-stack/tools/qbox-platform diff --check
 ```
 
-신규 예정 명령:
+구현된 명령:
 
 ```bash
 python3 scripts/test/validate_qbox_apollo_fidelity_contract.py \
@@ -151,7 +152,9 @@ invalidation matrix는 후속이다.
 이 gate는 해당 access path를 변경했을 때만 실행한다. 변경한 path에서 허용 주소
 하나와 차단 주소 하나를 실행하고, 차단이 `MemTxError` 또는
 `MemTxDecodeError`로 유한 시간 안에 끝나는지만 확인한다. DMI를 새로 열지 않는
-MVP에서는 DMI matrix를 실행하지 않는다.
+slice는 DMI matrix를 실행하지 않는다. NI-710AE처럼 DMI를 연 slice는 reset owner
+allow, programmed secure allow와 non-secure deny를 대표 vector로 실행하고 policy
+변경 뒤 stale DMI가 남지 않음을 full-system 진행으로 확인한다.
 
 ### V5. Fault, safety, watchdog와 lifecycle
 
@@ -176,6 +179,11 @@ request 하나만 실행한다. 우선순위는 SCMI/PFDI, MHU, PSCI다. HIPC/RP
 전체 오류 matrix는 후속이다. 오류는 유한 시간 안에 끝나고 mailbox/channel을
 BUSY 상태로 남기지 않아야 한다.
 
+I6 최소 gate는 SCMI/PFDI malformed length의 `SCMI_PROTOCOL_ERROR`, channel
+FREE와 즉시 정상 version request, 그리고 invalid RPMsg descriptor timeout 뒤
+정상 descriptor 재시도로 충족한다. PSCI/FF-A negative runtime은 I7 이후의
+firmware-owned extended gate다.
+
 ### V7. Local 4 CPU full-system
 
 선행 조건은 변경한 slice의 V0–V6 smoke 통과다.
@@ -193,7 +201,7 @@ python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --output <evidence-root>/full-coverage-audit.json
 ```
 
-신규 예정 profile runner:
+구현된 profile runner:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fidelity.py \
@@ -212,6 +220,9 @@ python3 scripts/run/run_qbox_apollo_fidelity.py \
 필수 횟수는 한 번이다. 실패하면 원인을 수정한 뒤 V7과 그 이후 gate를 다시
 실행한다.
 
+실행 결과: `build/qbox-apollo-qvp/fidelity-4cpu-local-20260717/`에서
+runtime, coverage와 contract가 pass했고 Linux CPU ID는 `[0,1,2,3]`이다.
+
 ### V8. Yocto `nexios-image` 4 CPU full-system
 
 현재 active config를 다시 확인한 뒤 다음을 실행한다.
@@ -224,10 +235,15 @@ python3 scripts/run/run_qbox_apollo_fidelity.py \
   --out-dir build/qbox-apollo-qvp/fidelity-4cpu-yocto-<timestamp>
 ```
 
-두 번째 명령은 I7에서 구현할 신규 예정 interface다. runner는 실제 Yocto deploy
+두 번째 명령은 I7에서 구현한 interface다. runner는 실제 Yocto deploy
 artifact를 선택하고 local artifact와 혼합하지 않아야 한다. Yocto build 한 번과
 V7의 boot milestone 한 번이 통과하면 된다. targeted negative test는 V1–V6에서
 이미 수행하므로 full-system에서 반복하지 않는다.
+
+실행 결과: `./yocto_build.sh` 7,293 task가 모두 성공했고,
+`build/qbox-apollo-qvp/fidelity-4cpu-yocto-20260717/`에서 runtime, coverage와
+contract가 pass했다. artifact-family error는 없고 Linux CPU ID는
+`[0,1,2,3]`이다.
 
 ### V9. 후속 focused FVP comparison
 
@@ -241,7 +257,7 @@ python3 scripts/run/runfvp_log_boot.py \
   --timeout 900 --require all --min-runtime 70 --no-login
 ```
 
-신규 예정 비교 명령은 MVP 구현 완료 뒤 한 번 실행한다.
+계획한 비교 명령은 MVP 구현 완료 뒤 한 번 실행한다.
 
 ```bash
 python3 scripts/test/compare_qbox_fvp_fidelity.py \
@@ -310,15 +326,15 @@ component를 좁힌 뒤에만 GDB/FVP Iris로 확대한다. evidence가 없는 �
 
 ## 8. 최종 완료 체크리스트
 
-- [ ] V0의 active 4 CPU contract와 provenance가 통과한다.
-- [ ] request context 대표 경로가 target과 fault record까지 보존된다.
-- [ ] NI-710AE APU가 공식 reset/program/lock semantics로 data path를 제어한다.
-- [ ] MMU-720AE SystemC backend가 실제 STE/CD/page walk와 EVTQ를 수행한다.
-- [ ] GPEX DMA와 MSI가 SID/SSID를 보존해 ITS/LPI까지 도달한다.
-- [ ] 변경한 debug/direct/reentrant path의 대표 allow/deny가 통과한다.
-- [ ] 구현한 fault slice의 source-to-sink와 clear/recovery가 한 번 통과한다.
-- [ ] 변경한 software ABI의 대표 오류 뒤 정상 request가 성공한다.
-- [ ] local build/boot와 Yocto build/boot가 각각 한 번 통과한다.
-- [ ] focused FVP comparison을 수행하거나 `deferred` 사유를 기록한다.
-- [ ] 모든 gap은 owner, 영향, 근거, 상태와 후속 완료 조건을 가진다.
-- [ ] CPU4–CPU15, 성능 budget, stress와 soak가 MVP 완료 판정에 포함되지 않는다.
+- [x] V0의 active 4 CPU contract와 provenance가 통과한다.
+- [x] request context 대표 경로가 target과 fault record까지 보존된다.
+- [x] NI-710AE APU가 공식 reset/program/lock semantics로 data path를 제어한다.
+- [x] MMU-720AE SystemC backend가 실제 STE/CD/page walk와 EVTQ를 수행한다.
+- [x] GPEX DMA와 MSI가 SID/SSID를 보존해 ITS/LPI까지 도달한다.
+- [x] 변경한 debug/direct/reentrant/DMI path의 대표 allow/deny가 통과한다.
+- [x] 구현한 fault slice의 source-to-sink와 clear/recovery가 한 번 통과한다.
+- [x] 변경한 software ABI의 대표 오류 뒤 정상 request가 성공한다.
+- [x] local build/boot와 Yocto build/boot가 각각 한 번 통과한다.
+- [x] focused FVP comparison의 `deferred` 사유를 기록한다.
+- [x] 모든 gap은 owner, 영향, 근거, 상태와 후속 완료 조건을 가진다.
+- [x] CPU4–CPU15, 성능 budget, stress와 soak가 MVP 완료 판정에 포함되지 않는다.

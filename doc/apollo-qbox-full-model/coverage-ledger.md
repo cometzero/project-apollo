@@ -17,6 +17,30 @@
 | `full-model-required` | side effect, fault, access-control, interrupt, reset/power 상태가 필요한 IP | SystemC/TLM model로 승격 |
 | `unsupported-gap` | FVP-visible이지만 first wave 범위 밖의 IP | 후속 epic에서 별도 구현 |
 
+## 잔여 Fidelity 단계 Ledger
+
+2026-07-16부터 잔여 부채는
+[`doc/apollo-qvp-fidelity-stages/`](../apollo-qvp-fidelity-stages/README-ko.md)의
+I0~I8 단계로 추적한다. machine-readable 정적 상태는
+`build/qbox-apollo-qvp/fidelity-contract-4cpu.json`, 통합 실행 상태는 local/Yocto
+bundle의 `fidelity-contract.json`과 `fidelity-summary.json`에 생성한다.
+
+| 단계 | 기능 | 초기 상태 | 필수 증거 |
+| --- | --- | --- | --- |
+| I0 | CFG2 4 CPU 계약과 provenance | `implemented` | fidelity contract JSON과 unit test |
+| I1 | 공통 request context | `complete` | QBox unit test와 local QBox build |
+| I2 | NI-710AE APU data path | `complete` | 공식 register 근거, allow/deny/lock test와 local QBox build |
+| I3 | MMU-720AE/SMMUv3 translation | `complete` | 공용 SMMUv3 mapped DMA read/write, EVTQ/IRQ/no-side-effect, TLBI stale 방지 test와 local QBox build |
+| I4 | GPEX MSI/ITS/LPI | `complete` | 동일 endpoint의 MSI-X/ITS/LPI 및 `pci=nomsi` INTx runtime test |
+| I5 | fault/safety/watchdog event plane | `complete` | opt-in SMMU event source, FMU record/IRQ, SSU sink, clear/recovery JSON |
+| I6 | software ABI 오류/recovery | `complete` | SCMI/PFDI protocol error·channel FREE와 invalid RPMsg descriptor 뒤 정상 재시도 |
+| I7 | local/Yocto/FVP 통합 검증 | `complete` (`FVP deferred`) | `fidelity-4cpu-local-20260717/`, `fidelity-4cpu-yocto-20260717/` manifest/result/log |
+| I8 | architecture/roadmap 종결 | `complete` | `i8-closeout-completion-2026-07-17-ko.md`와 문서/ledger 최종 상태 |
+
+I7의 `complete`는 local/Yocto 4 CPU MVP를 뜻한다. 새 focused FVP differential은
+comparison script, 실행 binary와 local FVP bundle 부재로 `deferred`이며 pass로
+계산하지 않는다.
+
 ## First Wave Gate
 
 첫 wave에서 `full-model-required`로 처리해야 하는 P0/P1 항목:
@@ -78,8 +102,8 @@ Source: `tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua`
 | `si_cl0_sram` | `gs_memory` | `memory-backing` | CL0 SRAM backing |
 | `si_cl0_atu_check_*` | `gs_memory` | `accepted-placeholder` | ATU reachability check window. first wave APU/ATU filter evidence로 전환 예정 |
 | `si_cl0_rse_shared_sram` | `gs_memory` | `memory-backing` | RSE/SI shared SRAM merged view |
-| `si_cl0_ssu` | `gs_memory` | `full-model-required` | SSU `ERR_*`, `SYS_*`, FMU aggregation, external safety state 필요 |
-| `si_cl0_fmu` | `gs_memory` | `full-model-required` | FMU error record, group status, critical/non-critical interrupt 필요 |
+| `si_cl0_ssu` | `zena_ssu` | `functional-model` | ERR/SYS 상태, FMU critical/non-critical input과 recovery 지원; 전체 ESM/reset matrix는 후속 |
+| `si_cl0_fmu` | `zena_fmu` | `functional-model` | error record, group status, critical/non-critical IRQ와 SSU binding 지원; 전체 source matrix는 후속 |
 | `si_cl0_smd_expansion_window` | `gs_memory` | `accepted-placeholder` | SMD expansion decode coverage. APU/ATU filter가 deny/report를 담당해야 함 |
 | `si_cl0_css_counters_timers_window` | `gs_memory` | `full-model-required` | counter/timer control side effect 필요. MODEL-070 follow-up |
 | `si_cl0_ap_peripheral_secure_sram` | `gs_memory` | `memory-backing` | AP secure peripheral SRAM backing |
