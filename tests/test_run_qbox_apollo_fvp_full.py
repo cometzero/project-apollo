@@ -557,6 +557,78 @@ def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tm
     assert status["scp_service_model"]["strategy"] == "real-si-scp"
 
 
+def test_keep_running_child_status_rejects_pfdi_timeout(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    cl1_log = tmp_path / "qbox-safety-island-cl1.log"
+    cl1_log.write_text(
+        cl1_log.read_text(encoding="utf-8")
+        + "<err> PFDI status timed out on CPU 0\n"
+        + "<err> PFDI request failed ret=-116\n",
+        encoding="utf-8",
+    )
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=0,
+    )
+
+    assert status["passed"] is False
+    assert status["fail_patterns"]["PFDI status timed out"] is True
+    assert status["fail_patterns"]["ret=-116"] is True
+
+
+def test_live_cl1_gate_rejects_pfdi_timeout(tmp_path):
+    runner = load_runner()
+    (tmp_path / "qbox-safety-island-cl1.log").write_text(
+        "PFDI Agent setup complete\n"
+        "PFDI service ready\n"
+        "<err> PFDI status timed out on CPU 0\n",
+        encoding="utf-8",
+    )
+    marker_groups = {
+        "maps_and_interrupts": {"map_ok": True},
+        "si_cl0": {"cl0_ok": True},
+        "si_cl1": {name: True for name in runner.LIVE_CL1_REQUIRED_MARKERS},
+    }
+
+    blocker = runner.live_cl1_gate_blocker(
+        SimpleNamespace(si_mode="live-cl0-cl1", out_dir=tmp_path),
+        marker_groups,
+        {"passed": True},
+    )
+
+    assert blocker == "live_cl0_cl1_error:pfdi_status_timeout"
+
+
+def test_live_cl1_gate_rejects_pfdi_initialization_failure(tmp_path):
+    runner = load_runner()
+    (tmp_path / "qbox-safety-island-cl1.log").write_text(
+        "PFDI Agent setup complete\n"
+        "PFDI service ready\n"
+        "<err> PROTOCOL_VERSION timed out (core=1)\n"
+        "<err> PFDI Agent device not ready\n",
+        encoding="utf-8",
+    )
+    marker_groups = {
+        "maps_and_interrupts": {"map_ok": True},
+        "si_cl0": {"cl0_ok": True},
+        "si_cl1": {name: True for name in runner.LIVE_CL1_REQUIRED_MARKERS},
+    }
+
+    blocker = runner.live_cl1_gate_blocker(
+        SimpleNamespace(si_mode="live-cl0-cl1", out_dir=tmp_path),
+        marker_groups,
+        {"passed": True},
+    )
+
+    assert blocker == (
+        "live_cl0_cl1_error:pfdi_protocol_version_timeout,"
+        "pfdi_agent_not_ready"
+    )
+
+
 def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)

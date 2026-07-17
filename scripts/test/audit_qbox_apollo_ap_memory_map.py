@@ -236,7 +236,7 @@ REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
     "System Management Domain Access Region": (("host_ap_atu", "translation_socket"),),
     "RGIC2LGIC_MESSREG": (("ap_rgic2lgic_messreg", "target_socket"),),
     "DRAM low": (("host_ap_dram1", "target_socket"),),
-    "SMMU+NI-710AE GPV + PCIe CTRL+PHY": (("ap_smmu_0", "mem"),),
+    "SMMU+NI-710AE GPV + PCIe CTRL+PHY": (("ap_smmu_0", "target_socket"),),
     "DRAM high": (("host_ap_dram2", "target_socket"),),
 }
 
@@ -573,7 +573,7 @@ def add_smmu_factory_socket(
     address = eval_lua_int(address_match.group(1), constants, tables)
     size = eval_lua_int(size_match.group(1), constants, tables)
     if address is not None and size is not None:
-        sockets.append(LuaSocket(lua_file, "ap_smmu_0", current_module, "mem", address, size))
+        sockets.append(LuaSocket(lua_file, "ap_smmu_0", current_module, "target_socket", address, size))
 
 
 def current_coverage(root: Path) -> list[LuaSocket]:

@@ -151,10 +151,14 @@ def validate_transactions(
         target = route.get("target")
         if target not in routers and target not in targets:
             errors.append({"id": f"transaction:target:{name}:{target}", "message": name})
+        bridge_value = route.get("bridge")
+        bridge_name = bridge_value if isinstance(bridge_value, str) else ""
+        bridge = bridges.get(bridge_name)
+        if bridge_value is not None and bridge is None:
+            errors.append(
+                {"id": f"transaction:bridge:{name}:{bridge_name}", "message": name}
+            )
         if source != target_view:
-            bridge_value = route.get("bridge")
-            bridge_name = bridge_value if isinstance(bridge_value, str) else ""
-            bridge = bridges.get(bridge_name)
             if bridge is None or bridge.get("kind") not in POLICY_BRIDGES:
                 errors.append({"id": f"transaction:policy_bridge:{name}", "message": name})
         if route.get("requester_required") or route.get("stream_id_required"):

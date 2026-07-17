@@ -103,6 +103,12 @@ LIVE_CL1_REQUIRED_MARKERS = {
     "pfdi_service": "PFDI service ready",
     "network_configured": "si_net_init: Network interface configured",
 }
+LIVE_CL1_FAIL_PATTERNS = {
+    "pfdi_status_timeout": "PFDI status timed out",
+    "pfdi_timeout_errno": "ret=-116",
+    "pfdi_protocol_version_timeout": "PROTOCOL_VERSION timed out",
+    "pfdi_agent_not_ready": "PFDI Agent device not ready",
+}
 LIVE_CL0_REQUIRED_MARKERS = {
     "scp_started": "[SI0_PLATFORM] SCP started",
     "module_init_complete": "[FWK] Module initialization complete!",
@@ -339,6 +345,7 @@ def synthesize_keep_running_child_status(
         args.primary_login_prompt: args.primary_login_prompt in combined,
         args.primary_shell_marker: args.primary_shell_marker in combined,
     }
+    cl1_log = ""
     if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
         cl1_log = rse_runner.read_required_pass_marker_file(
             args.out_dir / CONSOLE_LOGS["si_cl1"]
@@ -356,6 +363,9 @@ def synthesize_keep_running_child_status(
             for marker in LIVE_CL0_REQUIRED_MARKERS.values()
         }
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
+    fail_hits.update(
+        {pattern: pattern in cl1_log for pattern in LIVE_CL1_FAIL_PATTERNS.values()}
+    )
     probe = keep_running_probe_state(
         logs.get("primary_console", ""),
         args.primary_login_prompt,
@@ -913,6 +923,21 @@ def missing_markers(markers: dict[str, bool]) -> list[str]:
     return [name for name, value in markers.items() if not value]
 
 
+def live_cl1_error_hits(args: argparse.Namespace) -> dict[str, bool]:
+    if args.si_mode not in {"live-cl1", "live-cl0-cl1"}:
+        return {}
+    out_dir = getattr(args, "out_dir", None)
+    if out_dir is None:
+        return {name: False for name in LIVE_CL1_FAIL_PATTERNS}
+    cl1_log = rse_runner.read_required_pass_marker_file(
+        Path(out_dir) / CONSOLE_LOGS["si_cl1"]
+    )
+    return {
+        name: pattern in cl1_log
+        for name, pattern in LIVE_CL1_FAIL_PATTERNS.items()
+    }
+
+
 def live_cl1_gate_blocker(
     args: argparse.Namespace,
     marker_groups: dict[str, dict[str, bool]],
@@ -923,7 +948,13 @@ def live_cl1_gate_blocker(
     prefix = "live_cl1" if args.si_mode == "live-cl1" else "live_cl0_cl1"
     if child_status and not child_status.get("passed"):
         child_blocker = child_status.get("blocker")
-        return str(child_blocker) if child_blocker else None
+        if child_blocker:
+            return str(child_blocker)
+    error_hits = [
+        name for name, hit in live_cl1_error_hits(args).items() if hit
+    ]
+    if error_hits:
+        return f"{prefix}_error:" + ",".join(error_hits)
     map_missing = missing_markers(marker_groups.get("maps_and_interrupts", {}))
     if map_missing:
         return f"{prefix}_map_blocked:" + ",".join(map_missing)
@@ -953,6 +984,7 @@ def write_result(
         {name: artifact_record(path) for name, path in sorted(artifacts.items())}
     )
     marker_groups = build_marker_groups(args, child_status)
+    si_cl1_error_hits = live_cl1_error_hits(args)
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
     primary_obs = primary_console_observations(
@@ -1064,6 +1096,7 @@ def write_result(
         "secure_console_observations": secure_obs,
         "primary_console_observations": primary_obs,
         "marker_groups": marker_groups,
+        "si_cl1_error_hits": si_cl1_error_hits,
         "first_failing_marker": (
             None if check_only or args.build_only else first_failing_marker(marker_groups)
         ),

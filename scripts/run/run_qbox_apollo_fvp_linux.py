@@ -28,6 +28,9 @@ REQUIRED_TARGETS = [
     "uart-pl011",
     "arm_gicv3",
     "arm_gicv3_its",
+    "qemu_gpex",
+    "smmuv3",
+    "virtio_net_pci",
     "global_peripheral_initiator",
     "cpu_arm_cortexA720AE",
     "virtio_mmio_blk",
@@ -117,6 +120,35 @@ def qbox_build_dir(root: Path) -> Path:
             os.environ.get("QBOX_BUILD_DIR", str(default_dir)),
         )
     ).resolve()
+
+
+def installed_libqemu_library_paths(build_dir: Path) -> list[Path]:
+    cache = build_dir / "CMakeCache.txt"
+    try:
+        lines = cache.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+    paths: list[Path] = []
+    for line in lines:
+        if not line.startswith("libqemu_DIR:") or "=" not in line:
+            continue
+        cmake_dir = Path(line.split("=", 1)[1]).expanduser()
+        lib_dir = cmake_dir.parent.parent
+        if lib_dir.is_dir() and lib_dir not in paths:
+            paths.append(lib_dir)
+        for parent in lib_dir.parents:
+            if parent.name != "sysroots-components":
+                continue
+            dependency_glob = (
+                "work/x86_64-linux/qbox-libqemu-native/*/"
+                "recipe-sysroot-native/usr/lib"
+            )
+            for dependency_dir in sorted(parent.parent.glob(dependency_glob)):
+                if dependency_dir.is_dir() and dependency_dir not in paths:
+                    paths.append(dependency_dir)
+            break
+    return paths
 
 
 def timestamp() -> str:
@@ -351,6 +383,7 @@ def qbox_env(
         build_dir / "_deps/systemccci-build/inspection/src",
         build_dir / "_deps/systemclanguage-build/src",
         build_dir / "_deps/rpclib-build",
+        *installed_libqemu_library_paths(build_dir),
     ]
     current = env.get("LD_LIBRARY_PATH")
     if current:
@@ -430,6 +463,8 @@ def run_qbox(
         "-l",
         str(args.conf.resolve()),
     ]
+    for parameter in args.qbox_param:
+        cmd.extend(("--param", parameter))
     env = qbox_env(root, args, disk, extra_disks)
     validate_debug_env(args, env)
     prepare_debug_outputs(args, env)
@@ -597,6 +632,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     parser.add_argument("--accel", default="tcg")
     parser.add_argument("--netdev", default="type=user,hostfwd=tcp::2222-:22")
+    parser.add_argument(
+        "--qbox-param",
+        action="append",
+        default=[],
+        help="Pass a CCI name=value parameter to platforms-vp (repeatable)",
+    )
     parser.add_argument(
         "--extra-disk-size-mib",
         type=int,

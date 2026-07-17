@@ -84,6 +84,45 @@ def test_qbox_env_exports_initramfs_path_without_rootfs(tmp_path, monkeypatch):
     assert "QBOX_APOLLO_ROOTFS" not in env
 
 
+def test_qbox_env_adds_yocto_libqemu_from_cmake_cache(tmp_path, monkeypatch):
+    runner = load_runner()
+    build_dir = tmp_path / "qbox-platform"
+    libqemu_dir = tmp_path / "sysroots-components/x86_64/qbox-libqemu-native/usr/lib"
+    dependency_dir = (
+        tmp_path
+        / "work/x86_64-linux/qbox-libqemu-native/1.0"
+        / "recipe-sysroot-native/usr/lib"
+    )
+    (libqemu_dir / "cmake/libqemu").mkdir(parents=True)
+    dependency_dir.mkdir(parents=True)
+    build_dir.mkdir()
+    (build_dir / "CMakeCache.txt").write_text(
+        f"libqemu_DIR:UNINITIALIZED={libqemu_dir}/cmake/libqemu\n",
+        encoding="utf-8",
+    )
+    kernel = tmp_path / "Image"
+    dtb = tmp_path / "apollo.dtb"
+    for path in (kernel, dtb):
+        path.write_bytes(b"x")
+    args = type(
+        "Args",
+        (),
+        {
+            "kernel": kernel,
+            "dtb": dtb,
+            "initramfs": None,
+            "accel": "tcg",
+            "netdev": "type=user",
+        },
+    )()
+    monkeypatch.setenv("QBOX_PLATFORM_BUILD_DIR", str(build_dir))
+
+    env = runner.qbox_env(tmp_path, args, None, [])
+
+    assert str(libqemu_dir) in env["LD_LIBRARY_PATH"].split(":")
+    assert str(dependency_dir) in env["LD_LIBRARY_PATH"].split(":")
+
+
 def test_qbox_env_leaves_direct_pc_trace_disabled_by_default(tmp_path, monkeypatch):
     runner = load_runner()
     kernel = tmp_path / "Image"

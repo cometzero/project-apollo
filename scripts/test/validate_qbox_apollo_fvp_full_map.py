@@ -40,7 +40,7 @@ CHECKS = {
         ("platform:ap-dram-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
         ("platform:ap-gic-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
         ("platform:ap-gpex-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_target\(platform\.ap_gpex_0\.ecam_iface\)"),
-        ("platform:gpex-systemc-smmu-tbu", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"ap_smmu_0\.tbu_lti00_socket"),
+        ("platform:gpex-systemc-smmu-tbu", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"ap_smmu_lti00\.upstream_socket"),
         ("platform:si-cl0-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"si_cl0\.enable"),
         ("platform:qvp-ap-router", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"ap_compute\.enable_ap_router"),
         ("platform:si-cl0-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"platform\.si_cl0_router"),

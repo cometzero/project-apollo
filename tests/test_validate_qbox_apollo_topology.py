@@ -255,6 +255,22 @@ def test_validator_rejects_dangling_transaction_initiator(tmp_path: Path) -> Non
     assert "transaction:initiator:pcie_dma_to_smmu:missing_gpex_dma" in error_ids(report)
 
 
+def test_validator_rejects_dangling_bridge_on_same_view_route(tmp_path: Path) -> None:
+    contract = copy_contract(tmp_path)
+    replace_once(
+        contract / "transaction_routes.lua",
+        'target = "ap_router"; response = "tlm_to_memtx" };',
+        'target = "ap_router"; bridge = "missing_same_view_bridge"; response = "tlm_to_memtx" };',
+    )
+    emit = tmp_path / "out" / "topology.json"
+
+    result = run_validator(emit, contract_dir=contract)
+
+    assert result.returncode == 1
+    report = load_json(emit.parent / "validation.json")
+    assert "transaction:bridge:ap_cpu_local:missing_same_view_bridge" in error_ids(report)
+
+
 def test_runtime_wiring_has_no_broad_bridge_and_uses_policy_paths() -> None:
     fabric = FABRIC_SOURCE.read_text(encoding="utf-8")
     ap = AP_SOURCE.read_text(encoding="utf-8")
@@ -270,7 +286,7 @@ def test_runtime_wiring_has_no_broad_bridge_and_uses_policy_paths() -> None:
     assert "si_cl0_atu_check_" not in si_cl0
     assert "host_si_atu.translation_socket" in si_cl0
     assert "host_smdexp2smd_atu.translation_socket" in si_cl0
-    assert "tbu_lti00_socket" in ap
+    assert "ap_smmu_lti00.upstream_socket" in ap
     assert 'bind = "&smd_router.initiator_socket"' in system_mgmt
 
 
