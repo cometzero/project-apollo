@@ -75,6 +75,24 @@ def test_fast_boot_sram_dmi_preserves_explicit_flash_dmi_disable(monkeypatch):
     assert args.range_limited_flash_dmi is False
 
 
+def test_fast_boot_sram_dmi_uses_real_atu_ap_fip_path():
+    runner = load_runner()
+    args = SimpleNamespace(
+        rse_fast_boot_sram_dmi=True,
+        rse_direct_ap_fip_alias=False,
+    )
+
+    result = runner.ap_fip_logical_aperture_result(args)
+    ap_compute = (
+        ROOT
+        / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
+    ).read_text(encoding="utf-8")
+
+    assert result["enabled"] is False
+    assert result["mode"] == "atu_systemc_route"
+    assert "platform.rse_ap_fip_logical" not in ap_compute
+
+
 def test_missing_required_pass_markers_reports_incomplete_file(tmp_path):
     runner = load_runner()
     cl1_log = tmp_path / "qbox-safety-island-cl1.log"

@@ -479,7 +479,7 @@ HOST_AP_BL2_HEADER_VRING0_OFFSET = 0x00020000
 HOST_AP_BL2_HEADER_VRING1_OFFSET = 0x00040000
 HOST_AP_BL2_HEADER_VDEV0BUFFER_OFFSET = 0x00060000
 HOST_AP_BL2_HEADER_SAMPLE_SIZE = 0x80
-EXTRA_VIRTIO_BLK_SIZE = 64 * 1024 * 1024
+EXTRA_VIRTIO_BLK_SIZE = 0
 SI_CL0_PRIMARY_FLASH_OFFSET = 0x00067000
 SI_CL0_SECONDARY_FLASH_OFFSET = 0x002C7000
 SI_CL1_PRIMARY_FLASH_OFFSET = 0x00167000
@@ -2629,19 +2629,12 @@ def rse_fast_boot_sram_dmi_result(args: argparse.Namespace) -> dict[str, object]
 
 
 def ap_fip_logical_aperture_result(args: argparse.Namespace) -> dict[str, object]:
-    enabled = bool(args.rse_fast_boot_sram_dmi and not args.rse_direct_ap_fip_alias)
     return {
-        "enabled": enabled,
-        "mode": "sram_dmi_scoped_model_aperture" if enabled else "disabled",
+        "enabled": False,
+        "mode": "atu_systemc_route",
         "direct_file_alias": False,
-        "scope_plan": ".omo/plans/qemu-hotpath-scope-fileless-sram-dmi.md",
-        "fidelity_note": (
-            "Temporary modeled read-only RSE logical AP FIP aperture used only "
-            "with the SRAM-DMI no-direct full-system path; replacement is the "
-            "real AP flash/ATU/SystemC route."
-        )
-        if enabled
-        else "",
+        "scope_plan": "",
+        "fidelity_note": "",
     }
 
 
@@ -4036,8 +4029,8 @@ def write_result(
                     else "translation-model"
                 ),
                 "rse_ap_fip_visibility": (
-                    "temporary-sram-dmi-scoped-logical-aperture"
-                    if args.rse_fast_boot_sram_dmi and not args.rse_direct_ap_fip_alias
+                    "legacy-direct-file-alias"
+                    if args.rse_direct_ap_fip_alias
                     else "atu-systemc-route"
                 ),
                 "mhuv3": "systemc-mhu320ae",
