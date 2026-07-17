@@ -362,18 +362,18 @@ overlay에만 사용한다.
 
 | 영역 | 현재 QVP | 판정 및 개선점 |
 | --- | --- | --- |
-| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core 지원, full-system 기본 4 | active Yocto 기본과 local `maxcpus=4`가 정렬됨; 이번 fidelity gate는 CPU0–CPU3만 대상으로 하고 16-core enablement/lifecycle은 후속 범위 |
-| AP GIC/ITS | SystemC `gicx00_multiview` view 0 overlay와 QEMU `arm_gicv3` canonical backend, ITS, LPI/DirectLPI, RGIC message model | 표준 GIC access의 단일 functional owner는 QEMU이고 multiview 확장만 SystemC가 소유함; MSI→ITS→LPI와 GIC-720AE safety/fault 의미의 end-to-end 증거는 부족 |
-| AP MMU-720AE | 기본 `systemc-mmu720ae`, 선택 `qemu-arm-smmuv3` | boot/I/O functional subset, 두 backend의 requester/StreamID·fault 동등성 기준 필요 |
+| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core 지원, full-system 기본 4; AArch64-only EL0와 QARMA3/FGT/ECV/PAN/WFxT | active Yocto 기본과 local `maxcpus=4` 정렬 및 FVP-visible 지원 feature 확인; MTE/AMU/MPAM과 16-core lifecycle은 후속 범위 |
+| AP GIC/ITS | SystemC `gicx00_multiview` view 0 overlay와 16-frame discovery footprint, QEMU `arm_gicv3` canonical backend, ITS collection entry size 2, LPI/DirectLPI | CPU0–CPU3 functional owner는 QEMU이고 비활성 frame 및 multiview discovery만 SystemC가 소유함; 4 CPU Linux/OP-TEE scan과 ITS 초기화 확인 |
+| AP MMU-720AE | 기본 `systemc-mmu720ae`의 52-bit PA walk/32-bit SID profile, 선택 `qemu-arm-smmuv3` | 기본 backend는 FVP와 같은 `ias 52-bit, oas 52-bit` discovery signature 확인; 두 backend의 전체 fault 동등성은 후속 |
 | AP PCIe/GPEX DMA | GPEX bus master, MMU-720AE LTI00 TBU와 legacy SPI 300–303 | SystemC backend routing은 완료; explicit requester/StreamID와 MSI/LPI end-to-end 증거는 부족 |
-| CMN/NI-710AE | `host_cmn_cyprus`, `host_ni710ae_nci` | discovery/register 호환 모델이며 CHI coherency·실제 NoC arbitration 모델은 아님 |
-| AP timer/UART/RoS | MMIO timer, PL011, VirtIO, PL031 | 주요 software contract 제공 |
+| CMN/NI-710AE | `host_cmn_cyprus` CFG2 r3p0 6×4 XP/child graph, `host_ni710ae_nci` | FVP-visible revision과 node discovery 일치; CHI coherency·실제 NoC arbitration 모델은 아님 |
+| AP timer/UART/RoS | MMIO timer, PL011 rev3, VirtIO, PL031; 미사용 block placeholder는 0 B | FVP discovery signature와 주요 software contract 제공 |
 | AP secure watchdog | `gs_memory` control/refresh | 주소만 유지하는 placeholder, timeout/reset/IRQ 효과 필요 |
 | SMD | runtime `smd_router`, PPU/SCR, ATU, MHU, shared SRAM, system counters | high-nibble NCI와 canonical owner 구현; 완전한 RGM/APU 및 power/reset graph는 A6 이후 |
 | RSE | M55 wrapper, TCM/VM/flash, DMA350, crypto/KMU/LCM/SAM, protection, ATU, MHU | 폭넓은 기능 모델 보유 |
 | RSE OTP/control/integration | 일부 `gs_memory` | OTP, identity, power/security control과 DCLS 의미 보강 필요 |
 | SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view, 40-bit local router와 ATU | broad bridge 없이 정상 boot; DCLS/fault propagation 보강 필요 |
-| SI CL1 | 4×R82 SMP, GIC, MHU, UART, SRAM, 40-bit local router | FVP CFG2 extension scope, static SCMI/HIPC allow-list와 local view, requester-aware PFDI scheduler hold가 명시됨 |
+| SI CL1 | 4×R82 SMP, GIC, live AP/SI1 MHU peer, UART, AP-reset 보존 HIPC SRAM, 40-bit local router | FVP CFG2 extension scope, 실제 Zephyr-owned RPMsg endpoint와 requester-aware PFDI scheduler hold 확인 |
 | QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, `RequestContextTlmExtension`과 MemTx/TLM 오류 변환 | domain/requester/substream/access path 기반은 구현됐으며 미지원 initiator 조합과 전체 debug/DMI policy matrix는 후속 |
 | QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 50회 reset 회귀, 기준 full boot 8회, post-review acceptance 2회와 최종 trace-off 6회 통과; 신규 fault는 대표 smoke만 필수이며 stress/KVM/16 CPU는 후속 |
 | RoS | VirtIO block/net/rng, PL031 | system register, p9, VSI, RoS UART 항목은 부재 또는 범위 밖 |
@@ -385,6 +385,8 @@ overlay에만 사용한다.
 | system fabric | 상위 nibble로 AP/SMD/RSE/SI 분리 | `system_router`와 AP/SMD/RSE/SI local router, `0x2` SMD NCI decode, broad bridge 없음 | A4 policy-routing 구조 완료 |
 | AP shared SRAM | 128 MiB aperture | `0x0000_0000`의 1 MiB backing과 별도 boot용 SRAM | boot에는 충분할 수 있으나 aperture와 보호 의미가 축소됨 |
 | AP/SI SCMI/PFDI SRAM | SMD/SCP가 AP release 전에 초기화하거나 requester가 SI0 init 전에 게시하는 MHU transport backing | canonical `host_ap_mhu_ns_shared_sram`, SI ATU region 14 view, `preserve_on_ap_reset`, secure pending-mailbox preserve | 주소 view·reset owner·message owner를 분리해 AP reset 및 startup race 뒤 channel state/payload 보존 |
+| AP/SI1 HIPC SRAM | SI1이 AP보다 먼저 resource table/vring을 준비하는 512 KiB backing | AP header SRAM과 `0xE013_0000` alias가 하나의 backing을 사용하고 AP reset fan-out에서 제외 | synthetic seed 없이 live SI1 endpoint가 AP Linux에 연결됨 |
+| AP/RSE mailbox·flash | RSE ATU가 AP system-physical flash와 `0xFFFE_0000` carveout에 접근 | AP flash system bridge와 공유 carveout bridge를 사용하며 임시 logical FIP file alias는 없음 | online measured boot와 FWU mailbox가 실제 MHU2/ATU 경로를 사용 |
 | AP low DRAM | 2 GiB aperture | `0x8000_0000`, `0x7f00_0000` + SPMC/통신 buffer 분할 | 배치 의도는 있으나 선언적 bank 검증이 없음 |
 | AP high DRAM | single/multichip 규칙에 따라 배치 | `0x200_0000_0000`, 2 GiB | 현재 DT/deploy 산출물과의 자동 일치 확인 필요 |
 | RSE local map | 독립 32-bit 공간 | 독립 `rse_router` | 목표 구조에 가장 가까움 |
@@ -400,11 +402,14 @@ view로 모델링한다.
 | view | software-visible 주소/간격 | QVP 소유권과 routing |
 | --- | --- | --- |
 | RD-Aspen secure/legacy view 0 | GICD `0x2000_0000`, GICR scan 시작 `0x200c_0000`, 128 KiB 간격 | `gicx00_multiview`가 `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR/VIEWR/FLUSHR`만 처리하고 표준 GICD/GICR access는 canonical backend로 변환 |
-| canonical functional view 1 | GICD `0x2080_0000`, GICR `0x2088_0000`, CPU당 256 KiB 간격 | QEMU `arm_gicv3`가 distributor, CPU0–CPU3 redistributor와 interrupt 상태를 단일 소유 |
+| canonical functional view 1 | GICD `0x2080_0000`, GICR `0x2088_0000`, CPU당 256 KiB 간격, 16-frame footprint | QEMU `arm_gicv3`가 distributor와 CPU0–CPU3의 기능 상태를 소유하고 SystemC가 CPU4–CPU15 discovery footprint를 제공 |
 
-view 0의 256 KiB frame 안에는 128 KiB redistributor 두 개가 연속 배치되므로
-QVP는 OP-TEE가 사용하는 128 KiB scan을 CPU0–CPU3 canonical redistributor로
-변환한다. OP-TEE의 RD-Aspen `GICD_BASE`, `GICR_BASE`, `GICR_SIZE`를 view 1 주소에
+view 0의 각 256 KiB frame은 대응하는 canonical redistributor의 128 KiB register
+view와 multiview extension을 제공한다. QVP는 OP-TEE가 사용하는 discovery access를
+CPU0–CPU3 canonical redistributor로 전달하고 CPU4–CPU15에는 register footprint를
+제공한다. 연속 view의 `Last`는 CPU15에서만 설정하고, 개별 DT region은 각 region의
+scan이 다음 region으로 넘지 않도록 self-terminating `Last`를 제공한다. OP-TEE의
+RD-Aspen `GICD_BASE`, `GICR_BASE`, `GICR_SIZE`를 view 1 주소에
 맞춰 변경해서는 안 된다. 그런 변경은 software ABI를 QBox 내부 구현에 종속시키고
 FVP와의 주소 계약을 깨뜨린다. 표준 register 상태를 SystemC 배열과 QEMU 양쪽에
 복제하는 것도 금지하며, 기능 상태의 유일한 owner는 QEMU로 유지한다.
@@ -839,14 +844,14 @@ MVP 완료에는 G0–G6을 요구한다. G7은 수행하거나 `deferred` 사�
 | G6 QBox full-system smoke | RSE, SI, AP boot, 4 CPU correctness와 coverage audit가 local/Yocto에서 각각 한 번 통과 |
 | G7 focused FVP comparison | boot milestone과 변경한 대표 marker를 비교하거나 실행 제약과 `deferred` 사유를 기록 |
 
-2026-07-17 현재 판정은 G0/G1/G2/G3/G6 `pass`, G4/G5 `partial`, G7
-`pass(non-AP focused scope)`다. G4는 선택한 SMMU→FMU→SSU와 PCIe interrupt
+2026-07-17 최종 판정은 G0/G1/G2/G3/G6/G7 `pass`, G4/G5 `partial`이다.
+G4는 선택한 SMMU→FMU→SSU와 PCIe interrupt
 slice를 통과했지만 watchdog/DCLS/APU fault source 전체가 아니며, G5는
 SCMI/PFDI/HIPC 대표 recovery를 통과했지만 PSCI/FF-A 전체 error matrix가 아니다.
-G7은 기록된 RSE/SI0/SI1 로그와 변경 marker 비교를 완료했지만 AP는 요청 범위에서
-제외했고 자동 same-artifact whole-system differential은 extended gate다. 따라서
-이번 4 CPU MVP는 완료했으나 Apollo FVP 전체 safety/software equivalence를
-주장하지 않는다.
+G7은 동일 Yocto artifact의 RSE/SI0/SI1/TF-A/Primary Compute FVP/QBox 로그와
+변경 marker 비교까지 완료했다. 따라서 이번 4 CPU MVP와 계획한 discovery/boot
+fidelity 개선은 완료했으나, 미지원 MTE/AMU/MPAM과 전체 safety/error matrix까지
+포함한 Apollo FVP 완전 동등성을 주장하지 않는다.
 
 추가로 다음 조건은 gate 결과와 무관하게 필수다.
 
@@ -1087,11 +1092,32 @@ run_qbox_yocto.sh ... pfdi-requester-context-yocto-20260717-r1
   -> SI1 PFDI error gates all false; coverage passed
 ```
 
-SI0 CMN discovery는 FVP의 RN-SAM/HN-S/RN-D/RN-F/RN-I `21/8/3/8/8`과
-CCG RA/HA/LA `2/2/2` 대신 QBox에서 `1/8/0/1/0`, `0/0/0`을 보고한다.
-이는 이번 PFDI timeout의 원인은 아니지만 CMN topology/revision fidelity 부채로
-남긴다. 상세 로그, 구현 파일과 명령은
+이 시점에 확인한 SI0 CMN discovery 축약은 후속 whole-system 단계에서 CFG2 r3p0
+6×4 XP와 RN-SAM/HN-S/RN-D/RN-F/RN-I 및 CCG RA/HA/LA child graph를 구현해
+폐쇄했다. 상세 PFDI 로그, 구현 파일과 명령은
 [비-AP 로그 비교 및 PFDI 수정 보고서](apollo-qvp-fvp-qbox-non-ap-pfdi-analysis-2026-07-17-ko.md)에
+기록한다.
+
+### 11.5 2026-07-17 동일 Yocto artifact whole-system fidelity closure
+
+후속 비교는 RSE, SI0, SI1뿐 아니라 TF-A/OP-TEE와 Primary Compute까지 같은
+`nexios-image` 계열로 FVP/QBox 로그를 대조했다. 구현은 firmware나 kernel을
+변경하지 않고 QBox, QBox-platform, QEMU 경계에서 수행했다.
+
+| 개선 영역 | 최종 QVP 구조 | 검증 marker |
+| --- | --- | --- |
+| SI1 HIPC | 방향별 live AP/SI1 MHU pair, AP-reset 보존 512 KiB backing, synthetic seed 비활성 | SI1 `RPMSG Endpoint: ATTACHED`, Linux endpoint 생성 |
+| AP/RSE | 실제 MHU2 peer, shared carveout, system-physical AP flash bridge, RSE ATU | online measured boot 5개, FWU ABI 1.0, Regular State |
+| MHU IRQ | status clear 시 combined IRQ deassert 동기화, notify 단위 doorbell commit | SI0 RX-channel warning 0건, 3회 cold boot |
+| CMN/SMMU | CFG2 CMN-CYPRUS r3p0 graph, 52-bit MMU-720AE PA walk/IDR | FVP node count, `ias 52-bit, oas 52-bit` |
+| GIC/ITS | 16-frame GICR footprint와 self-terminating DT region, CTE size 2 | CPU0–CPU3 redistributor, 32,768 collection `esz 2` |
+| CPU/UART/block | 지원 가능한 A720AE feature, PL011 rev3, 0 B placeholder | QARMA3/ECV/FGT/WFxT, `PL011 rev3`, vdc/vdd 0 B |
+
+`./local_build.sh qbox`, local full-system boot, Yocto provider/image build와
+Yocto full-system boot가 통과했다. 최종 `result.json`은 `passed: true`,
+`blocker: null`, G0/G4 pass이며 PFDI timeout 4종, MHU RX warning,
+`psa_fwu_query`, redistributor 오류와 kernel panic은 0건이다. 상세 변경과 근거는
+[whole-system 로그 비교 보고서](apollo-qvp-fvp-qbox-yocto-system-log-comparison-2026-07-17-ko.md)에
 기록한다.
 
 ## 12. 4 CPU Fidelity 단계와 후속 범위
@@ -1110,5 +1136,5 @@ I0~I7 최소 범위는 완료했다.
 이번 후속 단계의 AP acceptance는 active Yocto와 같은 CPU0–CPU3, 총 4 CPU다.
 CPU4–CPU15 online, 16 CPU lifecycle과 KVM은 완료 조건에 포함하지 않는다. 4 CPU의
 대표 보안·DMA·interrupt·fault·ABI 경로와 local/Yocto smoke는 완료했다. 전체
-matrix, watchdog/DCLS/APU fault source 확대, PSCI/FF-A negative matrix와 FVP
-differential은 extended validation으로 관리한다.
+matrix, watchdog/DCLS/APU fault source 확대, PSCI/FF-A negative matrix와
+미지원 CPU feature/16 CPU lifecycle은 extended validation으로 관리한다.

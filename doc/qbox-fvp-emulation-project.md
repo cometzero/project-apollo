@@ -129,10 +129,21 @@ quantum keeper until the real SI0 firmware marks the shared-memory channel
 FREE. The channel slot is not treated as a CPU ID because CPU0 issues all four
 initial setup requests. Two trace-off local runs and one Yocto provider/image
 run passed without the four PFDI failure markers; coverage also passed. The
-focused non-AP differential is complete, while the automated same-artifact
-whole-system comparison remains backlog. The SI0 CMN discovery model still
-reports a reduced topology and remains explicit fidelity debt. See
+focused non-AP differential is complete. See
 `doc/apollo-qvp-fvp-qbox-non-ap-pfdi-analysis-2026-07-17-ko.md`.
+
+The follow-up same-Yocto-artifact whole-system comparison is also complete.
+The live SI1 firmware now reaches its guest-owned RPMsg endpoint through real
+AP/SI1 MHU peers, and AP reset preserves the SI1-owned HIPC SRAM. AP/RSE uses
+the real MHU2 and RSE-ATU path by default; removing the temporary logical FIP
+file alias restored FWU ABI 1.0 and the regular-state boot path. Combined-MHU
+IRQ deassert ordering no longer produces the SI0 RX-channel warning. The
+discovery profile now includes the CFG2 CMN-CYPRUS r3p0 graph, MMU-720AE
+52-bit SMMUv3 profile, sixteen GICR frames, ITS collection entry size 2,
+supported Cortex-A720AE TCG features, PL011 rev3, and zero-capacity FVP-style
+placeholder disks. Local and rebuilt Yocto runs both pass with four CPUs,
+Linux login, SI0/SI1 readiness, PFDI, RPMsg, FWU, and the coverage audit. See
+`doc/apollo-qvp-fvp-qbox-yocto-system-log-comparison-2026-07-17-ko.md`.
 
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
@@ -333,17 +344,18 @@ and are not synthesized in QBox.
 
 | IP / Block | Current QBox Direction | Fidelity Target | Primary Evidence |
 | --- | --- | --- | --- |
-| Cortex-A720AE Primary Compute | QEMU/libqemu CPU model via QBox | Functional AP boot, PSCI, timers, SMP, affinity, exception routing | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, QBox runtime logs |
+| Cortex-A720AE Primary Compute | QEMU/libqemu CPU model with AArch64-only EL0 and supported QARMA3/FGT/ECV/PAN/WFxT profile | Preserve functional AP boot, PSCI, timers, four-core SMP, affinity, and exception routing; keep unsupported MTE/AMU/MPAM explicit | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, QBox runtime logs |
 | DSU-120AE / DSU PMU | QBox-visible PMU evidence exists | Model enough PMU and topology behavior for Linux/FVP parity | `arm-zena-css/documentation/design/components.rst`, Linux probe logs |
-| GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS | Match FVP distributor, redistributors, ITS, IRQ numbering, multi-view constraints where used | FVP DTS, machine config, Linux `/proc/interrupts` |
-| SMMUv3 | libqemu-backed `arm_smmuv3` | Replace previous stub; maintain PCI bus, memory links, IRQs, Linux driver behavior | QEMU SMMUv3 model, FVP DTS, runtime driver probe |
-| PL011 UART | QBox UART + backend | Console compatibility, interrupt behavior, backend behavior, stop semantics | FVP config, QBox backend docs, Linux console logs |
+| GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS plus sixteen-frame SystemC multiview discovery and two-byte collection entries | Preserve distributor, redistributor, ITS, IRQ numbering, and multi-view behavior | FVP DTS, machine config, Linux `/proc/interrupts` |
+| CMN-CYPRUS | SystemC CFG2 r3p0 6x4 XP and child-node discovery graph | Preserve FVP-visible revision and topology discovery | SI0 firmware logs, FVP/QBox differential, component tests |
+| SMMUv3 | SystemC MMU-720AE profile with 52-bit internal PA walk and 32-bit SID advertisement | Maintain PCI bus, memory links, IRQs, Linux driver behavior, and FVP discovery signature | FVP DTS, Linux runtime driver probe, component tests |
+| PL011 UART | Reusable QBox UART configured as revision 3 on Apollo | Console compatibility, interrupt behavior, backend behavior, stop semantics | FVP config, QBox backend docs, Linux console logs |
 | SBSA watchdog | QEMU model | Linux watchdog probe and reset behavior where practical | FVP DTS, Linux probe logs, Arm SBSA watchdog docs |
 | PL031 RTC | QEMU model | Linux RTC behavior and IRQ compatibility | FVP DTS, Linux probe logs, Arm PL031 docs |
-| Virtio block/net/rng | QEMU virtio-mmio models | Match FVP device count, address/IRQ, and Linux driver behavior | FVP config, generated image artifacts, Linux probe logs |
-| MHUv3 | QBox compatibility components with reusable PBX/MBX frame model and SCMI/RPMsg service hooks | Move from reusable register-frame behavior toward full TRM-based channel/doorbell and service semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr RPMsg evidence |
-| Safety Island CL0/CL1 | Partial AP-visible remoteproc/RPMsg surface | Model boot, shared memory, MHU, Zephyr/OpenAMP interactions, and CL1 runtime behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
-| RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now bridges AP->RSE and RSE->AP doorbells, routes RSE MHU receiver IRQs to TF-M-visible IRQ numbers, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, and service-models SI CL1 RPMsg name service far enough for Linux to create `ethsi1`. | Keep boot-flash DMI disabled for TF-M storage debug, replace the service-modeled SI CL1 RPMsg endpoint with a real SI CL1 CPU/Zephyr peer, add secure-service userspace tests, and preserve host SCR/PPU/MHU/shared-memory semantics before any ATU/host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
+| Virtio block/net/rng | QEMU virtio-mmio models; unused block placeholders enumerate with zero capacity | Preserve FVP device count, address/IRQ, and Linux driver behavior | FVP config, generated image artifacts, Linux probe logs |
+| MHUv3 | Reusable PBX/MBX SystemC frames with live AP/RSE/SI peers, shared-memory doorbells, and ordered combined IRQ updates | Continue TRM-based channel, reset, and fault semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr/RSE evidence |
+| Safety Island CL0/CL1 | Live SI0 SCP and SI1 Zephyr CPUs with PFDI and guest-owned HIPC/RPMsg endpoint | Preserve boot, shared memory, MHU, OpenAMP, reset, and peer-failure behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
+| RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now uses real AP/RSE doorbell peers and the RSE-ATU/AP-flash route, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, reports FWU ABI 1.0, and boots in regular state. | Add secure-service userspace tests and preserve host SCR/PPU/MHU/shared-memory semantics before any further ATU or host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
 | FMU / SSU / SBISTC / SMCF / RAS | Some AP-visible RAS evidence; other safety IP mostly not modeled | Implement documented register and interrupt behavior needed for diagnostics and tests | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
 | PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, secure pending-mailbox preservation, malformed-length recovery, and requester-aware cross-instance deadline hold until the real SI0 response releases the channel | Add peer-offline, reset-time cancellation and fault-injection behavior | Zena PFDI docs, Linux/Zephyr/SCP code, FVP/QBox differential and component/runtime logs |
 | Power/performance control | AP-visible behavior only | Model SCMI-visible power/performance contracts before low-level PPU fidelity | Zena power/performance docs, SCMI logs |
