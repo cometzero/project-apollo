@@ -1,6 +1,6 @@
 # Apollo QVP Yocto/QBox Runbook
 
-Updated: 2026-07-06
+Updated: 2026-07-18
 
 This runbook covers the Apollo QVP Yocto machine and the Yocto-built QBox host
 provider. It documents the deploy contract and current blockers. It does not
@@ -124,6 +124,58 @@ For a file-backed dry run:
 ```bash
 ./run_qbox_yocto.sh --headless --dry-run
 ```
+
+`run_qbox_yocto.sh`는 기본적으로 다음 위치의 RSE Protected Storage 상태를
+재사용한다.
+
+```text
+build/qbox-apollo-fvp/state/yocto-apollo-qvp/rse-flash-image.img
+```
+
+source RSE flash의 SHA-256 또는 크기가 바뀌더라도 저장소 schema, PS/ITS layout,
+RSE OTP identity가 호환되면 새 firmware 영역과 기존 PS/ITS를 자동 병합한다.
+`result.json`의 `rse_flash_state.action`은 이 경우 `storage-preserved`다. schema,
+layout 또는 OTP identity가 바뀌면 state를 새 이미지에서 다시 생성한다. 구형
+sidecar metadata는 compatibility fingerprint가 없으므로 한 번 refresh된다.
+
+명시적으로 초기화하거나 일회성 pristine 상태를 사용할 때는 다음 옵션을 사용한다.
+
+```bash
+./run_qbox_yocto.sh --reset-rse-state
+./run_qbox_yocto.sh --no-persistent-rse-state
+./run_qbox_yocto.sh --rse-state-dir /path/to/state
+```
+
+U-Boot의 FWU Regular State까지만 빠르게 검증하려면 Linux/Safety Island 완료
+gate를 제외하는 전용 scope를 사용한다.
+
+```bash
+./run_qbox_yocto.sh --headless --uboot-only --timeout 90
+```
+
+RSE boot flash의 기본 backend는 같은 QEMU CFI01 MemoryRegion을 RSE CPU와 외부
+TLM initiator가 공유하는 `qemu-cfi-local`이다. 비교나 rollback이 필요할 때만
+runner 뒤에 다음 옵션을 전달한다.
+
+```bash
+./run_qbox_yocto.sh --headless --uboot-only -- \
+  --rse-flash-backend systemc-strata
+```
+
+새 erased PS/ITS의 cold 경로를 검증할 때는 persistent state를 명시적으로
+초기화한다.
+
+```bash
+./run_qbox_yocto.sh --headless --exit-after-pass --uboot-only \
+  --reset-rse-state
+```
+
+`result.json`의 `rse_flash_state.action`이 초기화를 나타내는지 확인하고, 다음
+reuse 실행에서 PS/ITS before/after hash가 같아야 한다.
+
+local 이미지의 대응 state는
+`build/qbox-apollo-fvp/state/local-apollo-qvp/`이며,
+`run_qbox_local.sh`도 같은 세 가지 state 옵션과 `--uboot-only`를 제공한다.
 
 The QVP runtime output root should use:
 

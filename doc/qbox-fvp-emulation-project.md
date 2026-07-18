@@ -145,6 +145,23 @@ placeholder disks. Local and rebuilt Yocto runs both pass with four CPUs,
 Linux login, SI0/SI1 readiness, PFDI, RPMsg, FWU, and the coverage audit. See
 `doc/apollo-qvp-fvp-qbox-yocto-system-log-comparison-2026-07-17-ko.md`.
 
+The 2026-07-18 cold-initialization work replaced the default RSE SystemC
+Strata access path with a single QEMU-local CFI01 MemoryRegion while retaining
+the TLM target export for external initiators. Address-filtered profiling
+showed 25.274 seconds in the cold QEMU-to-SystemC regular-access path. The
+QEMU-local model keeps Apollo's aligned `0xff` compatibility erase, avoids
+per-command ROMD topology churn, and coalesces block-backend writes by dirty
+sector with timer/reset/migration flush boundaries. Local cold RSE handoff to
+FWU Regular State fell from 32.792 to 6.940 seconds without a performance
+pass/fail threshold. Local and Yocto cold/reuse runs preserve PS/ITS hashes,
+and the same Yocto image passes FVP with the same measured-boot and U-Boot FWU
+marker order. `qemu-cfi-local` is now the default; `systemc-strata` remains an
+explicit rollback backend. See
+`doc/apollo-qvp-cold-initialization-profile-report-2026-07-18-ko.md`.
+The temporary QBox initiator, QEMU CFI JSON, and Strata wall-time profiling
+code used to make that decision was removed after the final clean runtime
+check; the reusable repositories retain only the selected functional path.
+
 The current QBox RD-Aspen primary-compute platform has file-backed build and
 runtime helpers:
 
