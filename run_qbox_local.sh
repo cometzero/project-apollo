@@ -22,8 +22,12 @@ SSH_PORT_START="${SSH_PORT_START:-2222}"
 SSH_PORT_END="${SSH_PORT_END:-2299}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+UBOOT_ONLY="${UBOOT_ONLY:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 LEGACY_FILE_BACKED_SRAM=0
+RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
+PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
+RESET_RSE_STATE=0
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
 PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
@@ -106,6 +110,10 @@ Options:
   --copy-disks
   --no-copy-disks
   --legacy-file-backed-sram
+  --rse-state-dir DIR
+  --reset-rse-state
+  --no-persistent-rse-state
+  --uboot-only
   --keep-running-after-pass
   --exit-after-pass
   --no-attach
@@ -290,6 +298,24 @@ parse_args()
                 ;;
             --legacy-file-backed-sram)
                 LEGACY_FILE_BACKED_SRAM=1
+                shift
+                ;;
+            --rse-state-dir)
+                (($# >= 2)) || die "--rse-state-dir requires a value"
+                RSE_STATE_DIR="$2"
+                shift 2
+                ;;
+            --reset-rse-state)
+                RESET_RSE_STATE=1
+                shift
+                ;;
+            --no-persistent-rse-state)
+                PERSIST_RSE_STATE=0
+                shift
+                ;;
+            --uboot-only)
+                UBOOT_ONLY=1
+                KEEP_RUNNING_AFTER_PASS=0
                 shift
                 ;;
             --keep-running-after-pass)
@@ -560,6 +586,10 @@ main()
 
     PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
     PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+    RSE_STATE_DIR="${RSE_STATE_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/state/local-${MACHINE}}"
+    if [[ "${RESET_RSE_STATE}" == "1" && "${PERSIST_RSE_STATE}" != "1" ]]; then
+        die "--reset-rse-state cannot be used with --no-persistent-rse-state"
+    fi
 
     local rootfs_src="${LOCAL_BUILD_DIR}/deploy/boot/${MACHINE}-local-disk.img"
     local efi_src="${LOCAL_BUILD_DIR}/deploy/boot/boot-fat.img"
@@ -617,6 +647,11 @@ main()
     printf '  ap_cpus: %s\n' "${QBOX_APOLLO_NUM_CPUS:-default}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
+    if [[ "${PERSIST_RSE_STATE}" == "1" ]]; then
+        printf '  rse_flash_state: %s\n' "${RSE_STATE_DIR}/rse-flash-image.img"
+    else
+        printf '  rse_flash_state: ephemeral\n'
+    fi
     printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"
     printf '  netdev: %s\n' "${netdev}"
 
@@ -671,6 +706,17 @@ main()
         --si-cl1-image "${SI_CL1_IMAGE}"
         --si-cl1-symbols "${SI_CL1_SYMBOLS}"
     )
+    if [[ "${PERSIST_RSE_STATE}" == "1" ]]; then
+        runner_cmd+=(
+            --rse-flash-state "${RSE_STATE_DIR}/rse-flash-image.img"
+        )
+        if [[ "${RESET_RSE_STATE}" == "1" ]]; then
+            runner_cmd+=(--reset-rse-flash-state)
+        fi
+    fi
+    if [[ "${UBOOT_ONLY}" == "1" ]]; then
+        runner_cmd+=(--uboot-only)
+    fi
     if [[ -n "${RSE_SYMBOLS}" ]]; then
         runner_cmd+=(--rse-symbols "${RSE_SYMBOLS}")
     fi

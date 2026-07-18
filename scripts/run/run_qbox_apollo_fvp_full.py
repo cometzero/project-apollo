@@ -380,6 +380,9 @@ def synthesize_keep_running_child_status(
     )
     passed = bool(non_linux_hit and linux_hit and not any(fail_hits.values()))
     scp_strategy = "real-si-scp" if args.si_mode == "live-cl0-cl1" else "service-model"
+    rse_flash_state = read_json(
+        args.out_dir / rse_runner.RSE_FLASH_STATE_STATUS_FILE
+    )
     return {
         "passed": passed,
         "blocker": None,
@@ -394,6 +397,8 @@ def synthesize_keep_running_child_status(
             "live_scp_cpu_gdb": scp_strategy == "real-si-scp",
         },
         "runtime_artifacts": {},
+        "rse_flash_state": rse_flash_state
+        or {"enabled": False, "action": "ephemeral"},
         "progress_marker_first_hits": keep_running_progress_marker_first_hits(
             logs,
             args.primary_login_prompt,
@@ -729,6 +734,9 @@ def gate_status(
     check_only: bool,
 ) -> dict[str, str]:
     gates = {gate: "not_run" for gate in GATES}
+    if args.uboot_only:
+        gates["G0"] = "pass" if not blocker else "blocked"
+        return gates
     if blocker:
         if blocker.startswith("missing_artifact"):
             gates["G0"] = "fail"
@@ -821,6 +829,16 @@ def child_rse_boot_timing_profile(
             }
         )
     return {"markers": markers, "deltas": [], "slowest_delta": None, "summary": {}}
+
+
+def child_runtime_evidence(
+    child_status: dict[str, Any] | None,
+) -> dict[str, Any]:
+    status = child_status or {}
+    return {
+        "runtime_elapsed_s": status.get("runtime_elapsed_s"),
+        "progress_marker_first_hits": status.get("progress_marker_first_hits"),
+    }
 
 
 def marker_from_child(
@@ -994,7 +1012,7 @@ def write_result(
         args.primary_shell_marker,
     )
     gate_blocker = None
-    if not check_only and not args.build_only:
+    if not check_only and not args.build_only and not args.uboot_only:
         gate_blocker = live_cl1_gate_blocker(args, marker_groups, child_status)
     if not blocker and gate_blocker:
         blocker = gate_blocker
@@ -1048,6 +1066,7 @@ def write_result(
         "pass_mode": (child_status or {}).get("pass_mode"),
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
+        "validation_scope": "uboot-only" if args.uboot_only else "full-system",
         "safety_island_mode": args.si_mode,
         "ap_tcg_mode": effective_platform_param(
             args,
@@ -1074,6 +1093,7 @@ def write_result(
             "multithread-quantum",
         ),
         "smmu_backend": args.smmu_backend,
+        "rse_flash_backend": args.rse_flash_backend,
         "mhu_backend": "systemc-mhu320ae",
         "qbox_conf": str(args.conf),
         "qbox_build_dir": str(args.qbox_build_dir),
@@ -1090,6 +1110,9 @@ def write_result(
         "completion_gates": gates,
         "input_artifacts": input_artifacts,
         "runtime_artifacts": (child_status or {}).get("runtime_artifacts", {}),
+        "rse_flash_state": (child_status or {}).get(
+            "rse_flash_state", {"enabled": False, "action": "ephemeral"}
+        ),
         "console_logs": console_logs,
         "mhu_trace_logs": mhu_trace_logs,
         "platform_stdout_log": console_logs["platform"],
@@ -1103,6 +1126,7 @@ def write_result(
         ),
         "post_login_probe": post_login_probe(child_status),
         "rse_boot_timing_profile": child_rse_boot_timing_profile(child_status),
+        **child_runtime_evidence(child_status),
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
         "completion_gate_blocker": gate_blocker,
@@ -1125,6 +1149,7 @@ def write_result(
         f"passed: {status['passed']}",
         f"verdict: {status['verdict']}",
         f"boot_mode: {status['boot_mode']}",
+        f"validation_scope: {status['validation_scope']}",
         f"safety_island_mode: {args.si_mode}",
         f"ap_tcg_mode: {status['ap_tcg_mode']}",
         f"si_cl0_tcg_mode: {status['si_cl0_tcg_mode']}",
@@ -1137,6 +1162,8 @@ def write_result(
         + json.dumps(status["qbox_performance_options"], sort_keys=True),
         "rse_otp_auto_provision: "
         + json.dumps(status["rse_otp_auto_provision"], sort_keys=True),
+        "rse_flash_state: "
+        + json.dumps(status["rse_flash_state"], sort_keys=True),
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         f"live_trace: {status['live_trace']}",
         f"blocker: {status['blocker'] or 'none'}",
@@ -1218,6 +1245,7 @@ def clear_run_outputs(out_dir: Path) -> None:
         "ap-si-mhuv3-trace.log",
         "si-cl1-mhuv3-trace.log",
         "si-cl0-pc-trace.log",
+        rse_runner.RSE_FLASH_STATE_STATUS_FILE,
     }
     stale_files.update(CONSOLE_LOGS.values())
     stale_files.add("qbox-scp.log")
@@ -1413,6 +1441,11 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
     ]
     if args.skip_build:
         cmd.append("--skip-build")
+    if args.rse_flash_state is not None:
+        cmd.extend(["--rse-flash-state", str(args.rse_flash_state)])
+    if args.reset_rse_flash_state:
+        cmd.append("--reset-rse-flash-state")
+    cmd.extend(["--rse-flash-backend", args.rse_flash_backend])
     if args.no_copy_writable_flash:
         cmd.append("--no-copy-writable-flash")
     if args.range_limited_flash_dmi:
@@ -1488,7 +1521,7 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--rse-fast-boot-sram-dmi")
     if getattr(args, "provision_blank_rse_otp", False):
         cmd.append("--allow-blank-rse-otp")
-    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
+    if not args.uboot_only and args.si_mode in {"live-cl1", "live-cl0-cl1"}:
         cl1_log = (args.out_dir / "qbox-safety-island-cl1.log").resolve()
         for marker in LIVE_CL1_REQUIRED_MARKERS.values():
             cmd.extend(["--required-pass-marker", str(cl1_log), marker])
@@ -1615,6 +1648,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--build-only", action="store_true")
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument(
+        "--uboot-only",
+        action="store_true",
+        help=(
+            "Stop the pass criteria at U-Boot FWU Regular State and skip "
+            "Safety Island/Linux completion gates."
+        ),
+    )
+    parser.add_argument(
         "--auto-provision-rse-otp",
         dest="auto_provision_rse_otp",
         action="store_true",
@@ -1704,6 +1745,12 @@ def parse_args() -> argparse.Namespace:
         "--cc3xx-stats",
         action="store_true",
         help="Forward CC3XX aggregate statistics collection to the RSE runner.",
+    )
+    parser.add_argument(
+        "--rse-flash-backend",
+        choices=("systemc-strata", "qemu-cfi-local"),
+        default="qemu-cfi-local",
+        help="RSE boot flash backend used by the child QBox runner.",
     )
     parser.add_argument(
         "--qbox-perf-profile",
@@ -1848,6 +1895,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--platform-param", action="append", default=[])
     parser.add_argument("--rse-rom", type=Path)
     parser.add_argument("--rse-flash", type=Path)
+    parser.add_argument(
+        "--rse-flash-state",
+        type=Path,
+        help="Persistent writable RSE flash state managed by the child runner.",
+    )
+    parser.add_argument(
+        "--reset-rse-flash-state",
+        action="store_true",
+        help="Recreate --rse-flash-state from the selected RSE flash image.",
+    )
     parser.add_argument("--rse-otp", type=Path)
     parser.add_argument("--ap-flash", type=Path)
     parser.add_argument("--ap-bl2-elf", type=Path)
@@ -1878,6 +1935,10 @@ def parse_args() -> argparse.Namespace:
     os.environ["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
     os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     args.out_dir = args.out_dir.resolve()
+    if args.uboot_only:
+        args.primary_login_prompt = "FWU: System booting in Regular State"
+        args.primary_shell_marker = "FWU: System booting in Regular State"
+        args.primary_shell_prompt_re = "FWU: System booting in Regular State"
     if args.qbox_performance_preset:
         args.rse_hotpath_accel = True
         args.rse_bl2_libc_hotpath = True
@@ -1934,6 +1995,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-bl2-delay-expected-hits must be non-negative")
     if args.rse_otp_provision_timeout <= 0:
         parser.error("--rse-otp-provision-timeout must be positive")
+    if args.reset_rse_flash_state and args.rse_flash_state is None:
+        parser.error("--reset-rse-flash-state requires --rse-flash-state")
     if args.rse_bl2_verify_sig_skip:
         args.rse_bl2_verify_sig_accel = True
     return args

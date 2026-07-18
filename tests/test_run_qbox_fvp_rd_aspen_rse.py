@@ -4,6 +4,8 @@ import os
 from types import SimpleNamespace
 import sys
 
+import pytest  # pyright: ignore[reportMissingImports]
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"
@@ -73,6 +75,230 @@ def test_fast_boot_sram_dmi_preserves_explicit_flash_dmi_disable(monkeypatch):
 
     assert args.rse_fast_boot_sram_dmi is True
     assert args.range_limited_flash_dmi is False
+    assert args.rse_flash_backend == "qemu-cfi-local"
+
+
+def test_active_apollo_storage_layout_covers_ps_and_its():
+    runner = load_runner()
+
+    assert runner.RSE_FLASH_PS_SIZE == 0x00100000
+    assert runner.RSE_FLASH_ITS_SIZE == 0x00040000
+    assert runner.RSE_BOOT_FLASH_STORAGE_SIZE == 0x00140000
+    assert runner.rse_storage_direct_fastpath_spec() == "0xb3000000:0x140000"
+
+
+def test_persistent_rse_flash_records_ps_and_its_before_after_hashes(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    monkeypatch.setattr(runner, "RSE_FLASH_IMG_SIZE", 8)
+    monkeypatch.setattr(runner, "RSE_FLASH_PS_SIZE", 4)
+    monkeypatch.setattr(runner, "RSE_FLASH_ITS_SIZE", 2)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_OFFSET", 8)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_SIZE", 6)
+    source = tmp_path / "source.img"
+    otp = tmp_path / "otp.img"
+    state = tmp_path / "state.img"
+    source.write_bytes(b"firmware")
+    otp.write_bytes(b"identity")
+
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=runner.rse_storage_compatibility(otp),
+    )
+    lock.close()
+
+    assert status["storage_regions"]["ps"]["before_sha256"] == runner.sha256_file_region(
+        state, offset=8, size=4
+    )
+    assert status["storage_regions"]["its"]["before_sha256"] == runner.sha256_file_region(
+        state, offset=12, size=2
+    )
+    with state.open("r+b") as flash:
+        flash.seek(8)
+        flash.write(b"PS!!IT")
+
+    finalized = runner.finalize_rse_flash_state_status(status)
+
+    assert finalized["storage_regions"]["ps"]["after_sha256"] == runner.sha256_file_region(
+        state, offset=8, size=4
+    )
+    assert finalized["storage_regions"]["its"]["after_sha256"] == runner.sha256_file_region(
+        state, offset=12, size=2
+    )
+    assert finalized["storage_regions"]["ps"]["changed"] is True
+    assert finalized["storage_regions"]["its"]["changed"] is True
+
+
+def test_qbox_and_fvp_cold_marker_schema_matches():
+    runner = load_runner()
+    fvp_script = ROOT / "scripts/run/runfvp_log_boot.py"
+    spec = importlib.util.spec_from_file_location("runfvp_log_boot", fvp_script)
+    assert spec is not None
+    assert spec.loader is not None
+    fvp_runner = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = fvp_runner
+    spec.loader.exec_module(fvp_runner)
+
+    expected = {
+        "rse_runtime_handoff",
+        "tf_a_mboot_fw_config",
+        "tf_a_mboot_secure_rt_el3",
+        "tf_a_mboot_hw_config",
+        "tf_a_mboot_secure_rt_el1_spmd",
+        "tf_a_mboot_bl33",
+        "uboot_mm_partition",
+        "fwu_regular_state",
+    }
+
+    assert expected <= runner.PROGRESS_MARKERS.keys()
+    assert {
+        name: runner.PROGRESS_MARKERS[name] for name in expected
+    } == {
+        name: fvp_runner.PROGRESS_MARKERS[name] for name in expected
+    }
+
+
+def test_persistent_rse_flash_create_reuse_reset_and_preserve_storage(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    monkeypatch.setattr(runner, "RSE_FLASH_IMG_SIZE", 8)
+    monkeypatch.setattr(runner, "RSE_FLASH_PS_SIZE", 4)
+    monkeypatch.setattr(runner, "RSE_FLASH_ITS_SIZE", 2)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_OFFSET", 8)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_SIZE", 6)
+    source = tmp_path / "source.img"
+    otp = tmp_path / "otp.img"
+    state = tmp_path / "state/rse-flash-image.img"
+    source.write_bytes(b"firmware")
+    otp.write_bytes(b"device-identity")
+    compatibility = runner.rse_storage_compatibility(otp)
+
+    path, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert path == state
+    assert status["action"] == "created"
+    assert state.stat().st_size == 16
+
+    with state.open("r+b") as flash:
+        flash.seek(8)
+        flash.write(b"STORE!")
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert status["action"] == "reused"
+    assert state.read_bytes()[8:14] == b"STORE!"
+
+    source.write_bytes(b"new-fw!!")
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert status["action"] == "storage-preserved"
+    assert status["storage_preserved"] is True
+    assert state.read_bytes()[:8] == b"new-fw!!"
+    assert state.read_bytes()[8:14] == b"STORE!"
+
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=True,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert status["action"] == "reset"
+    assert state.read_bytes()[8:14] == bytes([runner.FLASH_ERASED_VALUE]) * 6
+
+
+def test_persistent_rse_flash_refreshes_when_otp_identity_changes(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    monkeypatch.setattr(runner, "RSE_FLASH_IMG_SIZE", 8)
+    monkeypatch.setattr(runner, "RSE_FLASH_PS_SIZE", 4)
+    monkeypatch.setattr(runner, "RSE_FLASH_ITS_SIZE", 2)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_OFFSET", 8)
+    monkeypatch.setattr(runner, "RSE_BOOT_FLASH_STORAGE_SIZE", 6)
+    source = tmp_path / "source.img"
+    otp = tmp_path / "otp.img"
+    state = tmp_path / "state.img"
+    source.write_bytes(b"firmware")
+    otp.write_bytes(b"identity-a")
+    compatibility = runner.rse_storage_compatibility(otp)
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert status["action"] == "created"
+    with state.open("r+b") as flash:
+        flash.seek(8)
+        flash.write(b"STORE!")
+
+    otp.write_bytes(b"identity-b")
+    compatibility = runner.rse_storage_compatibility(otp)
+    _, status, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=16,
+        storage_compatibility=compatibility,
+    )
+    lock.close()
+    assert status["action"] == "refreshed"
+    assert status["storage_preserved"] is False
+    assert state.read_bytes()[8:14] == bytes([runner.FLASH_ERASED_VALUE]) * 6
+
+
+def test_persistent_rse_flash_rejects_concurrent_use(tmp_path):
+    runner = load_runner()
+    source = tmp_path / "source.img"
+    otp = tmp_path / "otp.img"
+    state = tmp_path / "state.img"
+    source.write_bytes(b"image")
+    otp.write_bytes(b"identity")
+    compatibility = runner.rse_storage_compatibility(otp)
+    _, _, lock = runner.prepare_persistent_rse_flash(
+        source,
+        state,
+        reset=False,
+        minimum_size=runner.RSE_BOOT_FLASH_SIZE,
+        storage_compatibility=compatibility,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="rse_flash_state_in_use"):
+            runner.prepare_persistent_rse_flash(
+                source,
+                state,
+                reset=False,
+                minimum_size=runner.RSE_BOOT_FLASH_SIZE,
+                storage_compatibility=compatibility,
+            )
+    finally:
+        lock.close()
 
 
 def test_fast_boot_sram_dmi_uses_real_atu_ap_fip_path():
@@ -169,8 +395,6 @@ def make_qbox_env_args(tmp_path):
         cc3xx_stats_interval=1024,
         cc3xx_status_read_fastpath=False,
         exception_trace=False,
-        flash_stats=False,
-        flash_stats_interval=1024,
         fwu_probe=False,
         no_copy_writable_flash=False,
         out_dir=tmp_path,
@@ -179,9 +403,6 @@ def make_qbox_env_args(tmp_path):
         pc_trace_limit=0,
         platform_param=[],
         post_login_probe=False,
-        qbox_initiator_addr_profile=False,
-        qbox_initiator_addr_profile_limit=64,
-        qbox_initiator_addr_profile_shift=12,
         qbox_perf_profile=True,
         qbox_perf_profile_interval=1024,
         qemu_trace=False,
@@ -201,6 +422,7 @@ def make_qbox_env_args(tmp_path):
         rse_direct_ap_fip_alias=False,
         rse_direct_file_aliases="",
         rse_direct_rse_flash_alias=False,
+        rse_flash_backend="qemu-cfi-local",
         rse_direct_si_sram_alias=False,
         rse_direct_si_sram_code_alias_size=0,
         rse_fast_boot_sram_dmi=False,
@@ -249,6 +471,7 @@ def test_qbox_env_omits_removed_remote_fields_and_keeps_accelerators(
     assert "QBOX_REMOTEPASS_PROFILE_DIR" not in env
     assert env["QBOX_RDASPEN_RSE_HOTPATH_ACCEL"] == "true"
     assert env["QBOX_RDASPEN_RSE_LMS_ACCEL"] == "true"
+    assert env["QBOX_RDASPEN_RSE_FLASH_BACKEND"] == "qemu-cfi-local"
     assert "QBOX_RDASPEN_RSE_HOTPATH_PROFILE_FILE" in env
 
 

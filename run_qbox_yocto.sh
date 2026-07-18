@@ -39,6 +39,10 @@ Options:
   --copy-disks                Copy writable rootfs/EFI disks into --out-dir first
   --no-copy-disks             Use Yocto deploy disk images in place (default)
   --legacy-file-backed-sram   Disable RSE SRAM fast-boot DMI accelerator
+  --rse-state-dir DIR         Persistent RSE flash state directory
+  --reset-rse-state           Reset persistent state from the selected image
+  --no-persistent-rse-state   Use a pristine per-run RSE flash copy
+  --uboot-only                Validate only through U-Boot FWU Regular State
   --headless                  Run without tmux and write logs under --out-dir
   --keep-running-after-pass   Keep QBox alive after the pass condition (default)
   --exit-after-pass           Stop QBox after the pass condition
@@ -66,7 +70,8 @@ Artifact overrides:
 Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
   QBOX_CONF_FILE, LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
-  OUT_DIR, TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT
+  OUT_DIR, TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
+  QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
 EOF
 }
 
@@ -588,9 +593,13 @@ RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+UBOOT_ONLY="${UBOOT_ONLY:-0}"
 NO_ATTACH="${NO_ATTACH:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 RSE_OTP_IMAGE_SIZE="${RSE_OTP_IMAGE_SIZE:-65536}"
+RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
+PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
+RESET_RSE_STATE=0
 
 ROOTFS_OVERRIDE="${ROOTFS:-}"
 EFI_CAPSULE_DISK_OVERRIDE="${EFI_CAPSULE_DISK:-}"
@@ -711,6 +720,24 @@ while (($#)); do
             ;;
         --legacy-file-backed-sram)
             LEGACY_FILE_BACKED_SRAM=1
+            shift
+            ;;
+        --rse-state-dir)
+            [[ $# -ge 2 ]] || die "--rse-state-dir requires a value"
+            RSE_STATE_DIR="$2"
+            shift 2
+            ;;
+        --reset-rse-state)
+            RESET_RSE_STATE=1
+            shift
+            ;;
+        --no-persistent-rse-state)
+            PERSIST_RSE_STATE=0
+            shift
+            ;;
+        --uboot-only)
+            UBOOT_ONLY=1
+            KEEP_RUNNING_AFTER_PASS=0
             shift
             ;;
         --headless)
@@ -881,6 +908,10 @@ export QBOX_APOLLO_NUM_CPUS
 
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+RSE_STATE_DIR="${RSE_STATE_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/state/yocto-${MACHINE}}"
+if [[ "${RESET_RSE_STATE}" == "1" && "${PERSIST_RSE_STATE}" != "1" ]]; then
+    die "--reset-rse-state cannot be used with --no-persistent-rse-state"
+fi
 
 ROOTFS_DEFAULT="${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}.wic"
 ROOTFS_GLOB="${DEPLOY_DIR}/${IMAGE_BASENAME}-${MACHINE}-*.wic"
@@ -1138,6 +1169,15 @@ RUNNER_CMD+=(
 if [[ -n "${RSE_SYMBOLS}" ]]; then
     RUNNER_CMD+=(--rse-symbols "${RSE_SYMBOLS}")
 fi
+if [[ "${PERSIST_RSE_STATE}" == "1" ]]; then
+    RUNNER_CMD+=(--rse-flash-state "${RSE_STATE_DIR}/rse-flash-image.img")
+    if [[ "${RESET_RSE_STATE}" == "1" ]]; then
+        RUNNER_CMD+=(--reset-rse-flash-state)
+    fi
+fi
+if [[ "${UBOOT_ONLY}" == "1" ]]; then
+    RUNNER_CMD+=(--uboot-only)
+fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
 
@@ -1156,6 +1196,7 @@ Apollo QBox Yocto launch
   rootfs:        ${RUN_ROOTFS}
   efi disk:      ${RUN_EFI_CAPSULE_DISK}
   rse otp:       ${RUN_RSE_OTP}
+  rse state:     $([[ "${PERSIST_RSE_STATE}" == "1" ]] && printf '%s' "${RSE_STATE_DIR}/rse-flash-image.img" || printf '%s' ephemeral)
   ssh port:      ${SSH_PORT_VALUE}
 EOF
 

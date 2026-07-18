@@ -193,6 +193,8 @@ def run_qvp_local_dry_run(
         "QBOX_PLATFORM_BUILD_DIR",
         "ROOTFS",
         "EFI_CAPSULE_DISK",
+        "QBOX_RSE_STATE_DIR",
+        "QBOX_PERSIST_RSE_STATE",
     ):
         env.pop(name, None)
     env.update(
@@ -347,6 +349,10 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     assert argv[argv.index("--primary-login-prompt") + 1] == "apollo-qvp login:"
     assert "--rse-rom" in argv
     assert "--rse-flash" in argv
+    state_index = argv.index("--rse-flash-state")
+    assert argv[state_index + 1] == str(
+        ROOT / "build/qbox-apollo-fvp/state/local-apollo-qvp/rse-flash-image.img"
+    )
     assert "--rse-otp" in argv
     assert "--ap-flash" in argv
     assert "--ap-bl2-elf" in argv
@@ -358,6 +364,16 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     assert "--si-cl1-image" in argv
     assert "--si-cl1-symbols" in argv
     assert "--rse-symbols" in argv
+
+
+def test_run_qbox_local_qvp_can_disable_persistent_rse_state(tmp_path: Path) -> None:
+    result = run_qvp_local_dry_run(
+        tmp_path, extra_args=["--no-persistent-rse-state"]
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--rse-flash-state" not in dry_run_command_argv(result.stdout)
+    assert "rse_flash_state: ephemeral" in result.stdout
 
 
 def test_run_qbox_local_qvp_no_copy_disks_uses_base_local_boot_disk(

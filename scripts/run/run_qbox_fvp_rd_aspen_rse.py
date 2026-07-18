@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import fcntl
 import gzip
 import hashlib
 import json
@@ -74,8 +75,6 @@ PLATFORM_STDOUT_LOG = "qbox-platform.log"
 QEMU_TRACE_LOG = "qemu-rse-trace.log"
 RSE_PC_TRACE_LOG = "rse-pc-trace.log"
 AP_PC_TRACE_LOG = "ap-pc-trace.log"
-RSE_STRATA_STATS = "rse-strata-stats.json"
-AP_STRATA_STATS = "ap-strata-stats.json"
 RSE_CC3XX_STATS = "rse-cc3xx-stats.json"
 QBOX_PERF_PROFILE_DIR = "qbox-perf-profile"
 MAX_REQUIRED_PASS_MARKERS = 32
@@ -177,14 +176,22 @@ PROGRESS_MARKERS = {
     "rse_image_2_loaded": "Image 2 loaded from the primary slot",
     "rse_image_0_loaded": "Image 0 loaded from the primary slot",
     "rse_first_image_slot": "Jumping to the first image slot",
+    "rse_runtime_handoff": "Jumping to the first image slot",
     "rse_scp_power_on_ap": "RSE to SCP SCMI power on AP succeeded",
     "measured_boot_bl33": "BL_33",
+    "tf_a_mboot_fw_config": "sw_type     : FW_CONFIG",
+    "tf_a_mboot_secure_rt_el3": "sw_type     : SECURE_RT_EL3",
+    "tf_a_mboot_hw_config": "sw_type     : HW_CONFIG",
+    "tf_a_mboot_secure_rt_el1_spmd": "sw_type     : SECURE_RT_EL1_SPMD",
+    "tf_a_mboot_bl33": "sw_type     : BL_33",
     "primary_efi_mm_partition": "EFI: MM partition ID 0x8006",
+    "uboot_mm_partition": "EFI: MM partition ID 0x8006",
     "primary_pk_enrolled": "PK key is enrolled successfully!",
     "primary_kek_enrolled": "KEK key is enrolled successfully!",
     "primary_db_enrolled": "db key is enrolled successfully!",
     "primary_dbx_enrolled": "dbx key is enrolled successfully!",
     "primary_fwu_regular_state": "FWU: System booting in Regular State",
+    "fwu_regular_state": "FWU: System booting in Regular State",
     "primary_bootflow_script": "** Booting bootflow",
     "primary_efi_bootaa64": "Booting /\\EFI\\BOOT\\BOOTAA64.EFI",
     "primary_linux_cpu": "Booting Linux on physical CPU",
@@ -491,10 +498,13 @@ RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_SIZE = (
     RSE_SECURE_PRIMARY_FLASH_OFFSET - RSE_BOOT_FLASH_PRE_PRIMARY_SCAN_OFFSET
 )
 RSE_FLASH_IMG_SIZE = 0x03000000
-RSE_FLASH_PS_SIZE = 0x00010000
-RSE_FLASH_ITS_SIZE = 0x00100000
+RSE_FLASH_PS_SIZE = 0x00100000
+RSE_FLASH_ITS_SIZE = 0x00040000
 RSE_BOOT_FLASH_STORAGE_OFFSET = RSE_FLASH_IMG_SIZE
 RSE_BOOT_FLASH_STORAGE_SIZE = RSE_FLASH_PS_SIZE + RSE_FLASH_ITS_SIZE
+RSE_STORAGE_METADATA_FORMAT_VERSION = 2
+RSE_STORAGE_SCHEMA_ID = "apollo-qvp-cfg2-tfm-ps-its-v1"
+RSE_FLASH_STATE_STATUS_FILE = "rse-flash-state.json"
 RSE_BOOT_FLASH_IMAGE_SLOT_OFFSETS = [
     RSE_SECURE_PRIMARY_FLASH_OFFSET,
     SI_CL0_PRIMARY_FLASH_OFFSET,
@@ -760,6 +770,246 @@ def copy_sparse(src: Path, dst: Path, *, chunk_size: int = 1024 * 1024) -> None:
                 target.write(data)
         target.truncate(src.stat().st_size)
     shutil.copystat(src, dst, follow_symlinks=True)
+
+
+def sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(chunk_size):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sha256_file_region(
+    path: Path,
+    *,
+    offset: int,
+    size: int,
+    chunk_size: int = 1024 * 1024,
+) -> str:
+    digest = hashlib.sha256()
+    remaining = size
+    with path.open("rb") as source:
+        source.seek(offset)
+        while remaining:
+            data = source.read(min(chunk_size, remaining))
+            if not data:
+                raise RuntimeError(
+                    f"rse_flash_state_storage_truncated:{path}:{offset}:{size}"
+                )
+            digest.update(data)
+            remaining -= len(data)
+    return digest.hexdigest()
+
+
+def finalize_rse_flash_state_status(
+    status: dict[str, object],
+) -> dict[str, object]:
+    if not status.get("enabled"):
+        return status
+
+    state = Path(str(status["path"]))
+    regions = status.get("storage_regions")
+    if not isinstance(regions, dict):
+        return status
+    for value in regions.values():
+        if not isinstance(value, dict):
+            continue
+        try:
+            after_hash = sha256_file_region(
+                state,
+                offset=int(value["offset"]),
+                size=int(value["size"]),
+            )
+        except (OSError, RuntimeError, KeyError, TypeError, ValueError) as exc:
+            value["after_sha256"] = None
+            value["hash_error"] = str(exc)
+            continue
+        value["after_sha256"] = after_hash
+        value["changed"] = after_hash != value.get("before_sha256")
+    return status
+
+
+def rse_storage_compatibility(rse_otp: Path) -> dict[str, object]:
+    descriptor: dict[str, object] = {
+        "schema_id": RSE_STORAGE_SCHEMA_ID,
+        "image_size": RSE_FLASH_IMG_SIZE,
+        "ps_offset": RSE_FLASH_IMG_SIZE,
+        "ps_size": RSE_FLASH_PS_SIZE,
+        "its_offset": RSE_FLASH_IMG_SIZE + RSE_FLASH_PS_SIZE,
+        "its_size": RSE_FLASH_ITS_SIZE,
+        "otp_sha256": sha256_file(rse_otp),
+    }
+    encoded = json.dumps(
+        descriptor,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return {
+        **descriptor,
+        "fingerprint": hashlib.sha256(encoded).hexdigest(),
+    }
+
+
+def copy_file_region(
+    source: Path,
+    destination: Path,
+    *,
+    offset: int,
+    size: int,
+    chunk_size: int = 1024 * 1024,
+) -> None:
+    remaining = size
+    with source.open("rb") as source_file, destination.open("r+b") as destination_file:
+        source_file.seek(offset)
+        destination_file.seek(offset)
+        while remaining:
+            data = source_file.read(min(chunk_size, remaining))
+            if not data:
+                raise RuntimeError(
+                    f"rse_flash_state_storage_truncated:{source}:{offset}:{size}"
+                )
+            destination_file.write(data)
+            remaining -= len(data)
+
+
+def write_json_atomic(path: Path, value: dict[str, object]) -> None:
+    temporary = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    try:
+        temporary.write_text(
+            json.dumps(value, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def prepare_persistent_rse_flash(
+    source: Path,
+    state: Path,
+    *,
+    reset: bool,
+    minimum_size: int,
+    storage_compatibility: dict[str, object],
+) -> tuple[Path, dict[str, object], object]:
+    source = source.resolve()
+    state = state.resolve()
+    if source == state:
+        raise RuntimeError(f"rse_flash_state_matches_source:{state}")
+
+    state.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path = state.with_name(state.name + ".source.json")
+    lock_path = state.with_name(state.name + ".lock")
+    lock = lock_path.open("a+", encoding="utf-8")
+    try:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        lock.close()
+        raise RuntimeError(f"rse_flash_state_in_use:{state}") from exc
+
+    source_size = source.stat().st_size
+    source_hash = sha256_file(source)
+    storage_end = RSE_BOOT_FLASH_STORAGE_OFFSET + RSE_BOOT_FLASH_STORAGE_SIZE
+    if minimum_size < storage_end:
+        lock.close()
+        raise RuntimeError(
+            f"rse_flash_state_storage_out_of_range:{minimum_size}:{storage_end}"
+        )
+    expected_fingerprint = storage_compatibility["fingerprint"]
+    metadata: dict[str, object] = {}
+    if metadata_path.exists():
+        try:
+            candidate = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if isinstance(candidate, dict):
+                metadata = candidate
+        except (OSError, json.JSONDecodeError):
+            metadata = {}
+
+    state_valid = bool(
+        state.exists()
+        and state.stat().st_size >= max(minimum_size, storage_end)
+        and metadata.get("format_version") == RSE_STORAGE_METADATA_FORMAT_VERSION
+        and metadata.get("storage_fingerprint") == expected_fingerprint
+    )
+    source_matches = bool(
+        state_valid
+        and metadata.get("source_sha256") == source_hash
+        and metadata.get("source_size") == source_size
+    )
+    if reset:
+        action = "reset"
+    elif source_matches:
+        action = "reused"
+    elif state_valid:
+        action = "storage-preserved"
+    elif state.exists() or metadata_path.exists():
+        action = "refreshed"
+    else:
+        action = "created"
+
+    if action != "reused":
+        temporary = state.with_name(f".{state.name}.tmp-{os.getpid()}")
+        try:
+            copy_sparse(source, temporary)
+            pad_flash_image(temporary, minimum_size)
+            if action == "storage-preserved":
+                copy_file_region(
+                    state,
+                    temporary,
+                    offset=RSE_BOOT_FLASH_STORAGE_OFFSET,
+                    size=RSE_BOOT_FLASH_STORAGE_SIZE,
+                )
+            os.replace(temporary, state)
+        finally:
+            temporary.unlink(missing_ok=True)
+        metadata = {
+            "format_version": RSE_STORAGE_METADATA_FORMAT_VERSION,
+            "source_sha256": source_hash,
+            "source_size": source_size,
+            "source_path": str(source),
+            "state_size": state.stat().st_size,
+            "storage_fingerprint": expected_fingerprint,
+            "storage_compatibility": storage_compatibility,
+        }
+        write_json_atomic(metadata_path, metadata)
+
+    status: dict[str, object] = {
+        "enabled": True,
+        "action": action,
+        "path": str(state),
+        "metadata_path": str(metadata_path),
+        "lock_path": str(lock_path),
+        "source_path": str(source),
+        "source_sha256": source_hash,
+        "source_size": source_size,
+        "state_size": state.stat().st_size,
+        "storage_preserved": action in {"reused", "storage-preserved"},
+        "storage_offset": RSE_BOOT_FLASH_STORAGE_OFFSET,
+        "storage_size": RSE_BOOT_FLASH_STORAGE_SIZE,
+        "storage_compatibility": storage_compatibility,
+        "storage_regions": {
+            "ps": {
+                "offset": RSE_FLASH_IMG_SIZE,
+                "size": RSE_FLASH_PS_SIZE,
+                "before_sha256": sha256_file_region(
+                    state,
+                    offset=RSE_FLASH_IMG_SIZE,
+                    size=RSE_FLASH_PS_SIZE,
+                ),
+            },
+            "its": {
+                "offset": RSE_FLASH_IMG_SIZE + RSE_FLASH_PS_SIZE,
+                "size": RSE_FLASH_ITS_SIZE,
+                "before_sha256": sha256_file_region(
+                    state,
+                    offset=RSE_FLASH_IMG_SIZE + RSE_FLASH_PS_SIZE,
+                    size=RSE_FLASH_ITS_SIZE,
+                ),
+            },
+        },
+    }
+    return state, status, lock
 
 
 def mtools_image_arg(image: Path) -> str:
@@ -2246,28 +2496,6 @@ def read_json_artifact(path: Path) -> dict[str, object] | None:
     return loaded if isinstance(loaded, dict) else None
 
 
-def parse_flash_stats(args: argparse.Namespace) -> dict[str, object]:
-    if not args.flash_stats:
-        return {"enabled": False}
-
-    result: dict[str, object] = {
-        "enabled": True,
-        "interval": args.flash_stats_interval,
-    }
-    for name, filename in (
-        ("rse_boot_flash", RSE_STRATA_STATS),
-        ("ap_flash", AP_STRATA_STATS),
-    ):
-        path = args.out_dir / filename
-        parsed = read_json_artifact(path)
-        result[name] = {
-            "path": str(path.resolve()),
-            "present": parsed is not None,
-            "stats": parsed,
-        }
-    return result
-
-
 def parse_cc3xx_stats(args: argparse.Namespace) -> dict[str, object]:
     if not (args.cc3xx_stats or args.qbox_perf_profile):
         return {"enabled": False}
@@ -2313,11 +2541,6 @@ def parse_qbox_perf_profile(args: argparse.Namespace) -> dict[str, object]:
         "enabled": True,
         "root": str(profile_root.resolve()),
         "qemu_initiator_dir": str(qemu_initiator_dir.resolve()),
-        "initiator_addr_profile": {
-            "enabled": bool(args.qbox_initiator_addr_profile),
-            "shift": args.qbox_initiator_addr_profile_shift,
-            "limit": args.qbox_initiator_addr_profile_limit,
-        },
         "cc3xx_profile": {
             "path": str(cc3xx_profile.resolve()),
             "present": cc3xx_parsed is not None,
@@ -3310,6 +3533,7 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     env["QBOX_RDASPEN_FLASH_WRITEBACK"] = (
         "false" if args.no_copy_writable_flash else "true"
     )
+    env["QBOX_RDASPEN_RSE_FLASH_BACKEND"] = args.rse_flash_backend
     env["QBOX_RDASPEN_SMMU_BACKEND"] = args.smmu_backend
     env["QBOX_RDASPEN_AP_FLASH"] = str(artifacts["ap_flash"])
     if args.ap_bl2_elf:
@@ -3354,16 +3578,6 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
     if args.rse_fast_boot_sram_dmi:
         env["QBOX_RDASPEN_HOST_SI_SRAM_DMI"] = "true"
         env["QBOX_RDASPEN_HOST_SRAM_SHARED_MEMORY"] = "true"
-    if args.flash_stats:
-        env["QBOX_RDASPEN_RSE_BOOT_FLASH_STATS_FILE"] = str(
-            args.out_dir / RSE_STRATA_STATS
-        )
-        env["QBOX_RDASPEN_AP_FLASH_STATS_FILE"] = str(
-            args.out_dir / AP_STRATA_STATS
-        )
-        env["QBOX_RDASPEN_FLASH_STATS_INTERVAL"] = str(
-            args.flash_stats_interval
-        )
     if args.cc3xx_stats or args.qbox_perf_profile:
         env["QBOX_RDASPEN_CC3XX_STATS_FILE"] = str(
             args.out_dir / RSE_CC3XX_STATS
@@ -3379,14 +3593,6 @@ def qbox_env(root: Path, args: argparse.Namespace, artifacts: dict[str, Path]) -
         env["QBOX_CC3XX_PROFILE_FILE"] = str(profile_root / CC3XX_PROFILE)
         env["QBOX_CC3XX_TIMING_STATS"] = "1"
         env["QBOX_PROFILE_FLUSH_INTERVAL"] = str(args.qbox_perf_profile_interval)
-        if args.qbox_initiator_addr_profile:
-            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE"] = "true"
-            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE_SHIFT"] = str(
-                args.qbox_initiator_addr_profile_shift
-            )
-            env["QBOX_QEMU_INITIATOR_ADDR_PROFILE_LIMIT"] = str(
-                args.qbox_initiator_addr_profile_limit
-            )
         if (
             args.rse_hotpath_accel
             or args.rse_lms_accel
@@ -3918,6 +4124,17 @@ def write_result(
     shared_memory_cleanup: list[dict[str, object]] | None = None,
 ) -> int:
     out_dir = args.out_dir
+    args.rse_flash_state_status = finalize_rse_flash_state_status(
+        getattr(
+            args,
+            "rse_flash_state_status",
+            {"enabled": False, "action": "ephemeral"},
+        )
+    )
+    write_json_atomic(
+        out_dir / RSE_FLASH_STATE_STATUS_FILE,
+        args.rse_flash_state_status,
+    )
     runtime_artifacts = artifacts if runtime_artifacts is None else runtime_artifacts
     status = evaluate(logs, rse_sram_dmi_smoke=args.rse_sram_dmi_smoke)
     if blocker:
@@ -3946,7 +4163,11 @@ def write_result(
         cc3xx_label += "-status-read-fastpath"
 
     static_label = "not-modeled" if blocker else "static-map-only"
-    rse_boot_media_label = "cfi-strata-flash-partial-model"
+    rse_boot_media_label = (
+        "qemu-cfi01-local-single-state-model"
+        if args.rse_flash_backend == "qemu-cfi-local"
+        else "cfi-strata-flash-partial-model"
+    )
     rse_scp_endpoint_label = "functional-model" if rse_scp_complete else "not-modeled"
     scp_service_model = {
         "strategy": args.scp_strategy,
@@ -3972,6 +4193,7 @@ def write_result(
             "boot_mode": "rse-oriented",
             "scp_strategy": args.scp_strategy,
             "smmu_backend": args.smmu_backend,
+            "rse_flash_backend": args.rse_flash_backend,
             "range_limited_flash_dmi": args.range_limited_flash_dmi,
             "rse_fast_boot_sram_dmi": rse_fast_boot_sram_dmi_result(args),
             "ap_fip_logical_aperture": ap_fip_logical_aperture_result(args),
@@ -4040,6 +4262,11 @@ def write_result(
             "input_artifacts": {name: str(path) for name, path in artifacts.items()},
             "runtime_artifacts": {name: str(path) for name, path in runtime_artifacts.items()},
             "copied_writable_artifacts": {name: str(path) for name, path in copied.items()},
+            "rse_flash_state": getattr(
+                args,
+                "rse_flash_state_status",
+                {"enabled": False, "action": "ephemeral"},
+            ),
             "flash_image_preparation": flash_image_preparation,
             "ap_flash_image_preparation": ap_flash_image_preparation,
             "rootfs_preparation": rootfs_preparation,
@@ -4058,7 +4285,6 @@ def write_result(
                 if qemu_trace_enabled(args)
                 else None
             ),
-            "flash_stats": parse_flash_stats(args),
             "cc3xx_stats": parse_cc3xx_stats(args),
             "qbox_perf_profile": parse_qbox_perf_profile(args),
             "rse_hotpath_accel": {
@@ -4285,6 +4511,8 @@ def write_result(
         + json.dumps(status["cc3xx_local_mmio_fastpath"], sort_keys=True),
         "rse_storage_direct_fastpath: "
         + json.dumps(status["rse_storage_direct_fastpath"], sort_keys=True),
+        "rse_flash_state: "
+        + json.dumps(status["rse_flash_state"], sort_keys=True),
         "rse_hotpath_accel: "
         + json.dumps(status["rse_hotpath_accel"], sort_keys=True),
         "rse_lms_accel: "
@@ -4337,7 +4565,6 @@ def write_result(
             else "none"
         ),
         f"qemu_trace_log: {status['qemu_trace_log'] or 'disabled'}",
-        "flash_stats: " + json.dumps(status["flash_stats"], sort_keys=True),
         "cc3xx_stats: "
         + json.dumps(
             {
@@ -4444,6 +4671,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--rse-rom", type=Path, default=deploy / "rse-rom-image.img")
     parser.add_argument("--rse-flash", type=Path, default=deploy / "rse-flash-image.img")
+    parser.add_argument(
+        "--rse-flash-state",
+        type=Path,
+        help=(
+            "Persistent writable RSE flash state. The runner reuses it only "
+            "while the source RSE flash hash and size remain unchanged."
+        ),
+    )
+    parser.add_argument(
+        "--reset-rse-flash-state",
+        action="store_true",
+        help="Recreate --rse-flash-state from the current source image.",
+    )
+    parser.add_argument(
+        "--rse-flash-backend",
+        choices=("systemc-strata", "qemu-cfi-local"),
+        default="qemu-cfi-local",
+        help=(
+            "RSE boot flash model. qemu-cfi-local maps one QEMU CFI01 "
+            "MemoryRegion into the RSE CPU and exports that same state to TLM."
+        ),
+    )
     parser.add_argument("--rse-otp", type=Path, default=deploy / "rse-otp-image.img")
     parser.add_argument("--ap-flash", type=Path, default=deploy / "ap-flash-image.img")
     parser.add_argument(
@@ -4714,14 +4963,6 @@ def build_parser() -> argparse.ArgumentParser:
             "path and classify which boot_enc function ranges executed."
         ),
     )
-    parser.add_argument(
-        "--flash-stats",
-        action="store_true",
-        help=(
-            "Enable periodic Strata flash statistics files in the QBox run "
-            "directory for RSE boot flash and AP flash."
-        ),
-    )
     flash_dmi_group = parser.add_mutually_exclusive_group()
     flash_dmi_group.add_argument(
         "--range-limited-flash-dmi",
@@ -4744,15 +4985,6 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.set_defaults(range_limited_flash_dmi=None)
-    parser.add_argument(
-        "--flash-stats-interval",
-        type=int,
-        default=512,
-        help=(
-            "Write Strata flash statistics every N target accesses when "
-            "--flash-stats is enabled."
-        ),
-    )
     parser.add_argument(
         "--cc3xx-stats",
         action="store_true",
@@ -4778,27 +5010,6 @@ def build_parser() -> argparse.ArgumentParser:
             "Flush QBox performance profile JSON files every N profiled "
             "events when --qbox-perf-profile is enabled."
         ),
-    )
-    parser.add_argument(
-        "--qbox-initiator-addr-profile",
-        action="store_true",
-        help=(
-            "Add an address-bucket histogram to QEMU initiator profile JSON "
-            "files. Requires --qbox-perf-profile and is intended for finding "
-            "remaining RSE regular-path MMIO/memory hot ranges."
-        ),
-    )
-    parser.add_argument(
-        "--qbox-initiator-addr-profile-shift",
-        type=int,
-        default=12,
-        help="Address bucket shift for --qbox-initiator-addr-profile.",
-    )
-    parser.add_argument(
-        "--qbox-initiator-addr-profile-limit",
-        type=int,
-        default=64,
-        help="Maximum number of address buckets emitted per QEMU initiator profile.",
     )
     parser.add_argument(
         "--rse-hotpath-accel",
@@ -5333,8 +5544,6 @@ def parse_args() -> argparse.Namespace:
             )
     if args.qemu_trace_filter or args.boot_enc_trace:
         args.qemu_trace = True
-    if args.flash_stats and args.flash_stats_interval <= 0:
-        parser.error("--flash-stats-interval must be positive")
     if (args.cc3xx_stats or args.qbox_perf_profile) and args.cc3xx_stats_interval <= 0:
         parser.error("--cc3xx-stats-interval must be positive")
     if args.qbox_perf_profile and args.qbox_perf_profile_interval <= 0:
@@ -5383,14 +5592,6 @@ def parse_args() -> argparse.Namespace:
         parser.error("--rse-bl2-boot-state-slot-usage-stride must be positive")
     if args.rse_bl2_verify_sig_skip:
         args.rse_bl2_verify_sig_accel = True
-    if args.qbox_initiator_addr_profile and not args.qbox_perf_profile:
-        parser.error("--qbox-initiator-addr-profile requires --qbox-perf-profile")
-    if args.qbox_initiator_addr_profile_shift < 0:
-        parser.error("--qbox-initiator-addr-profile-shift must be non-negative")
-    if args.qbox_initiator_addr_profile_shift > 30:
-        parser.error("--qbox-initiator-addr-profile-shift must be <= 30")
-    if args.qbox_initiator_addr_profile_limit <= 0:
-        parser.error("--qbox-initiator-addr-profile-limit must be positive")
     if args.rse_direct_si_sram_code_alias_size < 0:
         parser.error("--rse-direct-si-sram-code-alias-size must be non-negative")
     if args.rse_direct_ap_bl2_code_alias_size < 0:
@@ -5433,6 +5634,8 @@ def parse_args() -> argparse.Namespace:
         args.rse_storage_direct_fastpath = True
     if args.build_only and args.skip_build:
         parser.error("--build-only cannot be used with --skip-build")
+    if args.reset_rse_flash_state and args.rse_flash_state is None:
+        parser.error("--reset-rse-flash-state requires --rse-flash-state")
     if args.build_only:
         return args
     resolve_rse_bl2_hook_symbols(args, root)
@@ -5473,6 +5676,8 @@ def main() -> int:
         f"{name}: {path}" for name, path in required_artifacts.items() if not path.exists()
     ]
     copied: dict[str, Path] = {}
+    rse_flash_state_lock: object | None = None
+    args.rse_flash_state_status = {"enabled": False, "action": "ephemeral"}
     blocker = None
     command: list[str] = []
     platform_rc: int | None = None
@@ -5513,12 +5718,49 @@ def main() -> int:
 
     image_dir = args.out_dir / "writable-images"
     copy = not args.no_copy_writable_flash
-    copied["rse_flash"] = copy_if_requested(artifacts["rse_flash"], image_dir, copy=copy)
+    if args.rse_flash_state is not None:
+        try:
+            (
+                copied["rse_flash"],
+                args.rse_flash_state_status,
+                rse_flash_state_lock,
+            ) = prepare_persistent_rse_flash(
+                artifacts["rse_flash"],
+                args.rse_flash_state,
+                reset=args.reset_rse_flash_state,
+                minimum_size=RSE_BOOT_FLASH_SIZE,
+                storage_compatibility=rse_storage_compatibility(
+                    artifacts["rse_otp"]
+                ),
+            )
+        except RuntimeError as exc:
+            blocker = str(exc)
+            logs = write_placeholder_logs(args.out_dir, blocker)
+            return write_result(
+                args,
+                artifacts,
+                copied,
+                logs,
+                runtime_artifacts=artifacts,
+                command=command,
+                timed_out=timed_out,
+                interrupted=interrupted,
+                blocker=blocker,
+                platform_rc=platform_rc,
+            )
+    else:
+        copied["rse_flash"] = copy_if_requested(
+            artifacts["rse_flash"], image_dir, copy=copy
+        )
+    write_json_atomic(
+        args.out_dir / RSE_FLASH_STATE_STATUS_FILE,
+        args.rse_flash_state_status,
+    )
     copied["rse_flash"], flash_image_preparation = prepare_flash_for_qbox(
         copied["rse_flash"],
         image_dir,
         min_size=RSE_BOOT_FLASH_SIZE,
-        allow_pad=copy,
+        allow_pad=copy or args.rse_flash_state is not None,
     )
     copied["rse_otp"] = copy_if_requested(artifacts["rse_otp"], image_dir, copy=copy)
     copied["ap_flash"] = copy_if_requested(artifacts["ap_flash"], image_dir, copy=copy)

@@ -1,5 +1,6 @@
 from pathlib import Path
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -101,6 +102,9 @@ def make_child_command_args(tmp_path):
         rse_bl2_verify_sig_skip=False,
         rse_fast_boot_aliases=False,
         rse_fast_boot_sram_dmi=False,
+        rse_flash_backend="systemc-strata",
+        rse_flash_state=None,
+        reset_rse_flash_state=False,
         rse_hotpath_accel=True,
         rse_hotpath_max_bytes=0,
         rse_hotpath_memcpy_addr=None,
@@ -112,6 +116,7 @@ def make_child_command_args(tmp_path):
         skip_build=False,
         smmu_backend="systemc-mmu720ae",
         timeout=60,
+        uboot_only=False,
         build_only=False,
     )
 
@@ -149,6 +154,60 @@ def test_child_command_omits_removed_rse_remote_flags(tmp_path):
         assert flag not in cmd
     assert "--rse-hotpath-accel" in cmd
     assert "--rse-lms-accel" in cmd
+
+
+def test_child_command_forwards_persistent_rse_flash_state(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.rse_flash_state = tmp_path / "state/rse-flash-image.img"
+    args.reset_rse_flash_state = True
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    state_index = cmd.index("--rse-flash-state")
+    assert cmd[state_index + 1] == str(args.rse_flash_state)
+    assert "--reset-rse-flash-state" in cmd
+
+
+def test_child_command_forwards_qemu_local_cfi_backend(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.rse_flash_backend = "qemu-cfi-local"
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert cmd[cmd.index("--rse-flash-backend") + 1] == "qemu-cfi-local"
+
+
+def test_child_runtime_evidence_keeps_runtime_fields():
+    runner = load_runner()
+    expected_hits = {
+        "rse_runtime_handoff": {
+            "elapsed_s": 19.5,
+            "marker": "Jumping to the first image slot",
+        }
+    }
+    evidence = runner.child_runtime_evidence(
+        {
+            "runtime_elapsed_s": 52.25,
+            "progress_marker_first_hits": expected_hits,
+        }
+    )
+
+    assert evidence == {
+        "runtime_elapsed_s": 52.25,
+        "progress_marker_first_hits": expected_hits,
+    }
+
+
+def test_child_command_uboot_only_skips_live_cl1_completion_markers(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.uboot_only = True
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert "--required-pass-marker" not in cmd
 
 
 def test_child_command_requires_live_cl1_readiness(tmp_path):
@@ -373,6 +432,7 @@ def test_parse_args_and_artifacts_default_to_active_apollo_qvp(monkeypatch):
 
     assert args.local_build_dir == ROOT / "build/local-apollo-qvp"
     assert args.out_dir.parent == ROOT / "build/qbox-apollo-qvp"
+    assert args.rse_flash_backend == "qemu-cfi-local"
     assert artifacts["rootfs"].name == "apollo-qvp-local-disk.img"
     assert artifacts["ap_dtb"].name == "apollo-qvp.dtb"
     assert "apollo_qvp" in artifacts["ap_bl2_elf"].parts
@@ -581,6 +641,28 @@ def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tm
         "marker": "apollo-qvp login:",
     }
     assert status["scp_service_model"]["strategy"] == "real-si-scp"
+
+
+def test_keep_running_child_status_propagates_rse_flash_state(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    expected = {
+        "enabled": True,
+        "action": "storage-preserved",
+        "path": str(tmp_path / "state.img"),
+    }
+    (tmp_path / "rse-flash-state.json").write_text(
+        json.dumps(expected) + "\n",
+        encoding="utf-8",
+    )
+
+    status = runner.synthesize_keep_running_child_status(
+        make_args(tmp_path),
+        ["child-runner"],
+        child_returncode=None,
+    )
+
+    assert status["rse_flash_state"] == expected
 
 
 def test_keep_running_child_status_rejects_pfdi_timeout(tmp_path):

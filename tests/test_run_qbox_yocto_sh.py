@@ -24,6 +24,8 @@ QBOX_YOCTO_ENV_OVERRIDES = (
     "QBOX_CONF",
     "QBOX_CONF_FILE",
     "OUT_DIR",
+    "QBOX_RSE_STATE_DIR",
+    "QBOX_PERSIST_RSE_STATE",
 )
 
 
@@ -278,6 +280,24 @@ def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> No
     assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stdout
     assert "apollo-qvp.dtb" in result.stdout
     assert "--rse-symbols" not in argv
+    state_index = argv.index("--rse-flash-state")
+    assert argv[state_index + 1] == str(
+        ROOT / "build/qbox-apollo-fvp/state/yocto-apollo-qvp/rse-flash-image.img"
+    )
+
+
+def test_run_qbox_yocto_qvp_can_reset_custom_rse_state(tmp_path: Path) -> None:
+    state_dir = tmp_path / "qbox-state"
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=["--rse-state-dir", str(state_dir), "--reset-rse-state"],
+    )
+
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_command_argv(result.stdout)
+    state_index = argv.index("--rse-flash-state")
+    assert argv[state_index + 1] == str(state_dir / "rse-flash-image.img")
+    assert "--reset-rse-flash-state" in argv
 
 
 def test_run_qbox_yocto_qvp_uses_latest_qboxconf_when_link_is_absent(
