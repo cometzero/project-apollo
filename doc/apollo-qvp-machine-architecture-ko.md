@@ -1,10 +1,10 @@
 # Apollo QVP Machine Architecture 비교 및 개선안
 
-작성일: 2026-07-15, 최종 갱신 2026-07-17
+작성일: 2026-07-15, 최종 갱신 2026-07-20
 
 상태: QBox / system hardware / system software / QEMU 및 Arm Zena CSS
-하드웨어 블록 다이어그램 리뷰 반영, A0–A4 구조 전환과 I0–I7 4 CPU fidelity
-구현·리뷰·local/Yocto 검증 완료
+하드웨어 블록 다이어그램 리뷰 반영, A0–A4 구조 전환과 I0–I7 4 CPU fidelity,
+선택형 16 CPU/4 cluster FVP·QBox 검증 완료. 배포 기본값은 4 CPU다.
 
 대상: active `apollo-qvp` / RD-Aspen CFG2 / current Zena CSS architecture와
 FVP CFG2 extension
@@ -362,8 +362,8 @@ overlay에만 사용한다.
 
 | 영역 | 현재 QVP | 판정 및 개선점 |
 | --- | --- | --- |
-| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core 지원, full-system 기본 4; AArch64-only EL0와 QARMA3/FGT/ECV/PAN/WFxT | active Yocto 기본과 local `maxcpus=4` 정렬 및 FVP-visible 지원 feature 확인; MTE/AMU/MPAM과 16-core lifecycle은 후속 범위 |
-| AP GIC/ITS | SystemC `gicx00_multiview` view 0 overlay와 16-frame discovery footprint, QEMU `arm_gicv3` canonical backend, ITS collection entry size 2, LPI/DirectLPI | CPU0–CPU3 functional owner는 QEMU이고 비활성 frame 및 multiview discovery만 SystemC가 소유함; 4 CPU Linux/OP-TEE scan과 ITS 초기화 확인 |
+| AP CPU topology | `cpu_arm_cortexA720AE`, 1–16 core 지원, full-system 기본 4; AArch64-only EL0와 QARMA3/FGT/ECV/PAN/WFxT | 기본 4 CPU와 선택형 16 CPU를 지원한다. 16 CPU의 PSCI/SCMI bring-up, CPU1/4/8/12 hotplug와 4×4 MPIDR topology를 FVP/QBox에서 확인했다. MTE/AMU/MPAM은 후속 범위다. |
+| AP GIC/ITS | SystemC `gicx00_multiview` view 0 overlay와 16-frame discovery footprint, QEMU `arm_gicv3` canonical backend, ITS collection entry size 2, LPI/DirectLPI | 선택한 CPU 수만큼 CPU0–CPU15 redistributor의 기능 상태를 QEMU가 소유한다. 16 CPU Linux scan, exact affinity와 per-CPU timer PPI를 확인했다. |
 | AP MMU-720AE | 기본 `systemc-mmu720ae`의 52-bit PA walk/32-bit SID profile, 선택 `qemu-arm-smmuv3` | 기본 backend는 FVP와 같은 `ias 52-bit, oas 52-bit` discovery signature 확인; 두 backend의 전체 fault 동등성은 후속 |
 | AP PCIe/GPEX DMA | GPEX bus master, MMU-720AE LTI00 TBU와 legacy SPI 300–303 | SystemC backend routing은 완료; explicit requester/StreamID와 MSI/LPI end-to-end 증거는 부족 |
 | CMN/NI-710AE | `host_cmn_cyprus` CFG2 r3p0 6×4 XP/child graph, `host_ni710ae_nci` | FVP-visible revision과 node discovery 일치; CHI coherency·실제 NoC arbitration 모델은 아님 |
@@ -375,7 +375,7 @@ overlay에만 사용한다.
 | SI CL0 | R82, GIC/multiview, FMU/SSU, MHU, timer/PPU/PLL, CMN/NI view, 40-bit local router와 ATU | broad bridge 없이 정상 boot; DCLS/fault propagation 보강 필요 |
 | SI CL1 | 4×R82 SMP, GIC, live AP/SI1 MHU peer, UART, AP-reset 보존 HIPC SRAM, 40-bit local router | FVP CFG2 extension scope, 실제 Zephyr-owned RPMsg endpoint와 requester-aware PFDI scheduler hold 확인 |
 | QEMU/TLM bridge | `QemuMemTxAttrsTlmExtension`, `RequestContextTlmExtension`과 MemTx/TLM 오류 변환 | domain/requester/substream/access path 기반은 구현됐으며 미지원 initiator 조합과 전체 debug/DMI policy matrix는 후속 |
-| QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 50회 reset 회귀, 기준 full boot 8회, post-review acceptance 2회와 최종 trace-off 6회 통과; 신규 fault는 대표 smoke만 필수이며 stress/KVM/16 CPU는 후속 |
+| QEMU CPU lifecycle | managed target-vCPU reset, BQL/DMI reset, async job tracking, reset-held QK 격리, MTTCG quantum/WFI wake | 기존 4 CPU 반복 회귀와 선택형 16 CPU full-system/hotplug가 통과했다. stress와 KVM은 후속이다. |
 | RoS | VirtIO block/net/rng, PL031 | system register, p9, VSI, RoS UART 항목은 부재 또는 범위 밖 |
 
 ### 5.4 Memory map 차이
@@ -402,12 +402,12 @@ view로 모델링한다.
 | view | software-visible 주소/간격 | QVP 소유권과 routing |
 | --- | --- | --- |
 | RD-Aspen secure/legacy view 0 | GICD `0x2000_0000`, GICR scan 시작 `0x200c_0000`, 128 KiB 간격 | `gicx00_multiview`가 `GICD_CFGID`, `GICD_IVIEWR`, `GICR_PWRR/VIEWR/FLUSHR`만 처리하고 표준 GICD/GICR access는 canonical backend로 변환 |
-| canonical functional view 1 | GICD `0x2080_0000`, GICR `0x2088_0000`, CPU당 256 KiB 간격, 16-frame footprint | QEMU `arm_gicv3`가 distributor와 CPU0–CPU3의 기능 상태를 소유하고 SystemC가 CPU4–CPU15 discovery footprint를 제공 |
+| canonical functional view 1 | GICD `0x2080_0000`, GICR `0x2088_0000`, CPU당 256 KiB 간격, 16-frame footprint | QEMU `arm_gicv3`가 distributor와 활성 CPU0–CPU15의 기능 상태를 소유하고 SystemC multiview가 RD-Aspen view를 변환 |
 
 view 0의 각 256 KiB frame은 대응하는 canonical redistributor의 128 KiB register
 view와 multiview extension을 제공한다. QVP는 OP-TEE가 사용하는 discovery access를
-CPU0–CPU3 canonical redistributor로 전달하고 CPU4–CPU15에는 register footprint를
-제공한다. 연속 view의 `Last`는 CPU15에서만 설정하고, 개별 DT region은 각 region의
+선택한 모든 canonical redistributor로 전달한다. 16 CPU 모드에서 연속 view의
+`Last`는 CPU15에서만 설정하고, 개별 DT region은 각 region의
 scan이 다음 region으로 넘지 않도록 self-terminating `Last`를 제공한다. OP-TEE의
 RD-Aspen `GICD_BASE`, `GICR_BASE`, `GICR_SIZE`를 view 1 주소에
 맞춰 변경해서는 안 된다. 그런 변경은 software ABI를 QBox 내부 구현에 종속시키고
@@ -532,7 +532,7 @@ revision을 result에 보존한다.
 | 완료 | GPEX requester/StreamID, LTI00 SMMUv3와 MSI/ITS route | mapped/fault DMA 및 동일 endpoint MSI-X/LPI와 INTx 증거 완료 |
 | 완료 | IRQ/reset/power route manifest | topology validator와 machine contract에서 정적 검사 |
 | P1 | shared backing과 address view 구분이 불명확 | 동일 메모리 복제, DMI alias incoherency 가능 |
-| P1 | reset-held QK 교착은 수정됐으나 QEMU RAM owner와 4 CPU fault/reset lifecycle matrix가 부분적; KVM/16 CPU는 후속 | double mapping, backend별 reset/WFI 차이 가능 |
+| P1 | reset-held QK 교착과 16 CPU 정상 lifecycle은 검증했으나 fault/reset 전체 matrix와 KVM은 후속 | double mapping, backend별 reset/WFI 차이 가능 |
 | P1 | SCMI/PFDI/HIPC 대표 오류/recovery는 검증됐으나 PSCI/FF-A matrix는 미검증 | peer-offline/reset-time 또는 추가 descriptor 조합의 timeout 가능 |
 | 완화 | full-system QVP evidence root를 `qbox-apollo-qvp`로 이전 | direct-boot legacy 경로는 별도 정리 필요 |
 | P2 | SMMU→FMU→SSU 대표 fault는 완료됐으나 watchdog/DCLS/APU source 전체 수직 경로는 부분적 | 미구현 source의 fault/reset 검증 불가 |
@@ -1133,8 +1133,37 @@ I0~I7 최소 범위는 완료했다.
 3. [Fidelity 부채 검증 계획](apollo-qvp-fidelity-debt-validation-plan-ko.md)은
    V0–V9 최소 smoke gate, 대표 오류/recovery와 단일 실행 evidence를 정의한다.
 
-이번 후속 단계의 AP acceptance는 active Yocto와 같은 CPU0–CPU3, 총 4 CPU다.
-CPU4–CPU15 online, 16 CPU lifecycle과 KVM은 완료 조건에 포함하지 않는다. 4 CPU의
-대표 보안·DMA·interrupt·fault·ABI 경로와 local/Yocto smoke는 완료했다. 전체
-matrix, watchdog/DCLS/APU fault source 확대, PSCI/FF-A negative matrix와
-미지원 CPU feature/16 CPU lifecycle은 extended validation으로 관리한다.
+I0~I7 당시 AP acceptance는 active Yocto와 같은 CPU0–CPU3, 총 4 CPU였다. 이후
+선택형 16 CPU 단계에서 CPU4–CPU15 online과 대표 lifecycle을 별도로 폐쇄했다.
+전체 fault matrix, watchdog/DCLS/APU fault source 확대, PSCI/FF-A negative matrix,
+미지원 CPU feature와 KVM은 extended validation으로 관리한다.
+
+## 13. 선택형 16 CPU / 4 cluster 구현 상태
+
+2026-07-20 검증으로 Apollo QVP는 기본 4 CPU를 유지하면서 같은 machine에서
+16 CPU/4 cluster를 선택할 수 있다. Yocto의 source default는
+`PC_CPUS_COUNT_DEFAULT ??= "4"`이며, 16 CPU image는 build 전에
+`PC_CPUS_COUNT_DEFAULT=16`을 BitBake passthrough 환경으로 전달한다. image recipe는
+해당 값을 `.qboxconf`의 `QBOX_APOLLO_NUM_CPUS`로 기록한다. QBox runtime 선택
+우선순위는 명시적 환경변수, qboxconf, active `local.conf`, fallback 4 순서다.
+
+16 CPU 모드의 구조적 불변조건은 다음과 같다.
+
+- MPIDR은 `Aff2=cluster`, `Aff1=core`, `Aff0=0`이고 cluster당 4 CPU다.
+- QEMU GIC가 16개 canonical GICR functional state를 소유하며 SystemC multiview는
+  표준 상태를 복제하지 않는다.
+- SI0의 cluster/core PPU 출력은 `cluster * 4 + core`로 CPU0~CPU15 reset에
+  연결되며 비활성 CPU에는 연결하지 않는다.
+- system reset target 목록도 선택된 cluster/core PPU에서 동적으로 만들어진다.
+- A720AE `CLUSTERPM*` bank는 Aff2별 6-counter state를 공유한다. Linux가
+  `arm_dsu_0..3`와 event `0x2a`, `0x2b`를 사용할 수 있다.
+
+FVP와 QBox 모두 `smp: Brought up 1 node, 16 CPUs`, online `0-15`, 4×4
+cluster ID, 16 GICR affinity와 CPU1/4/8/12 offline/online을 보였다. SI0는 AP
+cluster 0~3, core 0~3의 PFDI monitoring을 시작하고 online 전환을 관찰했다.
+DSU PMU event는 두 emulator 모두 검증 workload에서 정상 schedule되어 count 0을
+반환했다. QBox model은 register state를 보존하지만 실제 cache/transaction event
+증가와 overflow SPI 발생은 아직 구현하지 않은 fidelity debt다.
+
+구현·검증 명령과 evidence path는
+[16 CPU 완료 보고서](apollo-qvp-16core-4cluster-completion-report-ko.md)에 있다.

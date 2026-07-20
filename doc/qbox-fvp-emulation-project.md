@@ -13,6 +13,9 @@ closely as practical instead of accumulating compatibility-only stubs.
 The current workspace baseline is `MACHINE = "apollo-qvp"`,
 `RD_ASPEN_VARIANT = "cfg2"`, baremetal architecture, `nexios-image`, and
 `PC_CPUS_COUNT_DEFAULT = "4"` as recorded in `build/conf/local.conf`.
+The 4-CPU baseline remains the default. A 16-CPU/4-cluster build is supported
+as an opt-in profile by exporting `PC_CPUS_COUNT_DEFAULT=16`; the generated
+QBox configuration carries that value into the full-system runtime.
 
 ## Non-Goals
 
@@ -77,6 +80,17 @@ of broad passthrough. Full-system AP CPU default is four, matching active
 Yocto configuration. Local full-system rootfs patching also writes the resolved
 CPU count as `maxcpus=`, so guest topology cannot silently retain the separate
 16-core direct-boot experiment value.
+
+The optional 16-CPU profile has been validated with the same Yocto image on
+FVP and QBox. QBox wires four SI0 AP cluster PPUs and sixteen core PPUs to CPU
+reset inputs, and QEMU owns sixteen functional GIC redistributors. Both
+runtimes bring CPU0 through CPU15 online with the expected four-by-four MPIDR
+topology, monitor all AP cores through PFDI, and pass representative hotplug
+of CPU1, CPU4, CPU8, and CPU12. The A720AE cluster PMU register bank is now a
+six-counter, Aff2-shared stateful model. FVP and QBox both schedule DSU events
+`0x2a` and `0x2b` on `arm_dsu_0` through `arm_dsu_3` and report zero for the
+bounded validation workload. Traffic-driven increments and overflow interrupt
+generation remain explicit fidelity debt.
 
 The structural migration phase remains `A4_policy_routing`; compatibility
 debt is empty. The following four-CPU fidelity phase now implements common
@@ -372,8 +386,8 @@ and are not synthesized in QBox.
 
 | IP / Block | Current QBox Direction | Fidelity Target | Primary Evidence |
 | --- | --- | --- | --- |
-| Cortex-A720AE Primary Compute | QEMU/libqemu CPU model with AArch64-only EL0 and supported QARMA3/FGT/ECV/PAN/WFxT profile | Preserve functional AP boot, PSCI, timers, four-core SMP, affinity, and exception routing; keep unsupported MTE/AMU/MPAM explicit | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, QBox runtime logs |
-| DSU-120AE / DSU PMU | QBox-visible PMU evidence exists | Model enough PMU and topology behavior for Linux/FVP parity | `arm-zena-css/documentation/design/components.rst`, Linux probe logs |
+| Cortex-A720AE Primary Compute | QEMU/libqemu CPU model with default four-core SMP and opt-in sixteen-core/four-cluster PSCI/SCMI lifecycle; AArch64-only EL0 and supported QARMA3/FGT/ECV/PAN/WFxT profile | Preserve the verified 1..16 topology and exception/timer routing; keep unsupported MTE/AMU/MPAM explicit | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, FVP/QBox 16-core logs |
+| DSU-120AE / DSU PMU | Aff2-shared six-counter A720AE system-register bank; four Linux PMU sources and events `0x2a`/`0x2b` are schedulable | Add traffic-driven counting and overflow SPI behavior without regressing the verified programming model | `arm-zena-css/documentation/design/components.rst`, FVP/QBox `perf stat` logs |
 | GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS plus sixteen-frame SystemC multiview discovery and two-byte collection entries | Preserve distributor, redistributor, ITS, IRQ numbering, and multi-view behavior | FVP DTS, machine config, Linux `/proc/interrupts` |
 | CMN-CYPRUS | SystemC CFG2 r3p0 6x4 XP and child-node discovery graph | Preserve FVP-visible revision and topology discovery | SI0 firmware logs, FVP/QBox differential, component tests |
 | SMMUv3 | SystemC MMU-720AE profile with 52-bit internal PA walk and 32-bit SID advertisement | Maintain PCI bus, memory links, IRQs, Linux driver behavior, and FVP discovery signature | FVP DTS, Linux runtime driver probe, component tests |
@@ -468,3 +482,5 @@ than relying on tmux screen state.
 6. Add automated same-artifact FVP-vs-QBox comparison for boot, maps, access
    policy, interrupt routes, device probes, remoteproc/RPMsg, and failed
    services.
+7. Drive A720AE DSU event counters from modeled cache/memory activity and route
+   overflow interrupts to cluster SPIs 216 through 219.
