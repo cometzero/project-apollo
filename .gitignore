@@ -15,5 +15,6 @@ __pycache__/
 /.omx/state/
 /.omx/reports/
 /.omx/ultragoal/
+/.omx/plans/
 /.omx/metrics.json
 /.omx/tmux-hook.json
