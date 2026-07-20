@@ -27,6 +27,11 @@ RSE_SOURCE = CONTRACT_DIR / "rse.lua"
 SYSTEM_MGMT_SOURCE = CONTRACT_DIR / "system_mgmt.lua"
 SI_CL0_SOURCE = CONTRACT_DIR / "si_cl0.lua"
 SI_CL1_SOURCE = CONTRACT_DIR / "si_cl1.lua"
+HOST_NI_SOURCE = (
+    ROOT
+    / "hsoc-stack/tools/qbox-platform/systemc-components/host_ni710ae_nci/include"
+    / "host_ni710ae_nci.h"
+)
 SCP_FIRMWARE = ROOT / "hsoc-stack/components/system_mgmt/scp-firmware"
 SI_CL0_FIRMWARE_CMAKE = (
     SCP_FIRMWARE / "product/automotive-rd/apollo-qvp/si0_ramfw/Firmware.cmake"
@@ -487,12 +492,37 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
     si_cl0 = SI_CL0_SOURCE.read_text(encoding="utf-8")
     system_mgmt = SYSTEM_MGMT_SOURCE.read_text(encoding="utf-8")
 
-    reset_targets = config.split("function ap_system_reset_bind_targets()", 1)[1]
-    reset_targets = reset_targets.split("\nend", 1)[0]
-    assert '"&ap_bl2_reset_loader.reset"' in reset_targets
-    assert '"&host_ap_bl2_header_sram.reset"' in reset_targets
-    assert '"&host_ap_mhu_ns_shared_sram.reset"' not in reset_targets
-    assert '"&ap_reset_gpio.reset_in"' in reset_targets
+    cold_reset_targets = config.split(
+        "function ap_cold_reset_bind_targets()", 1
+    )[1].split("\nend", 1)[0]
+    system_reset_targets = config.split(
+        "function ap_system_reset_bind_targets()", 1
+    )[1].split("\nend", 1)[0]
+    assert '"&ap_bl2_reset_loader.reset"' in cold_reset_targets
+    assert '"&host_ap_bl2_header_sram.reset"' in cold_reset_targets
+    assert '"&host_ap_mhu_ns_shared_sram.reset"' not in cold_reset_targets
+    assert '"&ap_reset_gpio.reset_in"' in cold_reset_targets
+    assert "ap_cold_reset_bind_targets()" in system_reset_targets
+    for core in range(4):
+        ppu_reset = f'"&si_cl0_ap_cluster0_core{core}_ppu.reset"'
+        assert ppu_reset not in cold_reset_targets
+        assert ppu_reset in system_reset_targets
+        assert system_reset_targets.index(ppu_reset) < system_reset_targets.index(
+            "ap_cold_reset_bind_targets()"
+        )
+    for frame in (
+        "host_ap_si_ns_scmi_mhu_pbx",
+        "host_ap_si_ns_scmi_mhu_mbx",
+        "host_ap_si_scmi_mhu_pbx",
+        "host_ap_si_scmi_mhu_mbx",
+        "host_ap_si_cl1_mhu_pbx",
+        "host_ap_si_cl1_mhu_mbx",
+        "host_ap_si_pfdi_monitor_mhu_pbx",
+        "host_ap_si_pfdi_monitor_mhu_mbx",
+        "host_ap_rse_mhu_pbx",
+        "host_ap_rse_mhu_mbx",
+    ):
+        assert f'"&{frame}.reset"' in cold_reset_targets
     assert (
         'name = "ap_mhu_ns_shared_sram"; base = 0x00180000; '
         'size = 0x00001000; view = "ap"; '
@@ -504,7 +534,7 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
 
     ap = AP_SOURCE.read_text(encoding="utf-8")
     assert "platform.ap_cold_reset_fanout = enable_ap_cpus and {" in ap
-    assert "reset_out = {bind = ap_system_reset_bind_targets()};" in ap
+    assert "reset_out = {bind = ap_cold_reset_bind_targets()};" in ap
 
     ap_core_ppu = si_cl0.split(
         'platform["si_cl0_ap_cluster"..cluster.."_core"..core.."_ppu"] =',
@@ -515,7 +545,7 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
     assert "power_on_load_pulse_width_ns = 0" in ap_core_ppu
     assert "power_on_load_to_reset_delay_ns = 0" in ap_core_ppu
     assert 'power_on_load = enable_ap_cpus and cluster == 0 and' in ap_core_ppu
-    assert '{bind = "&ap_cold_reset_fanout.reset_in"}' in ap_core_ppu
+    assert '{bind = "&host_reset_ctrl.ap_power_reset"}' in ap_core_ppu
     assert "assert_power_on_reset = enable_ap_cpus and cluster == 0;" in ap_core_ppu
     assert 'power_on_reset = enable_ap_cpus and cluster == 0 and {' in ap_core_ppu
     assert 'bind = "&ap_cpu_"..core..".reset";' in ap_core_ppu
@@ -524,6 +554,128 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
         "if platform.host_ap_si_scmi_mhu_pbx ~= nil and", 1
     )[1].split("\n    end", 1)[0]
     assert "not ctx.apollo_live_cl0 then" in synthetic_reset
+
+
+def test_rse_system_reset_restarts_live_apollo_domains() -> None:
+    config = CONFIG_SOURCE.read_text(encoding="utf-8")
+    ap = AP_SOURCE.read_text(encoding="utf-8")
+    rse = RSE_SOURCE.read_text(encoding="utf-8")
+
+    reset_targets = config.split(
+        "function apollo_system_reset_bind_targets()", 1
+    )[1].split("\nend", 1)[0]
+    assert "ap_system_reset_bind_targets()" in reset_targets
+    for frame in (
+        "rse_cpu_pass.qemu_inst",
+        "rse_sysctrl",
+        "rse_watchdog_ns",
+        "rse_watchdog_s",
+        "rse_mhu0_sender_s",
+        "rse_mhu0_receiver_s",
+        "rse_mhu2_sender_s",
+        "rse_mhu2_receiver_s",
+        "host_rse_si_mhu_pbx",
+        "host_rse_si_mhu_mbx",
+    ):
+        assert f'"&{frame}.reset"' in reset_targets
+    assert "if rse_local_crypto then" in reset_targets
+    assert '"&rse_cpu_pass.rse_kmu_regs.reset"' in reset_targets
+    assert '"&rse_cpu_pass.rse_cc3xx.reset"' in reset_targets
+    assert '"&rse_kmu_regs.reset"' in reset_targets
+    assert '"&rse_cc3xx.reset"' in reset_targets
+    assert '"&rse_cpu_pass.cpu_0.accel_reset"' in reset_targets
+    assert '"&host_si_cl0_clus_ppu.reset"' in reset_targets
+    assert '"&host_si_cl0_core0_ppu.reset"' in reset_targets
+    assert '"&si_cl0_ni710ae_primary_nci.reset"' in reset_targets
+    assert '"&si_cl0_ni710ae_secondary_nci.reset"' in reset_targets
+    assert '"&si_cl0_ni710ae_mhu_nci.reset"' in reset_targets
+    assert '"&si_cl0_qemu_inst.reset"' in reset_targets
+    assert '"&host_si_cl1_clus_ppu.reset"' in reset_targets
+    assert '"&si_cl1_cluster_ppu.reset"' in reset_targets
+    assert '"&si_cl1_core"..cpu.."_ppu.reset"' in reset_targets
+    assert '"&si_cl1_qemu_inst.reset"' in reset_targets
+    assert "host_ap_mhu_ns_shared_sram.reset" not in reset_targets
+    assert "host_rse_si_ssram.reset" not in reset_targets
+
+    assert "platform.apollo_system_reset_fanout = enable_ap_cpus and {" in ap
+    assert "reset_out = {bind = apollo_system_reset_bind_targets()};" in ap
+    assert (
+        'system_reset = {bind = "&apollo_system_reset_fanout.reset_in"};'
+        in rse
+    )
+    assert "platform.rse_system_reset_gpio" not in rse
+    signal_routes = (CONTRACT_DIR / "signal_routes.lua").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "rse_swreset_to_apollo_system_reset"' in signal_routes
+    assert 'source = "rse_sysctrl.system_reset"' in signal_routes
+    assert 'sink = "apollo_system_reset_fanout.reset_in"' in signal_routes
+
+
+def test_stage1_watchdog_and_reset_owner_contract() -> None:
+    config = CONFIG_SOURCE.read_text(encoding="utf-8")
+    address_map = ADDRESS_MAP_SOURCE.read_text(encoding="utf-8")
+    ap = AP_SOURCE.read_text(encoding="utf-8")
+    rse = RSE_SOURCE.read_text(encoding="utf-8")
+    si_cl0 = SI_CL0_SOURCE.read_text(encoding="utf-8")
+    system_mgmt = SYSTEM_MGMT_SOURCE.read_text(encoding="utf-8")
+    signal_routes = (CONTRACT_DIR / "signal_routes.lua").read_text(
+        encoding="utf-8"
+    )
+
+    assert "HOST_CSS_RGM_PHYS_BASE = 0x20000D0010000" in config
+    assert 'moduletype = "zena_reset_ctrl"' in system_mgmt
+    assert 'address = HOST_CSS_RGM_PHYS_BASE;' in system_mgmt
+    assert 'address = HOST_SYSTOP_PIK_PHYS_BASE;' in system_mgmt
+    assert 'ap_reset = {bind = "&ap_cold_reset_fanout.reset_in"};' in system_mgmt
+    assert "platform.host_systop_pik" not in system_mgmt
+
+    assert 'target = "host_reset_ctrl.rgm"' in address_map
+    assert 'target = "host_reset_ctrl.pik"' in address_map
+    assert 'target = "si_cl0_sys0_ppu"' in address_map
+    assert 'base = 0x1A420000' in address_map
+    assert 'target = "ap_watchdog_0.control"' in address_map
+    assert 'base = 0x1A430000' in address_map
+    assert 'target = "ap_watchdog_0.refresh"' in address_map
+
+    assert "platform.ap_ns_watchdog_ws1_fanout" in ap
+    assert ';&host_reset_ctrl.ap_ns_watchdog_reset"' in ap
+    assert 'ws1 = {bind = "&host_reset_ctrl.ap_s_watchdog_reset"};' in ap
+    assert "platform.rse_watchdog_ns" in rse
+    assert "platform.rse_watchdog_s" in rse
+    assert "platform.si_cl0_watchdog" in si_cl0
+    assert 'ws1 = {bind = "&host_reset_ctrl.si_watchdog_reset"};' in si_cl0
+
+    for route in (
+        'name = "ap_watchdog_to_css_rgm"',
+        'name = "ap_secure_watchdog_to_css_rgm"',
+        'name = "css_rgm_to_ap_cold_reset"',
+        'name = "si_cl0_watchdog_to_css_rgm"',
+    ):
+        assert route in signal_routes
+
+
+def test_stage2_apu_fmu_ssu_rgm_vertical_contract() -> None:
+    si_cl0 = SI_CL0_SOURCE.read_text(encoding="utf-8")
+    signal_routes = (CONTRACT_DIR / "signal_routes.lua").read_text(
+        encoding="utf-8"
+    )
+    host_ni = HOST_NI_SOURCE.read_text(encoding="utf-8")
+
+    assert "InitiatorSignalSocket<bool> apu_fault;" in host_ni
+    assert "apu_fault->write(true);" in host_ni
+    assert "apu_fault->write(false);" in host_ni
+    assert 'fault_source = "si_cl0_ni710ae_primary_nci.apu_fault";' in si_cl0
+    assert 'fault_input_enabled = true;' in si_cl0
+    assert 'fault_input_record = 0;' in si_cl0
+    assert 'apu_fault = {bind = "&si_cl0_fmu.fault_in"};' in si_cl0
+    assert (
+        'safety_status = {bind = "&host_reset_ctrl.safety_fault_reset"};'
+        in si_cl0
+    )
+    assert 'name = "si_ni710_apu_to_root_fmu"' in signal_routes
+    assert 'name = "si_fmu_critical_to_ssu"' in signal_routes
+    assert 'name = "si_ssu_to_rgm"' in signal_routes
 
 
 def test_si_cl0_preserves_a_valid_request_received_before_mhu_start() -> None:

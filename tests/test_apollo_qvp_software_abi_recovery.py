@@ -43,3 +43,18 @@ def test_apollo_software_contract_records_cleanup_and_recovery() -> None:
     assert 'recovery = "channel_free_next_request"' in contract
     assert 'malformed_descriptor = "bounded_poll_timeout"' in contract
     assert 'recovery = "next_doorbell_retry"' in contract
+    assert 'frame_reset = "clear_pending_release_requester"' in contract
+    assert 'peer_reset = "no_forward_retry_after_online"' in contract
+
+
+def test_mhu_reset_cancels_pending_request_and_peer_offline_requires_retry() -> None:
+    header = read("systemc-components/mhu320ae/include/mhu320ae.h")
+    component_test = read("tests/components/mhu320ae/mhu320ae-tests.cc")
+
+    assert "TargetSignalSocket<bool> reset" in header
+    assert 'trace_event("write-ignored-during-reset")' in header
+    assert "it->second->m_reset_asserted ? nullptr" in header
+    assert "m_requester_hold_pending[channel] = false" in header
+    assert "reset_test_mbx_reset.write(true)" in component_test
+    assert "reset_test_mbx_reset.write(false)" in component_test
+    assert "reset_test_pbx_reset.write(true)" in component_test

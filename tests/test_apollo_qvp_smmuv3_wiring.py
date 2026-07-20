@@ -17,8 +17,8 @@ def test_systemc_mmu720_profile_uses_reusable_smmuv3_core() -> None:
     text = CONFIG.read_text(encoding="utf-8")
 
     assert 'moduletype = "smmuv3"' in text
-    assert "pamax = 48" in text
-    assert "sidsize = 8" in text
+    assert "pamax = 52" in text
+    assert "sidsize = 32" in text
     assert "iidr = 0x720AE000" in text
     assert 'target_socket = {' in text
     assert 'dma = {bind = "&system_router.target_socket"}' in text

@@ -24,6 +24,7 @@ GUEST_TEST = (
     QBOX_PLATFORM / "platforms/apollo/test-profile/apollo-qvp-pcie-irq-test.sh"
 )
 QBOX_PLATFORM_CMAKE = QBOX_PLATFORM / "CMakeLists.txt"
+QBOX_PLATFORM_README = QBOX_PLATFORM / "platforms/apollo/README.md"
 PREPARE = ROOT / "scripts/test/prepare_qbox_apollo_pcie_irq_profile.py"
 VALIDATE = ROOT / "scripts/test/validate_qbox_apollo_pcie_irq_runtime.py"
 DIRECT_RUNNER = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
@@ -56,7 +57,7 @@ def test_apollo_test_endpoint_is_opt_in_and_has_fixed_identity() -> None:
     assert 'addr = "01.0"' in text
     assert 'mac = "52:54:00:12:34:56"' in text
     assert 'netdev_str = "type=user"' in text
-    assert 'gicv4_1_cte_size = 8' in text
+    assert 'gicv4_1_cte_size = 2' in text
 
 
 def test_apollo_build_contract_includes_test_endpoint_module() -> None:
@@ -75,7 +76,9 @@ def test_primary_compute_direct_profile_uses_same_pcie_path() -> None:
     assert 'moduletype = "smmuv3"' in text
     assert 'moduletype = "smmuv3_tbu"' in text
     assert 'topology_id = 0x40' in text
-    assert 'gicv4_1_cte_size = 8' in text
+    assert 'gicv4_1_cte_size = 2' in text
+    assert 'pamax = 52' in text
+    assert 'sidsize = 32' in text
     assert 'moduletype = "virtio_net_pci"' in text
     assert 'addr = "01.0"' in text
     assert '"qemu_gpex"' in runner
@@ -119,6 +122,17 @@ def test_guest_test_emits_bounded_runtime_evidence() -> None:
     assert "__QBOX_PCIE_IRQ_TEST_DONE__" in text
     assert "udhcpc" in text
     assert "smp_affinity" in text
+
+
+def test_documented_direct_runs_use_four_cpus_and_explicit_intx_bootarg() -> None:
+    text = QBOX_PLATFORM_README.read_text(encoding="utf-8")
+    section = text.split("## PCIe MSI-X/LPI And INTx Test Profile", 1)[1].split(
+        "## Fault Event Test Profile", 1
+    )[0]
+
+    assert section.count("QBOX_APOLLO_NUM_CPUS=4") == 2
+    assert section.count("maxcpus=4") == 2
+    assert 'maxcpus=4 mem=4064M pci=nomsi"' in section
 
 
 def test_profile_helper_adds_intx_bootarg_once() -> None:

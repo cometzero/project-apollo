@@ -190,7 +190,7 @@ PARTIAL_MODEL_ROWS: Final[dict[str, str]] = {
 WATCHED_OBJECTS: Final[set[str]] = {
     "host_ap_shared_sram",
     "host_ap_dram1", "host_ap_dram2", "ap_primary_uart", "ap_secure_uart",
-    "ap_watchdog_0", "ap_secure_wdog", "ap_secure_wdog_refresh",
+    "ap_watchdog_0", "ap_secure_wdog",
     "ap_timer_mem", "ap_gic", "ap_gic_its", "ap_smmu_0",
     "ap_virtioblk_0", "ap_virtioblk_1", "ap_virtioblk_2", "ap_virtioblk_3",
     "ap_virtionet_0", "ap_virtiorng_0", "ap_rtc_0", "host_ap_atu",
@@ -202,17 +202,15 @@ WATCHED_OBJECTS: Final[set[str]] = {
     "ap_cl3_ni710ae_fmu", "ap_fmu_region",
 }
 EXPLICIT_PLACEHOLDERS: Final[dict[str, set[str]]] = {
-    "AP0_S_WDOG CONTROL": {"ap_secure_wdog"},
-    "AP0_S_WDOG REFRESH": {"ap_secure_wdog_refresh"},
     "RGIC2LGIC_MESSREG": {"ap_rgic2lgic_messreg"},
 }
 REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
     "NS_UART": (("ap_primary_uart", "target_socket"),),
     "S_UART": (("ap_secure_uart", "target_socket"),),
-    "AP0_NS_WDOG0 CONTROL": (("ap_watchdog_0", "refresh_mem"),),
-    "AP0_NS_WDOG0 REFRESH": (("ap_watchdog_0", "control_mem"),),
-    "AP0_S_WDOG CONTROL": (("ap_secure_wdog", "target_socket"),),
-    "AP0_S_WDOG REFRESH": (("ap_secure_wdog_refresh", "target_socket"),),
+    "AP0_NS_WDOG0 CONTROL": (("ap_watchdog_0", "control"),),
+    "AP0_NS_WDOG0 REFRESH": (("ap_watchdog_0", "refresh"),),
+    "AP0_S_WDOG CONTROL": (("ap_secure_wdog", "control"),),
+    "AP0_S_WDOG REFRESH": (("ap_secure_wdog", "refresh"),),
     "SID": (("ap_sid", "target_socket"),),
     "AP0_REFCLK_CNTCTL": (("ap_timer_mem", "mem"),),
     "AP0_REFCLK_S_CNTBase1": (("ap_timer_mem", "mem"),),
