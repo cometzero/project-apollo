@@ -169,6 +169,16 @@ def test_child_command_forwards_persistent_rse_flash_state(tmp_path):
     assert "--reset-rse-flash-state" in cmd
 
 
+def test_child_command_forwards_opt_in_post_login_probe(tmp_path):
+    runner = load_runner()
+    args = make_child_command_args(tmp_path)
+    args.post_login_probe = True
+
+    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
+
+    assert "--post-login-probe" in cmd
+
+
 def test_child_command_forwards_qemu_local_cfi_backend(tmp_path):
     runner = load_runner()
     args = make_child_command_args(tmp_path)
@@ -204,10 +214,25 @@ def test_child_command_uboot_only_skips_live_cl1_completion_markers(tmp_path):
     runner = load_runner()
     args = make_child_command_args(tmp_path)
     args.uboot_only = True
+    args.post_login_probe = True
 
     cmd = runner.child_command(args, make_child_artifacts(tmp_path))
 
     assert "--required-pass-marker" not in cmd
+    assert "--post-login-probe" not in cmd
+
+
+def test_clear_run_outputs_preserves_tmux_primary_uart_fifo(tmp_path):
+    runner = load_runner()
+    fifo_path = tmp_path / "primary-uart-input.fifo"
+    stale_result = tmp_path / "result.json"
+    os.mkfifo(fifo_path)
+    stale_result.write_text("{}", encoding="utf-8")
+
+    runner.clear_run_outputs(tmp_path)
+
+    assert fifo_path.is_fifo()
+    assert not stale_result.exists()
 
 
 def test_child_command_requires_live_cl1_readiness(tmp_path):
@@ -500,10 +525,30 @@ def write_passing_logs(tmp_path):
                 "~ # echo __QBOX_PROBE_START__",
                 "__QBOX_PROBE_START__",
                 "arm_si_rproc_modprobe_rc:0",
+                "remoteproc_state_after:si-cl1:attached",
                 "virtio_rpmsg_bus_modprobe_rc:0",
                 "rpmsg_net_modprobe_rc:0",
                 "rpmsg_device:virtio6.ethsi1.-1.1024:ethsi1",
                 "ethsi1_iplink_rc:0",
+                "virtio_blk virtio_rng",
+                "ttyAMA0 uart-pl011",
+                "arm-smmu-v3 1c0000000.iommu",
+                "dsu_pmu_event_source:arm_dsu_0",
+                "dsu_pmu_event_source_rc:0",
+                "pfdi_misc_modprobe_rc:0",
+                "pfdi_info_rc:0",
+                "libPFDI version: 1.0",
+                "pfdi_firmware_info_rc:0",
+                "CPU0: Firmware reports 41 available diagnostic tests",
+                "pfdi_count_rc:0",
+                "CPU0: Out of Reset (OoR) test OK",
+                "pfdi_cpu0_result_rc:0",
+                "CPU1: Out of Reset (OoR) test OK",
+                "pfdi_cpu1_result_rc:0",
+                "CPU2: Out of Reset (OoR) test OK",
+                "pfdi_cpu2_result_rc:0",
+                "CPU3: Out of Reset (OoR) test OK",
+                "pfdi_cpu3_result_rc:0",
                 "~ # echo __QBOX_PROBE_DONE__",
                 "__QBOX_PROBE_DONE__",
             ]
@@ -611,7 +656,7 @@ def test_keep_running_child_status_does_not_follow_cl1_symlink(tmp_path):
     assert status["passed"] is False
 
 
-def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tmp_path):
+def test_keep_running_child_status_passes_with_complete_post_login_probe(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
 
@@ -621,13 +666,13 @@ def test_keep_running_child_status_passes_with_login_and_probe_output_ignored(tm
         child_returncode=None,
     )
 
-    assert status["passed"] is True
+    assert status["passed"] is True, status["post_login_probe"]
     assert status["marker_hits"]["linux_boot"]["apollo-qvp login:"] is True
-    assert status["post_login_probe"]["requested"] is False
-    assert status["post_login_probe"]["complete"] is False
+    assert status["post_login_probe"]["requested"] is True
+    assert status["post_login_probe"]["complete"] is True
     assert "rse_cpu_mode" not in status
     assert "remotepass_dmi_cache" not in status
-    assert status["post_login_probe"]["driver_patterns"] == {}
+    assert all(status["post_login_probe"]["driver_patterns"].values())
     profile = status["rse_boot_timing_profile"]
     assert profile["markers"][-1] == {
         "name": "primary_login_prompt",
@@ -737,7 +782,7 @@ def test_live_cl1_gate_rejects_pfdi_initialization_failure(tmp_path):
     )
 
 
-def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_path):
+def test_keep_running_child_status_requires_requested_probe_marker(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
     primary = tmp_path / "qbox-primary-console.log"
@@ -752,8 +797,78 @@ def test_keep_running_child_status_does_not_require_removed_probe_marker(tmp_pat
         child_returncode=None,
     )
 
-    assert status["passed"] is True
+    assert status["passed"] is False
     assert status["post_login_probe"]["complete"] is False
+
+
+def test_gate_status_records_post_login_qualification():
+    runner = load_runner()
+    args = SimpleNamespace(
+        build_only=False,
+        post_login_probe=True,
+        si_mode="live-cl0-cl1",
+        uboot_only=False,
+    )
+    child_status = {
+        "passed": True,
+        "post_login_probe": {
+            "requested": True,
+            "sent_probe": True,
+            "complete": True,
+            "passed": True,
+        },
+    }
+
+    gates = runner.gate_status(
+        args=args,
+        child_status=child_status,
+        blocker=None,
+        check_only=False,
+    )
+
+    assert gates["G1"] == "pass"
+    assert gates["G4"] == "pass"
+
+
+def test_post_login_probe_promotes_root_shell_marker(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    child_status = {
+        "marker_hits": {
+            "linux_boot": {
+                "apollo-qvp login:": True,
+                "~ #": False,
+            }
+        },
+        "post_login_probe": {
+            "requested": True,
+            "sent_probe": True,
+            "complete": True,
+            "passed": True,
+        },
+    }
+
+    groups = runner.build_marker_groups(make_args(tmp_path), child_status)
+
+    assert groups["linux"]["root_shell"] is True
+    assert groups["linux_boot"]["~ #"] is True
+
+
+def test_post_login_probe_rejects_incomplete_driver_contract():
+    runner = load_runner()
+
+    probe = runner.post_login_probe(
+        {
+            "post_login_probe": {
+                "requested": True,
+                "sent_probe": True,
+                "complete": True,
+                "driver_patterns": {"pfdi_4cpu": False},
+            }
+        }
+    )
+
+    assert probe["passed"] is False
 
 
 def test_keep_running_child_status_uses_configured_legacy_login_prompt(tmp_path):

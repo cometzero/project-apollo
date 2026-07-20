@@ -82,11 +82,25 @@ def runtime_gate_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
     gates = result.get("completion_gates", {})
     if not isinstance(gates, dict):
         return [{"name": "completion_gates", "passed": False, "status": "missing"}]
+    required = {"G0"}
+    probe = result.get("post_login_probe", {})
+    if isinstance(probe, dict) and probe.get("requested"):
+        required.add("G1")
+    mode_gate = {
+        "service-model": "G2",
+        "live-cl1": "G3",
+        "live-cl0-cl1": "G4",
+    }.get(result.get("safety_island_mode"))
+    if mode_gate:
+        required.add(mode_gate)
+    if result.get("fvp_differential"):
+        required.add("G5")
     checks = [
         {
             "name": f"gate:{gate}",
             "status": gates.get(gate, "missing"),
-            "passed": gates.get(gate) in {"pass", "not_run"},
+            "passed": gates.get(gate) == "pass",
+            "gating": gate in required,
         }
         for gate in GATES
     ]
@@ -393,7 +407,9 @@ def main() -> int:
         + log_checks
     )
     if runtime_result:
-        passed = all(check["passed"] for check in checks)
+        passed = all(
+            check["passed"] for check in checks if check.get("gating", True)
+        )
     else:
         passed = all(check["passed"] for check in block_checks + backend_checks + [ap_map_check])
     result = {

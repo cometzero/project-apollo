@@ -78,6 +78,89 @@ def test_fast_boot_sram_dmi_preserves_explicit_flash_dmi_disable(monkeypatch):
     assert args.rse_flash_backend == "qemu-cfi-local"
 
 
+def test_post_login_probe_commands_finish_after_four_cpu_pfdi_checks():
+    runner = load_runner()
+    args = SimpleNamespace(
+        fwu_probe=False,
+        secure_service_probe=False,
+    )
+
+    commands = runner.post_login_probe_commands(args)
+
+    assert commands[-1] == f"echo {runner.PROBE_DONE_MARKER}"
+    assert "pfdi-cli --info; echo pfdi_info_rc:$?" in commands
+    assert "pfdi-cli --pfdi_info 0; echo pfdi_firmware_info_rc:$?" in commands
+    assert "pfdi-cli --count 0; echo pfdi_count_rc:$?" in commands
+    assert (
+        "echo failed_units_count:$(systemctl --failed --no-legend --plain "
+        "2>/dev/null | wc -l)"
+        in commands
+    )
+    for cpu in range(4):
+        assert (
+            f"pfdi-cli --result {cpu}; echo pfdi_cpu{cpu}_result_rc:$?"
+            in commands
+        )
+
+
+def test_secure_service_probe_enables_post_login_driver(monkeypatch):
+    runner = load_runner()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "run_qbox_fvp_rd_aspen_rse.py",
+            "--build-only",
+            "--secure-service-probe",
+        ],
+    )
+
+    args = runner.parse_args()
+
+    assert args.post_login_probe is True
+
+
+def test_drive_post_login_probe_paces_commands_on_shell_prompts(monkeypatch):
+    runner = load_runner()
+    writes = []
+    monkeypatch.setattr(runner, "write_primary_uart", lambda _fd, text: writes.append(text))
+    args = SimpleNamespace(
+        fwu_probe=False,
+        login_user="root",
+        post_login_probe=True,
+        primary_login_prompt="apollo-qvp login:",
+        primary_shell_prompt_re=r"~ #\s*$",
+        secure_service_probe=False,
+    )
+    state = runner.make_probe_state(args)
+
+    runner.drive_post_login_probe(
+        args,
+        {"primary_console": "apollo-qvp login:\n"},
+        state,
+        1,
+    )
+    runner.drive_post_login_probe(
+        args,
+        {"primary_console": "apollo-qvp login:\n~ #\n"},
+        state,
+        1,
+    )
+    runner.drive_post_login_probe(
+        args,
+        {"primary_console": "apollo-qvp login:\n~ #\n__QBOX_PROBE_START__\n~ #\n"},
+        state,
+        1,
+    )
+
+    assert writes[0] == "root\n"
+    assert writes[1] == "echo __QBOX_PROBE_START__\n"
+    assert writes[2] == "uname -a\n"
+    assert state["sent_login"] is True
+    assert state["sent_probe"] is True
+    assert state["command_index"] == 2
+
+
 def test_active_apollo_storage_layout_covers_ps_and_its():
     runner = load_runner()
 

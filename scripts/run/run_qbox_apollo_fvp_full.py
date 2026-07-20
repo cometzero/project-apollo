@@ -260,21 +260,19 @@ def keep_running_child_logs(out_dir: Path) -> dict[str, str]:
 def keep_running_probe_state(
     primary_console: str,
     login_prompt: str,
+    *,
+    requested: bool,
 ) -> dict[str, Any]:
     clean_primary = clean_console_text(primary_console)
+    evaluated = rse_runner.evaluate_post_login_probe(primary_console)
     return {
-        "requested": False,
+        "requested": requested,
         "secure_service_requested": False,
         "fwu_requested": False,
         "sent_login": login_prompt in clean_primary,
-        "sent_probe": False,
-        "complete": False,
-        "done_marker": False,
-        "driver_patterns": {},
-        "return_codes": {
-            match.group(1): int(match.group(2))
-            for match in re.finditer(r"\b([A-Za-z0-9_]+_rc):(\d+)\b", clean_primary)
-        },
+        "sent_probe": "__QBOX_PROBE_START__" in clean_primary,
+        "complete": bool(evaluated["done_marker"]),
+        **evaluated,
     }
 
 
@@ -370,6 +368,7 @@ def synthesize_keep_running_child_status(
     probe = keep_running_probe_state(
         logs.get("primary_console", ""),
         args.primary_login_prompt,
+        requested=bool(args.post_login_probe),
     )
     linux_hit = any(marker_groups["linux_boot"].values())
     non_linux_hit = all(
@@ -378,7 +377,16 @@ def synthesize_keep_running_child_status(
         if group != "linux_boot"
         for hit in markers.values()
     )
-    passed = bool(non_linux_hit and linux_hit and not any(fail_hits.values()))
+    probe_ready = bool(
+        not args.post_login_probe
+        or (
+            probe.get("complete")
+            and all(bool(value) for value in probe["driver_patterns"].values())
+        )
+    )
+    passed = bool(
+        non_linux_hit and linux_hit and probe_ready and not any(fail_hits.values())
+    )
     scp_strategy = "real-si-scp" if args.si_mode == "live-cl0-cl1" else "service-model"
     rse_flash_state = read_json(
         args.out_dir / rse_runner.RSE_FLASH_STATE_STATUS_FILE
@@ -742,6 +750,9 @@ def gate_status(
             gates["G0"] = "fail"
             return gates
         gates["G0"] = "pass"
+        if args.post_login_probe:
+            probe = post_login_probe(child_status)
+            gates["G1"] = "pass" if probe.get("passed") else "blocked"
         if args.si_mode == "service-model":
             gates["G2"] = "blocked"
         elif args.si_mode == "live-cl1":
@@ -758,6 +769,11 @@ def gate_status(
     child_blocker = None
     if child_status:
         child_blocker = child_status.get("blocker")
+    if args.post_login_probe:
+        probe = post_login_probe(child_status)
+        gates["G1"] = "pass" if probe.get("passed") else (
+            "blocked" if child_blocker else "fail"
+        )
 
     if args.si_mode == "service-model":
         gates["G2"] = "pass" if child_passed else ("blocked" if child_blocker else "fail")
@@ -793,10 +809,17 @@ def post_login_probe(child_status: dict[str, Any] | None) -> dict[str, Any]:
     if not normalized.get("requested"):
         return {}
     if "passed" not in normalized:
+        driver_patterns = normalized.get("driver_patterns")
+        drivers_passed = bool(
+            isinstance(driver_patterns, dict)
+            and driver_patterns
+            and all(bool(value) for value in driver_patterns.values())
+        )
         normalized["passed"] = bool(
             normalized.get("requested")
             and normalized.get("sent_probe")
             and normalized.get("complete")
+            and drivers_passed
         )
     return normalized
 
@@ -887,8 +910,16 @@ def build_marker_groups(
     }
     groups["linux"] = {
         "login_prompt": bool(linux_boot.get(args.primary_login_prompt)),
-        "root_shell": bool(linux_boot.get(args.primary_shell_marker)),
+        "root_shell": bool(
+            linux_boot.get(args.primary_shell_marker)
+            or primary_obs["root_shell"]
+            or probe.get("passed")
+        ),
     }
+    if "linux_boot" in groups:
+        groups["linux_boot"][args.primary_shell_marker] = groups["linux"][
+            "root_shell"
+        ]
     groups["maps_and_interrupts"] = {
         "no_unexpected_shadowed_ranges": not bool(platform_obs["unexpected_shadowed_range"]),
         "rse_scp_handoff": all_hits(rse_scp),
@@ -1245,6 +1276,7 @@ def clear_run_outputs(out_dir: Path) -> None:
         "ap-si-mhuv3-trace.log",
         "si-cl1-mhuv3-trace.log",
         "si-cl0-pc-trace.log",
+        "post-login-probe-actions.log",
         rse_runner.RSE_FLASH_STATE_STATUS_FILE,
     }
     stale_files.update(CONSOLE_LOGS.values())
@@ -1521,6 +1553,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--rse-fast-boot-sram-dmi")
     if getattr(args, "provision_blank_rse_otp", False):
         cmd.append("--allow-blank-rse-otp")
+    if args.post_login_probe and not args.uboot_only:
+        cmd.append("--post-login-probe")
     if not args.uboot_only and args.si_mode in {"live-cl1", "live-cl0-cl1"}:
         cl1_log = (args.out_dir / "qbox-safety-island-cl1.log").resolve()
         for marker in LIVE_CL1_REQUIRED_MARKERS.values():
@@ -1686,6 +1720,19 @@ def parse_args() -> argparse.Namespace:
             "the pass condition."
         ),
     )
+    post_login_group = parser.add_mutually_exclusive_group()
+    post_login_group.add_argument(
+        "--post-login-probe",
+        dest="post_login_probe",
+        action="store_true",
+        help="Require the bounded root-shell driver/service qualification gate.",
+    )
+    post_login_group.add_argument(
+        "--no-post-login-probe",
+        dest="post_login_probe",
+        action="store_false",
+        help="Disable the root-shell gate for focused boot diagnostics.",
+    )
     parser.add_argument(
         "--smmu-backend",
         choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
@@ -1739,7 +1786,11 @@ def parse_args() -> argparse.Namespace:
             "fidelity experiments."
         ),
     )
-    parser.set_defaults(qbox_performance_preset=True, range_limited_flash_dmi=True)
+    parser.set_defaults(
+        post_login_probe=True,
+        qbox_performance_preset=True,
+        range_limited_flash_dmi=True,
+    )
     parser.set_defaults(auto_provision_rse_otp=True)
     parser.add_argument(
         "--cc3xx-stats",
@@ -1936,6 +1987,7 @@ def parse_args() -> argparse.Namespace:
     os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     args.out_dir = args.out_dir.resolve()
     if args.uboot_only:
+        args.post_login_probe = False
         args.primary_login_prompt = "FWU: System booting in Regular State"
         args.primary_shell_marker = "FWU: System booting in Regular State"
         args.primary_shell_prompt_re = "FWU: System booting in Regular State"

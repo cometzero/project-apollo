@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -140,6 +141,20 @@ MINIMUM_RUNTIME_ARTIFACT_SIZES = {
     "efi-capsule-update-disk-image-fvp-rd-aspen.img": 1024 * 1024,
 }
 
+FVP_ARTIFACT_PARAMETERS = {
+    "rse_rom": "css.smb.rseil.rse.rom.raw_image",
+    "rse_flash": "css.smb.rseil.rse_flashloader.fname",
+    "rse_otp": "css.smb.rseil.rse.lcm_nvm.raw_image",
+    "ap_flash": "ros.flash_loader.fname",
+    "rootfs": "ros.virtio_block0.image_path",
+    "efi_capsule_disk": "ros.virtio_block1.image_path",
+}
+
+FVP_WRITABLE_DISK_PARAMETERS = (
+    "ros.virtio_block0.image_path",
+    "ros.virtio_block1.image_path",
+)
+
 LOGIN_READY_PATTERNS = [
     re.compile(r"[\w.-]+ login:"),
     re.compile(r"Started .*Serial Getty on ttyAMA0"),
@@ -151,7 +166,7 @@ LOGIN_RETRY_READY_PATTERNS = [
     re.compile(r"systemd\[1\]:"),
 ]
 LOGIN_MAX_ATTEMPTS = 80
-ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+")
+ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+:[^\r\n]*[#>]")
 TERMINAL_STATUS_QUERY = "\x1b[6n"
 TERMINAL_STATUS_RESPONSE = "\x1b[32766;32766R"
 
@@ -209,6 +224,8 @@ class ConsoleCapture:
             self._file.write(line)
             if self.term == "terminal_ns_uart0" and login_ready(line):
                 self._answer_terminal_status = True
+            if self.term == "terminal_ns_uart0" and ROOT_PROMPT_RE.search(line):
+                self._answer_terminal_status = False
             if self._answer_terminal_status and TERMINAL_STATUS_QUERY in line:
                 self._send(TERMINAL_STATUS_RESPONSE)
             self._record_markers(line)
@@ -267,6 +284,14 @@ def read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8", errors="replace")
     except FileNotFoundError:
         return ""
+
+
+def latest_root_prompt_end(text: str) -> int:
+    return max((match.end() for match in ROOT_PROMPT_RE.finditer(text)), default=0)
+
+
+def post_login_marker_done(text: str, marker: str) -> bool:
+    return bool(re.search(rf"^{re.escape(marker)}\r?$", text, re.MULTILINE))
 
 
 def load_fvpconf(path: Path) -> dict:
@@ -349,6 +374,48 @@ def runtime_configuration_errors(config: dict) -> list[str]:
     return errors
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def initial_state_manifest(config: dict) -> dict[str, dict[str, object]]:
+    parameters = config.get("parameters", {})
+    sources: dict[str, Path] = {}
+    for name, key in FVP_ARTIFACT_PARAMETERS.items():
+        value = parameters.get(key)
+        if isinstance(value, str) and value:
+            sources[name] = Path(value)
+    for entry in config.get("data", []):
+        if not isinstance(entry, str) or "=" not in entry:
+            continue
+        path_text = entry.split("=", 1)[1].split("@", 1)[0]
+        path = Path(path_text)
+        if path.name == "combined_provisioning_message.bin":
+            sources["provisioning_bundle"] = path
+
+    return {
+        name: {
+            "path": str(path.resolve()),
+            "size": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+        for name, path in sorted(sources.items())
+        if path.is_file()
+    }
+
+
+def copy_sparse(src: Path, dst: Path) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["cp", "--reflink=auto", "--sparse=always", "--", str(src), str(dst)],
+        check=True,
+    )
+
+
 def copy_writable_flash(config: dict, out_dir: Path) -> list[str]:
     extra_args: list[str] = []
     image_dir = out_dir / "writable-images"
@@ -377,6 +444,16 @@ def copy_writable_flash(config: dict, out_dir: Path) -> list[str]:
         image_dir.mkdir(parents=True, exist_ok=True)
         dst = image_dir / src.name
         shutil.copy2(src, dst)
+        extra_args.extend(["--parameter", f"{key}={dst}"])
+    for key in FVP_WRITABLE_DISK_PARAMETERS:
+        value = parameters.get(key)
+        if not value:
+            continue
+        src = Path(value)
+        if not src.is_file():
+            continue
+        dst = image_dir / src.name
+        copy_sparse(src, dst)
         extra_args.extend(["--parameter", f"{key}={dst}"])
     return extra_args
 
@@ -549,6 +626,7 @@ def write_summary(
     post_login: dict,
     min_runtime_s: int,
     progress_marker_first_hits: dict[str, dict[str, object]],
+    initial_state: dict[str, dict[str, object]],
 ) -> None:
     passed = status["passed"] and (
         not post_login.get("requested") or post_login.get("done")
@@ -568,6 +646,7 @@ def write_summary(
         "post_login": post_login,
         "min_runtime_s": min_runtime_s,
         "progress_marker_first_hits": progress_marker_first_hits,
+        "initial_state": initial_state,
     }
     (out_dir / "result.json").write_text(
         json.dumps(result, indent=2, sort_keys=True),
@@ -776,6 +855,11 @@ def main() -> int:
         )
         return 2
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    initial_state = initial_state_manifest(config)
+    (args.out_dir / "initial-state.json").write_text(
+        json.dumps(initial_state, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     boot_log = args.out_dir / "fvp_stdout.log"
     extra_args = enable_terminal_telnet_args(config)
     if not args.no_copy_writable_flash:
@@ -797,6 +881,12 @@ def main() -> int:
     post_login_done = not args.post_login_command
     post_login_start_time: float | None = None
     post_login_marker = "__FVP_POST_LOGIN_DONE__"
+    post_login_commands = [
+        *args.post_login_command,
+        f"echo {post_login_marker}",
+    ]
+    post_login_command_index = 0
+    post_login_last_prompt_end = 0
 
     def stdout_reader() -> None:
         assert proc.stdout is not None
@@ -850,12 +940,13 @@ def main() -> int:
                 and not post_login_started
             ):
                 text = read_text(default_capture.log_path)
-                if ROOT_PROMPT_RE.search(text):
-                    for command_line in args.post_login_command:
-                        default_capture.sendline(command_line)
-                    default_capture.sendline(f"echo {post_login_marker}")
+                prompt_end = latest_root_prompt_end(text)
+                if prompt_end:
+                    default_capture.sendline(post_login_commands[0])
                     post_login_started = True
                     post_login_start_time = time.monotonic()
+                    post_login_command_index = 1
+                    post_login_last_prompt_end = prompt_end
 
             if (
                 default_capture
@@ -864,9 +955,22 @@ def main() -> int:
                 and not post_login_done
             ):
                 text = read_text(default_capture.log_path)
-                if post_login_marker in text:
+                if post_login_marker_done(text, post_login_marker):
                     post_login_done = True
-                elif (
+                else:
+                    prompt_end = latest_root_prompt_end(text)
+                    if (
+                        prompt_end > post_login_last_prompt_end
+                        and post_login_command_index < len(post_login_commands)
+                    ):
+                        default_capture.sendline(
+                            post_login_commands[post_login_command_index]
+                        )
+                        post_login_command_index += 1
+                        post_login_last_prompt_end = prompt_end
+                if (
+                    not post_login_done
+                    and
                     post_login_start_time is not None
                     and time.monotonic() - post_login_start_time
                     >= args.post_login_timeout
@@ -907,6 +1011,7 @@ def main() -> int:
         "timeout_s": args.post_login_timeout if args.post_login_command else None,
         "login_sent": login_sent,
         "login_attempts": login_attempts,
+        "command_index": post_login_command_index,
     }
     write_summary(
         out_dir=args.out_dir,
@@ -921,6 +1026,7 @@ def main() -> int:
         post_login=post_login,
         min_runtime_s=args.min_runtime,
         progress_marker_first_hits=progress_marker_first_hits_result,
+        initial_state=initial_state,
     )
 
     passed = status["passed"] and (

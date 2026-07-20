@@ -270,14 +270,22 @@ POST_LOGIN_PROBE_COMMANDS = [
     "if ls -d /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu* >/dev/null 2>&1; then echo dsu_pmu_event_source_rc:0; else echo dsu_pmu_event_source_rc:1; fi",
     "ip link show ethsi1; echo ethsi1_iplink_rc:$?",
     "ip link show || true",
-    f"echo {PROBE_DONE_MARKER}",
     "dmesg | grep -Ei 'gic|its|pl011|ttyAMA|watchdog|rtc|virtio|rng|eth|scmi|mhu|smmu|remoteproc|rpmsg|pfdi|hipc|ras|pmu|dsu|timer' || true",
     "cat /proc/interrupts | grep -Ei 'uart-pl011|virtio|rtc-pl031|arch_timer|GIC|ITS|gwdt|smmu|ras|estatus|mhu|scmi|remoteproc' || true",
     "lsmod | grep -Ei 'virtio|rng|pfdi|hipc|rpmsg|remoteproc|scmi|mhu|smmu' || true",
     "modprobe -v openvswitch; echo openvswitch_modprobe_rc:$?",
     "modprobe -v pfdi_misc; echo pfdi_misc_modprobe_rc:$?",
+    "pfdi-cli --info; echo pfdi_info_rc:$?",
+    "pfdi-cli --pfdi_info 0; echo pfdi_firmware_info_rc:$?",
+    "pfdi-cli --count 0; echo pfdi_count_rc:$?",
+    "pfdi-cli --result 0; echo pfdi_cpu0_result_rc:$?",
+    "pfdi-cli --result 1; echo pfdi_cpu1_result_rc:$?",
+    "pfdi-cli --result 2; echo pfdi_cpu2_result_rc:$?",
+    "pfdi-cli --result 3; echo pfdi_cpu3_result_rc:$?",
     "systemctl is-system-running || true",
     "systemctl --failed --no-pager || true",
+    "echo failed_units_count:$(systemctl --failed --no-legend --plain 2>/dev/null | wc -l)",
+    f"echo {PROBE_DONE_MARKER}",
 ]
 
 SECURE_SERVICE_PROBE_BINARIES = [
@@ -351,6 +359,21 @@ POST_LOGIN_DRIVER_PATTERNS = {
     "dsu_pmu": [
         r"dsu_pmu_event_source_rc:0|probe of dsu-pmu-0 returned 0|arm_dsu_0",
         r"dsu_pmu_event_source:.*(arm_dsu|dsu)|dsu-pmu-0|arm_dsu_0",
+    ],
+    "pfdi_4cpu": [
+        r"pfdi_misc_modprobe_rc:0",
+        r"pfdi_info_rc:0",
+        r"libPFDI version:\s*1\.0",
+        r"pfdi_firmware_info_rc:0",
+        r"pfdi_count_rc:0",
+        r"pfdi_cpu0_result_rc:0",
+        r"CPU0: Out of Reset \(OoR\) test OK",
+        r"pfdi_cpu1_result_rc:0",
+        r"CPU1: Out of Reset \(OoR\) test OK",
+        r"pfdi_cpu2_result_rc:0",
+        r"CPU2: Out of Reset \(OoR\) test OK",
+        r"pfdi_cpu3_result_rc:0",
+        r"CPU3: Out of Reset \(OoR\) test OK",
     ],
 }
 
@@ -3881,6 +3904,21 @@ def cleanup_sram_dmi_shared_memory(phase: str) -> dict[str, object]:
     return result
 
 
+def write_primary_uart(fd: int, text: str) -> None:
+    os.write(fd, text.encode("utf-8"))
+
+
+def open_post_login_probe_fifo(out_dir: Path) -> tuple[Path, int]:
+    fifo_path = out_dir / "primary-uart-input.fifo"
+    try:
+        fifo_path.unlink()
+    except FileNotFoundError:
+        pass
+    os.mkfifo(fifo_path)
+    fd = os.open(fifo_path, os.O_RDWR | os.O_NONBLOCK)
+    return fifo_path, fd
+
+
 def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
     return {
         "requested": bool(args.post_login_probe),
@@ -3894,7 +3932,76 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "actions": [],
         "login_attempts": 0,
         "last_login_time": 0.0,
+        "command_index": 0,
+        "last_prompt_end": 0,
     }
+
+
+def drive_post_login_probe(
+    args: argparse.Namespace,
+    logs: dict[str, str],
+    state: dict[str, object],
+    fifo_fd: int | None,
+) -> None:
+    if not args.post_login_probe or fifo_fd is None:
+        return
+    clean_primary = clean_text(logs.get("primary_console", ""))
+    actions = state.setdefault("actions", [])
+    assert isinstance(actions, list)
+    login_ready = bool(
+        args.primary_login_prompt in clean_primary
+        or any(
+            re.search(pattern, clean_primary, re.IGNORECASE | re.MULTILINE)
+            for pattern in LOGIN_READY_PATTERNS
+        )
+    )
+    login_attempts = int(state.get("login_attempts", 0))
+    last_login_time = float(state.get("last_login_time", 0.0))
+    shell_prompt_matches = list(
+        re.finditer(args.primary_shell_prompt_re, clean_primary, re.MULTILINE)
+    )
+    shell_prompt_end = shell_prompt_matches[-1].end() if shell_prompt_matches else 0
+    retry_login = (
+        bool(state["sent_login"])
+        and not state["sent_probe"]
+        and login_ready
+        and login_attempts < 6
+        and time.monotonic() - last_login_time >= 5.0
+    )
+    if not state["sent_login"] and shell_prompt_matches:
+        state["sent_login"] = True
+        actions.append("shell_prompt_already_ready")
+    elif (not state["sent_login"] and login_ready) or retry_login:
+        prefix = "" if args.primary_login_prompt in clean_primary else "\n"
+        write_primary_uart(fifo_fd, prefix + args.login_user + "\n")
+        state["sent_login"] = True
+        state["login_attempts"] = login_attempts + 1
+        state["last_login_time"] = time.monotonic()
+        actions.append(f"sent_login_attempt_{login_attempts + 1}")
+    command_index = int(state.get("command_index", 0))
+    last_prompt_end = int(state.get("last_prompt_end", 0))
+    commands = post_login_probe_commands(args)
+    command_ready = bool(
+        state["sent_login"]
+        and shell_prompt_end > 0
+        and (
+            not state["sent_probe"]
+            or shell_prompt_end > last_prompt_end
+        )
+    )
+    if command_ready and command_index < len(commands):
+        write_primary_uart(fifo_fd, commands[command_index] + "\n")
+        state["sent_probe"] = True
+        state["command_index"] = command_index + 1
+        state["last_prompt_end"] = shell_prompt_end
+        actions.append(f"sent_probe_command_{command_index + 1}")
+    if (
+        int(state.get("command_index", 0)) >= len(commands)
+        and PROBE_DONE_MARKER in clean_primary
+    ):
+        state["complete"] = True
+    if args.fwu_probe and fwu_probe_stage_complete(logs):
+        state["complete"] = True
 
 
 def run_platform(
@@ -3930,6 +4037,11 @@ def run_platform(
         ] + cmd
     env = qbox_env(root, args, artifacts)
     post_login_probe = make_probe_state(args)
+    primary_uart_fd: int | None = None
+    if args.post_login_probe:
+        fifo_path, primary_uart_fd = open_post_login_probe_fifo(out_dir)
+        env["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(fifo_path)
+        post_login_probe["input_path"] = str(fifo_path)
     timed_out = False
     interrupted = False
     logs = {role: "" for role in CONSOLE_LOGS}
@@ -3967,6 +4079,7 @@ def run_platform(
                     log.write(decoded)
                     platform_stdout += decoded
                 logs = read_console_logs(out_dir)
+                drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
                 live_logs = {**logs, "platform_stdout": platform_stdout}
                 update_progress_marker_first_hits(
                     live_logs,
@@ -3980,9 +4093,18 @@ def run_platform(
                 required_markers_missing = missing_required_pass_markers(
                     args.required_pass_marker
                 )
+                probe_complete = bool(post_login_probe.get("complete"))
+                if (
+                    args.post_login_probe
+                    and probe_complete
+                    and not args.keep_running_after_pass
+                ):
+                    stop_process(proc)
+                    break
                 pass_condition_hit = (
                     status["passed"]
                     and not required_markers_missing
+                    and (not args.post_login_probe or probe_complete)
                     and not args.keep_running_after_pass
                 )
                 if pass_condition_hit:
@@ -4025,6 +4147,8 @@ def run_platform(
     finally:
         elapsed_s = time.monotonic() - start
         stop_process(proc)
+        if primary_uart_fd is not None:
+            os.close(primary_uart_fd)
         if args.rse_fast_boot_sram_dmi and not interrupted:
             shared_memory_cleanup.append(
                 cleanup_sram_dmi_shared_memory("after_run")
@@ -4066,6 +4190,10 @@ def run_platform(
         args.post_login_probe
         and post_login_probe.get("sent_probe")
         and post_login_probe.get("complete")
+        and all(
+            bool(value)
+            for value in object_dict(probe_eval.get("driver_patterns")).values()
+        )
     )
     if args.post_login_probe:
         action_log = out_dir / "post-login-probe-actions.log"
@@ -4845,7 +4973,14 @@ def build_parser() -> argparse.ArgumentParser:
             "still records the matched fail patterns."
         ),
     )
-    parser.set_defaults(post_login_probe=False)
+    parser.add_argument(
+        "--post-login-probe",
+        action="store_true",
+        help=(
+            "Log in on the primary UART and run bounded Linux driver and "
+            "service probes before accepting a full-system pass."
+        ),
+    )
     parser.add_argument(
         "--secure-service-probe",
         action="store_true",
@@ -5527,11 +5662,12 @@ def parse_args() -> argparse.Namespace:
     if args.exception_trace:
         args.pc_trace = True
     if args.secure_service_probe or args.fwu_probe:
-        parser.error("--secure-service-probe and --fwu-probe require removed post-login probe support")
+        args.post_login_probe = True
     if args.rse_sram_dmi_smoke:
         conflicts = [
             name
             for name, enabled in (
+                ("--post-login-probe", args.post_login_probe),
                 ("--secure-service-probe", args.secure_service_probe),
                 ("--fwu-probe", args.fwu_probe),
             )
@@ -6040,6 +6176,12 @@ def main() -> int:
         and post_login_probe
         and not post_login_probe.get("sent_probe")
     )
+    post_login_probe_failed = bool(
+        args.post_login_probe
+        and post_login_probe
+        and post_login_probe.get("complete")
+        and not post_login_probe.get("passed")
+    )
     if post_login_probe_not_reached and timed_out:
         runtime_blocker = "qbox_post_login_probe_not_reached_timeout"
     elif post_login_probe_not_reached:
@@ -6059,6 +6201,8 @@ def main() -> int:
             "qbox_secure_service_probe_failed:"
             + format_rc_failures(secure_service_failures)
         )
+    elif post_login_probe_failed:
+        runtime_blocker = "qbox_post_login_probe_failed"
     elif post_login_probe_incomplete and timed_out:
         runtime_blocker = "qbox_post_login_probe_incomplete_timeout"
     elif post_login_probe_incomplete:

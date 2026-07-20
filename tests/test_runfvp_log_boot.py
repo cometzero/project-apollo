@@ -116,6 +116,61 @@ def test_copy_writable_flash_copies_rse_otp_nvm_image(tmp_path: Path) -> None:
     ]
 
 
+def test_copy_writable_flash_reflinks_virtio_disks(tmp_path: Path) -> None:
+    module = load_module()
+    rootfs = tmp_path / "deploy/nexios-image-apollo-qvp.wic"
+    efi = tmp_path / "deploy/efi-capsule.img"
+    rootfs.parent.mkdir()
+    rootfs.write_bytes(b"rootfs-state")
+    efi.write_bytes(b"efi-state")
+
+    args = module.copy_writable_flash(
+        {
+            "parameters": {
+                "ros.virtio_block0.image_path": str(rootfs),
+                "ros.virtio_block1.image_path": str(efi),
+            }
+        },
+        tmp_path / "out",
+    )
+
+    copied_rootfs = tmp_path / "out/writable-images" / rootfs.name
+    copied_efi = tmp_path / "out/writable-images" / efi.name
+    assert copied_rootfs.read_bytes() == b"rootfs-state"
+    assert copied_efi.read_bytes() == b"efi-state"
+    assert args == [
+        "--parameter",
+        f"ros.virtio_block0.image_path={copied_rootfs}",
+        "--parameter",
+        f"ros.virtio_block1.image_path={copied_efi}",
+    ]
+
+
+def test_initial_state_manifest_hashes_common_artifacts(tmp_path: Path) -> None:
+    module = load_module()
+    rse_flash = tmp_path / "rse-flash-image.img"
+    rootfs = tmp_path / "rootfs.wic"
+    provisioning = tmp_path / "combined_provisioning_message.bin"
+    rse_flash.write_bytes(b"rse-flash")
+    rootfs.write_bytes(b"rootfs")
+    provisioning.write_bytes(b"provisioning")
+    config = {
+        "parameters": {
+            "css.smb.rseil.rse_flashloader.fname": str(rse_flash),
+            "ros.virtio_block0.image_path": str(rootfs),
+        },
+        "data": [f"css.smb.rseil.rse.sram1={provisioning}@0x20000"],
+    }
+
+    manifest = module.initial_state_manifest(config)
+
+    assert manifest["rse_flash"]["sha256"] == module.sha256_file(rse_flash)
+    assert manifest["rootfs"]["sha256"] == module.sha256_file(rootfs)
+    assert manifest["provisioning_bundle"]["sha256"] == module.sha256_file(
+        provisioning
+    )
+
+
 def test_primary_console_accepts_systemd_multi_user_as_boot_ready() -> None:
     module = load_module()
 
@@ -141,6 +196,34 @@ def test_empty_terminal_configuration_cannot_pass_boot() -> None:
 
     assert not status["passed"]
     assert status["missing_required_patterns"]
+
+
+def test_post_login_done_ignores_echoed_marker() -> None:
+    module = load_module()
+    marker = "__FVP_POST_LOGIN_DONE__"
+
+    assert not module.post_login_marker_done(
+        f"root@apollo-qvp:~# echo {marker}\n", marker
+    )
+    assert module.post_login_marker_done(
+        f"root@apollo-qvp:~# echo {marker}\n{marker}\n", marker
+    )
+
+
+def test_latest_root_prompt_end_tracks_new_prompt() -> None:
+    module = load_module()
+    first = "root@apollo-qvp:~# "
+    second = first + "uname -a\nLinux\nroot@apollo-qvp:~# "
+
+    assert module.latest_root_prompt_end(second) > module.latest_root_prompt_end(first)
+
+
+def test_root_prompt_detection_allows_terminal_status_tail() -> None:
+    module = load_module()
+
+    assert module.ROOT_PROMPT_RE.search(
+        "root@apollo-qvp:~# \x1b[32766;32766R"
+    )
 
 
 def test_default_fvpconf_skips_incomplete_stable_config(tmp_path: Path) -> None:
