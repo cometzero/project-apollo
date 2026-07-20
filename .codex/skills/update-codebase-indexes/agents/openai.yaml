@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Codebase Indexes"
+  short_description: "Refresh one or all project codebase indexes"
+  default_prompt: "Use $update-codebase-indexes to refresh the requested Arm Auto Solutions codebase-memory indexes and report the results."

@@ -38,6 +38,7 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
   `./local_build.sh qbox`,
   `./run_qbox_local.sh`,
   `scripts/build/build_qbox.sh`,
+  `scripts/update_codebase_indexes.sh`,
   `scripts/package.sh`,
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
   `scripts/run/run_qbox_apollo_fvp_full.py`,
@@ -100,6 +101,8 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
    - `$yocto-dev` / `$yocto-review` for Yocto metadata work.
    - `$linux-kernel-review` for kernel, DTS, Kconfig, driver, HIPC, RPMsg,
      remoteproc, or PFDI Linux work.
+   - `$update-codebase-indexes` for listing, refreshing, or verifying one or
+     all canonical codebase-memory-mcp submodule indexes.
    When delegating, pass the exact registered role as `agent_type`; a
    `task_name` or role name in the message does not select its TOML model.
    The registrations and default model are in `.codex/config.toml`. If the
@@ -121,6 +124,206 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
    software structure, consult `doc/arm_zena_css_dev_guide/` early. Use it for
    memory maps, register maps, boot flows, firmware/domain responsibilities,
    and other hardware/software interface details before changing code.
+
+## Codebase Memory Indexing
+
+Use `codebase-memory-mcp` as the first code-discovery surface for repositories
+that have a ready index. Prefer `search_graph`, `trace_path`,
+`get_code_snippet`, `query_graph`, and `search_code` before broad filesystem
+searches. Check the corresponding `index_status` and indexing coverage before
+making exhaustive or negative claims. Read the source directly when coverage
+is partial, skipped, excluded, stale, or otherwise uncertain.
+
+### Managed Apollo Component Indexes
+
+The following `hsoc-stack/components/` Git submodules were indexed separately
+in `fast` mode. This is the verified snapshot from 2026-07-19:
+
+| Project | Repository path | Nodes | Edges | Status |
+| --- | --- | ---: | ---: | --- |
+| `apollo-linux` | `hsoc-stack/components/primary_compute/linux` | 2,157,447 | 8,216,469 | ready |
+| `apollo-u-boot` | `hsoc-stack/components/primary_compute/u-boot` | 376,014 | 934,469 | ready |
+| `apollo-trusted-firmware-a` | `hsoc-stack/components/primary_compute/trusted-firmware-a` | 58,675 | 170,874 | ready |
+| `apollo-optee-os` | `hsoc-stack/components/primary_compute/optee_os` | 33,375 | 132,160 | ready |
+| `apollo-trusted-firmware-m` | `hsoc-stack/components/system_mgmt/trusted-firmware-m` | 8,385 | 22,901 | ready |
+| `apollo-scp-firmware` | `hsoc-stack/components/system_mgmt/scp-firmware` | 98,068 | 257,834 | ready |
+| `apollo-zephyr` | `hsoc-stack/components/system_mgmt/zephyrproject/zephyr` | 248,877 | 753,310 | ready |
+| `apollo-zephyr-hsoc-src` | `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src` | 214 | 222 | ready |
+
+### Managed Other Top-Level Submodule Indexes
+
+Every other top-level `.gitmodules` entry also has a ready index. This table
+uses the canonical project name for future refreshes:
+
+| Project | Repository path | Nodes | Edges | Status |
+| --- | --- | ---: | ---: | --- |
+| `build-arm-arm-auto-solutions-arm-zena-css` | `arm-zena-css` | 1,737 | 2,615 | ready |
+| `apollo-meta-arm` | `layers/meta-arm` | 1,817 | 2,685 | ready |
+| `apollo-meta-bluechi` | `layers/meta-bluechi` | 119 | 117 | ready |
+| `apollo-meta-cassini` | `layers/meta-cassini` | 859 | 1,026 | ready |
+| `apollo-meta-clang` | `layers/meta-clang` | 672 | 687 | ready |
+| `apollo-meta-ewaol` | `layers/meta-ewaol` | 57 | 53 | ready |
+| `apollo-meta-mender` | `layers/meta-mender` | 1,539 | 2,959 | ready |
+| `apollo-meta-openembedded` | `layers/meta-openembedded` | 9,180 | 10,184 | ready |
+| `apollo-meta-ptx` | `layers/meta-ptx` | 69 | 71 | ready |
+| `apollo-meta-secure-core` | `layers/meta-secure-core` | 580 | 618 | ready |
+| `apollo-meta-security` | `layers/meta-security` | 1,476 | 2,051 | ready |
+| `apollo-meta-virtualization` | `layers/meta-virtualization` | 1,119 | 1,293 | ready |
+| `apollo-meta-zephyr` | `layers/meta-zephyr` | 510 | 639 | ready |
+| `apollo-poky` | `layers/poky` | 18,424 | 79,396 | ready |
+| `apollo-sw-ref-stack` | `sw-ref-stack` | 2,020 | 7,481 | ready |
+| `apollo-buildroot` | `hsoc-stack/tools/buildroot` | 13,522 | 32,950 | ready |
+| `apollo-meta-hsoc-auto-solutions` | `hsoc-stack/yocto/meta-hsoc-auto-solutions` | 216 | 375 | ready |
+| `apollo-meta-hsoc-bsp` | `hsoc-stack/yocto/meta-hsoc-bsp` | 305 | 370 | ready |
+| `apollo-qbox` | `hsoc-stack/tools/qbox` | 9,033 | 28,146 | ready |
+| `apollo-qbox-platform` | `hsoc-stack/tools/qbox-platform` | 5,057 | 14,543 | ready |
+| `apollo-qemu` | `hsoc-stack/tools/qemu` | 138,058 | 670,087 | ready |
+| `apollo-hsoc-tests` | `hsoc-stack/tests` | 251 | 931 | ready |
+
+All 30 top-level submodule roots were ready on 2026-07-19. The 17 indexes
+created in the final expansion added 52,430 nodes and 143,516 edges in
+approximately 6.02 seconds. Their DB files total 110,428,160 bytes, and the
+largest observed maximum RSS was 799,028 KiB for `apollo-poky`.
+
+Treat `list_projects` as the authoritative inventory and reuse the canonical
+name above for the same root. Older overlapping QBox and QBox Platform aliases
+exist in local cache state; do not create additional aliases unless a task
+explicitly needs a narrower index.
+
+Indexes are local machine state, not Git repository content. The default
+storage is:
+
+```text
+~/.cache/codebase-memory-mcp/<project>.db
+```
+
+At the snapshot above, `apollo-linux.db` is approximately 3.8 GiB. Check free
+space on the filesystem containing the cache before a full reindex because
+SQLite temporary, WAL, and replacement files can require additional space.
+
+### Refresh Existing Indexes
+
+The CLI does not continuously synchronize source changes. Re-run the same
+project name, repository path, and mode after changing or updating a submodule:
+
+```bash
+scripts/update_codebase_indexes.sh --list
+scripts/update_codebase_indexes.sh --directory layers/meta-arm
+scripts/update_codebase_indexes.sh --all
+```
+
+The helper preserves the canonical mapping above, updates indexes
+sequentially, verifies every result, and writes logs plus `summary.tsv` below
+`build/codebase-memory-index/<timestamp>/`. Use the direct CLI form only when
+debugging or adding a mapping to the helper:
+
+```bash
+set -o pipefail
+
+/usr/bin/time -v \
+  codebase-memory-mcp cli index_repository \
+    --repo-path /build/arm/arm-auto-solutions/hsoc-stack/components/primary_compute/linux \
+    --name apollo-linux \
+    --mode fast \
+  2>&1 | tee /tmp/apollo-linux-index.log
+```
+
+With a healthy existing DB and stored file hashes, this routes to incremental
+indexing. Unchanged files are reused, changed files are reparsed, deleted files
+are purged, and a no-change run exits through the incremental no-op path.
+Filesystem discovery and hash comparison still run, so a no-op is not
+instantaneous on a large tree.
+
+Confirm the result and route with:
+
+```bash
+codebase-memory-mcp cli index_status --project apollo-linux
+
+rg 'pipeline.route|incremental.classify|incremental.noop|incremental.done' \
+  ~/.cache/codebase-memory-mcp/logs/.worker-*.log
+```
+
+Incremental indexing is not guaranteed when the project name, root path, or
+mode changes. A missing or corrupt DB, missing stored hashes, or a discovered
+file count more than 50 percent above the stored hash count causes a full
+reindex. Keep `fast` mode for the managed top-level submodule indexes unless wider
+coverage is explicitly required.
+
+### Add or Remove Index Scope
+
+Use `.gitmodules` as the source of truth for new top-level repositories. Create
+one separate `fast` index for each initialized submodule. Use a stable, unique
+`apollo-*` project name and record it in the tables above:
+
+```bash
+CBM_SUBMODULE_PATH=layers/meta-example
+CBM_PROJECT_NAME=apollo-meta-example
+
+codebase-memory-mcp cli index_repository \
+  --repo-path "/build/arm/arm-auto-solutions/${CBM_SUBMODULE_PATH}" \
+  --name "${CBM_PROJECT_NAME}" \
+  --mode fast
+```
+
+Index one large component at a time. Record the project name, exact root,
+mode, node and edge counts, DB size, elapsed time, maximum RSS, and exit status
+before starting another large index. Do not index the aggregate
+`hsoc-stack/components/` directory when the submodules are already indexed
+individually; that duplicates graph data and increases memory and storage use.
+
+The top-level `.cbmignore` currently contains:
+
+```gitignore
+build/
+```
+
+This excludes the generated top-level build tree only when the indexed root is
+`/build/arm/arm-auto-solutions`. `codebase-memory-mcp` loads `.cbmignore` from
+the exact `--repo-path` root; the top-level file does not automatically apply
+to separately indexed submodules. Add a submodule-local `.cbmignore` when that
+submodule needs extra exclusions. Preserve source directories unless there is
+a measured indexing or relevance reason to exclude them.
+
+Changing ignore rules can leave previously indexed, now-excluded files
+preserved by an incremental run. When the old nodes must be removed, request
+explicit approval, delete the named project, and recreate it with the same
+canonical name and intended mode:
+
+```bash
+CBM_SUBMODULE_PATH=layers/meta-example
+CBM_PROJECT_NAME=apollo-meta-example
+
+codebase-memory-mcp cli delete_project --project "${CBM_PROJECT_NAME}"
+codebase-memory-mcp cli index_repository \
+  --repo-path "/build/arm/arm-auto-solutions/${CBM_SUBMODULE_PATH}" \
+  --name "${CBM_PROJECT_NAME}" \
+  --mode fast
+```
+
+`delete_project` is destructive local-state cleanup. Never run it merely to
+refresh source changes; normal refreshes must use incremental indexing.
+
+### Resource and Coverage Cautions
+
+- The first `apollo-linux` fast index took 12 minutes 10 seconds, reached
+  approximately 12.5 GiB maximum RSS, and produced a 3.8 GiB DB. Ensure enough
+  RAM, swap, cache filesystem space, and idle CPU before a Linux full reindex.
+- Run only one memory-intensive index at a time. Do not run Linux indexing in
+  parallel with Yocto, QBox, QEMU, or another large index/build.
+- Keep `set -o pipefail` when piping through `tee`; otherwise `tee` can mask an
+  indexing failure.
+- A `ready` status and matching node counts prove that a DB exists, not that
+  every source construct was parsed. Inspect coverage and use direct source
+  search for excluded, skipped, or partially parsed paths.
+- `apollo-poky` fast mode excludes `scripts/`, `bitbake/bin`, and documentation.
+  Read those paths directly or create an explicitly wider index when the task
+  depends on BitBake command entrypoints or Poky helper scripts.
+- `layers/meta-mender/tests/acceptance/image-tests` and QEMU ROM/test nested
+  submodules were not initialized in this snapshot. Their parent indexes are
+  ready, but those absent nested sources are not covered.
+- Report OOM, signal termination, nonzero exit status, node/edge mismatches, or
+  a non-`ready` status as an indexing failure. Do not treat a partial DB as
+  current.
 
 ## Explicit Apollo FVP Debugging
 
