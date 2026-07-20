@@ -1180,6 +1180,7 @@ if [[ "${HEADLESS}" == "0" ]]; then
     RUNNER_CMD+=(--)
 fi
 RUNNER_CMD+=(
+    --no-post-login-probe
     --rse-rom "${RSE_ROM}"
     --rse-flash "${RSE_FLASH}"
     --rse-otp "${RUN_RSE_OTP}"

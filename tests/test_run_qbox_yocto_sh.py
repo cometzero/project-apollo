@@ -266,6 +266,8 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "debug/symbols.json" in result.stdout
     assert "--qbox-performance-preset" in result.stdout
     assert "--cc3xx-qemu-native-backend" in result.stdout
+    assert "--no-post-login-probe" in result.stdout
+    assert "--post-login-probe" not in result.stdout
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
@@ -294,6 +296,8 @@ def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> No
     assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stdout
     assert "apollo-qvp.dtb" in result.stdout
     assert "--rse-symbols" not in argv
+    assert "--no-post-login-probe" in argv
+    assert "--post-login-probe" not in argv
     state_index = argv.index("--rse-flash-state")
     assert argv[state_index + 1] == str(
         ROOT / "build/qbox-apollo-fvp/state/yocto-apollo-qvp/rse-flash-image.img"
