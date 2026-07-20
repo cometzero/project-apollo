@@ -286,6 +286,23 @@ def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> No
     )
 
 
+def test_run_qbox_yocto_skips_initial_state_manifest_by_default(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_dry_run(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    assert "initial state:  skipped" in result.stdout
+
+
+def test_run_qbox_yocto_can_record_initial_state_manifest(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(tmp_path, extra_args=["--record-initial-state"])
+
+    assert result.returncode == 0, result.stderr
+    assert "initial state:  SHA-256 manifest" in result.stdout
+    assert "--record-initial-state" not in dry_run_command_argv(result.stdout)
+
+
 def test_run_qbox_yocto_qvp_can_reset_custom_rse_state(tmp_path: Path) -> None:
     state_dir = tmp_path / "qbox-state"
     result = run_qvp_dry_run(

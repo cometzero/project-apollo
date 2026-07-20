@@ -125,6 +125,20 @@ For a file-backed dry run:
 ./run_qbox_yocto.sh --headless --dry-run
 ```
 
+일반 실행은 QBox 시작 전에 deploy artifact 전체를 해시하지 않는다. 동일 초기
+상태 FVP/QBox 비교처럼 실행 전 byte identity가 필요한 qualification에서만 다음
+옵션을 추가한다.
+
+```bash
+./run_qbox_yocto.sh --headless --record-initial-state
+```
+
+이 옵션은 `OUT_DIR/initial-state.json`에 RSE/AP flash, OTP, provisioning
+bundle, rootfs WIC와 EFI disk의 크기 및 SHA-256을 기록한다. 현재 rootfs WIC는
+sparse 파일이어도 논리 크기 전체를 읽으므로 QBox 프로세스 시작 전에 수십 초가
+걸릴 수 있다. 자동화에서는 `RUN_QBOX_RECORD_INITIAL_STATE=1`로 같은 동작을
+요청할 수 있다.
+
 `run_qbox_yocto.sh`는 기본적으로 다음 위치의 RSE Protected Storage 상태를
 재사용한다.
 

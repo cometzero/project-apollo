@@ -38,6 +38,8 @@ Options:
   --rootfs-bootargs-profile P Rootfs bootargs profile (default: none)
   --copy-disks                Copy writable rootfs/EFI disks into --out-dir first
   --no-copy-disks             Use Yocto deploy disk images in place (default)
+  --record-initial-state      Write a pre-run SHA-256 artifact manifest (slow)
+  --no-record-initial-state   Skip full-image hashing before launch (default)
   --legacy-file-backed-sram   Disable RSE SRAM fast-boot DMI accelerator
   --rse-state-dir DIR         Persistent RSE flash state directory
   --reset-rse-state           Reset persistent state from the selected image
@@ -71,7 +73,7 @@ Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
   QBOX_CONF_FILE, LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
   OUT_DIR, TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
-  QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
+  RUN_QBOX_RECORD_INITIAL_STATE, QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
 EOF
 }
 
@@ -590,6 +592,7 @@ PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
 PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
+RUN_QBOX_RECORD_INITIAL_STATE="${RUN_QBOX_RECORD_INITIAL_STATE:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
@@ -716,6 +719,14 @@ while (($#)); do
             ;;
         --no-copy-disks)
             RUN_QBOX_COPY_DISKS=0
+            shift
+            ;;
+        --record-initial-state)
+            RUN_QBOX_RECORD_INITIAL_STATE=1
+            shift
+            ;;
+        --no-record-initial-state)
+            RUN_QBOX_RECORD_INITIAL_STATE=0
             shift
             ;;
         --legacy-file-backed-sram)
@@ -1049,6 +1060,17 @@ fi
 RUN_ROOTFS="${ROOTFS}"
 RUN_EFI_CAPSULE_DISK="${EFI_CAPSULE_DISK}"
 RUN_RSE_OTP="${RSE_OTP}"
+if [[ "${DRY_RUN}" == "0" && "${RUN_QBOX_RECORD_INITIAL_STATE}" == "1" ]]; then
+    python3 "${ROOT_DIR}/scripts/inspect/write_apollo_initial_state_manifest.py" \
+        --output "${OUT_DIR}/initial-state.json" \
+        --artifact "rse_rom=${RSE_ROM}" \
+        --artifact "rse_flash=${RSE_FLASH}" \
+        --artifact "rse_otp=${RSE_OTP}" \
+        --artifact "ap_flash=${AP_FLASH}" \
+        --artifact "rootfs=${ROOTFS}" \
+        --artifact "efi_capsule_disk=${EFI_CAPSULE_DISK}" \
+        --artifact "provisioning_bundle=${PROVISIONING_BUNDLE}"
+fi
 if [[ "${RUN_QBOX_COPY_DISKS}" == "1" ]]; then
     RUN_ROOTFS="${OUT_DIR}/input-images/$(basename "${ROOTFS}")"
     RUN_EFI_CAPSULE_DISK="${OUT_DIR}/input-images/$(basename "${EFI_CAPSULE_DISK}")"
@@ -1197,6 +1219,7 @@ Apollo QBox Yocto launch
   efi disk:      ${RUN_EFI_CAPSULE_DISK}
   rse otp:       ${RUN_RSE_OTP}
   rse state:     $([[ "${PERSIST_RSE_STATE}" == "1" ]] && printf '%s' "${RSE_STATE_DIR}/rse-flash-image.img" || printf '%s' ephemeral)
+  initial state:  $([[ "${RUN_QBOX_RECORD_INITIAL_STATE}" == "1" ]] && printf '%s' 'SHA-256 manifest' || printf '%s' skipped)
   ssh port:      ${SSH_PORT_VALUE}
 EOF
 
