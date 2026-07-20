@@ -267,7 +267,7 @@ POST_LOGIN_PROBE_COMMANDS = [
     "ls -l /sys/bus/rpmsg/devices || true",
     "for d in /sys/bus/rpmsg/devices/*; do [ -e $d/name ] && echo rpmsg_device:$(basename $d):$(cat $d/name); done",
     "for d in /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu*; do [ -d $d ] && echo dsu_pmu_event_source:$(basename $d); done",
-    "if ls -d /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu* >/dev/null 2>&1; then echo dsu_pmu_event_source_rc:0; else echo dsu_pmu_event_source_rc:1; fi",
+    "dsu_pmu_found=0; for d in /sys/bus/event_source/devices/arm_dsu* /sys/bus/event_source/devices/dsu*; do [ -d \"$d\" ] && dsu_pmu_found=1; done; if [ \"$dsu_pmu_found\" -eq 1 ]; then echo dsu_pmu_event_source_rc:0; else echo dsu_pmu_event_source_rc:1; fi",
     "ip link show ethsi1; echo ethsi1_iplink_rc:$?",
     "ip link show || true",
     "dmesg | grep -Ei 'gic|its|pl011|ttyAMA|watchdog|rtc|virtio|rng|eth|scmi|mhu|smmu|remoteproc|rpmsg|pfdi|hipc|ras|pmu|dsu|timer' || true",

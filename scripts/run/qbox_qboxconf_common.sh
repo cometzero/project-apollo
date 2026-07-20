@@ -250,6 +250,26 @@ def image_path(images: JsonObject, qboxconf_dir: Path, *keys: str) -> str:
     return ""
 
 
+def ap_cpu_count(value: JsonObject) -> str:
+    env_value = value.get("env")
+    if env_value is None:
+        return ""
+    if not isinstance(env_value, dict):
+        raise QBoxConfError("qboxconf field env must be an object")
+    count = env_value.get("QBOX_APOLLO_NUM_CPUS")
+    if count is None:
+        return ""
+    if not isinstance(count, str) or not count.isdecimal():
+        raise QBoxConfError(
+            "qboxconf field env.QBOX_APOLLO_NUM_CPUS must be a decimal string"
+        )
+    if not 1 <= int(count) <= 16:
+        raise QBoxConfError(
+            "qboxconf field env.QBOX_APOLLO_NUM_CPUS must be in range 1..16"
+        )
+    return count
+
+
 raw_qboxconf = Path(sys.argv[1])
 current_ld_library_path = sys.argv[2]
 raw_yocto_build_dir = Path(sys.argv[3])
@@ -284,6 +304,7 @@ try:
     recipe_sysroot_native = str(recipe_sysroot_native_path)
     exe = require_safe_relative(require_string(loaded, "exe"), "exe")
     config = require_safe_relative(require_string(loaded, "config"), "config")
+    qbox_apollo_num_cpus = ap_cpu_count(loaded)
 except QBoxConfError as error:
     fail(f"invalid qboxconf schema: {qboxconf}: {error}")
 
@@ -307,6 +328,7 @@ assignments = {
     "QBOXCONF_RECIPE_SYSROOT_NATIVE": recipe_sysroot_native,
     "QBOXCONF_EXE": str(Path(bindir) / exe),
     "QBOXCONF_CONFIG": str(Path(data_dir) / config),
+    "QBOXCONF_APOLLO_NUM_CPUS": qbox_apollo_num_cpus,
     "QBOXCONF_DEBUG_SYMBOLS": debug_symbols,
     "QBOXCONF_LD_LIBRARY_PATH": ":".join(ld_entries),
     "QBOXCONF_IMAGE_ROOTFS_WIC": image_path(images, qboxconf_dir, "rootfs_wic", "wic"),

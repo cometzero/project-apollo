@@ -912,8 +912,15 @@ if [[ "${MACHINE}" == "apollo-qvp" ]]; then
     [[ -x "${QBOXCONF_EXE}" ]] || die "QBox executable not found or not executable: ${QBOXCONF_EXE}"
 fi
 
-QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-$(default_ap_cpu_count || true)}"
-QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-4}"
+if [[ -z "${QBOX_APOLLO_NUM_CPUS:-}" ]]; then
+    QBOX_APOLLO_NUM_CPUS="${QBOXCONF_APOLLO_NUM_CPUS:-}"
+fi
+if [[ -z "${QBOX_APOLLO_NUM_CPUS}" ]]; then
+    QBOX_APOLLO_NUM_CPUS="$(default_ap_cpu_count || true)"
+fi
+if [[ -z "${QBOX_APOLLO_NUM_CPUS}" ]]; then
+    QBOX_APOLLO_NUM_CPUS=4
+fi
 validate_ap_cpu_count "${QBOX_APOLLO_NUM_CPUS}"
 export QBOX_APOLLO_NUM_CPUS
 

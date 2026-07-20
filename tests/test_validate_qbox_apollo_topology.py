@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -47,6 +48,7 @@ RSE_BL2_SCMI_COMMS = (
     / "arm/rse/automotive_rd/apollo-qvp/bl2/scmi_comms.c"
 )
 RSE_BL2_BOOT_HAL = RSE_BL2_SCMI_COMMS.with_name("boot_hal_bl2.c")
+QEMU_ARM_CPU64 = ROOT / "hsoc-stack/tools/qemu/target/arm/tcg/cpu64.c"
 CONTRACT_FILES = (
     "topology.lua",
     "address_map.lua",
@@ -503,13 +505,13 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
     assert '"&host_ap_mhu_ns_shared_sram.reset"' not in cold_reset_targets
     assert '"&ap_reset_gpio.reset_in"' in cold_reset_targets
     assert "ap_cold_reset_bind_targets()" in system_reset_targets
-    for core in range(4):
-        ppu_reset = f'"&si_cl0_ap_cluster0_core{core}_ppu.reset"'
-        assert ppu_reset not in cold_reset_targets
-        assert ppu_reset in system_reset_targets
-        assert system_reset_targets.index(ppu_reset) < system_reset_targets.index(
-            "ap_cold_reset_bind_targets()"
-        )
+    assert "for cpu=0,(AP_NUM_CPUS-1) do" in system_reset_targets
+    assert '"&si_cl0_ap_cluster"..cluster.."_core"..core.."_ppu.reset"' in (
+        system_reset_targets
+    )
+    assert system_reset_targets.index("for cpu=0,(AP_NUM_CPUS-1) do") < (
+        system_reset_targets.index("ap_cold_reset_bind_targets()")
+    )
     for frame in (
         "host_ap_si_ns_scmi_mhu_pbx",
         "host_ap_si_ns_scmi_mhu_mbx",
@@ -541,19 +543,65 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
         1,
     )[1]
     ap_core_ppu = ap_core_ppu.split("\n            }", 1)[0]
-    assert "assert_power_on_load = enable_ap_cpus and" in ap_core_ppu
+    assert "local cpu_index = ap_cpu_index(cluster, core)" in si_cl0
+    assert "local cpu_active = enable_ap_cpus and cpu_index < AP_NUM_CPUS" in si_cl0
     assert "power_on_load_pulse_width_ns = 0" in ap_core_ppu
     assert "power_on_load_to_reset_delay_ns = 0" in ap_core_ppu
-    assert 'power_on_load = enable_ap_cpus and cluster == 0 and' in ap_core_ppu
+    assert "assert_power_on_reset = cpu_active;" in ap_core_ppu
+    assert "assert_power_on_load = cpu_active and cpu_index == 0;" in ap_core_ppu
+    assert "power_on_load = cpu_active and cpu_index == 0 and" in ap_core_ppu
     assert '{bind = "&host_reset_ctrl.ap_power_reset"}' in ap_core_ppu
-    assert "assert_power_on_reset = enable_ap_cpus and cluster == 0;" in ap_core_ppu
-    assert 'power_on_reset = enable_ap_cpus and cluster == 0 and {' in ap_core_ppu
-    assert 'bind = "&ap_cpu_"..core..".reset";' in ap_core_ppu
+    assert "power_on_reset = cpu_active and {" in ap_core_ppu
+    assert 'bind = "&ap_cpu_"..cpu_index..".reset";' in ap_core_ppu
 
     synthetic_reset = system_mgmt.split(
         "if platform.host_ap_si_scmi_mhu_pbx ~= nil and", 1
     )[1].split("\n    end", 1)[0]
     assert "not ctx.apollo_live_cl0 then" in synthetic_reset
+
+
+def test_ap_16_core_affinity_and_reset_targets_execute_in_lua() -> None:
+    lua = shutil.which("lua")
+    if lua is None:
+        raise AssertionError("lua is required for Apollo topology validation")
+
+    script = "\n".join(
+        (
+            'dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua")',
+            'print("cpus="..AP_NUM_CPUS)',
+            "for cpu=0,(AP_NUM_CPUS-1) do",
+            '    print(string.format("cpu=%d mpidr=0x%x", cpu, mp_affinity(cpu)))',
+            "end",
+            'print("reset="..ap_system_reset_bind_targets())',
+        )
+    )
+    env = os.environ.copy()
+    env.update(
+        {
+            "QBOX_RDASPEN_ENABLE_AP_CPUS": "true",
+            "QBOX_APOLLO_NUM_CPUS": "16",
+        }
+    )
+    result = subprocess.run(
+        [lua, "-e", script],
+        cwd=ROOT,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "cpus=16" in result.stdout
+    for cpu in range(16):
+        cluster, core = divmod(cpu, 4)
+        assert f"cpu={cpu} mpidr=0x{cluster * 0x10000 + core * 0x100:x}" in (
+            result.stdout
+        )
+        assert (
+            f"&si_cl0_ap_cluster{cluster}_core{core}_ppu.reset" in result.stdout
+        )
 
 
 def test_rse_system_reset_restarts_live_apollo_domains() -> None:
@@ -768,3 +816,16 @@ def test_ap_gic_inactive_redistributor_tail_is_explicit_razwi() -> None:
     assert "AP_GIC_ACTIVE_REDIST_REGIONS * AP_GIC_REDIST_SIZE" in ap
     assert "(AP_GIC_REDIST_REGIONS - AP_GIC_ACTIVE_REDIST_REGIONS) *" in ap
     assert 'bind = "&ap_router.initiator_socket"' in ap
+
+
+def test_a720ae_dsu_pmu_exposes_six_stateful_counters() -> None:
+    cpu64 = QEMU_ARM_CPU64.read_text(encoding="utf-8")
+
+    assert "CORTEX_A720AE_DSU_PMU_NUM_COUNTERS 6" in cpu64
+    assert "cortex_a720ae_dsu_pmu_state" in cpu64
+    assert "~(ARM_AFF0_MASK | ARM_AFF1_MASK)" in cpu64
+    assert "candidate->mp_affinity &" in cpu64
+    assert ".readfn = cortex_a720ae_dsu_pmu_pmcr_read" in cpu64
+    assert ".writefn = cortex_a720ae_dsu_pmu_pmxevcntr_write" in cpu64
+    assert "CORTEX_A720AE_DSU_PMU_CEID1" in cpu64
+    assert "no-counter DSU PMU register bank" not in cpu64

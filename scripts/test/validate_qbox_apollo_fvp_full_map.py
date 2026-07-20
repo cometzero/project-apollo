@@ -108,7 +108,7 @@ CHECKS = {
         (
             "reset:ap-cpu-count-limit",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"not\s+enable_ap_cpus\s+or\s+\(AP_NUM_CPUS\s*>=\s*1\s+and\s+AP_NUM_CPUS\s*<=\s*16\)",
+            r"not\s+enable_ap_cpus\s+or\s+\(AP_NUM_CPUS\s*>=\s*1\s+and\s+AP_NUM_CPUS\s*<=\s*AP_MAX_CPUS\)",
         ),
         (
             "reset:ap-power-domain-count",

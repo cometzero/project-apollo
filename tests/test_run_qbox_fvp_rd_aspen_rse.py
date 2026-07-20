@@ -103,6 +103,23 @@ def test_post_login_probe_commands_finish_after_four_cpu_pfdi_checks():
         )
 
 
+def test_dsu_probe_does_not_fail_when_only_one_supported_glob_matches():
+    runner = load_runner()
+    args = SimpleNamespace(
+        fwu_probe=False,
+        secure_service_probe=False,
+    )
+
+    commands = runner.post_login_probe_commands(args)
+    status_command = next(
+        command
+        for command in commands
+        if "dsu_pmu_event_source_rc:" in command
+    )
+
+    assert "ls -d" not in status_command
+
+
 def test_secure_service_probe_enables_post_login_driver(monkeypatch):
     runner = load_runner()
     monkeypatch.setattr(

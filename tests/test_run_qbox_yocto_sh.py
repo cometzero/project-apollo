@@ -23,6 +23,7 @@ QBOX_YOCTO_ENV_OVERRIDES = (
     "QBOX_PLATFORM_BUILD_DIR",
     "QBOX_CONF",
     "QBOX_CONF_FILE",
+    "QBOX_APOLLO_NUM_CPUS",
     "OUT_DIR",
     "QBOX_RSE_STATE_DIR",
     "QBOX_PERSIST_RSE_STATE",
@@ -41,6 +42,7 @@ def create_qboxconf(
     machine: str = "apollo-qvp",
     basename: str = "nexios-image",
     include_debug_symbols: bool = False,
+    ap_cpu_count: str | None = None,
 ) -> Path:
     components_dir = yocto_build / "tmp_baremetal/sysroots-components/x86_64"
     provider_root = components_dir / "qbox-apollo-qvp-native/usr"
@@ -82,6 +84,8 @@ def create_qboxconf(
             "LD_LIBRARY_PATH": "${provider.libdir}:${provider.module_dir}",
         },
     }
+    if ap_cpu_count is not None:
+        payload["env"]["QBOX_APOLLO_NUM_CPUS"] = ap_cpu_count
     if include_debug_symbols:
         touch_file(data_dir / "debug/symbols.json", "{}\n")
         payload["debug_symbols"] = str(data_dir / "debug/symbols.json")
@@ -182,6 +186,8 @@ def run_dry_run(
 def run_qvp_dry_run(
     tmp_path: Path,
     extra_args: list[str] | None = None,
+    extra_env: dict[str, str] | None = None,
+    ap_cpu_count: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     yocto_build, _deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
@@ -189,6 +195,12 @@ def run_qvp_dry_run(
         build_dir_name="build",
         include_qboxconf=True,
     )
+
+    if ap_cpu_count is not None:
+        qboxconf = _deploy / "nexios-image-apollo-qvp.qboxconf"
+        payload = json.loads(qboxconf.read_text(encoding="utf-8"))
+        payload["env"]["QBOX_APOLLO_NUM_CPUS"] = ap_cpu_count
+        rewrite_qboxconf(qboxconf, payload)
 
     env = os.environ.copy()
     for name in QBOX_YOCTO_ENV_OVERRIDES:
@@ -200,6 +212,8 @@ def run_qvp_dry_run(
             "SSH_PORT_END": "24999",
         }
     )
+    if extra_env:
+        env.update(extra_env)
 
     command = [
         str(SCRIPT),
@@ -284,6 +298,33 @@ def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> No
     assert argv[state_index + 1] == str(
         ROOT / "build/qbox-apollo-fvp/state/yocto-apollo-qvp/rse-flash-image.img"
     )
+
+
+def test_run_qbox_yocto_qvp_uses_qboxconf_ap_cpu_count(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(tmp_path, ap_cpu_count="16")
+
+    assert result.returncode == 0, result.stderr
+    assert "ap cpus:       16" in result.stdout
+
+
+def test_run_qbox_yocto_qvp_explicit_ap_cpu_count_wins(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_env={"QBOX_APOLLO_NUM_CPUS": "8"},
+        ap_cpu_count="16",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "ap cpus:       8" in result.stdout
+
+
+def test_run_qbox_yocto_qvp_rejects_invalid_qboxconf_ap_cpu_count(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_dry_run(tmp_path, ap_cpu_count="17")
+
+    assert result.returncode != 0
+    assert "env.QBOX_APOLLO_NUM_CPUS must be in range 1..16" in result.stderr
 
 
 def test_run_qbox_yocto_skips_initial_state_manifest_by_default(
