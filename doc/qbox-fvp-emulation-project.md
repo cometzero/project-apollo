@@ -272,6 +272,17 @@ with active bank 0 and five images, and VirtIO block 1 contains `fw.cap`
 matching the generated capsule image. This is only preflight evidence; capsule
 application, bank-1 boot markers, and cross-reboot writeback persistence remain
 open.
+The 2026-07-18 Apollo reset qualification advances this boundary without
+closing the A/B lifecycle. RSE SYSCTRL software reset now resets the live RSE,
+SI0, SI1, AP reset-owned state, local crypto, NI-710AE policy, and MHU frames.
+AP cold reset and full-system reset use separate target lists so the AP core
+PPU power-on load pulse cannot reset its own PPU state. The Yocto FWU probe now
+reboots RSE TF-M, SI0 SCP, SI1 Zephyr, TF-A/U-Boot, and Linux a second time
+without the earlier NI-710AE abort or early AP-to-RSE MHU deadlock. However,
+the copied capsule remains visible in the per-run ESP while U-Boot still boots
+Regular State without `FWU: Updating`, RSE image 1, `FIP_B`, or Trial State.
+This narrows the remaining FWU work to capsule discovery/boot-device lifecycle
+and subsequent bank/metadata persistence rather than generic reset recovery.
 The coverage audit now records RSE fidelity labels from RSE-oriented
 `result.json`; the current V004 audit has no missing labels and explicitly
 keeps `mhuv3`, `rse_sacfg`, and `rse_nsacfg` as fidelity debt.
@@ -370,11 +381,11 @@ and are not synthesized in QBox.
 | SBSA watchdog | QEMU model | Linux watchdog probe and reset behavior where practical | FVP DTS, Linux probe logs, Arm SBSA watchdog docs |
 | PL031 RTC | QEMU model | Linux RTC behavior and IRQ compatibility | FVP DTS, Linux probe logs, Arm PL031 docs |
 | Virtio block/net/rng | QEMU virtio-mmio models; unused block placeholders enumerate with zero capacity | Preserve FVP device count, address/IRQ, and Linux driver behavior | FVP config, generated image artifacts, Linux probe logs |
-| MHUv3 | Reusable PBX/MBX SystemC frames with live AP/RSE/SI peers, shared-memory doorbells, and ordered combined IRQ updates | Continue TRM-based channel, reset, and fault semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr/RSE evidence |
+| MHUv3 | Reusable PBX/MBX SystemC frames with live AP/RSE/SI peers, shared-memory doorbells, ordered combined IRQ updates, explicit frame reset, peer-offline hold, and post-reset retry | Continue TRM-based channel and exhaustive fault semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr/RSE evidence |
 | Safety Island CL0/CL1 | Live SI0 SCP and SI1 Zephyr CPUs with PFDI and guest-owned HIPC/RPMsg endpoint | Preserve boot, shared memory, MHU, OpenAMP, reset, and peer-failure behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
 | RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now uses real AP/RSE doorbell peers and the RSE-ATU/AP-flash route, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, reports FWU ABI 1.0, and boots in regular state. | Add secure-service userspace tests and preserve host SCR/PPU/MHU/shared-memory semantics before any further ATU or host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
 | FMU / SSU / SBISTC / SMCF / RAS | Some AP-visible RAS evidence; other safety IP mostly not modeled | Implement documented register and interrupt behavior needed for diagnostics and tests | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
-| PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, secure pending-mailbox preservation, malformed-length recovery, and requester-aware cross-instance deadline hold until the real SI0 response releases the channel | Add peer-offline, reset-time cancellation and fault-injection behavior | Zena PFDI docs, Linux/Zephyr/SCP code, FVP/QBox differential and component/runtime logs |
+| PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, secure pending-mailbox preservation, malformed-length recovery, reset-time cancellation, peer-offline hold, and requester-aware cross-instance deadline handling | Add exhaustive fault-injection and reconnect ordering | Zena PFDI docs, Linux/Zephyr/SCP code, FVP/QBox differential and component/runtime logs |
 | Power/performance control | AP-visible behavior only | Model SCMI-visible power/performance contracts before low-level PPU fidelity | Zena power/performance docs, SCMI logs |
 
 ## Implementation Workflow
