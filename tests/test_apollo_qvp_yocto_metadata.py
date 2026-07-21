@@ -98,6 +98,8 @@ REQUIRED_SNIPPETS: Final = {
     BSP / "conf/machine/apollo-qvp.conf": (
         'KMACHINE = "apollo-qvp"',
         'ARM_SYSTEMREADY_FIRMWARE = "firmware-apollo-qvp:do_deploy"',
+        "FVP_CONFIG[ros.virtio_block1.image_path]",
+        "efi-capsule-update-disk-image-apollo-qvp.img",
     ),
     BSP / "recipes-bsp/images/firmware-apollo-qvp.bb": (
         'APOLLO_FIRMWARE_MACHINE = "apollo-qvp"',
