@@ -169,6 +169,23 @@ auto_build_threads() {
     fi
 }
 
+deactivate_virtualenv() {
+    local virtualenv_bin="${VIRTUAL_ENV:-}"
+    local path_entry
+    local -a clean_path=() path_entries=()
+
+    [[ -n "${virtualenv_bin}" ]] || return 0
+    virtualenv_bin="${virtualenv_bin%/}/bin"
+    IFS=: read -r -a path_entries <<<"${PATH}"
+    for path_entry in "${path_entries[@]}"; do
+        [[ "${path_entry}" == "${virtualenv_bin}" ]] || clean_path+=("${path_entry}")
+    done
+    PATH="$(IFS=:; printf '%s' "${clean_path[*]}")"
+    unset VIRTUAL_ENV
+    export PATH
+    hash -r
+}
+
 if [[ ! -f "${POKY_DIR}/oe-init-build-env" ]]; then
     echo "error: missing ${POKY_DIR}/oe-init-build-env" >&2
     exit 1
@@ -181,6 +198,7 @@ fi
 
 export TEMPLATECONF
 export MACHINE="${APOLLO_MACHINE}"
+deactivate_virtualenv
 
 if [[ "${KEEP_CONF}" == "1" ]]; then
     echo "notice: preserving existing configuration in ${BUILD_DIR}/conf" >&2
