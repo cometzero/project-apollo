@@ -1442,7 +1442,7 @@ def test_tfm_build_dry_run_resolves_platform_from_yocto_vars(tmp_path: Path) -> 
     assert "-DCROSS_COMPILE=arm-none-eabi" in output
 
 
-def test_stale_yocto_vars_cache_rejected_before_default_loading(
+def test_stale_yocto_vars_cache_refreshed_before_default_loading(
     tmp_path: Path,
 ) -> None:
     # Given: the cache claims a hash for live config that no longer matches.
@@ -1476,6 +1476,22 @@ def test_stale_yocto_vars_cache_rejected_before_default_loading(
         )
         + "\n",
     )
+    tools_dir = tmp_path / "tools"
+    collector_log = add_fake_collector_python(
+        tools_dir,
+        tmp_path,
+        {
+            "nexios-image": {
+                "MACHINE": "apollo-fvp",
+                "RD_ASPEN_VARIANT": "fresh-cfg",
+                "PC_CPUS_COUNT_DEFAULT": "4",
+            },
+            "u-boot": {
+                "MACHINE": "apollo-fvp",
+                "UBOOT_MACHINE": "fresh_defconfig",
+            },
+        },
+    )
 
     # When: dry-run would otherwise apply build/Kconfig defaults from cache.
     result = run_local_build(
@@ -1485,15 +1501,19 @@ def test_stale_yocto_vars_cache_rejected_before_default_loading(
         extra_env={
             "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "1",
             "APOLLO_LOCAL_BUILD_YOCTO_VARS": str(vars_path),
+            "PATH": f"{tools_dir}:/usr/bin:/bin",
         },
     )
 
-    # Then: stale values are rejected before they affect the resolved plan.
-    assert result.returncode != 0
+    # Then: the cache is refreshed before its values affect the resolved plan.
+    assert result.returncode == 0, output_of(result)
     output = output_of(result)
-    assert "stale config hash" in output
+    assert "refreshing stale Yocto local-build vars" in output
     assert "stale-machine" not in output
-    assert "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=0" in output
+    assert "RD_ASPEN_VARIANT=fresh-cfg fresh_defconfig defconfig" in output
+    assert "collect_yocto_local_build_vars.py" in collector_log.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_tfm_build_dry_run_rejects_unresolved_platform() -> None:

@@ -70,7 +70,8 @@ apollo_local_build_generate_yocto_vars()
         return 1
     command -v python3 >/dev/null 2>&1 ||
         return 1
-    python3 "${collector}" --output "${output}" >/dev/null
+    python3 "${collector}" --build-dir "${YOCTO_BUILD_DIR}" \
+        --output "${output}" >/dev/null
 }
 
 apollo_local_build_apply_default()
@@ -94,7 +95,39 @@ apollo_local_build_load_yocto_vars()
 
     [[ "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS}" != "0" ]] || return 0
     apollo_local_build_help_requested "${1:-}" && return 0
-    if [[ ! -f "${cache}" ]]; then
+    if [[ -f "${cache}" ]]; then
+        if ! python3 - "${cache}" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+cache = Path(sys.argv[1])
+try:
+    raw = json.loads(cache.read_text(encoding="utf-8"))
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1) from None
+
+for entry in raw.get("config_paths", {}).values():
+    path = Path(str(entry.get("path", "")))
+    expected = entry.get("sha256")
+    if not expected:
+        continue
+    if not path.is_file():
+        raise SystemExit(1)
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != expected:
+        raise SystemExit(1)
+PY
+        then
+            printf 'notice: refreshing stale Yocto local-build vars: %s\n' \
+                "${cache}" >&2
+            apollo_local_build_generate_yocto_vars "${cache}" ||
+                return 1
+        fi
+    else
         apollo_local_build_generate_yocto_vars "${cache}" ||
             return 1
     fi

@@ -641,34 +641,6 @@ run_component()
 
 parse_args "$@"
 
-if [[ "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}" != 0 &&
-    -f "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" ]]; then
-    python3 - "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" <<'PY'
-from __future__ import annotations
-
-import hashlib
-import json
-import sys
-from pathlib import Path
-
-cache = Path(sys.argv[1])
-raw = json.loads(cache.read_text(encoding="utf-8"))
-for entry in raw.get("config_paths", {}).values():
-    path = Path(str(entry.get("path", "")))
-    expected = entry.get("sha256")
-    if not expected or not path.is_file():
-        continue
-    actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    if actual != expected:
-        print(
-            f"error: stale config hash for {path}; "
-            "refresh Yocto local-build vars or set APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=0",
-            file=sys.stderr,
-        )
-        raise SystemExit(1)
-PY
-fi
-
 if [[ "${COMPONENT_SET}" == 0 ]]; then
     if [[ "${PACKAGE_MODE}" == enabled || "${REFRESH_SDK}" == 1 ]]; then
         SELECTED_COMPONENTS=()

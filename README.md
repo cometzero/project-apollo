@@ -241,7 +241,9 @@ track the active Apollo BitBake configuration without requiring a full image
 build for every invocation. Environment overrides still take precedence over
 cached values. Set `APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=0` to disable cache
 usage, or set `APOLLO_LOCAL_BUILD_YOCTO_VARS=/path/to/json` to select a
-specific cache file.
+specific cache file. If the cached hashes for `local.conf`, `bblayers.conf`,
+or `templateconf.cfg` no longer match the active Yocto build configuration,
+`local_build.sh` regenerates the cache before loading its defaults.
 
 The cache mirrors values local-build directly consumes, including
 `MACHINE`, `RD_ASPEN_VARIANT`, `PC_CPUS_COUNT`, the Linux bootargs tail,
@@ -251,7 +253,8 @@ Yocto-only by design: rootfs composition, WIC layout, dm-verity, UKI A/B
 generation, package QA, licensing, and sstate behavior are intentionally out
 of local-build scope.
 
-To refresh the cached local-build inputs from the active Yocto configuration:
+To force-refresh the cached local-build inputs from the active Yocto
+configuration:
 
 ```bash
 python3 scripts/build/collect_yocto_local_build_vars.py \
