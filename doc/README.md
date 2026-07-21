@@ -1,6 +1,6 @@
 # Arm Auto Solutions Analysis
 
-Updated: 2026-07-15
+Updated: 2026-07-21
 
 This directory contains Codex-facing analysis notes for the current
 `/build/arm/arm-auto-solutions` workspace. The workspace is now a top-level Git
@@ -23,6 +23,14 @@ separate.
   Korean source-backed hardware analysis for Apollo FVP/RD-Aspen CFG2 covering
   RSE, Safety Island CL0/CL1, interconnect, interrupt, processor, I/O, system
   management, and peripheral blocks.
+- [Arm Zena CSS FVP Timer And Counter Analysis KR](arm-zena-css-fvp-timer-counter-analysis-ko.md) -
+  Korean source- and Iris-backed analysis of the Zena CSS REFCLK, shared System
+  Counter, per-domain timer frames, the RSE Local System Counter, and the
+  hardware-versus-FVP topology difference.
+- [FVP Iris Debugging Guide KR](fvp-iris-debugging-guide-ko.md) - Korean guide
+  for building local FVP debug artifacts, launching the existing halted Iris
+  server helper, setting symbolic breakpoints, checking logs, and resolving
+  common manifest, port, symbol, and timeout failures.
 - [Apollo QBox Hardware KR](apollo-qbox-hardware-ko.md) - Korean mapping from
   Apollo FVP hardware blocks to current QBox/QEMU emulation paths, including
   Lua instances, SystemC modules, QEMU modules, and fidelity status.
@@ -30,6 +38,10 @@ separate.
   Korean subsystem-by-subsystem comparison of the Arm Zena CSS FVP memory map
   and Apollo QVP Lua, SystemC, and QEMU implementation modules, including
   explicit partial-model, placeholder, and missing-IP gaps.
+- [QBox-FVP Timer And Counter Comparison KR](qbox-fvp-timer-counter-comparison-ko.md) -
+  Korean comparison of the FVP shared-counter behavior and the current QBox
+  counter islands, including exact frequencies, fidelity gaps, the recommended
+  shared-provider architecture, and post-implementation validation invariants.
 - [Apollo QVP Machine Architecture KR](apollo-qvp-machine-architecture-ko.md) -
   Korean architecture comparison of current Apollo QVP and Arm Zena CSS/FVP,
   covering address views, buses, memory, hardware blocks, routing gaps, and
