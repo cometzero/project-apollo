@@ -1885,12 +1885,12 @@ def parse_args() -> argparse.Namespace:
         "--rse-bl2-delay-accel",
         action="store_true",
         help=(
-            "Forward RSE BL2 delay_cycles acceleration for LBIST, MBIST, "
-            "and CL1 boot wait mimic loops."
+            "Forward RSE BL2 delay_cycles acceleration for the LBIST and "
+            "MBIST mimic loops while preserving the SI startup wait by default."
         ),
     )
     parser.add_argument("--rse-bl2-delay-max-cycles", type=int, default=50 * 1000 * 1000)
-    parser.add_argument("--rse-bl2-delay-expected-hits", type=int, default=3)
+    parser.add_argument("--rse-bl2-delay-expected-hits", type=int, default=2)
     parser.add_argument("--cc3xx-stats-interval", type=int, default=1024)
     parser.add_argument(
         "--cc3xx-status-read-fastpath",

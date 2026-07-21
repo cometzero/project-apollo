@@ -4522,8 +4522,8 @@ def write_result(
                 "max_cycles": args.rse_bl2_delay_max_cycles,
                 "expected_hits": args.rse_bl2_delay_expected_hits,
                 "fidelity_note": (
-                    "opt-in performance mode; skips TF-M BL2 delay_cycles loops "
-                    "used to mimic LBIST, MBIST, and CL1 boot wait time"
+                    "opt-in performance mode; skips the configured prefix of TF-M BL2 "
+                    "delay_cycles loops; the default preserves the SI startup wait"
                 ),
                 "effective_when": "qbox_perf_profile.rse_hotpath_profile.stats.bl2_delay_accel.hits > 0",
             },
@@ -5446,9 +5446,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--rse-bl2-delay-accel",
         action="store_true",
         help=(
-            "Enable opt-in RSE BL2 delay_cycles acceleration. The hook skips "
-            "the guest spin loops used to mimic LBIST, MBIST, and CL1 boot "
-            "wait timing without changing TF-M binaries."
+            "Enable opt-in RSE BL2 delay_cycles acceleration. By default the "
+            "hook skips the LBIST and MBIST mimic loops while preserving the "
+            "SI startup wait without changing TF-M binaries."
         ),
     )
     parser.add_argument(
@@ -5465,10 +5465,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rse-bl2-delay-expected-hits",
         type=int,
-        default=3,
+        default=2,
         help=(
             "Clear the BL2 delay PC watch after this many successful skips. "
-            "Use 0 to keep it armed."
+            "The default preserves the third, SI startup wait; use 0 to keep the watch armed."
         ),
     )
     parser.add_argument(
