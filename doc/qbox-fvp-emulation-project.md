@@ -100,6 +100,23 @@ an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
 recovery. Unimplemented combinations remain explicit extended-validation
 debt rather than boot-compatibility bridges.
 
+The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
+QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
+MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI
+bridge creates an instance-local QOM proxy whose callbacks read and schedule
+against the same SystemC CSS counter; it does not copy the count into an SSE
+replica. Counter-change notifications are delivered on the owning QEMU
+IOThread. QEMU provides only reusable Arm counter-provider hooks and the
+optional non-secure CNTCTLBase capability. QBox core retains only generic
+libqemu ABI-size negotiation and `MemTxAttrs.user` propagation. QBox
+Platform's `qemu_timer_api` owns the clock, IOThread job, reset, IRQ, provider,
+and snapshot C++ adapters over the low-level libqemu exports. Apollo addresses,
+frequencies, frame policy, bridge implementation, and Lua wiring remain in
+QBox Platform. The final live run registered the Linux MMIO timer at
+125MHz, reached the root shell, and passed the strict timer snapshot and full
+coverage audit under
+`build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/`.
+
 The 2026-07-23 runtime A/B found that connecting the AP `ARMCPU` generic
 timers to that external bridge delayed Linux clockevent wakeups even though
 the guest still reported `arch_sys_counter` at 125MHz. The production Apollo

@@ -48,14 +48,16 @@ AP CPU external-provider 연결 설명은 구현 이력을 나타내며, product
 
 | 검증 | 결과 | Evidence |
 | --- | --- | --- |
-| QEMU AP MMIO access/reset qtest | 9/9 pass | `build/qbox-apollo-qvp/timer-validation/20260722-final/qemu-mmio-qtest-2.log` |
-| QBox 표준 local build | pass | `build/qbox-apollo-qvp/timer-validation/20260722-final/local-build-qbox.log` |
-| Apollo static map | 76/76 pass | `build/qbox-apollo-qvp/ap-map-9-1-1/ap-map-audit.json` |
-| live CL0+CL1 full-system boot | pass, Linux login 55.101초 | `build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/result.json` |
-| QBox timer snapshot | pass, CSS 7개 view exact identity | `build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/timer-snapshot.json` |
+| QEMU AP MMIO provider/access/reset qtest | 10/10 pass | `build/qemu-timer-qtest-standalone/meson-logs/testlog.txt` |
+| QBox Platform counter integration unit | 3/3 pass | `build/local-apollo-qvp/work/qbox-platform/Testing/Temporary/LastTest.log` |
+| QBox 표준 local build | pass | `build/local-apollo-qvp/logs/qbox-build.log` |
+| Apollo static map | 76/76 pass | `build/qbox-apollo-qvp/full-map-validation.json` |
+| live CL0+CL1 full-system boot | pass, login prompt 53.384초 | `build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/result.json` |
+| Linux AP MMIO timer probe | pass, 125.00MHz physical | `build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/qbox-primary-console.log` |
+| QBox timer snapshot | pass, strict CSS shared-provider/access/IRQ gate | `build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/timer-snapshot.json` |
 | FVP Iris two-sample snapshot | pass | `build/qbox-apollo-qvp/timer-validation/final-differential/fvp/timer-snapshot-final.json` |
-| QBox/FVP differential | 44/44 pass | `build/qbox-apollo-qvp/timer-validation/final-differential/timer-differential.json` |
-| full coverage audit | pass | `build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/full-coverage-audit.json` |
+| QBox/FVP differential | 44/44 pass | `build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/timer-differential.json` |
+| full coverage audit | pass | `build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/full-coverage-audit.json` |
 
 QBox의 여러 `QemuInstance`는 MULTI TCG에서 서로 다른 local virtual time까지
 진행할 수 있다. 따라서 snapshot은 각 consumer의 raw count를 bridge epoch로
@@ -78,9 +80,10 @@ domain을 구현해야 한다.
 1. **CSS System Counter domain**
    - 물리적으로 하나인 CSS REFCLK 기반 count state를 SMD, AP, SI0 및 CFG2
      SI1이 공유한다.
-   - count state는 QBox core의 재사용 가능한 SystemC provider가 소유한다.
+   - count state는 QBox Platform의 SystemC provider가 소유한다.
    - AP, SI0, SI1은 서로 다른 QEMU DSO/`QemuInstance`이므로 각 instance 안에
-     proxy를 하나씩 만들고 모두 같은 SystemC provider에 연결한다.
+     callback proxy를 하나씩 만들고, 모든 read/deadline/snapshot을 같은 SystemC
+     provider에 직접 전달한다. QEMU-local counter state 복제본은 만들지 않는다.
    - CPU Generic Timer의 comparator, virtualization register와 PPI는 QEMU
      `ARMCPU`에 그대로 둔다.
    - AP memory-mapped Generic Timer의 frame별 CVAL/control/ISTATUS와 SPI 48/49도
@@ -214,13 +217,13 @@ IRQ는 `device/include/platform_irq.h:38-40,58`과 Zena guide
                       |                       |
               CSS REFCLK domain          RSE local domain
                       |                       |
-          QBox arm_system_counter      RSE QEMU Clock source
+     QBox Platform arm_system_counter RSE QEMU Clock source
           one coherent count state              |
           125MHz / effective 1            QEMU sse-counter
                       |                       |
           +-----------+----------+      +-----+-----+-----+-----+
           |           |          |      |     |     |     |     |
-       SMD/SI0     AP proxy    SI proxies   TIMER0 TIMER1 TIMER2 TIMER3
+       SMD/SI0    AP bridge   SI bridges   TIMER0 TIMER1 TIMER2 TIMER3
        MMIO views     |         |    |      IRQ3  IRQ4  IRQ5  IRQ27
                       |         |    |
                   AP QEMU     SI0  SI1 QEMU
@@ -233,17 +236,21 @@ Cross-chip sync: independent request/ack block, not a count provider
 ```
 
 QOM object link는 서로 다른 QEMU DSO 사이를 연결할 수 없다. 따라서 AP, SI0,
-SI1 각 QEMU instance 안에 proxy object를 하나씩 생성하되, proxy의 host callback
-opaque가 동일한 QBox `arm_system_counter`를 가리키게 한다. RSE는 이 CSS proxy를
-사용하지 않는다.
+SI1 각 QEMU instance 안에는 QBox Platform이 만든 local QOM callback proxy를
+하나씩 두고, `qemu_arm_generic_timer_counter_bridge`가 QEMU virtual time을
+SystemC time으로 변환해 같은 `arm_system_counter`를 직접 조회한다. proxy는
+별도 count state를 소유하지 않는다. CPU와 MMIO timer는 자기 instance의 proxy를
+QOM link로 참조한다. RSE만 CSS bridge를 사용하지 않고 독립 local SSE counter를
+유지한다.
 
 ## 5. 상세 설계 계약
 
-### 5.1 QBox CSS counter provider
+### 5.1 QBox Platform CSS counter provider
 
-QBox core에 `systemc-components/arm_system_counter/`를 추가한다. 이 module은
+QBox Platform에 `systemc-components/arm_system_counter/`를 둔다. 이 module은
 MMIO register를 직접 소유하지 않고 physical counter state와 consumer API만
-제공한다.
+제공한다. Apollo의 counter topology와 synchronization policy는 platform
+integration 책임이므로 QBox core에는 두지 않는다.
 
 최소 state는 다음과 같다.
 
@@ -402,6 +409,14 @@ link가 있으면 다음 consumer만 provider를 사용한다.
    - provider notification 시 frame별 timer를 다시 arm/cancel하고 IRQ를
      재평가한다.
 
+Apollo AP integration은 non-secure Linux가 `CNTCTLBase`의 `CNTACR0`을 설정해
+사용 가능한 frame을 선택한다. `access-control=on`에서 이 접근까지 모두 RAZ/WI로
+막으면 Linux `arch-timer-mmio` probe가 `-EINVAL`로 실패한다. 따라서 QEMU는
+기본값 false인 opt-in `cntctlbase-ns-access` property를 제공하고 Apollo만 true로
+설정한다. 이 경우에도 `CNTNSAR`은 secure-only이고, reset의 bit 0만 설정되므로
+non-secure frame 0만 열리며 secure frame 1은 계속 RAZ/WI이다. generic QEMU의
+기존 default와 다른 machine의 보안 정책은 바뀌지 않는다.
+
 provider의 reported frequency와 CPU `cntfrq`, MMIO `cntfrq`가 executed 125MHz contract와
 다르면 realization 단계에서 fail-fast한다. null provider의 기존 default와
 migration format은 바꾸지 않는다. external provider mode에서는 counter state를
@@ -435,13 +450,13 @@ physical output을 PPI 20, hypervisor output을 PPI 19에 연결한다. 이는 t
 복사하지 않는다. Iris target/output 및 FVP GIC 상태로 별도 matrix를 P0에서
 확정한다.
 
-### 5.4 libqemu 및 QBox per-instance bridge
+### 5.4 libqemu callback proxy 및 QBox Platform per-instance bridge
 
-QEMU provider proxy의 callback 등록/해제와 change notification을
-`libqemu/wrappers/target/arm.{h,c}` 및 `libqemu/exports.py`에 노출한다. 현재
-`libqemu_init()`은 크기나 version 정보 없이 library 내부 `LibQemuExports *`를
-반환하므로, 기존 struct 뒤에 field를 붙이고 null을 검사하는 방식은 ABI-safe하지
-않다(`libqemu/libqemu.h:50-56`, `libqemu/libqemu.c:170-178`).
+QEMU의 Arm CPU/MMIO timer는 reusable generic counter-provider interface를
+사용한다. 서로 다른 QEMU DSO의 QOM graph를 직접 연결할 수 없으므로, libqemu는
+instance-local callback proxy를 만들고 QBox Platform의 bridge가 그 callback을
+구현한다. 이 callback proxy는 Apollo production wiring의 실제 전송 경로이며
+호환성만을 위해 남겨 둔 unused ABI가 아니다.
 
 따라서 기존 `libqemu_init`은 legacy consumer용으로 보존하고 새
 `libqemu_init_v2(argc, argv, requested_abi, caller_struct_size, &actual_size)` symbol을
@@ -453,32 +468,35 @@ size가 필요한 마지막 field까지 포함하는지 확인한 뒤에만 expo
 lockstep 방식도 허용하지만, system libqemu 경로에서는 v2 negotiation을 생략하지
 않는다.
 
-QBox core에
-`qemu-components/timer/qemu_arm_generic_timer_counter_bridge/`를 추가한다. 각
-bridge는 하나의 `QemuInstance`와 하나의 `arm_system_counter`를 constructor
-argument로 받는다.
+QBox Platform에
+`qemu-components/qemu_arm_generic_timer_counter_bridge/`를 둔다. 각 bridge는
+하나의 `QemuInstance`와 하나의 공유 `arm_system_counter`를 constructor argument로
+받고, 그 instance에 callback proxy를 만든다. callback의 `count_at_ns`,
+`deadline_ns`, `snapshot`은 QEMU virtual nanosecond를 검증된 epoch offset으로
+SystemC absolute nanosecond로 변환한 뒤 같은 shared provider를 직접 호출한다.
+별도의 QEMU-local CSS counter state는 만들지 않는다.
 
 필수 threading/lifecycle 규칙은 다음과 같다.
 
-- QEMU read/deadline callback은 그 instance의 `qemu_ns`를 provider에 전달한다.
-  QEMU thread에서 `sc_time_stamp()`를 읽지 않는다.
+- CPU/MMIO read와 deadline 계산은 bridge callback에서 같은 SystemC provider를
+  조회한다. QEMU thread에서 `sc_time_stamp()`를 직접 읽지 않고, capture한 epoch와
+  callback 인자의 QEMU virtual time만 사용한다.
 - 최초 synchronization point에서 QEMU virtual-clock epoch와 SystemC absolute
-  time의 대응을 assert한다. 차이가 있으면 bridge가 검증된 per-instance offset을
+  time의 대응을 capture한다. 차이가 있으면 bridge가 검증된 per-instance offset을
   적용하며 암묵적으로 0이라고 가정하지 않는다.
 - provider mutation notification은 generation별로 coalesce한다.
 - provider lock을 해제한 뒤 instance별 cancellable iothread executor를 사용하고,
-  한 번에 하나의 QEMU BQL만 잡아 provider proxy의 consumer notification을
-  실행한다. bridge를 임의의 CPU0 lifetime에 결합하지 않도록 libqemu/QBox
+  한 번에 하나의 QEMU BQL만 잡아 proxy consumer의 deadline과 IRQ 재평가를
+  요청한다. bridge를 임의의 CPU0 lifetime에 결합하지 않도록 libqemu/QBox
   `QemuInstance`에 generic enqueue/drain API를 추가한다.
 - 두 QEMU instance의 BQL을 동시에 잡지 않는다.
-- callback 실행 중 counter reset/write가 발생해도 lock inversion이 없어야 한다.
-- teardown 순서는 observer 해제, pending job drain/cancel, QEMU callback clear,
-  proxy destroy이다. pending job이 raw dangling `this`를 참조하면 안 된다.
-- QEMU `Clock` 생성/입력 연결과 QOM device reset은 QEMU 내부 API로 수행한다.
-  QBox가 QEMU private struct를 조작하지 않도록 versioned libqemu export와 RAII
-  wrapper를 함께 제공한다.
+- sync job 실행 중 counter reset/write가 발생해도 lock inversion이 없어야 한다.
+- teardown 순서는 observer 해제, pending job stop/drain, callback clear, proxy
+  destroy이다. pending job이 raw dangling `this`를 참조하면 안 된다.
+- simulation 시작 후 structural rate/scale 변경은 금지한다. 허용된 mutation은
+  shared provider generation을 올리고 각 owning IOThread에 notification을 전달한다.
 
-AP, SI0, SI1 CPU wrapper와 AP MMIO wrapper는 동일 QEMU instance의 proxy object를
+AP, SI0, SI1 CPU wrapper와 AP MMIO wrapper는 동일 QEMU instance의 bridge proxy를
 두 번째 constructor argument로 받아 QOM link를 설정한다. 현재 one-argument
 constructor는 non-Apollo/legacy config를 위해 유지한다.
 
@@ -495,11 +513,17 @@ register map의 offset, reset value, scaling, access size와 interrupt semantics
 표로 비교한다. 차이가 있으면 QEMU model을 재사용 가능한 방식으로 확장하며,
 register-only SystemC stub으로 되돌아가지 않는다.
 
-QBox core에는 다음 wrapper가 필요하다.
+Apollo/RSE-specific wrapper는 QBox core가 아니라 QBox Platform에 둔다.
 
 - `qemu_clock_source`: QEMU `Clock` 생성, frequency 설정과 input 연결
 - `qemu_sse_counter`: control/read 두 MMIO region 노출
 - `qemu_sse_timer`: counter QOM link, 한 MMIO region과 한 IRQ 노출
+
+이 wrapper와 libqemu timer 호출 adapter는 QBox Platform의
+`qemu-components/qemu_timer_api/`가 소유한다. QBox core에서는 검증된 export
+table과 QOM object handle만 사용하고 clock/reset/job/snapshot용 timer 전용 C++
+API를 추가하지 않는다. 따라서 다른 QBox platform은 Apollo timer component나
+Zena register 정책에 대한 build dependency를 갖지 않는다.
 
 이 object들은 outer AP QEMU가 아니라 `rse_cpu_pass` 내부의 active RSE
 `QemuInstance`에 생성한다(`platforms/apollo/hw-block/rse.lua:611-683,763-806`).
@@ -624,19 +648,20 @@ reported metadata로 유지한다. 정확한 `nWARMRESETAON` platform source 연
 | 파일/영역 | 변경 |
 | --- | --- |
 | `include/hw/timer/arm_generic_timer_counter.h` | nullable provider interface와 consumer contract 추가 |
-| `hw/timer/arm_generic_timer_counter.c` | proxy/provider 공통 helper와 notification 구현 |
+| `hw/timer/arm_generic_timer_counter.c` | provider 공통 helper, callback proxy와 notification 구현 |
+| `hw/timer/sse-{counter,timer}.c` | RSE local counter/timer reset, notifier lifecycle와 snapshot 구현 |
 | `hw/timer/meson.build` | 새 generic timer source 등록 |
 | `target/arm/cpu.h`, `cpu.c` | optional provider link, notifier lifecycle, timer initialization 검증 |
 | `target/arm/helper.c` | count와 Generic Timer deadline provider 경로 추가 |
 | `target/arm/tcg/op_helper.c` | WFIT deadline provider 경로 추가 |
-| `include/hw/timer/arm_arch_timer_mmio.h`, `hw/timer/arm_arch_timer_mmio.c` | frame state는 유지하고 optional counter source/deadline 연결 |
-| `libqemu/wrappers/target/arm.{h,c}` | proxy callback 등록/해제/notify export |
+| `include/hw/timer/arm_arch_timer_mmio.h`, `hw/timer/arm_arch_timer_mmio.c` | frame state와 optional counter source/deadline을 유지하고 opt-in `cntctlbase-ns-access` 추가 |
+| `libqemu/wrappers/target/arm.{h,c}` | timer snapshot API와 ABI-compatible legacy proxy export |
 | `libqemu/libqemu.{h,c}`, `libqemu/libqemu.version` | size/version-negotiated `libqemu_init_v2` 추가, legacy init 보존 |
-| `libqemu/exports.py` | v2 export table에 timer/clock/reset API 생성 |
+| `libqemu/exports.py` | v2 export table에 low-level timer/clock/reset/job API 생성 |
 | `libqemu/wrappers/timer.{h,c}` 또는 신규 clock wrapper | QEMU-owned `Clock` 생성, frequency와 input 연결 API |
 | `libqemu/wrappers/qdev.{h,c}` | QOM device 단위 reset API |
 | libqemu iothread job helper | CPU에 종속되지 않는 cancellable enqueue/drain API |
-| `tests/qtest/arm-arch-timer-mmio-test.c` | external count, frame 독립성, notification/deadline test 추가 |
+| `tests/qtest/arm-arch-timer-mmio-test.c` | external count, frame 독립성, notification/deadline 및 Apollo NS CNTCTLBase access test 추가 |
 | 신규/기존 Arm CPU qtest | CPU counter, PPI, WFIT와 legacy fallback test |
 
 QEMU 변경은 Apollo address나 IRQ 숫자를 포함하지 않는다. 모든 platform-specific
@@ -646,34 +671,34 @@ QEMU 변경은 Apollo address나 IRQ 숫자를 포함하지 않는다. 모든 pl
 
 | 파일/영역 | 변경 |
 | --- | --- |
-| `systemc-components/arm_system_counter/` | anchored shared counter, observer와 reset API |
-| `systemc-components/CMakeLists.txt` | component 등록 |
-| `tests/components/arm-system-counter/` | time, rate, mutation, rollover, reset, concurrency unit test |
-| `qemu-components/timer/qemu_arm_generic_timer_counter_bridge/` | QemuInstance별 SystemC↔libqemu bridge |
-| `qemu-components/timer/qemu_arm_arch_timer_mmio/` | optional proxy constructor/link 지원 |
-| `qemu-components/timer/qemu_clock_source/` | RSE counter용 QEMU Clock wrapper |
-| `qemu-components/timer/qemu_sse_counter/` | RSE LSC control/read wrapper |
-| `qemu-components/timer/qemu_sse_timer/` | RSE timestamp timer/IRQ wrapper |
-| `qemu-components/common/src/libqemu-cxx/` | v2 ABI negotiation, clock/device-reset와 callback lifetime RAII wrapper |
+| `qemu-components/common/src/libqemu-cxx/` | v2 ABI negotiation과 export-size 검증; timer 전용 adapter는 포함하지 않음 |
 | `systemc-components/common/include/tlm-extensions/request-context.h` | secure와 privileged QEMU attrs normalization |
 | `qemu-components/common/include/ports/initiator.h` | `MemTxAttrs.user`를 RequestContext privilege로 전달 |
 | libqemu-cxx memory attrs/test | QEMU `user` bit 보존 및 secure/privileged 조합 검증 |
-| `qemu-components/common/include/qemu-instance.h` | instance-owned iothread executor와 drain lifecycle |
-| 관련 CMake/test | bridge, multi-instance, reset/teardown test 등록 |
+| 관련 CMake/test | libqemu v2 base-table negotiation test 등록 |
 
 ### 7.3 `hsoc-stack/tools/qbox-platform`
 
 | 파일/영역 | 변경 |
 | --- | --- |
+| `systemc-components/arm_system_counter/` | anchored shared counter, observer와 reset API |
+| `tests/components/arm_system_counter/` | time, rate, mutation, rollover, reset, concurrency unit test |
+| `qemu-components/qemu_timer_api/` | QBox core 밖의 clock/job/reset/IRQ/provider/snapshot adapter |
 | `systemc-components/host_gtimer/` | private counter 제거, Zena frame frontend로 전환 |
+| `qemu-components/qemu_arm_generic_timer_counter_bridge/` | instance-local QOM proxy callback을 shared SystemC provider에 직접 연결하는 Apollo synchronization bridge |
+| `qemu-components/qemu_arm_arch_timer_mmio/` | bridge proxy, frame access와 IRQ를 연결하는 AP REFCLK wrapper |
+| `qemu-components/qemu_clock_source/` | QEMU counter input clock wrapper |
+| `qemu-components/qemu_sse_counter/` | 독립 RSE LSC control/read wrapper |
+| `qemu-components/qemu_sse_timer/` | RSE timestamp timer/IRQ wrapper |
+| `tests/platforms/apollo-timer-counter-tests.cc` | 두 QEMU instance bridge의 shared count/IRQ/epoch integration test |
 | `systemc-components/rse_ppc_filter/` | RequestContext 기반 PPC0/PPC2 access enforcement |
 | `tests/components/host_gtimer/` | read-side increment 기대를 제거하고 shared/time contract 검증 |
 | `qemu-components/cpu_arm/cpu_arm_cortex_a720ae/` | optional provider link와 AP PPI 19/20/26/27/28/29/30 output |
 | `qemu-components/cpu_arm/cpu_arm_cortex_r82/` | optional provider link와 domain별 architected timer output |
 | `platforms/apollo/hw-block/system_mgmt.lua` | CSS provider와 SMD control/read view 연결 |
-| `platforms/apollo/hw-block/ap_compute.lua` | AP proxy, CPU와 MMIO frame 연결 |
-| `platforms/apollo/hw-block/si_cl0.lua` | SI0 proxy, CPU와 local frame 연결 |
-| `platforms/apollo/hw-block/si_cl1.lua` | SI1 proxy와 CPU 연결; 100MHz 독립 island 제거 |
+| `platforms/apollo/hw-block/ap_compute.lua` | AP bridge, CPU/MMIO frame과 opt-in NS CNTCTLBase access 연결 |
+| `platforms/apollo/hw-block/si_cl0.lua` | SI0 bridge와 CPU/local frame 연결 |
+| `platforms/apollo/hw-block/si_cl1.lua` | SI1 bridge와 CPU 연결; 100MHz 독립 island 제거 |
 | `platforms/apollo/hw-block/rse.lua` | RSE LSC stub 교체, TIMER0~3/alias/IRQ/reset 연결 |
 | `platforms/apollo/hw-block/config.lua` | source-backed RSE timer map/IRQ와 resolved frequency contract |
 | Apollo platform tests/README | topology, runtime option과 fidelity deviation 문서화 |
@@ -738,11 +763,11 @@ contract, AP access control, AP/SI PPI, RSE map/IRQ/reset split과 SSE compatibi
 
 상태: **완료**. nullable provider, CPU/MMIO/SSE consumer, deadline notification,
 versioned libqemu ABI, QEMU Clock/reset/job API와 legacy fallback을 구현했다. strict
-ARM/AArch64 build와 SSE 5/5, MMIO 9/9 qtest가 통과했다.
+ARM/AArch64 build와 SSE 5/5, MMIO 10/10 qtest가 통과했다.
 
 작업:
 
-- `TMR-100`: generic counter-provider QOM interface와 host proxy 구현
+- `TMR-100`: generic counter-provider QOM interface와 ABI-compatible host proxy 구현
 - `TMR-101`: ARMCPU count/deadline/notification 경로 연결
 - `TMR-102`: WFIT deadline 경로 연결
 - `TMR-103`: AP MMIO timer count/deadline/notification 경로 연결
@@ -750,6 +775,8 @@ ARM/AArch64 build와 SSE 5/5, MMIO 9/9 qtest가 통과했다.
 - `TMR-105`: generic per-instance iothread enqueue/drain API 추가
 - `TMR-106`: legacy null-provider 및 external-provider qtest 추가
 - `TMR-107`: QEMU-owned Clock 연결과 per-device reset libqemu API 추가
+- `TMR-108`: SSE counter를 generic provider로 연결하고 qtest 추가
+- `TMR-109`: default-off NS CNTCTLBase access property와 security regression qtest 추가
 
 완료 gate:
 
@@ -759,22 +786,25 @@ ARM/AArch64 build와 SSE 5/5, MMIO 9/9 qtest가 통과했다.
   재계산된다.
 - AP MMIO frame 0/1 count는 같고 CVAL/control/ISTATUS/IRQ는 독립이다.
 
-### P2. QBox shared provider와 per-instance bridge
+### P2. QBox Platform shared provider와 per-instance bridge
 
-상태: **single-chip production scope 완료**. `arm_system_counter`, instance별 bridge,
-QEMU wrapper, iothread ordering과 `MemTxAttrs.user` propagation을 구현했다. QBox core
-timer CTest 4/4와 세 QEMU instance의 runtime snapshot이 통과했다. simulation 시작
-후 structural rate/scale 변경은 금지하므로 현재 Apollo 경로에는 future-dated
-reanchor rendezvous가 필요하지 않으며, 일반화된 mutable rendezvous는 P6로 이동했다.
+상태: **single-chip production scope 완료**. `arm_system_counter`, instance별
+`qemu_arm_generic_timer_counter_bridge`, QEMU wrapper, iothread ordering과
+`MemTxAttrs.user` propagation을 구현했다. Apollo-specific model과 test는 QBox
+Platform이 소유한다. QBox core는 v2 export-table 검증과 QOM handle만 제공하며,
+timer 전용 adapter와 Apollo counter model은 QBox Platform이 소유한다.
+simulation 시작 후 structural rate/scale 변경은 금지하므로 현재 Apollo 경로에는
+future-dated reanchor rendezvous가 필요하지 않으며, 일반화된 mutable rendezvous는
+P6로 이동했다.
 
 작업:
 
 - `TMR-200`: `arm_system_counter` state, rational math와 observer 구현
 - `TMR-201`: reset, halt, partial CNTCV write와 generation 구현
 - `TMR-202`: input-tick phase/fractional accumulator와 deadline edge case 구현
-- `TMR-203`: QEMU provider proxy의 libqemu-cxx wrapper 구현
-- `TMR-204`: AP/SI instance별 bridge와 epoch alignment 구현
-- `TMR-205`: deferred notification, BQL ordering과 teardown 구현
+- `TMR-203`: generic libqemu callback proxy와 versioned callback ABI 구현
+- `TMR-204`: AP/SI instance별 bridge와 SystemC/QEMU epoch alignment 구현
+- `TMR-205`: bridge notification, BQL ordering과 teardown 구현
 - `TMR-206`: 2개 이상 QEMU instance가 같은 provider를 사용하는 integration test
 - `TMR-207`: Apollo structural rate/scale을 simulation 시작 후 immutable로 고정;
   일반 mutable cross-instance rendezvous는 P6로 이동
@@ -782,9 +812,10 @@ reanchor rendezvous가 필요하지 않으며, 일반화된 mutable rendezvous�
 
 완료 gate:
 
-- frozen time의 모든 bridge count가 정확히 같다.
+- frozen time의 모든 bridge consumer count가 정확히 같다.
 - 각 QEMU raw observation은 bridge epoch로 변환한 SystemC time의 provider count와
   정확히 같다.
+- bridge proxy는 자체 CSS count state를 갖지 않고 shared provider를 직접 조회한다.
 - simulation 시작 후 structural rate/scale 변경 시 fail-fast한다.
 - provider lock 밖에서 notification을 enqueue하고 owning IOThread에서 drain한다.
 - queued notification teardown unit test와 full-system 종료가 callback-after-free
@@ -798,9 +829,9 @@ provider에 연결하고, CPU PPI와 AP MMIO SPI/access reset값을 FVP 측정�
 작업:
 
 - `TMR-300`: SMD control/read와 SI0 view를 하나의 provider에 연결
-- `TMR-301`: AP, SI0, SI1 QEMU bridge instance 생성
+- `TMR-301`: AP, SI0, SI1 QEMU-local callback bridge 생성
 - `TMR-302`: A720AE/R82 CPU를 optional provider에 연결
-- `TMR-303`: AP MMIO secure/non-secure frame을 AP proxy에 연결
+- `TMR-303`: AP MMIO secure/non-secure frame을 AP bridge에 연결
 - `TMR-304`: independent SI1 100MHz island와 read-side `+4096` stub 제거
 - `TMR-305`: sync frame이 counter provider로 오인되지 않도록 ownership 검사 추가
 - `TMR-306`: AP/SI별 architected timer output을 wrapper에 노출하고 PPI matrix 교정
@@ -911,14 +942,15 @@ python3 scripts/test/audit_qbox_core_boundary.py
 
 ### T1. QBox/SystemC unit
 
-다음 명령으로 QBox/SystemC counter와 bridge를 검증했다.
+다음 명령으로 QBox Platform counter와 per-instance bridge를 검증한다.
 
 ```bash
 cmake --build build/local-apollo-qvp/work/qbox-platform \
-  --target arm_system_counter-tests host_gtimer-tests --parallel <jobs>
+  --target arm_system_counter-tests host_gtimer-tests \
+  apollo-timer-counter-tests --parallel <jobs>
 
 ctest --test-dir build/local-apollo-qvp/work/qbox-platform \
-  -R '^(arm_system_counter-tests|host_gtimer-tests)$' \
+  -R '^(arm_system_counter-tests|host_gtimer-tests|apollo-timer-counter-tests)$' \
   --output-on-failure
 ```
 
@@ -983,18 +1015,17 @@ count로 정규화된다.
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 \
   --timeout 600 \
-  --no-post-login-probe \
   --timer-probe \
+  --skip-build \
+  --no-post-login-probe \
   --out-dir \
-    build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final
+    build/qbox-apollo-qvp/timer-boundary-strict-final-20260722
 
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json \
-    build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/result.json \
-  --ap-map-audit \
-    build/qbox-apollo-qvp/ap-map-9-1-1/ap-map-audit.json \
+    build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/result.json \
   --output \
-    build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/full-coverage-audit.json
+    build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/full-coverage-audit.json
 ```
 
 `--timer-probe`는 AP CPU/MMIO count, frame deadline/SPI, SI CPU/CNTBase와 RSE
@@ -1046,11 +1077,11 @@ python3 scripts/debug/capture_fvp_timer_snapshot.py \
 
 python3 scripts/test/compare_qbox_fvp_timer_snapshots.py \
   --qbox \
-    build/qbox-apollo-qvp/timer-validation/20260722-full-runtime-final/timer-snapshot.json \
+    build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/timer-snapshot.json \
   --fvp \
     build/qbox-apollo-qvp/timer-validation/final-differential/fvp/timer-snapshot-final.json \
   --output \
-    build/qbox-apollo-qvp/timer-validation/final-differential/timer-differential.json
+    build/qbox-apollo-qvp/timer-boundary-strict-final-20260722/timer-differential.json
 ```
 
 FVP snapshot은 U-Boot `_start`와 `board_init_f`에서 각각 모든 CSS view가 같은
@@ -1063,9 +1094,9 @@ native timebase로 비교하며, 최종 differential은 44/44 pass다.
 Nested repository dependency 때문에 다음 순서로 commit한다. 각 commit은
 Conventional Commit, English message와 `git commit -s`를 사용한다.
 
-1. `qemu`: generic external counter provider, CPU/MMIO consumer와 qtests
-2. `qbox`: SystemC provider, libqemu bridge와 unit tests
-3. `qbox`: QEMU Clock/SSE counter/timer wrapper와 tests
+1. `qemu`: generic external counter provider, SSE participation, CPU/MMIO consumer와 qtests
+2. `qbox`: generic libqemu v2 clock/job/reset/snapshot support
+3. `qbox-platform`: SystemC provider, Arm/SSE wrappers와 per-instance bridge
 4. `qbox-platform`: CSS frontend/Lua/CPU wrapper 전환
 5. `qbox-platform`: RSE LSC/timer/IRQ/reset/security 전환
 6. top-level: Iris/differential 도구, docs와 nested submodule pointer
@@ -1082,7 +1113,7 @@ API를 가리키는 중간 상태를 push하지 않는다.
 | 선택한 frequency 계약이 component source 의도와 불일치 | QBox만 맞춰도 firmware timebase가 틀릴 수 있음 | 정상 FVP executed 125MHz를 production 기준으로 고정하고 malformed component write는 별도 debt로 추적 |
 | count read만 provider화 | CVAL/IRQ/WFIT가 stale deadline 사용 | count/deadline/notify qtest 세 항목을 하나의 gate로 묶음 |
 | unversioned libqemu struct 확장 | 오래된 DSO에서 out-of-bounds function pointer read | v2 ABI/size negotiation, legacy init 분리 |
-| QEMU instance별 time epoch 불일치 | 같은 source인데 count가 다름 | startup epoch assertion과 multi-instance frozen-time test |
+| QEMU instance별 bridge epoch 불일치 | 같은 source인데 count가 다름 | startup epoch capture와 multi-instance frozen-time test |
 | consumer QEMU가 mutation time보다 run-ahead | 이미 실행된 guest side effect는 notification으로 복구 불가 | mutable phase zero-lookahead와 all-instance rendezvous |
 | provider mutex/BQL deadlock | full-system hang | provider lock 밖 notification, one-BQL rule, stress test |
 | future TLM anchor 조기 적용 | 다른 domain이 미래 state 관측 | annotated delay consume 또는 ordered PEQ 검증 |
@@ -1111,7 +1142,7 @@ phase는 완료가 아니다.
   top-level submodule pointer
 - P0 frequency/reset/access decision record 및 FVP raw snapshot
 - QEMU legacy/external provider qtest 결과
-- QBox counter/bridge/RSE wrapper unit 및 multi-instance 결과
+- QBox Platform counter/bridge/RSE wrapper unit 및 multi-instance 결과
 - Apollo map validator JSON
 - live CL0+CL1 full-system `result.json`과 per-domain log
 - coverage audit JSON
