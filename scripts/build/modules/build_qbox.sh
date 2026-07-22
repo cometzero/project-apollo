@@ -121,12 +121,14 @@ build_qbox()
 
     if [[ "${qbox_run_unit_tests}" == 1 ]]; then
         run_logged qbox-unit-test-build \
+            "${qbox_tool_env[@]}" \
             "${cmake_cmd}" \
             --build "${QBOX_PLATFORM_BUILD_DIR}" \
             --target qbox_platform_systemc_component_tests \
             --parallel "${JOBS}"
 
         run_logged qbox-unit-tests \
+            "${qbox_tool_env[@]}" \
             ctest \
             --test-dir "${QBOX_PLATFORM_BUILD_DIR}" \
             -L qbox-platform-systemc-components \

@@ -1183,14 +1183,19 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
     qbox_core = tmp_path / "qbox"
     qbox_platform = tmp_path / "qbox-platform"
     qbox_qemu = tmp_path / "qemu"
+    native_bin = sdk_dir / "sysroots/x86_64-pokysdk-linux/usr/bin"
     for path in (tools_dir, sdk_dir, qbox_core, qbox_platform, qbox_qemu):
         path.mkdir(parents=True)
+    native_bin.mkdir(parents=True)
     write_file(sdk_dir / "environment-setup-apollo-test", "export TARGET_PREFIX=aarch64-test-\n")
+    for tool in ("python3", "meson", "meson.real"):
+        write_file(native_bin / tool, "#!/bin/sh\nexit 0\n")
+        (native_bin / tool).chmod(0o755)
     write_file(
         tools_dir / "cmake",
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
-        "printf 'cmake %s\\n' \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n"
+        "printf 'cmake path=%s python-no-user-site=%s args=%s\\n' \"${PATH%%:*}\" \"${PYTHONNOUSERSITE:-}\" \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n"
         "build_dir=''\n"
         "prev=''\n"
         "for arg in \"$@\"; do\n"
@@ -1207,7 +1212,7 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
         tools_dir / "ctest",
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
-        "printf 'ctest %s\\n' \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n",
+        "printf 'ctest path=%s python-no-user-site=%s args=%s\\n' \"${PATH%%:*}\" \"${PYTHONNOUSERSITE:-}\" \"$*\" >> \"${APOLLO_TEST_CALL_LOG}\"\n",
     )
     write_file(
         tools_dir / "ccache",
@@ -1242,6 +1247,19 @@ def test_qbox_systemc_tests_option_runs_ctest_after_qbox_build(tmp_path: Path) -
     assert "--test-dir" in calls
     assert "-L qbox-platform-systemc-components" in calls
     assert calls.index("--target apollo_fvp_full_system") < calls.index("ctest ")
+    tool_shim = local_build / "work/qbox-platform/.qbox-sdk-native-tools"
+    build_lines = [
+        line
+        for line in calls.splitlines()
+        if line.startswith("cmake ") and "--build" in line
+    ]
+    assert len(build_lines) == 2
+    ctest_line = next(
+        line for line in calls.splitlines() if line.startswith("ctest ")
+    )
+    for line in (*build_lines, ctest_line):
+        assert f"path={tool_shim}" in line
+        assert "python-no-user-site=1" in line
     timing = (local_build / "logs" / "local-build-timings.tsv").read_text(
         encoding="utf-8"
     )
