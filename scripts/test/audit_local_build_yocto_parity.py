@@ -16,10 +16,9 @@ from typing import Final, NotRequired, TypedDict
 SCHEMA_VERSION: Final = 1
 ROOT: Final = Path(__file__).resolve().parents[2]
 LOCAL_COMMON: Final = Path("scripts/build/local_build_common.sh")
+LOCAL_CONFIG: Final = Path("local_build.conf")
 BOOT_DISK: Final = Path("scripts/build/modules/build_boot_disk.sh")
 OPTEE: Final = Path("scripts/build/modules/build_optee.sh")
-UBOOT: Final = Path("scripts/build/modules/build_uboot.sh")
-LINUX: Final = Path("scripts/build/modules/build_linux.sh")
 MAXCPUS_PATTERN: Final = re.compile(r"(?:^|\s)maxcpus=([0-9]+)(?=\s|$)")
 
 
@@ -79,14 +78,7 @@ def read_text(path: Path) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def required_match(pattern: str, text: str, path: Path, name: str) -> str:
-    match = re.search(pattern, text, re.MULTILINE)
-    if match is None:
-        raise AuditInputError(path, f"could not find {name}")
-    return match.group(1)
-
-
-def source_common_values(vars_path: Path) -> dict[str, str]:
+def source_common_values() -> dict[str, str]:
     names = (
         "MACHINE",
         "RD_ASPEN_VARIANT",
@@ -95,6 +87,8 @@ def source_common_values(vars_path: Path) -> dict[str, str]:
         "BOOTLOADER_LINUX_APPEND",
         "LOCAL_BUILD_BOOTARGS",
         "OPTEE_PLATFORM",
+        "UBOOT_MACHINE",
+        "KERNEL_DEVICETREE",
     )
     script = (
         "set -euo pipefail; "
@@ -103,8 +97,6 @@ def source_common_values(vars_path: Path) -> dict[str, str]:
     )
     env = {
         "PATH": os.environ.get("PATH", ""),
-        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "1",
-        "APOLLO_LOCAL_BUILD_YOCTO_VARS": str(vars_path),
     }
     completed = subprocess.run(
         ["bash", "-lc", script],
@@ -116,7 +108,10 @@ def source_common_values(vars_path: Path) -> dict[str, str]:
         stderr=subprocess.PIPE,
     )
     if completed.returncode != 0:
-        raise AuditInputError(vars_path, completed.stderr.strip() or "failed to source local_build_common.sh")
+        raise AuditInputError(
+            ROOT / LOCAL_CONFIG,
+            completed.stderr.strip() or "failed to source local_build_common.sh",
+        )
     values: dict[str, str] = {}
     for line in completed.stdout.splitlines():
         name, value = line.split("=", 1)
@@ -124,14 +119,10 @@ def source_common_values(vars_path: Path) -> dict[str, str]:
     return values
 
 
-def local_values(vars_path: Path) -> LocalValues:
-    common = read_text(LOCAL_COMMON)
+def local_values() -> LocalValues:
     boot_disk = read_text(BOOT_DISK)
     optee = read_text(OPTEE)
-    uboot = read_text(UBOOT)
-    linux = read_text(LINUX)
-    sourced = source_common_values(vars_path)
-    dtb_path = required_match(r'^\s*local dtb="\$\{LINUX_BUILD_DIR\}/([^"]+)"$', linux, LINUX, "dtb")
+    sourced = source_common_values()
     return LocalValues(
         machine=sourced["MACHINE"],
         rd_aspen_variant=sourced["RD_ASPEN_VARIANT"],
@@ -142,13 +133,8 @@ def local_values(vars_path: Path) -> LocalValues:
         bootargs_uses_variable='setenv bootargs "${LOCAL_BUILD_BOOTARGS}"' in boot_disk,
         optee_has_versioned_workdir="optee-os/4.7.0" in optee,
         optee_platform=sourced["OPTEE_PLATFORM"],
-        uboot_defconfig=required_match(
-            r'^\s*RD_ASPEN_VARIANT="\$\{VARIANT\}" ([A-Za-z0-9_]+_defconfig)$',
-            uboot,
-            UBOOT,
-            "U-Boot defconfig",
-        ),
-        linux_dtb=Path(dtb_path).name,
+        uboot_defconfig=sourced["UBOOT_MACHINE"],
+        linux_dtb=Path(sourced["KERNEL_DEVICETREE"]).name,
     )
 
 
@@ -233,7 +219,7 @@ def bootloader_linux_append_maxcpus_check(capture: VarsCapture) -> Check | None:
     machine = yocto_var(capture, "nexios-image", "MACHINE")
     pc_cpus_count = yocto_var(capture, "nexios-image", "PC_CPUS_COUNT_DEFAULT")
     bootargs = yocto_var(capture, "nexios-image", "BOOTLOADER_LINUX_APPEND")
-    if machine != "apollo-fvp" or pc_cpus_count is None or bootargs is None:
+    if machine is None or pc_cpus_count is None or bootargs is None:
         return None
     maxcpus_match = MAXCPUS_PATTERN.search(bootargs)
     if maxcpus_match is None:
@@ -273,24 +259,27 @@ def bootloader_linux_append_maxcpus_check(capture: VarsCapture) -> Check | None:
 
 def build_checks(capture: VarsCapture, local: LocalValues) -> list[Check]:
     bootargs_var = yocto_var(capture, "nexios-image", "BOOTLOADER_LINUX_APPEND")
+    if bootargs_var is not None:
+        bootargs_var = " ".join(bootargs_var.split())
+    local_bootargs_tail = " ".join(local.bootloader_linux_append.split())
     expected_bootargs = (
         "console=ttyAMA0,115200 earlycon=pl011,0x1A400000 root=/dev/ram0 rw rdinit=/init loglevel=7"
     )
     if bootargs_var is not None:
         expected_bootargs = f"{expected_bootargs} {bootargs_var}"
     checks = [
-        compare_check("machine", local.machine, yocto_var(capture, "nexios-image", "MACHINE"), "nexios-image", "MACHINE", str(LOCAL_COMMON)),
-        compare_check("pc_cpus_count", local.pc_cpus_count, yocto_var(capture, "nexios-image", "PC_CPUS_COUNT_DEFAULT"), "nexios-image", "PC_CPUS_COUNT_DEFAULT", str(LOCAL_COMMON)),
-        compare_check("rd_aspen_variant", local.rd_aspen_variant, yocto_var(capture, "nexios-image", "RD_ASPEN_VARIANT"), "nexios-image", "RD_ASPEN_VARIANT", str(LOCAL_COMMON)),
-        compare_check("uboot_defconfig", local.uboot_defconfig, yocto_var(capture, "u-boot", "UBOOT_MACHINE"), "u-boot", "UBOOT_MACHINE", str(UBOOT)),
-        compare_check("linux_dtb", local.linux_dtb, Path(yocto_var(capture, "linux-yocto-rt", "KERNEL_DEVICETREE") or "").name or None, "linux-yocto-rt", "KERNEL_DEVICETREE", str(LINUX)),
-        compare_check("linux_defconfig", local.linux_defconfig, yocto_var(capture, "linux-yocto-rt", "KBUILD_DEFCONFIG"), "linux-yocto-rt", "KBUILD_DEFCONFIG", str(LOCAL_COMMON)),
-        compare_check("optee_platform", local.optee_platform, yocto_var(capture, "optee-os", "PLATFORM"), "optee-os", "PLATFORM", str(OPTEE)),
+        compare_check("machine", local.machine, yocto_var(capture, "nexios-image", "MACHINE"), "nexios-image", "MACHINE", str(LOCAL_CONFIG)),
+        compare_check("pc_cpus_count", local.pc_cpus_count, yocto_var(capture, "nexios-image", "PC_CPUS_COUNT_DEFAULT"), "nexios-image", "PC_CPUS_COUNT_DEFAULT", str(LOCAL_CONFIG)),
+        compare_check("rd_aspen_variant", local.rd_aspen_variant, yocto_var(capture, "nexios-image", "RD_ASPEN_VARIANT"), "nexios-image", "RD_ASPEN_VARIANT", str(LOCAL_CONFIG)),
+        compare_check("uboot_defconfig", local.uboot_defconfig, yocto_var(capture, "u-boot", "UBOOT_MACHINE"), "u-boot", "UBOOT_MACHINE", str(LOCAL_CONFIG)),
+        compare_check("linux_dtb", local.linux_dtb, Path(yocto_var(capture, "linux-yocto-rt", "KERNEL_DEVICETREE") or "").name or None, "linux-yocto-rt", "KERNEL_DEVICETREE", str(LOCAL_CONFIG)),
+        compare_check("linux_defconfig", local.linux_defconfig, yocto_var(capture, "linux-yocto-rt", "KBUILD_DEFCONFIG"), "linux-yocto-rt", "KBUILD_DEFCONFIG", str(LOCAL_CONFIG)),
+        compare_check("optee_platform", local.optee_platform, yocto_var(capture, "optee-os", "PLATFORM"), "optee-os", "PLATFORM", str(LOCAL_CONFIG)),
     ]
     checks.append(
         missing_check("bootloader_linux_append_capture", "nexios-image", "BOOTLOADER_LINUX_APPEND")
         if bootargs_var is None
-        else compare_check("bootloader_linux_append_capture", local.bootloader_linux_append, bootargs_var, "nexios-image", "BOOTLOADER_LINUX_APPEND", str(LOCAL_COMMON))
+        else compare_check("bootloader_linux_append_capture", local_bootargs_tail, bootargs_var, "nexios-image", "BOOTLOADER_LINUX_APPEND", str(LOCAL_CONFIG))
     )
     checks.append(
         missing_check("boot_disk_bootargs", "nexios-image", "BOOTLOADER_LINUX_APPEND")
@@ -330,7 +319,7 @@ def out_of_scope() -> list[dict[str, str]]:
 
 def build_report(vars_path: Path) -> Report:
     capture = parse_capture(vars_path)
-    checks = build_checks(capture, local_values(vars_path))
+    checks = build_checks(capture, local_values())
     status = "fail" if any(check["status"] == "fail" for check in checks) else "pass"
     return {
         "schema_version": SCHEMA_VERSION,
@@ -338,7 +327,7 @@ def build_report(vars_path: Path) -> Report:
         "inputs": {
             "vars": str(vars_path),
             "repo_root": str(ROOT),
-            "local_files": [str(LOCAL_COMMON), str(BOOT_DISK), str(OPTEE), str(UBOOT), str(LINUX)],
+            "local_files": [str(LOCAL_CONFIG), str(LOCAL_COMMON), str(BOOT_DISK), str(OPTEE)],
         },
         "checks": checks,
         "out_of_scope": out_of_scope(),

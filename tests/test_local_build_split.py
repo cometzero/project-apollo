@@ -122,7 +122,8 @@ def test_tfa_rebuild_observes_stale_platform_reset_and_dts_arg(
     yocto_tmp = tmp_path / "yocto-tmp"
     tfa_src = tmp_path / "trusted-firmware-a"
     env = {
-        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+        "MACHINE": "apollo-fvp",
+        "TF_A_PLATFORM": "apollo_fvp",
         "ROOT_DIR": str(ROOT),
         "LOCAL_BUILD_DIR": str(local_build_dir),
         "YOCTO_TMP": str(yocto_tmp),

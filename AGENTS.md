@@ -103,6 +103,8 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
      remoteproc, or PFDI Linux work.
    - `$update-codebase-indexes` for listing, refreshing, or verifying one or
      all canonical codebase-memory-mcp submodule indexes.
+   - `$update-local-build-conf` for explicitly comparing active Yocto recipe
+     values and refreshing the manually maintained `local_build.conf`.
    When delegating, pass the exact registered role as `agent_type`; a
    `task_name` or role name in the message does not select its TOML model.
    The registrations and default model are in `.codex/config.toml`. If the

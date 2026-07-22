@@ -35,7 +35,6 @@ def test_buildroot_overlay_removes_stale_pfdi_local_agent(
     env = os.environ.copy()
     env.update(
         {
-            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
             "TEST_BUILDROOT_BUILD_DIR": str(build_dir),
             "TEST_BUILDROOT_OVERLAY": str(overlay),
             "TEST_WORK_DIR": str(work_dir),

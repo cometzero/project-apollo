@@ -32,6 +32,8 @@ EXPECTED_SKILLS = {
     "linux-kernel-review",
     "qbox-dev",
     "systemc-dev",
+    "update-codebase-indexes",
+    "update-local-build-conf",
     "yocto-dev",
     "yocto-review",
 }

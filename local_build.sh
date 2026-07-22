@@ -665,9 +665,8 @@ if [[ "${QBOX_RUN_UNIT_TESTS:-0}" == 1 ||
         die "--qbox-unit-tests requires qbox build or clean-build"
 fi
 
-if [[ "${ACTION}" == build && "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}" == 0 &&
-    "${TFM_PLATFORM:-}" == missing/* ]]; then
-    die "TFM_PLATFORM ${TFM_PLATFORM} is unresolved; refresh trusted-firmware-m Yocto variables."
+if [[ "${ACTION}" == build && "${TFM_PLATFORM:-}" == missing/* ]]; then
+    die "TFM_PLATFORM ${TFM_PLATFORM} is unresolved; update local_build.conf."
 fi
 
 if ((CCACHE_REPORT_ONLY)); then

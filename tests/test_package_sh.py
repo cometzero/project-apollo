@@ -59,7 +59,6 @@ def test_package_readme_and_manifest_use_qvp_machine_paths(tmp_path: Path) -> No
         cwd=ROOT,
         env={
             **os.environ,
-            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
             "MACHINE": "apollo-qvp",
             "LOCAL_BUILD_DIR": str(local_build),
             "PACKAGE_DIR": str(package_dir),

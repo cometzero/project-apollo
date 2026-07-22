@@ -54,20 +54,20 @@ def test_audit_passes_when_sourced_defaults_match_capture(tmp_path: Path) -> Non
         vars_path,
         {
             "nexios-image": {
-                "BOOTLOADER_LINUX_APPEND": "console=ttyAMA0 root=/dev/ram0",
-                "MACHINE": "apollo-fvp",
+                "BOOTLOADER_LINUX_APPEND": "cpuidle.governor=menu maxcpus=4 mem=4064M",
+                "MACHINE": "apollo-qvp",
                 "PC_CPUS_COUNT_DEFAULT": "4",
                 "RD_ASPEN_VARIANT": "cfg2",
             },
             "u-boot": {
-                "MACHINE": "apollo-fvp",
+                "MACHINE": "apollo-qvp",
                 "RD_ASPEN_VARIANT": "cfg2",
-                "UBOOT_MACHINE": "apollo_fvp_defconfig",
+                "UBOOT_MACHINE": "apollo_qvp_defconfig",
             },
             "linux-yocto-rt": {
-                "KBUILD_DEFCONFIG": "apollo_fvp_defconfig",
-                "KERNEL_DEVICETREE": "arm/apollo-fvp.dtb",
-                "MACHINE": "apollo-fvp",
+                "KBUILD_DEFCONFIG": "apollo_qvp_defconfig",
+                "KERNEL_DEVICETREE": "arm/apollo-qvp.dtb",
+                "MACHINE": "apollo-qvp",
             },
             "optee-os": {"PLATFORM": "automotive_rd-rdaspen"},
         },
@@ -84,7 +84,9 @@ def test_audit_passes_when_sourced_defaults_match_capture(tmp_path: Path) -> Non
     assert checks["rd_aspen_variant"]["status"] == "pass"
     assert checks["uboot_defconfig"]["status"] == "pass"
     assert checks["linux_dtb"]["status"] == "pass"
-    assert checks["boot_disk_bootargs"]["local"].endswith("console=ttyAMA0 root=/dev/ram0")
+    assert checks["boot_disk_bootargs"]["local"].endswith(
+        "cpuidle.governor=menu maxcpus=4 mem=4064M"
+    )
 
 
 def test_audit_catches_stale_env_override_against_capture(tmp_path: Path, monkeypatch) -> None:
@@ -95,14 +97,14 @@ def test_audit_catches_stale_env_override_against_capture(tmp_path: Path, monkey
         {
             "nexios-image": {
                 "BOOTLOADER_LINUX_APPEND": "cpuidle.governor=menu maxcpus=4 mem=4064M",
-                "MACHINE": "apollo-fvp",
+                "MACHINE": "apollo-qvp",
                 "PC_CPUS_COUNT_DEFAULT": "4",
                 "RD_ASPEN_VARIANT": "cfg2",
             },
-            "u-boot": {"UBOOT_MACHINE": "apollo_fvp_defconfig"},
+            "u-boot": {"UBOOT_MACHINE": "apollo_qvp_defconfig"},
             "linux-yocto-rt": {
-                "KBUILD_DEFCONFIG": "apollo_fvp_defconfig",
-                "KERNEL_DEVICETREE": "arm/apollo-fvp.dtb",
+                "KBUILD_DEFCONFIG": "apollo_qvp_defconfig",
+                "KERNEL_DEVICETREE": "arm/apollo-qvp.dtb",
             },
             "optee-os": {"PLATFORM": "automotive_rd-rdaspen"},
         },
@@ -124,14 +126,14 @@ def test_audit_fails_when_captured_bootargs_have_stale_maxcpus(tmp_path: Path) -
         {
             "nexios-image": {
                 "BOOTLOADER_LINUX_APPEND": "cpuidle.governor=menu maxcpus=4 mem=4064M",
-                "MACHINE": "apollo-fvp",
+                "MACHINE": "apollo-qvp",
                 "PC_CPUS_COUNT_DEFAULT": "8",
                 "RD_ASPEN_VARIANT": "cfg2",
             },
-            "u-boot": {"UBOOT_MACHINE": "apollo_fvp_defconfig"},
+            "u-boot": {"UBOOT_MACHINE": "apollo_qvp_defconfig"},
             "linux-yocto-rt": {
-                "KBUILD_DEFCONFIG": "apollo_fvp_defconfig",
-                "KERNEL_DEVICETREE": "arm/apollo-fvp.dtb",
+                "KBUILD_DEFCONFIG": "apollo_qvp_defconfig",
+                "KERNEL_DEVICETREE": "arm/apollo-qvp.dtb",
             },
             "optee-os": {"PLATFORM": "automotive_rd-rdaspen"},
         },

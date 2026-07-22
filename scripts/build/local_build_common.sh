@@ -7,7 +7,6 @@ APOLLO_LOCAL_BUILD_COMMON_SOURCED=1
 LOCAL_BUILD_SCRIPT_DIR="${LOCAL_BUILD_SCRIPT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 LOCAL_BUILD_MODULE_DIR="${LOCAL_BUILD_MODULE_DIR:-${LOCAL_BUILD_SCRIPT_DIR}/modules}"
 ROOT_DIR="${ROOT_DIR:-$(cd "${LOCAL_BUILD_SCRIPT_DIR}/../.." && pwd)}"
-APOLLO_LOCAL_BUILD_USE_YOCTO_VARS="${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS:-1}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
 
 apollo_local_build_config_error()
@@ -25,195 +24,15 @@ apollo_local_build_require_safe_token()
         apollo_local_build_config_error "${name} must be a safe token containing only letters, digits, '_' or '-': ${value}"
 }
 
-apollo_local_build_active_machine()
-{
-    if [[ -n "${MACHINE:-}" ]]; then
-        printf '%s\n' "${MACHINE}"
-        return 0
-    fi
-    local local_conf="${YOCTO_BUILD_DIR}/conf/local.conf"
-    local machine
-    if [[ -f "${local_conf}" ]]; then
-        machine="$(
-            sed -nE 's/^[[:space:]]*MACHINE[[:space:]]*(\?\?=|\?=|:=|\+=|=)[[:space:]]*"([^"]+)".*/\2/p' \
-                "${local_conf}" | tail -n 1
-        )"
-        if [[ -n "${machine}" ]]; then
-            printf '%s\n' "${machine}"
-            return 0
-        fi
-    fi
-    printf 'apollo-fvp\n'
-}
-
-APOLLO_LOCAL_BUILD_DEFAULT_MACHINE="$(apollo_local_build_active_machine)"
-apollo_local_build_require_safe_token MACHINE "${APOLLO_LOCAL_BUILD_DEFAULT_MACHINE}"
-APOLLO_LOCAL_BUILD_YOCTO_VARS="${APOLLO_LOCAL_BUILD_YOCTO_VARS:-${YOCTO_BUILD_DIR}/local-${APOLLO_LOCAL_BUILD_DEFAULT_MACHINE}/yocto-local-build-vars.json}"
-if [[ "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" != /* ]]; then
-    APOLLO_LOCAL_BUILD_YOCTO_VARS="${ROOT_DIR}/${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
+LOCAL_BUILD_CONFIG="${LOCAL_BUILD_CONFIG:-${ROOT_DIR}/local_build.conf}"
+if [[ "${LOCAL_BUILD_CONFIG}" != /* ]]; then
+    LOCAL_BUILD_CONFIG="${ROOT_DIR}/${LOCAL_BUILD_CONFIG}"
 fi
+[[ -r "${LOCAL_BUILD_CONFIG}" ]] ||
+    apollo_local_build_config_error "local build configuration is not readable: ${LOCAL_BUILD_CONFIG}"
+# shellcheck source=local_build.conf
+source "${LOCAL_BUILD_CONFIG}"
 
-apollo_local_build_help_requested()
-{
-    case "${1:-}" in
-        -h|--help|help) return 0 ;;
-        *) return 1 ;;
-    esac
-}
-
-apollo_local_build_generate_yocto_vars()
-{
-    local output="$1"
-    local collector="${ROOT_DIR}/scripts/build/collect_yocto_local_build_vars.py"
-
-    [[ -f "${collector}" ]] ||
-        return 1
-    command -v python3 >/dev/null 2>&1 ||
-        return 1
-    python3 "${collector}" --build-dir "${YOCTO_BUILD_DIR}" \
-        --output "${output}" >/dev/null
-}
-
-apollo_local_build_apply_default()
-{
-    local name="$1"
-    local value="$2"
-
-    case "${name}" in
-        MACHINE|RD_ASPEN_VARIANT|PC_CPUS_COUNT|LINUX_DEFCONFIG|KERNEL_DEVICETREE|BOOTLOADER_LINUX_APPEND|OPTEE_PLATFORM|UBOOT_MACHINE|TF_A_PLATFORM|TFM_PLATFORM|SCP_PLATFORM|ZEPHYR_BOARD|QBOX_APOLLO_BUILD_TARGET|QBOX_CORE_DIR|QBOX_PLATFORM_DIR|QBOX_QEMU_DIR) ;;
-        *) return 0 ;;
-    esac
-    if [[ -z "${!name+x}" ]]; then
-        printf -v "${name}" '%s' "${value}"
-    fi
-}
-
-apollo_local_build_load_yocto_vars()
-{
-    local cache="${APOLLO_LOCAL_BUILD_YOCTO_VARS}"
-    local assignments line name value
-
-    [[ "${APOLLO_LOCAL_BUILD_USE_YOCTO_VARS}" != "0" ]] || return 0
-    apollo_local_build_help_requested "${1:-}" && return 0
-    if [[ -f "${cache}" ]]; then
-        if ! python3 - "${cache}" <<'PY'
-from __future__ import annotations
-
-import hashlib
-import json
-import sys
-from pathlib import Path
-
-cache = Path(sys.argv[1])
-try:
-    raw = json.loads(cache.read_text(encoding="utf-8"))
-except (OSError, json.JSONDecodeError):
-    raise SystemExit(1) from None
-
-for entry in raw.get("config_paths", {}).values():
-    path = Path(str(entry.get("path", "")))
-    expected = entry.get("sha256")
-    if not expected:
-        continue
-    if not path.is_file():
-        raise SystemExit(1)
-    actual = hashlib.sha256(path.read_bytes()).hexdigest()
-    if actual != expected:
-        raise SystemExit(1)
-PY
-        then
-            printf 'notice: refreshing stale Yocto local-build vars: %s\n' \
-                "${cache}" >&2
-            apollo_local_build_generate_yocto_vars "${cache}" ||
-                return 1
-        fi
-    else
-        apollo_local_build_generate_yocto_vars "${cache}" ||
-            return 1
-    fi
-
-    if ! assignments="$(
-        python3 - "${cache}" <<'PY'
-from __future__ import annotations
-
-import json
-import sys
-from pathlib import Path
-from typing import Final
-
-
-SCHEMA_VERSION: Final = 1
-MAPPINGS: Final = (
-    ("MACHINE", "nexios-image", "MACHINE"),
-    ("RD_ASPEN_VARIANT", "nexios-image", "RD_ASPEN_VARIANT"),
-    ("PC_CPUS_COUNT", "nexios-image", "PC_CPUS_COUNT_DEFAULT"),
-    ("UBOOT_MACHINE", "u-boot", "UBOOT_MACHINE"),
-    ("LINUX_DEFCONFIG", "linux-yocto-rt", "KBUILD_DEFCONFIG"),
-    ("KERNEL_DEVICETREE", "linux-yocto-rt", "KERNEL_DEVICETREE"),
-    ("BOOTLOADER_LINUX_APPEND", "nexios-image", "BOOTLOADER_LINUX_APPEND"),
-    ("OPTEE_PLATFORM", "optee-os", "PLATFORM"),
-    ("TF_A_PLATFORM", "trusted-firmware-a", "TF_A_PLATFORM"),
-    ("TFM_PLATFORM", "trusted-firmware-m", "TFM_PLATFORM"),
-    ("SCP_PLATFORM", "scp-firmware", "SCP_PLATFORM"),
-    ("ZEPHYR_BOARD", "zephyr-demos-cl1", "ZEPHYR_BOARD"),
-    ("QBOX_APOLLO_BUILD_TARGET", "qbox-apollo-qvp-native", "QBOX_APOLLO_BUILD_TARGET"),
-    ("QBOX_CORE_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_SRC"),
-    ("QBOX_PLATFORM_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QBOX_PLATFORM_SRC"),
-    ("QBOX_QEMU_DIR", "qbox-apollo-qvp-native", "HSOC_APOLLO_QEMU_SRC"),
-)
-
-
-def fail(message: str) -> None:
-    print(f"error: {Path(sys.argv[1])}: {message}", file=sys.stderr)
-    raise SystemExit(1)
-
-
-try:
-    raw = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-except OSError as exc:
-    fail(str(exc))
-except json.JSONDecodeError as exc:
-    fail(f"invalid JSON: {exc.msg}")
-
-if not isinstance(raw, dict):
-    fail("top-level JSON value must be an object")
-if raw.get("schema_version") != SCHEMA_VERSION:
-    fail(f"schema_version must be {SCHEMA_VERSION}")
-recipes = raw.get("recipes")
-if not isinstance(recipes, dict):
-    fail("missing recipes object")
-
-for local_name, recipe, bitbake_name in MAPPINGS:
-    entry = recipes.get(recipe)
-    if entry is None:
-        continue
-    if not isinstance(entry, dict):
-        fail(f"{recipe}: recipe entry must be an object")
-    variables = entry.get("variables")
-    if not isinstance(variables, dict):
-        fail(f"{recipe}: missing variables object")
-    value = str(variables.get(bitbake_name, "")).strip()
-    if value:
-        print(f"{local_name}={value}")
-PY
-    )"; then
-        return 1
-    fi
-    [[ -n "${assignments}" ]] ||
-        return 0
-    while IFS= read -r line; do
-        name="${line%%=*}"
-        value="${line#*=}"
-        apollo_local_build_apply_default "${name}" "${value}"
-    done <<< "${assignments}"
-}
-
-if ! apollo_local_build_load_yocto_vars "${1:-}"; then
-    printf 'error: could not load Yocto local-build vars from %s with APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=1\n' \
-        "${APOLLO_LOCAL_BUILD_YOCTO_VARS}" >&2
-    printf 'error: set APOLLO_LOCAL_BUILD_USE_YOCTO_VARS=0 to use built-in local-build defaults intentionally\n' >&2
-    return 1 2>/dev/null || exit 1
-fi
 MACHINE="${MACHINE:-apollo-fvp}"
 apollo_local_build_require_safe_token MACHINE "${MACHINE}"
 LOCAL_MACHINE_WORK_PREFIX="${MACHINE//-/_}"

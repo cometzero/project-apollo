@@ -70,10 +70,12 @@ package_local_fvp_outputs()
     validate_local_fvp_deploy_root
     preflight_local_fvp_package_tools
     package_local_flash_images
-    export YOCTO_TMP
+    export YOCTO_TMP EFI_ARCH INITRD_ARCHIVE AUTO_AD_NEXIOS_UKI_A
+    export AUTO_AD_NEXIOS_UKI_B AUTO_AD_NEXIOS_UKI_CMDLINE_A
+    export AUTO_AD_NEXIOS_UKI_CMDLINE_B UKIFY_CMD UEFI_SECURE_BOOT
+    export UKI_SB_KEY UKI_SB_CERT
     python3 - "$YOCTO_DEPLOY_DIR" "$LOCAL_BUILD_DIR" "$MACHINE" \
-        "$LOCAL_BUILD_DTB_BASENAME" \
-        "$APOLLO_LOCAL_BUILD_YOCTO_VARS" <<'PY'
+        "$LOCAL_BUILD_DTB_BASENAME" <<'PY'
 from __future__ import annotations
 
 import hashlib
@@ -90,7 +92,6 @@ yocto_deploy = Path(sys.argv[1])
 local_build = Path(sys.argv[2])
 machine = sys.argv[3]
 local_dtb_basename = sys.argv[4]
-vars_path = Path(sys.argv[5])
 deploy = local_build / "deploy"
 images = deploy / "images"
 firmware = deploy / "firmware"
@@ -509,14 +510,6 @@ for entry in cfg.get("data", []):
 cfg["data"] = rewritten_data
 
 
-def recipe_vars(recipe: str) -> dict[str, str]:
-    try:
-        raw = json.loads(vars_path.read_text(encoding="utf-8"))
-    except OSError:
-        return {}
-    return raw.get("recipes", {}).get(recipe, {}).get("variables", {})
-
-
 REQUIRED_UKI_VARS = (
     "INITRD_ARCHIVE",
     "EFI_ARCH",
@@ -526,20 +519,6 @@ REQUIRED_UKI_VARS = (
     "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
     "UEFI_SECURE_BOOT",
 )
-
-
-def refresh_vars_if_needed(variables: dict[str, str]) -> dict[str, str]:
-    missing = [name for name in REQUIRED_UKI_VARS if not variables.get(name)]
-    if not missing:
-        return variables
-    collector = Path.cwd() / "scripts" / "build" / "collect_yocto_local_build_vars.py"
-    if collector.is_file():
-        subprocess.run(["python3", str(collector), "--output", str(vars_path)], check=True)
-    variables = recipe_vars("nexios-image")
-    missing = [name for name in REQUIRED_UKI_VARS if not variables.get(name)]
-    if missing:
-        fail(f"refresh did not provide required UKI variable(s): {', '.join(missing)}")
-    return variables
 
 
 def native_python_env(native_root: Path) -> dict[str, str]:
@@ -602,7 +581,16 @@ def resolve_ukify(raw_cmd: str) -> tuple[str, dict[str, str]]:
 
 linux_source = "yocto-copied"
 if local_linux_inputs_present:
-    variables = refresh_vars_if_needed(recipe_vars("nexios-image"))
+    variables = {
+        name: os.environ.get(name, "")
+        for name in (*REQUIRED_UKI_VARS, "UKIFY_CMD", "UKI_SB_KEY", "UKI_SB_CERT")
+    }
+    missing = [name for name in REQUIRED_UKI_VARS if not variables[name]]
+    if missing:
+        fail(
+            "local_build.conf does not define required UKI variable(s): "
+            + ", ".join(missing)
+        )
     uki_a = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_A", "auto-ad-nexios-a.efi"), "AUTO_AD_NEXIOS_UKI_A")
     uki_b = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_B", "auto-ad-nexios-b.efi"), "AUTO_AD_NEXIOS_UKI_B")
     initrd_name = safe_name(variables["INITRD_ARCHIVE"], "INITRD_ARCHIVE")

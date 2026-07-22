@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 import json
 import os
@@ -35,7 +34,6 @@ def run_local_build(
     *argv: str, extra_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     env = {
-        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
         "PATH": "/usr/bin:/bin",
         "RUN_STAMP": "pytest",
         "HOME": "/nonexistent",
@@ -254,18 +252,15 @@ def test_ccache_required_fails_when_missing(tmp_path: Path) -> None:
     assert "APOLLO_LOCAL_BUILD_CCACHE=required" in output
 
 
-def test_dry_run_builtin_defaults_use_16_pc_cpus() -> None:
-    result = run_local_build(
-        "--dry-run",
-        extra_env={"APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0"},
-    )
+def test_dry_run_local_config_defaults_use_4_pc_cpus() -> None:
+    result = run_local_build("--dry-run")
 
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
-    assert "pc cpus: 16" in output
+    assert "pc cpus: 4" in output
     assert "tfa linux dts: 1" in output
-    assert "maxcpus=16" in output
-    assert "maxcpus=4" not in output
+    assert "maxcpus=4" in output
+    assert "maxcpus=16" not in output
 
 
 def test_dry_run_defaults_to_six_jobs_at_16gb_or_less(tmp_path: Path) -> None:
@@ -347,7 +342,7 @@ def test_package_local_linux_preflights_missing_mtools(tmp_path: Path) -> None:
     add_local_linux_fixture(local_build, modules=False)
     tools_dir = tmp_path / "host-tools"
     tools_dir.mkdir(parents=True)
-    for command in ("bash", "dirname", "python3", "realpath"):
+    for command in ("bash", "dirname", "mkdir", "python3", "realpath"):
         (tools_dir / command).symlink_to(Path("/bin") / command)
     write_file(
         tools_dir / "sgdisk",
@@ -395,7 +390,7 @@ def test_buildroot_dry_run_resolves_initramfs_output() -> None:
     assert component_step_lines(output) == ["buildroot: build"]
     assert "function: build_buildroot_initramfs" in output
     assert "initramfs.cpio.gz" in output
-    assert "build/local-apollo-fvp/deploy/boot" in output
+    assert "build/local-apollo-qvp/deploy/boot" in output
 
 
 def test_boot_artifact_components_dry_run_resolve_existing_module_functions() -> None:
@@ -584,11 +579,11 @@ def test_uboot_defconfig_dry_run_resolves_make_kconfig_command() -> None:
     assert "u-boot: defconfig" in output
     assert "make -C" in output
     assert "hsoc-stack/components/primary_compute/u-boot" in output
-    assert "O=build/local-apollo-fvp/work/u-boot" in output
+    assert "O=build/local-apollo-qvp/work/u-boot" in output
     assert "ARCH=arm" in output
     assert "CROSS_COMPILE=aarch64-poky-linux-" in output
     assert "RD_ASPEN_VARIANT=cfg2" in output
-    assert "apollo_fvp_defconfig" in output
+    assert "apollo_qvp_defconfig" in output
 
 
 def test_linux_menuconfig_dry_run_resolves_make_kconfig_command() -> None:
@@ -602,7 +597,7 @@ def test_linux_menuconfig_dry_run_resolves_make_kconfig_command() -> None:
     assert "linux: menuconfig" in output
     assert "make -C" in output
     assert "hsoc-stack/components/primary_compute/linux" in output
-    assert "O=build/local-apollo-fvp/work/linux" in output
+    assert "O=build/local-apollo-qvp/work/linux" in output
     assert "ARCH=arm64" in output
     assert "CROSS_COMPILE=aarch64-poky-linux-" in output
     assert "menuconfig" in output
@@ -620,10 +615,10 @@ def test_zephyr_savedefconfig_dry_run_resolves_cmake_target() -> None:
     assert "cmake -S" in output
     assert "arm-zena-css/components/safety_island/zephyr/src/apps/sample" in output
     assert "-B" in output
-    assert "build/local-apollo-fvp/work/zephyr-demos-cl1" in output
+    assert "build/local-apollo-qvp/work/zephyr-demos-cl1" in output
     assert "cmake --build" in output
     assert "--target savedefconfig" in output
-    assert "generated defconfig: build/local-apollo-fvp/work/zephyr-demos-cl1/zephyr/defconfig" in output
+    assert "generated defconfig: build/local-apollo-qvp/work/zephyr-demos-cl1/zephyr/defconfig" in output
 
 
 def test_zephyr_kconfig_missing_deps_fail_with_recovery_message(
@@ -799,6 +794,7 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
         "SDK_DIR": str(sdk_dir),
         "YOCTO_BUILD_DIR": str(yocto_build),
         "LOCAL_BUILD_DIR": str(local_build),
+        "MACHINE": "apollo-fvp",
     }
 
     # When: a real Kconfig command reaches SDK setup.
@@ -1146,6 +1142,7 @@ def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
         "SDK_DIR": str(sdk_dir),
         "YOCTO_BUILD_DIR": str(yocto_build),
         "LOCAL_BUILD_DIR": str(local_build),
+        "MACHINE": "apollo-fvp",
         "QBOX_CORE_DIR": str(qbox_core),
         "QBOX_PLATFORM_DIR": str(qbox_platform),
         "QBOX_QEMU_DIR": str(qbox_qemu),
@@ -1258,7 +1255,7 @@ def test_linux_clean_dry_run_shows_only_linux_owned_outputs() -> None:
     assert component_step_lines(output) == ["linux: clean"]
     assert "work/linux" in output
     assert "deploy/boot/Image" in output
-    assert "deploy/boot/apollo-fvp.dtb" in output
+    assert "deploy/boot/apollo-qvp.dtb" in output
     assert "work/trusted-firmware-m" not in output
     assert "work/scp-firmware" not in output
     assert "work/zephyr-demos-cl1" not in output
@@ -1446,9 +1443,9 @@ def make_package_fixture(tmp_path: Path) -> tuple[Path, Path, dict[str, str]]:
     )
 
     env = {
-        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
         "YOCTO_DEPLOY_DIR": str(yocto_deploy),
         "LOCAL_BUILD_DIR": str(local_build),
+        "KERNEL_DEVICETREE": "arm/apollo-fvp.dtb",
         "MACHINE": machine,
     }
     return yocto_deploy, local_build, env
@@ -1482,28 +1479,22 @@ def write_yocto_recipe_vars(
     )
 
 
-def test_tfm_build_dry_run_resolves_platform_from_yocto_vars(tmp_path: Path) -> None:
-    # Given: Yocto collected the Apollo TF-M platform from trusted-firmware-m.
-    vars_path = tmp_path / "yocto-local-build-vars.json"
-    write_yocto_recipe_vars(
-        vars_path,
-        {
-            "nexios-image": {"MACHINE": "apollo-fvp"},
-            "trusted-firmware-m": {
-                "MACHINE": "apollo-fvp",
-                "TFM_PLATFORM": "arm/rse/automotive_rd/apollo-fvp",
-            },
-        },
+def test_tfm_build_dry_run_resolves_platform_from_local_build_conf(
+    tmp_path: Path,
+) -> None:
+    # Given: a reviewed local build configuration selects the FVP TF-M platform.
+    config_path = tmp_path / "local_build.conf"
+    write_file(
+        config_path,
+        'MACHINE="${MACHINE-apollo-fvp}"\n'
+        'TFM_PLATFORM="${TFM_PLATFORM-arm/rse/automotive_rd/apollo-fvp}"\n',
     )
 
-    # When: the local TF-M build plan is resolved from the Yocto cache.
+    # When: the local TF-M build plan is resolved from that configuration.
     result = run_local_build(
         "tf-m",
         "--dry-run",
-        extra_env={
-            "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "1",
-            "APOLLO_LOCAL_BUILD_YOCTO_VARS": str(vars_path),
-        },
+        extra_env={"LOCAL_BUILD_CONFIG": str(config_path)},
     )
 
     # Then: the configure metadata carries a non-empty Apollo platform.
@@ -1514,39 +1505,21 @@ def test_tfm_build_dry_run_resolves_platform_from_yocto_vars(tmp_path: Path) -> 
     assert "-DCROSS_COMPILE=arm-none-eabi" in output
 
 
-def test_stale_yocto_vars_cache_refreshed_before_default_loading(
+def test_local_build_conf_is_loaded_without_yocto_cache_refresh(
     tmp_path: Path,
 ) -> None:
-    # Given: the cache claims a hash for live config that no longer matches.
-    live_config = tmp_path / "build/conf/local.conf"
-    write_file(live_config, 'MACHINE = "apollo-fvp"\n')
+    # Given: obsolete cache inputs and a reviewed local build configuration.
     vars_path = tmp_path / "yocto-local-build-vars.json"
-    write_file(
+    write_yocto_recipe_vars(
         vars_path,
-        json.dumps(
-            {
-                "schema_version": 1,
-                "config_paths": {
-                    "local_conf": {
-                        "path": str(live_config),
-                        "sha256": hashlib.sha256(b"old config\n").hexdigest(),
-                    },
-                },
-                "recipes": {
-                    "nexios-image": {
-                        "command": "fixture bitbake -e nexios-image",
-                        "variables": {
-                            "MACHINE": "stale-machine",
-                            "RD_ASPEN_VARIANT": "stale-cfg",
-                            "PC_CPUS_COUNT_DEFAULT": "99",
-                        },
-                    },
-                },
-            },
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n",
+        {"nexios-image": {"MACHINE": "stale-machine"}},
+    )
+    config_path = tmp_path / "local_build.conf"
+    write_file(
+        config_path,
+        'MACHINE="${MACHINE-apollo-qvp}"\n'
+        'RD_ASPEN_VARIANT="${RD_ASPEN_VARIANT-reviewed-cfg}"\n'
+        'UBOOT_MACHINE="${UBOOT_MACHINE-reviewed_defconfig}"\n',
     )
     tools_dir = tmp_path / "tools"
     collector_log = add_fake_collector_python(
@@ -1565,7 +1538,7 @@ def test_stale_yocto_vars_cache_refreshed_before_default_loading(
         },
     )
 
-    # When: dry-run would otherwise apply build/Kconfig defaults from cache.
+    # When: obsolete cache controls are present during a dry-run.
     result = run_local_build(
         "u-boot",
         "defconfig",
@@ -1573,19 +1546,18 @@ def test_stale_yocto_vars_cache_refreshed_before_default_loading(
         extra_env={
             "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "1",
             "APOLLO_LOCAL_BUILD_YOCTO_VARS": str(vars_path),
+            "LOCAL_BUILD_CONFIG": str(config_path),
             "PATH": f"{tools_dir}:/usr/bin:/bin",
         },
     )
 
-    # Then: the cache is refreshed before its values affect the resolved plan.
+    # Then: only local_build.conf affects the plan and no collector runs.
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
-    assert "refreshing stale Yocto local-build vars" in output
+    assert "refreshing stale Yocto local-build vars" not in output
     assert "stale-machine" not in output
-    assert "RD_ASPEN_VARIANT=fresh-cfg fresh_defconfig defconfig" in output
-    assert "collect_yocto_local_build_vars.py" in collector_log.read_text(
-        encoding="utf-8"
-    )
+    assert "RD_ASPEN_VARIANT=reviewed-cfg reviewed_defconfig defconfig" in output
+    assert not collector_log.exists()
 
 
 def test_tfm_build_dry_run_rejects_unresolved_platform() -> None:
@@ -1603,7 +1575,7 @@ def test_tfm_build_dry_run_rejects_unresolved_platform() -> None:
     output = output_of(result)
     assert "TFM_PLATFORM" in output
     assert "missing/platform" in output
-    assert "trusted-firmware-m" in output
+    assert "local_build.conf" in output
 
 
 def add_local_linux_fixture(
@@ -1760,9 +1732,9 @@ def local_uki_env(
     ukify_log: Path,
     wic_log: Path,
 ) -> dict[str, str]:
-    return base_env | {
-        "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "1",
-        "APOLLO_LOCAL_BUILD_YOCTO_VARS": str(vars_path),
+    raw = json.loads(vars_path.read_text(encoding="utf-8"))
+    variables = raw["recipes"]["nexios-image"]["variables"]
+    return base_env | variables | {
         "PATH": f"{tools_dir}:/usr/bin:/bin",
         "UKIFY_LOG": str(ukify_log),
         "WIC_TOOL_LOG": str(wic_log),
@@ -2826,7 +2798,7 @@ def test_package_local_linux_prefers_local_initramfs_bootargs(
     assert manifest["local_linux"]["cmdline_b"] == local_bootargs
 
 
-def test_package_local_linux_refreshes_stale_yocto_vars_missing_initrd(
+def test_package_local_linux_ignores_stale_yocto_vars_without_collecting(
     tmp_path: Path,
 ) -> None:
     yocto_deploy, local_build, env = make_package_fixture(tmp_path)
@@ -2837,6 +2809,10 @@ def test_package_local_linux_refreshes_stale_yocto_vars_missing_initrd(
     stale_variables = default_uki_variables(tools_dir / "ukify")
     del stale_variables["INITRD_ARCHIVE"]
     write_yocto_vars(vars_path, stale_variables)
+    write_file(
+        yocto_deploy / "nexios-initramfs-image-apollo-qvp.cpio.gz",
+        b"reviewed config initrd\n",
+    )
     collector_log = add_fake_collector_python(
         tools_dir,
         tmp_path,
@@ -2852,17 +2828,13 @@ def test_package_local_linux_refreshes_stale_yocto_vars_missing_initrd(
     )
 
     assert result.returncode == 0, output_of(result)
-    refreshed = json.loads(vars_path.read_text(encoding="utf-8"))
-    assert refreshed["recipes"]["nexios-image"]["variables"]["INITRD_ARCHIVE"] == (
-        "nexios-initramfs-image-apollo-fvp.cpio.gz"
-    )
-    assert "collect_yocto_local_build_vars.py" in collector_log.read_text(
-        encoding="utf-8"
-    )
+    captured = json.loads(vars_path.read_text(encoding="utf-8"))
+    assert "INITRD_ARCHIVE" not in captured["recipes"]["nexios-image"]["variables"]
+    assert not collector_log.exists()
     assert len(ukify_log.read_text(encoding="utf-8").splitlines()) == 2
 
 
-def test_package_local_linux_refreshes_component_cache_and_uses_native_ukify(
+def test_package_local_linux_uses_native_ukify_from_local_config(
     tmp_path: Path,
 ) -> None:
     yocto_deploy, local_build, env = make_package_fixture(tmp_path)
@@ -2916,26 +2888,13 @@ def test_package_local_linux_refreshes_component_cache_and_uses_native_ukify(
     native_ukify.chmod(0o755)
     (tools_dir / "ukify").unlink()
     vars_path = tmp_path / "yocto-vars.json"
-    write_yocto_recipe_vars(
-        vars_path,
-        {
-            "nexios-image": {
-                "MACHINE": "apollo-fvp",
-                "BOOTLOADER_LINUX_APPEND": "cpuidle.governor=menu",
-            },
-            "linux-yocto-rt": {
-                "MACHINE": "apollo-fvp",
-                "KBUILD_DEFCONFIG": "apollo_fvp_defconfig",
-                "KERNEL_DEVICETREE": "arm/apollo-fvp.dtb",
-            },
-        },
-    )
-    refreshed_variables = default_uki_variables(Path("ukify"))
-    refreshed_variables["UKIFY_CMD"] = "ukify build"
+    variables = default_uki_variables(Path("ukify"))
+    variables["UKIFY_CMD"] = "ukify build"
+    write_yocto_vars(vars_path, variables)
     collector_log = add_fake_collector_python(
         tools_dir,
         tmp_path,
-        {"nexios-image": refreshed_variables},
+        {"nexios-image": variables},
     )
 
     result = run_local_build(
@@ -2948,22 +2907,7 @@ def test_package_local_linux_refreshes_component_cache_and_uses_native_ukify(
     )
 
     assert result.returncode == 0, output_of(result)
-    refreshed = json.loads(vars_path.read_text(encoding="utf-8"))
-    variables = refreshed["recipes"]["nexios-image"]["variables"]
-    for name in (
-        "INITRD_ARCHIVE",
-        "UKIFY_CMD",
-        "EFI_ARCH",
-        "AUTO_AD_NEXIOS_UKI_A",
-        "AUTO_AD_NEXIOS_UKI_B",
-        "AUTO_AD_NEXIOS_UKI_CMDLINE_A",
-        "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
-        "UEFI_SECURE_BOOT",
-    ):
-        assert variables[name]
-    assert "collect_yocto_local_build_vars.py" in collector_log.read_text(
-        encoding="utf-8"
-    )
+    assert not collector_log.exists()
     ukify_lines = ukify_log.read_text(encoding="utf-8").splitlines()
     assert len(ukify_lines) == 2
     assert str(native_ukify) in ukify_lines[0]
@@ -3048,7 +2992,7 @@ def test_package_local_linux_prefers_native_ukify_when_host_ukify_lacks_pefile(
     assert "dep=native-pefile" in ukify_lines[0]
 
 
-def test_package_local_linux_rejects_refreshed_vars_still_missing_initrd(
+def test_package_local_linux_rejects_empty_initrd_in_local_config(
     tmp_path: Path,
 ) -> None:
     yocto_deploy, local_build, env = make_package_fixture(tmp_path)
@@ -3059,12 +3003,17 @@ def test_package_local_linux_rejects_refreshed_vars_still_missing_initrd(
     stale_variables = default_uki_variables(tools_dir / "ukify")
     del stale_variables["INITRD_ARCHIVE"]
     write_yocto_vars(vars_path, stale_variables)
-    add_fake_collector_python(tools_dir, tmp_path, {"nexios-image": stale_variables})
+    collector_log = add_fake_collector_python(
+        tools_dir,
+        tmp_path,
+        {"nexios-image": stale_variables},
+    )
 
     result = run_local_build(
         "--package",
         extra_env=with_fixture_flash_hook(
-            local_uki_env(env, vars_path, tools_dir, ukify_log, wic_log),
+            local_uki_env(env, vars_path, tools_dir, ukify_log, wic_log)
+            | {"INITRD_ARCHIVE": ""},
             tmp_path / "package-flash-hook.log",
         ),
     )
@@ -3072,8 +3021,8 @@ def test_package_local_linux_rejects_refreshed_vars_still_missing_initrd(
     assert result.returncode != 0
     output = output_of(result)
     assert "INITRD_ARCHIVE" in output
-    assert "refresh" in output
-    assert "missing captured Yocto variable" not in output
+    assert "local_build.conf" in output
+    assert not collector_log.exists()
     assert not ukify_log.exists()
     assert not wic_log.exists()
 
