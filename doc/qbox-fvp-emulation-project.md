@@ -100,6 +100,16 @@ an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
 recovery. Unimplemented combinations remain explicit extended-validation
 debt rather than boot-compatibility bridges.
 
+The 2026-07-23 runtime A/B found that connecting the AP `ARMCPU` generic
+timers to that external bridge delayed Linux clockevent wakeups even though
+the guest still reported `arch_sys_counter` at 125MHz. The production Apollo
+wiring therefore keeps AP CPU timers on native `cpu_arm_cortexA720AE` and uses
+`ap_timer_counter_bridge` only for the AP REFCLK MMIO frames. The shared CSS
+provider, SMD/SI views, and AP secure/non-secure REFCLK frames remain in place.
+After this correction, ten 3-second guest-monotonic samples measured
+3.090-3.120 seconds on the Yocto image and 3.060-3.080 seconds on the local
+Buildroot image. Evidence is under `build/qbox-apollo-qvp/timer-ab/`.
+
 The 2026-07-17 acceptance used the same `smoke` contract for local and Yocto
 artifacts. `./local_build.sh qbox --qbox-unit-tests` passed all 33
 QBox-platform component tests; `./yocto_build.sh` completed all 7,293 tasks.

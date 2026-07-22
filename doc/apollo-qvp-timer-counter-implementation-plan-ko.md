@@ -21,6 +21,25 @@ MMIO timer, RSE local counter/timer, 구조화 QBox/FVP snapshot 및 differentia
 SCP-firmware, TF-M, TF-A, Linux, Zephyr 등 `components/` source는 관측 근거와
 빌드 입력으로만 사용하고 이 계획에서 수정하지 않는다.
 
+### 2026-07-23 AP CPU timer 회귀 교정
+
+동일 Yocto image를 사용한 A/B에서 timer 적용 전 `sleep 3`은 3초 근처로
+안정적이었지만, AP `ARMCPU`까지 external CSS counter bridge에 연결한 구성은
+3초 요청이 평균 3.938초, 최대 5.45초까지 늦게 깨어났다. 양쪽 모두 Linux
+clocksource는 `arch_sys_counter`, 주파수는 125MHz였으므로 고정 비율 오차가 아니라
+external provider의 deadline 재평가/전달 지연으로 판정했다.
+
+최종 구성에서는 AP CPU internal Generic Timer를 native
+`cpu_arm_cortexA720AE` 경로로 복원한다. `ap_timer_counter_bridge`와 shared CSS
+provider는 제거하지 않고 AP REFCLK MMIO frame에만 사용한다. 수정 후 Yocto는
+`time sleep 3` 3.068초와 10회 평균 3.106초, local Buildroot는 3.02초와
+10회 평균 3.068초였다. `/proc/uptime` 반복 측정에는 두 번의 `cut` 및 UART poll
+비용이 포함된다. Evidence는
+`build/qbox-apollo-qvp/timer-ab/fixed-yocto-20260723-005315/`와
+`build/qbox-apollo-qvp/timer-ab/fixed-local-20260723-005714/`에 있다. 이후 절의
+AP CPU external-provider 연결 설명은 구현 이력을 나타내며, production wiring은
+이 교정 사항을 우선한다.
+
 ## 0. 구현 및 검증 결과
 
 2026-07-22 현재 구현은 QEMU, QBox core, QBox Platform과 top-level 검증 도구
