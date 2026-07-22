@@ -1,12 +1,12 @@
 # Arm Zena CSS FVP Timer, Counter 및 Reference Clock 분석
 
-작성일: 2026-07-21
+작성일: 2026-07-21, 최종 갱신 2026-07-22
 
 대상: `FVP_Zena_CSS_Cfg2` / RD-Aspen CFG2
 
 FVP 버전: Fast Models 11.31.25 (2026-02-25)
 
-상위 저장소 기준: `761725a0bc4cc0ec1230a01e8ed1627f09989cee`
+상위 저장소 기준: `8e1b107c27b1fec01b325832e362a1e851bd7b64` 기반 working tree
 
 ## 1. 결론
 
@@ -17,9 +17,10 @@ Arm Zena CSS의 timer 구조를 단순히 "subsystem마다 독립 counter가 하
 1. AP와 Safety Island가 사용하는 Arm Generic Timer는 timer comparator와
    interrupt 상태는 CPU core 또는 MMIO frame별로 독립적이지만, 시간의 기준인
    System Counter 값은 CSS REFCLK 계열의 공통 counter를 사용하도록 구성된다.
-2. 물리 REFCLK 입력은 125MHz이다. 현재 SCP-firmware 설정은 한 REFCLK edge마다
-   counter를 8 증가시키므로, FVP에서 관측되는 64-bit count의 실효 증가율은
-   1GHz이다.
+2. 물리 REFCLK 입력과 정상 배포 image에서 실제 실행되는 visible count는 모두
+   125MHz이다. 정상 boot의 SMD `CNTINCR=0`은 FVP reset/default 의미의 실효
+   increment 1로 동작한다. debugger로 `CNTINCR=8`을 강제했을 때의 1GHz 결과는
+   rate 제어가 동작함을 확인한 대조군일 뿐 정상 boot 계약이 아니다.
 3. Zena CSS 하드웨어 사양에는 RSE 전용 Local System Counter가 별도로 존재하며,
    RSE `TIMER0`~`TIMER3`의 `CNTVALUEB` 입력을 공급한다. 따라서 하드웨어 관점의
    기본 구조는 "CSS 공통 counter 하나 + RSE local counter 하나"이다.
@@ -145,6 +146,24 @@ CPU internal timer는 per-core PPI 장치이다. 각 core의 comparator/control�
 축을 읽는다. 따라서 AP CPU 수만큼 독립 free-running counter가 생기는 구조가
 아니다.
 
+AP hardware의 timer PPI matrix는 다음과 같다
+(`09-programmers-model-for-zena-css.md:1331-1348`).
+
+| PPI | Timer output | 의미 |
+| ---: | --- | --- |
+| 19 | `CNTHVS` | Secure EL2 virtual timer |
+| 20 | `CNTHPS` | Secure EL2 physical timer |
+| 26 | `CNTHPIRQn` | Non-secure EL2 physical timer |
+| 27 | `CNTVIRQn` | virtual timer |
+| 28 | `CNTHVIRQn` | EL2 virtual timer |
+| 29 | `CNTPSIRQn` | secure physical timer |
+| 30 | `CNTPNSIRQn` | non-secure physical timer |
+
+이 표는 count source가 일곱 개라는 뜻이 아니다. comparator/control/interrupt
+class가 분리되어 있고 모두 해당 PE가 보는 공통 physical counter 시간 축을
+기준으로 deadline을 계산한다는 뜻이다. 실제 firmware/DT가 사용하는 subset과
+PE가 구현한 extension은 별도로 확인해야 한다.
+
 ### 4.4 Safety Island의 timer
 
 Safety Island CL0에는 다음 local programmer view가 있다.
@@ -158,6 +177,12 @@ Safety Island CL0에는 다음 local programmer view가 있다.
 근거는 Zena CSS guide `:1227-1230`, `:1304`이다. CFG2의 CL1은 FVP 전용 두 번째
 Cortex-R82AE cluster이며, 현재 하드웨어 guide에는 CL1 register와 interrupt가
 정의되어 있지 않다(`08-fixed-virtual-platform.md:21-32`).
+
+SI0 hardware의 CPU timer PPI는 AP matrix와 같지 않다. table 9-38
+(`09-programmers-model-for-zena-css.md:1644-1656`)에서 timer output은
+`CNTHPSIRQ=PPI20`, `CNTVIRQ=PPI27`, `CNTPSIRQ=PPI29` 세 개이고 PPI 19, 26,
+28, 30은 reserved이다. CFG2 SI1은 FVP extension이므로 SI0 표를 그대로 복사해서
+하드웨어 사실로 취급할 수 없고 Iris target/GIC 상태로 별도 확인해야 한다.
 
 SCP-firmware는 하나의 논리 `SI0_TIMER` element에 세 view를 묶는다.
 
@@ -180,12 +205,14 @@ SCP-firmware는 하나의 논리 `SI0_TIMER` element에 세 view를 묶는다.
 | `0x5015_9000` | `SOC_TIMER1` | Zena CSS System Timestamp-based Timer 1 |
 | `0x5015_A000` | `LSC_CB` | Local System Counter Control Base |
 | `0x5015_B000` | `LSC_RB` | Local System Counter Read Base |
-| `0x5800_0000`~`0x5800_3000` | `TIMER0`~`TIMER3` | RSE timestamp timer, IRQ 39~42 |
+| `0x5800_0000`~`0x5800_3000` | `TIMER0`~`TIMER3` | RSE timestamp timer, IRQ 3/4/5/27 |
 
 Zena CSS guide `:15014-15023`은 Local System Counter의 목적을 `TIMER0`~`TIMER3`에
-`CNTVALUEB`를 공급하는 것으로 직접 정의한다. Local System Counter와 TIMER3는
-PD_AON 및 warm-reset 특성도 갖는다(`:14940-14946`, `:15027-15043`). TF-M의
-RSE common platform도 같은 control/read base와 timer base를 정의한다.
+`CNTVALUEB`를 공급하는 것으로 직접 정의한다. `TIMER0`~`TIMER3`과 Local System
+Counter는 모두 PD_AON에 속한다. reset source는 `TIMER0`~`TIMER2`가
+`nWARMRESETSYS_RSS`, `TIMER3`과 Local System Counter가 `nWARMRESETAON`으로
+다르다(`:14940-14946`, `:15027-15043`). TF-M의 RSE common platform도 같은
+control/read base와 timer base를 정의한다.
 
 TF-M common device 설정은 `SYSTIMER0_ARMV8M_DEFAULT_FREQ_HZ`를 32MHz로
 정의한다(`device/config/device_cfg.h:91-94`). 이는 현재 software가 RSE system
@@ -234,46 +261,49 @@ LLRAM 설정뿐이므로 이 분석에서는 모델 기본 clock parameter가 �
 
 ### 5.2 Iris 동적 측정
 
-FVP model 자체의 count identity를 확인하기 위해 boot image 없이 Iris server를
-띄우고 다음 조건으로 측정했다.
-
-- `non_arch_start_at_default=1`을 진단 목적으로 사용
-- `CNTFID0 = 125000000`
-- `CNTINCR = 8`
-- `CNTCR = 0x101`
-- FVP simulation time을 `160,000,000` tick 진행
-- Iris simulation tick frequency는 `1,000,000,000,000Hz`
-
-측정 결과는 다음과 같다.
+배포된 local-build image를 정상 실행한 뒤 Iris로 멈춰 같은 logical point에서
+register와 simulation time delta를 수집했다. 정상 상태는 다음과 같다.
 
 ```text
-simulation elapsed = 160 us
-count delta         = 160000
-
-SMD CNTCV           = 160000
-AP CPU CNTPCT       = 160000
-SI0 CPU CNTPCT      = 160000
-SI1 CPU CNTPCT      = 160000
-RSE TIMER0 PCT      = 160000
-RSE TIMER1 PCT      = 160000
-RSE TIMER2 PCT      = 160000
-RSE TIMER3 PCT      = 160000
+physical REFCLK     = 125000000 Hz
+SMD CNTCR           = 0x101
+SMD CNTFID0         = 125000000
+SMD CNTINCR         = 0
+simulation elapsed  = 1030743023 ticks @ 1 THz
+expected count      = floor(1030743023 * 125000000 / 1e12)
+                    = 128842
+observed count delta= 128842
 ```
 
-따라서 이 FVP에서 해당 view들은 동일한 64-bit count를 읽으며, 실효 count
-증가율은 `160000 / 160us = 1GHz`이다.
+즉 정상 배포 image의 executed contract는 `125MHz input`, `CNTINCR register=0`,
+FVP default 실효 increment 1, visible count 125MHz이다. AP CPU 0~3은
+`CNTFRQ_EL0=125MHz`이고 같은 SMD count를 읽었다. SI0은 `CNTFRQ_EL0=0`이지만
+같은 count를 읽었고, SI1 CPU 0~3은 `CNTFRQ_EL0=100MHz`를 보고하면서도 같은
+SMD count를 읽었다. reported frequency metadata와 physical count source가 서로
+다를 수 있음을 구분해야 한다.
+
+rate 제어 대조군으로 debugger가 `CNTINCR=8`을 강제한 경우에는
+`232320000000`개의 1THz simulation tick 동안 count가 `232320000` 증가하여 정확히
+1GHz가 됐다. 이 결과는 `CNTINCR=8`의 모델 의미를 확인하지만 정상 boot 상태를
+나타내지 않는다.
 
 두 번째 검증에서는 counter를 정지한 뒤 SMD `CNTCV`에 `0x912345678`을 기록했다.
 그 즉시 AP CPU, SI0 CPU, SI1 CPU 및 RSE `TIMER0`~`TIMER3`의 count view가 모두
 같은 값을 반환했다. 이는 단순히 같은 rate로 따로 증가하는 counter가 아니라,
 현재 FVP 내에서 실제로 같은 counter state가 alias되어 있음을 보여준다.
 
-AP MMIO secure/non-secure frame도 같은 방식으로 확인을 시도했지만, firmware가
-없는 bare FVP에서 `0x1A820000`과 `0x1A830000`의 `PCT`는 모두 0을 반환했다.
-같은 시점의 SMD `CNTCV`와 AP CPU `CNTPCT_EL0`는 160000이었다. AP MMIO frame은
-하드웨어상 CSS REFCLK counter를 사용해야 하지만, 이 bare-model 결과만으로는
-FVP 내부 연결을 확정할 수 없다. power, access-control 또는 frame 설정이 끝난
-정상 firmware boot 지점에서 다시 읽어야 한다.
+정상 boot의 AP MMIO control base `0x1A810000`에서는 `CNTFRQ=125MHz`,
+`CNTNSAR=1`, `CNTACR0=0x3f`, `CNTACR1=0`을 읽었다. 따라서 non-secure frame 0
+`0x1A830000`은 SMD와 같은 count와 125MHz를 반환하지만 secure frame 1
+`0x1A820000`의 count/frequency는 RAZ이다. debugger로 `CNTACR1=0x3f`를 쓰면
+secure frame 1도 즉시 같은 SMD count와 125MHz를 반환했고, 0으로 복구하면 다시
+RAZ가 됐다. 이는 frame 1의 map과 공통 count 연결이 존재하되 정상 firmware가
+access를 disable한다는 증거다.
+
+SI1 FVP-only CPU timer output은 comparator를 강제로 만료시켜 GIC pending bit를
+측정했다. `CNTP=PPI29`, `CNTV=PPI27`, `CNTHPS=PPI20`이 확인됐고, 이 FVP의 SI1
+CPU에는 `CNTHP`, `CNTHV`, `CNTHVS`, `CNTPS` comparator register가 노출되지
+않았다. 이 matrix는 CFG2 FVP 동작이며 SI0 hardware table을 복사한 결과가 아니다.
 
 반면 RSE CPU의 모든 Iris memory space에서 다음 주소는 unmapped access였다.
 
@@ -285,9 +315,15 @@ FVP 내부 연결을 확정할 수 없다. power, access-control 또는 frame �
 따라서 현재 FVP는 하드웨어가 정의한 RSE local counter path를 구현하지 않고,
 RSE `TIMER0`~`TIMER3`을 CSS 공통 count에 연결한 것으로 결론 내릴 수 있다.
 
-이 측정은 boot artifact를 넣지 않은 bare-model 진단이다. 따라서 firmware가
-정상 부팅 중 만드는 최종 register 상태를 검증한 것은 아니며, boot image가
-없어 발생한 bus-loop warning은 counter identity 결론에 사용하지 않았다.
+정상 boot 측정과 강제 쓰기 대조군의 원자료, 배포 artifact hash 및 판단은
+`build/qbox-apollo-qvp/timer-validation/20260722-085755/fvp/` 아래에 보존했다.
+
+최종 독립 재측정은 U-Boot `_start`와 `board_init_f`에서 수행했다. 두 지점 모두
+SMD, AP CPU, AP MMIO NS/S, SI0 CPU/CNTBase와 SI1 CPU의 7개 CSS view가 정확히
+같았고, secure frame의 원래 `CNTACR1=0`을 확인한 뒤 임시 32-bit enable write와
+복구를 수행했다. 구조화 결과는
+`build/qbox-apollo-qvp/timer-validation/final-differential/fvp/timer-snapshot-final.json`
+이며 status는 `pass`다.
 
 ### 5.3 FVP 논리 topology
 
@@ -297,8 +333,9 @@ RSE `TIMER0`~`TIMER3`을 CSS 공통 count에 연결한 것으로 결론 내릴 �
 ros.ref_clk_frequency = 125MHz
                  |
           SMD ref_counter
-          CNTINCR = 8
-          effective count = 1GHz
+          normal CNTINCR = 0
+          default effective increment = 1
+          effective count = 125MHz
                  |
        +---------+----------+------------+-------------+
        |         |          |            |             |
@@ -307,27 +344,32 @@ ros.ref_clk_frequency = 125MHz
 
 RSE LSC control/read (0x5015A000/0x5015B000): not mapped in this FVP
 
-* AP MMIO는 hardware-intended 연결이다. bare pre-boot PCT는 0이어서
-  정상 firmware boot에서 FVP 연결을 추가 확인해야 한다.
+* AP MMIO NS frame 0은 정상 enable되어 공통 count를 읽는다. secure frame 1은
+  CNTACR1=0 때문에 RAZ이며, CNTACR1=0x3f 대조군에서 같은 count가 확인됐다.
 ```
 
 ## 6. 주파수 계약 문제
 
-### 6.1 CSS REFCLK: 125MHz 입력과 1GHz count
+### 6.1 CSS REFCLK: 정상 실행 125MHz와 source/deploy 불일치
 
 현재 source에는 물리 clock과 visible count frequency 사이의 계약이 일관되지
 않는 지점이 있다.
 
-1. FVP의 물리 REFCLK parameter는 125MHz이다.
-2. SCP-firmware는 `SYSCNT_INCR=8`을 "1GHz clock speed에 필요한 값"이라고
+1. FVP의 물리 REFCLK parameter와 정상 visible count delta는 125MHz이다.
+2. SCP-firmware source는 `SYSCNT_INCR=8`을 "1GHz clock speed에 필요한 값"이라고
    설명하고 `CNTINCR`에 기록한다
    (`config_gtimer.c:32-39`, `:51-59`).
-3. Iris 측정도 visible counter가 1GHz로 증가함을 확인했다.
-4. 그러나 같은 SCP configuration의 `.frequency`와 `CNTFID0` 설정값은
+3. 그러나 배포된 `si0_ramfw.elf`의 `gtimer_control_init+0x34`는
+   `str x5, [x3, x2]`로 32-bit impdef register에 64-bit store를 수행한다.
+   `syscnt_impdef_cfg`의 배포 bytes는 `{0xc0:0, 0xd0:8}`이다. FVP는 이 malformed
+   64-bit `CNTINCR` write를 WI로 처리하여 정상 boot에서 `CNTINCR=0`이 유지된다.
+4. debugger로 유효한 `CNTINCR=8` 쓰기를 강제한 대조군에서만 visible count가
+   정확히 1GHz가 됐다.
+5. 같은 SCP configuration의 `.frequency`와 `CNTFID0` 설정값은
    125MHz이다(`config_gtimer.c:63-73`, `mod_gtimer.c:294-312`).
-5. `mod_gtimer`는 이 `.frequency`를 framework에 반환하고 count-to-time 변환에도
+6. `mod_gtimer`는 이 `.frequency`를 framework에 반환하고 count-to-time 변환에도
    사용한다(`mod_gtimer.c:165-175`, `:393-396`).
-6. TF-A의 `SYS_COUNTER_FREQ_IN_TICKS`와 `plat_get_syscnt_freq2()`도 125MHz를
+7. TF-A의 `SYS_COUNTER_FREQ_IN_TICKS`와 `plat_get_syscnt_freq2()`도 125MHz를
    반환한다(`platform_def.h:315-316`, `apollo_fvp_plat.c:58-61`).
 
 동일 SCP-firmware tree의 RD1AE 및 여러 Neoverse RD configuration은
@@ -336,17 +378,20 @@ RSE LSC control/read (0x5015A000/0x5015B000): not mapped in this FVP
 
 - 125MHz REFCLK에 `CNTINCR=8`을 적용하여 visible count를 1GHz로 만들고,
   `CNTFID0`, `CNTFRQ`, firmware time conversion도 1GHz로 맞춘다.
-- visible count 자체를 125MHz로 유지하고 `CNTINCR=1`로 맞춘다.
+- visible count 자체를 125MHz로 유지하고 FVP의 `CNTINCR=0` default 실효
+  increment 1 의미를 명시적으로 계약한다.
 
-현재 source 주석과 FVP 실측은 첫 번째 방향을 가리키지만, 이 문서의 범위에서는
-component source를 변경하지 않는다. 정상 FVP boot에서 SCP 설정 직후
-`CNTFID0`, `CNTINCR`, `CNTFRQ_EL0`, count delta를 Iris로 함께 수집한 뒤
-architecture owner와 최종 주파수 계약을 결정해야 한다.
+현재 정상 배포 FVP와 firmware reported-frequency의 실행 계약은 두 번째 방향,
+즉 visible 125MHz이다. 다만 source 의도와 배포 실행이 다르므로 이 문서에서는
+component source를 변경하지 않는다. production QBox는 측정된 125MHz를 기준으로
+generic provider와 production wiring을 구현했다. 이는 사용자가 정상 배포 FVP의
+executed 125MHz 계약을 우선하도록 결정한 결과이며, source의 malformed 64-bit
+write는 별도 component debt로 남긴다.
 
-### 6.2 RSE: TF-M 32MHz와 FVP 1GHz alias
+### 6.2 RSE: TF-M 32MHz와 FVP 125MHz alias
 
 TF-M common RSE device는 `TIMER0`의 기본 frequency를 32MHz로 설정하지만,
-현재 FVP의 RSE `TIMER0`~`TIMER3` count view는 CSS SMD count와 동일한 1GHz
+현재 FVP의 RSE `TIMER0`~`TIMER3` count view는 CSS SMD count와 동일한 125MHz
 delta를 반환했다. 동시에 하드웨어 guide는 RSE Local System Counter의 입력
 clock source/rate를 명시하지 않는다.
 
@@ -356,7 +401,7 @@ clock source/rate를 명시하지 않는다.
 | ---: | --- | --- |
 | 32MHz | TF-M common RSE timer software 설정 | source로 확정 |
 | 미확정 | Zena CSS RSE Local System Counter의 실제 hardware clock | 추가 TRM/integration 자료 필요 |
-| 1GHz | 현재 FVP가 RSE TIMER0~3에 alias한 CSS count | Iris로 측정 |
+| 125MHz | 현재 FVP가 RSE TIMER0~3에 alias한 CSS count | 정상 boot Iris로 측정 |
 
 QBox의 RSE Local System Counter를 구현할 때 125MHz나 1GHz를 임의로 적용하면
 안 된다. Corstone Ma1 integration 자료와 정상 FVP/firmware 설정을 추가 확인해
@@ -367,10 +412,10 @@ RSE local-domain frequency를 별도로 결정해야 한다.
 | Subsystem/view | Timer/comparator 상태 | Count source: 하드웨어 의도 | 현재 FVP | 판정 |
 | --- | --- | --- | --- | --- |
 | AP CPU core | core별, PPI별 독립 | CSS REFCLK System Counter | SMD `ref_counter` 공유 | 확정 |
-| AP MMIO secure/non-secure frame | frame별 CVAL/control/SPI 독립 | CSS REFCLK System Counter | bare pre-boot PCT=0, 정상 boot 연결 미확인 | 하드웨어 확정/FVP pending |
+| AP MMIO secure/non-secure frame | frame별 CVAL/control/SPI 독립 | CSS REFCLK System Counter | NS frame 0은 공통 count, S frame 1은 `CNTACR1=0`에서 RAZ이고 enable 대조군에서 공통 count | FVP 측정 |
 | SI0 CPU 및 timer frame | core/frame별 독립 | CSS REFCLK System Counter | SMD `ref_counter` 공유 | 확정 |
-| SI1 CPU | core별 독립 | CFG2 FVP 전용이라 하드웨어 guide 미정의 | SMD `ref_counter` 공유 | FVP 측정 |
-| RSE TIMER0~3 | timer별 compare/IRQ 독립 | RSE Local System Counter, rate는 로컬 guide에서 미확정 | SMD `ref_counter` 1GHz 공유 | 하드웨어/FVP/TF-M 32MHz 계약 불일치 |
+| SI1 CPU | core별 독립 | CFG2 FVP 전용이라 하드웨어 guide 미정의 | SMD `ref_counter` 공유, `CNTP/V/CNTHPS=PPI29/27/20` | FVP 측정 |
+| RSE TIMER0~3 | timer별 compare/IRQ 독립 | RSE Local System Counter, rate는 로컬 guide에서 미확정 | SMD `ref_counter` 125MHz 공유 | 하드웨어/FVP/TF-M 32MHz 계약 불일치 |
 | RSE SOC_TIMER0/1 | timer별 독립 | 로컬 자료만으로 source 미확정 | address unmapped | FVP 미구현 |
 | Cross-chip sync | 동기화 state machine | primary-secondary chip 동기화 | 별도 sync block | counter source가 아님 |
 
@@ -415,7 +460,10 @@ RSE local-domain frequency를 별도로 결정해야 한다.
   않았다.
 - RSE Local System Counter 자체의 입력 clock source/rate도 로컬 guide만으로
   확정하지 않았다. TF-M의 32MHz 값은 software configuration 근거로만 사용했다.
-- 정상 firmware boot 후 최종 frequency register 집합은 이번 측정 범위에
-  포함하지 않았다. 125MHz/1GHz 계약은 별도 boot-time 검증이 필요하다.
-- AP MMIO frame은 bare pre-boot 상태에서 0을 반환했으므로 정상 boot의
-  power/access-control 설정 후 count identity를 다시 확인해야 한다.
+- 정상 배포 image의 CSS executed contract와 AP MMIO access-control은 측정했다.
+  SCP-firmware source가 의도한 `CNTINCR=8`과 배포 ELF의 malformed 64-bit write 중
+  어느 쪽을 고칠지는 component owner 결정 사항으로 남는다.
+- RSE Local System Counter의 실제 clock rate, secure/non-secure 노출 정책과
+  integration reset signoff는 미확정이다. 모든 timer/LSC의 PD_AON 소속 및
+  `TIMER0`~`TIMER2` 대비 `TIMER3`/LSC reset-source 차이는 문서상 확인했지만
+  runtime reset evidence는 아직 없다.

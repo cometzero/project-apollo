@@ -1,6 +1,6 @@
 # Arm Auto Solutions Analysis
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 This directory contains Codex-facing analysis notes for the current
 `/build/arm/arm-auto-solutions` workspace. The workspace is now a top-level Git
@@ -39,9 +39,14 @@ separate.
   and Apollo QVP Lua, SystemC, and QEMU implementation modules, including
   explicit partial-model, placeholder, and missing-IP gaps.
 - [QBox-FVP Timer And Counter Comparison KR](qbox-fvp-timer-counter-comparison-ko.md) -
-  Korean comparison of the FVP shared-counter behavior and the current QBox
-  counter islands, including exact frequencies, fidelity gaps, the recommended
-  shared-provider architecture, and post-implementation validation invariants.
+  Korean comparison of the FVP shared-counter behavior and the implemented
+  QBox shared-provider topology, including exact frequencies, remaining
+  fidelity debt, and the passing structured differential evidence.
+- [Apollo QVP Timer And Counter Implementation Plan KR](apollo-qvp-timer-counter-implementation-plan-ko.md) -
+  Korean implementation and completion record for the shared CSS counter provider,
+  per-QEMU-instance bridges, AP/SI CPU and MMIO timer integration, independent
+  RSE local counter/timers, repository ownership, phased gates, and 44/44
+  FVP/QBox differential validation.
 - [Apollo QVP Machine Architecture KR](apollo-qvp-machine-architecture-ko.md) -
   Korean architecture comparison of current Apollo QVP and Arm Zena CSS/FVP,
   covering address views, buses, memory, hardware blocks, routing gaps, and
