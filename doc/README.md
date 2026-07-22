@@ -1,6 +1,6 @@
 # Arm Auto Solutions Analysis
 
-Updated: 2026-07-22
+Updated: 2026-07-23
 
 This directory contains Codex-facing analysis notes for the current
 `/build/arm/arm-auto-solutions` workspace. The workspace is now a top-level Git
@@ -42,6 +42,10 @@ separate.
   Korean comparison of the FVP shared-counter behavior and the implemented
   QBox shared-provider topology, including exact frequencies, remaining
   fidelity debt, and the passing structured differential evidence.
+- [Apollo QVP Timer Delay Analysis KR](apollo-qvp-timer-delay-analysis-ko.md) -
+  Korean analysis of the AP Linux timer delay, the native AP CPU timer fix,
+  the current QBox/QEMU/SystemC counter topology, and the remaining SI0, SI1,
+  SMD, AP MMIO, and RSE timer risks with detailed ASCII diagrams.
 - [Apollo QVP Timer And Counter Implementation Plan KR](apollo-qvp-timer-counter-implementation-plan-ko.md) -
   Korean implementation and completion record for the shared CSS counter provider,
   per-QEMU-instance bridges, AP/SI CPU and MMIO timer integration, independent
