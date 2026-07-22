@@ -136,6 +136,16 @@ CHECKS = {
             r"ap_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
         ),
         (
+            "timer:ap-cpu-native-counter",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r'local cpu\s*=\s*\{[\s\S]*?moduletype\s*=\s*"cpu_arm_cortexA720AE"',
+        ),
+        (
+            "timer:ap-cpu-no-external-counter",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"NOT:cpu_arm_cortexA720AE_external_counter",
+        ),
+        (
             "timer:si0-css-provider-bridge",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
             r"si_cl0_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
