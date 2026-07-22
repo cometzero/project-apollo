@@ -44,6 +44,72 @@ def test_required_targets_use_local_rse_cpu_only():
     assert all("remote" not in target.lower() for target in runner.REQUIRED_TARGETS)
 
 
+def make_sdk_native_fixture(root: Path, build_dir: Path) -> Path:
+    native_bin = (
+        root
+        / "build/local-sdk-apollo-qvp/sysroots/x86_64-pokysdk-linux/usr/bin"
+    )
+    native_bin.mkdir(parents=True)
+    for name in ("python3", "meson", "meson.real"):
+        tool = native_bin / name
+        tool.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        tool.chmod(0o755)
+    build_dir.mkdir(parents=True)
+    return native_bin
+
+
+def test_qbox_sdk_native_build_env_supplies_meson_python_shims(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    build_dir = tmp_path / "build/local-apollo-qvp/work/qbox-platform"
+    native_bin = make_sdk_native_fixture(tmp_path, build_dir)
+    monkeypatch.setenv("PATH", "/host/bin")
+    monkeypatch.setenv("OECORE_NATIVE_SYSROOT", "/stale/sdk")
+
+    env, cmake_args = runner.qbox_sdk_native_build_env(tmp_path, build_dir)
+
+    shim = build_dir / ".qbox-sdk-native-tools"
+    assert env["PATH"].split(os.pathsep)[0] == str(shim)
+    assert "OECORE_NATIVE_SYSROOT" not in env
+    assert env["PYTHONNOUSERSITE"] == "1"
+    assert (shim / "nativepython3").resolve() == native_bin / "python3"
+    assert cmake_args == [f"-DLIBQEMU_PYTHON={native_bin / 'python3'}"]
+
+
+def test_ensure_qbox_targets_uses_source_rebuild_and_sdk_env_by_default(
+    tmp_path, monkeypatch
+):
+    runner = load_runner()
+    build_dir = tmp_path / "build/local-apollo-qvp/work/qbox-platform"
+    make_sdk_native_fixture(tmp_path, build_dir)
+    (tmp_path / "hsoc-stack/tools/qbox").mkdir(parents=True)
+    (tmp_path / "hsoc-stack/tools/qbox-platform").mkdir(parents=True)
+    (tmp_path / "hsoc-stack/tools/qemu").mkdir(parents=True)
+    monkeypatch.setenv("QBOX_PLATFORM_BUILD_DIR", str(build_dir))
+    monkeypatch.delenv("QBOX_LIBQEMU_BUILD_ALWAYS", raising=False)
+    calls = []
+    monkeypatch.setattr(
+        runner,
+        "run",
+        lambda cmd, *, cwd, env=None: calls.append((cmd, cwd, env)),
+    )
+
+    runner.ensure_qbox_targets(tmp_path, 3)
+
+    assert len(calls) == 2
+    configure, build = calls
+    assert "-DLIBQEMU_BUILD_ALWAYS=ON" in configure[0]
+    assert "-DQBOX_USE_SYSTEM_LIBQEMU=OFF" in configure[0]
+    assert any(arg.startswith("-DLIBQEMU_PYTHON=") for arg in configure[0])
+    assert build[0][-2:] == ["--parallel", "3"]
+    for _, _, env in calls:
+        assert env is not None
+        assert env["PATH"].split(os.pathsep)[0] == str(
+            build_dir / ".qbox-sdk-native-tools"
+        )
+
+
 def test_patched_bootargs_replaces_maxcpus_for_modeled_topology():
     runner = load_runner()
 

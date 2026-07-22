@@ -463,6 +463,43 @@ def test_parse_args_and_artifacts_default_to_active_apollo_qvp(monkeypatch):
     assert "apollo_qvp" in artifacts["ap_bl2_elf"].parts
 
 
+def test_timer_probe_without_model_snapshot_is_a_hard_nonpass(tmp_path):
+    # Given: timer evidence was requested but no model-side producer exists.
+    runner = load_runner()
+    args = SimpleNamespace(out_dir=tmp_path, timer_probe=True, timer_probe_run_id="current-run")
+
+    # When: the runner records timer evidence.
+    evidence = runner.timer_probe_evidence(args)
+
+    # Then: it writes an explicit unavailable artifact rather than inferring success.
+    assert evidence["status"] == "unavailable"
+    assert evidence["strict_gate"] is True
+    assert (tmp_path / "timer-probe-status.json").exists()
+
+
+def test_timer_probe_rejects_a_stale_pass_snapshot(tmp_path):
+    # Given: a successful snapshot from a different runner invocation.
+    runner = load_runner()
+    (tmp_path / "timer-snapshot.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "pass",
+                "source": {"run_id": "prior-run"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(out_dir=tmp_path, timer_probe=True, timer_probe_run_id="current-run")
+
+    # When: the current runner evaluates the old artifact.
+    evidence = runner.timer_probe_evidence(args)
+
+    # Then: stale evidence cannot satisfy the strict timer gate.
+    assert evidence["status"] == "unavailable"
+    assert evidence["reason"] == "model_side_timer_snapshot_run_id_mismatch"
+
+
 @pytest.mark.parametrize(
     "forward_args",
     [

@@ -83,6 +83,68 @@ CHECKS = {
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
             r'protocol\s*=\s*ctx\.apollo_live_cl1\s+and\s+"doorbell-bridge"\s+or\s+"doorbell"',
         ),
+        (
+            "timer:ap-refclk-ns-spi49",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"AP_SYS_TIMER_IRQ_NS\s*=\s*49",
+        ),
+        (
+            "timer:ap-refclk-secure-spi48",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"AP_SYS_TIMER_IRQ_S\s*=\s*48",
+        ),
+        (
+            "timer:rse-timer0-irq3",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"RSE_TIMER0_IRQ\s*=\s*3",
+        ),
+        (
+            "timer:rse-timer1-irq4",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"RSE_TIMER1_IRQ\s*=\s*4",
+        ),
+        (
+            "timer:rse-timer2-irq5",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"RSE_TIMER2_IRQ\s*=\s*5",
+        ),
+        (
+            "timer:rse-timer3-irq27",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"RSE_TIMER3_IRQ\s*=\s*27",
+        ),
+        (
+            "timer:rse-no-legacy-39-through-42",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"NOT:RSE_TIMER[0-3]_IRQ\s*=\s*(?:39|40|41|42)",
+        ),
+    ],
+    "timer": [
+        (
+            "timer:css-single-provider",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"platform\.css_system_counter\s*=\s*\{[\s\S]*?moduletype\s*=\s*\"arm_system_counter\"",
+        ),
+        (
+            "timer:css-provider-frequency-contract",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"input_frequency_hz\s*=\s*125000000[\s\S]*?integer_increment\s*=\s*1[\s\S]*?reported_frequency_hz\s*=\s*125000000",
+        ),
+        (
+            "timer:ap-css-provider-bridge",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"ap_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+        ),
+        (
+            "timer:si0-css-provider-bridge",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
+            r"si_cl0_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+        ),
+        (
+            "timer:si1-css-provider-bridge",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua",
+            r"si_cl1_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+        ),
     ],
     "atu": [
         ("atu:analysis", "doc/qbox-apollo-fvp-map-analysis.md", r"ATU|ATW"),
@@ -160,12 +222,15 @@ def run_check(root: Path, category: str, item: tuple[str, str, str]) -> dict[str
     name, rel_path, pattern = item
     path = resolve_check_path(root, rel_path)
     text = read_text(path)
+    forbidden = pattern.startswith("NOT:")
+    effective_pattern = pattern.removeprefix("NOT:")
+    matched = bool(text and re.search(effective_pattern, text, re.IGNORECASE | re.MULTILINE))
     return {
         "category": category,
         "name": name,
         "path": str(path),
         "pattern": pattern,
-        "passed": bool(text and re.search(pattern, text, re.IGNORECASE | re.MULTILINE)),
+        "passed": not matched if forbidden else matched,
     }
 
 

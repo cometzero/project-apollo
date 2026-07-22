@@ -49,9 +49,13 @@ build_qbox()
     qbox_use_system_libqemu="${QBOX_USE_SYSTEM_LIBQEMU:-auto}"
     case "${qbox_use_system_libqemu}" in
         auto)
-            if [[ -n "${qbox_libqemu_dir}" ]]; then
+            if [[ -n "${qbox_libqemu_dir}" ]] &&
+                qbox_libqemu_supports_arm_timer_abi "${qbox_libqemu_dir}"; then
                 qbox_use_system_libqemu=ON
             else
+                if [[ -n "${qbox_libqemu_dir}" ]]; then
+                    log "Ignoring incompatible Yocto qbox-libqemu-native (missing Arm timer ABI): ${qbox_libqemu_dir}"
+                fi
                 qbox_use_system_libqemu=OFF
             fi
             ;;
@@ -70,6 +74,8 @@ build_qbox()
     if [[ "${qbox_use_system_libqemu}" == "ON" ]]; then
         [[ -n "${qbox_libqemu_dir}" ]] ||
             die "QBOX_USE_SYSTEM_LIBQEMU=ON but libqemuConfig.cmake was not found under ${YOCTO_TMP}; build qbox-libqemu-native or set QBOX_LIBQEMU_DIR"
+        qbox_libqemu_supports_arm_timer_abi "${qbox_libqemu_dir}" ||
+            die "QBOX_USE_SYSTEM_LIBQEMU=ON but ${qbox_libqemu_dir} does not provide the required Arm timer ABI; rebuild qbox-libqemu-native or set QBOX_USE_SYSTEM_LIBQEMU=OFF"
         log "Using Yocto qbox-libqemu-native for QBox: ${qbox_libqemu_dir}"
         qbox_cmake_args=()
         qbox_libqemu_prefix="${qbox_libqemu_dir%/lib/cmake/libqemu}"
@@ -85,7 +91,7 @@ build_qbox()
             -DQBOX_QEMU_SOURCE_DIR="${QBOX_QEMU_DIR}"
             -DLIBQEMU_GIT="file://${QBOX_QEMU_DIR}"
             -DFETCHCONTENT_SOURCE_DIR_LIBQEMU="${QBOX_QEMU_DIR}"
-            -DLIBQEMU_BUILD_ALWAYS="${QBOX_LIBQEMU_BUILD_ALWAYS:-OFF}"
+            -DLIBQEMU_BUILD_ALWAYS="${QBOX_LIBQEMU_BUILD_ALWAYS:-ON}"
         )
     fi
 
@@ -126,6 +132,20 @@ build_qbox()
             -L qbox-platform-systemc-components \
             --output-on-failure
     fi
+}
+
+qbox_libqemu_supports_arm_timer_abi()
+{
+    local cmake_dir="$1"
+    local prefix
+    local header
+
+    prefix="${cmake_dir%/lib/cmake/libqemu}"
+    header="${prefix}/include/libqemu/libqemu/libqemu.h"
+    [[ -f "${header}" ]] || return 1
+
+    grep -Eq '^[[:space:]]*#define[[:space:]]+LIBQEMU_ARM_TIMER_REQUIRED_STRUCT_SIZE([[:space:]]|$)' \
+        "${header}"
 }
 
 qbox_sdk_native_sysroot()
@@ -207,6 +227,7 @@ qbox_sdk_native_tool_args()
     tool_shim="${QBOX_PLATFORM_BUILD_DIR}/.qbox-sdk-native-tools"
     mkdir -p "${tool_shim}"
     ln -sfn "${native_bin}/python3" "${tool_shim}/python3"
+    ln -sfn "${native_bin}/python3" "${tool_shim}/nativepython3"
     ln -sfn "${native_bin}/meson" "${tool_shim}/meson"
     ln -sfn "${native_bin}/meson.real" "${tool_shim}/meson.real"
 

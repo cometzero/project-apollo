@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 from typing import Any
+import uuid
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -237,6 +238,48 @@ def read_json(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def timer_probe_evidence(args: argparse.Namespace) -> dict[str, Any]:
+    path = args.out_dir / "timer-snapshot.json"
+    snapshot = read_json(path)
+    source = snapshot.get("source")
+    run_id_matches = isinstance(source, dict) and source.get("run_id") == args.timer_probe_run_id
+    if snapshot.get("schema_version") == 1 and snapshot.get("status") == "pass" and run_id_matches:
+        return {
+            "requested": True,
+            "strict_gate": True,
+            "status": snapshot["status"],
+            "path": str(path.resolve()),
+            "producer": "model-side",
+        }
+    reason = "model_side_timer_snapshot_missing_or_nonpass"
+    if snapshot.get("schema_version") == 1 and not run_id_matches:
+        reason = "model_side_timer_snapshot_run_id_mismatch"
+    unavailable = {
+        "schema_version": 1,
+        "producer": "qbox",
+        "status": "unavailable",
+        "captured_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "source": {
+            "machine": "apollo-qvp",
+            "artifact_path": str(path.resolve()),
+            "run_id": args.timer_probe_run_id,
+        },
+        "samples": [],
+        "reason": reason,
+    }
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    status_path = args.out_dir / "timer-probe-status.json"
+    status_path.write_text(json.dumps(unavailable, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "requested": True,
+        "strict_gate": True,
+        "status": "unavailable",
+        "path": str(path.resolve()),
+        "producer": "model-side",
+        "reason": reason,
+    }
 
 
 def read_log(path: Path) -> str:
@@ -1029,6 +1072,9 @@ def write_result(
     check_only: bool,
 ) -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    timer_probe = timer_probe_evidence(args) if args.timer_probe else {"requested": False}
+    if args.timer_probe and timer_probe["status"] != "pass" and not blocker:
+        blocker = "timer_probe_unavailable"
     input_artifacts = {"conf": artifact_record(args.conf)}
     input_artifacts.update(
         {name: artifact_record(path) for name, path in sorted(artifacts.items())}
@@ -1138,6 +1184,7 @@ def write_result(
         ),
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
         "live_trace": args.live_trace,
+        "timer_probe": timer_probe,
         "completion_gates": gates,
         "input_artifacts": input_artifacts,
         "runtime_artifacts": (child_status or {}).get("runtime_artifacts", {}),
@@ -1576,6 +1623,14 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_APOLLO_FULL_SI_MODE"] = args.si_mode
+    if args.timer_probe:
+        env["QBOX_APOLLO_TIMER_SNAPSHOT"] = "1"
+        env["QBOX_APOLLO_TIMER_SNAPSHOT_RUN_ID"] = args.timer_probe_run_id
+        env["QBOX_APOLLO_TIMER_SNAPSHOT_TIME_NS"] = str(args.timer_snapshot_time_ns)
+        env["QBOX_APOLLO_TIMER_SNAPSHOT_INTERVAL_NS"] = str(args.timer_snapshot_interval_ns)
+        env["QBOX_APOLLO_TIMER_SNAPSHOT_PATH"] = str(
+            (args.out_dir / "timer-snapshot.json").resolve()
+        )
     if not args.build_only:
         # Full-system runtime evidence must include the AP firmware/Linux path.
         # The reused RSE child runner only enables AP CPUs for probe-oriented
@@ -1677,6 +1732,26 @@ def parse_args() -> argparse.Namespace:
         default=root / "build/qbox-apollo-qvp" / f"full-{timestamp()}",
     )
     parser.add_argument("--timeout", type=int, default=900)
+    parser.add_argument(
+        "--timer-probe",
+        action="store_true",
+        help=(
+            "Require a model-side structured timer snapshot. Missing or non-pass "
+            "evidence is a hard failure."
+        ),
+    )
+    parser.add_argument(
+        "--timer-snapshot-time-ns",
+        type=int,
+        default=1_000_000,
+        help="Simulation timestamp for the single model-side timer snapshot.",
+    )
+    parser.add_argument(
+        "--timer-snapshot-interval-ns",
+        type=int,
+        default=1_000_000,
+        help="Interval from start to end model-side timer snapshot.",
+    )
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--build-only", action="store_true")
@@ -2023,6 +2098,10 @@ def parse_args() -> argparse.Namespace:
         )
     if args.rse_hotpath_max_bytes <= 0:
         parser.error("--rse-hotpath-max-bytes must be positive")
+    if args.timer_snapshot_time_ns < 0:
+        parser.error("--timer-snapshot-time-ns must be non-negative")
+    if args.timer_snapshot_interval_ns <= 0:
+        parser.error("--timer-snapshot-interval-ns must be positive")
     if args.rse_hotpath_memcpy_addr is not None and args.rse_hotpath_memcpy_addr <= 0:
         parser.error("--rse-hotpath-memcpy-addr must be positive")
     if args.rse_hotpath_memset_addr is not None and args.rse_hotpath_memset_addr <= 0:
@@ -2056,6 +2135,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    args.timer_probe_run_id = uuid.uuid4().hex
     args.provision_blank_rse_otp = False
     args.rse_otp_auto_provision = {
         "enabled": args.auto_provision_rse_otp,

@@ -79,7 +79,8 @@ COMPONENTS = (
         SI_CL0_TARGET,
         ("work/scp-firmware/bin/apollo-qvp-si0-bl2.elf",
          "work/scp-firmware/bin/apollo-fvp-si0-bl2.elf"),
-        ("arch_exception_reset", "platform_init_hook", "fwk_arch_init"),
+        ("arch_exception_reset", "platform_init_hook", "fwk_arch_init",
+         "__fwk_run_main_loop"),
         ("hsoc-stack/components/system_mgmt/scp-firmware",),
     ),
     Component(
@@ -114,7 +115,8 @@ COMPONENTS = (
     ),
     Component(
         "u-boot", "U-Boot", "u_boot_linux", AP_TARGET,
-        ("work/u-boot/u-boot",), ("_start", "board_init_f", "main_loop"),
+        ("work/u-boot/u-boot",),
+        ("_start", "board_init_f", "dram_init", "relocate_code", "main_loop"),
         ("hsoc-stack/components/primary_compute/u-boot",),
         runtime_text_address=0xE0000000,
     ),

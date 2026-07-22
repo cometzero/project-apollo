@@ -712,6 +712,95 @@ def cmake_cache_values(cache: Path) -> dict[str, str]:
     return values
 
 
+def qbox_sdk_native_sysroot(root: Path, build_dir: Path) -> Path | None:
+    candidates: list[Path] = []
+    for name in ("QBOX_NATIVE_SDK_SYSROOT", "SDK_NATIVE_SYSROOT"):
+        value = os.environ.get(name)
+        if value:
+            candidates.append(Path(value).expanduser())
+
+    local_build_dir = build_dir.parent.parent
+    if local_build_dir.name.startswith("local-"):
+        sdk_name = "local-sdk-" + local_build_dir.name.removeprefix("local-")
+        candidates.extend(
+            sorted((local_build_dir.parent / sdk_name / "sysroots").glob(
+                "*-pokysdk-linux"
+            ))
+        )
+    candidates.extend(
+        path
+        for sdk_dir in sorted((root / "build").glob("local-sdk-*"))
+        for path in sorted((sdk_dir / "sysroots").glob("*-pokysdk-linux"))
+    )
+
+    for candidate in candidates:
+        native_bin = candidate / "usr/bin"
+        if all((native_bin / tool).is_file() for tool in ("python3", "meson", "meson.real")):
+            return candidate.resolve()
+    return None
+
+
+def qbox_sdk_native_build_env(
+    root: Path, build_dir: Path
+) -> tuple[dict[str, str], list[str]]:
+    env = os.environ.copy()
+    native_sysroot = qbox_sdk_native_sysroot(root, build_dir)
+    if native_sysroot is None:
+        return env, []
+
+    native_bin = native_sysroot / "usr/bin"
+    tool_shim = build_dir / ".qbox-sdk-native-tools"
+    tool_shim.mkdir(parents=True, exist_ok=True)
+    tools = {
+        "python3": native_bin / "python3",
+        "nativepython3": native_bin / "python3",
+        "meson": native_bin / "meson",
+        "meson.real": native_bin / "meson.real",
+    }
+    for name, target in tools.items():
+        link = tool_shim / name
+        if link.is_symlink() and link.resolve() == target.resolve():
+            continue
+        if link.exists() or link.is_symlink():
+            link.unlink()
+        link.symlink_to(target)
+
+    for name in (
+        "OECORE_NATIVE_SYSROOT",
+        "OECORE_TARGET_SYSROOT",
+        "SDKTARGETSYSROOT",
+        "SDKPATH",
+        "CONFIG_SITE",
+        "PKG_CONFIG_SYSROOT_DIR",
+        "PKG_CONFIG_PATH",
+        "PKG_CONFIG_LIBDIR",
+        "OECORE_ACLOCAL_OPTS",
+        "TARGET_PREFIX",
+        "CONFIGURE_FLAGS",
+        "CC",
+        "CXX",
+        "CPP",
+        "LD",
+        "AR",
+        "AS",
+        "STRIP",
+        "OBJCOPY",
+        "OBJDUMP",
+        "READELF",
+        "NM",
+        "RANLIB",
+        "CFLAGS",
+        "CXXFLAGS",
+        "CPPFLAGS",
+        "LDFLAGS",
+        "KCFLAGS",
+    ):
+        env.pop(name, None)
+    env["PATH"] = os.pathsep.join((str(tool_shim), env.get("PATH", "")))
+    env["PYTHONNOUSERSITE"] = "1"
+    return env, [f"-DLIBQEMU_PYTHON={native_bin / 'python3'}"]
+
+
 def ensure_qbox_targets(root: Path, jobs: int) -> None:
     core_dir = qbox_core_dir(root)
     platform_dir = qbox_platform_dir(root)
@@ -722,11 +811,12 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
     libqemu_source = os.environ.get(
         "QBOX_FETCHCONTENT_SOURCE_DIR_LIBQEMU", str(local_qemu)
     )
-    libqemu_build_always = os.environ.get("QBOX_LIBQEMU_BUILD_ALWAYS", "OFF")
+    libqemu_build_always = os.environ.get("QBOX_LIBQEMU_BUILD_ALWAYS", "ON")
     apollo_build_target = os.environ.get(
         "QBOX_APOLLO_BUILD_TARGET", "apollo_fvp_full_system"
     )
     install_prefix = str((build_dir / "install").resolve())
+    build_env, sdk_cmake_args = qbox_sdk_native_build_env(root, build_dir)
 
     configure_cmd = [
         "cmake",
@@ -742,8 +832,12 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
         "LIBQEMU_GIT": libqemu_git,
         "FETCHCONTENT_SOURCE_DIR_LIBQEMU": libqemu_source,
         "LIBQEMU_BUILD_ALWAYS": libqemu_build_always,
+        "QBOX_USE_SYSTEM_LIBQEMU": "OFF",
         "QBOX_APOLLO_BUILD_TARGET": apollo_build_target,
     }
+    for argument in sdk_cmake_args:
+        key, value = argument.removeprefix("-D").split("=", 1)
+        expected_cache[key] = value
     for key, value in expected_cache.items():
         if value:
             configure_cmd.append(f"-D{key}={value}")
@@ -755,7 +849,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
             needs_configure = True
             break
     if needs_configure:
-        run(configure_cmd, cwd=root)
+        run(configure_cmd, cwd=root, env=build_env)
 
     build_targets = [apollo_build_target] if apollo_build_target else REQUIRED_TARGETS
     cmd = [
@@ -767,7 +861,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
         "--parallel",
         str(jobs),
     ]
-    run(cmd, cwd=root)
+    run(cmd, cwd=root, env=build_env)
 
 
 def copy_if_requested(src: Path, dst_dir: Path, *, copy: bool) -> Path:

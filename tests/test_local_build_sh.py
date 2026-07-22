@@ -456,6 +456,78 @@ def test_qbox_build_dry_run_resolves_qbox_target() -> None:
     assert "package: local FVP deploy" not in output
 
 
+def test_qbox_libqemu_timer_abi_probe_rejects_stale_package(
+    tmp_path: Path,
+) -> None:
+    prefix = tmp_path / "libqemu"
+    cmake_dir = prefix / "lib/cmake/libqemu"
+    header = prefix / "include/libqemu/libqemu/libqemu.h"
+    write_file(cmake_dir / "libqemuConfig.cmake", "# fixture\n")
+    write_file(header, "#define LIBQEMU_ABI_VERSION 1U\n")
+
+    result = subprocess.run(
+        (
+            "bash",
+            "-c",
+            "source scripts/build/modules/build_qbox.sh; "
+            "qbox_libqemu_supports_arm_timer_abi \"${QBOX_TEST_LIBQEMU_DIR}\"",
+        ),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_COMMON_SOURCED": "1",
+            "PATH": "/usr/bin:/bin",
+            "QBOX_TEST_LIBQEMU_DIR": str(cmake_dir),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode != 0, output_of(result)
+
+
+def test_qbox_libqemu_timer_abi_probe_accepts_current_package(
+    tmp_path: Path,
+) -> None:
+    prefix = tmp_path / "libqemu"
+    cmake_dir = prefix / "lib/cmake/libqemu"
+    header = prefix / "include/libqemu/libqemu/libqemu.h"
+    write_file(cmake_dir / "libqemuConfig.cmake", "# fixture\n")
+    write_file(
+        header,
+        "#define LIBQEMU_ABI_VERSION 2U\n"
+        "#define LIBQEMU_ARM_TIMER_REQUIRED_STRUCT_SIZE 2248U\n",
+    )
+
+    result = subprocess.run(
+        (
+            "bash",
+            "-c",
+            "source scripts/build/modules/build_qbox.sh; "
+            "qbox_libqemu_supports_arm_timer_abi \"${QBOX_TEST_LIBQEMU_DIR}\"",
+        ),
+        cwd=ROOT,
+        check=False,
+        env={
+            "APOLLO_LOCAL_BUILD_COMMON_SOURCED": "1",
+            "PATH": "/usr/bin:/bin",
+            "QBOX_TEST_LIBQEMU_DIR": str(cmake_dir),
+        },
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    assert result.returncode == 0, output_of(result)
+
+
+def test_qbox_source_libqemu_rebuilds_incrementally_by_default() -> None:
+    build_script = ROOT / "scripts/build/modules/build_qbox.sh"
+
+    assert 'QBOX_LIBQEMU_BUILD_ALWAYS:-ON' in build_script.read_text()
+
+
 def test_qbox_unit_tests_dry_run_selects_qbox_only() -> None:
     result = run_local_build("--qbox-unit-tests", "--dry-run")
 
