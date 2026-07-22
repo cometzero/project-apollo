@@ -523,6 +523,15 @@ def test_qbox_source_libqemu_rebuilds_incrementally_by_default() -> None:
     assert 'QBOX_LIBQEMU_BUILD_ALWAYS:-ON' in build_script.read_text()
 
 
+def test_qbox_nested_qemu_build_preserves_make_jobserver() -> None:
+    qemu_cmake = ROOT / "hsoc-stack/tools/qemu/qemu.cmake"
+    contents = qemu_cmake.read_text()
+
+    assert 'set(_qemu_build_command "$(MAKE)")' in contents
+    assert "BUILD_COMMAND ${_qemu_build_command}" in contents
+    assert "INSTALL_COMMAND ${_qemu_build_command} install" in contents
+
+
 def test_qbox_unit_tests_dry_run_selects_qbox_only() -> None:
     result = run_local_build("--qbox-unit-tests", "--dry-run")
 
