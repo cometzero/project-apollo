@@ -165,8 +165,6 @@ def main() -> int:
     hw_block = root / HW_BLOCK_REL
     objects: list[LuaObject] = []
     for path in sorted(hw_block.glob("*.lua")):
-        if path.name in {"primary_compute.lua", "si_cl1_isolated.lua"}:
-            continue
         objects.extend(iter_lua_objects(path, read_text(path)))
     forbidden = forbidden_rse_objects(objects)
     result = {

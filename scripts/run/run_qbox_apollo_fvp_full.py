@@ -672,7 +672,7 @@ def should_auto_provision_rse_otp(
 ) -> tuple[bool, str]:
     if not args.auto_provision_rse_otp:
         return False, "disabled"
-    if args.check_only or args.build_only or args.isolated:
+    if args.check_only or args.build_only:
         return False, "non_runtime_mode"
     if args.rse_otp is not None:
         return False, "explicit_rse_otp"
@@ -958,6 +958,9 @@ def build_marker_groups(
             or primary_obs["root_shell"]
             or probe.get("passed")
         ),
+    }
+    groups["post_login"] = {
+        "probe": bool(probe.get("passed")),
     }
     if "linux_boot" in groups:
         groups["linux_boot"][args.primary_shell_marker] = groups["linux"][
@@ -1345,44 +1348,6 @@ def write_blocker_logs(args: argparse.Namespace, blocker: str) -> None:
             f"console: {name}\n"
             f"blocker: {blocker}\n",
         )
-
-
-def live_mode_blocker(args: argparse.Namespace) -> str | None:
-    if args.isolated:
-        return None
-    return None
-
-
-def isolated_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[str]:
-    root = workspace_root()
-    if args.si_mode != "live-cl1":
-        raise ValueError("--isolated is currently implemented only for --si-mode live-cl1")
-    cmd = [
-        sys.executable,
-        str(root / "scripts/run/run_qbox_apollo_fvp_si_cl1.py"),
-        "--image",
-        str(artifacts["si_cl1_image"]),
-        "--symbols",
-        str(artifacts["si_cl1_symbols"]),
-        "--out-dir",
-        str(args.out_dir),
-        "--timeout",
-        str(args.timeout),
-        "--jobs",
-        str(args.jobs),
-        "--qbox-build-dir",
-        str(args.qbox_build_dir),
-    ]
-    if args.skip_build:
-        cmd.append("--skip-build")
-    return cmd
-
-
-def run_isolated(args: argparse.Namespace, artifacts: dict[str, Path]) -> int:
-    cmd = isolated_command(args, artifacts)
-    print("+ " + " ".join(cmd), flush=True)
-    proc = subprocess.run(cmd, cwd=workspace_root(), check=False)
-    return proc.returncode
 
 
 def wait_for_keep_running_child_pass(
@@ -1783,11 +1748,6 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--rse-otp-provision-timeout", type=int, default=600)
     parser.add_argument(
-        "--isolated",
-        action="store_true",
-        help="Run the isolated live Safety Island mode for this --si-mode.",
-    )
-    parser.add_argument(
         "--keep-running-after-pass",
         action="store_true",
         help=(
@@ -2155,34 +2115,6 @@ def main() -> int:
             child_returncode=None,
             blocker=blocker,
             check_only=True,
-        )
-
-    if args.isolated:
-        if args.si_mode != "live-cl1":
-            blocker = "isolated_mode_not_implemented_for:" + args.si_mode
-            write_blocker_logs(args, blocker)
-            return write_result(
-                args,
-                artifacts,
-                command=[],
-                child_status=None,
-                child_returncode=None,
-                blocker=blocker,
-                check_only=False,
-            )
-        return run_isolated(args, artifacts)
-
-    blocker = live_mode_blocker(args)
-    if blocker:
-        write_blocker_logs(args, blocker)
-        return write_result(
-            args,
-            artifacts,
-            command=[],
-            child_status=None,
-            child_returncode=None,
-            blocker=blocker,
-            check_only=False,
         )
 
     blocker = auto_provision_rse_otp(args, artifacts)

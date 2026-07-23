@@ -195,9 +195,10 @@ BL2 validation delta를 151.321초에서 133.339초로 줄였다. 같은 결과 
 full-system 검증 bundle은
 `build/qbox-apollo-fvp/cc3xx-qemu-native-20260605-003557/full/`을 사용한다.
 이 run은 `passed: true`, `blocker: none`, Linux login, post-login probe,
-SI CL1 remoteproc/RPMsg, `ethsi1`, DSU PMU evidence를 남긴다. 기존 direct-boot
-guardrail은 `build/qbox-apollo-fvp/direct-guardrail-20260605-004025/`에서
-`passed: true`로 확인했다.
+SI CL1 remoteproc/RPMsg, `ethsi1`, DSU PMU evidence를 남긴다. 역사적
+direct-boot guardrail evidence는
+`build/qbox-apollo-fvp/direct-guardrail-20260605-004025/`에서 pass로
+확인했지만, 현재 G1/G2 contract에는 사용하지 않는다.
 
 RSE boot time을 FVP에 가깝게 비교하는 기본 fast path는 file-backed SRAM
 alias가 아니라 shared-memory SRAM DMI이다. 이 경로는 RSE runner에
@@ -558,27 +559,7 @@ build/qbox-apollo-fvp/full-check-only/map-validation.json
 build/qbox-apollo-fvp/full-check-only/coverage-audit.json
 ```
 
-## G1: Direct-Boot Guardrail
-
-기존 AP Linux direct-boot 경로가 깨지지 않았는지 확인한다.
-
-```bash
-python3 scripts/run/run_qbox_apollo_fvp_linux.py \
-  --skip-build \
-  --timeout 600 \
-  --post-login-probe \
-  --out-dir build/qbox-apollo-fvp/direct-guardrail
-```
-
-이 결과는 regression guardrail이다. RSE/Safety Island를 우회하므로
-full-system 완료 증거가 아니다.
-
-Direct-boot guardrail은 RSE/Safety Island/TF-A/OP-TEE/U-Boot을 의도적으로
-우회하는 별도 runner 결과로만 관리한다. Full-system runner에서는 빠른 stub
-옵션을 제공하지 않으며, direct-boot 결과는 G2-G5 full-system completion에
-사용하지 않는다.
-
-## G2: Service-Model Full Boot
+## G1/G2: Service-Model Full Boot 및 AP Probe
 
 RSE-first AP firmware boot가 동작하는지 확인한다.
 
@@ -598,6 +579,11 @@ python3 scripts/analyze/compare_fvp_qbox_rse_logs.py \
 ```
 
 `service-model`은 Safety Island CPU fidelity debt를 명시적으로 남긴다.
+G1은 같은 `full-service-model/result.json`에서 AP BL2, BL31, OP-TEE,
+U-Boot, Linux, post-login probe, `qbox-secure-console.log`,
+`qbox-primary-console.log`만 확인한다. G2는 같은 evidence directory에서
+RSE-first service-model 전체 marker, subsystem logs, service-model debt,
+comparison 결과까지 확인한다.
 
 ## G3: Live CL1 Integration
 
@@ -784,22 +770,6 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
 ```
 
 모든 artifact override는 `result.json`의 `artifacts` 항목에 기록된다.
-
-## 단독 CL1 Bring-Up
-
-CL1 Zephyr만 빠르게 확인하려면 isolated mode를 사용한다.
-
-```bash
-python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode live-cl1 \
-  --isolated \
-  --skip-build \
-  --timeout 300 \
-  --out-dir build/qbox-apollo-fvp/si-cl1-isolated
-```
-
-이 결과는 milestone evidence이다. AP/RSE/SI 통합 완료 증거로는 사용할
-수 없다.
 
 ## 문제 분석 순서
 

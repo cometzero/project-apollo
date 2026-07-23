@@ -12,9 +12,6 @@ QBOX_VIRTIO_NET = (
 )
 QBOX_PLATFORM = ROOT / "hsoc-stack/tools/qbox-platform"
 AP_COMPUTE = QBOX_PLATFORM / "platforms/apollo/hw-block/ap_compute.lua"
-PRIMARY_COMPUTE = (
-    QBOX_PLATFORM / "platforms/apollo/hw-block/primary_compute.lua"
-)
 SIGNAL_ROUTES = QBOX_PLATFORM / "platforms/apollo/hw-block/signal_routes.lua"
 OVERLAY = (
     QBOX_PLATFORM
@@ -27,7 +24,6 @@ QBOX_PLATFORM_CMAKE = QBOX_PLATFORM / "CMakeLists.txt"
 QBOX_PLATFORM_README = QBOX_PLATFORM / "platforms/apollo/README.md"
 PREPARE = ROOT / "scripts/test/prepare_qbox_apollo_pcie_irq_profile.py"
 VALIDATE = ROOT / "scripts/test/validate_qbox_apollo_pcie_irq_runtime.py"
-DIRECT_RUNNER = ROOT / "scripts/run/run_qbox_apollo_fvp_linux.py"
 
 
 def load_script(name: str, path: Path):
@@ -64,26 +60,6 @@ def test_apollo_build_contract_includes_test_endpoint_module() -> None:
     text = QBOX_PLATFORM_CMAKE.read_text(encoding="utf-8")
 
     assert "\n    virtio_net_pci\n" in text
-
-
-def test_primary_compute_direct_profile_uses_same_pcie_path() -> None:
-    text = PRIMARY_COMPUTE.read_text(encoding="utf-8")
-    runner = DIRECT_RUNNER.read_text(encoding="utf-8")
-
-    assert 'QBOX_APOLLO_PCIE_IRQ_TEST' in text
-    assert 'moduletype = "qemu_gpex"' in text
-    assert 'bind = "&smmu_lti00.upstream_socket"' in text
-    assert 'moduletype = "smmuv3"' in text
-    assert 'moduletype = "smmuv3_tbu"' in text
-    assert 'topology_id = 0x40' in text
-    assert 'gicv4_1_cte_size = 2' in text
-    assert 'pamax = 52' in text
-    assert 'sidsize = 32' in text
-    assert 'moduletype = "virtio_net_pci"' in text
-    assert 'addr = "01.0"' in text
-    assert '"qemu_gpex"' in runner
-    assert '"smmuv3"' in runner
-    assert '"virtio_net_pci"' in runner
 
 
 def test_overlay_describes_gpex_smmu_and_its_contract() -> None:
@@ -124,15 +100,19 @@ def test_guest_test_emits_bounded_runtime_evidence() -> None:
     assert "smp_affinity" in text
 
 
-def test_documented_direct_runs_use_four_cpus_and_explicit_intx_bootarg() -> None:
+def test_documented_profile_uses_canonical_full_system_runner() -> None:
     text = QBOX_PLATFORM_README.read_text(encoding="utf-8")
     section = text.split("## PCIe MSI-X/LPI And INTx Test Profile", 1)[1].split(
         "## Fault Event Test Profile", 1
     )[0]
 
+    assert section.count("run_qbox_apollo_fvp_full.py") == 2
+    assert "run_qbox_apollo_fvp_linux.py" not in section
     assert section.count("QBOX_APOLLO_NUM_CPUS=4") == 2
-    assert section.count("maxcpus=4") == 2
-    assert 'maxcpus=4 mem=4064M pci=nomsi"' in section
+    assert section.count("--si-mode live-cl0-cl1") == 2
+    assert section.count("--rootfs-bootargs-profile none") == 2
+    assert "--msix-log <msix-output>/qbox-primary-console.log" in section
+    assert "--intx-log <intx-output>/qbox-primary-console.log" in section
 
 
 def test_profile_helper_adds_intx_bootarg_once() -> None:

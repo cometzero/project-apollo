@@ -67,12 +67,13 @@ exported.
 
 1. Run static map and boundary checks.
 2. Run the narrow component test.
-3. Run Primary Compute direct boot when the change is AP-only.
+3. Run the full Apollo service-model mode for focused AP changes.
 4. Run the full Apollo system for cross-domain changes.
 5. Audit full-system coverage from the generated `result.json`.
 
 ```bash
-python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
+  --si-mode service-model --timeout 600
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --timeout 600
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \

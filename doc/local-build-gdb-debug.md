@@ -161,27 +161,20 @@ scripts/debug/run_local_gdb.py libqemu-aarch64 \
 
 ## 개별 AP CPU의 TF-A, OP-TEE, U-Boot, Linux
 
-이 컴포넌트들은 같은 AP CPU GDB stub에 각 단계의 ELF를 선택해 연결한다.
-직접 부팅 runner에서 CPU 0의 stub을 연 예시는 다음과 같다.
-
-터미널 1:
-
-```bash
-QBOX_APOLLO_GDB_CPU_INDEX=0 \
-QBOX_APOLLO_GDB_PORT=12341 \
-python3 scripts/run/run_qbox_apollo_fvp_linux.py \
-  --skip-build --interactive --timeout 0
-```
-
-터미널 2:
+이 컴포넌트들은 full-system AP CPU GDB stub에 각 단계의 ELF를 선택해 연결한다.
+지원되는 경로는 `run_qbox_local_debug.sh`가 여는 AP target pane과
+`build/local-apollo-qvp/debug/gdb/ap.gdb` command file이다.
 
 ```bash
-scripts/debug/run_local_gdb.py linux \
-  --remote localhost:12341 --break start_kernel
+./run_qbox_local_debug.sh --ap-early-attach
+scripts/debug/run_local_gdb.py domain-ap --batch
+scripts/debug/run_local_gdb.py linux --batch
 ```
 
-부팅 단계에 따라 `tfa-bl2`, `tfa-bl31`, `optee-core`, `u-boot`, `linux` 중
-현재 PC에 맞는 컴포넌트를 선택한다.
+실행 중인 full-system AP GDB stub에 수동으로 붙을 때는 `run_qbox_local_debug.sh`
+출력과 `build/local-apollo-qvp/debug/README.md`에 기록된 AP 포트와 command file을
+사용한다. 부팅 단계에 따라 `tfa-bl2`, `tfa-bl31`, `optee-core`, `u-boot`,
+`linux` 중 현재 PC에 맞는 컴포넌트를 선택한다.
 
 ## RSE TF-M과 Safety Island
 

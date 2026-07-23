@@ -22,10 +22,6 @@ SI_CL0_LUA = (
 SI_CL1_LUA = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua"
 )
-SI_CL1_ISOLATED_LUA = (
-    ROOT
-    / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1_isolated.lua"
-)
 APOLLO_QVP_CONFIG = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
 )
@@ -323,10 +319,6 @@ def test_full_system_qemu_defaults_use_per_cpu_wake_conditions():
         '"QBOX_APOLLO_FULL_SI_CL0_TCG_MODE", "MULTI"' in si_cl0_text
     )
 
-    isolated_text = SI_CL1_ISOLATED_LUA.read_text(encoding="utf-8")
-    assert 'getenv_or("QBOX_APOLLO_SI_CL1_TCG_MODE", "SINGLE")' in isolated_text
-
-
 def test_live_cl1_gate_requires_pfdi_readiness():
     runner = load_runner()
     marker_groups = {
@@ -506,6 +498,7 @@ def test_timer_probe_rejects_a_stale_pass_snapshot(tmp_path):
         ["--rse-cpu-mode", "remote"],
         ["--remotepass-dmi-cache"],
         ["--rse-hotpath-tlm-fallback"],
+        ["--isolated"],
         ["--definitely-invalid-option"],
     ],
 )
@@ -888,6 +881,7 @@ def test_post_login_probe_promotes_root_shell_marker(tmp_path):
     groups = runner.build_marker_groups(make_args(tmp_path), child_status)
 
     assert groups["linux"]["root_shell"] is True
+    assert groups["post_login"]["probe"] is True
     assert groups["linux_boot"]["~ #"] is True
 
 

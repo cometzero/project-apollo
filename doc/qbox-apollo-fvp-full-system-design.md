@@ -21,7 +21,7 @@ the Apollo FVP system shape:
 - Primary Compute: Cortex-A720AE running TF-A, OP-TEE, U-Boot, and Linux.
 
 The target is FVP-equivalent functional behavior for the local
-`apollo-fvp` configuration, not only a Linux direct-boot shortcut.
+`apollo-fvp` configuration, not an AP-only Linux endpoint.
 
 ## Completion Boundary
 
@@ -32,9 +32,8 @@ RSE TF-M -> SI CL0 SCP-firmware -> SI CL1 Zephyr -> AP TF-A/OP-TEE/U-Boot/Linux
 ```
 
 All four domains must be live in the same QBox run for the final gate. AP Linux
-login, RSE-first service-model boot, and isolated Safety Island firmware runs
-are milestone evidence only. They are useful regression gates, but they do not
-prove Apollo FVP equivalence.
+login and RSE-first service-model boot are milestone evidence only. They are
+useful regression gates, but they do not prove Apollo FVP equivalence.
 
 Completion can be claimed only from the saved
 `build/qbox-apollo-fvp/full-live-cl0-cl1/` evidence directory after
@@ -51,19 +50,14 @@ Any missing live-domain marker, absent boot-critical hardware block,
 unreviewed fidelity gap, or tmux-only observation is not a completion point and
 must be reported as `blocked`, `fail`, or `not_run` in machine-readable output.
 
-The verifier may also attach isolated milestone evidence, such as the current
-QAP-FULL-020 CL1 Zephyr pass, under `milestone_evidence`. That evidence is
-useful for review and regression tracking, but it does not advance the G0-G5
-completion gates and cannot authorize a full-system completion claim.
+Historical isolated CL1 evidence may be cited only as dated development
+context. It is not a current verifier input, does not advance the G0-G5
+completion gates, and cannot authorize a full-system completion claim.
 
 ## Evidence Inputs
 
 The design is based on the current workspace state:
 
-- `tools/qbox-platform/platforms/apollo/apollo-pc.lua` is the current Apollo
-  primary-compute direct-boot platform.
-- `scripts/run/run_qbox_apollo_fvp_linux.py` boots local `Image` and
-  `initramfs.cpio.gz` directly and bypasses RSE, TF-A, OP-TEE, and U-Boot.
 - `tools/qbox-platform/platforms/apollo/hw-block/rse.lua` contains the Apollo-owned
   RSE-first topology imported from the existing RD-Aspen RSE platform: RSE
   Cortex-M55, AP firmware chain, AP reset release, AP/RSE/SI MHUv3 paths,
@@ -108,15 +102,8 @@ be compared without editing Lua.
 
 ## Entry Points
 
-Keep the existing fast direct-boot path unchanged:
-
-```text
-scripts/run/run_qbox_apollo_fvp_linux.py
-./local_build.sh qbox
-tools/qbox-platform/platforms/apollo/apollo-pc.lua
-```
-
-Add a separate full-system path:
+Use the full-system path for current AP, service-model, live-CL1, and
+live-CL0/CL1 evidence:
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
@@ -134,9 +121,9 @@ tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua
 build/qbox-apollo-fvp/full-<run-id>/
 ```
 
-The split is important because direct boot starts AP Linux through an AArch64
-stub with EL3/EL2 disabled, while full-system boot starts from RSE and releases
-AP CPU0 into AP BL2 with EL3/EL2 enabled.
+The full-system path starts from RSE and releases AP CPU0 into AP BL2 with
+EL3/EL2 enabled. G1 AP-probe evidence is read from this path's
+`full-service-model/result.json`, not from a separate AP runner.
 
 ## Memory, Interrupt, And ATU Design
 
@@ -383,7 +370,7 @@ QBox top container
 
 Use the existing `fvp-rd-aspen-rse` topology as the first source of truth for
 RSE and AP wiring. Add Apollo-specific artifact defaults, environment variable
-names, and output paths instead of modifying the current direct-boot Lua.
+names, and output paths in `apollo-qvp.lua`.
 
 ## Safety Island Modes
 
@@ -500,8 +487,8 @@ last gate before claiming completion and should record:
   that permits a final report to claim the full-system task is complete.
 - `completion_ready: true`.
 - `overall_gates.G0..G5 == "pass"`.
-- Paths for the check-only, direct-boot, service-model, live-CL1, and
-  live-CL0/CL1 evidence directories.
+- Paths for the check-only, service-model, live-CL1, and live-CL0/CL1 evidence
+  directories.
 - Per-check pass/fail entries for `result.json`, subsystem logs, marker
   groups, FVP comparison, map comparison, and coverage audit artifacts.
 
@@ -528,7 +515,7 @@ python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --out-dir build/qbox-apollo-fvp/full-service-model
 ```
 
-Live SI validation should start isolated, then integrate:
+Live SI validation uses integrated full-system modes:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
@@ -585,8 +572,8 @@ The following decisions should be reviewed before implementation:
 
 ## Main Risks
 
-- Cortex-R82 source probes pass, but live SCP-firmware and Zephyr execution
-  still need isolated runtime proof.
+- Cortex-R82 source probes are necessary but not sufficient; live SCP-firmware
+  and Zephyr execution must be proven by integrated runtime evidence.
 - GIC-720AE behavior may require more than the current GICv3-compatible view
   once live Safety Island firmware handles timers and interrupts.
 - ATU, ATW, and access-protection behavior crosses RSE, SMD, AP, and SI. Static

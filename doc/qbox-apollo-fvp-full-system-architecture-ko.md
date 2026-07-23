@@ -32,7 +32,7 @@ JSON evidence로 확인되어야 한다.
 | --- | --- |
 | Workspace root | full-system runner, map validator, coverage audit, strict verifier, 한국어/영어 설계 문서 |
 | `tools/qbox` | upstream-friendly QBox core, reusable SystemC/TLM/QEMU integration, `platforms-vp` 실행 파일 |
-| `tools/qbox-platform` | Apollo full-system Lua platform, Safety Island CL1 단독 platform, Zena/RSE SystemC/TLM host models, Apollo-specific QEMU wrapper, component tests |
+| `tools/qbox-platform` | Apollo full-system Lua platform, Zena/RSE SystemC/TLM host models, Apollo-specific QEMU wrapper, component tests |
 | `tools/qemu` | Cortex-R82 architectural feature 보강 |
 
 주요 커밋은 다음과 같다.
@@ -43,31 +43,19 @@ JSON evidence로 확인되어야 한다.
 | `tools/qbox-platform` | `5840f3eaef90` | pre-split Apollo platform history seed |
 | `tools/qemu` | `9743cfc25f1e` | `feat(arm): complete Cortex-R82 features` |
 
-## 기존 경로와 새 경로
+## Full-System 경로
 
-기존 Apollo QBox 경로는 Primary Compute Linux를 직접 부팅한다.
-
-```text
-scripts/run/run_qbox_apollo_fvp_linux.py
-./local_build.sh qbox
-tools/qbox-platform/platforms/apollo/apollo-pc.lua
-```
-
-이 경로는 Linux kernel, initramfs, AP device model 검증에는 빠르다.
-하지만 RSE, TF-A, OP-TEE, U-Boot, Safety Island CL0/CL1을 우회하므로
-full-system 완료 증거로 사용할 수 없다.
-
-새 full-system 경로는 RSE-first firmware chain을 기준으로 한다.
+현재 full-system 경로는 RSE-first firmware chain을 기준으로 한다.
 
 ```text
 scripts/run/run_qbox_apollo_fvp_full.py
 ./local_build.sh qbox
-scripts/run/run_qbox_apollo_fvp_si_cl1.py
 scripts/test/validate_qbox_apollo_fvp_full_map.py
 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
 scripts/test/verify_qbox_apollo_fvp_full_completion.py
 tools/qbox-platform/platforms/apollo/apollo-qvp.lua
-tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua
+tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua
+tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua
 ```
 
 ## 전체 SW Architecture
@@ -193,13 +181,6 @@ tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua
 - `reset_fanout`으로 MHU power-on-reset 신호를 여러 SI CL1 CPU reset
   입력으로 fan-out한다.
 - AP/SI MHU trace와 SI CL0 PC trace를 파일로 남긴다.
-
-### Safety Island CL1 단독 Platform
-
-`tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua`는 CL1 Zephyr만 빠르게 실행해
-SMP, UART, PFDI agent, PFDI service, shell marker를 확인하는 단독
-milestone platform이다. 최종 완료 증거는 아니지만 Cortex-R82/Zephyr
-bring-up 회귀 검사에 유용하다.
 
 ## SystemC/TLM 모델
 
@@ -331,8 +312,8 @@ build/qbox-apollo-fvp/full-live-cl0-cl1/
 | Gate | 이름 | 의미 |
 | --- | --- | --- |
 | G0 | Contract readiness | artifact, Cortex-R82, map, coverage contract 준비 |
-| G1 | Direct-boot guardrail | 기존 AP Linux direct boot 회귀 없음 |
-| G2 | Service-model full boot | RSE-first AP boot와 service-model debt 확인 |
+| G1 | Full-system AP probe | `full-service-model/result.json`에서 AP firmware, Linux, post-login, AP log 확인 |
+| G2 | Service-model full boot | 같은 service-model evidence에서 RSE-first boot와 service-model debt 확인 |
 | G3 | Live CL1 integration | live CL1 Zephyr와 AP Linux HIPC/RPMsg path 확인 |
 | G4 | Live CL0/CL1 integration | RSE, CL0, CL1, AP firmware, U-Boot, Linux가 한 run에서 통과 |
 | G5 | FVP equivalence closure | FVP log comparison, map comparison, coverage audit 통과 |
@@ -364,7 +345,8 @@ JSON은 다음 조건을 만족해야 한다.
 
 ## 설계상 남겨둔 원칙
 
-- Direct boot는 빠른 regression guardrail로 유지한다.
+- AP probe는 별도 runner가 아니라 full-system service-model evidence에서
+  확인한다.
 - Full-system 완료는 live CL0/CL1 integrated run만 인정한다.
 - Register stub이나 service-model은 숨기지 않고 coverage audit에
   분류한다.

@@ -48,10 +48,10 @@ Safety Island live CPU, optional SMMU/CC3XX backend, RoS virtio RNG에 쓰인다
 | `arm_smmuv3` | Arm SMMUv3 QEMU device | `QemuDevice`, QEMU device type `arm-smmuv3` | AP I/O SMMU optional backend. `ap_smmu_component()`에서 `QBOX_RDASPEN_SMMU_BACKEND=qemu-arm-smmuv3`일 때 사용 | Linux-visible SMMUv3 register/device behavior를 QEMU 구현으로 제공하고, SystemC `mmu720ae`와 비교/fallback 기준으로 사용 |
 | `qemu_cc3xx` | RSE CC3XX/CryptoCell register model의 QEMU-native backend | `sc_module` + QEMU `MemoryRegionOps`; 내부 core는 SystemC `cc3xx`와 공유 | RSE local crypto path optional backend. `QBOX_RDASPEN_CC3XX_BACKEND=qemu-native`일 때 `rse_cc3xx_component()`가 선택 | RSE TF-M/BL2 crypto MMIO hot path를 QEMU callback으로 처리해 성능을 개선하면서 CC3XX register/DMA side effect는 공유 core로 유지 |
 | `rse_cpu_accel` | RSE TF-M BL2/MCUboot semantic acceleration | static library, `QemuCpuPcEntryObserver` | `platforms/apollo/rse-cpu/ApolloRseCPU`에 링크됨. Lua module로 직접 생성되지는 않음 | RSE Cortex-M55 실행 중 특정 PC entry를 관찰해 BL2 image load, hash, signature, LMS/P-256, delay hot path를 가속 |
-| `cpu_arm_cortexA720AE` | Arm Cortex-A720AE AP CPU | `QemuCpuArm`, QEMU CPU type `cortex-a720ae-arm` | `ap_compute.lua`의 AP CPU cluster, `primary_compute.lua`의 direct AP path | Apollo Primary Compute firmware/Linux 실행, EL2/EL3, PSCI, reset vector, timer/PMU/GIC signal 연결 |
-| `cpu_arm_cortexR82` | Arm Cortex-R82 Safety Island CPU | `QemuCpuArm`, QEMU CPU type `cortex-r82-arm` | live SI CL0, live SI CL1, isolated SI CL1 | SCP-firmware 또는 Zephyr 실행용 Safety Island CPU backend |
-| `sbsa_gwdt` | Arm SBSA Generic Watchdog | `QemuDevice`, QEMU device type `sbsa_gwdt` | AP full-system 및 primary-compute direct path | AP firmware/Linux watchdog register window와 watchdog IRQ 제공 |
-| `virtio_mmio_rng` | virtio-mmio RNG device | `QemuVirtioMMIO`, QEMU device type `virtio-rng-device` | `ros.lua`의 AP-visible RoS RNG, `primary_compute.lua` direct path | Linux/guest entropy source 제공 |
+| `cpu_arm_cortexA720AE` | Arm Cortex-A720AE AP CPU | `QemuCpuArm`, QEMU CPU type `cortex-a720ae-arm` | `ap_compute.lua`의 AP CPU cluster | Apollo Primary Compute firmware/Linux 실행, EL2/EL3, PSCI, reset vector, timer/PMU/GIC signal 연결 |
+| `cpu_arm_cortexR82` | Arm Cortex-R82 Safety Island CPU | `QemuCpuArm`, QEMU CPU type `cortex-r82-arm` | live SI CL0, live SI CL1 | SCP-firmware 또는 Zephyr 실행용 Safety Island CPU backend |
+| `sbsa_gwdt` | Arm SBSA Generic Watchdog | `QemuDevice`, QEMU device type `sbsa_gwdt` | AP full-system path | AP firmware/Linux watchdog register window와 watchdog IRQ 제공 |
+| `virtio_mmio_rng` | virtio-mmio RNG device | `QemuVirtioMMIO`, QEMU device type `virtio-rng-device` | `ros.lua`의 AP-visible RoS RNG | Linux/guest entropy source 제공 |
 
 ### QEMU Component Notes
 
@@ -84,7 +84,7 @@ SystemC/TLM dynamic module이다. 일부는 실제 IP의 제한된 functional mo
 | `host_scr` | Host system control/SID/SCR register blocks | Register model | AP SID, SI CL0 SCR/system ID, host SI SCR | System ID, SoC/chip ID, CL configuration, CPUHALT/mem/safety control compatibility |
 | `host_smcf_mgi` | SMCF MGI monitor group interface | Register model | live SI CL0 SMCF monitor/group interface | Monitor request/status, mode request/status, data-valid and feature registers 제공 |
 | `host_system_pll` | System PLL control/status window | Register model | live SI CL0 PLL | PLL programming write를 받아 lock bit를 set해 firmware polling을 통과 |
-| `mhu320ae` | Arm CoreLink MHU-320AE / MHU Architecture v3 doorbell PBX/MBX | SystemC/TLM functional subset | RSE local MHU0/MHU2, AP/RSE, RSE/SI, AP/SI SCMI, AP/SI CL1 HIPC, PFDI monitor, isolated/live CL1 | Doorbell frame, IRQ, SCMI shared-memory service, PFDI monitor, AP reset/power SCMI, RPMsg namespace seed, RSE PS proxy path 제공 |
+| `mhu320ae` | Arm CoreLink MHU-320AE / MHU Architecture v3 doorbell PBX/MBX | SystemC/TLM functional subset | RSE local MHU0/MHU2, AP/RSE, RSE/SI, AP/SI SCMI, AP/SI CL1 HIPC, PFDI monitor, live CL1 | Doorbell frame, IRQ, SCMI shared-memory service, PFDI monitor, AP reset/power SCMI, RPMsg namespace seed, RSE PS proxy path 제공 |
 | `mmu720ae` | Arm MMU-720AE / SMMUv3-compatible AP I/O MMU | SystemC/TLM functional subset | AP SMMU default backend | SMMUv3 register/queue/IRQ surface 제공. SMMU enabled 상태의 silent bypass를 막고 translation fault/event를 기록 |
 | `ras_ffh_stub` | RAS Firmware First Handling IRQ surface | Stub | 현재 Apollo Lua 직접 사용 없음 | RAS FFH interrupt-only placeholder |
 | `reset_fanout` | Reset signal fanout helper | Pure SystemC signal utility | System-management reset distribution | 하나의 reset input을 여러 reset output으로 전달하고 delta/timing ordering을 안정화 |
@@ -107,7 +107,7 @@ SystemC/TLM dynamic module이다. 일부는 실제 IP의 제한된 functional mo
 | AP/Primary Compute | `cpu_arm_cortexA720AE`, `mmu720ae`/`arm_smmuv3`, `sbsa_gwdt`, `strata_flash_j3`, `host_scr`, `gic720ae_messreg`, `zena_fmu` | TF-A/OP-TEE/U-Boot/Linux 실행, AP flash, AP SMMU, watchdog, GIC-720AE sideband, safety/fault surfaces |
 | RoS | `virtio_mmio_rng` | AP-visible virtio RNG; block/net/RTC는 QBox core component 사용 |
 | Safety Island CL0 | `cpu_arm_cortexR82`, `host_cmn_cyprus`, `gicx00_multiview`, `host_gtimer`, `host_ni710ae_nci`, `host_ppu`, `host_scr`, `host_smcf_mgi`, `host_system_pll`, `zena_fmu`, `zena_ssu` | SCP-firmware live 실행, SI GIC view programming, timer/discovery/safety/control register compatibility |
-| Safety Island CL1 | `cpu_arm_cortexR82`, `mhu320ae`, `host_ppu` | Zephyr live/isolated 실행, HIPC/RPMsg, PFDI monitor, CL1 cluster power/reset surface |
+| Safety Island CL1 | `cpu_arm_cortexR82`, `mhu320ae`, `host_ppu` | Zephyr live 실행, HIPC/RPMsg, PFDI monitor, CL1 cluster power/reset surface |
 | Cross-domain messaging | `mhu320ae`, `rse_atu`, `reset_fanout` | AP/RSE/SI SCMI, AP/SI CL1 HIPC, AP logical MHU aliases, reset/power fanout |
 
 ## Conditional and Unused Surfaces
@@ -119,7 +119,6 @@ SystemC/TLM dynamic module이다. 일부는 실제 IP의 제한된 functional mo
 | `mmu720ae` | Apollo 기본값 | `QBOX_RDASPEN_SMMU_BACKEND`가 없으면 AP SMMU backend로 사용 |
 | `arm_smmuv3` | opt-in | `QBOX_RDASPEN_SMMU_BACKEND=qemu-arm-smmuv3`일 때 사용 |
 | `ras_ffh_stub` | Apollo Lua 직접 사용 없음 | RAS FFH IRQ placeholder로 빌드됨 |
-| `si_cl1_isolated.lua`의 `mhu320ae`, `cpu_arm_cortexR82` | 별도 entrypoint | `apollo-si-cl1.lua` isolated run에서 사용. full-system QVP의 `si_cl1.lua`와 같은 목적의 축소 platform |
 
 ## Fidelity 관점의 해석
 

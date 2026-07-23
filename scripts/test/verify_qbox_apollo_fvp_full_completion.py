@@ -68,9 +68,8 @@ GOAL_DEFINITION = {
         "Primary Compute",
     ],
     "not_completion_points": [
-        "AP Linux direct boot reaches login",
+        "A focused full-system AP probe reaches login",
         "RSE-first service-model boot reaches Linux",
-        "isolated SI CL0 or CL1 firmware boots without AP integration",
         "live CL1 integration without live CL0 SCP-firmware",
         "tmux-only console output without saved result.json and UART logs",
     ],
@@ -108,8 +107,11 @@ COMPLETION_LEVELS = {
         "completion_role": "required precondition",
     },
     "G1": {
-        "name": "Direct-boot guardrail",
-        "objective": "The existing AP Linux direct-boot path has not regressed.",
+        "name": "Full-system AP probe",
+        "objective": (
+            "The canonical Apollo QVP reaches AP firmware, Linux, and the "
+            "post-login probe."
+        ),
         "completion_role": "required regression guardrail",
     },
     "G2": {
@@ -159,11 +161,11 @@ GOAL_VERIFICATION_PLAN = [
     },
     {
         "gate": "G1",
-        "name": "Direct-boot guardrail",
+        "name": "Full-system AP probe",
         "required_evidence": [
-            "direct-guardrail/result.json",
-            "direct AP console log",
-            "post-login probe markers",
+            "full-service-model/result.json",
+            "secure and primary console logs",
+            "AP firmware, Linux, and post-login marker groups",
         ],
         "completion_role": "required regression guardrail",
     },
@@ -219,21 +221,9 @@ FINAL_ACCEPTANCE_ARTIFACTS = {
 REVIEW_RULES = [
     "Final completion is authorized only by --strict-final verifier success.",
     "All G0..G5 gates must be pass in the same final verification output.",
-    "Service-model and isolated live-domain runs are milestone evidence only.",
+    "Service-model and focused live-domain runs are milestone evidence only.",
     "Every runtime claim must cite result.json and file-backed subsystem logs.",
     "Unclassified missing markers or absent boot-critical hardware are failures.",
-]
-SI_CL1_ISOLATED_REQUIRED = [
-    "cpu0_oor",
-    "zephyr_boot",
-    "shell",
-    "pfdi_agent",
-    "pfdi_service",
-]
-SI_CL1_ISOLATED_SECONDARIES = [
-    "cpu1_up",
-    "cpu2_up",
-    "cpu3_up",
 ]
 
 
@@ -424,14 +414,6 @@ def choose_result_dir(root: Path, preferred: str, fallback: str | None = None) -
     return choose_existing(root, preferred, fallback)
 
 
-def result_json_path(path: Path | None) -> Path | None:
-    if path is None:
-        return None
-    if path.name == "result.json":
-        return path
-    return path / "result.json"
-
-
 def add_check(
     checks: list[dict[str, Any]],
     gate: str,
@@ -481,25 +463,67 @@ def verify_g0(checks: list[dict[str, Any]], check_dir: Path) -> str:
     return "pass" if all(check["passed"] for check in checks if check["gate"] == "G0") else "fail"
 
 
-def verify_g1(checks: list[dict[str, Any]], direct_dir: Path) -> str:
-    result_path = direct_dir / "result.json"
+def verify_g1(checks: list[dict[str, Any]], full_dir: Path) -> str:
+    result_path = full_dir / "result.json"
     result = read_json(result_path)
-    log_path = Path(str(result.get("log_path", "")))
-    add_check(checks, "G1", "direct boot result exists", bool(result), path=result_path)
-    add_check(checks, "G1", "direct boot passed", bool(result.get("passed")), path=result_path)
+    marker_groups = result.get("marker_groups")
+    post_login_probe = result.get("post_login_probe")
+    ap_groups_pass = isinstance(marker_groups, dict) and all(
+        isinstance(marker_groups.get(group), dict)
+        and bool(marker_groups[group])
+        and all(bool(value) for value in marker_groups[group].values())
+        for group in ("ap_firmware", "linux", "post_login")
+    )
     add_check(
         checks,
         "G1",
-        "direct post-login probe completed",
-        bool(result.get("post_login_probe") and result.get("probe_complete")),
+        "full-system AP result exists",
+        bool(result),
         path=result_path,
     )
     add_check(
         checks,
         "G1",
-        "direct boot log present",
-        log_path.exists() and log_path.stat().st_size > 0,
-        path=log_path,
+        "full-system AP result passed",
+        bool(result.get("passed")),
+        path=result_path,
+    )
+    add_check(
+        checks,
+        "G1",
+        "full-system AP service-model mode recorded",
+        result.get("safety_island_mode") == "service-model",
+        path=result_path,
+    )
+    add_check(
+        checks,
+        "G1",
+        "full-system AP gate passed",
+        gate_value(result, "G1") == "pass",
+        path=result_path,
+    )
+    add_check(
+        checks,
+        "G1",
+        "full-system AP marker groups passed",
+        ap_groups_pass,
+        path=result_path,
+    )
+    add_check(
+        checks,
+        "G1",
+        "full-system AP post-login probe passed",
+        isinstance(post_login_probe, dict)
+        and bool(post_login_probe.get("requested"))
+        and bool(post_login_probe.get("passed")),
+        path=result_path,
+    )
+    add_check(
+        checks,
+        "G1",
+        "full-system AP logs present",
+        log_files_present(result, ["secure_console", "primary_console"]),
+        path=result_path,
     )
     return "pass" if all(check["passed"] for check in checks if check["gate"] == "G1") else "fail"
 
@@ -744,45 +768,6 @@ def verify_g5(
     return "fail" if strict_final else "not_run"
 
 
-def verify_si_cl1_isolated(path: Path | None) -> dict[str, Any]:
-    result_path = result_json_path(path)
-    if result_path is None:
-        return {
-            "task": "QAP-FULL-020",
-            "status": "not_configured",
-            "counts_for_completion_gate": False,
-            "detail": "Use --si-cl1-isolated-dir to attach isolated CL1 evidence.",
-        }
-
-    result = read_json(result_path)
-    marker_groups = result.get("marker_groups")
-    required = marker_groups.get("required", {}) if isinstance(marker_groups, dict) else {}
-    optional = marker_groups.get("optional", {}) if isinstance(marker_groups, dict) else {}
-    fail = marker_groups.get("fail", {}) if isinstance(marker_groups, dict) else {}
-    checks = {
-        "result_exists": bool(result),
-        "task_matches": result.get("task") == "QAP-FULL-020",
-        "passed": bool(result.get("passed")),
-        "isolated_milestone_only": (
-            result.get("completion_gate_effect") == "isolated_milestone_only"
-        ),
-        "required_markers": all(bool(required.get(name)) for name in SI_CL1_ISOLATED_REQUIRED),
-        "secondary_cpu_markers": all(
-            bool(optional.get(name)) for name in SI_CL1_ISOLATED_SECONDARIES
-        ),
-        "no_fail_patterns": not any(bool(value) for value in fail.values()),
-    }
-    return {
-        "task": "QAP-FULL-020",
-        "status": "pass" if all(checks.values()) else "fail",
-        "counts_for_completion_gate": False,
-        "path": str(result_path.resolve()),
-        "completion_gate_effect": result.get("completion_gate_effect"),
-        "checks": checks,
-        "blocker": result.get("blocker"),
-    }
-
-
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -792,7 +777,6 @@ def parse_args() -> argparse.Namespace:
         default=root / "build/qbox-apollo-fvp",
     )
     parser.add_argument("--check-only-dir", default="full-check-only")
-    parser.add_argument("--direct-dir", default="direct-guardrail")
     parser.add_argument("--service-model-dir")
     parser.add_argument("--live-cl1-dir", default="full-live-cl1")
     parser.add_argument("--live-cl0-cl1-dir", default="full-live-cl0-cl1")
@@ -805,15 +789,6 @@ def parse_args() -> argparse.Namespace:
         "--strict-final",
         action="store_true",
         help="Return success only when G0 through G5 are complete.",
-    )
-    parser.add_argument(
-        "--si-cl1-isolated-dir",
-        type=Path,
-        help=(
-            "Optional QAP-FULL-020 isolated CL1 evidence directory. "
-            "This is reported as milestone evidence only and never counts "
-            "toward final completion."
-        ),
     )
     return parser.parse_args()
 
@@ -832,7 +807,7 @@ def main() -> int:
     )
     dirs = {
         "G0": evidence_root / args.check_only_dir,
-        "G1": evidence_root / args.direct_dir,
+        "G1": service_dir,
         "G2": service_dir,
         "G3": evidence_root / args.live_cl1_dir,
         "G4": evidence_root / args.live_cl0_cl1_dir,
@@ -962,9 +937,6 @@ def main() -> int:
         "completion_rejection_reason": completion_rejection_reason,
         "first_failed_check": first_failed_check,
         "completion_levels": COMPLETION_LEVELS,
-        "milestone_evidence": {
-            "QAP-FULL-020": verify_si_cl1_isolated(args.si_cl1_isolated_dir),
-        },
         "final_acceptance_artifacts": FINAL_ACCEPTANCE_ARTIFACTS,
         "final_bundle_contract": final_bundle,
         "review_rules": REVIEW_RULES,

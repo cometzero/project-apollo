@@ -85,14 +85,19 @@ def live_result(
     gate: str,
     ap_cpus: int,
     primary_text: str = LINUX_16_CPU_CONSOLE,
+    post_login_probe_passed: bool = True,
 ) -> dict:
     return {
         "passed": True,
         "verdict": "pass",
         "safety_island_mode": mode,
-        "completion_gates": {"G0": "pass", gate: "pass"},
+        "completion_gates": {"G0": "pass", "G1": "pass", gate: "pass"},
         "marker_groups": marker_groups(),
         "console_logs": console_logs(run_dir, primary_text),
+        "post_login_probe": {
+            "requested": True,
+            "passed": post_login_probe_passed,
+        },
         "platform_observations": {
             "ap_cpus": ap_cpus,
             "expected_ap_cpus": 16,
@@ -112,10 +117,10 @@ def make_evidence_root(
     *,
     final_ap_cpus: int,
     final_primary_text: str = LINUX_16_CPU_CONSOLE,
+    service_post_login_probe_passed: bool = True,
 ) -> Path:
     evidence_root = tmp_path / "qbox-apollo-fvp"
     check_dir = evidence_root / "full-check-only"
-    direct_dir = evidence_root / "direct-guardrail"
     service_dir = evidence_root / "full-service-model"
     live_cl1_dir = evidence_root / "full-live-cl1"
     final_dir = evidence_root / "full-live-cl0-cl1"
@@ -137,20 +142,15 @@ def make_evidence_root(
     write_json(check_dir / "map-validation.json", {"passed": True})
     write_json(check_dir / "coverage-audit.json", {"passed": True})
 
-    direct_log = write_log(direct_dir / "qbox-apollo-fvp.log")
-    write_json(
-        direct_dir / "result.json",
-        {
-            "passed": True,
-            "post_login_probe": {"passed": True},
-            "probe_complete": True,
-            "log_path": str(direct_log),
-        },
-    )
-
     write_json(
         service_dir / "result.json",
-        live_result(service_dir, mode="service-model", gate="G2", ap_cpus=16),
+        live_result(
+            service_dir,
+            mode="service-model",
+            gate="G2",
+            ap_cpus=16,
+            post_login_probe_passed=service_post_login_probe_passed,
+        ),
     )
     write_json(service_dir / "comparison.json", {"passed": True})
     write_json(
@@ -179,12 +179,14 @@ def run_strict_verifier(
     *,
     final_ap_cpus: int,
     final_primary_text: str = LINUX_16_CPU_CONSOLE,
+    service_post_login_probe_passed: bool = True,
 ) -> tuple[int, dict]:
     verifier = load_verifier()
     evidence_root = make_evidence_root(
         tmp_path,
         final_ap_cpus=final_ap_cpus,
         final_primary_text=final_primary_text,
+        service_post_login_probe_passed=service_post_login_probe_passed,
     )
     output = evidence_root / "full-live-cl0-cl1/final-verification.json"
     monkeypatch.setattr(
@@ -209,6 +211,26 @@ def find_check(result: dict, name: str) -> dict:
     return next(check for check in result["checks"] if check["name"] == name)
 
 
+def test_parse_args_rejects_removed_isolated_evidence_option(monkeypatch):
+    verifier = load_verifier()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "verify_qbox_apollo_fvp_full_completion.py",
+            "--si-cl1-isolated-dir",
+            "retired-evidence",
+        ],
+    )
+
+    try:
+        verifier.parse_args()
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("removed isolated evidence option was accepted")
+
+
 def test_strict_final_accepts_16_ap_cpu_full_system_evidence(tmp_path, monkeypatch):
     # Given: synthetic final evidence for the active 16-CPU Apollo full-system contract.
     # When: the strict final verifier evaluates the canonical live CL0/CL1 bundle.
@@ -217,9 +239,25 @@ def test_strict_final_accepts_16_ap_cpu_full_system_evidence(tmp_path, monkeypat
     # Then: completion is authorized and the G4 AP CPU acceptance check passes.
     assert exit_code == 0
     assert result["completion_claim_allowed"] is True
+    assert result["overall_gates"]["G1"] == "pass"
     assert result["overall_gates"]["G4"] == "pass"
+    assert "milestone_evidence" not in result
     assert find_check(result, "live-cl0-cl1 AP CPUs enabled")["passed"] is True
     assert find_check(result, "live-cl0-cl1 Linux enumerated 16 CPUs")["passed"] is True
+
+
+def test_strict_final_rejects_failed_full_system_ap_probe(tmp_path, monkeypatch):
+    exit_code, result = run_strict_verifier(
+        tmp_path,
+        monkeypatch,
+        final_ap_cpus=16,
+        service_post_login_probe_passed=False,
+    )
+
+    assert exit_code == 1
+    assert result["completion_claim_allowed"] is False
+    assert result["overall_gates"]["G1"] == "fail"
+    assert find_check(result, "full-system AP post-login probe passed")["passed"] is False
 
 
 def test_strict_final_rejects_4_ap_cpu_full_system_evidence(tmp_path, monkeypatch):

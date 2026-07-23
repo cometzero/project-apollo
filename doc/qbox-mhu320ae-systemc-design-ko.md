@@ -71,8 +71,8 @@ Register model 위에 다음 protocol hook을 얹는다.
 
 - `protocol = "scmi"`: SCMI shared-memory request를 읽고 response를 작성한다.
 - `scmi_transport = "pfdi-monitor"`: PFDI monitor protocol `0x90`을 허용한다.
-- `protocol = "doorbell"`: direct boot compatibility, AP/SI CL1 HIPC
-  resource-table seed, RPMsg name-service injection에 사용한다.
+- `protocol = "doorbell"`: AP/SI CL1 HIPC resource-table seed와 RPMsg
+  name-service injection에 사용한다.
 - `protocol = "doorbell-bridge"`: AP/RSE secure service와 live CL1 HIPC
   cross-domain doorbell forwarding에 사용한다.
 
@@ -88,10 +88,10 @@ Default 전환 대상:
 - `tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua`: RSE local MHU0/MHU2,
   AP/RSE secure mailbox, RSE/SI SCMI, AP/SI SCMI/CL1/PFDI paths.
 - `tools/qbox-platform/platforms/apollo/apollo-qvp.lua`: live CL1 HIPC/PFDI override.
-- `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua`: isolated CL1 HIPC/PFDI.
 
-`mhuv3_rproc_stub`는 standalone primary-compute remoteproc path의 separate
-compatibility component로 남긴다.
+`mhuv3_rproc_stub`는 legacy primary-compute remoteproc compatibility
+component로 남아 있지만, 현재 Apollo full-system 검증 경로의 gate나
+platform wiring contract는 아니다.
 
 ## Fidelity gap
 

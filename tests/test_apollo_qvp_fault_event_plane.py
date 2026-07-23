@@ -35,13 +35,3 @@ def test_full_machine_smmu_event_fans_out_to_gic_and_test_fmu() -> None:
     )
     assert 'fault_source = "ap_smmu_0.irq_eventq"' in ap_compute
     assert 'fault_input_record = 1' in ap_compute
-
-
-def test_direct_machine_uses_same_opt_in_event_plane() -> None:
-    direct = read("platforms/apollo/hw-block/primary_compute.lua")
-
-    assert 'getenv_bool_or("QBOX_APOLLO_FAULT_EVENT_TEST", false)' in direct
-    assert '"&smmu_event_fanout.signal_in"' in direct
-    assert 'bind = "&gic_0.spi_in_65;&smmu_fault_observer.fault_in"' in direct
-    assert 'fault_source = "smmu_0.irq_eventq"' in direct
-    assert 'event_log = getenv_or("QBOX_APOLLO_FAULT_EVENT_LOG", "")' in direct

@@ -19,9 +19,8 @@
 | 분석 revision | arm-zena-css `bf34d9e71f67`, qbox-platform `29a4fbc21e76`, qbox `5b44f50ff3d8`, qemu `ca30c1782ea0` |
 
 FVP 표의 주소는 Zena CSS programmer's model의 architectural address다.
-QBox 표는 활성 full-system Lua가 생성하는 주소를 우선한다. Direct AP
-(`apollo-pc.lua`)와 isolated SI CL1(`apollo-si-cl1.lua`)은 별도
-실행 경로이므로 full-system 구현 상태에 합산하지 않는다.
+QBox 표는 지원되는 Apollo QVP runtime인 `apollo-qvp.lua` full-system 경로가
+생성하는 주소와 인스턴스를 우선한다.
 
 ### 구현 상태
 

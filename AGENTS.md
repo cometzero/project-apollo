@@ -43,8 +43,7 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
   `scripts/run/run_qbox_apollo_fvp_full.py`,
   `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
-  `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`,
-  `scripts/run/run_qbox_apollo_fvp_linux.py`
+  `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 ## Source Boundaries
 
@@ -479,9 +478,6 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `build/qbox-apollo-fvp/full-<timestamp>/`.
    - Use `--keep-running-after-pass` only for interactive demos that should not
      exit after the boot pass condition.
-   - For Apollo local-build Primary Compute direct boot on QBox, use
-     `python3 scripts/run/run_qbox_apollo_fvp_linux.py --timeout 600` and
-     inspect `build/qbox-apollo-fvp/<timestamp>/`.
    - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` only as the lower-level
      RSE/RD-Aspen compatibility runner when focused RSE evidence is needed.
    - For Apollo FVP local boot, build with `./local_build.sh build`, then use

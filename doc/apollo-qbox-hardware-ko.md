@@ -14,10 +14,8 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 | 구분 | 파일 |
 | --- | --- |
 | FVP 하드웨어 기준 | `doc/apollo-fvp-hardware-analysis-ko.md` |
-| Apollo QBox direct boot | `tools/qbox-platform/platforms/apollo/apollo-pc.lua`, `hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-fvp.dts`, generated `build/qbox-apollo-fvp/apollo-fvp-direct.overlay.dts` |
-| Apollo QBox full-system wrapper | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` |
-| Apollo QBox hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/` |
-| SI CL1 isolated boot | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` |
+| Apollo QVP full-system wrapper | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` |
+| Apollo QVP hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/` |
 | Apollo QBox full-system hardware blocks | `tools/qbox-platform/platforms/apollo/hw-block/{config,fabric,rse,ap_compute,ros,system_mgmt,si_cl0,si_cl1}.lua` |
 | QBox core modules | `tools/qbox/systemc-components/`, `tools/qbox/qemu-components/` |
 | Apollo/RD-Aspen overlay modules | `tools/qbox-platform/systemc-components/`, `tools/qbox-platform/qemu-components/` |
@@ -28,13 +26,11 @@ Lua instance -> QBox/SystemC/QEMU module -> backend source`의 대응 관계이�
 
 ## 실행 경로
 
-현재 Apollo QBox에는 세 가지 실행 경로가 있다. 각 경로는 목적과 fidelity
-수준이 다르므로 문서와 검증에서 분리해서 봐야 한다.
+현재 지원되는 Apollo QVP runtime은 full-system 경로 하나다. AP 단독 부팅과
+SI CL1 단독 부팅을 현재 검증 또는 확장 경로로 사용하지 않는다.
 
 | 경로 | Lua entry | 목적 | 하드웨어 범위 |
 | --- | --- | --- | --- |
-| Primary Compute direct boot | `tools/qbox-platform/platforms/apollo/apollo-pc.lua` | Linux kernel/initramfs를 직접 부팅하는 빠른 AP 검증 | AP CPU 4개, AP GIC/ITS, UART, watchdog, RTC, virtio, reserved memory |
-| SI CL1 isolated | `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` | Zephyr CL1 단독 부팅과 UART/MHU/PFDI bring-up | CL1 Cortex-R82 4개, CL1 GIC, UART, HIPC/PFDI MHU, SRAM |
 | Full-system | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` | RSE-first topology 위에 live CL0/CL1/AP를 통합 | RSE TF-M, AP firmware chain, SI CL0 SCP, SI CL1 Zephyr, service/live 혼합 모델 |
 
 `apollo-qvp.lua`는 `hw-block/config.lua`에서 공통 실행 옵션과 artifact path를
@@ -45,15 +41,11 @@ CPU/GIC/loader 경로는 `QBOX_APOLLO_FULL_SI_MODE`에 따라 각 subsystem의
 
 ## Lua 구성 분석
 
-현재 Apollo QBox Lua 구성은 단일 거대 플랫폼 파일이 아니라, 목적별 entry와
-공통 config/fabric과 subsystem-owned hardware block을 조합하는 방식이다.
+현재 Apollo QBox Lua 구성은 단일 거대 플랫폼 파일이 아니라, `apollo-qvp.lua`
+entry와 공통 config/fabric, subsystem-owned hardware block을 조합하는 방식이다.
 
 | Lua 파일 | 역할 | 주요 구성 |
 | --- | --- | --- |
-| `tools/qbox-platform/platforms/apollo/apollo-pc.lua` | Primary Compute direct boot entrypoint | `hw-block/primary_compute.lua`를 로드해 AP Linux direct-boot platform을 구성 |
-| `tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua` | Primary Compute direct boot block | AP Linux kernel, DTB, initramfs를 `loader`로 직접 적재하고 AP 4-core, GIC/ITS, UART, watchdog, RTC, virtio, reserved memory를 빠르게 구성 |
-| `tools/qbox-platform/platforms/apollo/apollo-si-cl1.lua` | SI CL1 isolated boot entrypoint | `hw-block/si_cl1_isolated.lua`를 로드해 CL1 단독 Zephyr platform을 구성 |
-| `tools/qbox-platform/platforms/apollo/hw-block/si_cl1_isolated.lua` | SI CL1 isolated boot block | CL1 Zephyr 단독 검증용. CL1 Cortex-R82 4-core, CL1 GIC, UART, HIPC/PFDI `mhu320ae`, SCMI shmem, CL1 SRAM만 독립 router에 연결 |
 | `tools/qbox-platform/platforms/apollo/apollo-qvp.lua` | Apollo full-system entrypoint | 실행 모드와 공통 context를 구성하고 `hw-block` 모듈을 호출 |
 | `tools/qbox-platform/platforms/apollo/hw-block/config.lua` | Shared full-system config | `QBOX_*` environment, artifact path, trace/backend option, AP/RSE/SI 공통 address constant를 초기화 |
 | `tools/qbox-platform/platforms/apollo/hw-block/fabric.lua` | Root fabric block | `Container`, `host_router`, `keep_alive_0` 생성 |
@@ -133,10 +125,8 @@ QBox 구현은 한 종류의 backend만 쓰지 않는다. 현재 Apollo FVP 하�
 
 | FVP IP | QBox instance | Module | Backend/source |
 | --- | --- | --- | --- |
-| Cortex-A720AE AP cores | direct boot: `cpu_0..cpu_3` | `cpu_arm_cortexA720AE` | `tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_a720ae/` or overlay copy when testing platform-local changes, QEMU CPU type `cortex-a720ae-arm` |
-| Cortex-A720AE AP cores | full-system: `ap_cpu_0..ap_cpu_3` | `cpu_arm_cortexA720AE` | same |
+| Cortex-A720AE AP cores | `ap_cpu_0..ap_cpu_3` | `cpu_arm_cortexA720AE` | `tools/qbox/qemu-components/cpu_arm/cpu_arm_cortex_a720ae/` or overlay copy when testing platform-local changes, QEMU CPU type `cortex-a720ae-arm` |
 
-Direct boot는 EL3/EL2를 끄고 AArch64 boot stub으로 Linux를 직접 시작한다.
 Full-system은 AP BL2 entry로 진입해야 하므로 `has_el3=true`,
 `has_el2=true`, `rvbar=HOST_AP_BL2_PHYS_BASE`를 사용한다. AP CPU 수는 현재
 QBox 경로에서 4개로 구성되어 있으며, FVP 기준의 16개 AP core 전체를 모두
@@ -152,37 +142,35 @@ OFF 상태로 남아 AP BL2가 실행되지 않는 문제를 막기 위한 필�
 
 | FVP 영역 | QBox instance | Module | 비고 |
 | --- | --- | --- | --- |
-| Low DRAM `0x80000000` | direct: `ram_0`, full: `host_ap_dram1` | `gs_memory` | local Image/rootfs 또는 AP firmware runtime memory |
-| High DRAM bank1 `0x200_0000_0000` / `0x20000000000` | direct: `ram_1`, full: `host_ap_dram2` | `gs_memory` | 현재 Arm Zena CSS FVP boot artifact와 맞춘 2 GiB backing. AP 9.1.1의 `0x08_8000_0000` row는 deferred parity로 추적 |
+| Low DRAM `0x80000000` | `host_ap_dram1` | `gs_memory` | AP firmware/Linux runtime memory |
+| High DRAM bank1 `0x200_0000_0000` / `0x20000000000` | `host_ap_dram2` | `gs_memory` | 현재 Arm Zena CSS FVP boot artifact와 맞춘 2 GiB backing. AP 9.1.1의 `0x08_8000_0000` row는 deferred parity로 추적 |
 | AP shared SRAM | `host_ap_shared_sram` | `gs_memory` | SDS, SCMI payload, reset syndrome seed |
-| AP SCMI shared memory | direct: `sram_0`, full: `host_ap_mhu_ns_shared_sram` | `gs_memory` | `0x00180000` 4 KiB |
-| SI CL1 remoteproc carveouts | direct: `si_cl1_rproc_rsctbl_0`, `si_cl1_vdev0vring*_0`, `si_cl1_vdev0buffer_0` | `gs_memory` | AP-visible HIPC reserved memory |
+| AP SCMI shared memory | `host_ap_mhu_ns_shared_sram` | `gs_memory` | `0x00180000` 4 KiB |
+| SI CL1 remoteproc carveouts | AP/SI shared memory aliases | `gs_memory` | AP-visible HIPC reserved memory |
 | AP flash/FIP | `host_ap_flash` | `strata_flash_j3` | AP secure flash image, writeback/DMI 옵션 지원 |
 | Trusted NV counter | `host_ap_trusted_nvctr` | `gs_memory` | TF-A certificate counter seed |
 
-`loader`는 direct boot에서는 kernel, DTB, initramfs, boot stub을 로드하고,
-full-system에서는 AP BL2 reset loader와 RSE/SI image loader가 역할을
+`loader`는 full-system에서 AP BL2 reset loader와 RSE/SI image loader가 역할을
 분담한다.
 
 ### AP Interrupt/I/O
 
 | FVP IP | QBox instance | Module | Backend/source |
 | --- | --- | --- | --- |
-| GIC-720AE AP GIC view | direct: `gic_0`, full: `ap_gic` | `arm_gicv3` | `tools/qemu/hw/intc/arm_gicv3*.c` |
-| ITS | direct: `its_0`, full: `ap_gic_its` | `arm_gicv3_its` | `tools/qemu/hw/intc/arm_gicv3_its*.c` |
-| MMU-720AE/SMMUv3 | full: `ap_smmu_0` | 기본 `mmu720ae`, fallback `arm_smmuv3` | `tools/qbox-platform/systemc-components/mmu720ae/`, `tools/qemu/hw/arm/smmuv3*.c` |
-| PL011 primary UART | direct: `pl011_uart_0`, full: `ap_primary_uart` | `Pl011` with `uart-pl011` dylib | QBox SystemC PL011 wrapper |
+| GIC-720AE AP GIC view | `ap_gic` | `arm_gicv3` | `tools/qemu/hw/intc/arm_gicv3*.c` |
+| ITS | `ap_gic_its` | `arm_gicv3_its` | `tools/qemu/hw/intc/arm_gicv3_its*.c` |
+| MMU-720AE/SMMUv3 | `ap_smmu_0` | 기본 `mmu720ae`, fallback `arm_smmuv3` | `tools/qbox-platform/systemc-components/mmu720ae/`, `tools/qemu/hw/arm/smmuv3*.c` |
+| PL011 primary UART | `ap_primary_uart` | `Pl011` with `uart-pl011` dylib | QBox SystemC PL011 wrapper |
 | PL011 secure UART | `ap_secure_uart` | `Pl011` | secure console file backend |
-| SBSA watchdog | direct: `watchdog_0`, full: `ap_watchdog_0` | `sbsa_gwdt` | `tools/qemu/hw/watchdog/sbsa_gwdt.c` |
+| SBSA watchdog | `ap_watchdog_0` | `sbsa_gwdt` | `tools/qemu/hw/watchdog/sbsa_gwdt.c` |
 | Secure watchdog placeholder | `ap_secure_wdog` | `gs_memory` | secure-world error path access 보존 |
-| AP REFCLK memory-mapped timer | full: `ap_timer_mem` | `qemu_arm_arch_timer_mmio` | reusable Arm MMIO QEMU/QBox timer path, 125MHz |
-| RTC | direct: `rtc_0`, full: `ap_rtc_0` | `pl031` | `tools/qemu/hw/rtc/pl031` equivalent wrapper |
-| Virtio block | direct: `virtioblk_0..3`, full: `ap_virtioblk_0..3` | `virtio_mmio_blk` | `tools/qemu/hw/block/virtio-blk.c`, `tools/qemu/hw/virtio/virtio-mmio.c` |
-| Virtio net | direct: `virtionet0_0`, full: `ap_virtionet_0` | `virtio_mmio_net` | `tools/qemu/hw/net/virtio-net.c` |
-| Virtio rng | direct: `virtiorng_0`, full: `ap_virtiorng_0` | `virtio_mmio_rng` | `tools/qemu/hw/virtio/virtio-rng.c` |
+| AP REFCLK memory-mapped timer | `ap_timer_mem` | `qemu_arm_arch_timer_mmio` | reusable Arm MMIO QEMU/QBox timer path, 125MHz |
+| RTC | `ap_rtc_0` | `pl031` | `tools/qemu/hw/rtc/pl031` equivalent wrapper |
+| Virtio block | `ap_virtioblk_0..3` | `virtio_mmio_blk` | `tools/qemu/hw/block/virtio-blk.c`, `tools/qemu/hw/virtio/virtio-mmio.c` |
+| Virtio net | `ap_virtionet_0` | `virtio_mmio_net` | `tools/qemu/hw/net/virtio-net.c` |
+| Virtio rng | `ap_virtiorng_0` | `virtio_mmio_rng` | `tools/qemu/hw/virtio/virtio-rng.c` |
 
-Direct boot DTS는 AP 4-core subset만 기술하고, full-system 경로는
-RSE-first topology의 AP GIC, SMMU, virtio, UART, watchdog, RTC, AP-SI MHU
+Full-system 경로는 RSE-first topology의 AP GIC, SMMU, virtio, UART, watchdog, RTC, AP-SI MHU
 구성을 사용한다.
 
 AP timer topology는 CPU-local generic timer와 AP REFCLK MMIO timer를
@@ -321,15 +309,15 @@ FVP 수준의 전체 fault injection/RAS parity는 후속 fidelity 과제로 남
 
 ## Safety Island CL1 Block
 
-CL1은 full-system과 isolated 경로 모두 4-core live Zephyr 대상으로
-구성된다.
+CL1은 full-system `live-cl1` 또는 `live-cl0-cl1` 모드에서 4-core live Zephyr
+대상으로 구성된다.
 
 | FVP IP | QBox instance | Module | 비고 |
 | --- | --- | --- | --- |
 | Cortex-R82AE CL1 cores | `si_cl1_cpu_0..3` | `cpu_arm_cortexR82` | 4-core SMP |
 | CL1 SRAM | `si_cl1_sram` | `gs_memory` | Zephyr image load/execution |
 | CL1 SCMI/PFDI shmem | `si_cl1_scmi_shmem` | `gs_memory` | `0x48000000` |
-| CL1 HIPC shared RAM | isolated: `si_cl1_shared_ram`, full: `host_ap_bl2_header_sram` alias | `gs_memory` | resource table/vring/RPMsg buffer |
+| CL1 HIPC shared RAM | `host_ap_bl2_header_sram` alias | `gs_memory` | resource table/vring/RPMsg buffer |
 | CL1 GIC view 2 | `si_cl1_gic` | `arm_gicv3` | GICD `0x30200000`, 4 redistributors |
 | CL1 UART | `si_cl1_uart` | `Pl011` | Zephyr console file log |
 | CL1 HIPC PBX/MBX | `si_cl1_hipc_mhu_pbx`, `si_cl1_hipc_mhu_mbx` | `mhu320ae` | doorbell 또는 doorbell-bridge |
@@ -337,9 +325,8 @@ CL1은 full-system과 isolated 경로 모두 4-core live Zephyr 대상으로
 | CL1 image loader | `si_cl1_loader` | `loader` | `zephyr-demos-cl1.bin` load |
 | CL1 reset fanout | `apollo_si_cl1_reset_fanout` | `reset_fanout` | live CL0가 CL1/AP reset release 연동 |
 
-Isolated 경로는 `router` 하나에 CL1 local view를 붙인다. Full-system 경로는
-RSE-first `host_router`를 임시 merged bus로 사용하면서, AP broad window보다
-CL1 narrow window가 우선하도록 decode priority를 조정한다.
+Full-system 경로는 RSE-first `host_router`를 임시 merged bus로 사용하면서,
+AP broad window보다 CL1 narrow window가 우선하도록 decode priority를 조정한다.
 
 ## Interconnect, ATU, Address View
 
@@ -506,8 +493,8 @@ true로 확인되었다. Coverage audit은 `si_cl0_ssu=zena_ssu`,
 ## 구현/검증 시 체크리스트
 
 - Lua platform에서 IP가 어떤 source view에 물려 있는지 먼저 확인한다:
-  direct AP `router`, full-system `host_router`, RSE `rse_router`, CL1 isolated
-  `router`.
+  full-system `host_router`, AP `ap_view_router`, RSE `rse_router`, SI CL0/CL1
+  local routers.
 - AP/SI/RSE가 같은 주소를 다르게 보는 경우 `addrtr`, ATU, alias, decode
   priority를 함께 확인한다.
 - MHU 문제는 `pair`, `frame`, `protocol`, `irq`, `tx_shmem/rx_shmem`,

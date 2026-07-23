@@ -795,16 +795,13 @@ def high_dram_value_check(
 
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
     config_path = "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
-    primary_path = "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/primary_compute.lua"
     dts_path = (
         "hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/"
         "apollo-fvp.dts"
     )
     config = read_text(root / config_path)
-    primary = read_text(root / primary_path)
     dts = read_text(root / dts_path)
     config_match = re.search(r"\b(?:local\s+)?HOST_AP_DRAM2_BASE\s*=\s*(0x[0-9a-fA-F]+|\d+)", config)
-    primary_match = re.search(r"\bram_1\s*=\s*\{.*?\baddress\s*=\s*(0x[0-9a-fA-F]+|\d+)\s*;", primary, re.S)
     dts_node = re.search(r"memory@80000000\s*\{(?P<body>.*?)\n\s*\};", dts, re.S)
     dts_cells = re.findall(r"<[^>]+>", dts_node.group("body")) if dts_node else []
     dts_high = normalized_cells(dts_cells[1]) if len(dts_cells) > 1 else "missing"
@@ -819,12 +816,6 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
             config_path,
             None if config_match is None else line_for_offset(config, config_match.start(1)),
             None if config_match is None else int(config_match.group(1), 0),
-        ),
-        high_dram_value_check(
-            "direct_boot_ram_1_base",
-            primary_path,
-            None if primary_match is None else line_for_offset(primary, primary_match.start(1)),
-            None if primary_match is None else int(primary_match.group(1), 0),
         ),
         {
             "name": "local_build_linux_dts_high_memory_cells",

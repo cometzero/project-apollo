@@ -160,8 +160,9 @@ revision이 바뀌면 주소, module type, 기본값과 fidelity 판정도 다�
 | FVP 역할 | architecture/FVP 비교 및 source-level debug 기준 |
 
 full-system QBox Lua와 runner의 AP CPU 기본값은 active Yocto 설정과 같은 4다.
-직접 부팅 전용 `apollo-pc.lua`는 16-core 실험 기본값을 유지하므로 full-system
-evidence와 혼동하지 않고 resolved CPU 수를 `result.json`에 기록한다.
+지원되는 Apollo QVP runtime은 `apollo-qvp.lua`와
+`scripts/run/run_qbox_apollo_fvp_full.py` full-system 경로이며, resolved CPU 수는
+`result.json`에 기록한다.
 
 ### 3.3 기준 자료의 우선순위
 
@@ -514,11 +515,10 @@ event 순서가 핵심이다.
 ### 5.8 Evidence root 명명 차이
 
 프로젝트 contract, full-system runner, coverage audit와 신규 QVP evidence의
-표준 root는 `build/qbox-apollo-qvp/`로 이전됐다. topology bundle, local source
-runtime과 Yocto image runtime도 이 경로 아래 서로 다른 run directory를 사용한다.
-직접 부팅용 legacy runner의 `build/qbox-apollo-fvp/` 기본값은 아직 호환 부채로
-남아 있으므로 full-system/FVP reference와 혼동하지 않게 실제 path, command와
-revision을 result에 보존한다.
+표준 root는 `build/qbox-apollo-qvp/`다. topology bundle, local source runtime과
+Yocto image runtime도 이 경로 아래 서로 다른 run directory를 사용한다. FVP
+reference 또는 오래된 artifact와 혼동하지 않게 실제 path, command와 revision을
+result에 보존한다.
 
 ## 6. 구조적 위험과 우선순위
 
@@ -534,7 +534,7 @@ revision을 result에 보존한다.
 | P1 | shared backing과 address view 구분이 불명확 | 동일 메모리 복제, DMI alias incoherency 가능 |
 | P1 | reset-held QK 교착과 16 CPU 정상 lifecycle은 검증했으나 fault/reset 전체 matrix와 KVM은 후속 | double mapping, backend별 reset/WFI 차이 가능 |
 | P1 | SCMI/PFDI/HIPC 대표 오류/recovery는 검증됐으나 PSCI/FF-A matrix는 미검증 | peer-offline/reset-time 또는 추가 descriptor 조합의 timeout 가능 |
-| 완화 | full-system QVP evidence root를 `qbox-apollo-qvp`로 이전 | direct-boot legacy 경로는 별도 정리 필요 |
+| 완료 | full-system QVP evidence root를 `qbox-apollo-qvp`로 정렬 | FVP reference와 QVP runtime evidence의 path/provenance 구분 필요 |
 | P2 | SMMU→FMU→SSU 대표 fault는 완료됐으나 watchdog/DCLS/APU source 전체 수직 경로는 부분적 | 미구현 source의 fault/reset 검증 불가 |
 | P2 | FVP CFG2 CL1 scope가 hardware contract와 섞임 | reference 확장을 current silicon 필수 기능으로 오판 |
 | P3 | CHI/NoC timing·contention 미모델링 | 성능·타이밍 분석에는 사용할 수 없음 |
@@ -1020,22 +1020,28 @@ I0~I6은 다음 최소 수직 slice를 닫았다.
 ./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
   -> QBox-platform SystemC component tests 33/33 passed
 
-scripts/run/run_qbox_apollo_fidelity.py --artifacts local --cpus 4
-  -> build/qbox-apollo-qvp/fidelity-4cpu-local-20260717
-  -> runtime/coverage/contract pass, Linux CPU IDs [0,1,2,3]
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
+  --si-mode service-model \
+  --timeout 600 \
+  --out-dir build/qbox-apollo-qvp/<focused-ap-run>
+  -> focused AP/service-model runtime, coverage, contract 결과를 result.json에 기록
 
 ./yocto_build.sh
   -> 7,293 tasks attempted, all succeeded
 
-scripts/run/run_qbox_apollo_fidelity.py --artifacts yocto --cpus 4
-  -> build/qbox-apollo-qvp/fidelity-4cpu-yocto-20260717
-  -> runtime/coverage/contract pass, Linux CPU IDs [0,1,2,3]
+python3 scripts/run/run_qbox_apollo_fvp_full.py \
+  --si-mode live-cl0-cl1 \
+  --timeout 600 \
+  --out-dir build/qbox-apollo-qvp/<integrated-run>
+  -> integrated RSE/AP/SI CL0/SI CL1 runtime, coverage, contract 결과를 result.json에 기록
 ```
 
-두 manifest의 `artifact_family_errors`는 빈 배열이다. 이 I0~I7 acceptance
-시점에는 계획한 comparison script와 실행 binary가 없어 focused FVP 비교를
-`deferred`로 기록했다. 이후 확보한 기록 로그로 수행한 비-AP differential과
-PFDI 수정 결과는 11.4에서 별도로 판정한다. 상세 근거는
+현재 검증 명령은 focused AP/service-model 실행과 integrated `live-cl0-cl1`
+실행을 분리한다. 기존 I0~I7 acceptance 기록에서는 두 manifest의
+`artifact_family_errors`가 빈 배열이었고, 당시 계획한 comparison script와
+실행 binary가 없어 focused FVP 비교를 `deferred`로 기록했다. 이후 확보한 기록
+로그로 수행한 비-AP differential과 PFDI 수정 결과는 11.4에서 별도로 판정한다.
+상세 근거는
 [I7 완료 보고서](apollo-qvp-fidelity-stages/i7-integration-validation-completion-2026-07-17-ko.md)에
 기록한다.
 

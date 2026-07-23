@@ -7,9 +7,9 @@ Updated: 2026-07-23
 bus, peripheral 또는 subsystem을 연결하는 방법을 설명한다. 분석 기준은
 qbox-platform 커밋 `14b73e8e95582eec665814fb492d7ae49bc5b34a`이다.
 
-`apollo-pc.lua`와 `apollo-si-cl1.lua`는 각각 AP와 SI CL1의 독립 실행
-경로이다. 이 문서에서 별도 언급이 없으면 모든 절차는 full-system
-`apollo-qvp.lua` 경로를 뜻한다.
+지원되는 Apollo QVP runtime 경로는 `apollo-qvp.lua` full-system 하나다.
+이 문서의 모든 절차와 검증 명령은 `scripts/run/run_qbox_apollo_fvp_full.py`로
+실행하는 full-system 경로를 뜻한다.
 
 ## 1. 핵심 원칙
 
@@ -124,8 +124,6 @@ peripheral / memory
 | 파일 | 역할 | 수정하는 경우 |
 | --- | --- | --- |
 | `apollo-qvp.lua` | full-system 최상위 조립 순서와 live SI mode를 결정한다. contract를 읽고 각 subsystem의 `define()`/`enable()`을 호출한다. | 새 subsystem module을 full-system에 넣거나 subsystem 간 생성 순서를 바꿀 때 |
-| `apollo-pc.lua` | `primary_compute.lua`를 실행하는 AP 독립 실행 진입점이다. | AP 단독 실행 경로도 같은 장치를 가져야 할 때 |
-| `apollo-si-cl1.lua` | `si_cl1_isolated.lua`를 실행하는 SI CL1 독립 실행 진입점이다. | SI CL1 독립 실행 경로도 같은 장치를 가져야 할 때 |
 
 ### 4.2 Machine contract
 
@@ -154,13 +152,10 @@ contract 파일은 현재 별도 directory가 아니라 모두 `hw-block/`에 �
 | `rse.lua` | RSE router, M55 QEMU instance, TCM/flash, NVIC, MHU, timer, watchdog 및 system access path를 만든다. | `define()` |
 | `si_cl0.lua` | SI CL0의 host-visible object를 먼저 정의하고, live mode에서 R82, GIC, UART, MHU, NCI/APU 및 loader를 활성화한다. | `define()`, `enable()` |
 | `si_cl1.lua` | SI CL1의 host-visible object를 먼저 정의하고, live mode에서 R82, GIC, UART, HIPC/PFDI MHU와 loader를 활성화한다. | `define()`, `enable()` |
-| `primary_compute.lua` | `apollo-pc.lua`용 독립 AP platform 전체를 한 파일에서 만든다. full-system AP 구현의 원본으로 사용하면 안 된다. | standalone `platform` |
-| `si_cl1_isolated.lua` | `apollo-si-cl1.lua`용 독립 SI CL1 platform을 만든다. full-system CL1 경로와 별도이다. | standalone `platform` |
 
 full-system 기능은 subsystem 소유 파일에 추가한다. 예를 들어 AP device는
 `ap_compute.lua` 또는 `ros.lua`, SMD control block은 `system_mgmt.lua`,
-SI CL0 device는 `si_cl0.lua`가 기본 소유 위치이다. standalone 경로의
-파일을 먼저 수정하면 `apollo-qvp.lua`에는 반영되지 않는다.
+SI CL0 device는 `si_cl0.lua`, SI CL1 device는 `si_cl1.lua`가 기본 소유 위치이다.
 
 ## 5. 기존 bus에 peripheral 연결
 
