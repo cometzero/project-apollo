@@ -246,6 +246,66 @@ def test_bsp_uki_uses_timestamp_stable_initramfs_link() -> None:
     assert '${IMGDEPLOYDIR}/${IMAGE_NAME}.cpio.gz' not in image_recipe
 
 
+def test_bsp_uki_keeps_unique_deploy_names_and_canonical_esp_names() -> None:
+    # Given: product and BSP UKIs share DEPLOY_DIR_IMAGE but U-Boot uses one
+    # stable A/B filename contract inside each image's ESP.
+    layer = ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions"
+    uki_class = (layer / "classes/auto-ad-nexios-uki-ab.bbclass").read_text(
+        encoding="utf-8"
+    )
+    bsp_image = (
+        layer / "recipes-core/images/nexios-bsp-initramfs.bb"
+    ).read_text(encoding="utf-8")
+
+    # When: the class maps deploy artifacts into the ESP.
+    # Then: source and destination names are independent, and the BSP keeps
+    # unique deploy artifacts while satisfying U-Boot's canonical paths.
+    assert (
+        'AUTO_AD_NEXIOS_UKI_ESP_A ?= "${AUTO_AD_NEXIOS_UKI_A}"'
+        in uki_class
+    )
+    assert (
+        'AUTO_AD_NEXIOS_UKI_ESP_B ?= "${AUTO_AD_NEXIOS_UKI_B}"'
+        in uki_class
+    )
+    assert (
+        "${AUTO_AD_NEXIOS_UKI_A};"
+        "EFI/Linux/${AUTO_AD_NEXIOS_UKI_ESP_A}"
+        in uki_class
+    )
+    assert (
+        "${AUTO_AD_NEXIOS_UKI_B};"
+        "EFI/Linux/${AUTO_AD_NEXIOS_UKI_ESP_B}"
+        in uki_class
+    )
+    assert 'local uki_destination="$4"' in uki_class
+    assert '"::/EFI/Linux/${uki_destination}"' in uki_class
+    assert (
+        '"${AUTO_AD_NEXIOS_UKI_A}" "${AUTO_AD_NEXIOS_UKI_ESP_A}"'
+        in uki_class
+    )
+    assert (
+        '"${AUTO_AD_NEXIOS_UKI_B}" "${AUTO_AD_NEXIOS_UKI_ESP_B}"'
+        in uki_class
+    )
+    assert (
+        'AUTO_AD_NEXIOS_UKI_A = "nexios-bsp-initramfs-a.efi"'
+        in bsp_image
+    )
+    assert (
+        'AUTO_AD_NEXIOS_UKI_B = "nexios-bsp-initramfs-b.efi"'
+        in bsp_image
+    )
+    assert (
+        'AUTO_AD_NEXIOS_UKI_ESP_A = "auto-ad-nexios-a.efi"'
+        in bsp_image
+    )
+    assert (
+        'AUTO_AD_NEXIOS_UKI_ESP_B = "auto-ad-nexios-b.efi"'
+        in bsp_image
+    )
+
+
 def test_bsp_network_check_rejects_tunnel_only_interfaces() -> None:
     # Given: Linux creates sit/tunnel interfaces even without a usable BSP NIC.
     selftest = (
