@@ -666,7 +666,7 @@ if [[ "${QBOX_RUN_UNIT_TESTS:-0}" == 1 ||
 fi
 
 if [[ "${ACTION}" == build && "${TFM_PLATFORM:-}" == missing/* ]]; then
-    die "TFM_PLATFORM ${TFM_PLATFORM} is unresolved; update local_build.conf."
+    die "TFM_PLATFORM ${TFM_PLATFORM} is unresolved; update scripts/build/local_build.conf."
 fi
 
 if ((CCACHE_REPORT_ONLY)); then

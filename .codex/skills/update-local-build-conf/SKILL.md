@@ -1,18 +1,20 @@
 ---
 name: update-local-build-conf
-description: Compare Apollo local-build inputs with the active Yocto recipe environments, review differences, and update the repository local_build.conf without adding runtime BitBake lookups. Use when Yocto machine, firmware platform, kernel, QBox, boot arguments, or UKI packaging metadata changes and the manually maintained local build configuration must be refreshed.
+description: Compare Apollo local-build inputs with the active Yocto recipe environments, review differences, and update scripts/build/local_build.conf without adding runtime BitBake lookups. Use when Yocto machine, firmware platform, kernel, QBox, boot arguments, or UKI packaging metadata changes and the manually maintained local build configuration must be refreshed.
 ---
 
 # Update Local Build Config
 
-Refresh `local_build.conf` as an explicit maintenance operation. Never connect
-the collector or its JSON output to `local_build.sh` runtime execution.
+Refresh `scripts/build/local_build.conf` as an explicit maintenance operation.
+Never connect the collector or its JSON output to `local_build.sh` runtime
+execution.
 
 ## Workflow
 
 1. Work from `/build/arm/arm-auto-solutions`. Inspect `git status --short`,
-   `local_build.conf`, `build/conf/local.conf`, `build/conf/bblayers.conf`, and
-   `build/conf/templateconf.cfg`. Preserve unrelated user changes.
+   `scripts/build/local_build.conf`, `build/conf/local.conf`,
+   `build/conf/bblayers.conf`, and `build/conf/templateconf.cfg`. Preserve
+   unrelated user changes.
 2. Confirm that the active Yocto machine is the machine intended for the local
    build. If the two machines differ, report the difference before editing.
 3. Capture a new review artifact explicitly:
@@ -29,7 +31,7 @@ the collector or its JSON output to `local_build.sh` runtime execution.
    arguments as equivalent and keep QBox source paths workspace-relative via
    `${ROOT_DIR}`.
 
-| `local_build.conf` | Recipe | Yocto variable |
+| `scripts/build/local_build.conf` | Recipe | Yocto variable |
 | --- | --- | --- |
 | `MACHINE` | `nexios-image` | `MACHINE` |
 | `RD_ASPEN_VARIANT` | `nexios-image` | `RD_ASPEN_VARIANT` |
@@ -59,12 +61,13 @@ the collector or its JSON output to `local_build.sh` runtime execution.
 | `UKI_SB_CERT` | `nexios-image` | `UKI_SB_CERT` |
 
 5. Present the old value, captured value, and proposed value for every real
-   difference. Update only reviewed assignments in `local_build.conf` with
-   `apply_patch`. Do not edit component repositories or Yocto metadata.
+   difference. Update only reviewed assignments in
+   `scripts/build/local_build.conf` with `apply_patch`. Do not edit component
+   repositories or Yocto metadata.
 6. Validate the result:
 
    ```bash
-   bash -n local_build.conf local_build.sh \
+   bash -n scripts/build/local_build.conf local_build.sh \
      scripts/build/local_build_common.sh \
      scripts/build/modules/package_fvp_local.sh
    python3 -m pytest -q tests/test_local_build_sh.py
@@ -84,4 +87,4 @@ the collector or its JSON output to `local_build.sh` runtime execution.
 
 Report the capture artifact path, reviewed changes, validation commands, and
 any failed or intentionally deferred comparison. If collection fails, leave
-`local_build.conf` unchanged and report the BitBake failure.
+`scripts/build/local_build.conf` unchanged and report the BitBake failure.

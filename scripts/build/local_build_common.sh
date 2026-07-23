@@ -24,13 +24,13 @@ apollo_local_build_require_safe_token()
         apollo_local_build_config_error "${name} must be a safe token containing only letters, digits, '_' or '-': ${value}"
 }
 
-LOCAL_BUILD_CONFIG="${LOCAL_BUILD_CONFIG:-${ROOT_DIR}/local_build.conf}"
+LOCAL_BUILD_CONFIG="${LOCAL_BUILD_CONFIG:-${LOCAL_BUILD_SCRIPT_DIR}/local_build.conf}"
 if [[ "${LOCAL_BUILD_CONFIG}" != /* ]]; then
     LOCAL_BUILD_CONFIG="${ROOT_DIR}/${LOCAL_BUILD_CONFIG}"
 fi
 [[ -r "${LOCAL_BUILD_CONFIG}" ]] ||
     apollo_local_build_config_error "local build configuration is not readable: ${LOCAL_BUILD_CONFIG}"
-# shellcheck source=local_build.conf
+# shellcheck source=scripts/build/local_build.conf
 source "${LOCAL_BUILD_CONFIG}"
 
 MACHINE="${MACHINE:-apollo-fvp}"

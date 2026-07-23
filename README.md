@@ -206,9 +206,10 @@ sources:
 ```
 
 Local outputs follow `build/local-${MACHINE}`. With no environment override,
-the helper reads the reviewed defaults from `local_build.conf` and currently
-resolves to `apollo-qvp` and `build/local-apollo-qvp`. An explicit environment
-value takes precedence over the matching setting in that file.
+the helper reads the reviewed defaults from `scripts/build/local_build.conf`
+and currently resolves to `apollo-qvp` and `build/local-apollo-qvp`. An
+explicit environment value takes precedence over the matching setting in that
+file.
 
 When the SDK is missing, `local_build.sh` creates it with
 `bitbake nexios-image -c populate_sdk` and applies the same automatic
@@ -231,10 +232,11 @@ To prebuild only the QBox targets used by the Apollo full-system runner:
 
 ### Reviewed Local Build Configuration
 
-`local_build.sh` sources `local_build.conf` and does not run BitBake, inspect
-Yocto configuration hashes, or refresh a Yocto-variable cache while resolving
-its build settings. Set `LOCAL_BUILD_CONFIG=/path/to/local_build.conf` to use
-another reviewed configuration. Environment overrides still take precedence.
+`local_build.sh` sources `scripts/build/local_build.conf` and does not run
+BitBake, inspect Yocto configuration hashes, or refresh a Yocto-variable cache
+while resolving its build settings. Set
+`LOCAL_BUILD_CONFIG=/path/to/local_build.conf` to use another reviewed
+configuration. Environment overrides still take precedence.
 
 The file records values local-build directly consumes, including
 `MACHINE`, `RD_ASPEN_VARIANT`, `PC_CPUS_COUNT`, the Linux bootargs tail,
@@ -246,9 +248,9 @@ local-build scope.
 
 Use `$update-local-build-conf` when a Yocto metadata or machine change requires
 a periodic comparison. The skill explicitly captures the allowlisted Yocto
-values, presents the differences for review, updates only `local_build.conf`,
-and validates that normal local builds remain independent of BitBake variable
-collection.
+values, presents the differences for review, updates only
+`scripts/build/local_build.conf`, and validates that normal local builds remain
+independent of BitBake variable collection.
 
 The user-facing `local_build.sh` and `scripts/build/build_*.sh` stage
 entrypoints are intentionally thin. Component implementation lives in

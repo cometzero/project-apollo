@@ -588,7 +588,7 @@ if local_linux_inputs_present:
     missing = [name for name in REQUIRED_UKI_VARS if not variables[name]]
     if missing:
         fail(
-            "local_build.conf does not define required UKI variable(s): "
+            "scripts/build/local_build.conf does not define required UKI variable(s): "
             + ", ".join(missing)
         )
     uki_a = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_A", "auto-ad-nexios-a.efi"), "AUTO_AD_NEXIOS_UKI_A")

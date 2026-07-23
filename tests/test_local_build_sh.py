@@ -177,6 +177,30 @@ def test_sdk_dir_defaults_to_active_machine(tmp_path: Path) -> None:
     assert result.stdout.strip() == str(tmp_path / "build/local-sdk-apollo-qvp")
 
 
+def test_default_local_build_config_lives_with_build_scripts() -> None:
+    # Given: the repository default local-build configuration.
+    command = (
+        "set -euo pipefail; "
+        "source scripts/build/local_build_common.sh; "
+        'printf "%s\\n" "${LOCAL_BUILD_CONFIG}"'
+    )
+
+    # When: the common build environment resolves its default configuration.
+    result = subprocess.run(
+        ("bash", "-lc", command),
+        cwd=ROOT,
+        check=False,
+        env={"PATH": "/usr/bin:/bin"},
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    # Then: configuration is co-located with the build scripts.
+    assert result.returncode == 0, output_of(result)
+    assert result.stdout.strip() == str(ROOT / "scripts/build/local_build.conf")
+
+
 def test_ccache_report_covers_every_component_when_available(tmp_path: Path) -> None:
     tools_dir = tmp_path / "tools"
     write_file(

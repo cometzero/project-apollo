@@ -16,7 +16,7 @@ from typing import Final, NotRequired, TypedDict
 SCHEMA_VERSION: Final = 1
 ROOT: Final = Path(__file__).resolve().parents[2]
 LOCAL_COMMON: Final = Path("scripts/build/local_build_common.sh")
-LOCAL_CONFIG: Final = Path("local_build.conf")
+LOCAL_CONFIG: Final = Path("scripts/build/local_build.conf")
 BOOT_DISK: Final = Path("scripts/build/modules/build_boot_disk.sh")
 OPTEE: Final = Path("scripts/build/modules/build_optee.sh")
 MAXCPUS_PATTERN: Final = re.compile(r"(?:^|\s)maxcpus=([0-9]+)(?=\s|$)")

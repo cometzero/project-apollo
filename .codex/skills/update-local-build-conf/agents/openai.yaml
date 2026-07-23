@@ -1,4 +1,4 @@
 interface:
   display_name: "Update Local Build Config"
   short_description: "Refresh Apollo local build settings from Yocto"
-  default_prompt: "Use $update-local-build-conf to compare active Yocto values with local_build.conf, update only reviewed settings, and validate local builds without runtime BitBake lookups."
+  default_prompt: "Use $update-local-build-conf to compare active Yocto values with scripts/build/local_build.conf, update only reviewed settings, and validate local builds without runtime BitBake lookups."
