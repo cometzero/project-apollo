@@ -20,6 +20,7 @@ RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 NO_ATTACH=0
 DRY_RUN=0
 LOCAL_MODE=0
+BSP_MODE=0
 
 usage()
 {
@@ -32,6 +33,7 @@ file-backed logs.
 Options:
   --machine NAME       apollo-fvp or apollo-qvp (default: ${MACHINE})
   --local              run the local Apollo FVP package (apollo-fvp only)
+  --bsp                run the Yocto nexios-bsp-initramfs image
   --build-dir PATH     Yocto build directory (default: ${YOCTO_BUILD_DIR})
   --deploy-dir PATH    image deploy directory
                        (default: <build-dir>/tmp_baremetal/deploy/images/<machine>)
@@ -55,6 +57,7 @@ Examples:
   ./local_build.sh --package
   Missing local package recovery: ./local_build.sh --package first.
   ./run_fvp.sh
+  ./run_fvp.sh --bsp
   ./run_fvp.sh --machine apollo-qvp
   ./run_fvp.sh --local
   ./run_fvp.sh --no-attach
@@ -145,7 +148,11 @@ resolve_deploy_dir()
 resolve_fvpconf()
 {
     local deploy_dir="$1"
-    local stable="${deploy_dir}/nexios-image-${MACHINE}.fvpconf"
+    local image_basename="nexios-image"
+    if ((BSP_MODE)); then
+        image_basename="nexios-bsp-initramfs"
+    fi
+    local stable="${deploy_dir}/${image_basename}-${MACHINE}.fvpconf"
     local latest
 
     if [[ -n "${FVP_CONF}" ]]; then
@@ -173,7 +180,7 @@ resolve_fvpconf()
         fi
     done < <(
         find "${deploy_dir}" -maxdepth 1 -type f \
-            -name "nexios-image-${MACHINE}-*.fvpconf" \
+            -name "${image_basename}-${MACHINE}-*.fvpconf" \
             -printf '%T@ %p\n' 2>/dev/null |
             sort -nr |
             sed 's/^[^ ]* //'
@@ -702,6 +709,7 @@ print_dry_run()
     cat <<EOF
 Apollo FVP tmux run
   session: ${TMUX_SESSION}
+  boot profile: ${BOOT_PROFILE}
   fvpconf: ${FVP_CONF}
   out_dir: ${OUT_DIR}
   command: $(quote_args "${cmd[@]}")
@@ -841,6 +849,10 @@ while (($# > 0)); do
             LOCAL_MODE=1
             shift
             ;;
+        --bsp)
+            BSP_MODE=1
+            shift
+            ;;
         --build-dir)
             (($# >= 2)) || die "--build-dir requires a value"
             YOCTO_BUILD_DIR="$2"
@@ -897,6 +909,12 @@ done
 FVP_CONF_REQUESTED=0
 if [[ -n "${FVP_CONF}" ]]; then
     FVP_CONF_REQUESTED=1
+fi
+
+BOOT_PROFILE="product"
+if ((BSP_MODE)); then
+    ((LOCAL_MODE == 0)) || die "--bsp cannot be used with --local"
+    BOOT_PROFILE="bsp-initramfs"
 fi
 
 YOCTO_BUILD_DIR="$(abspath "${YOCTO_BUILD_DIR}")"
