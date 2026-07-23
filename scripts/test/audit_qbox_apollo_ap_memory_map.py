@@ -752,6 +752,15 @@ def normalized_cells(value: str) -> str:
     return "<" + " ".join(value.strip().strip("<>").split()) + ">"
 
 
+def dts_cells_equal(left: str, right: str) -> bool:
+    try:
+        return [int(value, 0) for value in left.strip("<>").split()] == [
+            int(value, 0) for value in right.strip("<>").split()
+        ]
+    except ValueError:
+        return False
+
+
 def dts_cell_address(cells: str) -> int | None:
     try:
         values = [int(value, 0) for value in cells.strip("<>").split()]
@@ -800,6 +809,10 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
     dts_cells = re.findall(r"<[^>]+>", dts_node.group("body")) if dts_node else []
     dts_high = normalized_cells(dts_cells[1]) if len(dts_cells) > 1 else "missing"
     dts_base = None if dts_high == "missing" else dts_cell_address(dts_high)
+    dts_fvp_compatible = dts_cells_equal(dts_high, EXPECTED_HIGH_DRAM_DTS_CELLS)
+    dts_programmer_model = dts_cells_equal(
+        dts_high, AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS
+    )
     return [
         high_dram_value_check(
             "full_system_host_ap_dram2_base",
@@ -817,15 +830,21 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
             "name": "local_build_linux_dts_high_memory_cells",
             "path": dts_path,
             "line": None if dts_node is None or len(dts_cells) <= 1 else line_for_offset(dts, dts.find(dts_cells[1], dts_node.start("body"))),
-            "passed": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,
-            "issue": None if dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS else "ap_programmer_model_high_dram_dts_cells" if dts_high == AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS else "unexpected_high_dram_dts_cells",
+            "passed": dts_fvp_compatible,
+            "issue": (
+                None
+                if dts_fvp_compatible
+                else "ap_programmer_model_high_dram_dts_cells"
+                if dts_programmer_model
+                else "unexpected_high_dram_dts_cells"
+            ),
             "current_value": hex_or_missing(dts_base),
             "current_cells": dts_high,
             "expected_value": f"0x{EXPECTED_HIGH_DRAM_BASE:x}",
             "expected_size": f"0x{EXPECTED_HIGH_DRAM_SIZE:x}",
             "expected_cells": EXPECTED_HIGH_DRAM_DTS_CELLS,
             "ap_programmer_model_cells": AP_PROGRAMMER_MODEL_HIGH_DRAM_DTS_CELLS,
-            "fvp_compatible": dts_high == EXPECTED_HIGH_DRAM_DTS_CELLS,
+            "fvp_compatible": dts_fvp_compatible,
         },
     ]
 
