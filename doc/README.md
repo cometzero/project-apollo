@@ -63,6 +63,10 @@ separate.
   Korean architecture comparison of current Apollo QVP and Arm Zena CSS/FVP,
   covering address views, buses, memory, hardware blocks, routing gaps, and
   the target domain-separated virtual-platform structure.
+- [Apollo QVP QBox Bus And Subsystem Integration Guide KR](apollo-qvp-qbox-bus-subsystem-integration-guide-ko.md) -
+  Korean implementation guide for connecting peripherals, bus masters,
+  inter-domain bridges, and new subsystems to the current Apollo QVP,
+  including the responsibility of every Apollo Lua file and validation gates.
 - [Apollo QVP Machine Improvement Plan KR](apollo-qvp-machine-improvement-plan-ko.md) -
   Korean phased implementation plan for declarative topology, AP/SMD/RSE/SI
   router separation, ATU/APU policy, memory and signal routing, and FVP/QVP
