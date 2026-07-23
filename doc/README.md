@@ -38,6 +38,14 @@ separate.
   Korean subsystem-by-subsystem comparison of the Arm Zena CSS FVP memory map
   and Apollo QVP Lua, SystemC, and QEMU implementation modules, including
   explicit partial-model, placeholder, and missing-IP gaps.
+- [Apollo QVP QBox Hardware Topology HTML](apollo-qvp-qbox-hardware-topology.html) -
+  Archify overview generated against qbox-platform `db7b10d16296`; its
+  domain/router layout remains broadly representative, but it predates the
+  current shared-counter and native AP timer split.
+- [Apollo QVP QBox ea25d49 Topology HTML](apollo-qvp-qbox-hardware-topology-ea25d49.html) -
+  Archify reconstruction of the 2026-07-08 pre-refactor topology, including
+  the shared `host_router`, conditional AP view router, direct SI bindings,
+  and the qbox-platform built-in 16-CPU default at that revision.
 - [QBox-FVP Timer And Counter Comparison KR](qbox-fvp-timer-counter-comparison-ko.md) -
   Korean comparison of the FVP shared-counter behavior and the implemented
   QBox shared-provider topology, including exact frequencies, remaining
