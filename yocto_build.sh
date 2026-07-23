@@ -16,16 +16,18 @@ DM_VERITY_MODE="${APOLLO_DM_VERITY:-}"
 APOLLO_MACHINE="${MACHINE:-${DEFAULT_APOLLO_MACHINE}}"
 DRY_RUN=0
 KEEP_CONF=0
+BSP_ONLY=0
 
 usage() {
     cat <<'EOF'
 Usage: ./yocto_build.sh [options]
 
-Build the Apollo Yocto nexios-image.
+Build the Apollo Yocto product and BSP validation images.
 
 Options:
   --machine apollo-fvp|apollo-qvp
                           Select the Apollo Yocto machine.
+  --bsp                   Build only nexios-bsp-initramfs.
   --keep-conf             Preserve the existing BUILD_DIR/conf directory.
   --dm-verity=on|off      Build through the matching Yocto multiconfig.
   --dm-verity on|off      Same as --dm-verity=on|off.
@@ -92,6 +94,10 @@ while (($#)); do
             ;;
         --dry-run)
             DRY_RUN=1
+            shift
+            ;;
+        --bsp)
+            BSP_ONLY=1
             shift
             ;;
         --keep-conf)
@@ -213,7 +219,13 @@ source "${POKY_DIR}/oe-init-build-env" "${BUILD_DIR}"
 set -u
 
 BITBAKE_ARGS=()
-BITBAKE_TARGET="nexios-image"
+if [[ "${BSP_ONLY}" == "1" ]]; then
+    BITBAKE_TARGETS=("nexios-bsp-initramfs")
+else
+    BITBAKE_TARGETS=("nexios-bsp-initramfs" "nexios-image")
+fi
+export APOLLO_BSP_BUILD_ONLY="${BSP_ONLY}"
+export BB_ENV_PASSTHROUGH_ADDITIONS="${BB_ENV_PASSTHROUGH_ADDITIONS:-} APOLLO_BSP_BUILD_ONLY"
 
 echo "notice: machine '${APOLLO_MACHINE}' uses shared build directory ${PWD}" >&2
 
@@ -239,7 +251,9 @@ if [[ -n "${DM_VERITY_MC}" ]]; then
         echo "BBMULTICONFIG = \"${DM_VERITY_MC}\""
     } >"${MULTICONFIG_CONF}"
     BITBAKE_ARGS+=(-R "${MULTICONFIG_CONF}")
-    BITBAKE_TARGET="mc:${DM_VERITY_MC}:nexios-image"
+    for target_index in "${!BITBAKE_TARGETS[@]}"; do
+        BITBAKE_TARGETS[${target_index}]="mc:${DM_VERITY_MC}:${BITBAKE_TARGETS[${target_index}]}"
+    done
     echo "notice: dm-verity mode '${DM_VERITY_MODE}' uses multiconfig ${DM_VERITY_MC}" >&2
 fi
 
@@ -267,10 +281,13 @@ if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" ||
 fi
 
 if [[ "${DRY_RUN}" == "1" ]]; then
+    printf 'APOLLO_BSP_BUILD_ONLY=%q\n' "${APOLLO_BSP_BUILD_ONLY}"
     printf 'MACHINE=%q bitbake' "${APOLLO_MACHINE}"
-    printf ' %q' "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGET}"
+    printf ' %q' "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGETS[@]}"
     printf '\n'
     exit 0
 fi
 
-MACHINE="${APOLLO_MACHINE}" bitbake "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGET}"
+MACHINE="${APOLLO_MACHINE}" \
+APOLLO_BSP_BUILD_ONLY="${APOLLO_BSP_BUILD_ONLY}" \
+    bitbake "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGETS[@]}"

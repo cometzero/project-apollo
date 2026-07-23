@@ -21,6 +21,7 @@ run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-qvp)
+  --bsp                       Boot nexios-bsp-initramfs from its boot-only WIC
   --build-dir DIR             Yocto build directory (default: ./build)
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
@@ -560,7 +561,8 @@ MACHINE="${MACHINE:-apollo-qvp}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-}"
 DEPLOY_DIR="${DEPLOY_DIR:-}"
 YOCTO_WORK_DIR="${YOCTO_WORK_DIR:-}"
-IMAGE_BASENAME="${IMAGE_BASENAME:-nexios-image}"
+IMAGE_BASENAME_FROM_ENV="${IMAGE_BASENAME:-}"
+IMAGE_BASENAME="${IMAGE_BASENAME_FROM_ENV:-nexios-image}"
 QBOX_CONF_FILE="${QBOX_CONF_FILE:-}"
 
 LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-}"
@@ -575,11 +577,13 @@ LOCAL_BUILD_DIR_EXPLICIT=0
 QBOX_TOOL_DIR_EXPLICIT=0
 QBOX_BUILD_DIR_EXPLICIT=0
 QBOX_CONF_EXPLICIT=0
+IMAGE_BASENAME_EXPLICIT=0
 RSE_SYMBOLS_EXPLICIT=0
 [[ -n "${LOCAL_BUILD_DIR}" ]] && LOCAL_BUILD_DIR_EXPLICIT=1
 [[ -n "${QBOX_TOOL_DIR}" ]] && QBOX_TOOL_DIR_EXPLICIT=1
 [[ -n "${QBOX_BUILD_DIR}" ]] && QBOX_BUILD_DIR_EXPLICIT=1
 [[ -n "${QBOX_CONF}" ]] && QBOX_CONF_EXPLICIT=1
+[[ -n "${IMAGE_BASENAME_FROM_ENV}" ]] && IMAGE_BASENAME_EXPLICIT=1
 [[ -n "${RSE_SYMBOLS:-}" ]] && RSE_SYMBOLS_EXPLICIT=1
 
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
@@ -589,7 +593,7 @@ TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(nproc)}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
-PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
+PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
 RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 RUN_QBOX_RECORD_INITIAL_STATE="${RUN_QBOX_RECORD_INITIAL_STATE:-0}"
@@ -603,6 +607,7 @@ RSE_OTP_IMAGE_SIZE="${RSE_OTP_IMAGE_SIZE:-65536}"
 RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
 RESET_RSE_STATE=0
+BSP_MODE=0
 
 ROOTFS_OVERRIDE="${ROOTFS:-}"
 EFI_CAPSULE_DISK_OVERRIDE="${EFI_CAPSULE_DISK:-}"
@@ -634,6 +639,10 @@ while (($#)); do
             MACHINE="$2"
             shift 2
             ;;
+        --bsp)
+            BSP_MODE=1
+            shift
+            ;;
         --build-dir)
             [[ $# -ge 2 ]] || die "--build-dir requires a value"
             YOCTO_BUILD_DIR="$2"
@@ -652,6 +661,7 @@ while (($#)); do
         --image-basename)
             [[ $# -ge 2 ]] || die "--image-basename requires a value"
             IMAGE_BASENAME="$2"
+            IMAGE_BASENAME_EXPLICIT=1
             shift 2
             ;;
         --qboxconf)
@@ -864,6 +874,16 @@ done
 
 reject_removed_env
 
+BOOT_PROFILE="product"
+if [[ "${BSP_MODE}" == "1" ]]; then
+    if [[ "${IMAGE_BASENAME_EXPLICIT}" == "1" &&
+        "${IMAGE_BASENAME}" != "nexios-bsp-initramfs" ]]; then
+        die "--bsp conflicts with image basename '${IMAGE_BASENAME}'"
+    fi
+    BOOT_PROFILE="bsp-initramfs"
+    IMAGE_BASENAME="nexios-bsp-initramfs"
+fi
+
 source "${ROOT_DIR}/scripts/run/qbox_qboxconf_common.sh"
 
 if [[ -z "${YOCTO_BUILD_DIR}" ]]; then
@@ -924,8 +944,15 @@ fi
 validate_ap_cpu_count "${QBOX_APOLLO_NUM_CPUS}"
 export QBOX_APOLLO_NUM_CPUS
 
-PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
-PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+if [[ "${BSP_MODE}" == "1" ]]; then
+    PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-NEXIOS_BSP_INITRAMFS_READY}"
+    PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-nexios-bsp#}"
+    PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:^|\\n)nexios-bsp#\\s*$}"
+else
+    PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
+    PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
+    PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+fi
 RSE_STATE_DIR="${RSE_STATE_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/state/yocto-${MACHINE}}"
 if [[ "${RESET_RSE_STATE}" == "1" && "${PERSIST_RSE_STATE}" != "1" ]]; then
     die "--reset-rse-state cannot be used with --no-persistent-rse-state"
@@ -1214,6 +1241,7 @@ RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
 cat <<EOF
 Apollo QBox Yocto launch
   machine:       ${MACHINE}
+  boot profile:  ${BOOT_PROFILE}
   deploy dir:    ${DEPLOY_DIR}
   work dir:      ${YOCTO_WORK_DIR}
   output dir:    ${OUT_DIR}
