@@ -473,7 +473,9 @@ build_external_kernel_module()
     local build_dir="$3"
     local module="$4"
     local release="$5"
+    local installed_module="${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/${module}.ko"
     require_dir "${src}"
+    require_command "${AARCH64_PREFIX}strip"
 
     rm -rf "${build_dir}"
     mkdir -p "${build_dir}"
@@ -483,10 +485,11 @@ build_external_kernel_module()
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
         M="${build_dir}" modules
 
-    sign_kernel_module "${build_dir}/${module}.ko"
-
     install_artifact "${build_dir}/${module}.ko" \
-        "${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/${module}.ko"
+        "${installed_module}"
+    run_logged "strip-${module}.ko" "${AARCH64_PREFIX}strip" \
+        --strip-debug "${installed_module}"
+    sign_kernel_module "${installed_module}"
 }
 
 build_arm_si_rproc_module()
@@ -528,6 +531,7 @@ kernel_modules_overlay_manifest()
     printf 'release=%s\n' "${release}"
     printf 'KERNEL_MODULES_AUTOLOAD=%s\n' "${KERNEL_MODULES_AUTOLOAD}"
     printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
+    printf 'INSTALL_MOD_STRIP=1\n'
     fingerprint_file_hash "${LINUX_BUILD_DIR}/.config" linux-config
     fingerprint_file_hash "${LINUX_BUILD_DIR}/Module.symvers" linux-module-symvers
     fingerprint_file_hash "${LINUX_BUILD_DIR}/modules.order" linux-modules-order
@@ -565,7 +569,8 @@ install_kernel_modules_overlay()
     rm -rf "${BUILDROOT_OVERLAY}/lib/modules/${release}"
     run_logged linux-modules-install make -C "${LINUX_SRC}" \
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        INSTALL_MOD_PATH="${BUILDROOT_OVERLAY}" modules_install
+        INSTALL_MOD_PATH="${BUILDROOT_OVERLAY}" INSTALL_MOD_STRIP=1 \
+        modules_install
 
     if [[ " ${KERNEL_MODULES_AUTOLOAD} " == *" arm_si_rproc "* ]]; then
         build_arm_si_rproc_module "${release}"
@@ -607,8 +612,12 @@ buildroot_initramfs_manifest()
 
 build_buildroot_initramfs()
 {
+    local compressor
+
     require_dir "${BUILDROOT_SRC}"
+    require_command pigz
     mkdir -p "${BUILDROOT_BUILD_DIR}" "${BOOT_DIR}"
+    compressor="$(buildroot_cpio_compress_cmd)"
 
     prepare_buildroot_toolchain
     prepare_buildroot_external
@@ -646,6 +655,7 @@ build_buildroot_initramfs()
     rm -rf "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf.d"
     run_logged buildroot-build buildroot_env make -C "${BUILDROOT_SRC}" \
         O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        ROOTFS_CPIO_COMPRESS_CMD="${compressor}" \
         -j "${JOBS}"
     validate_buildroot_runtime_files
 

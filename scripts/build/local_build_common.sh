@@ -837,6 +837,11 @@ auto_build_threads()
 
 JOBS="${JOBS:-$(auto_build_threads)}"
 
+buildroot_cpio_compress_cmd()
+{
+    printf 'pigz -9 -p %s -c -n\n' "${JOBS}"
+}
+
 bitbake_network_sandbox_supported()
 {
     python3 - <<'PY'

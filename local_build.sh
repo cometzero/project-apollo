@@ -326,6 +326,7 @@ print_component_dry_run()
                 buildroot)
                     printf '    output: %s\n' "${BOOT_DIR}/initramfs.cpio.gz"
                     printf '    work: %s\n' "${BUILDROOT_BUILD_DIR#"${ROOT_DIR}"/}"
+                    printf '    compressor: %s\n' "$(buildroot_cpio_compress_cmd)"
                     ;;
                 flash-images)
                     printf '    outputs: %s %s %s\n' \

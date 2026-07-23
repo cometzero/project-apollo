@@ -407,7 +407,12 @@ def test_no_package_removes_default_package_step() -> None:
 
 
 def test_buildroot_dry_run_resolves_initramfs_output() -> None:
-    result = run_local_build("buildroot", "--dry-run")
+    result = run_local_build(
+        "buildroot",
+        "--dry-run",
+        "--jobs",
+        "7",
+    )
 
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
@@ -415,6 +420,7 @@ def test_buildroot_dry_run_resolves_initramfs_output() -> None:
     assert "function: build_buildroot_initramfs" in output
     assert "initramfs.cpio.gz" in output
     assert "build/local-apollo-qvp/deploy/boot" in output
+    assert "compressor: pigz -9 -p 7 -c -n" in output
 
 
 def test_boot_artifact_components_dry_run_resolve_existing_module_functions() -> None:

@@ -252,6 +252,12 @@ values, presents the differences for review, updates only
 `scripts/build/local_build.conf`, and validates that normal local builds remain
 independent of BitBake variable collection.
 
+Buildroot still creates the same gzip-compressed CPIO image, but the local
+build runs `pigz -9` with the requested `JOBS` count and suppresses gzip
+timestamps with `-n`. Kernel modules copied into the Buildroot rootfs are
+stripped of debug information before signing; the original modules under the
+local Linux build directory retain their debug information.
+
 The user-facing `local_build.sh` and `scripts/build/build_*.sh` stage
 entrypoints are intentionally thin. Component implementation lives in
 sourceable modules under `scripts/build/modules/`, while
