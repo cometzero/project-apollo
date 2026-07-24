@@ -67,8 +67,8 @@ def newest_match(deploy_dir, pattern):
 
 def inspect_uboot_artifacts(deploy_dir):
     return {
-        "u_boot_bin": artifact_record(newest_match(deploy_dir, "u-boot-apollo-fvp-*.bin")),
-        "initial_env": artifact_record(newest_match(deploy_dir, "u-boot-initial-env-apollo-fvp-*")),
+        "u_boot_bin": artifact_record(newest_match(deploy_dir, "u-boot-apollo-*-*.bin")),
+        "initial_env": artifact_record(newest_match(deploy_dir, "u-boot-initial-env-apollo-*-*")),
     }
 
 
@@ -98,9 +98,11 @@ def inspect_host_fixture_evidence(path):
     fallback_ok = (
         data.get("status") == "PASS"
         and len(load_attempts) >= 2
-        and load_attempts[0].get("path") == "EFI/Linux/auto-ad-nexios-a.efi"
-        and load_attempts[1].get("path") == "EFI/Linux/auto-ad-nexios-b.efi"
-        and booted_path == "EFI/Linux/auto-ad-nexios-b.efi"
+        and load_attempts[0].get("path")
+        == "EFI/Linux/a-slot/auto-ad-nexios-a.efi"
+        and load_attempts[1].get("path")
+        == "EFI/Linux/b-slot/auto-ad-nexios-b.efi"
+        and booted_path == "EFI/Linux/b-slot/auto-ad-nexios-b.efi"
     )
     c_fixture = data.get("c_fixture", {})
     stdout_value = c_fixture.get("stdout")
@@ -177,8 +179,7 @@ def inspect_secure_boot_parse_log(path):
 
 def check_filesystems(wic, by_name):
     expected = {
-        "boot_a": ("vfat", "boot_a"),
-        "boot_b": ("vfat", "boot_b"),
+        "boot": ("vfat", "boot"),
         "rootro_a": ("ext4", None),
         "rootro_b": ("ext4", None),
         "rootrw": ("ext4", "rootrw"),

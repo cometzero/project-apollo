@@ -42,7 +42,7 @@ def parse_args(argv):
     parser.add_argument(
         "--expect-partitions",
         default=",".join(f"{name}={size}" for name, size in DEFAULT_EXPECTED.items()),
-        help="comma-separated partition contract, for example boot_a=128M,...",
+        help="comma-separated partition contract, for example boot=256M,...",
     )
     parser.add_argument(
         "--expect-default-slot",
@@ -132,11 +132,11 @@ def inspect(args):
 def copy_slot_uki_fixture(wic, by_name, work_dir):
     esp_dir = work_dir / "esp-fixture"
     result = {}
-    for slot in ("boot_a", "boot_b"):
+    for slot in ("a-slot", "b-slot"):
         slot_dir = esp_dir / slot / "EFI" / "Linux"
         slot_dir.mkdir(parents=True, exist_ok=True)
         uki_path = slot_dir / Path(SLOT_UKI_FILES[slot]).name
-        copy_from_fat(wic, by_name[slot], SLOT_UKI_FILES[slot], uki_path)
+        copy_from_fat(wic, by_name["boot"], SLOT_UKI_FILES[slot], uki_path)
         result[slot] = str(uki_path)
     return result
 
@@ -169,9 +169,9 @@ def run_negative_suite(args):
         raise InspectError("corrupt misc fixture was accepted")
 
     esp_files = copy_slot_uki_fixture(wic, by_name, work_dir)
-    missing_a = Path(esp_files["boot_a"])
+    missing_a = Path(esp_files["a-slot"])
     missing_a.unlink()
-    fallback_b = Path(esp_files["boot_b"])
+    fallback_b = Path(esp_files["b-slot"])
     if fallback_b.name != "auto-ad-nexios-b.efi" or not fallback_b.exists():
         raise InspectError("missing selected UKI fixture did not expose fallback B")
 

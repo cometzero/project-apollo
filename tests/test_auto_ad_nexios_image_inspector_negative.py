@@ -26,7 +26,8 @@ def write_behavior_evidence(tmp_path):
             [
                 "CASE corrupt-crc-default-a",
                 "auto-ad-nexios: invalid misc, defaulting slot A",
-                "ENV aanx_slot=A aanx_uki=EFI/Linux/auto-ad-nexios-a.efi",
+                "ENV aanx_slot=A "
+                "aanx_uki=EFI/Linux/a-slot/auto-ad-nexios-a.efi",
                 "SUMMARY PASS default-A fixture exercised parser and selector",
             ]
         )
@@ -40,10 +41,10 @@ def write_behavior_evidence(tmp_path):
                 "c_fixture": {"stdout": str(stdout)},
                 "bootcommand_fixture": {
                     "load_attempts": [
-                        {"path": "EFI/Linux/auto-ad-nexios-a.efi"},
-                        {"path": "EFI/Linux/auto-ad-nexios-b.efi"},
+                        {"path": "EFI/Linux/a-slot/auto-ad-nexios-a.efi"},
+                        {"path": "EFI/Linux/b-slot/auto-ad-nexios-b.efi"},
                     ],
-                    "booted_path": "EFI/Linux/auto-ad-nexios-b.efi",
+                    "booted_path": "EFI/Linux/b-slot/auto-ad-nexios-b.efi",
                 },
             }
         )
@@ -93,7 +94,7 @@ def make_partitions(module):
                 "end_sector": (offset + size) // module.SECTOR_SIZE - 1,
                 "offset": offset,
                 "size_bytes": size,
-                "code": module.ESP_TYPE if name.startswith("boot_") else module.LINUX_TYPE,
+                "code": module.ESP_TYPE if name == "boot" else module.LINUX_TYPE,
                 "name": name,
             }
         )
@@ -124,12 +125,16 @@ def setup_negative_fixture(tmp_path, monkeypatch):
     misc_blob = make_misc_blob(module)
 
     def fake_read_exact(_path, offset, size):
-        if offset == partitions[2]["offset"] and size == module.MISC_SIZE:
+        if offset == partitions[1]["offset"] and size == module.MISC_SIZE:
             return bytes(misc_blob)
         return b"\x00" * size
 
     def fake_copy_from_fat(_wic, _part, fat_path, out_path):
-        if fat_path.endswith("auto-ad-nexios-a.efi"):
+        if fat_path.endswith("a-slot/metadata"):
+            content = b"slot=A\n"
+        elif fat_path.endswith("b-slot/metadata"):
+            content = b"slot=B\n"
+        elif fat_path.endswith("auto-ad-nexios-a.efi"):
             content = b"MZ rootwait root=PARTLABEL=rootro_a ro console="
         elif fat_path.endswith("auto-ad-nexios-b.efi"):
             content = b"MZ rootwait root=PARTLABEL=rootro_b ro console="
@@ -190,7 +195,7 @@ def test_negative_suite_records_behavior_backed_negative_results(tmp_path, monke
     assert report["negative"]["corrupt_misc"]["stdout"] == str(tmp_path / "host-fixture.stdout")
     assert report["negative"]["missing_selected_uki"]["status"] == "PASS"
     assert report["negative"]["missing_selected_uki"]["booted_path"] == (
-        "EFI/Linux/auto-ad-nexios-b.efi"
+        "EFI/Linux/b-slot/auto-ad-nexios-b.efi"
     )
     assert report["negative"]["bad_dm_verity_root"]["status"] == "PASS"
     assert report["negative"]["bad_dm_verity_root"]["markers"]["mapper_mount_failed"]
@@ -199,7 +204,7 @@ def test_negative_suite_records_behavior_backed_negative_results(tmp_path, monke
     assert not (
         work_dir
         / "esp-fixture"
-        / "boot_a"
+        / "a-slot"
         / "EFI"
         / "Linux"
         / "auto-ad-nexios-a.efi"
@@ -207,7 +212,7 @@ def test_negative_suite_records_behavior_backed_negative_results(tmp_path, monke
     assert (
         work_dir
         / "esp-fixture"
-        / "boot_b"
+        / "b-slot"
         / "EFI"
         / "Linux"
         / "auto-ad-nexios-b.efi"

@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 
-DEFAULT_EXPECTED = {"boot_a": "128M", "boot_b": "128M", "misc": "4M",
+DEFAULT_EXPECTED = {"boot": "256M", "misc": "4M",
                     "rootro_a": "8192M", "rootro_b": "8192M",
                     "rootrw": "512M", "data": "4096M"}
 EXPECTED_ORDER = list(DEFAULT_EXPECTED)
@@ -31,10 +31,22 @@ ESP_SECURE_BOOT_AUTH_FILES = (
     "::/uefi-sb-authenticated-variables/DB.auth",
     "::/uefi-sb-authenticated-variables/DBX.auth",
 )
-SLOT_UKI_FILES = {"boot_a": "::/EFI/Linux/auto-ad-nexios-a.efi",
-                  "boot_b": "::/EFI/Linux/auto-ad-nexios-b.efi"}
-SLOT_UKI_CMDLINES = {"boot_a": b"rootwait root=PARTLABEL=rootro_a ro console=",
-                     "boot_b": b"rootwait root=PARTLABEL=rootro_b ro console="}
+SLOT_UKI_FILES = {
+    "a-slot": "::/EFI/Linux/a-slot/auto-ad-nexios-a.efi",
+    "b-slot": "::/EFI/Linux/b-slot/auto-ad-nexios-b.efi",
+}
+SLOT_UKI_CMDLINES = {
+    "a-slot": b"rootwait root=PARTLABEL=rootro_a ro console=",
+    "b-slot": b"rootwait root=PARTLABEL=rootro_b ro console=",
+}
+SLOT_METADATA_FILES = {
+    "a-slot": "::/EFI/Linux/a-slot/metadata",
+    "b-slot": "::/EFI/Linux/b-slot/metadata",
+}
+SLOT_METADATA_VALUES = {
+    "a-slot": b"slot=A\n",
+    "b-slot": b"slot=B\n",
+}
 
 
 class InspectError(ValueError):
@@ -185,8 +197,7 @@ def check_partition_contract(partitions, expected):
                 f"partition {name} size mismatch: expected {expected_bytes} bytes, got {actual}"
             )
     for name, code in {
-        "boot_a": ESP_TYPE,
-        "boot_b": ESP_TYPE,
+        "boot": ESP_TYPE,
         "misc": LINUX_TYPE,
         "rootro_a": LINUX_TYPE,
         "rootro_b": LINUX_TYPE,
@@ -250,20 +261,32 @@ def pe_has_authenticode_certificate(path):
 
 
 def inspect_esp_slots(wic, by_name, secure_boot, deploy_dir):
-    result = {}
+    result = {"files": {}, "slots": {}}
     with tempfile.TemporaryDirectory(prefix="aanx-esp-") as tmpdir:
-        for name in ("boot_a", "boot_b"):
+        required_files = ESP_REQUIRED_FILES
+        if secure_boot == "1":
+            required_files += ESP_SECURE_BOOT_AUTH_FILES
+        for index, fat_path in enumerate(required_files):
+            out_path = Path(tmpdir) / f"boot-{index}"
+            copy_from_fat(wic, by_name["boot"], fat_path, out_path)
+            result["files"][fat_path.replace("::", "")] = out_path.stat().st_size
+
+        for name in ("a-slot", "b-slot"):
             files = {}
-            required_files = ESP_REQUIRED_FILES
-            if secure_boot == "1":
-                required_files += ESP_SECURE_BOOT_AUTH_FILES
-            for index, fat_path in enumerate(required_files):
-                out_path = Path(tmpdir) / f"{name}-{index}"
-                copy_from_fat(wic, by_name[name], fat_path, out_path)
-                files[fat_path.replace("::", "")] = out_path.stat().st_size
+            metadata_fat_path = SLOT_METADATA_FILES[name]
+            metadata_path = Path(tmpdir) / f"{name}-metadata"
+            copy_from_fat(wic, by_name["boot"], metadata_fat_path, metadata_path)
+            metadata_value = metadata_path.read_bytes()
+            if metadata_value != SLOT_METADATA_VALUES[name]:
+                raise InspectError(
+                    f"{name} metadata mismatch: expected "
+                    f"{SLOT_METADATA_VALUES[name]!r}, got {metadata_value!r}"
+                )
+            files[metadata_fat_path.replace("::", "")] = metadata_path.stat().st_size
+
             uki_fat_path = SLOT_UKI_FILES[name]
             uki_path = Path(tmpdir) / f"{name}-uki.efi"
-            copy_from_fat(wic, by_name[name], uki_fat_path, uki_path)
+            copy_from_fat(wic, by_name["boot"], uki_fat_path, uki_path)
             if SLOT_UKI_CMDLINES[name] not in uki_path.read_bytes():
                 raise InspectError(f"{name} UKI command line does not target its rootro slot")
             deploy_path = deploy_dir / Path(uki_fat_path).name
@@ -279,9 +302,10 @@ def inspect_esp_slots(wic, by_name, secure_boot, deploy_dir):
                 if not uki_signed:
                     raise InspectError(f"{name} UKI is unsigned but UEFI_SECURE_BOOT=1")
             files[uki_fat_path.replace("::", "")] = uki_path.stat().st_size
-            result[name] = {
+            result["slots"][name] = {
                 "files": files,
-                "uki_cmdline_root": "rootro_a" if name == "boot_a" else "rootro_b",
+                "metadata_slot": "A" if name == "a-slot" else "B",
+                "uki_cmdline_root": "rootro_a" if name == "a-slot" else "rootro_b",
                 "uki_deploy_artifact": str(deploy_path),
                 "uki_sha256": esp_sha256,
                 "uki_signed": uki_signed,

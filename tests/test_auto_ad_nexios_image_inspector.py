@@ -25,14 +25,14 @@ def test_parse_expect_partitions_requires_name_size_pairs():
     module = load_module()
 
     with pytest.raises(module.InspectError):
-        module.parse_expect_partitions("boot_a")
+        module.parse_expect_partitions("boot")
 
 
 def test_parse_expect_partitions_accepts_contract():
     module = load_module()
 
     expected = module.parse_expect_partitions(
-        "boot_a=128M,boot_b=128M,misc=4M,"
+        "boot=256M,misc=4M,"
         "rootro_a=8192M,rootro_b=8192M,rootrw=512M,data=4096M"
     )
 
@@ -40,7 +40,10 @@ def test_parse_expect_partitions_accepts_contract():
     assert module.parse_size(expected["rootro_a"]) == 8192 * 1024 * 1024
 
 
-def test_esp_required_files_accept_direct_uki_layout_without_boot_conf(tmp_path, monkeypatch):
+@pytest.mark.parametrize("machine", ["apollo-fvp", "apollo-qvp"])
+def test_esp_required_files_accept_direct_uki_layout_without_boot_conf(
+    tmp_path, monkeypatch, machine
+):
     module = load_module()
     helper = sys.modules["auto_ad_nexios_image_inspector_lib"]
     wic = tmp_path / "fixture.wic"
@@ -57,13 +60,17 @@ def test_esp_required_files_accept_direct_uki_layout_without_boot_conf(tmp_path,
                 "end_sector": start + (size // module.SECTOR_SIZE) - 1,
                 "offset": start * module.SECTOR_SIZE,
                 "size_bytes": size,
-                "code": module.ESP_TYPE if name.startswith("boot_") else module.LINUX_TYPE,
+                "code": module.ESP_TYPE if name == "boot" else module.LINUX_TYPE,
                 "name": name,
             }
         )
     copied = []
 
     def fat_bytes(fat_path):
+        if fat_path.endswith("a-slot/metadata"):
+            return b"slot=A\n"
+        if fat_path.endswith("b-slot/metadata"):
+            return b"slot=B\n"
         if fat_path.endswith("auto-ad-nexios-a.efi"):
             return b"MZ rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0,115200"
         if fat_path.endswith("auto-ad-nexios-b.efi"):
@@ -75,13 +82,13 @@ def test_esp_required_files_accept_direct_uki_layout_without_boot_conf(tmp_path,
         Path(out_path).write_bytes(fat_bytes(fat_path))
 
     (tmp_path / "auto-ad-nexios-a.efi").write_bytes(
-        fat_bytes("::/EFI/Linux/auto-ad-nexios-a.efi")
+        fat_bytes("::/EFI/Linux/a-slot/auto-ad-nexios-a.efi")
     )
     (tmp_path / "auto-ad-nexios-b.efi").write_bytes(
-        fat_bytes("::/EFI/Linux/auto-ad-nexios-b.efi")
+        fat_bytes("::/EFI/Linux/b-slot/auto-ad-nexios-b.efi")
     )
-    (tmp_path / "u-boot-apollo-fvp-test.bin").write_bytes(b"u-boot")
-    (tmp_path / "u-boot-initial-env-apollo-fvp-test").write_bytes(b"env")
+    (tmp_path / f"u-boot-{machine}-test.bin").write_bytes(b"u-boot")
+    (tmp_path / f"u-boot-initial-env-{machine}-test").write_bytes(b"env")
     monkeypatch.setattr(module, "parse_sgdisk", lambda _wic: partitions)
     monkeypatch.setattr(module, "check_filesystems", lambda _wic, _by_name: {})
     monkeypatch.setattr(
@@ -102,20 +109,31 @@ def test_esp_required_files_accept_direct_uki_layout_without_boot_conf(tmp_path,
     summary = json.loads(json_out.read_text())
 
     assert summary["result"] == "PASS"
-    assert "/EFI/BOOT/bootaa64.efi" in summary["esp"]["boot_a"]["files"]
-    assert "/EFI/Linux/auto-ad-nexios-a.efi" in summary["esp"]["boot_a"]["files"]
-    assert "/EFI/Linux/auto-ad-nexios-b.efi" in summary["esp"]["boot_b"]["files"]
-    assert "/loader/entries/boot.conf" not in summary["esp"]["boot_a"]["files"]
-    assert "/Image.unsigned" not in summary["esp"]["boot_b"]["files"]
-    assert summary["esp"]["boot_a"]["uki_cmdline_root"] == "rootro_a"
-    assert summary["esp"]["boot_b"]["uki_cmdline_root"] == "rootro_b"
+    assert "/EFI/BOOT/bootaa64.efi" in summary["esp"]["files"]
+    assert (
+        "/EFI/Linux/a-slot/auto-ad-nexios-a.efi"
+        in summary["esp"]["slots"]["a-slot"]["files"]
+    )
+    assert (
+        "/EFI/Linux/b-slot/auto-ad-nexios-b.efi"
+        in summary["esp"]["slots"]["b-slot"]["files"]
+    )
+    assert "/loader/entries/boot.conf" not in summary["esp"]["files"]
+    assert "/Image.unsigned" not in summary["esp"]["files"]
+    assert summary["esp"]["slots"]["a-slot"]["metadata_slot"] == "A"
+    assert summary["esp"]["slots"]["b-slot"]["metadata_slot"] == "B"
+    assert summary["esp"]["slots"]["a-slot"]["uki_cmdline_root"] == "rootro_a"
+    assert summary["esp"]["slots"]["b-slot"]["uki_cmdline_root"] == "rootro_b"
     assert summary["u_boot"]["u_boot_bin"]["size"] == 6
     assert all(
         "loader/entries/boot.conf" not in path
-        for slot in ("boot_a", "boot_b")
-        for path in summary["esp"][slot]["files"]
+        for slot in ("a-slot", "b-slot")
+        for path in summary["esp"]["slots"][slot]["files"]
     )
-    assert ("boot_b", "::/EFI/Linux/auto-ad-nexios-b.efi") in copied
+    assert (
+        "boot",
+        "::/EFI/Linux/b-slot/auto-ad-nexios-b.efi",
+    ) in copied
 
 
 def test_esp_inspection_rejects_missing_slot_uki(tmp_path, monkeypatch):
@@ -123,17 +141,18 @@ def test_esp_inspection_rejects_missing_slot_uki(tmp_path, monkeypatch):
     helper = sys.modules["auto_ad_nexios_image_inspector_lib"]
     wic = tmp_path / "fixture.wic"
     wic.write_bytes(b"fixture")
-    by_name = {
-        "boot_a": {"name": "boot_a", "offset": 0},
-        "boot_b": {"name": "boot_b", "offset": 1024},
-    }
+    by_name = {"boot": {"name": "boot", "offset": 0}}
 
     def fake_copy_from_fat(_wic, _part, fat_path, out_path):
+        if fat_path.endswith("a-slot/metadata"):
+            Path(out_path).write_bytes(b"slot=A\n")
+            return
+        if fat_path.endswith("b-slot/metadata"):
+            Path(out_path).write_bytes(b"slot=B\n")
+            return
         if fat_path.endswith("auto-ad-nexios-b.efi"):
             raise module.InspectError(f"missing FAT file {fat_path}: not found")
         content = b"rootwait root=PARTLABEL=rootro_a ro console="
-        if fat_path.endswith("auto-ad-nexios-b.efi"):
-            content = b"rootwait root=PARTLABEL=rootro_b ro console="
         Path(out_path).write_bytes(content)
 
     (tmp_path / "auto-ad-nexios-a.efi").write_bytes(
@@ -204,7 +223,7 @@ def test_check_filesystems_allows_unlabeled_rootro_partitions(monkeypatch):
 
     def fake_blkid_probe(_wic, part):
         name = part["name"]
-        if name in ("boot_a", "boot_b"):
+        if name == "boot":
             return {"probed": True, "TYPE": "vfat", "LABEL_FATBOOT": name}
         if name in ("rootro_a", "rootro_b"):
             return {"probed": True, "TYPE": "ext4"}
@@ -225,7 +244,7 @@ def test_check_filesystems_still_requires_mutable_partition_labels(monkeypatch):
 
     def fake_blkid_probe(_wic, part):
         name = part["name"]
-        if name in ("boot_a", "boot_b"):
+        if name == "boot":
             return {"probed": True, "TYPE": "vfat", "LABEL_FATBOOT": name}
         if name in ("rootro_a", "rootro_b"):
             return {"probed": True, "TYPE": "ext4"}
