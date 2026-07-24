@@ -16,6 +16,9 @@ REQUIRED_UKI_VARIABLES = {
     "EFI_ARCH",
     "AUTO_AD_NEXIOS_UKI_A",
     "AUTO_AD_NEXIOS_UKI_B",
+    "AUTO_AD_NEXIOS_SLOT_DIR_A",
+    "AUTO_AD_NEXIOS_SLOT_DIR_B",
+    "AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME",
     "AUTO_AD_NEXIOS_UKI_CMDLINE_A",
     "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
     "UKIFY_CMD",
@@ -82,6 +85,9 @@ def test_parse_bitbake_env_keeps_auto_ad_nexios_uki_package_values() -> None:
         'EFI_ARCH="aa64"\n'
         'AUTO_AD_NEXIOS_UKI_A="auto-ad-nexios-a.efi"\n'
         'AUTO_AD_NEXIOS_UKI_B="auto-ad-nexios-b.efi"\n'
+        'AUTO_AD_NEXIOS_SLOT_DIR_A="EFI/Linux/a-slot"\n'
+        'AUTO_AD_NEXIOS_SLOT_DIR_B="EFI/Linux/b-slot"\n'
+        'AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME="metadata"\n'
         'AUTO_AD_NEXIOS_UKI_CMDLINE_A="rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0"\n'
         'AUTO_AD_NEXIOS_UKI_CMDLINE_B="rootwait root=PARTLABEL=rootro_b ro console=ttyAMA0"\n'
         'UKIFY_CMD="/build/tmp/sysroots-components/x86_64/systemd/usr/lib/systemd/ukify"\n'
@@ -98,6 +104,9 @@ def test_parse_bitbake_env_keeps_auto_ad_nexios_uki_package_values() -> None:
     assert variables == {
         "AUTO_AD_NEXIOS_UKI_A": "auto-ad-nexios-a.efi",
         "AUTO_AD_NEXIOS_UKI_B": "auto-ad-nexios-b.efi",
+        "AUTO_AD_NEXIOS_SLOT_DIR_A": "EFI/Linux/a-slot",
+        "AUTO_AD_NEXIOS_SLOT_DIR_B": "EFI/Linux/b-slot",
+        "AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME": "metadata",
         "AUTO_AD_NEXIOS_UKI_CMDLINE_A": (
             "rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0"
         ),

@@ -8,6 +8,7 @@ ROOT: Final = Path(__file__).resolve().parents[1]
 
 AUTO_SOLUTIONS: Final = Path("hsoc-stack/yocto/meta-hsoc-auto-solutions")
 BSP: Final = Path("hsoc-stack/yocto/meta-hsoc-bsp")
+U_BOOT: Final = Path("hsoc-stack/components/primary_compute/u-boot")
 
 REQUIRED_QVP_PATHS: Final = (
     AUTO_SOLUTIONS / "conf/templates/apollo-qvp/local.conf.sample",
@@ -324,6 +325,58 @@ def test_auto_ad_nexios_uki_tracks_deployed_kernel_content() -> None:
 
     assert "do_uki[file-checksums]" in metadata
     assert "${DEPLOY_DIR_IMAGE}/${UKI_KERNEL_FILENAME}" in metadata
+
+
+def test_auto_ad_nexios_uses_one_boot_esp_with_slot_directories() -> None:
+    wks_files = (
+        BSP / "wic/apollo-fvp-auto-ad-nexios-ab.wks.in",
+        BSP / "wic/apollo-fvp-auto-ad-nexios-ab-plain.wks.in",
+        BSP / "wic/apollo-qvp-auto-ad-nexios-ab.wks.in",
+        BSP / "wic/apollo-qvp-auto-ad-nexios-ab-plain.wks.in",
+        BSP / "wic/apollo-fvp-nexios-bsp-initramfs.wks.in",
+        BSP / "wic/apollo-qvp-nexios-bsp-initramfs.wks.in",
+    )
+
+    for path in wks_files:
+        metadata = (ROOT / path).read_text(encoding="utf-8")
+        assert metadata.count('--part-name="boot"') == 1
+        assert "--fixed-size=256M" in metadata
+        assert "boot_a" not in metadata
+        assert "boot_b" not in metadata
+        assert "bootimg-efi-slot" not in metadata
+
+    assert not (
+        ROOT
+        / BSP
+        / "scripts/lib/wic/plugins/source/bootimg_efi_slot.py"
+    ).exists()
+
+
+def test_u_boot_validates_single_esp_slot_metadata() -> None:
+    selector = (ROOT / U_BOOT / "cmd/auto_ad_nexios.c").read_text(
+        encoding="utf-8"
+    )
+    boot_commands = (
+        U_BOOT / "configs/apollo_fvp_defconfig",
+        U_BOOT / "configs/apollo_qvp_defconfig",
+        BSP / "recipes-bsp/u-boot/files/apollo-fvp-auto-ad-nexios.cfg",
+        BSP / "recipes-bsp/u-boot/files/apollo-qvp-auto-ad-nexios.cfg",
+    )
+
+    assert '#define AANX_BOOT_PART\t\t"boot"' in selector
+    assert "EFI/Linux/a-slot/metadata" in selector
+    assert "EFI/Linux/b-slot/metadata" in selector
+    assert '.metadata_value = "slot=A\\n"' in selector
+    assert '.metadata_value = "slot=B\\n"' in selector
+    assert "fs_load_alloc" in selector
+    assert "aanx_fallback_valid" in selector
+    assert "AANX_BOOT_A_PART" not in selector
+    assert "AANX_BOOT_B_PART" not in selector
+
+    for path in boot_commands:
+        boot_command = (ROOT / path).read_text(encoding="utf-8")
+        assert "aanx_fallback_valid" in boot_command
+        assert "aanx_fallback_boot_part" not in boot_command
 
 
 def test_qbox_native_ui_options_are_native_scoped() -> None:

@@ -246,9 +246,9 @@ def test_bsp_uki_uses_timestamp_stable_initramfs_link() -> None:
     assert '${IMGDEPLOYDIR}/${IMAGE_NAME}.cpio.gz' not in image_recipe
 
 
-def test_bsp_uki_keeps_unique_deploy_names_and_canonical_esp_names() -> None:
+def test_bsp_uki_uses_single_esp_slot_directories_and_metadata() -> None:
     # Given: product and BSP UKIs share DEPLOY_DIR_IMAGE but U-Boot uses one
-    # stable A/B filename contract inside each image's ESP.
+    # stable A/B filename contract inside each image's single ESP.
     layer = ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions"
     uki_class = (layer / "classes/auto-ad-nexios-uki-ab.bbclass").read_text(
         encoding="utf-8"
@@ -257,9 +257,9 @@ def test_bsp_uki_keeps_unique_deploy_names_and_canonical_esp_names() -> None:
         layer / "recipes-core/images/nexios-bsp-initramfs.bb"
     ).read_text(encoding="utf-8")
 
-    # When: the class maps deploy artifacts into the ESP.
-    # Then: source and destination names are independent, and the BSP keeps
-    # unique deploy artifacts while satisfying U-Boot's canonical paths.
+    # When: the class maps deploy artifacts into per-slot ESP directories.
+    # Then: source names remain unique while UKIs and identity metadata follow
+    # the U-Boot single-partition contract.
     assert (
         'AUTO_AD_NEXIOS_UKI_ESP_A ?= "${AUTO_AD_NEXIOS_UKI_A}"'
         in uki_class
@@ -269,25 +269,37 @@ def test_bsp_uki_keeps_unique_deploy_names_and_canonical_esp_names() -> None:
         in uki_class
     )
     assert (
+        'AUTO_AD_NEXIOS_SLOT_DIR_A ?= "EFI/Linux/a-slot"'
+        in uki_class
+    )
+    assert (
+        'AUTO_AD_NEXIOS_SLOT_DIR_B ?= "EFI/Linux/b-slot"'
+        in uki_class
+    )
+    assert (
+        'AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME ?= "metadata"'
+        in uki_class
+    )
+    assert (
         "${AUTO_AD_NEXIOS_UKI_A};"
-        "EFI/Linux/${AUTO_AD_NEXIOS_UKI_ESP_A}"
+        "${AUTO_AD_NEXIOS_SLOT_DIR_A}/${AUTO_AD_NEXIOS_UKI_ESP_A}"
         in uki_class
     )
     assert (
         "${AUTO_AD_NEXIOS_UKI_B};"
-        "EFI/Linux/${AUTO_AD_NEXIOS_UKI_ESP_B}"
-        in uki_class
-    )
-    assert 'local uki_destination="$4"' in uki_class
-    assert '"::/EFI/Linux/${uki_destination}"' in uki_class
-    assert (
-        '"${AUTO_AD_NEXIOS_UKI_A}" "${AUTO_AD_NEXIOS_UKI_ESP_A}"'
+        "${AUTO_AD_NEXIOS_SLOT_DIR_B}/${AUTO_AD_NEXIOS_UKI_ESP_B}"
         in uki_class
     )
     assert (
-        '"${AUTO_AD_NEXIOS_UKI_B}" "${AUTO_AD_NEXIOS_UKI_ESP_B}"'
+        "${AUTO_AD_NEXIOS_SLOT_METADATA_A};"
+        "${AUTO_AD_NEXIOS_SLOT_DIR_A}/"
+        "${AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME}"
         in uki_class
     )
+    assert 'stream.write("slot=%s\\n" % slot)' in uki_class
+    assert "IMAGE_EFI_BOOT_FILES_label-boot_a" not in uki_class
+    assert "IMAGE_EFI_BOOT_FILES_label-boot_b" not in uki_class
+    assert "auto_ad_nexios_install_slot_uki" not in uki_class
     assert (
         'AUTO_AD_NEXIOS_UKI_A = "nexios-bsp-initramfs-a.efi"'
         in bsp_image
@@ -349,7 +361,8 @@ def test_bsp_selftest_covers_boot_and_partition_contracts() -> None:
     ).read_text(encoding="utf-8")
 
     # When: the required low-level checks are inspected.
-    # Then: initramfs cmdline, console, timer, and A/B WIC layout are covered.
+    # Then: initramfs cmdline, console, timer, and two-partition WIC layout
+    # are covered.
     for contract in (
         "rdinit=/init",
         "ttyAMA",
@@ -357,9 +370,9 @@ def test_bsp_selftest_covers_boot_and_partition_contracts() -> None:
         "/sys/class/block/vda1",
         "/sys/class/block/vda2",
         "/sys/class/block/vda3",
-        "/sys/class/block/vda4",
     ):
         assert contract in selftest
+    assert "/sys/class/block/vda4" not in selftest
 
 
 def test_bsp_image_uses_minimal_pfdi_runtime_package() -> None:

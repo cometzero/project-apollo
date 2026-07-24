@@ -1688,10 +1688,9 @@ def add_stub_uki_tools(tmp_path: Path) -> tuple[Path, Path, Path]:
         "printf 'sgdisk %s\\n' \"$*\" >> \"${WIC_TOOL_LOG}\"\n"
         "cat <<'OUT'\n"
         "Number  Start (sector)    End (sector)  Size       Code  Name\n"
-        "   1            2048          264191   128.0 MiB   EF00  boot_a\n"
-        "   2          264192          526335   128.0 MiB   EF00  boot_b\n"
-        "   4          534528        17311743   8192.0 MiB  8300  rootro_a\n"
-        "   5        17311744        34088959   8192.0 MiB  8300  rootro_b\n"
+        "   1            2048          526335   256.0 MiB   EF00  boot\n"
+        "   3          534528        17311743   8192.0 MiB  8300  rootro_a\n"
+        "   4        17311744        34088959   8192.0 MiB  8300  rootro_b\n"
         "OUT\n",
     )
     write_file(
@@ -1806,6 +1805,9 @@ def default_uki_variables(ukify: Path) -> dict[str, str]:
         "INITRD_ARCHIVE": "nexios-initramfs-image-apollo-fvp.cpio.gz",
         "AUTO_AD_NEXIOS_UKI_A": "auto-ad-nexios-a.efi",
         "AUTO_AD_NEXIOS_UKI_B": "auto-ad-nexios-b.efi",
+        "AUTO_AD_NEXIOS_SLOT_DIR_A": "EFI/Linux/a-slot",
+        "AUTO_AD_NEXIOS_SLOT_DIR_B": "EFI/Linux/b-slot",
+        "AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME": "metadata",
         "AUTO_AD_NEXIOS_UKI_CMDLINE_A": "rootwait root=PARTLABEL=rootro_a ro console=ttyAMA0",
         "AUTO_AD_NEXIOS_UKI_CMDLINE_B": "rootwait root=PARTLABEL=rootro_b ro console=ttyAMA0",
         "UKIFY_CMD": str(ukify),
@@ -2727,8 +2729,25 @@ def test_package_local_linux_generates_slot_ukis_and_manifest(tmp_path: Path) ->
         local_deploy / "images" / "auto-ad-nexios-b.efi"
     ).read_text(encoding="utf-8")
     wic_lines = wic_log.read_text(encoding="utf-8").splitlines()
-    assert any("boot_a" in line or "@@1048576" in line for line in wic_lines)
-    assert any("boot_b" in line or "@@135266304" in line for line in wic_lines)
+    assert any(line.startswith("sgdisk -p ") for line in wic_lines)
+    assert any(
+        "@@1048576" in line
+        and "::/EFI/Linux/a-slot/auto-ad-nexios-a.efi" in line
+        for line in wic_lines
+        if line.startswith("mcopy ")
+    )
+    assert any(
+        "@@1048576" in line
+        and "::/EFI/Linux/b-slot/auto-ad-nexios-b.efi" in line
+        for line in wic_lines
+        if line.startswith("mcopy ")
+    )
+    assert sum(
+        "::/EFI/Linux/a-slot/metadata" in line
+        or "::/EFI/Linux/b-slot/metadata" in line
+        for line in wic_lines
+        if line.startswith("mcopy ")
+    ) == 2
 
 
 def test_package_local_linux_uses_kernel_devicetree_basename(
@@ -2761,14 +2780,16 @@ def test_package_local_linux_uses_kernel_devicetree_basename(
     ) in ukify_lines[1]
 
 
-def test_package_local_linux_rejects_unsafe_uki_and_initrd_names(
+def test_package_local_linux_rejects_unsafe_uki_slot_and_initrd_paths(
     tmp_path: Path,
 ) -> None:
-    # Given: BitBake-derived UKI/initrd names contain absolute, parent, or nested paths.
+    # Given: BitBake-derived UKI, slot, and initrd paths escape their boundary.
     unsafe_cases = (
         ("AUTO_AD_NEXIOS_UKI_A", str(tmp_path / "absolute.efi")),
         ("AUTO_AD_NEXIOS_UKI_A", "../escape.efi"),
         ("AUTO_AD_NEXIOS_UKI_A", "subdir/file.efi"),
+        ("AUTO_AD_NEXIOS_SLOT_DIR_A", "../EFI/Linux/a-slot"),
+        ("AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME", "../metadata"),
         ("INITRD_ARCHIVE", "../escape.cpio.gz"),
     )
 
@@ -2798,7 +2819,10 @@ def test_package_local_linux_rejects_unsafe_uki_and_initrd_names(
         assert result.returncode != 0, unsafe_name
         output = output_of(result)
         assert variable in output
-        assert "unsafe file name" in output
+        expected_error = {
+            "AUTO_AD_NEXIOS_SLOT_DIR_A": "unsafe FAT directory",
+        }.get(variable, "unsafe file name")
+        assert expected_error in output
         assert not (local_build / "deploy" / "escape.efi").exists()
         assert not (local_build / "deploy" / "escape.cpio.gz").exists()
         assert not (local_build / "deploy" / "images" / "subdir").exists()
@@ -3106,7 +3130,12 @@ def test_package_local_linux_patches_only_local_wic_copy(tmp_path: Path) -> None
     local_wic = local_build / "deploy" / "images" / "nexios-image-apollo-fvp.wic"
     assert source_wic.read_bytes() == source_wic_before
     assert local_wic.read_bytes() != source_wic_before
-    assert str(yocto_deploy) not in wic_log.read_text(encoding="utf-8")
+    mutation_lines = [
+        line
+        for line in wic_log.read_text(encoding="utf-8").splitlines()
+        if not line.startswith("sgdisk ")
+    ]
+    assert all(str(yocto_deploy) not in line for line in mutation_lines)
     manifest = json.loads(
         (local_build / "deploy" / "local-package-manifest.json").read_text(
             encoding="utf-8"
@@ -3144,10 +3173,12 @@ def test_package_local_linux_reuses_current_wic_patch_stamp(
     # When: packaging runs again with the same WIC and UKI inputs.
     second = run_local_build("--package", extra_env=package_env)
 
-    # Then: it preserves the patched WIC and skips WIC mutation tools.
+    # Then: it preserves the patched WIC and only revalidates the source GPT.
     assert second.returncode == 0, output_of(second)
     assert local_wic.read_bytes() == first_wic
-    assert not wic_log.exists()
+    assert wic_log.read_text(encoding="utf-8").splitlines() == [
+        f"sgdisk -p {yocto_deploy}/nexios-image-apollo-fvp.wic"
+    ]
 
 
 def test_package_rejects_wic_side_artifact_source_symlink_escape(

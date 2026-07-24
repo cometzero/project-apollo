@@ -71,8 +71,10 @@ package_local_fvp_outputs()
     preflight_local_fvp_package_tools
     package_local_flash_images
     export YOCTO_TMP EFI_ARCH INITRD_ARCHIVE AUTO_AD_NEXIOS_UKI_A
-    export AUTO_AD_NEXIOS_UKI_B AUTO_AD_NEXIOS_UKI_CMDLINE_A
-    export AUTO_AD_NEXIOS_UKI_CMDLINE_B UKIFY_CMD UEFI_SECURE_BOOT
+    export AUTO_AD_NEXIOS_UKI_B AUTO_AD_NEXIOS_SLOT_DIR_A
+    export AUTO_AD_NEXIOS_SLOT_DIR_B AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME
+    export AUTO_AD_NEXIOS_UKI_CMDLINE_A AUTO_AD_NEXIOS_UKI_CMDLINE_B
+    export UKIFY_CMD UEFI_SECURE_BOOT
     export UKI_SB_KEY UKI_SB_CERT
     python3 - "$YOCTO_DEPLOY_DIR" "$LOCAL_BUILD_DIR" "$MACHINE" \
         "$LOCAL_BUILD_DTB_BASENAME" <<'PY'
@@ -311,6 +313,18 @@ def safe_name(name: str, variable: str) -> str:
     return name
 
 
+def safe_fat_dir(name: str, variable: str) -> str:
+    parts = name.split("/")
+    if (
+        not name
+        or name.startswith("/")
+        or "\\" in name
+        or any(part in ("", ".", "..") for part in parts)
+    ):
+        fail(f"{variable}: unsafe FAT directory: {name}")
+    return "/".join(parts)
+
+
 def safe_kernel_release(release: str) -> str:
     if not release:
         fail("kernel.release: empty release")
@@ -360,6 +374,20 @@ def wic_patch_marker(wic: Path) -> Path:
     return wic.with_name(f".{wic.name}.local-uki-patch.json")
 
 
+def wic_partition_offset(wic: Path, part_name: str) -> str:
+    result = subprocess.run(
+        ["sgdisk", "-p", str(wic)],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    for line in result.stdout.splitlines():
+        fields = line.split()
+        if len(fields) >= 7 and fields[0].isdigit() and fields[-1] == part_name:
+            return str(int(fields[1]) * 512)
+    fail(f"missing GPT partition {part_name}: {wic}")
+
+
 def file_fingerprint(path: Path) -> dict[str, object]:
     resolved = path.resolve(strict=True)
     stat = resolved.stat()
@@ -372,7 +400,7 @@ def file_fingerprint(path: Path) -> dict[str, object]:
 
 def wic_patch_payload(
     wic_src: Path,
-    slots: tuple[tuple[str, str], ...],
+    slots: tuple[tuple[str, str, str, str], ...],
 ) -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -381,9 +409,11 @@ def wic_patch_payload(
             {
                 "name": name,
                 "offset": offset,
+                "destination": destination,
+                "metadata": metadata,
                 "sha256": digest(images / name),
             }
-            for name, offset in slots
+            for name, offset, destination, metadata in slots
         ],
     }
 
@@ -515,6 +545,9 @@ REQUIRED_UKI_VARS = (
     "EFI_ARCH",
     "AUTO_AD_NEXIOS_UKI_A",
     "AUTO_AD_NEXIOS_UKI_B",
+    "AUTO_AD_NEXIOS_SLOT_DIR_A",
+    "AUTO_AD_NEXIOS_SLOT_DIR_B",
+    "AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME",
     "AUTO_AD_NEXIOS_UKI_CMDLINE_A",
     "AUTO_AD_NEXIOS_UKI_CMDLINE_B",
     "UEFI_SECURE_BOOT",
@@ -593,6 +626,18 @@ if local_linux_inputs_present:
         )
     uki_a = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_A", "auto-ad-nexios-a.efi"), "AUTO_AD_NEXIOS_UKI_A")
     uki_b = safe_name(variables.get("AUTO_AD_NEXIOS_UKI_B", "auto-ad-nexios-b.efi"), "AUTO_AD_NEXIOS_UKI_B")
+    slot_dir_a = safe_fat_dir(
+        variables["AUTO_AD_NEXIOS_SLOT_DIR_A"],
+        "AUTO_AD_NEXIOS_SLOT_DIR_A",
+    )
+    slot_dir_b = safe_fat_dir(
+        variables["AUTO_AD_NEXIOS_SLOT_DIR_B"],
+        "AUTO_AD_NEXIOS_SLOT_DIR_B",
+    )
+    metadata_name = safe_name(
+        variables["AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME"],
+        "AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME",
+    )
     initrd_name = safe_name(variables["INITRD_ARCHIVE"], "INITRD_ARCHIVE")
     ukify, ukify_env = resolve_ukify(variables.get("UKIFY_CMD", "ukify"))
     if variables.get("UEFI_SECURE_BOOT") == "1":
@@ -648,17 +693,48 @@ if local_linux_inputs_present:
                 "source_preserved": True,
             }
         )
-    wic_slots = ((uki_a, "1048576"), (uki_b, "135266304"))
+    boot_offset = wic_partition_offset(wic_src, "boot")
+    wic_slots = (
+        (uki_a, boot_offset, f"{slot_dir_a}/{uki_a}", "slot=A\n"),
+        (uki_b, boot_offset, f"{slot_dir_b}/{uki_b}", "slot=B\n"),
+    )
     wic_payload = wic_patch_payload(wic_src, wic_slots)
     try:
         if wic_patch_current(wic, wic_payload):
             record_copied_artifact(wic_src, wic, "yocto-copied")
         else:
             copy_artifact(wic_src, wic, "yocto-copied")
-            subprocess.run(["sgdisk", "-p", str(wic)], check=True, stdout=subprocess.PIPE, text=True)
-            for name, offset in wic_slots:
-                ensure_mtools_dir(f"{wic}@@{offset}", "::/EFI")
-                subprocess.run(["mcopy", "-o", "-i", f"{wic}@@{offset}", str(images / name), "::/EFI/BOOT/BOOTAA64.EFI"], check=True)
+            for name, offset, destination, metadata in wic_slots:
+                fat_image = f"{wic}@@{offset}"
+                fat_dir = ""
+                for component in destination.rsplit("/", 1)[0].split("/"):
+                    fat_dir = f"{fat_dir}/{component}"
+                    ensure_mtools_dir(fat_image, f"::{fat_dir}")
+                subprocess.run(
+                    [
+                        "mcopy",
+                        "-o",
+                        "-i",
+                        fat_image,
+                        str(images / name),
+                        f"::/{destination}",
+                    ],
+                    check=True,
+                )
+                metadata_source = images / f"{name}.metadata"
+                safe_write_path(metadata_source)
+                metadata_source.write_text(metadata, encoding="utf-8")
+                subprocess.run(
+                    [
+                        "mcopy",
+                        "-o",
+                        "-i",
+                        fat_image,
+                        str(metadata_source),
+                        f"::{fat_dir}/{metadata_name}",
+                    ],
+                    check=True,
+                )
             write_wic_patch_marker(wic, wic_payload)
     except subprocess.CalledProcessError:
         wic.unlink(missing_ok=True)
