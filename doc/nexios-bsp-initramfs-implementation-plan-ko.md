@@ -48,9 +48,11 @@ raw CPIO만 생성하는 방식은 채택하지 않는다. 현재
 만들어야 하고, 이 경우 U-Boot/UKI 경로를 우회하여 BSP 검증 범위도
 줄어든다.
 
-boot-only WIC는 기존 A/B 부팅 계약에 필요한 `boot_a`, `boot_b`, `misc`
-partition만 유지한다. 8 GiB dm-verity root partition 두 개와 `rootrw`,
-`data` partition은 만들지 않는다. 현재 제품 WKS의 partition 구성은
+boot-only WIC는 단일 `boot` ESP와 기존 A/B 상태를 보존하는 `misc`
+partition만 유지한다. A/B UKI는 `boot` 안의 `EFI/Linux/a-slot`과
+`EFI/Linux/b-slot`에 배치하고 각 디렉터리의 `metadata`로 slot identity를
+검증한다. 8 GiB dm-verity root partition 두 개와 `rootrw`, `data`
+partition은 만들지 않는다. 현재 제품 WKS의 partition 구성은
 `hsoc-stack/yocto/meta-hsoc-bsp/wic/apollo-qvp-auto-ad-nexios-ab.wks.in:11-20`
 및
 `hsoc-stack/yocto/meta-hsoc-bsp/wic/apollo-fvp-auto-ad-nexios-ab.wks.in:11-20`
@@ -104,7 +106,7 @@ dm-verity image를 dependency로 끌어오는 것을 막는다.
 flowchart LR
     A[RSE / SI firmware] --> B[TF-A]
     B --> C[U-Boot]
-    C --> D[boot_a / boot_b UKI]
+    C --> D[boot ESP의 a-slot / b-slot UKI]
     D --> E[Linux kernel]
     E --> F[nexios-initramfs-image]
     F --> G[dm-verity rootro]
@@ -118,7 +120,7 @@ flowchart LR
 flowchart LR
     A[RSE / SI firmware] --> B[TF-A]
     B --> C[U-Boot]
-    C --> D[BSP boot_a / boot_b UKI]
+    C --> D[BSP boot ESP의 a-slot / b-slot UKI]
     D --> E[Linux kernel]
     E --> F[nexios-bsp-initramfs /init]
     F --> G[mount + mdev + module load]
@@ -160,18 +162,16 @@ machine별 신규 WKS를 추가한다.
 - `hsoc-stack/yocto/meta-hsoc-bsp/wic/apollo-fvp-nexios-bsp-initramfs.wks.in`
 - `hsoc-stack/yocto/meta-hsoc-bsp/wic/apollo-qvp-nexios-bsp-initramfs.wks.in`
 
-partition은 다음 세 개만 둔다.
+partition은 다음 두 개만 둔다.
 
 | Partition | 목적 | 초기 크기 |
 | --- | --- | ---: |
-| `boot_a` | U-Boot가 선택하는 slot A ESP와 BSP UKI | 128 MiB |
-| `boot_b` | slot B ESP와 동일한 BSP UKI | 128 MiB |
+| `boot` | a-slot/b-slot UKI와 slot별 `metadata`를 포함하는 단일 ESP | 256 MiB |
 | `misc` | 기존 A/B boot-state 계약 유지 | 4 MiB |
 
-초기 ESP 크기는 현재 제품 WKS와 동일하게 유지하여 UKI 크기로 인한
-변수를 제거한다. 실제 UKI 크기와 20% 이상의 여유를 확인한 뒤 별도
-최적화할 수 있다. root partition이 없으므로 WIC 크기는 제품 WIC보다
-크게 줄어든다.
+초기 ESP 크기는 기존 두 128 MiB ESP의 합계를 유지한다. 이에 따라 두
+UKI의 성장 여유와 `misc` 이후 partition offset을 모두 보존한다. root
+partition이 없으므로 WIC 크기는 제품 WIC보다 크게 줄어든다.
 
 ### 5.3 BSP UKI
 
@@ -625,8 +625,8 @@ nexios-bsp-initramfs-${MACHINE}.cpio.gz | cpio -it
 - `/init`와 BusyBox가 존재
 - 필수 module/package가 존재
 - 금지 package/file이 없음
-- WIC partition이 `boot_a`, `boot_b`, `misc` 세 개뿐
-- 두 ESP에 BSP UKI가 존재
+- WIC partition이 `boot`, `misc` 두 개뿐
+- 단일 ESP의 `a-slot`, `b-slot`에 BSP UKI와 올바른 `metadata`가 존재
 - UKI inspect 결과에 BSP CPIO와 `rdinit=/init` 포함
 - UKI command line에 `root=`, `dm-verity`가 없음
 - QVP `.qboxconf`가 BSP WIC와 현재 QBox provider를 가리킴
@@ -710,7 +710,7 @@ T(BSP_READY) <= 0.5 * T(NEXIOS_PRODUCT_SHELL_READY)
 | FVP/QVP kernel built-in/module 차이 | 한 machine에서 modprobe 실패 | 두 machine config/manifest 비교, machine override 최소화 |
 | 기존 OEQA의 SSH dependency | minimal image에서 test 미실행 | console self-test와 log parser 제공 |
 | PFDI reference app의 Python 의존 | initramfs 비대화 | C 실행 파일과 설정만 `pfdi-bsp-app`으로 분리하고 Python/systemd 제외 |
-| boot_a/boot_b에 같은 BSP UKI | slot 차이 검증 부족 | 빠른 BSP profile은 동일 payload가 의도, A/B update 검증은 제품 profile 유지 |
+| a-slot/b-slot에 같은 BSP payload | slot 차이 검증 부족 | slot별 metadata identity를 검사하고, A/B update 검증은 제품 profile 유지 |
 
 ## 14. 변경 소유권과 커밋 단위
 
@@ -785,11 +785,11 @@ T(BSP_READY) <= 0.5 * T(NEXIOS_PRODUCT_SHELL_READY)
 | 제품 로그인 시간 median | 87.862초 |
 | 시간 감소 | 47.467초, 54.02% |
 
-최종 BSP 산출물은 QVP/FVP 각각 13,792,953/13,792,946 byte CPIO,
-37,404,672 byte UKI, 273,695,744 byte boot-only WIC이다. WIC는 계획대로
-`boot_a` 128 MiB, `boot_b` 128 MiB, `misc` 4 MiB의 세 partition만
-포함한다. 두 ESP에는 각각 A/B BSP UKI가 존재한다. BSP UKI command
-line은 `rdinit=/init`을 포함하고 `root=`는 포함하지 않는다.
+최종 BSP 산출물은 QVP/FVP 각각 13,792,953/13,792,946 byte CPIO와
+37,404,672 byte UKI를 생성한다. boot-only WIC는 `boot` 256 MiB와
+`misc` 4 MiB의 두 partition만 포함하며, 단일 ESP의 `a-slot`과
+`b-slot`에는 각각 BSP UKI와 slot identity metadata가 존재한다. BSP UKI
+command line은 `rdinit=/init`을 포함하고 `root=`는 포함하지 않는다.
 
 검증 근거는 다음 경로에 보존한다.
 
