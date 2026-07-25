@@ -121,193 +121,117 @@ buildroot_env()
         "$@"
 }
 
+resolve_yocto_recipe_source()
+{
+    local recipe="$1"
+    local architecture="$2"
+    local source_subdir="$3"
+    local source
+
+    source="$(first_existing_glob \
+        "${YOCTO_TMP}/work/${architecture}-poky-linux/${recipe}/*/sources-unpack/${source_subdir}" \
+        || true)"
+    [[ -n "${source}" ]] ||
+        die "Yocto source for ${recipe} was not found below ${YOCTO_TMP}/work"
+    require_dir "${source}"
+    printf '%s\n' "${source}"
+}
+
+resolve_buildroot_bsp_sources()
+{
+    ARM_SI_RPROC_SRC="${ARM_SI_RPROC_SRC:-$(
+        resolve_yocto_recipe_source arm-si-rproc-mod \
+            "${LOCAL_MACHINE_WORK_PREFIX}" src
+    )}"
+    RPMSG_NET_SRC="${RPMSG_NET_SRC:-$(
+        resolve_yocto_recipe_source rpmsg-net-mod \
+            "${LOCAL_MACHINE_WORK_PREFIX}" src
+    )}"
+    PFDI_MISC_SRC="${PFDI_MISC_SRC:-$(
+        resolve_yocto_recipe_source pfdi-misc-mod \
+            "${LOCAL_MACHINE_WORK_PREFIX}" src
+    )}"
+    PFDI_BSP_SRC="${PFDI_BSP_SRC:-$(
+        resolve_yocto_recipe_source platform-fault-detection \
+            "cortexa720" git
+    )}"
+}
+
+prepare_pfdi_bsp_config()
+{
+    local default_pack="${PFDI_BSP_CONFIG_DIR}/pfdi_test_config_0.pack"
+    if [[ "${PFDI_BSP_CONFIG_PACK}" != "${default_pack}" ]]; then
+        require_file "${PFDI_BSP_CONFIG_PACK}"
+        return 0
+    fi
+
+    local pfdi_tool_dir="${PFDI_BSP_SRC}/pfdi-demo/pfdi-tool"
+    local host_python3
+    require_dir "${pfdi_tool_dir}/pfdi_tool"
+    host_python3="$(PATH="${HOST_PATH}" command -v python3 || true)"
+    [[ -n "${host_python3}" ]] ||
+        die "host python3 was not found in the original host PATH"
+
+    rm -rf "${PFDI_BSP_CONFIG_DIR}"
+    mkdir -p "${PFDI_BSP_CONFIG_DIR}"
+    run_logged pfdi-config-generate env PYTHONPATH="${pfdi_tool_dir}" \
+        "${host_python3}" -m pfdi_tool.run generate 0 40 60 1 \
+        "${PC_CPUS_COUNT}" \
+        "${PFDI_BSP_CONFIG_DIR}"
+    run_logged pfdi-config-pack env PYTHONPATH="${pfdi_tool_dir}" \
+        "${host_python3}" -m pfdi_tool.run pack "${PFDI_BSP_CONFIG_DIR}"
+    require_file "${PFDI_BSP_CONFIG_PACK}"
+}
+
 prepare_buildroot_overlay()
 {
-    mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc/modules-load.d,usr/bin}
-    rm -f "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent" \
+    require_file "${NEXIOS_BSP_INIT_DIR}/init"
+    require_file "${NEXIOS_BSP_INIT_DIR}/nexios-bsp-selftest"
+    require_file "${PFDI_BSP_CONFIG_PACK}"
+
+    mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc}
+    mkdir -p "${BUILDROOT_OVERLAY}/etc/pfdi"
+    mkdir -p "${BUILDROOT_OVERLAY}/usr/libexec/nexios-bsp"
+    rm -f \
+        "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" \
+        "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent" \
+        "${BUILDROOT_BUILD_DIR}/target/usr/bin/apollo-network-setup" \
         "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-local-agent"
+    rm -rf "${BUILDROOT_OVERLAY}/etc/modules-load.d"
     rm -rf "${WORK_DIR}/pfdi-local-agent"
     chmod 1777 "${BUILDROOT_OVERLAY}/tmp"
-    local login_prompt="${LOCAL_BUILD_LOGIN_PROMPT:-${MACHINE} login:}"
-    local login_prompt_sed="${login_prompt//\\/\\\\}"
-    login_prompt_sed="${login_prompt_sed//&/\\&}"
-    login_prompt_sed="${login_prompt_sed//|/\\|}"
-    local banner="${MACHINE} local Buildroot initramfs"
-    local banner_sed="${banner//\\/\\\\}"
-    banner_sed="${banner_sed//&/\\&}"
-    banner_sed="${banner_sed//|/\\|}"
 
-    local module
-    {
-        for module in ${KERNEL_MODULES_AUTOLOAD}; do
-            printf '%s\n' "${module}"
-        done
-    } | write_file_if_changed "${BUILDROOT_OVERLAY}/etc/modules-load.d/${MACHINE}.conf"
-
-    write_file_if_changed "${BUILDROOT_OVERLAY}/init" <<'EOF'
-#!/bin/sh
-mount -t devtmpfs devtmpfs /dev 2>/dev/null || mount -t tmpfs devtmpfs /dev
-if [ -e /dev/console ]; then
-    exec </dev/console >/dev/console 2>&1
-fi
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-mount -t tmpfs tmpfs /run 2>/dev/null || true
-
-echo "@LOCAL_BUILD_BANNER@"
-echo "local-initramfs: booted"
-cat /proc/cmdline
-
-load_modules()
-{
-    local conf
-    local module
-    local args
-
-    for conf in /etc/modules-load.d/*.conf /usr/lib/modules-load.d/*.conf; do
-        [ -e "${conf}" ] || continue
-        while read -r module args; do
-            case "${module}" in
-                ""|\#*) continue ;;
-            esac
-            echo "local-initramfs: modprobe ${module}"
-            modprobe "${module}" ${args} ||
-                echo "local-initramfs: modprobe ${module} failed"
-        done < "${conf}"
-    done
-}
-
-load_modules
-lsmod 2>/dev/null || true
-
-if [ -x /usr/bin/apollo-network-setup ]; then
-    echo "local-initramfs: starting apollo-network-setup"
-    /usr/bin/apollo-network-setup
-fi
-
-echo "@LOCAL_BUILD_LOGIN_PROMPT@"
-exec /bin/sh -i
-EOF
-    sed -i "s|@LOCAL_BUILD_LOGIN_PROMPT@|${login_prompt_sed}|g" \
+    install -m 0755 "${NEXIOS_BSP_INIT_DIR}/init" \
         "${BUILDROOT_OVERLAY}/init"
-    sed -i "s|@LOCAL_BUILD_BANNER@|${banner_sed}|g" \
-        "${BUILDROOT_OVERLAY}/init"
-    chmod 0755 "${BUILDROOT_OVERLAY}/init"
-
-    write_file_if_changed "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" <<'EOF'
-#!/bin/sh
-set -u
-PATH=/sbin:/usr/sbin:/bin:/usr/bin
-export PATH
-
-bind_rpmsg_netdev()
-{
-    local driver
-    local path
-    local name
-    local dev
-
-    for driver in rpmsg_netdev rpmsg_net; do
-        [ -d "/sys/bus/rpmsg/drivers/${driver}" ] || continue
-
-        for path in /sys/bus/rpmsg/devices/*; do
-            [ -e "${path}/name" ] || continue
-            read -r name < "${path}/name" || continue
-            [ "${name}" = "ethsi1" ] || continue
-            [ ! -L "${path}/driver" ] || return 0
-
-            dev="${path##*/}"
-            echo "${driver}" > "${path}/driver_override" 2>/dev/null || true
-            if echo "${dev}" > "/sys/bus/rpmsg/drivers/${driver}/bind" 2>/dev/null; then
-                echo "apollo-network-setup: bound ${dev} to ${driver}"
-                return 0
-            fi
-            echo "apollo-network-setup: failed to bind ${dev} to ${driver}"
-        done
-    done
-}
-
-dump_rpmsg_sysfs()
-{
-    local path
-    local driver
-    local name
-    local modalias
-
-    echo "apollo-network-setup: rpmsg drivers:"
-    ls -1 /sys/bus/rpmsg/drivers 2>/dev/null || true
-
-    for path in /sys/bus/rpmsg/devices/*; do
-        [ -e "${path}" ] || continue
-        name="$(cat "${path}/name" 2>/dev/null || true)"
-        modalias="$(cat "${path}/modalias" 2>/dev/null || true)"
-        driver="none"
-        [ ! -L "${path}/driver" ] ||
-            driver="$(basename "$(readlink "${path}/driver")")"
-        echo "apollo-network-setup: rpmsg device ${path##*/} name=${name:-unknown} modalias=${modalias:-unknown} driver=${driver}"
-    done
-}
-
-for _ in 1 2 3 4 5 6 7 8 9 10 \
-    11 12 13 14 15 16 17 18 19 20 \
-    21 22 23 24 25 26 27 28 29 30; do
-    ip link show ethsi1 >/dev/null 2>&1 && break
-    bind_rpmsg_netdev
-    ip link show ethsi1 >/dev/null 2>&1 && break
-    sleep 1
-done
-
-if ! ip link show ethsi1 >/dev/null 2>&1; then
-    dump_rpmsg_sysfs
-    echo "apollo-network-setup: ethsi1 is not available"
-    exit 1
-fi
-
-modprobe bridge 2>/dev/null || true
-ip link add name brsi1 type bridge 2>/dev/null || true
-if ! ip link show brsi1 >/dev/null 2>&1; then
-    echo "apollo-network-setup: brsi1 is not available"
-    exit 1
-fi
-ip link set ethsi1 master brsi1 2>/dev/null || true
-if ! ip addr replace 192.168.1.2/24 dev brsi1; then
-    echo "apollo-network-setup: failed to configure brsi1"
-    exit 1
-fi
-if ! ip link set ethsi1 up; then
-    echo "apollo-network-setup: failed to bring up ethsi1"
-    exit 1
-fi
-if ! ip link set brsi1 up; then
-    echo "apollo-network-setup: failed to bring up brsi1"
-    exit 1
-fi
-ip -br addr show brsi1 ethsi1 2>/dev/null || true
-echo "apollo-network-setup: configured brsi1/ethsi1"
-EOF
-    chmod 0755 "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup"
+    install -m 0755 "${NEXIOS_BSP_INIT_DIR}/nexios-bsp-selftest" \
+        "${BUILDROOT_OVERLAY}/usr/libexec/nexios-bsp/selftest"
+    install -m 0644 "${PFDI_BSP_CONFIG_PACK}" \
+        "${BUILDROOT_OVERLAY}/etc/pfdi/pfdi_test_config_0.pack"
+    printf '%s\n' "${MACHINE}" |
+        write_file_if_changed "${BUILDROOT_OVERLAY}/etc/nexios-bsp-machine"
+    printf '%s\n' "${PC_CPUS_COUNT}" |
+        write_file_if_changed "${BUILDROOT_OVERLAY}/etc/nexios-bsp-cpus"
 }
 
 prepare_buildroot_external()
 {
-    mkdir -p "${BUILDROOT_EXTERNAL}"
+    require_file "${BUILDROOT_EXTERNAL}/external.desc"
+    require_file "${BUILDROOT_EXTERNAL}/Config.in"
+    require_file "${BUILDROOT_EXTERNAL}/external.mk"
+    require_file \
+        "${BUILDROOT_EXTERNAL}/package/apollo-pfdi-bsp/apollo-pfdi-bsp.mk"
+}
 
-    write_file_if_changed "${BUILDROOT_EXTERNAL}/external.desc" <<'EOF'
-name: APOLLO_FVP
-desc: Apollo FVP local Buildroot customizations
-EOF
+prepare_buildroot_linux_config()
+{
+    require_file "${LINUX_BUILD_DIR}/.config"
+    require_file "${LINUX_BUILD_DIR}/modsign_key.pem"
 
-    write_file_if_changed "${BUILDROOT_EXTERNAL}/Config.in" <<'EOF'
-# Apollo FVP does not currently add Buildroot packages.
-EOF
-
-    write_file_if_changed "${BUILDROOT_EXTERNAL}/external.mk" <<'EOF'
-define APOLLO_FVP_REMOVE_LDCONF
-	rm -f $(TARGET_DIR)/etc/ld.so.conf
-	rm -rf $(TARGET_DIR)/etc/ld.so.conf.d
-endef
-TARGET_FINALIZE_HOOKS += APOLLO_FVP_REMOVE_LDCONF
-EOF
+    sed \
+        -e 's/^CONFIG_MODULES=y$/# CONFIG_MODULES is not set/' \
+        -e "s|^CONFIG_MODULE_SIG_KEY=.*|CONFIG_MODULE_SIG_KEY=\"${LINUX_BUILD_DIR}/modsign_key.pem\"|" \
+        "${LINUX_BUILD_DIR}/.config" |
+        write_file_if_changed "${BUILDROOT_LINUX_CONFIG}"
 }
 
 write_buildroot_defconfig()
@@ -354,14 +278,26 @@ BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
 BR2_PACKAGE_KMOD=y
 BR2_PACKAGE_KMOD_TOOLS=y
 BR2_PACKAGE_IPROUTE2=y
+BR2_PACKAGE_UTIL_LINUX=y
+BR2_PACKAGE_UTIL_LINUX_BINARIES=y
 BR2_PACKAGE_LIBMNL=y
 BR2_PACKAGE_LIBCAP=y
 BR2_PACKAGE_ELFUTILS=y
+BR2_PACKAGE_ZSTD=y
 BR2_PACKAGE_IPERF=y
+BR2_PACKAGE_APOLLO_PFDI_BSP=y
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_GZIP=y
 # BR2_TARGET_ROOTFS_TAR is not set
-# BR2_LINUX_KERNEL is not set
+BR2_LINUX_KERNEL=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION=y
+BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6.18"
+BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
+BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="${BUILDROOT_LINUX_CONFIG}"
+BR2_LINUX_KERNEL_IMAGE_TARGET_CUSTOM=y
+BR2_LINUX_KERNEL_IMAGE_TARGET_NAME="Image"
+BR2_PACKAGE_LINUX_TOOLS_PERF=y
+BR2_PACKAGE_LINUX_TOOLS_PERF_NEEDS_HOST_PYTHON3=y
 EOF
     printf '%s\n' "${defconfig}"
 }
@@ -391,10 +327,20 @@ configure_buildroot_if_needed()
         return 0
     fi
 
-    run_logged buildroot-defconfig buildroot_env make -C "${BUILDROOT_SRC}" \
-        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+    run_logged buildroot-defconfig buildroot_make \
         BR2_DEFCONFIG="${defconfig}" defconfig
     printf '%s\n' "${digest}" > "${marker}"
+}
+
+buildroot_make()
+{
+    buildroot_env make -C "${BUILDROOT_SRC}" \
+        O="${BUILDROOT_BUILD_DIR}" \
+        BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        LINUX_OVERRIDE_SRCDIR="${LINUX_SRC}" \
+        APOLLO_PFDI_BSP_SOURCE_DIR="${PFDI_BSP_SRC}" \
+        APOLLO_PFDI_BSP_CONFIG_PACK="${PFDI_BSP_CONFIG_PACK}" \
+        "$@"
 }
 
 validate_buildroot_zena_packages()
@@ -406,9 +352,14 @@ validate_buildroot_zena_packages()
         "BR2_PACKAGE_KMOD=y"
         "BR2_PACKAGE_KMOD_TOOLS=y"
         "BR2_PACKAGE_IPROUTE2=y"
+        "BR2_PACKAGE_UTIL_LINUX=y"
+        "BR2_LINUX_KERNEL=y"
+        "BR2_PACKAGE_LINUX_TOOLS_PERF=y"
+        "BR2_PACKAGE_APOLLO_PFDI_BSP=y"
         "BR2_PACKAGE_LIBMNL=y"
         "BR2_PACKAGE_LIBCAP=y"
         "BR2_PACKAGE_ELFUTILS=y"
+        "BR2_PACKAGE_ZSTD=y"
         "BR2_PACKAGE_IPERF=y"
     )
 
@@ -425,15 +376,32 @@ validate_buildroot_runtime_files()
 {
     require_file "${BUILDROOT_BUILD_DIR}/target/sbin/ip"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/iperf"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/perf"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-sample-app"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/lib/libpfdi.so.1.0"
+    require_file \
+        "${BUILDROOT_BUILD_DIR}/target/etc/pfdi/pfdi_test_config_0.pack"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/libexec/nexios-bsp/selftest"
 
     local lib
-    for lib in libmnl.so.0 libcap.so.2 libelf.so.1; do
+    for lib in libmnl.so.0 libcap.so.2 libelf.so.1 libzstd.so.1; do
         find "${BUILDROOT_BUILD_DIR}/target" -name "${lib}" -print -quit |
             grep -q . ||
             die "Buildroot target is missing runtime dependency: ${lib}"
     done
 
     log "Validated Buildroot Arm Zena CSS runtime files"
+}
+
+buildroot_cross_prefix()
+{
+    local prefix="${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}"
+
+    if [[ -x "${prefix}gcc" ]]; then
+        printf '%s\n' "${prefix}"
+    else
+        printf '%s\n' "${AARCH64_PREFIX}"
+    fi
 }
 
 kernel_release()
@@ -474,20 +442,22 @@ build_external_kernel_module()
     local module="$4"
     local release="$5"
     local installed_module="${BUILDROOT_OVERLAY}/lib/modules/${release}/updates/${module}.ko"
+    local cross_prefix
+    cross_prefix="$(buildroot_cross_prefix)"
     require_dir "${src}"
-    require_command "${AARCH64_PREFIX}strip"
+    require_command "${cross_prefix}strip"
 
     rm -rf "${build_dir}"
     mkdir -p "${build_dir}"
     cp -a "${src}/." "${build_dir}/"
 
     run_logged "${name}-build" make -C "${LINUX_SRC}" \
-        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${cross_prefix}" \
         M="${build_dir}" modules
 
     install_artifact "${build_dir}/${module}.ko" \
         "${installed_module}"
-    run_logged "strip-${module}.ko" "${AARCH64_PREFIX}strip" \
+    run_logged "strip-${module}.ko" "${cross_prefix}strip" \
         --strip-debug "${installed_module}"
     sign_kernel_module "${installed_module}"
 }
@@ -601,8 +571,12 @@ buildroot_initramfs_manifest()
     printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
     fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.config" buildroot-config
     fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.apollo-defconfig.sha256" buildroot-defconfig
+    fingerprint_file_hash "${BUILDROOT_LINUX_CONFIG}" buildroot-linux-config
     fingerprint_file_hash "${BUILDROOT_TOOLCHAIN_DIR}/.apollo-toolchain.manifest" buildroot-toolchain
     fingerprint_file_hash "${BUILDROOT_OVERLAY}/lib/modules/${release}/.apollo-modules.manifest" kernel-modules-overlay
+    fingerprint_tree_metadata "${NEXIOS_BSP_INIT_DIR}" nexios-bsp-init
+    fingerprint_tree_metadata "${PFDI_BSP_SRC}" pfdi-bsp-src
+    fingerprint_file_hash "${PFDI_BSP_CONFIG_PACK}" pfdi-bsp-config
     fingerprint_tree_metadata "${BUILDROOT_EXTERNAL}" buildroot-external
     find "${BUILDROOT_OVERLAY}" \
         -path "${BUILDROOT_OVERLAY}/lib/modules" -prune -o \
@@ -619,8 +593,11 @@ build_buildroot_initramfs()
     mkdir -p "${BUILDROOT_BUILD_DIR}" "${BOOT_DIR}"
     compressor="$(buildroot_cpio_compress_cmd)"
 
+    resolve_buildroot_bsp_sources
     prepare_buildroot_toolchain
+    prepare_pfdi_bsp_config
     prepare_buildroot_external
+    prepare_buildroot_linux_config
     prepare_buildroot_overlay
     install_kernel_modules_overlay
 
@@ -653,8 +630,8 @@ build_buildroot_initramfs()
     fi
     rm -f "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf"
     rm -rf "${BUILDROOT_BUILD_DIR}/target/etc/ld.so.conf.d"
-    run_logged buildroot-build buildroot_env make -C "${BUILDROOT_SRC}" \
-        O="${BUILDROOT_BUILD_DIR}" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+    rm -rf "${BUILDROOT_BUILD_DIR}/target/lib/modules"
+    run_logged buildroot-build buildroot_make \
         ROOTFS_CPIO_COMPRESS_CMD="${compressor}" \
         -j "${JOBS}"
     validate_buildroot_runtime_files

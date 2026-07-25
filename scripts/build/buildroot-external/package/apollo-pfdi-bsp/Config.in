@@ -1,0 +1,7 @@
+config BR2_PACKAGE_APOLLO_PFDI_BSP
+	bool "apollo-pfdi-bsp"
+	depends on BR2_TOOLCHAIN_HAS_THREADS
+	depends on !BR2_STATIC_LIBS
+	help
+	  Build the Apollo Platform Fault Detection Interface library and
+	  BSP sample application from the source unpacked by Yocto.

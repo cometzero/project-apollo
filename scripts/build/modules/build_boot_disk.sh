@@ -14,7 +14,8 @@ boot_disk_manifest()
         "${BOOT_DIR}/Image" \
         "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}" \
         "${BOOT_DIR}/initramfs.cpio.gz" \
-        "${BOOT_DIR}/boot.scr"
+        "${BOOT_DIR}/boot.scr" \
+        "${LOCAL_BUILD_MISC_IMAGE}"
 }
 
 create_boot_disk()
@@ -22,6 +23,7 @@ create_boot_disk()
     require_file "${BOOT_DIR}/Image"
     require_file "${BOOT_DIR}/${LOCAL_BUILD_DTB_BASENAME}"
     require_file "${BOOT_DIR}/initramfs.cpio.gz"
+    require_file "${LOCAL_BUILD_MISC_IMAGE}"
     validate_local_build_file_under_dir "boot disk" "${LOCAL_BUILD_BOOT_DISK}" "${BOOT_DIR}"
 
     write_file_if_changed "${BOOT_DIR}/boot.cmd" <<EOF
@@ -67,11 +69,17 @@ EOF
     mcopy -i "${fat}" "${BOOT_DIR}/boot.scr" ::/
 
     truncate -s 300M "${disk}"
+    local misc_start_sector=$((2048 + 256 * 1024 * 1024 / 512))
     sgdisk --clear --set-alignment=1 \
         --new=1:2048:+256M \
         --typecode=1:ef00 \
         --change-name=1:boot \
+        --new=2:"${misc_start_sector}":+4M \
+        --typecode=2:8300 \
+        --change-name=2:misc \
         "${disk}" >/dev/null
     dd if="${fat}" of="${disk}" bs=512 seek=2048 conv=notrunc status=none
+    dd if="${LOCAL_BUILD_MISC_IMAGE}" of="${disk}" bs=512 \
+        seek="${misc_start_sector}" conv=notrunc status=none
     printf '%s\n' "${manifest}" > "${marker}"
 }
