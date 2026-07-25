@@ -336,9 +336,11 @@ print_component_dry_run()
                     ;;
                 boot-disk)
                     validate_local_build_file_under_dir "boot disk" "${LOCAL_BUILD_BOOT_DISK}" "${BOOT_DIR}"
-                    printf '    outputs: %s %s\n' \
+                    printf '    outputs: %s %s %s %s\n' \
                         "${LOCAL_BUILD_BOOT_DISK}" \
-                        "${BOOT_DIR}/boot-fat.img"
+                        "${BOOT_DIR}/boot-fat.img" \
+                        "${LOCAL_BUILD_UKI_A}" \
+                        "${LOCAL_BUILD_UKI_B}"
                     ;;
                 fvpconf)
                     printf '    output: %s\n' "${DEPLOY_DIR}/${MACHINE}-local.fvpconf"
@@ -516,7 +518,15 @@ run_clean()
             rm -f "${BOOT_DIR}/boot.cmd" \
                 "${BOOT_DIR}/boot.scr" \
                 "${BOOT_DIR}/boot-fat.img" \
+                "${BOOT_DIR}/boot-fat.img.manifest" \
+                "${LOCAL_BUILD_UKI_A}" \
+                "${LOCAL_BUILD_UKI_B}" \
+                "${LOCAL_BUILD_UKI_A}.manifest" \
+                "${LOCAL_BUILD_UKI_B}.manifest" \
+                "${LOCAL_BUILD_SLOT_METADATA_A}" \
+                "${LOCAL_BUILD_SLOT_METADATA_B}" \
                 "${LOCAL_BUILD_BOOT_DISK}" \
+                "${LOCAL_BUILD_BOOT_DISK}.manifest" \
                 "${LOCAL_BUILD_LEGACY_BOOT_DISK}"
             return 0
             ;;

@@ -594,6 +594,17 @@ main()
 
     local rootfs_src="${LOCAL_BUILD_DIR}/deploy/boot/${MACHINE}-local-disk.img"
     local efi_src="${LOCAL_BUILD_DIR}/deploy/boot/boot-fat.img"
+    local uki_a="${LOCAL_BUILD_DIR}/deploy/boot/auto-ad-nexios-a.efi"
+    local uki_b="${LOCAL_BUILD_DIR}/deploy/boot/auto-ad-nexios-b.efi"
+    local boot_profile="local-uki-bsp"
+    if [[ -n "${ROOTFS_OVERRIDE}" ]]; then
+        boot_profile="custom-rootfs"
+    elif [[ "${DRY_RUN}" != "1" ]]; then
+        [[ -f "${uki_a}" ]] ||
+            die "missing local slot A UKI: ${uki_a}. Run ./local_build.sh boot-disk first."
+        [[ -f "${uki_b}" ]] ||
+            die "missing local slot B UKI: ${uki_b}. Run ./local_build.sh boot-disk first."
+    fi
     RUN_ROOTFS="$(artifact_path "local Buildroot boot disk" "${ROOTFS_OVERRIDE}" "${rootfs_src}" "")"
     RUN_EFI_CAPSULE_DISK="$(artifact_path "local EFI capsule disk" "${EFI_CAPSULE_DISK_OVERRIDE}" "${efi_src}" "${QBOXCONF_IMAGE_EFI_CAPSULE_DISK:-}")"
     RSE_ROM="$(artifact_path "RSE ROM image" "${RSE_ROM_OVERRIDE}" "${LOCAL_BUILD_DIR}/deploy/firmware/rse-rom-image.img" "${QBOXCONF_IMAGE_RSE_ROM:-}")"
@@ -646,7 +657,10 @@ main()
     printf '  qbox_conf: %s\n' "${QBOX_CONF}"
     printf '  qbox_build_dir: %s\n' "${QBOX_BUILD_DIR}"
     printf '  ap_cpus: %s\n' "${QBOX_APOLLO_NUM_CPUS:-default}"
+    printf '  boot_profile: %s\n' "${boot_profile}"
     printf '  rootfs: %s\n' "${RUN_ROOTFS}"
+    printf '  uki_slot_a: %s\n' "${uki_a}"
+    printf '  uki_slot_b: %s\n' "${uki_b}"
     printf '  efi_capsule_disk: %s\n' "${RUN_EFI_CAPSULE_DISK}"
     if [[ "${PERSIST_RSE_STATE}" == "1" ]]; then
         printf '  rse_flash_state: %s\n' "${RSE_STATE_DIR}/rse-flash-image.img"

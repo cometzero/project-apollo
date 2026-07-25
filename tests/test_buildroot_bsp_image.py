@@ -145,12 +145,18 @@ def test_buildroot_finalize_forces_busybox_mount() -> None:
         assert library in external_makefile
 
 
-def test_local_boot_disk_matches_bsp_misc_partition() -> None:
+def test_local_boot_disk_matches_bsp_uki_layout() -> None:
     boot_disk_script = BOOT_DISK_SCRIPT.read_text(encoding="utf-8")
 
     assert '"${LOCAL_BUILD_MISC_IMAGE}"' in boot_disk_script
     assert "--new=2:" in boot_disk_script
     assert "--change-name=2:misc" in boot_disk_script
+    assert '"${AUTO_AD_NEXIOS_SLOT_DIR_A}"' in boot_disk_script
+    assert '"${AUTO_AD_NEXIOS_SLOT_DIR_B}"' in boot_disk_script
+    assert "${AUTO_AD_NEXIOS_SLOT_METADATA_FILENAME}" in boot_disk_script
+    assert "build_local_uki" in boot_disk_script
+    assert "mkimage" not in boot_disk_script
+    assert "booti " not in boot_disk_script
 
 
 def test_tmp_baremetal_sources_feed_non_buildroot_packages(tmp_path: Path) -> None:
