@@ -29,7 +29,7 @@ RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
 RESET_RSE_STATE=0
 PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
-PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
+PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-}"
 
@@ -584,8 +584,9 @@ main()
         export QBOX_APOLLO_NUM_CPUS
     fi
 
-    PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
-    PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+    PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-NEXIOS_BSP_INITRAMFS_READY}"
+    PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-nexios-bsp#}"
+    PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:^|\\n)nexios-bsp#\\s*$}"
     RSE_STATE_DIR="${RSE_STATE_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/state/local-${MACHINE}}"
     if [[ "${RESET_RSE_STATE}" == "1" && "${PERSIST_RSE_STATE}" != "1" ]]; then
         die "--reset-rse-state cannot be used with --no-persistent-rse-state"
@@ -691,6 +692,7 @@ main()
     runner_cmd+=("${TMUX_RUNNER_ARGS[@]}")
     runner_cmd+=(--)
     runner_cmd+=(
+        --no-post-login-probe
         --rse-rom "${RSE_ROM}"
         --rse-flash "${RSE_FLASH}"
         --rse-otp "${RSE_OTP}"

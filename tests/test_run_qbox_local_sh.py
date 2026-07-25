@@ -346,7 +346,14 @@ def test_run_qbox_local_qvp_uses_local_qbox_and_local_initramfs_disk(
     assert "nexios-image-apollo-qvp.wic" not in result.stdout
     assert ".verity" not in result.stdout
     assert "tmux_layout: fvp-like" in result.stdout
-    assert argv[argv.index("--primary-login-prompt") + 1] == "apollo-qvp login:"
+    assert argv[argv.index("--primary-login-prompt") + 1] == (
+        "NEXIOS_BSP_INITRAMFS_READY"
+    )
+    assert argv[argv.index("--primary-shell-marker") + 1] == "nexios-bsp#"
+    assert argv[argv.index("--primary-shell-prompt-re") + 1] == (
+        r"(?:^|\n)nexios-bsp#\s*$"
+    )
+    assert "--no-post-login-probe" in argv
     assert "--rse-rom" in argv
     assert "--rse-flash" in argv
     state_index = argv.index("--rse-flash-state")
