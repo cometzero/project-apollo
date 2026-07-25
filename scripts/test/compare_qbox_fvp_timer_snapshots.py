@@ -19,6 +19,7 @@ from timer_snapshot_schema import (
     Check,
     TimerSample,
     TimerSnapshot,
+    TimerSource,
     TimerView,
 )
 
@@ -126,12 +127,32 @@ def rate_checks(qbox: TimerSnapshot, fvp: TimerSnapshot) -> list[Check]:
 
 
 def qbox_contract_checks(snapshot: TimerSnapshot) -> list[Check]:
-    checks: list[Check] = []
+    mode = snapshot["source"].get("rse_smd_counter_mirror")
+    checks: list[Check] = [
+        check(
+            "qbox:rse-mode",
+            isinstance(mode, bool),
+            "QBox source must declare boolean RSE SMD counter mirror mode",
+        )
+    ]
     for sample in snapshot["samples"]:
         views = sample["views"]
         smd = views.get("smd")
         smd_contract = smd is not None and smd.get("input_frequency_hz") == 125_000_000 and smd.get("increment") == 1 and smd.get("reported_frequency_hz") == 125_000_000
         checks.append(check(f"qbox:normal-css-contract:{sample['name']}", smd_contract, "normal CSS count contract is 125MHz input, increment 1, reported 125MHz"))
+        mirror_observation_valid = all(
+            views.get(view_id) is not None
+            and views[view_id].get("observed_counter")
+            == views[view_id].get("counter")
+            for view_id in CSS_VIEW_IDS
+        )
+        checks.append(
+            check(
+                f"qbox:mirror-observation:{sample['name']}",
+                mirror_observation_valid,
+                "all CSS local mirrors must match the authority at the synchronization barrier",
+            )
+        )
         for view_id, expected_hz in REPORTED_FREQUENCIES_HZ.items():
             view = views.get(view_id)
             checks.append(check(f"qbox:reported-frequency:{view_id}:{sample['name']}", view is not None and view.get("reported_frequency_hz") == expected_hz, f"{view_id} reported frequency must be {expected_hz}Hz"))
@@ -142,6 +163,70 @@ def qbox_contract_checks(snapshot: TimerSnapshot) -> list[Check]:
             view = views.get(view_id)
             deadline_state = view is not None and all(field in view for field in ("cval", "enabled", "masked", "istatus"))
             checks.append(check(f"qbox:deadline-state:{view_id}:{sample['name']}", deadline_state, "AP MMIO timer deadline state must be observed"))
+        rse_views = [views.get(view_id) for view_id in RSE_IRQS]
+        if mode is True:
+            mirror_valid = (
+                smd is not None
+                and "counter" in smd
+                and all(
+                    view is not None
+                    and view.get("counter") == smd["counter"]
+                    and view.get("observed_counter") == smd["counter"]
+                    and view.get("counter_basis") == "css_mirror"
+                    for view in rse_views
+                )
+            )
+            checks.append(
+                check(
+                    f"qbox:rse-mirror:{sample['name']}",
+                    mirror_valid,
+                    "RSE TIMER0-3 must use the SMD counter in mirror mode",
+                )
+            )
+        elif mode is False:
+            local_valid = all(
+                view is not None
+                and view.get("counter_basis") == "rse_local"
+                and isinstance(view.get("input_frequency_hz"), int)
+                and view.get("input_frequency_hz", 0) > 0
+                and view.get("reset_domain") == "rse_local_aon"
+                for view in rse_views
+            )
+            checks.append(
+                check(
+                    f"qbox:rse-local:{sample['name']}",
+                    local_valid,
+                    "RSE local mode requires explicit rate, basis, and reset evidence",
+                )
+            )
+    if mode is False and len(snapshot["samples"]) >= 2:
+        start, end = snapshot["samples"][0], snapshot["samples"][-1]
+        elapsed_ns = end["sim_time_ns"] - start["sim_time_ns"]
+        start_views = [start["views"].get(view_id) for view_id in RSE_IRQS]
+        end_views = [end["views"].get(view_id) for view_id in RSE_IRQS]
+        local_rate_valid = elapsed_ns > 0
+        for start_view, end_view in zip(start_views, end_views):
+            if (
+                start_view is None
+                or end_view is None
+                or "counter" not in start_view
+                or "counter" not in end_view
+                or not isinstance(start_view.get("input_frequency_hz"), int)
+            ):
+                local_rate_valid = False
+                continue
+            delta = (end_view["counter"] - start_view["counter"]) & COUNTER_MASK
+            expected = (
+                start_view["input_frequency_hz"] * elapsed_ns
+            ) // 1_000_000_000
+            local_rate_valid = local_rate_valid and abs(delta - expected) <= 1
+        checks.append(
+            check(
+                "qbox:rse-local-rate",
+                local_rate_valid,
+                "RSE local counter delta must match its independent input rate",
+            )
+        )
     return checks
 
 
@@ -225,6 +310,9 @@ def read_snapshot(path: Path) -> TimerSnapshot:
             counter_basis = view.get("counter_basis")
             if isinstance(counter_basis, str):
                 parsed_views[view_id]["counter_basis"] = counter_basis
+            reset_domain = view.get("reset_domain")
+            if isinstance(reset_domain, str):
+                parsed_views[view_id]["reset_domain"] = reset_domain
         parsed = {"name": name, "marker": marker, "sim_time_ns": sim_time_ns, "views": parsed_views}
         for field in ("raw_simulation_ticks", "iris_timebase_hz"):
             value = sample.get(field)
@@ -236,12 +324,22 @@ def read_snapshot(path: Path) -> TimerSnapshot:
     )
     if not isinstance(schema_version, int) or not isinstance(producer, str) or not isinstance(status, str) or not isinstance(captured_at, str):
         raise ValueError(f"snapshot header is invalid: {path}")
+    parsed_source: TimerSource = {
+        "machine": source_machine,
+        "revision": source_revision,
+    }
+    run_id = source.get("run_id")
+    if isinstance(run_id, str):
+        parsed_source["run_id"] = run_id
+    rse_mode = source.get("rse_smd_counter_mirror")
+    if isinstance(rse_mode, bool):
+        parsed_source["rse_smd_counter_mirror"] = rse_mode
     return {
         "schema_version": schema_version,
         "producer": producer,
         "status": status,
         "captured_at": captured_at,
-        "source": {"machine": source_machine, "revision": source_revision},
+        "source": parsed_source,
         "samples": parsed_samples,
     }
 

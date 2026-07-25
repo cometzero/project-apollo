@@ -43,6 +43,7 @@ class TimerView(TypedDict):
     irq: NotRequired[int]
     access_control_state: NotRequired[str]
     counter_basis: NotRequired[str]
+    reset_domain: NotRequired[str]
     observed_counter: NotRequired[int]
     observation_time_ns: NotRequired[int]
     observed: bool
@@ -57,12 +58,19 @@ class TimerSample(TypedDict):
     views: dict[str, TimerView]
 
 
+class TimerSource(TypedDict):
+    machine: str
+    revision: str
+    run_id: NotRequired[str]
+    rse_smd_counter_mirror: NotRequired[bool]
+
+
 class TimerSnapshot(TypedDict):
     schema_version: int
     producer: str
     status: str
     captured_at: str
-    source: dict[str, str]
+    source: TimerSource
     samples: list[TimerSample]
 
 

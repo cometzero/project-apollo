@@ -24,7 +24,7 @@ def load_module() -> ModuleType:
 
 def snapshot(producer: str, *, second_counter: int = 200) -> dict[str, object]:
     def sample(name: str, sim_time_ns: int, counter: int) -> dict[str, object]:
-        return {
+        result = {
             "name": name,
             "marker": name,
             "sim_time_ns": sim_time_ns,
@@ -36,19 +36,29 @@ def snapshot(producer: str, *, second_counter: int = 200) -> dict[str, object]:
                 "si0_cpu0": {"domain": "css", "counter": counter, "reported_frequency_hz": 125000000, "observed": True},
                 "si0_cntbase": {"domain": "css", "counter": counter, "reported_frequency_hz": 125000000, "observed": True},
                 "si1_cpu0": {"domain": "css", "counter": counter, "reported_frequency_hz": 100000000, "observed": True},
-                "rse_timer0": {"domain": "rse", "counter": counter, "irq": 3, "observed": True},
-                "rse_timer1": {"domain": "rse", "counter": counter, "irq": 4, "observed": True},
-                "rse_timer2": {"domain": "rse", "counter": counter, "irq": 5, "observed": True},
-                "rse_timer3": {"domain": "rse", "counter": counter, "irq": 27, "observed": True},
+                "rse_timer0": {"domain": "rse", "counter": counter, "counter_basis": "css_mirror", "irq": 3, "observed": True},
+                "rse_timer1": {"domain": "rse", "counter": counter, "counter_basis": "css_mirror", "irq": 4, "observed": True},
+                "rse_timer2": {"domain": "rse", "counter": counter, "counter_basis": "css_mirror", "irq": 5, "observed": True},
+                "rse_timer3": {"domain": "rse", "counter": counter, "counter_basis": "css_mirror", "irq": 27, "observed": True},
             },
         }
+        views = result["views"]
+        assert isinstance(views, dict)
+        for view in views.values():
+            assert isinstance(view, dict)
+            view["observed_counter"] = counter
+        return result
 
     return {
         "schema_version": 1,
         "producer": producer,
         "status": "pass",
         "captured_at": "2026-07-22T00:00:00Z",
-        "source": {"machine": "apollo-qvp", "revision": "test"},
+        "source": {
+            "machine": "apollo-qvp",
+            "revision": "test",
+            "rse_smd_counter_mirror": True,
+        },
         "samples": [sample("start", 1_000, 100), sample("end", 2_000, second_counter)],
     }
 
@@ -150,6 +160,7 @@ def test_rate_comparison_handles_a_64_bit_counter_wrap() -> None:
         for view in views.values():
             assert isinstance(view, dict)
             view["counter"] = counter
+            view["observed_counter"] = counter
     for sample, counter in zip(fvp["samples"], (100, 115)):
         assert isinstance(sample, dict)
         views = sample["views"]
@@ -211,6 +222,83 @@ def test_build_report_rejects_duplicate_or_insufficient_common_samples() -> None
         "qbox:sample-names",
         "rate:common-samples",
     }
+
+
+def test_build_report_rejects_divergent_rse_timer_when_mirror_is_enabled() -> None:
+    # Given: default mirror mode but one RSE normalized counter diverges.
+    module = load_module()
+    qbox = snapshot("qbox")
+    samples = qbox["samples"]
+    assert isinstance(samples, list)
+    first = samples[0]
+    assert isinstance(first, dict)
+    views = first["views"]
+    assert isinstance(views, dict)
+    timer = views["rse_timer2"]
+    assert isinstance(timer, dict)
+    timer["counter"] = 101
+
+    # When: the RSE mirror contract is checked.
+    report = module.build_report(qbox, snapshot("fvp"))
+
+    # Then: the mismatch is a hard failure.
+    assert report["status"] == "fail"
+    assert any(
+        item["id"] == "qbox:rse-mirror:start"
+        and item["status"] == "fail"
+        for item in report["checks"]
+    )
+
+
+def test_build_report_accepts_explicit_rse_local_counter_mode() -> None:
+    # Given: RSE local mode with explicit rate, basis, and reset evidence.
+    module = load_module()
+    qbox = snapshot("qbox")
+    source = qbox["source"]
+    assert isinstance(source, dict)
+    source["rse_smd_counter_mirror"] = False
+    samples = qbox["samples"]
+    assert isinstance(samples, list)
+    for sample_item in samples:
+        assert isinstance(sample_item, dict)
+        views = sample_item["views"]
+        assert isinstance(views, dict)
+        for index in range(4):
+            timer = views[f"rse_timer{index}"]
+            assert isinstance(timer, dict)
+            timer.update(
+                {
+                    "counter": timer["counter"] + 17,
+                    "counter_basis": "rse_local",
+                    "input_frequency_hz": 100_000_000,
+                    "reset_domain": "rse_local_aon",
+                }
+            )
+
+    # When: the explicit independent-mode contract is checked.
+    report = module.build_report(qbox, snapshot("fvp"))
+
+    # Then: CSS identity remains strict while RSE may be independent.
+    assert report["status"] == "pass"
+
+
+def test_build_report_rejects_missing_rse_mirror_mode() -> None:
+    # Given: a QBox snapshot without the platform mode that explains RSE time.
+    module = load_module()
+    qbox = snapshot("qbox")
+    source = qbox["source"]
+    assert isinstance(source, dict)
+    del source["rse_smd_counter_mirror"]
+
+    # When: the source contract is checked.
+    report = module.build_report(qbox, snapshot("fvp"))
+
+    # Then: ambiguous RSE evidence is rejected.
+    assert report["status"] == "fail"
+    assert any(
+        item["id"] == "qbox:rse-mode" and item["status"] == "fail"
+        for item in report["checks"]
+    )
 
 
 def test_cli_fails_for_unavailable_snapshot(tmp_path: Path) -> None:
