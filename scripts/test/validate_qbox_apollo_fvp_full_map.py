@@ -127,9 +127,14 @@ CHECKS = {
             r"input_frequency_hz\s*=\s*125000000[\s\S]*?integer_increment\s*=\s*1[\s\S]*?reported_frequency_hz\s*=\s*125000000",
         ),
         (
-            "timer:ap-css-provider-bridge",
+            "timer:ap-cpu-mirror-publisher",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"ap_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+            r"ap_cpu_counter_mirror_[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
+        ),
+        (
+            "timer:ap-mmio-mirror-publisher",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"ap_timer_counter_mirror[\s\S]*?qemu_arm_mmio_counter_mirror[\s\S]*?&platform\.css_system_counter",
         ),
         (
             "timer:ap-cpu-native-counter",
@@ -137,19 +142,44 @@ CHECKS = {
             r'local cpu\s*=\s*\{[\s\S]*?moduletype\s*=\s*"cpu_arm_cortexA720AE"',
         ),
         (
-            "timer:ap-cpu-no-external-counter",
+            "timer:ap-no-pull-counter-bridge",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"NOT:cpu_arm_cortexA720AE_external_counter",
+            r"NOT:qemu_arm_generic_timer_counter_bridge|counter_provider",
         ),
         (
-            "timer:si0-css-provider-bridge",
+            "timer:si0-css-mirror-publisher",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
-            r"si_cl0_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+            r"si_cl0_cpu_counter_mirror[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
         ),
         (
-            "timer:si1-css-provider-bridge",
+            "timer:si1-css-mirror-publisher",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua",
-            r"si_cl1_timer_counter_bridge[\s\S]*?&platform\.css_system_counter",
+            r"si_cl1_cpu_counter_mirror_[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
+        ),
+        (
+            "timer:smd-frontends-share-authority",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"host_css_counters_timers[\s\S]*?args\s*=\s*\{\"&platform\.css_system_counter\"\}[\s\S]*?host_css_counters_timers_read[\s\S]*?args\s*=\s*\{\"&platform\.css_system_counter\"\}",
+        ),
+        (
+            "timer:rse-mirror-default-enabled",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r'QBOX_APOLLO_RSE_SMD_COUNTER_MIRROR",\s*true',
+        ),
+        (
+            "timer:rse-local-mirror-selection",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r'rse_smd_counter_mirror\s+and[\s\S]*?"qemu_sse_counter_mirror"[\s\S]*?&platform\.css_system_counter',
+        ),
+        (
+            "timer:qemu-cpu-local-affine-state",
+            "hsoc-stack/tools/qemu/target/arm/cpu.h",
+            r"anchor_count[\s\S]*?generation[\s\S]*?\}\s*gt_counter_mirror",
+        ),
+        (
+            "timer:qemu-cpu-hot-path-no-provider",
+            "hsoc-stack/tools/qemu/target/arm/helper.c",
+            r"NOT:counter_provider|counter_proxy|qemu_arm_generic_timer_counter_bridge",
         ),
     ],
     "atu": [
