@@ -26,7 +26,8 @@ scripts/test/validate_qbox_apollo_fvp_full_map.py
 
 The workspace still keeps user-facing root entrypoints such as
 `./yocto_build.sh`, `./local_build.sh`, `./run_fvp.sh`, `./run_qbox_local.sh`,
-and `./run_qbox_local_debug.sh`.
+`./run_qbox_yocto.sh`, `./run_qbox_local_debug.sh`,
+`./run_qbox_boot_regression.sh`, and `./run_test.sh`.
 
 Use `./local_build.sh qbox` for QBox target builds. The former dedicated build
 shortcut wrappers were replaced by stage entrypoints under `scripts/build/`.
@@ -66,7 +67,7 @@ contract.
 
 | Script | Status | Reason |
 | --- | --- | --- |
-| `run_qbox_apollo_fvp_full_tmux.sh` | keep | User-facing tmux launcher used by `./run_qbox_local.sh`. |
+| `run_qbox_apollo_fvp_full_tmux.sh` | keep | Shared tmux launcher used by local, Yocto, and QBox debug entrypoints. |
 | `run_qbox_apollo_fvp_full.py` | keep | Canonical Apollo full-system QBox runner. |
 | `run_qbox_fvp_rd_aspen_rse.py` | keep | RSE-first child runner used by the full-system runner, build packaging checks, and debug helpers. |
 | `run_local_fvp_tmux.sh` | keep | Interactive FVP tmux runner used by `scripts/debug/run_local_fvp_debug.sh` for local-build debug sessions. |
