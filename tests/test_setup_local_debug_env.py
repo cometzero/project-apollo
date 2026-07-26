@@ -47,10 +47,37 @@ def test_qbox_and_libqemu_are_debug_components() -> None:
     assert {"qbox-host", "qbox-core", "libqemu-aarch64"} <= names
 
 
+def test_manifest_can_select_component_and_override_elf(tmp_path: Path) -> None:
+    module = load_debug_env_module()
+    elf = Path("/bin/true").resolve()
+
+    manifest = module.generate_manifest(
+        ROOT,
+        tmp_path / "artifacts",
+        tmp_path / "debug",
+        selected_components={"qbox-host"},
+        elf_overrides={"qbox-host": elf},
+    )
+
+    assert set(manifest["components"]) == {"qbox-host"}
+    assert manifest["components"]["qbox-host"]["elf"] == str(elf)
+    assert manifest["missing"] == []
+
+
 def test_qbox_defaults_to_relwithdebinfo() -> None:
     build_script = ROOT / "scripts/build/modules/build_qbox.sh"
 
     assert 'QBOX_CMAKE_BUILD_TYPE:-RelWithDebInfo' in build_script.read_text()
+
+
+def test_yocto_qbox_defaults_to_relwithdebinfo() -> None:
+    recipe = (
+        ROOT
+        / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-devtools/qbox/"
+        "qbox-apollo-qvp-native.bb"
+    )
+
+    assert "-DCMAKE_BUILD_TYPE=RelWithDebInfo" in recipe.read_text()
 
 
 def test_elf_arch_ignores_architecture_name_in_path(tmp_path: Path) -> None:
@@ -59,6 +86,22 @@ def test_elf_arch_ignores_architecture_name_in_path(tmp_path: Path) -> None:
     shutil.copy2("/bin/true", elf)
 
     assert module.elf_arch(elf) == "x86_64"
+
+
+def test_yocto_source_prefix_maps_to_workspace_source(tmp_path: Path) -> None:
+    module = load_debug_env_module()
+    source_root = tmp_path / "workspace/u-boot"
+    source = source_root / "arch/arm/lib/entry.S"
+    source.parent.mkdir(parents=True)
+    source.write_text("entry:\n", encoding="utf-8")
+    compiled = Path(
+        "/usr/src/debug/u-boot/2026.01+git/arch/arm/lib/entry.S"
+    )
+
+    assert module.match_source_substitution(compiled, (source_root,)) == (
+        Path("/usr/src/debug/u-boot/2026.01+git"),
+        source_root,
+    )
 
 
 def test_qbox_host_script_stops_once_at_sc_main(tmp_path: Path) -> None:

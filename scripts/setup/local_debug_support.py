@@ -113,6 +113,56 @@ def gdb_quote(path: Path) -> str:
     return f'"{escaped}"'
 
 
+def match_source_substitution(
+    compiled_path: Path,
+    source_roots: Iterable[Path],
+) -> tuple[Path, Path] | None:
+    parts = compiled_path.parts
+    for source_root in source_roots:
+        for index in range(1, len(parts)):
+            suffix = Path(*parts[index:])
+            if (source_root / suffix).is_file():
+                return Path(*parts[:index]), source_root
+    return None
+
+
+def source_substitutions(
+    root: Path,
+    component: Component,
+    elf: Path,
+    symbols: Mapping[str, int],
+) -> tuple[tuple[Path, Path], ...]:
+    source_roots = tuple(
+        (root / source).resolve()
+        for source in component.source_roots
+        if (root / source).is_dir()
+    )
+    substitutions: set[tuple[Path, Path]] = set()
+    for name in component.default_symbols:
+        address = symbols.get(name)
+        if address is None:
+            continue
+        try:
+            location = run_text(
+                ["addr2line", "-e", str(elf), f"0x{address:x}"]
+            ).strip()
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        path_text, separator, _line = location.rpartition(":")
+        if not separator or not path_text or path_text.startswith("??"):
+            continue
+        compiled_path = Path(path_text)
+        if compiled_path.is_file():
+            continue
+        substitution = match_source_substitution(
+            compiled_path,
+            source_roots,
+        )
+        if substitution is not None:
+            substitutions.add(substitution)
+    return tuple(sorted(substitutions, key=lambda item: str(item[0])))
+
+
 def qbox_context_commands(root: Path, component: Component) -> list[str]:
     roots = [
         str((root / source).resolve())
@@ -245,6 +295,16 @@ def write_gdb_script(
         if component.debugger == "gdb":
             lines.append(f"set environment LD_LIBRARY_PATH {joined}")
             lines.append("set sysroot /")
+    for compiled_prefix, source_root in source_substitutions(
+        root,
+        component,
+        elf,
+        symbols,
+    ):
+        lines.append(
+            "set substitute-path "
+            f"{gdb_quote(compiled_prefix)} {gdb_quote(source_root)}"
+        )
     for source in component.source_roots:
         source_path = root / source
         if source_path.exists():

@@ -188,6 +188,8 @@ def run_qvp_dry_run(
     extra_args: list[str] | None = None,
     extra_env: dict[str, str] | None = None,
     ap_cpu_count: str | None = None,
+    *,
+    headless: bool = True,
 ) -> subprocess.CompletedProcess[str]:
     yocto_build, _deploy, _work, _local_build, _conf = create_yocto_tree(
         tmp_path,
@@ -219,10 +221,11 @@ def run_qvp_dry_run(
         str(SCRIPT),
         "--build-dir",
         str(yocto_build),
-        "--headless",
         "--dry-run",
-        *(extra_args or []),
     ]
+    if headless:
+        command.append("--headless")
+    command.extend(extra_args or [])
     return subprocess.run(
         command,
         cwd=ROOT,
@@ -239,6 +242,123 @@ def dry_run_command_argv(output: str) -> list[str]:
     marker = "Headless QBox runner command:"
     index = lines.index(marker)
     return shlex.split(lines[index + 1])
+
+
+def test_run_qbox_yocto_debug_without_target_lists_targets() -> None:
+    result = subprocess.run(
+        [str(SCRIPT), "--debug"],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert result.stderr == ""
+    assert "Available --debug targets:" in result.stdout
+    for target in ("qbox", "rse", "si_cl0", "si_cl1", "tf-a", "u-boot", "linux"):
+        assert target in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("target", "component", "entrypoint", "endpoint", "platform_param"),
+    [
+        ("qbox", "qbox-host", "sc_main", "127.0.0.1:12339", None),
+        (
+            "rse",
+            "tfm-bl1_1",
+            "Reset_Handler",
+            "127.0.0.1:12340",
+            "platform.rse_cpu_pass.cpu_0.gdb_port=12340",
+        ),
+        (
+            "si_cl0",
+            "scp-si0",
+            "arch_exception_reset",
+            "127.0.0.1:12341",
+            "platform.si_cl0_cpu_0.gdb_port=12341",
+        ),
+        (
+            "si_cl1",
+            "si-cl1-zephyr",
+            "z_cstart",
+            "127.0.0.1:12342",
+            "platform.si_cl1_cpu_0.gdb_port=12342",
+        ),
+        (
+            "tf-a",
+            "tfa-bl2",
+            "bl2_main",
+            "127.0.0.1:12343",
+            "platform.ap_cpu_0.gdb_port=12343",
+        ),
+        (
+            "u-boot",
+            "u-boot",
+            "_start",
+            "127.0.0.1:12343",
+            "platform.ap_cpu_0.gdb_port=12343",
+        ),
+        (
+            "linux",
+            "linux",
+            "start_kernel",
+            "127.0.0.1:12343",
+            "platform.ap_cpu_0.gdb_port=12343",
+        ),
+    ],
+)
+def test_run_qbox_yocto_debug_target_maps_to_gdb_contract(
+    tmp_path: Path,
+    target: str,
+    component: str,
+    entrypoint: str,
+    endpoint: str,
+    platform_param: str | None,
+) -> None:
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=["--debug", target, "--no-attach"],
+        headless=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert f"  debug target:  {target}" in result.stdout
+    assert f"  component:     {component}" in result.stdout
+    assert f"  entrypoint:    {entrypoint}" in result.stdout
+    assert f"  gdb endpoint:  {endpoint}" in result.stdout
+    assert f"  debug_target: {target}" in result.stdout
+    assert f"  debug_component: {component}" in result.stdout
+    assert f"  debug_endpoint: {endpoint}" in result.stdout
+    assert "  manifest:      " in result.stdout
+    if platform_param is None:
+        assert "--host-gdb-script" in result.stdout
+        assert "debug attach:  " not in result.stdout
+    else:
+        assert platform_param in result.stdout
+        assert (
+            "  debug attach:  qbox-platform.log contains "
+            "QBox GDB entry breakpoint reached:"
+        ) in result.stdout
+        assert "--host-gdb-script" not in result.stdout
+
+
+def test_run_qbox_yocto_debug_rejects_unknown_target(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=["--debug", "si-cl0"],
+        headless=False,
+    )
+
+    assert result.returncode != 0
+    assert "invalid --debug target: si-cl0" in result.stderr
+
+
+def test_run_qbox_yocto_debug_rejects_headless_mode(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(tmp_path, extra_args=["--debug", "rse"])
+
+    assert result.returncode != 0
+    assert "--debug requires the interactive tmux layout" in result.stderr
 
 
 def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:

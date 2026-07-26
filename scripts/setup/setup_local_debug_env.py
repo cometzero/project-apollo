@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from typing import TypedDict
+from typing import Iterable, Mapping, TypedDict
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -29,6 +29,7 @@ from local_debug_support import (  # noqa: E402
     elf_text_address,
     first_existing,
     install_build_id_debug_file,
+    match_source_substitution,
     resolve_elf,
     shared_library_paths,
     symbol_source_locations,
@@ -139,16 +140,48 @@ def add_libqemu_debug_file(
     record["debug_file"] = str(debug_file)
 
 
-def generate_manifest(root: Path, local_build: Path, out_dir: Path) -> DebugManifest:
+def generate_manifest(
+    root: Path,
+    local_build: Path,
+    out_dir: Path,
+    *,
+    selected_components: set[str] | None = None,
+    elf_overrides: Mapping[str, Path] | None = None,
+    extra_solib_paths: Iterable[Path] = (),
+) -> DebugManifest:
     out_dir.mkdir(parents=True, exist_ok=True)
     clean_generated_files(out_dir)
     components: dict[str, ComponentRecord] = {}
     missing: list[str] = []
     specs = COMPONENTS + HOST_COMPONENTS + qbox_plugin_components(local_build)
-    solib_paths = shared_library_paths(root, local_build)
+    if selected_components is not None:
+        specs = tuple(
+            component
+            for component in specs
+            if component.name in selected_components
+        )
+    overrides = elf_overrides or {}
+    solib_paths = tuple(
+        sorted(
+            {
+                *shared_library_paths(root, local_build),
+                *(
+                    path.resolve()
+                    for path in extra_solib_paths
+                    if path.is_dir()
+                ),
+            }
+        )
+    )
 
     for component in specs:
-        elf = resolve_elf(root, local_build, component)
+        elf = overrides.get(component.name)
+        if elf is not None:
+            elf = elf.resolve()
+            if not elf.is_file():
+                elf = None
+        else:
+            elf = resolve_elf(root, local_build, component)
         if elf is None:
             missing.append(component.name)
             continue
@@ -184,6 +217,18 @@ def generate_manifest(root: Path, local_build: Path, out_dir: Path) -> DebugMani
     }
 
 
+def parse_elf_overrides(values: list[str]) -> dict[str, Path]:
+    overrides: dict[str, Path] = {}
+    for value in values:
+        name, separator, path = value.partition("=")
+        if not separator or not name or not path:
+            raise ValueError(
+                f"invalid --elf value {value!r}; expected COMPONENT=PATH"
+            )
+        overrides[name] = Path(path)
+    return overrides
+
+
 def main() -> int:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -193,11 +238,51 @@ def main() -> int:
         default=root / "build/local-apollo-qvp",
     )
     parser.add_argument("--out-dir", type=Path, default=None)
+    parser.add_argument(
+        "--component",
+        action="append",
+        default=[],
+        help="Generate only the named component; may be repeated.",
+    )
+    parser.add_argument(
+        "--elf",
+        action="append",
+        default=[],
+        metavar="COMPONENT=PATH",
+        help="Override a component ELF path; may be repeated.",
+    )
+    parser.add_argument(
+        "--solib-dir",
+        action="append",
+        default=[],
+        type=Path,
+        help="Add a host shared-library search directory.",
+    )
     args = parser.parse_args()
 
     local_build = args.local_build_dir.resolve()
     out_dir = (args.out_dir or local_build / "debug").resolve()
-    manifest = generate_manifest(root, local_build, out_dir)
+    try:
+        elf_overrides = parse_elf_overrides(args.elf)
+    except ValueError as error:
+        parser.error(str(error))
+    available = {
+        component.name
+        for component in COMPONENTS + HOST_COMPONENTS
+    }
+    requested = set(args.component)
+    unknown = (requested | set(elf_overrides)) - available
+    if unknown:
+        parser.error("unknown component(s): " + ", ".join(sorted(unknown)))
+    selected = requested or set(elf_overrides) or None
+    manifest = generate_manifest(
+        root,
+        local_build,
+        out_dir,
+        selected_components=selected,
+        elf_overrides=elf_overrides,
+        extra_solib_paths=args.solib_dir,
+    )
     manifest_path = out_dir / "symbols.json"
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",

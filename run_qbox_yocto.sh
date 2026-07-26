@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SCRIPT_DIR}"
 source "${ROOT_DIR}/scripts/run/qbox_qboxconf_common.sh"
+source "${ROOT_DIR}/scripts/run/qbox_debug_common.sh"
 
 die() {
     echo "run_qbox_yocto.sh: error: $*" >&2
@@ -49,6 +50,8 @@ Options:
   --headless                  Run without tmux and write logs under --out-dir
   --keep-running-after-pass   Keep QBox alive after the pass condition (default)
   --exit-after-pass           Stop QBox after the pass condition
+  --debug TARGET              Run GDB in the interactive pane; TARGET is one of
+                              qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
   --no-attach                 Start tmux session without attaching
   --dry-run                   Print the underlying QBox runner command
   --help                      Show this help
@@ -556,6 +559,104 @@ validate_ap_cpu_count() {
         die "QBOX_APOLLO_NUM_CPUS must be in range 1..16: ${value}"
 }
 
+debug_port_in_use() {
+    local port="$1"
+
+    ss -H -ltn 2>/dev/null |
+        awk '{print $4}' |
+        grep -Eq "(^|[:.])${port}$|\\]:${port}$"
+}
+
+resolve_yocto_debug_elf() {
+    local work_root
+    work_root="$(dirname "${YOCTO_WORK_DIR}")"
+
+    case "${DEBUG_TARGET}" in
+        qbox)
+            if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+                resolve_file_with_glob \
+                    "Yocto QBox host debug ELF" \
+                    "" \
+                    "$(dirname "${QBOXCONF_RECIPE_SYSROOT_NATIVE}")/build/platforms-vp"
+            else
+                resolve_file \
+                    "QBox host debug ELF" \
+                    "${QBOX_BUILD_DIR}/platforms-vp"
+            fi
+            ;;
+        rse)
+            resolve_file_with_glob \
+                "Yocto RSE TF-M BL1_1 debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/trusted-firmware-m/*/build/bin/bl1_1.elf"
+            ;;
+        si_cl0)
+            resolve_file_with_glob \
+                "Yocto SI CL0 SCP debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/scp-firmware/*/build/ramfw/si0/bin/*-si0-bl2.elf"
+            ;;
+        si_cl1)
+            resolve_file_with_glob \
+                "Yocto SI CL1 Zephyr debug ELF" \
+                "" \
+                "${work_root}/${WORK_PREFIX}_safety_island_c1-zephyr/zephyr-demos-cl1/*/build/zephyr/zephyr.elf"
+            ;;
+        tf-a)
+            resolve_file_with_glob \
+                "Yocto TF-A BL2 debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/trusted-firmware-a/*/build/${WORK_PREFIX}/debug/bl2/bl2.elf"
+            ;;
+        u-boot)
+            resolve_file_with_glob \
+                "Yocto U-Boot debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/u-boot/*/build/u-boot"
+            ;;
+        linux)
+            resolve_file_with_glob \
+                "Yocto Linux debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/linux-*/*/build/vmlinux"
+            ;;
+    esac
+}
+
+validate_qbox_debug_build_id() {
+    local runtime_elf="$1"
+    local debug_elf="$2"
+
+    python3 - "${runtime_elf}" "${debug_elf}" <<'PY'
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def build_id(path: Path) -> str:
+    result = subprocess.run(
+        ["readelf", "-n", str(path)],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    match = re.search(r"Build ID:\s*([0-9a-fA-F]+)", result.stdout)
+    if match is None:
+        raise SystemExit(f"error: ELF has no build ID: {path}")
+    return match.group(1).lower()
+
+
+runtime = Path(sys.argv[1])
+debug = Path(sys.argv[2])
+if build_id(runtime) != build_id(debug):
+    raise SystemExit(
+        "error: Yocto QBox runtime/debug ELF build IDs differ: "
+        f"{runtime} != {debug}"
+    )
+PY
+}
+
 RUN_STAMP="$(date +%Y%m%d-%H%M%S)"
 MACHINE="${MACHINE:-apollo-qvp}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-}"
@@ -608,6 +709,18 @@ RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
 RESET_RSE_STATE=0
 BSP_MODE=0
+DEBUG_TARGET=""
+DEBUG_COMPONENT=""
+DEBUG_ENTRYPOINT=""
+DEBUG_ENTRY_ADDRESS=""
+DEBUG_ENDPOINT=""
+DEBUG_MANIFEST=""
+DEBUG_GDB_SCRIPT=""
+DEBUG_ARTIFACT_ELF=""
+DEBUG_WAIT_LOG=""
+DEBUG_WAIT_MARKER=""
+DEBUG_CPU_PARAM=""
+DEBUG_PLATFORM_PARAMS=()
 
 ROOTFS_OVERRIDE="${ROOTFS:-}"
 EFI_CAPSULE_DISK_OVERRIDE="${EFI_CAPSULE_DISK:-}"
@@ -773,6 +886,14 @@ while (($#)); do
             KEEP_RUNNING_AFTER_PASS=0
             shift
             ;;
+        --debug)
+            if [[ $# -lt 2 || "$2" == --* ]]; then
+                qbox_debug_usage
+                exit 0
+            fi
+            DEBUG_TARGET="$2"
+            shift 2
+            ;;
         --no-attach)
             NO_ATTACH=1
             shift
@@ -873,6 +994,12 @@ while (($#)); do
 done
 
 reject_removed_env
+
+if [[ -n "${DEBUG_TARGET}" ]]; then
+    qbox_debug_configure_target
+    [[ "${HEADLESS}" == "0" ]] ||
+        die "--debug requires the interactive tmux layout; remove --headless"
+fi
 
 BOOT_PROFILE="product"
 if [[ "${BSP_MODE}" == "1" ]]; then
@@ -1091,6 +1218,56 @@ else
     SI_CL1_SYMBOLS="$(resolve_file "Safety Island CL1 Zephyr symbols" "${QBOXCONF_IMAGE_SI_CL1_SYMBOLS:-}" "${DEPLOY_DIR}/zephyr-demos-cl1.elf")"
 fi
 
+if [[ -n "${DEBUG_TARGET}" ]]; then
+    DEBUG_MANIFEST="${OUT_DIR}/debug/symbols.json"
+    DEBUG_GDB_SCRIPT="${OUT_DIR}/debug/gdb/${DEBUG_COMPONENT}.gdb"
+    if [[ "${DRY_RUN}" != "1" ]]; then
+        command -v python3 >/dev/null 2>&1 ||
+            die "python3 is required for --debug"
+        command -v gdb-multiarch >/dev/null 2>&1 ||
+            die "gdb-multiarch is required for --debug"
+        if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+            command -v gdb >/dev/null 2>&1 ||
+                die "gdb is required for --debug qbox"
+            command -v gdbserver >/dev/null 2>&1 ||
+                die "gdbserver is required for --debug qbox"
+        fi
+
+        DEBUG_ARTIFACT_ELF="$(resolve_yocto_debug_elf)"
+        debug_setup=(
+            python3
+            "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py"
+            --local-build-dir "${YOCTO_BUILD_DIR}"
+            --out-dir "${OUT_DIR}/debug"
+            --component "${DEBUG_COMPONENT}"
+            --elf "${DEBUG_COMPONENT}=${DEBUG_ARTIFACT_ELF}"
+        )
+        if [[ -d "${QBOXCONF_PROVIDER_LIBDIR:-}" ]]; then
+            debug_setup+=(--solib-dir "${QBOXCONF_PROVIDER_LIBDIR}")
+        fi
+        "${debug_setup[@]}"
+
+        DEBUG_ENTRY_ADDRESS="$(
+            qbox_debug_validate_manifest \
+                "${DEBUG_MANIFEST}" \
+                "${DEBUG_COMPONENT}" \
+                "${DEBUG_ENTRYPOINT}"
+        )"
+        if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+            validate_qbox_debug_build_id \
+                "${QBOXCONF_EXE}" "${DEBUG_ARTIFACT_ELF}"
+        fi
+        if [[ -n "${DEBUG_CPU_PARAM}" ]]; then
+            DEBUG_PLATFORM_PARAMS+=(
+                "${DEBUG_CPU_PARAM}.gdb_breakpoint=${DEBUG_ENTRY_ADDRESS}"
+            )
+        fi
+        debug_port="${DEBUG_ENDPOINT##*:}"
+        debug_port_in_use "${debug_port}" &&
+            die "GDB port is already in use: ${debug_port}"
+    fi
+fi
+
 RUN_ROOTFS="${ROOTFS}"
 RUN_EFI_CAPSULE_DISK="${EFI_CAPSULE_DISK}"
 RUN_RSE_OTP="${RSE_OTP}"
@@ -1189,6 +1366,20 @@ else
         --netdev "${NETDEV}"
         --tmux-layout fvp-like
     )
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        RUNNER_CMD+=(
+            --debug-target "${DEBUG_TARGET}"
+            --debug-component "${DEBUG_COMPONENT}"
+            --debug-endpoint "${DEBUG_ENDPOINT}"
+            --debug-manifest "${DEBUG_MANIFEST}"
+        )
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            RUNNER_CMD+=(
+                --debug-wait-log "${OUT_DIR}/${DEBUG_WAIT_LOG}"
+                --debug-wait-marker "${DEBUG_WAIT_MARKER}"
+            )
+        fi
+    fi
 fi
 
 if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
@@ -1235,6 +1426,17 @@ fi
 if [[ "${UBOOT_ONLY}" == "1" ]]; then
     RUNNER_CMD+=(--uboot-only)
 fi
+if [[ -n "${DEBUG_TARGET}" ]]; then
+    RUNNER_CMD+=(--ignore-fail-patterns)
+    if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+        export QBOX_HOST_GDB_EXEC="${ROOT_DIR}/scripts/debug/gdbserver_gdb_wrapper.sh"
+        export QBOX_HOST_GDBSERVER_ENDPOINT="${DEBUG_ENDPOINT}"
+        RUNNER_CMD+=(--host-gdb-script "${DEBUG_GDB_SCRIPT}")
+    fi
+    for debug_param in "${DEBUG_PLATFORM_PARAMS[@]}"; do
+        RUNNER_CMD+=(--platform-param "${debug_param}")
+    done
+fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
 
@@ -1258,6 +1460,23 @@ Apollo QBox Yocto launch
   initial state:  $([[ "${RUN_QBOX_RECORD_INITIAL_STATE}" == "1" ]] && printf '%s' 'SHA-256 manifest' || printf '%s' skipped)
   ssh port:      ${SSH_PORT_VALUE}
 EOF
+
+if [[ -n "${DEBUG_TARGET}" ]]; then
+    cat <<EOF
+  debug target:  ${DEBUG_TARGET}
+  component:     ${DEBUG_COMPONENT}
+  entrypoint:    ${DEBUG_ENTRYPOINT}
+  gdb endpoint:  ${DEBUG_ENDPOINT}
+  manifest:      ${DEBUG_MANIFEST}
+EOF
+    if [[ -n "${DEBUG_ARTIFACT_ELF}" ]]; then
+        printf '  debug ELF:     %s\n' "${DEBUG_ARTIFACT_ELF}"
+    fi
+    if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+        printf '  debug attach:  %s contains %s\n' \
+            "${DEBUG_WAIT_LOG}" "${DEBUG_WAIT_MARKER}"
+    fi
+fi
 
 if [[ "${HEADLESS}" == "1" && "${DRY_RUN}" == "1" ]]; then
     printf 'Headless QBox runner command:\n  '
