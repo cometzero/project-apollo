@@ -31,3 +31,17 @@ def test_bsp_init_does_not_create_configfs_path_in_sysfs() -> None:
     # Then: init leaves the configfs mountpoint to the kernel filesystem.
     assert invalid_mkdir not in init
     assert "mkdir -p /sys/kernel/debug" in init
+
+
+def test_qvp_pfdi_worker_timeout_allows_for_cosimulation_latency() -> None:
+    # Given: QBox can delay a per-CPU PFDI SMC beyond the hardware default.
+    init = INIT.read_text(encoding="utf-8")
+
+    # When: the QVP-specific pfdi_misc load contract is inspected.
+    machine_read = 'machine="$(cat /etc/nexios-bsp-machine)"'
+    timeout_option = "pfdi_wait_timeout_ms=1000"
+
+    # Then: QVP raises only the PFDI worker limit before loading the module.
+    assert init.index(machine_read) < init.index("modprobe")
+    assert 'test "${machine}" = "apollo-qvp"' in init
+    assert timeout_option in init
