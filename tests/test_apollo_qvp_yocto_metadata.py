@@ -99,6 +99,7 @@ REQUIRED_SNIPPETS: Final = {
     BSP / "conf/machine/apollo-qvp.conf": (
         'KMACHINE = "apollo-qvp"',
         'ARM_SYSTEMREADY_FIRMWARE = "firmware-apollo-qvp:do_deploy"',
+        'EXTRA_IMAGEDEPENDS += "lite-cornea-native"',
         "FVP_CONFIG[ros.virtio_block1.image_path]",
         "efi-capsule-update-disk-image-apollo-qvp.img",
     ),

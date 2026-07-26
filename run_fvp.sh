@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="${ROOT_DIR}/run_fvp.sh"
+source "${ROOT_DIR}/scripts/run/fvp_debug_common.sh"
 
 MACHINE="${MACHINE:-apollo-fvp}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
@@ -21,6 +22,16 @@ NO_ATTACH=0
 DRY_RUN=0
 LOCAL_MODE=0
 BSP_MODE=0
+DEBUG_TARGET=""
+IRIS_PORT="${IRIS_PORT:-7100}"
+CORNEA_BIN="${CORNEA_BIN:-}"
+DEBUG_COMPONENT=""
+DEBUG_ENTRYPOINT=""
+DEBUG_IRIS_INSTANCE=""
+DEBUG_DIR=""
+DEBUG_MANIFEST=""
+DEBUG_GDB_SCRIPT=""
+DEBUG_ELF=""
 
 usage()
 {
@@ -44,13 +55,16 @@ Options:
   --out-dir PATH       log/output directory
                        (default: <build-dir>/fvp-tmux/<machine>-<timestamp>)
   --runfvp-bin PATH    runfvp executable (default: ${RUNFVP_BIN})
+  --debug TARGET       run GDB through lite-cornea and Iris; TARGET is one of
+                       rse, si_cl0, si_cl1, tf-a, u-boot, or linux
+  --iris-port PORT     Iris TCP port for --debug (default: ${IRIS_PORT})
   --no-attach          start tmux but do not attach
   --dry-run            print the resolved command and log layout only
   -h, --help           show this help
 
 Environment overrides:
   MACHINE YOCTO_BUILD_DIR DEPLOY_DIR RUNFVP_BIN FVP_CONF TMUX_SESSION OUT_DIR
-  RUN_STAMP TMUX_BIN SDK_DIR
+  RUN_STAMP TMUX_BIN SDK_DIR CORNEA_BIN
 
 Examples:
   ./yocto_build.sh
@@ -59,6 +73,7 @@ Examples:
   ./run_fvp.sh
   ./run_fvp.sh --bsp
   ./run_fvp.sh --machine apollo-qvp
+  ./run_fvp.sh --machine apollo-qvp --debug linux
   ./run_fvp.sh --local
   ./run_fvp.sh --no-attach
   ./run_fvp.sh --dry-run
@@ -570,6 +585,23 @@ start_shell_pane()
     printf '%s\n' "${pane_id}"
 }
 
+start_iris_gdb_pane()
+{
+    local pane_body
+    local pane_id
+
+    pane_body="$(
+        printf 'exec %q ' "${ROOT_DIR}/scripts/debug/run_fvp_cornea_gdb.sh"
+        printf '%q %q ' --iris-port "${IRIS_PORT}"
+        printf '%q %q ' --iris-instance "${DEBUG_IRIS_INSTANCE}"
+        printf '%q %q ' --gdb-script "${DEBUG_GDB_SCRIPT}"
+        printf '%q %q' --cornea "${CORNEA_BIN}"
+    )"
+    pane_id="$(tmux_cmd split-window -d -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T "gdb-${DEBUG_TARGET}"
+    printf '%s\n' "${pane_id}"
+}
+
 start_uart_pane()
 {
     local term="$1"
@@ -721,6 +753,20 @@ file-backed UART logs
   ${OUT_DIR}/uarts/tf_a.log
   ${OUT_DIR}/uarts/u_boot_linux.log
 EOF
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        cat <<EOF
+
+FVP debug
+  debug backend: lite-cornea
+  debug target: ${DEBUG_TARGET}
+  component: ${DEBUG_COMPONENT}
+  entrypoint: ${DEBUG_ENTRYPOINT}
+  Iris instance: ${DEBUG_IRIS_INSTANCE}
+  iris port: ${IRIS_PORT}
+  manifest: ${DEBUG_MANIFEST}
+  cornea: ${CORNEA_BIN}
+EOF
+    fi
 }
 
 start_tmux()
@@ -739,6 +785,20 @@ start_tmux()
     RUNFVP_BIN="$(abspath "${RUNFVP_BIN}")"
     SDK_DIR="$(abspath "${SDK_DIR}")"
     mkdir -p "${OUT_DIR}/uarts"
+
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        fvp_debug_resolve_cornea "$((DRY_RUN == 0))"
+        CORNEA_BIN="$(abspath "${CORNEA_BIN}")"
+        DEBUG_DIR="${OUT_DIR}/debug"
+        DEBUG_MANIFEST="${DEBUG_DIR}/symbols.json"
+        DEBUG_GDB_SCRIPT="${DEBUG_DIR}/gdb/${DEBUG_COMPONENT}.gdb"
+        if ((DRY_RUN == 0)); then
+            require_command gdb-multiarch
+            fvp_debug_port_in_use &&
+                die "Iris port is already in use: ${IRIS_PORT}"
+            fvp_debug_prepare_manifest
+        fi
+    fi
 
     local auto_args_file="${OUT_DIR}/auto-fvp-args.txt"
     local extra_args_file="${OUT_DIR}/extra-fvp-args.txt"
@@ -802,7 +862,11 @@ start_tmux()
     si0_pane_id="$(start_waiting_uart_pane safety_island_cl0 -v -l 75% -t "${rse_pane_id}")"
     si1_pane_id="$(start_waiting_uart_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}")"
     tf_a_pane_id="$(start_waiting_uart_pane tf_a -v -l 50% -t "${si1_pane_id}")"
-    start_shell_pane -h -l 50% -t "${FVP_ROOT_PANE}" >/dev/null
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        start_iris_gdb_pane -h -l 50% -t "${FVP_ROOT_PANE}" >/dev/null
+    else
+        start_shell_pane -h -l 50% -t "${FVP_ROOT_PANE}" >/dev/null
+    fi
     rebalance_fvp_uart_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${tf_a_pane_id}"
     install_fvp_uart_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${tf_a_pane_id}"
 
@@ -883,6 +947,19 @@ while (($# > 0)); do
             RUNFVP_BIN="$2"
             shift 2
             ;;
+        --debug)
+            if (($# < 2)) || [[ "$2" == --* ]]; then
+                fvp_debug_usage
+                exit 0
+            fi
+            DEBUG_TARGET="$2"
+            shift 2
+            ;;
+        --iris-port)
+            (($# >= 2)) || die "--iris-port requires a value"
+            IRIS_PORT="$2"
+            shift 2
+            ;;
         --no-attach)
             NO_ATTACH=1
             shift
@@ -922,6 +999,28 @@ case "${MACHINE}" in
     apollo-fvp|apollo-qvp) ;;
     *) die "unsupported machine: ${MACHINE} (expected apollo-fvp or apollo-qvp)" ;;
 esac
+if [[ -n "${DEBUG_TARGET}" ]]; then
+    [[ "${MACHINE}" == "apollo-qvp" ]] ||
+        die "--debug currently supports only --machine apollo-qvp"
+    if [[ ! "${IRIS_PORT}" =~ ^[0-9]+$ ]] ||
+        ((10#${IRIS_PORT} < 1 || 10#${IRIS_PORT} > 65535)); then
+        die "invalid Iris port: ${IRIS_PORT}"
+    fi
+    fvp_debug_configure_target
+    for arg in "${EXTRA_FVP_ARGS[@]}"; do
+        case "${arg}" in
+            --iris-server|--iris-port|--iris-connect|--print-port-number|--run)
+                die "${arg} is managed by --debug"
+                ;;
+        esac
+    done
+    EXTRA_FVP_ARGS=(
+        --iris-server
+        --iris-port "${IRIS_PORT}"
+        --print-port-number
+        "${EXTRA_FVP_ARGS[@]}"
+    )
+fi
 DEPLOY_DIR="$(abspath "$(resolve_deploy_dir)")"
 resolved_fvpconf="$(resolve_fvpconf "${DEPLOY_DIR}" || true)"
 if [[ -n "${resolved_fvpconf}" ]]; then
