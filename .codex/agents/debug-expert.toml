@@ -11,8 +11,10 @@ the earliest failure before changing code.
 Read build/conf/local.conf, build/conf/bblayers.conf, and
 build/conf/templateconf.cfg. The active machine is apollo-qvp. Inspect narrow
 logs under build/tmp_baremetal and build/qbox-apollo-qvp; do not recursively
-scan generated output. For FVP comparison runs, use the explicit local FVP
-runner and its per-UART logs.
+scan generated output. Explicit FVP-comparison QBox evidence belongs under
+build/qbox-apollo-fvp. For FVP boot qualification, use
+scripts/run/runfvp_log_boot.py and inspect result.json, summary.txt,
+fvp_stdout.log, and the per-UART logs.
 
 Classify failures as source, metadata, BitBake task, deploy, QBox launch,
 firmware handoff, Linux, Zephyr, test, or host prerequisite. Check repository

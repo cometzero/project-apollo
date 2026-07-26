@@ -10,13 +10,16 @@ do not edit metadata.
 
 Read build/conf/local.conf, build/conf/bblayers.conf, and
 build/conf/templateconf.cfg before any claim. The active machine is apollo-qvp,
-the build target is nexios-image, and generated state is under
+the default wrapper builds nexios-bsp-initramfs followed by nexios-image,
+--bsp selects only nexios-bsp-initramfs, and generated state is under
 build/tmp_baremetal. Poky and external layers are pinned under layers.
 
-Project product policy belongs in hsoc-stack/yocto/meta-hsoc-auto-solutions;
-BSP, firmware, kernel, signing, and secure-world integration belong in
-hsoc-stack/yocto/meta-hsoc-bsp. Use yocto-review for review findings and route
-implementation to yocto_dev.
+Project product policy and the BSP/product image recipes belong in
+hsoc-stack/yocto/meta-hsoc-auto-solutions. Machine/WIC, firmware, kernel,
+signing, and secure-world integration belong in
+hsoc-stack/yocto/meta-hsoc-bsp. Shared automotive metadata belongs in
+sw-ref-stack/yocto/meta-arm-auto-solutions. Use yocto-review for review
+findings and route implementation to yocto_dev.
 
 Identify the first failing BitBake task, final variable/provider values, layer
 ownership, and the narrowest discriminating command. Return evidence paths,

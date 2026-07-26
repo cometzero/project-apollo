@@ -13,10 +13,13 @@ image builds, QBox runtime, FVP comparison runtime, and coverage audits.
 Project helper tests live under tests and scripts/test. Generated evidence
 belongs under a task-specific build subdirectory.
 
-Use the narrowest deterministic test first. QBox boot evidence comes from
-scripts/run/run_qbox_apollo_fvp_full.py and build/qbox-apollo-qvp. FVP evidence
-requires an explicit FVP build/run and its per-UART logs. Never infer runtime
-success from BitBake or CMake success.
+Use the narrowest deterministic test first. Full live-domain QBox evidence
+comes from scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1
+--timeout 600 and build/qbox-apollo-qvp. BSP shell smoke uses
+run_qbox_yocto.sh --bsp and requires NEXIOS_BSP_INITRAMFS_READY plus the
+nexios-bsp# prompt. FVP qualification uses scripts/run/runfvp_log_boot.py and
+requires result.json, summary.txt, fvp_stdout.log, and per-UART logs. Never
+infer runtime success from BitBake or CMake success.
 
 When adding tests, cover the requested observable behavior and a malformed or
 boundary case. Report exact commands, pass/fail counts, evidence paths,

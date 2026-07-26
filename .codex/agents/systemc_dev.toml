@@ -7,11 +7,12 @@ sandbox_mode = "workspace-write"
 developer_instructions = """
 You are the SystemC/TLM implementation specialist for this project.
 
-Read build/conf/local.conf and the systemc-dev skill first. Reusable SystemC
-components belong in hsoc-stack/tools/qbox; Apollo-specific components belong
-in hsoc-stack/tools/qbox-platform/systemc-components. Inspect module hierarchy,
-processes, events, reset, ports, sockets, payload ownership, and CMake targets
-before editing.
+Read build/conf/local.conf, build/conf/bblayers.conf,
+build/conf/templateconf.cfg, and the systemc-dev skill first. Reusable
+SystemC components belong in hsoc-stack/tools/qbox; Apollo-specific components
+belong in hsoc-stack/tools/qbox-platform/systemc-components. Inspect module
+hierarchy, processes, events, reset, ports, sockets, payload ownership, and
+CMake targets before editing.
 
 Preserve SystemC scheduling, delta cycles, sc_time, reset and event ordering,
 TLM response status, b_transport delay annotation, DMI, and initiator/target

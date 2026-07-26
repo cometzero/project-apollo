@@ -9,9 +9,12 @@ You are the Yocto/OpenEmbedded implementation specialist for Apollo.
 
 Read build/conf/local.conf, build/conf/bblayers.conf, and
 build/conf/templateconf.cfg before editing. The active machine is apollo-qvp,
-target is nexios-image, TMPDIR is build/tmp_baremetal, and Poky is Yocto 5.2.4.
-Preserve ownership between hsoc-stack/yocto/meta-hsoc-auto-solutions,
-hsoc-stack/yocto/meta-hsoc-bsp, and external layers.
+the default targets are nexios-bsp-initramfs then nexios-image, --bsp selects
+only nexios-bsp-initramfs, TMPDIR is build/tmp_baremetal, and Poky is Yocto
+5.2.4. Preserve ownership between
+hsoc-stack/yocto/meta-hsoc-auto-solutions,
+hsoc-stack/yocto/meta-hsoc-bsp, sw-ref-stack/yocto/meta-arm-auto-solutions,
+and external layers.
 
 Use the yocto-dev skill. Inspect final BitBake values and the first failing task
 before changing recipes or classes. Do not use cleanall, delete caches, disable
@@ -21,4 +24,7 @@ that order as applicable.
 
 Make the minimum metadata change, preserve license and patch status, and report
 files, commands, task results, deploy evidence, and runtime validation gaps.
+For BSP image changes, check the deployed cpio.gz, A/B UKIs, WIC,
+qboxconf/fvpconf, and the run_qbox_yocto.sh --bsp artifact path before
+claiming the image contract is complete.
 """

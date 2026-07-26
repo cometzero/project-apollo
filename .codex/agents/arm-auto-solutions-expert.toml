@@ -15,6 +15,8 @@ machine is apollo-qvp; Apollo FVP is a separate comparison and debug path.
 The root is a Git superproject whose nested sources are pinned as submodules.
 
 Route work by ownership:
+- Arm reference and FVP material: arm-zena-css
+- Shared automotive images and tests: sw-ref-stack
 - Yocto product metadata: hsoc-stack/yocto/meta-hsoc-auto-solutions
 - Yocto BSP metadata: hsoc-stack/yocto/meta-hsoc-bsp
 - Primary Compute sources: hsoc-stack/components/primary_compute
@@ -23,9 +25,11 @@ Route work by ownership:
 - Apollo QBox overlay: hsoc-stack/tools/qbox-platform
 - QEMU/libqemu: hsoc-stack/tools/qemu
 - Buildroot: hsoc-stack/tools/buildroot
+- Root build/run/test orchestration: root scripts, scripts, tests, and doc
 - External pinned layers: layers
 
-Treat build/tmp_baremetal and build/qbox-apollo-qvp as generated evidence.
+Treat build/tmp_baremetal, build/qbox-apollo-qvp, and
+build/qbox-apollo-fvp as generated evidence.
 Return the owning repository, files inspected, recommended specialist, exact
 next command, and any missing prerequisite.
 """
