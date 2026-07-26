@@ -46,15 +46,48 @@ def test_build_remote_gdb_command() -> None:
         "gdb-multiarch",
         "-q",
         "--batch",
-        "-ex",
-        "target remote localhost:12341",
         "-x",
         "/tmp/linux.gdb",
         "-ex",
         "break start_kernel",
         "-ex",
+        "target remote localhost:12341",
+        "-ex",
         "continue",
     ]
+
+
+def test_build_remote_command_waits_for_boot_marker_after_loading_symbols() -> None:
+    module = load_runner_module()
+    component = module.DebugComponent(
+        name="linux",
+        domain="u_boot_linux",
+        debugger="gdb-multiarch",
+        elf=Path("/tmp/vmlinux"),
+        gdb_script=Path("/tmp/linux.gdb"),
+    )
+
+    command = module.build_gdb_command(
+        component,
+        remote="localhost:12343",
+        wait_log_marker=(
+            Path("/tmp/qbox-rse.log"),
+            "SCP ready. Power domain protocol version",
+            600.0,
+        ),
+        resume=True,
+    )
+
+    script_index = command.index("/tmp/linux.gdb")
+    wait_index = next(
+        index
+        for index, value in enumerate(command)
+        if value.startswith("shell ") and "--wait-log-marker-only" in value
+    )
+    remote_index = command.index("target remote localhost:12343")
+
+    assert script_index < wait_index < remote_index
+    assert "SCP ready. Power domain protocol version" in command[wait_index]
 
 
 def test_build_host_attach_command() -> None:

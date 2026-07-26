@@ -13,6 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 TMUX_SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
 
 
+def test_qbox_debug_pane_is_zoomed_for_source_display() -> None:
+    contents = TMUX_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'tmux_cmd resize-pane -Z -t "${START_INTERACTIVE_PANE_ID}"' in contents
+
+
 def read_until(
     proc: subprocess.Popen[bytes],
     needle: bytes,

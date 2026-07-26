@@ -32,6 +32,17 @@ PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-}"
 PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-}"
 PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-}"
 QBOX_APOLLO_NUM_CPUS="${QBOX_APOLLO_NUM_CPUS:-}"
+DEBUG_TARGET=""
+DEBUG_COMPONENT=""
+DEBUG_ENTRYPOINT=""
+DEBUG_ENTRY_ADDRESS=""
+DEBUG_ENDPOINT=""
+DEBUG_MANIFEST=""
+DEBUG_GDB_SCRIPT=""
+DEBUG_WAIT_LOG=""
+DEBUG_WAIT_MARKER=""
+DEBUG_CPU_PARAM=""
+DEBUG_PLATFORM_PARAMS=()
 
 QBOX_BUILD_DIR_EXPLICIT=0
 QBOX_CONF_EXPLICIT=0
@@ -116,6 +127,9 @@ Options:
   --uboot-only
   --keep-running-after-pass
   --exit-after-pass
+  --debug TARGET
+                   run GDB in the interactive shell pane; TARGET is one of
+                   qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
   --no-attach
   --dry-run
   --help
@@ -136,6 +150,14 @@ Artifact overrides:
   --si-cl0-image FILE
   --si-cl1-image FILE
   --si-cl1-symbols FILE
+EOF
+}
+
+debug_usage()
+{
+    cat <<'EOF'
+Available --debug targets:
+  qbox, rse, si_cl0, si_cl1, tf-a, u-boot, linux
 EOF
 }
 
@@ -206,6 +228,124 @@ reject_removed_environment_overrides()
     for name in "${REMOVED_ENV_OVERRIDES[@]}"; do
         die "unsupported removed environment override: ${name}"
     done
+}
+
+configure_debug_target()
+{
+    case "${DEBUG_TARGET}" in
+        qbox)
+            DEBUG_COMPONENT="qbox-host"
+            DEBUG_ENTRYPOINT="sc_main"
+            DEBUG_ENDPOINT="127.0.0.1:12339"
+            ;;
+        rse)
+            DEBUG_COMPONENT="tfm-bl1_1"
+            DEBUG_ENTRYPOINT="Reset_Handler"
+            DEBUG_ENDPOINT="127.0.0.1:12340"
+            DEBUG_CPU_PARAM="platform.rse_cpu_pass.cpu_0.cpu"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.rse_cpu_pass.cpu_0.gdb_port=12340"
+            )
+            ;;
+        si_cl0)
+            DEBUG_COMPONENT="scp-si0"
+            DEBUG_ENTRYPOINT="arch_exception_reset"
+            DEBUG_ENDPOINT="127.0.0.1:12341"
+            DEBUG_CPU_PARAM="platform.si_cl0_cpu_0"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.si_cl0_cpu_0.gdb_port=12341"
+            )
+            ;;
+        si_cl1)
+            DEBUG_COMPONENT="si-cl1-zephyr"
+            DEBUG_ENTRYPOINT="z_cstart"
+            DEBUG_ENDPOINT="127.0.0.1:12342"
+            DEBUG_CPU_PARAM="platform.si_cl1_cpu_0"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.si_cl1_cpu_0.gdb_port=12342"
+            )
+            ;;
+        tf-a)
+            DEBUG_COMPONENT="tfa-bl2"
+            DEBUG_ENTRYPOINT="bl2_main"
+            DEBUG_ENDPOINT="127.0.0.1:12343"
+            DEBUG_CPU_PARAM="platform.ap_cpu_0"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.ap_cpu_0.gdb_port=12343"
+            )
+            ;;
+        u-boot)
+            DEBUG_COMPONENT="u-boot"
+            DEBUG_ENTRYPOINT="_start"
+            DEBUG_ENDPOINT="127.0.0.1:12343"
+            DEBUG_CPU_PARAM="platform.ap_cpu_0"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.ap_cpu_0.gdb_port=12343"
+            )
+            ;;
+        linux)
+            DEBUG_COMPONENT="linux"
+            DEBUG_ENTRYPOINT="start_kernel"
+            DEBUG_ENDPOINT="127.0.0.1:12343"
+            DEBUG_CPU_PARAM="platform.ap_cpu_0"
+            DEBUG_PLATFORM_PARAMS=(
+                "platform.ap_cpu_0.gdb_port=12343"
+            )
+            ;;
+        *)
+            die "invalid --debug target: ${DEBUG_TARGET}"
+            ;;
+    esac
+    if [[ -n "${DEBUG_CPU_PARAM}" ]]; then
+        DEBUG_WAIT_LOG="qbox-platform.log"
+        DEBUG_WAIT_MARKER="QBox GDB entry breakpoint reached:"
+    fi
+}
+
+validate_debug_manifest()
+{
+    local component="$1"
+    local entrypoint="$2"
+
+    python3 - "${DEBUG_MANIFEST}" "${component}" "${entrypoint}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest = Path(sys.argv[1])
+component_name = sys.argv[2]
+entrypoint = sys.argv[3]
+try:
+    decoded = json.loads(manifest.read_text(encoding="utf-8"))
+    component = decoded["components"][component_name]
+except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+    raise SystemExit(
+        f"error: debug manifest has no usable {component_name} record: {error}"
+    )
+
+for field in ("elf", "gdb_script"):
+    path = Path(component.get(field, ""))
+    if not path.is_file():
+        raise SystemExit(
+            f"error: debug manifest {component_name}.{field} is missing: {path}"
+        )
+if component.get("has_debug_info") is not True:
+    raise SystemExit(f"error: {component_name} ELF has no DWARF debug info")
+if component.get("has_debug_line") is not True:
+    raise SystemExit(f"error: {component_name} ELF has no DWARF source lines")
+if entrypoint not in component.get("symbols", {}):
+    raise SystemExit(
+        f"error: {component_name} ELF has no {entrypoint} entrypoint symbol"
+    )
+if entrypoint not in component.get("source_locations", {}):
+    raise SystemExit(
+        f"error: {component_name} ELF has no source line for {entrypoint}"
+    )
+address = int(component["symbols"][entrypoint], 0)
+if component.get("arch") == "arm":
+    address &= ~1
+print(hex(address))
+PY
 }
 
 parse_args()
@@ -325,6 +465,14 @@ parse_args()
             --exit-after-pass)
                 KEEP_RUNNING_AFTER_PASS=0
                 shift
+                ;;
+            --debug)
+                if (($# < 2)) || [[ "$2" == --* ]]; then
+                    debug_usage
+                    exit 0
+                fi
+                DEBUG_TARGET="$2"
+                shift 2
                 ;;
             --no-attach)
                 TMUX_RUNNER_ARGS+=("$1")
@@ -511,6 +659,9 @@ main()
     reject_removed_environment_overrides
     parse_args "$@"
     require_safe_token MACHINE "${MACHINE}"
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        configure_debug_target
+    fi
 
     YOCTO_BUILD_DIR="$(abspath "${YOCTO_BUILD_DIR}")"
     WORK_PREFIX="$(machine_to_work_prefix "${MACHINE}")"
@@ -569,6 +720,35 @@ main()
         [[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
         [[ -x "${QBOX_BUILD_DIR}/platforms-vp" ]] ||
             die "QBox executable not found or not executable: ${QBOX_BUILD_DIR}/platforms-vp"
+    fi
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        DEBUG_MANIFEST="${LOCAL_BUILD_DIR}/debug/symbols.json"
+        DEBUG_GDB_SCRIPT="${LOCAL_BUILD_DIR}/debug/gdb/${DEBUG_COMPONENT}.gdb"
+        if [[ "${DRY_RUN}" != "1" ]]; then
+            command -v python3 >/dev/null 2>&1 || die "python3 is required for --debug"
+            command -v gdb-multiarch >/dev/null 2>&1 ||
+                die "gdb-multiarch is required for --debug"
+            if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+                command -v gdb >/dev/null 2>&1 || die "gdb is required for --debug qbox"
+                command -v gdbserver >/dev/null 2>&1 ||
+                    die "gdbserver is required for --debug qbox"
+            fi
+            python3 "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py" \
+                --local-build-dir "${LOCAL_BUILD_DIR}" \
+                --out-dir "${LOCAL_BUILD_DIR}/debug"
+            DEBUG_ENTRY_ADDRESS="$(
+                validate_debug_manifest \
+                    "${DEBUG_COMPONENT}" "${DEBUG_ENTRYPOINT}"
+            )"
+            if [[ -n "${DEBUG_CPU_PARAM}" ]]; then
+                DEBUG_PLATFORM_PARAMS+=(
+                    "${DEBUG_CPU_PARAM}.gdb_breakpoint=${DEBUG_ENTRY_ADDRESS}"
+                )
+            fi
+            debug_port="${DEBUG_ENDPOINT##*:}"
+            port_in_use "${debug_port}" &&
+                die "GDB port is already in use: ${debug_port}"
+        fi
     fi
 
     if [[ -z "${QBOX_APOLLO_NUM_CPUS}" ]]; then
@@ -669,6 +849,19 @@ main()
     fi
     printf '  ssh: host port %s -> guest port 22\n' "${ssh_port}"
     printf '  netdev: %s\n' "${netdev}"
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        printf '  debug_target: %s\n' "${DEBUG_TARGET}"
+        printf '  debug_component: %s\n' "${DEBUG_COMPONENT}"
+        printf '  debug_entrypoint: %s\n' "${DEBUG_ENTRYPOINT}"
+        [[ -n "${DEBUG_ENTRY_ADDRESS}" ]] &&
+            printf '  debug_entry_address: %s\n' "${DEBUG_ENTRY_ADDRESS}"
+        printf '  debug_endpoint: %s\n' "${DEBUG_ENDPOINT}"
+        printf '  debug_manifest: %s\n' "${DEBUG_MANIFEST}"
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            printf '  debug_attach_gate: %s contains %s\n' \
+                "${DEBUG_WAIT_LOG}" "${DEBUG_WAIT_MARKER}"
+        fi
+    fi
 
     local rse_fast_boot_mode="--rse-fast-boot-sram-dmi"
     if ((LEGACY_FILE_BACKED_SRAM)); then
@@ -695,6 +888,20 @@ main()
         --netdev "${netdev}"
         --tmux-layout fvp-like
     )
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        runner_cmd+=(
+            --debug-target "${DEBUG_TARGET}"
+            --debug-component "${DEBUG_COMPONENT}"
+            --debug-endpoint "${DEBUG_ENDPOINT}"
+            --debug-manifest "${DEBUG_MANIFEST}"
+        )
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            runner_cmd+=(
+                --debug-wait-log "${OUT_DIR}/${DEBUG_WAIT_LOG}"
+                --debug-wait-marker "${DEBUG_WAIT_MARKER}"
+            )
+        fi
+    fi
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         runner_cmd+=(--keep-running-after-pass)
     else
@@ -735,6 +942,18 @@ main()
     fi
     if [[ -n "${RSE_SYMBOLS}" ]]; then
         runner_cmd+=(--rse-symbols "${RSE_SYMBOLS}")
+    fi
+    if [[ -n "${DEBUG_TARGET}" ]]; then
+        runner_cmd+=(--ignore-fail-patterns)
+        if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+            export QBOX_HOST_GDB_EXEC="${ROOT_DIR}/scripts/debug/gdbserver_gdb_wrapper.sh"
+            export QBOX_HOST_GDBSERVER_ENDPOINT="${DEBUG_ENDPOINT}"
+            runner_cmd+=(--host-gdb-script "${DEBUG_GDB_SCRIPT}")
+        fi
+        local debug_param
+        for debug_param in "${DEBUG_PLATFORM_PARAMS[@]}"; do
+            runner_cmd+=(--platform-param "${debug_param}")
+        done
     fi
     runner_cmd+=(
         --rse-hotpath-accel

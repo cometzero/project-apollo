@@ -43,8 +43,15 @@ SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
+DEBUG_TARGET="${DEBUG_TARGET:-}"
+DEBUG_COMPONENT="${DEBUG_COMPONENT:-}"
+DEBUG_ENDPOINT="${DEBUG_ENDPOINT:-}"
+DEBUG_MANIFEST="${DEBUG_MANIFEST:-}"
+DEBUG_WAIT_LOG="${DEBUG_WAIT_LOG:-}"
+DEBUG_WAIT_MARKER="${DEBUG_WAIT_MARKER:-}"
 NO_ATTACH=0
 DRY_RUN=0
+START_INTERACTIVE_PANE_ID=""
 
 RUNNER_ARGS_FILE="${RUNNER_ARGS_FILE:-}"
 REMOVED_ENV_OVERRIDES=()
@@ -115,6 +122,13 @@ Options:
                        net device, for example type=user,hostfwd=tcp::2223-:22
   --tmux-layout MODE   pane layout: tiled or fvp-like
                        (default: ${TMUX_LAYOUT})
+  --debug-target NAME  label used for the GDB pane
+  --debug-component N  symbols.json component loaded in the GDB pane
+  --debug-endpoint H:P QEMU or host gdbserver endpoint
+  --debug-manifest P   generated local debug symbols.json
+  --debug-wait-log P   defer remote attach until this log contains a marker
+  --debug-wait-marker S
+                       marker paired with --debug-wait-log
   --no-attach          start tmux but do not attach
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -737,6 +751,11 @@ Apollo QBox full-system tmux run
   effective_cc3xx_local_mmio_fastpath: ${effective_cc3xx_local_mmio_fastpath}
   netdev: ${NETDEV:-default}
   tmux_layout: ${TMUX_LAYOUT}
+  debug_target: ${DEBUG_TARGET:-disabled}
+  debug_component: ${DEBUG_COMPONENT:-disabled}
+  debug_endpoint: ${DEBUG_ENDPOINT:-disabled}
+  debug_attach_gate: ${DEBUG_WAIT_LOG:+${DEBUG_WAIT_LOG} contains ${DEBUG_WAIT_MARKER}}
+  interactive_pane: ${DEBUG_TARGET:+gdb-${DEBUG_TARGET}}
   out_dir: ${OUT_DIR}
   qbox_core_dir: ${QBOX_CORE_DIR}
   qbox_platform_dir: ${QBOX_PLATFORM_DIR}
@@ -1110,6 +1129,33 @@ start_shell_pane()
     pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
     tmux_cmd select-pane -t "${pane_id}" -T shell
     START_LOG_PANE_ID="${pane_id}"
+    START_INTERACTIVE_PANE_ID="${pane_id}"
+}
+
+start_debug_pane()
+{
+    local pane_body
+    local pane_id
+
+    pane_body=$(
+        printf 'cd %q || exit 1; ' "${ROOT_DIR}"
+        printf 'printf "GDB target: %%s\\nEndpoint: %%s\\nManifest: %%s\\n\\n" %q %q %q; ' \
+            "${DEBUG_TARGET}" "${DEBUG_ENDPOINT}" "${DEBUG_MANIFEST}"
+        printf 'exec %q --manifest %q %q --remote %q --wait-remote' \
+            "${ROOT_DIR}/scripts/debug/run_local_gdb.py" "${DEBUG_MANIFEST}" \
+            "${DEBUG_COMPONENT}" "${DEBUG_ENDPOINT}"
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            printf ' --wait-log-marker %q %q' \
+                "${DEBUG_WAIT_LOG}" "${DEBUG_WAIT_MARKER}"
+        fi
+        if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
+            printf ' --continue'
+        fi
+    )
+    pane_id="$(tmux_cmd split-window -P -F '#{pane_id}' "$@" bash -lc "${pane_body}")"
+    tmux_cmd select-pane -t "${pane_id}" -T "gdb-${DEBUG_TARGET}"
+    START_LOG_PANE_ID="${pane_id}"
+    START_INTERACTIVE_PANE_ID="${pane_id}"
 }
 
 start_fvp_like_log_panes()
@@ -1131,7 +1177,11 @@ start_fvp_like_log_panes()
     si1_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane secure_console -v -l 50% -t "${si1_pane_id}"
     secure_pane_id="${START_LOG_PANE_ID}"
-    start_shell_pane -h -l 50% -t "${platform_pane_id}"
+    if [[ -n "${DEBUG_COMPONENT}" ]]; then
+        start_debug_pane -h -l 50% -t "${platform_pane_id}"
+    else
+        start_shell_pane -h -l 50% -t "${platform_pane_id}"
+    fi
     rebalance_fvp_like_log_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
     install_fvp_like_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
 }
@@ -1151,6 +1201,19 @@ start_tmux()
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
     validate_bool "TMUX_UART_INPUT_FIFOS" "${TMUX_UART_INPUT_FIFOS}"
     validate_tmux_layout "${TMUX_LAYOUT}"
+    if [[ -n "${DEBUG_COMPONENT}" ]]; then
+        [[ -n "${DEBUG_TARGET}" ]] || die "--debug-component requires --debug-target"
+        [[ -n "${DEBUG_ENDPOINT}" ]] || die "--debug-component requires --debug-endpoint"
+        [[ -n "${DEBUG_MANIFEST}" ]] || die "--debug-component requires --debug-manifest"
+        [[ "${TMUX_LAYOUT}" == "fvp-like" ]] ||
+            die "--debug-component requires --tmux-layout fvp-like"
+    fi
+    if [[ -n "${DEBUG_WAIT_LOG}" || -n "${DEBUG_WAIT_MARKER}" ]]; then
+        [[ -n "${DEBUG_WAIT_LOG}" && -n "${DEBUG_WAIT_MARKER}" ]] ||
+            die "--debug-wait-log and --debug-wait-marker must be used together"
+        [[ -n "${DEBUG_COMPONENT}" ]] ||
+            die "--debug-wait-log requires --debug-component"
+    fi
     require_command "${TMUX_BIN}"
     require_command "${PYTHON_BIN}"
 
@@ -1174,6 +1237,14 @@ start_tmux()
     QBOX_PLATFORM_BUILD_DIR="$(abspath "${QBOX_PLATFORM_BUILD_DIR}")"
     QBOX_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR}"
     QBOX_CONF="$(abspath "${QBOX_CONF}")"
+    if [[ -n "${DEBUG_COMPONENT}" ]]; then
+        DEBUG_MANIFEST="$(abspath "${DEBUG_MANIFEST}")"
+        ((DRY_RUN)) || [[ -f "${DEBUG_MANIFEST}" ]] ||
+            die "debug manifest not found: ${DEBUG_MANIFEST}"
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            DEBUG_WAIT_LOG="$(abspath "${DEBUG_WAIT_LOG}")"
+        fi
+    fi
     mkdir -p "${OUT_DIR}"
 
     local runner_args_file="${OUT_DIR}/extra-runner-args.txt"
@@ -1276,7 +1347,12 @@ start_tmux()
         tmux_cmd bind-key -n F12 run-shell -b "${stop_body}"
         start_fvp_like_log_panes "${platform_pane_id}"
         tmux_cmd run-shell -b "${supervisor_body}"
-        tmux_cmd select-pane -t "${platform_pane_id}"
+        if [[ -n "${DEBUG_COMPONENT}" ]]; then
+            tmux_cmd select-pane -t "${START_INTERACTIVE_PANE_ID}"
+            tmux_cmd resize-pane -Z -t "${START_INTERACTIVE_PANE_ID}"
+        else
+            tmux_cmd select-pane -t "${platform_pane_id}"
+        fi
     else
         local runner_pane_id
         runner_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
@@ -1479,6 +1555,36 @@ while (($# > 0)); do
         --tmux-layout)
             (($# >= 2)) || die "--tmux-layout requires a value"
             TMUX_LAYOUT="$2"
+            shift 2
+            ;;
+        --debug-target)
+            (($# >= 2)) || die "--debug-target requires a value"
+            DEBUG_TARGET="$2"
+            shift 2
+            ;;
+        --debug-component)
+            (($# >= 2)) || die "--debug-component requires a value"
+            DEBUG_COMPONENT="$2"
+            shift 2
+            ;;
+        --debug-endpoint)
+            (($# >= 2)) || die "--debug-endpoint requires a value"
+            DEBUG_ENDPOINT="$2"
+            shift 2
+            ;;
+        --debug-manifest)
+            (($# >= 2)) || die "--debug-manifest requires a value"
+            DEBUG_MANIFEST="$2"
+            shift 2
+            ;;
+        --debug-wait-log)
+            (($# >= 2)) || die "--debug-wait-log requires a value"
+            DEBUG_WAIT_LOG="$2"
+            shift 2
+            ;;
+        --debug-wait-marker)
+            (($# >= 2)) || die "--debug-wait-marker requires a value"
+            DEBUG_WAIT_MARKER="$2"
             shift 2
             ;;
         --no-attach)

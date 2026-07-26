@@ -113,6 +113,93 @@ def gdb_quote(path: Path) -> str:
     return f'"{escaped}"'
 
 
+def qbox_context_commands(root: Path, component: Component) -> list[str]:
+    roots = [
+        str((root / source).resolve())
+        for source in component.source_roots
+        if (root / source).exists()
+    ]
+    return [
+        "python",
+        "import gdb",
+        "import os",
+        "import time",
+        "",
+        "class QBoxContext:",
+        "    def __init__(self, roots):",
+        "        self.roots = tuple(os.path.realpath(root) + os.sep for root in roots)",
+        "        self.stopped_at_ns = None",
+        "",
+        "    def on_stop(self, _event):",
+        "        self.stopped_at_ns = time.monotonic_ns()",
+        "        for thread in gdb.selected_inferior().threads():",
+        "            try:",
+        "                thread.switch()",
+        "                frame = gdb.newest_frame()",
+        "            except gdb.error:",
+        "                continue",
+        "            while frame is not None:",
+        "                sal = frame.find_sal()",
+        "                if sal.symtab is not None:",
+        "                    source = os.path.realpath(sal.symtab.fullname())",
+        "                    if source.startswith(self.roots):",
+        "                        frame.select()",
+        '                        gdb.write("\\nQBox source context:\\n")',
+        '                        gdb.execute("frame")',
+        '                        gdb.execute("list")',
+        "                        return",
+        "                frame = frame.older()",
+        '        gdb.write("\\nNo source-backed QBox frame; host thread heads:\\n")',
+        '        gdb.execute("thread apply all bt 3")',
+        "",
+        "    def compensate(self):",
+        "        if self.stopped_at_ns is None:",
+        "            return",
+        "        elapsed_ns = time.monotonic_ns() - self.stopped_at_ns",
+        "        self.stopped_at_ns = None",
+        "        adjusted = set()",
+        '        symbols = list(gdb.lookup_static_symbols("timers_state"))',
+        '        global_symbol = gdb.lookup_global_symbol("timers_state")',
+        "        if global_symbol is not None:",
+        "            symbols.append(global_symbol)",
+        "        for symbol in symbols:",
+        "            try:",
+        "                state = symbol.value()",
+        '                if int(state["cpu_ticks_enabled"]) == 0:',
+        "                    continue",
+        '                offset = state["cpu_clock_offset"]',
+        "                address = int(offset.address)",
+        "                if address in adjusted:",
+        "                    continue",
+        "                offset.assign(int(offset) - elapsed_ns)",
+        "                adjusted.add(address)",
+        "            except (gdb.error, TypeError, ValueError):",
+        "                continue",
+        "        if adjusted:",
+        "            gdb.write(",
+        '                "QBox debugger pause compensation: "',
+        '                f"{elapsed_ns / 1_000_000_000:.3f}s across "',
+        '                f"{len(adjusted)} QEMU clock(s)\\n"',
+        "            )",
+        "",
+        "class QBoxCompensate(gdb.Command):",
+        "    def __init__(self, context):",
+        '        super().__init__("qbox-compensate-pause", gdb.COMMAND_SUPPORT)',
+        "        self.context = context",
+        "",
+        "    def invoke(self, _argument, _from_tty):",
+        "        self.context.compensate()",
+        "",
+        f"qbox_context = QBoxContext({roots!r})",
+        "qbox_compensate = QBoxCompensate(qbox_context)",
+        "gdb.events.stop.connect(qbox_context.on_stop)",
+        "end",
+        "define hook-continue",
+        "  qbox-compensate-pause",
+        "end",
+    ]
+
+
 def shared_library_paths(root: Path, local_build: Path) -> tuple[Path, ...]:
     qbox_build = local_build / "work/qbox-platform"
     candidates = {
@@ -157,18 +244,47 @@ def write_gdb_script(
         lines.append(f"set solib-search-path {joined}")
         if component.debugger == "gdb":
             lines.append(f"set environment LD_LIBRARY_PATH {joined}")
+            lines.append("set sysroot /")
     for source in component.source_roots:
         source_path = root / source
         if source_path.exists():
             lines.append(f"directory {gdb_quote(source_path)}")
-    lines.extend((f"file {gdb_quote(elf)}", "info files"))
-    for name in component.default_symbols:
-        if name in symbols:
-            lines.extend(
-                (f"info address {name}", f"info line {name}", f"break {name}")
-            )
+    lines.append(f"file {gdb_quote(elf)}")
+    if component.runtime_text_address is not None:
+        linked_text_address = int(elf_text_address(elf), 16)
+        load_offset = component.runtime_text_address - linked_text_address
+        lines.append(
+            f"symbol-file -o {load_offset:#x} {gdb_quote(elf)}"
+        )
+    lines.append("info files")
+    available_default_symbols = [
+        name for name in component.default_symbols if name in symbols
+    ]
+    entry_symbols = (
+        available_default_symbols[:1]
+        if component.name == "qbox-host"
+        else available_default_symbols
+    )
+    for name in entry_symbols:
+        breakpoint = "tbreak" if component.name == "qbox-host" else "break"
+        lines.extend(
+            (f"info address {name}", f"info line {name}", f"{breakpoint} {name}")
+        )
+    if entry_symbols:
+        lines.append(f"list {entry_symbols[0]}")
     if component.name == "qbox-host":
-        lines.append("tbreak libqemu_init")
+        lines.extend(qbox_context_commands(root, component))
+    else:
+        lines.extend(
+            (
+                "define hook-stop",
+                "  echo \\nStopped at ",
+                "  info symbol $pc",
+                "  info line *$pc",
+                "  list *$pc",
+                "end",
+            )
+        )
     if component.debugger == "gdb-multiarch":
         lines.extend(("", "# Use --remote HOST:PORT for a QEMU GDB stub."))
     else:

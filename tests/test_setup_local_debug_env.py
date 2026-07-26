@@ -61,7 +61,7 @@ def test_elf_arch_ignores_architecture_name_in_path(tmp_path: Path) -> None:
     assert module.elf_arch(elf) == "x86_64"
 
 
-def test_qbox_host_script_sets_libqemu_breakpoint(tmp_path: Path) -> None:
+def test_qbox_host_script_stops_once_at_sc_main(tmp_path: Path) -> None:
     module = load_debug_env_module()
     component = next(
         item for item in module.HOST_COMPONENTS if item.name == "qbox-host"
@@ -74,16 +74,20 @@ def test_qbox_host_script_sets_libqemu_breakpoint(tmp_path: Path) -> None:
         tmp_path,
         component,
         Path("/bin/true"),
-        {},
+        {"sc_main": 0x1000},
         (tmp_path,),
     )
 
     contents = script.read_text()
+    lines = contents.splitlines()
     assert "set auto-solib-add on" in contents
     assert f"set debug-file-directory {tmp_path}" in contents
     assert f"set solib-search-path {tmp_path}" in contents
     assert f"set environment LD_LIBRARY_PATH {tmp_path}" in contents
-    assert "tbreak libqemu_init" in contents
+    assert "set sysroot /" in lines
+    assert "tbreak sc_main" in lines
+    assert "break sc_main" not in lines
+    assert "tbreak libqemu_init" not in lines
 
 
 def test_component_script_reports_entry_source_line(tmp_path: Path) -> None:
@@ -105,7 +109,42 @@ def test_component_script_reports_entry_source_line(tmp_path: Path) -> None:
 
     contents = script.read_text()
     assert "info line main" in contents
-    assert "break main" in contents
+    assert "tbreak main" in contents
+    assert "list main" in contents
+    assert "class QBoxContext" in contents
+    assert "gdb.events.stop.connect(qbox_context.on_stop)" in contents
+
+
+def test_qbox_host_stop_selects_a_source_backed_frame(tmp_path: Path) -> None:
+    module = load_debug_env_module()
+    component = next(
+        item for item in module.HOST_COMPONENTS if item.name == "qbox-host"
+    )
+    script = tmp_path / "qbox-host.gdb"
+
+    module.write_gdb_script(
+        script,
+        ROOT,
+        tmp_path,
+        component,
+        Path("/bin/true"),
+        {"sc_main": 0x1000},
+        (tmp_path,),
+    )
+
+    contents = script.read_text()
+    assert "class QBoxContext" in contents
+    assert "gdb.events.stop.connect(qbox_context.on_stop)" in contents
+    assert "QBox source context" in contents
+    assert "thread apply all bt 3" in contents
+    assert 'gdb.lookup_static_symbols("timers_state")' in contents
+    assert 'gdb.lookup_global_symbol("timers_state")' in contents
+    assert 'state["cpu_clock_offset"]' in contents
+    assert "class QBoxCompensate(gdb.Command)" in contents
+    assert "define hook-continue" in contents
+    assert "qbox-compensate-pause" in contents
+    assert "gdb.events.cont.connect" not in contents
+    assert "QBox debugger pause compensation:" in contents
 
 
 def test_domain_scripts_load_each_staged_component(tmp_path: Path) -> None:
@@ -136,6 +175,36 @@ def test_u_boot_uses_tf_a_bl33_runtime_address() -> None:
     component = next(item for item in module.COMPONENTS if item.name == "u-boot")
 
     assert component.runtime_text_address == 0xE0000000
+
+
+def test_component_script_relocates_runtime_symbols(tmp_path: Path) -> None:
+    module = load_debug_env_module()
+    component = module.Component(
+        "runtime-test",
+        "Runtime test",
+        "test",
+        "test",
+        (),
+        ("main",),
+        (),
+        runtime_text_address=0x200000,
+    )
+    elf = Path("/bin/true")
+    script = tmp_path / "runtime-test.gdb"
+
+    module.write_gdb_script(
+        script,
+        ROOT,
+        tmp_path,
+        component,
+        elf,
+        {"main": 0x1000},
+        (),
+    )
+
+    linked = int(module.elf_text_address(elf), 16)
+    offset = component.runtime_text_address - linked
+    assert f'symbol-file -o 0x{offset:x} "{elf}"' in script.read_text()
 
 
 def test_domain_script_relocates_u_boot_symbols(tmp_path: Path) -> None:

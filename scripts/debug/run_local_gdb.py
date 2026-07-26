@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import shlex
 import shutil
 import sys
 import time
@@ -74,20 +75,31 @@ def build_gdb_command(
     remote: str | None = None,
     breakpoints: tuple[str, ...] = (),
     program_args: tuple[str, ...] = (),
+    wait_log_marker: tuple[Path, str, float] | None = None,
     resume: bool = False,
 ) -> list[str]:
     command = [component.debugger, "-q"]
     if batch:
         command.append("--batch")
-    remote_first = remote is not None and component.domain != "qbox"
-    if not remote_first:
-        command.extend(("-x", str(component.gdb_script)))
-    if remote is not None:
-        command.extend(("-ex", f"target remote {remote}"))
-    if remote_first:
-        command.extend(("-x", str(component.gdb_script)))
+    command.extend(("-x", str(component.gdb_script)))
     for symbol in breakpoints:
         command.extend(("-ex", f"break {symbol}"))
+    if wait_log_marker is not None:
+        log, marker, timeout = wait_log_marker
+        wait_command = shlex.join(
+            (
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "--wait-log-marker-only",
+                str(log),
+                marker,
+                "--wait-seconds",
+                str(timeout),
+            )
+        )
+        command.extend(("-ex", f"shell {wait_command}"))
+    if remote is not None:
+        command.extend(("-ex", f"target remote {remote}"))
     if attach_pid is not None:
         command.extend(("-p", str(attach_pid)))
     if resume:
@@ -174,6 +186,11 @@ def parse_args() -> argparse.Namespace:
     connection.add_argument("--attach", type=int, metavar="PID")
     connection.add_argument("--remote", metavar="HOST:PORT")
     parser.add_argument("--break", dest="breakpoints", action="append", default=[])
+    parser.add_argument(
+        "--wait-log-marker",
+        nargs=2,
+        metavar=("LOG", "MARKER"),
+    )
     parser.add_argument("--batch", action="store_true")
     parser.add_argument("--wait-remote", action="store_true")
     parser.add_argument("--wait-seconds", type=float, default=600.0)
@@ -256,6 +273,11 @@ def main() -> int:
         remote=remote,
         breakpoints=tuple(args.breakpoints),
         program_args=tuple(args.program_args or ()),
+        wait_log_marker=(
+            (Path(args.wait_log_marker[0]).resolve(), args.wait_log_marker[1], args.wait_seconds)
+            if args.wait_log_marker is not None
+            else None
+        ),
         resume=args.resume,
     )
     os.execvp(command[0], command)

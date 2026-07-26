@@ -131,7 +131,8 @@ HOST_COMPONENTS = (
     Component(
         "qbox-host", "QBox platforms-vp host", "qbox", "localhost",
         ("work/qbox-platform/platforms-vp",), ("sc_main", "main"),
-        ("hsoc-stack/tools/qbox", "hsoc-stack/tools/qbox-platform"),
+        ("hsoc-stack/tools/qbox", "hsoc-stack/tools/qbox-platform",
+         "hsoc-stack/tools/qemu"),
         debugger="gdb",
     ),
     Component(
