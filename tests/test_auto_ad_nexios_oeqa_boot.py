@@ -10,14 +10,14 @@ ROOT = Path(__file__).resolve().parents[1]
 OEQA_CASE = (
     ROOT
     / "hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/"
-    / "test_01_auto_ad_nexios_uki_boot.py"
+    / "test_00_apollo_uki_boot.py"
 )
 
 
 def load_module():
     sys.path.insert(0, str(ROOT / "layers/poky/meta/lib"))
     spec = importlib.util.spec_from_file_location(
-        "test_01_auto_ad_nexios_uki_boot", OEQA_CASE
+        "test_00_apollo_uki_boot", OEQA_CASE
     )
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -37,7 +37,7 @@ def test_uki_boot_marker_check_uses_existing_console_log(tmp_path: Path) -> None
     )
     (log_dir / "default_log").symlink_to(default_log.name)
 
-    case = module.AutoAdNexiosUkiBootTest(
+    case = module.ApolloUkiBootTest(
         methodName="test_01_uboot_uki_boot_markers"
     )
     case.console = "default"
@@ -71,7 +71,7 @@ def test_writable_mount_check_queries_each_target() -> None:
                 return 0, ""
             return 1, f"unexpected command: {command}"
 
-    case = module.AutoAdNexiosUkiBootTest(
+    case = module.ApolloUkiBootTest(
         methodName="test_03_writable_mounts"
     )
     case.target = FakeTarget()

@@ -1,0 +1,27 @@
+{
+  "boot": {
+    "selectors": ["test_00_fvp_boot", "test_00_rse_boot", "test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_tfa_secure_partition_boot", "test_00_uboot_boot", "test_00_systemd_boot", "test_00_linux_boot", "test_00_safety_boot", "test_60_linux_connectivity", "test_00_apollo_uki_boot"],
+    "cases": {
+      "rse-boot": ["test_00_rse_boot"],
+      "secure-partition-boot": ["test_00_rse_boot", "test_00_tfa_secure_partition_boot"],
+      "si-cl0-boot": ["test_00_si_cl0_boot"],
+      "si-cl1-boot": ["test_00_si_cl0_boot", "test_00_si_cl1_boot"],
+      "tfa-boot": ["test_00_rse_boot", "test_00_tfa_secure_partition_boot"],
+      "uboot-boot": ["test_00_rse_boot", "test_00_uboot_boot"],
+      "linux-boot": ["test_00_fvp_boot", "test_00_linux_boot"],
+      "apollo-uki": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_00_apollo_uki_boot"]
+    }
+  },
+  "linux": {
+    "selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices", "test_64_linux_pfdi", "test_65_linux_crypto"],
+    "cases": {"connectivity": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity"], "dsu": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu"], "cpu-topology": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_62_linux_cpu_topology"], "fvp-devices": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_63_linux_fvp_devices"], "pfdi": ["test_00_fvp_boot", "test_00_linux_boot", "test_64_linux_pfdi"], "crypto": ["test_00_fvp_boot", "test_00_linux_boot", "test_65_linux_crypto"]}
+  },
+  "rse": {"selectors": ["test_00_rse_boot"], "cases": {}},
+  "safety-island-cl0": {"selectors": ["test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_fvp_boot", "test_00_linux_boot", "test_20_si_cl0_diagnostics", "test_21_si_cl0_pfdi", "test_22_si_cl0_smcf"], "cases": {"diagnostics": ["test_00_si_cl0_boot", "test_20_si_cl0_diagnostics"], "pfdi": ["test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_fvp_boot", "test_00_linux_boot", "test_21_si_cl0_pfdi"], "smcf": ["test_00_si_cl0_boot", "test_22_si_cl0_smcf"]}},
+  "safety-island-cl1": {"selectors": ["test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_fvp_boot", "test_00_linux_boot", "test_30_si_cl1_pfdi", "test_31_si_cl1_hipc"], "cases": {"pfdi": ["test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_30_si_cl1_pfdi"], "hipc": ["test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_fvp_boot", "test_00_linux_boot", "test_31_si_cl1_hipc"]}},
+  "tf-a": {"selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_rse_boot", "test_00_tfa_secure_partition_boot", "test_40_tfa_cpu_topology", "test_41_tfa_ras"], "cases": {"cpu-topology": ["test_00_rse_boot", "test_00_tfa_secure_partition_boot", "test_40_tfa_cpu_topology"], "ras": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_rse_boot", "test_00_tfa_secure_partition_boot", "test_40_tfa_cpu_topology", "test_41_tfa_ras"]}},
+  "u-boot": {"selectors": ["test_00_rse_boot", "test_00_uboot_boot"], "cases": {}},
+  "power": {"selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_rse_boot", "test_70_power_scmi", "test_71_power_cpuidle", "test_72_power_cpufreq", "test_73_power_mbpp"], "cases": {"scmi": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_rse_boot", "test_70_power_scmi"], "cpuidle": ["test_00_fvp_boot", "test_00_linux_boot", "test_71_power_cpuidle"], "cpufreq": ["test_00_fvp_boot", "test_00_linux_boot", "test_72_power_cpufreq"], "mbpp": ["test_00_fvp_boot", "test_00_linux_boot", "test_73_power_mbpp"]}},
+  "trusted-services": {"selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_80_trusted_services"], "cases": {"psa-api": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_80_trusted_services"]}},
+  "all": {"selectors": ["test_00_fvp_boot", "test_00_rse_boot", "test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_00_tfa_secure_partition_boot", "test_00_uboot_boot", "test_00_systemd_boot", "test_00_linux_boot", "test_00_safety_boot", "test_60_linux_connectivity", "test_00_apollo_uki_boot", "test_20_si_cl0_diagnostics", "test_21_si_cl0_pfdi", "test_22_si_cl0_smcf", "test_30_si_cl1_pfdi", "test_31_si_cl1_hipc", "test_40_tfa_cpu_topology", "test_41_tfa_ras", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices", "test_64_linux_pfdi", "test_65_linux_crypto", "test_70_power_scmi", "test_71_power_cpuidle", "test_72_power_cpufreq", "test_73_power_mbpp", "test_80_trusted_services"], "cases": {}}
+}

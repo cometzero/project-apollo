@@ -1,0 +1,14 @@
+{
+  "apollo-fvp": {
+    "controller": "HSOCOEFVPTarget",
+    "image": "nexios-image",
+    "distro": "auto-ad-nexios",
+    "default_suite": "all"
+  },
+  "apollo-qvp": {
+    "controller": "HSOCOEFVPTarget",
+    "image": "nexios-image",
+    "distro": "auto-ad-nexios",
+    "default_suite": "all"
+  }
+}

@@ -78,6 +78,7 @@ def test_inspect_writes_active_apollo_manifest_when_config_is_current(tmp_path: 
         "watchdog",
         "networking",
         "virtiorng",
+        "cpu_hotplug",
     ]
     assert manifest["test_target"] == "HSOCOEFVPTarget"
     assert manifest["test_target_ip"] == "127.0.0.1:2222"
@@ -135,12 +136,14 @@ def test_write_conf_uses_active_override_for_extended_suite(tmp_path: Path) -> N
     tokens = conf.replace('"', " ").split()
     assert 'TEST_SUITES = "' in conf
     assert 'TEST_SUITES:apollo-fvp:auto-ad-nexios = "' in conf
-    assert 'TEST_FVP_DEVICES = "rtc watchdog networking virtiorng"' in conf
+    assert (
+        'TEST_FVP_DEVICES = '
+        '"rtc watchdog networking virtiorng cpu_hotplug"'
+    ) in conf
     assert (
         'TEST_FVP_DEVICES:apollo-fvp:auto-ad-nexios = '
-        '"rtc watchdog networking virtiorng"'
+        '"rtc watchdog networking virtiorng cpu_hotplug"'
     ) in conf
-    assert "cpu_hotplug" not in conf
     assert "test_100_fwu" not in conf
     assert "test_10_pfdi" not in tokens
     assert "test_10_ras_cpu" not in tokens
