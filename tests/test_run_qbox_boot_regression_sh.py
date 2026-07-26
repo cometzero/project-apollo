@@ -76,6 +76,42 @@ def test_run_qbox_boot_regression_wrapper_defaults(tmp_path: Path) -> None:
     assert args[-4:] == ["--threshold", "0.10", "--", "--copy-disks"]
 
 
+def test_run_qbox_boot_regression_forwards_multi_session(tmp_path: Path) -> None:
+    args_file = tmp_path / "args.txt"
+    fake_python = make_fake_python(
+        tmp_path / "python3",
+        f"printf '%s\\n' \"$@\" > {shlex.quote(str(args_file))}\n",
+    )
+    result_root = tmp_path / "results"
+    result_root.mkdir()
+    (result_root / "run_qbox_yocto_baseline.json").write_text(
+        "{}\n",
+        encoding="utf-8",
+    )
+    regression_script = tmp_path / "run_qbox_yocto_boot_regression.py"
+    regression_script.write_text("# fake\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [str(SCRIPT), "--multi-session"],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "PYTHON": str(fake_python),
+            "REGRESSION_SCRIPT": str(regression_script),
+            "RESULT_ROOT": str(result_root),
+        },
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert args_file.read_text(encoding="utf-8").splitlines()[-2:] == [
+        "--",
+        "--multi-session",
+    ]
+
+
 def test_run_qbox_boot_regression_wrapper_forwards_ctrl_c(tmp_path: Path) -> None:
     pid_file = tmp_path / "child.pid"
     int_file = tmp_path / "child.interrupted"

@@ -391,6 +391,14 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
+def test_run_qbox_yocto_multi_session_is_explicit_opt_in(tmp_path: Path) -> None:
+    result = run_dry_run(tmp_path, ["--multi-session"])
+
+    assert result.returncode == 0, result.stderr
+    assert "multi session: 1" in result.stdout
+    assert "multi_session: 1" in result.stdout
+
+
 def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> None:
     # Given: Yocto-style apollo-qvp deploy artifacts with qboxconf/sysroot provider paths.
     result = run_qvp_dry_run(tmp_path)

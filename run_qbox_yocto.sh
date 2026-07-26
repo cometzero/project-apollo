@@ -53,6 +53,7 @@ Options:
   --debug TARGET              Run GDB in the interactive pane; TARGET is one of
                               qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
   --no-attach                 Start tmux session without attaching
+  --multi-session             Preserve existing QBox and tmux sessions
   --dry-run                   Print the underlying QBox runner command
   --help                      Show this help
 
@@ -704,6 +705,7 @@ KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
 NO_ATTACH="${NO_ATTACH:-0}"
 DRY_RUN="${DRY_RUN:-0}"
+MULTI_SESSION="${MULTI_SESSION:-0}"
 RSE_OTP_IMAGE_SIZE="${RSE_OTP_IMAGE_SIZE:-65536}"
 RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
@@ -898,6 +900,10 @@ while (($#)); do
             NO_ATTACH=1
             shift
             ;;
+        --multi-session)
+            MULTI_SESSION=1
+            shift
+            ;;
         --dry-run)
             DRY_RUN=1
             shift
@@ -994,6 +1000,11 @@ while (($#)); do
 done
 
 reject_removed_env
+
+if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
+    "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
+        --stop-existing-sessions
+fi
 
 if [[ -n "${DEBUG_TARGET}" ]]; then
     qbox_debug_configure_target
@@ -1393,6 +1404,9 @@ fi
 if [[ "${HEADLESS}" == "0" && "${DRY_RUN}" == "1" ]]; then
     RUNNER_CMD+=(--dry-run)
 fi
+if [[ "${HEADLESS}" == "0" && "${MULTI_SESSION}" == "1" ]]; then
+    RUNNER_CMD+=(--multi-session)
+fi
 RUNNER_CMD+=("${TMUX_RUNNER_ARGS[@]}")
 if [[ "${HEADLESS}" == "0" ]]; then
     RUNNER_CMD+=(--)
@@ -1448,6 +1462,7 @@ Apollo QBox Yocto launch
   work dir:      ${YOCTO_WORK_DIR}
   output dir:    ${OUT_DIR}
   session:       ${TMUX_SESSION}
+  multi session: ${MULTI_SESSION}
   headless:      ${HEADLESS}
   qboxconf:      ${QBOX_CONF_FILE:-}
   qbox tools:    ${QBOX_TOOL_DIR}
@@ -1483,6 +1498,13 @@ if [[ "${HEADLESS}" == "1" && "${DRY_RUN}" == "1" ]]; then
     printf '%q ' "${RUNNER_CMD[@]}"
     printf '\n'
     exit 0
+fi
+
+if [[ "${HEADLESS}" == "1" ]]; then
+    export QBOX_MANAGED_SESSION=1
+    export QBOX_SESSION_OWNER_UID
+    export QBOX_SESSION_OUT_DIR="${OUT_DIR}"
+    QBOX_SESSION_OWNER_UID="$(id -u)"
 fi
 
 exec "${RUNNER_CMD[@]}"

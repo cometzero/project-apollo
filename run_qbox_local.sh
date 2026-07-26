@@ -25,6 +25,7 @@ RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
 DRY_RUN="${DRY_RUN:-0}"
+MULTI_SESSION="${MULTI_SESSION:-0}"
 LEGACY_FILE_BACKED_SRAM=0
 RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
@@ -132,6 +133,7 @@ Options:
                    run GDB in the interactive shell pane; TARGET is one of
                    qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
   --no-attach
+  --multi-session    preserve existing QBox and tmux sessions
   --dry-run
   --help
 
@@ -372,6 +374,10 @@ parse_args()
                 TMUX_RUNNER_ARGS+=("$1")
                 shift
                 ;;
+            --multi-session)
+                MULTI_SESSION=1
+                shift
+                ;;
             --rootfs)
                 (($# >= 2)) || die "--rootfs requires a value"
                 ROOTFS_OVERRIDE="$2"
@@ -552,6 +558,10 @@ main()
 {
     reject_removed_environment_overrides
     parse_args "$@"
+    if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
+        "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
+            --stop-existing-sessions
+    fi
     require_safe_token MACHINE "${MACHINE}"
     if [[ -n "${DEBUG_TARGET}" ]]; then
         configure_debug_target
@@ -725,6 +735,7 @@ main()
     printf '  machine: %s\n' "${MACHINE}"
     printf '  qboxconf: %s\n' "${QBOX_CONF_FILE:-}"
     printf '  session: %s\n' "${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
+    printf '  multi_session: %s\n' "${MULTI_SESSION}"
     printf '  out_dir: %s\n' "${OUT_DIR}"
     printf '  local_build_dir: %s\n' "${LOCAL_BUILD_DIR}"
     printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
@@ -803,6 +814,9 @@ main()
     fi
     if [[ "${DRY_RUN}" == "1" ]]; then
         runner_cmd+=(--dry-run)
+    fi
+    if [[ "${MULTI_SESSION}" == "1" ]]; then
+        runner_cmd+=(--multi-session)
     fi
     runner_cmd+=("${TMUX_RUNNER_ARGS[@]}")
     runner_cmd+=(--)

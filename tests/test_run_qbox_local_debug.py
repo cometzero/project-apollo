@@ -106,6 +106,7 @@ def test_debug_launcher_help_is_available() -> None:
 
     assert result.returncode == 0
     assert "--vscode" in result.stdout
+    assert "--multi-session" in result.stdout
     assert "--ap-early-attach" in result.stdout
     assert "--firmware-early-attach" in result.stdout
 

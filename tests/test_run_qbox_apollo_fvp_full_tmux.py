@@ -19,6 +19,128 @@ def test_qbox_debug_pane_is_zoomed_for_source_display() -> None:
     assert 'tmux_cmd resize-pane -Z -t "${START_INTERACTIVE_PANE_ID}"' in contents
 
 
+def test_stop_existing_sessions_only_removes_managed_qbox_sessions(
+    tmp_path: Path,
+) -> None:
+    tmux_log = tmp_path / "tmux.log"
+    managed_out = tmp_path / "managed-out"
+    managed_out.mkdir()
+    fake_tmux = tmp_path / "tmux"
+    fake_tmux.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -eu\n"
+        f"printf '%s ' \"$@\" >> {tmux_log}\n"
+        f"printf '\\n' >> {tmux_log}\n"
+        "case \"${1:-}\" in\n"
+        "  list-sessions)\n"
+        "    printf '%s\\n' managed-qbox other-user-qbox user-shell "
+        "apollo-qbox-yocto-20260726-120000\n"
+        "    ;;\n"
+        "  show-options)\n"
+        "    session=\"${4:-}\"\n"
+        "    option=\"${5:-}\"\n"
+        "    if [[ \"${session}:${option}\" == "
+        "\"managed-qbox:@qbox-managed\" ]]; then\n"
+        "      printf '1\\n'\n"
+        "    elif [[ \"${session}:${option}\" == "
+        "\"managed-qbox:@qbox-owner-uid\" ]]; then\n"
+        f"      printf '%s\\n' {os.getuid()}\n"
+        "    elif [[ \"${session}:${option}\" == "
+        "\"managed-qbox:@qbox-out-dir\" ]]; then\n"
+        f"      printf '%s\\n' {managed_out}\n"
+        "    elif [[ \"${session}:${option}\" == "
+        "\"other-user-qbox:@qbox-managed\" ]]; then\n"
+        "      printf '1\\n'\n"
+        "    elif [[ \"${session}:${option}\" == "
+        "\"other-user-qbox:@qbox-owner-uid\" ]]; then\n"
+        f"      printf '%s\\n' {os.getuid() + 1}\n"
+        "    fi\n"
+        "    ;;\n"
+        "  display-message)\n"
+        f"    printf '%s\\n' {os.getpid()}\n"
+        "    ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_tmux.chmod(0o755)
+
+    result = subprocess.run(
+        [str(TMUX_SCRIPT), "--stop-existing-sessions"],
+        cwd=ROOT,
+        env={**os.environ, "TMUX_BIN": str(fake_tmux)},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Stopping previous QBox tmux session: managed-qbox" in result.stdout
+    assert (
+        "Stopping previous QBox tmux session: "
+        "apollo-qbox-yocto-20260726-120000"
+    ) in result.stdout
+    commands = tmux_log.read_text(encoding="utf-8")
+    assert "kill-session -t managed-qbox" in commands
+    assert "kill-session -t apollo-qbox-yocto-20260726-120000" in commands
+    assert "kill-session -t other-user-qbox" not in commands
+    assert "kill-session -t user-shell" not in commands
+
+
+def test_stop_existing_sessions_only_stops_current_users_managed_process(
+    tmp_path: Path,
+) -> None:
+    base_env = {
+        **os.environ,
+        "QBOX_MANAGED_SESSION": "1",
+    }
+    managed = subprocess.Popen(
+        ["bash", "-c", "exec -a run_qbox_apollo_fvp_full.py sleep 300"],
+        env={
+            **base_env,
+            "QBOX_SESSION_OWNER_UID": str(os.getuid()),
+            "QBOX_SESSION_OUT_DIR": str(tmp_path / "managed"),
+        },
+    )
+    other_owner = subprocess.Popen(
+        ["bash", "-c", "exec -a run_qbox_apollo_fvp_full.py sleep 300"],
+        env={
+            **base_env,
+            "QBOX_SESSION_OWNER_UID": str(os.getuid() + 1),
+            "QBOX_SESSION_OUT_DIR": str(tmp_path / "other-owner"),
+        },
+    )
+    unmarked = subprocess.Popen(
+        ["bash", "-c", "exec -a run_qbox_apollo_fvp_full.py sleep 300"],
+        env=os.environ.copy(),
+    )
+    try:
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            cmdline = Path(f"/proc/{managed.pid}/cmdline").read_bytes()
+            if b"run_qbox_apollo_fvp_full.py" in cmdline:
+                break
+            time.sleep(0.01)
+        else:
+            raise AssertionError("managed QBox test process did not exec")
+
+        result = subprocess.run(
+            [str(TMUX_SCRIPT), "--stop-existing-sessions"],
+            cwd=ROOT,
+            env={**os.environ, "TMUX_BIN": str(tmp_path / "missing-tmux")},
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        assert result.returncode == 0, result.stderr
+        managed.wait(timeout=3)
+        assert other_owner.poll() is None
+        assert unmarked.poll() is None
+    finally:
+        for proc in (managed, other_owner, unmarked):
+            terminate_process(proc)
+
+
 def read_until(
     proc: subprocess.Popen[bytes],
     needle: bytes,

@@ -15,6 +15,7 @@ POLL_INTERVAL="${POLL_INTERVAL:-0.5}"
 CONTEXT_LINES="${CONTEXT_LINES:-3}"
 RESULT_WAIT_TIMEOUT="${RESULT_WAIT_TIMEOUT:-}"
 DRY_RUN=0
+MULTI_SESSION=0
 CHILD_PID=""
 
 die()
@@ -48,8 +49,9 @@ Common overrides:
   ./run_qbox_boot_regression.sh -- --copy-disks
 
 Wrapper options:
-  --dry-run      Print the command without running it
-  -h, --help     Show this help
+  --multi-session Preserve existing QBox and tmux sessions
+  --dry-run       Print the command without running it
+  -h, --help      Show this help
 
 All other arguments are passed to scripts/test/run_qbox_yocto_boot_regression.py.
 Arguments after "--" are passed through to run_qbox_yocto.sh by that script.
@@ -118,6 +120,10 @@ main()
                 DRY_RUN=1
                 shift
                 ;;
+            --multi-session)
+                MULTI_SESSION=1
+                shift
+                ;;
             --)
                 extra_args+=("$@")
                 break
@@ -134,6 +140,12 @@ main()
     if ! contains_arg "--record-baseline" "${extra_args[@]}"; then
         [[ -f "${BASELINE}" ]] ||
             die "missing baseline: ${BASELINE}; create it with --record-baseline first"
+    fi
+    if ((MULTI_SESSION)); then
+        if ! contains_arg "--" "${extra_args[@]}"; then
+            extra_args+=(--)
+        fi
+        extra_args+=(--multi-session)
     fi
 
     local -a command=(

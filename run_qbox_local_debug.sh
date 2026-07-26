@@ -17,6 +17,7 @@ DRY_RUN=0
 AP_EARLY_ATTACH=0
 FIRMWARE_EARLY_ATTACH=0
 REPLACE_SESSION=0
+MULTI_SESSION=0
 RUNNER_ARGS=()
 CHILD_ARGS=()
 
@@ -46,6 +47,7 @@ Options:
   --local-build-dir DIR   local Apollo build directory
   --vscode                leave GDB endpoints for VS Code instead of CLI panes
   --replace-session       stop an existing named tmux session before launch
+  --multi-session         preserve other QBox and tmux sessions
   --ap-early-attach       attach AP GDB before TF-A starts (CLI only)
   --firmware-early-attach attach RSE/SI GDB before firmware starts (CLI only)
   --no-attach             start tmux without attaching this terminal
@@ -152,6 +154,10 @@ while (($#)); do
             REPLACE_SESSION=1
             shift
             ;;
+        --multi-session)
+            MULTI_SESSION=1
+            shift
+            ;;
         --ap-early-attach)
             AP_EARLY_ATTACH=1
             shift
@@ -195,6 +201,11 @@ if [[ "${LOCAL_DEBUG_SKIP_MANIFEST:-0}" != "1" ]]; then
     done
 fi
 
+if ((DRY_RUN == 0 && MULTI_SESSION == 0)); then
+    TMUX_BIN="${TMUX_BIN}" "${STOP_QBOX_SESSION_SH}" \
+        --stop-existing-sessions
+fi
+
 if ((DRY_RUN == 0 && REPLACE_SESSION)); then
     if env -u TMUX "${TMUX_BIN}" has-session -t "${SESSION}" 2>/dev/null; then
         printf 'Replacing existing tmux session: %s\n' "${SESSION}"
@@ -222,6 +233,7 @@ command=(
     --no-attach
     "${RUNNER_ARGS[@]}"
 )
+((MULTI_SESSION)) && command+=(--multi-session)
 ((DRY_RUN)) && command+=(--dry-run)
 command+=(
     --

@@ -250,6 +250,13 @@ def test_run_qbox_dry_run_omits_removed_remote_surfaces(tmp_path: Path) -> None:
         assert surface not in result.stderr
 
 
+def test_run_qbox_local_multi_session_is_explicit_opt_in(tmp_path: Path) -> None:
+    result = run_dry_run(tmp_path, ["--multi-session"])
+
+    assert result.returncode == 0, result.stderr
+    assert "multi_session: 1" in result.stdout
+
+
 def test_run_qbox_local_rejects_unsafe_machine_before_deriving_paths(
     tmp_path: Path,
 ) -> None:

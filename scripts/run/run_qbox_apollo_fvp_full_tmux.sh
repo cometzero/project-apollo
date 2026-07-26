@@ -11,6 +11,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 SCRIPT_PATH="${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")"
+CURRENT_UID="$(id -u)"
 
 PYTHON_BIN="${PYTHON:-python3}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
@@ -43,6 +44,7 @@ SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
+MULTI_SESSION="${MULTI_SESSION:-0}"
 DEBUG_TARGET="${DEBUG_TARGET:-}"
 DEBUG_COMPONENT="${DEBUG_COMPONENT:-}"
 DEBUG_ENDPOINT="${DEBUG_ENDPOINT:-}"
@@ -130,6 +132,7 @@ Options:
   --debug-wait-marker S
                        marker paired with --debug-wait-log
   --no-attach          start tmux but do not attach
+  --multi-session      preserve existing QBox tmux sessions
   --dry-run            print the run command and log layout only
   -h, --help           show this help
 
@@ -146,7 +149,7 @@ Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR
   QBOX_CORE_DIR QBOX_PLATFORM_DIR QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   SI_MODE TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
-  TMUX_LAYOUT
+  TMUX_LAYOUT MULTI_SESSION
   TMUX_UART_INPUT_FIFOS
   ROOTFS_BOOTARGS_PROFILE
   QBOX_PERFORMANCE_PRESET LEGACY_FILE_BACKED_SRAM
@@ -560,7 +563,9 @@ wait_pids_exit()
     while ((SECONDS < deadline)); do
         alive=0
         for pid in "$@"; do
-            if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+            if [[ "${pid}" =~ ^[0-9]+$ ]] &&
+                kill -0 "${pid}" 2>/dev/null &&
+                [[ "$(ps -o stat= -p "${pid}" 2>/dev/null || true)" != *Z* ]]; then
                 alive=1
                 break
             fi
@@ -571,22 +576,82 @@ wait_pids_exit()
     return 1
 }
 
-process_matches_out_dir()
+process_is_managed_qbox_session()
 {
     local pid="$1"
     local cmdline=""
+    local env_lines=""
+
+    [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
+    [[ -r "/proc/${pid}/cmdline" && -r "/proc/${pid}/environ" ]] || return 1
+    [[ "$(stat -c %u "/proc/${pid}" 2>/dev/null || true)" == "${CURRENT_UID}" ]] ||
+        return 1
+
+    cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
+    case "${cmdline}" in
+        *"run_qbox_apollo_fvp_full.py"*|*"/platforms-vp"*|*"platforms-vp"*) ;;
+        *) return 1 ;;
+    esac
+
+    env_lines="$(tr '\0' '\n' <"/proc/${pid}/environ" 2>/dev/null || true)"
+    grep -qx 'QBOX_MANAGED_SESSION=1' <<<"${env_lines}" &&
+        grep -qx "QBOX_SESSION_OWNER_UID=${CURRENT_UID}" <<<"${env_lines}"
+}
+
+managed_qbox_session_pids()
+{
+    local proc
+    local pid
+
+    for proc in /proc/[0-9]*; do
+        [[ -d "${proc}" ]] || continue
+        pid="${proc##*/}"
+        if process_is_managed_qbox_session "${pid}"; then
+            printf '%s\n' "${pid}"
+        fi
+    done | sort -n -u
+}
+
+signal_managed_qbox_session_pids()
+{
+    local signal="$1"
+    shift
+    local pid
+
+    for pid in "$@"; do
+        if process_is_managed_qbox_session "${pid}"; then
+            kill "-${signal}" "${pid}" 2>/dev/null || true
+        fi
+    done
+}
+
+stop_existing_managed_processes()
+{
+    local -a pids=()
+
+    mapfile -t pids < <(managed_qbox_session_pids)
+    ((${#pids[@]} > 0)) || return 0
+
+    printf 'Stopping %d previous QBox process(es) owned by UID %s\n' \
+        "${#pids[@]}" "${CURRENT_UID}"
+    signal_managed_qbox_session_pids INT "${pids[@]}"
+    wait_pids_exit 5 "${pids[@]}" ||
+        signal_managed_qbox_session_pids TERM "${pids[@]}"
+    wait_pids_exit 2 "${pids[@]}" ||
+        signal_managed_qbox_session_pids KILL "${pids[@]}"
+}
+
+process_environment_matches_out_dir()
+{
+    local pid="$1"
     local env_lines=""
     local line
     local value
 
     [[ "${pid}" =~ ^[0-9]+$ ]] || return 1
-    [[ -r "/proc/${pid}/cmdline" && -r "/proc/${pid}/environ" ]] || return 1
-
-    cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
-    case "${cmdline}" in
-        *"/platforms-vp"*|*"platforms-vp"*) ;;
-        *) return 1 ;;
-    esac
+    [[ -r "/proc/${pid}/environ" ]] || return 1
+    [[ "$(stat -c %u "/proc/${pid}" 2>/dev/null || true)" == "${CURRENT_UID}" ]] ||
+        return 1
 
     env_lines="$(tr '\0' '\n' <"/proc/${pid}/environ" 2>/dev/null || true)"
     while IFS= read -r line; do
@@ -603,6 +668,21 @@ process_matches_out_dir()
     done <<<"${env_lines}"
 
     return 1
+}
+
+process_matches_out_dir()
+{
+    local pid="$1"
+    local cmdline=""
+
+    [[ -r "/proc/${pid}/cmdline" ]] || return 1
+    cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
+    case "${cmdline}" in
+        *"/platforms-vp"*|*"platforms-vp"*) ;;
+        *) return 1 ;;
+    esac
+
+    process_environment_matches_out_dir "${pid}"
 }
 
 qbox_runtime_pids_for_out_dir()
@@ -660,7 +740,8 @@ stop_session()
         pid="$(<"${pid_file}")"
     fi
 
-    if [[ "${pid}" =~ ^[0-9]+$ ]] && kill -0 "${pid}" 2>/dev/null; then
+    if process_environment_matches_out_dir "${pid}" &&
+        kill -0 "${pid}" 2>/dev/null; then
         mapfile -t pids < <(process_tree_snapshot "${pid}")
     fi
     mapfile -t runtime_pids < <(qbox_runtime_pids_for_out_dir)
@@ -681,6 +762,88 @@ stop_session()
 
     : >"${done_file}"
     tmux_cmd kill-session -t "${session}" 2>/dev/null || true
+}
+
+is_legacy_qbox_session()
+{
+    case "$1" in
+        apollo-qbox-demo-*|apollo-qbox-yocto-*|apollo-qbox-debug-*|apollo-qbox-full-*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+stop_existing_sessions()
+{
+    stop_existing_managed_processes
+    command -v "${TMUX_BIN}" >/dev/null 2>&1 || return 0
+
+    local session
+    local managed
+    local owner_uid
+    local server_pid
+    local session_out_dir
+    local -a sessions=()
+
+    mapfile -t sessions < <(
+        tmux_cmd list-sessions -F '#{session_name}' 2>/dev/null || true
+    )
+    for session in "${sessions[@]}"; do
+        [[ -n "${session}" ]] || continue
+        managed="$(
+            tmux_cmd show-options -v -t "${session}" @qbox-managed \
+                2>/dev/null || true
+        )"
+        if [[ "${managed}" != "1" ]] && ! is_legacy_qbox_session "${session}"; then
+            continue
+        fi
+
+        owner_uid="$(
+            tmux_cmd show-options -v -t "${session}" @qbox-owner-uid \
+                2>/dev/null || true
+        )"
+        if [[ ! "${owner_uid}" =~ ^[0-9]+$ ]]; then
+            server_pid="$(
+                tmux_cmd display-message -p -t "${session}" '#{pid}' \
+                    2>/dev/null || true
+            )"
+            if [[ "${server_pid}" =~ ^[0-9]+$ ]]; then
+                owner_uid="$(
+                    ps -o uid= -p "${server_pid}" 2>/dev/null |
+                        tr -d '[:space:]'
+                )"
+            fi
+        fi
+        if [[ "${owner_uid}" != "${CURRENT_UID}" ]]; then
+            printf 'Skipping QBox tmux session owned by UID %s: %s\n' \
+                "${owner_uid:-unknown}" "${session}" >&2
+            continue
+        fi
+
+        session_out_dir="$(
+            tmux_cmd show-options -v -t "${session}" @qbox-out-dir \
+                2>/dev/null || true
+        )"
+        printf 'Stopping previous QBox tmux session: %s\n' "${session}"
+        if [[ "${session_out_dir}" == /* && -d "${session_out_dir}" ]]; then
+            (
+                OUT_DIR="${session_out_dir}"
+                stop_session "${session}"
+            )
+        else
+            tmux_cmd kill-session -t "${session}" 2>/dev/null || true
+        fi
+    done
+}
+
+mark_managed_session()
+{
+    tmux_cmd set-option -t "${TMUX_SESSION}" @qbox-managed 1
+    tmux_cmd set-option -t "${TMUX_SESSION}" @qbox-owner-uid "${CURRENT_UID}"
+    tmux_cmd set-option -t "${TMUX_SESSION}" @qbox-out-dir "${OUT_DIR}"
 }
 
 print_dry_run()
@@ -736,6 +899,7 @@ print_dry_run()
     cat <<EOF
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
+  multi_session: ${MULTI_SESSION}
   si_mode: ${SI_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
@@ -1200,6 +1364,7 @@ start_tmux()
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
     validate_bool "TMUX_UART_INPUT_FIFOS" "${TMUX_UART_INPUT_FIFOS}"
+    validate_bool "MULTI_SESSION" "${MULTI_SESSION}"
     validate_tmux_layout "${TMUX_LAYOUT}"
     if [[ -n "${DEBUG_COMPONENT}" ]]; then
         [[ -n "${DEBUG_TARGET}" ]] || die "--debug-component requires --debug-target"
@@ -1262,6 +1427,9 @@ start_tmux()
         return 0
     fi
 
+    if [[ "${MULTI_SESSION}" == "0" ]]; then
+        stop_existing_sessions
+    fi
     if tmux_cmd has-session -t "${TMUX_SESSION}" 2>/dev/null; then
         die "tmux session already exists: ${TMUX_SESSION}"
     fi
@@ -1271,6 +1439,9 @@ start_tmux()
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
         printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
+        printf 'QBOX_MANAGED_SESSION=1 QBOX_SESSION_OWNER_UID=%q ' \
+            "${CURRENT_UID}"
+        printf 'QBOX_SESSION_OUT_DIR=%q ' "${OUT_DIR}"
         printf 'QBOX_CORE_DIR=%q QBOX_PLATFORM_DIR=%q QBOX_PLATFORM_BUILD_DIR=%q ' \
             "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
         printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
@@ -1340,6 +1511,7 @@ start_tmux()
             tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' \
                 -s "${TMUX_SESSION}" -n qbox bash -lc "${platform_pane_body}"
         )"
+        mark_managed_session
         tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
         tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
         tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
@@ -1356,6 +1528,7 @@ start_tmux()
     else
         local runner_pane_id
         runner_pane_id="$(tmux_cmd new-session -d "${new_session_size_args[@]}" -P -F '#{pane_id}' -s "${TMUX_SESSION}" -n qbox bash -lc "${supervisor_body}")"
+        mark_managed_session
         tmux_cmd set-option -t "${TMUX_SESSION}" mouse on
         tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-status top
         tmux_cmd set-window-option -t "${TMUX_SESSION}:qbox" pane-border-format '#{pane_index}: #{pane_title}'
@@ -1412,6 +1585,11 @@ if [[ "${1:-}" == "--stop-session" ]]; then
     shift
     stop_session "$@"
     exit $?
+fi
+
+if [[ "${1:-}" == "--stop-existing-sessions" ]]; then
+    stop_existing_sessions
+    exit 0
 fi
 
 if [[ "${1:-}" == "--rebalance-fvp-like-log-panes" ]]; then
@@ -1589,6 +1767,10 @@ while (($# > 0)); do
             ;;
         --no-attach)
             NO_ATTACH=1
+            shift
+            ;;
+        --multi-session)
+            MULTI_SESSION=1
             shift
             ;;
         --dry-run)
