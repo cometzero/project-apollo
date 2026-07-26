@@ -67,21 +67,37 @@ exported.
 
 1. Run static map and boundary checks.
 2. Run the narrow component test.
-3. Run the full Apollo service-model mode for focused AP changes.
-4. Run the full Apollo system for cross-domain changes.
-5. Audit full-system coverage from the generated `result.json`.
+3. Use a root interactive launcher only for login/BSP/manual debugging.
+4. Run the full Apollo service-model mode for focused AP changes.
+5. Run the full Apollo system for cross-domain changes.
+6. Run the headless regression wrapper for timing/error comparisons.
+7. Audit full-system coverage from the generated `result.json`.
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode service-model --timeout 600
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --timeout 600
+./run_qbox_boot_regression.sh --record-baseline
+./run_qbox_boot_regression.sh
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json <runtime-result.json> \
   --output build/qbox-apollo-qvp/full-coverage-audit.json
 ```
 
 Use the lower-level RSE runner only for focused RSE compatibility evidence.
+The regression comparison requires its JSON baseline; create it with
+`--record-baseline` before the first plain invocation.
+
+`run_qbox_local.sh` and `run_qbox_yocto.sh` replace only managed sessions and
+processes owned by the current UID. Use `--multi-session` to preserve existing
+QBox sessions. The convenience launchers pass `--no-post-login-probe`; use the
+canonical Python runner for full post-login qualification.
+
+For source-level debug, select one of `qbox`, `rse`, `si_cl0`, `si_cl1`,
+`tf-a`, `u-boot`, or `linux` with the root launcher. Yocto debug requires
+interactive tmux. `run_qbox_local_debug.sh` exposes the fixed host/RSE/SI0/SI1/AP
+endpoints for multi-domain work.
 
 ## Evidence
 

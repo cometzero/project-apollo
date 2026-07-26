@@ -12,13 +12,15 @@ description: QBox/SystemC/QEMU co-simulation workflow for Apollo. Use for QBox C
 - Apollo platform entrypoints: `hsoc-stack/tools/qbox-platform/platforms/apollo`
 - local QEMU/libqemu: `hsoc-stack/tools/qemu`
 - local build tree: `build/local-${MACHINE}/work/qbox-platform`
-- full-system evidence: `build/qbox-apollo-qvp`
+- QVP full-system evidence: `build/qbox-apollo-qvp`
+- explicit FVP-comparison evidence: `build/qbox-apollo-fvp`
 
 Archived candidates in `hsoc-stack/tools/qbox-platform/patch-qbox` are not
 applied by normal builds. Change the owning repository directly unless the user
 explicitly requests an archived patch.
 
-Read `build/conf/local.conf`, relevant QBox READMEs, CMake files, Lua
+Read `build/conf/local.conf`, `build/conf/bblayers.conf`,
+`build/conf/templateconf.cfg`, relevant QBox READMEs, CMake files, Lua
 entrypoints, and existing tests before editing. Delegate deep implementation
 with `agent_type = "qbox_dev"` (`gpt-5.6-sol`, high); use
 `agent_type = "systemc_dev"` (`gpt-5.6-sol`, high) for reusable
@@ -79,11 +81,28 @@ python3 scripts/test/audit_qbox_core_boundary.py
 
 ## Runtime
 
+Interactive boot/login launchers:
+
+```bash
+./run_qbox_local.sh
+./run_qbox_yocto.sh
+./run_qbox_yocto.sh --bsp
+```
+
+They use `live-cl0-cl1`, disable the shared post-login probe, and replace only
+current-UID managed QBox sessions unless `--multi-session` is set. Do not use
+their tmux/login marker alone as a full qualification claim.
+
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --timeout 600
 ```
 
 Inspect the generated `result.json`, per-domain UART logs, and coverage audit.
-Do not use tmux screen contents alone as proof. Report files changed, owning
-repositories, commands, build/runtime results, and unresolved fidelity gaps.
+For timing/error regression, create the first JSON baseline with
+`./run_qbox_boot_regression.sh --record-baseline`, then use
+`./run_qbox_boot_regression.sh` for comparisons. QBox GDB targets are `qbox`,
+`rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and `linux`; Yocto debug is
+interactive and cannot be combined with `--headless`. Do not use tmux screen
+contents alone as proof. Report files changed, owning repositories, commands,
+build/runtime results, and unresolved fidelity gaps.

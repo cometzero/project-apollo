@@ -23,12 +23,14 @@ The active baseline is:
 
 - machine: `apollo-qvp`
 - template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp`
-- image target: `nexios-image`
+- default image targets: `nexios-bsp-initramfs`, then `nexios-image`
+- BSP-only build: `./yocto_build.sh --bsp`
 - variant: `cfg2`
 - Primary Compute CPUs: `4`
 - BitBake TMPDIR: `build/tmp_baremetal`
 - local build root: `build/local-${MACHINE}`
-- QBox runtime evidence: `build/qbox-apollo-qvp`
+- QBox QVP runtime evidence: `build/qbox-apollo-qvp`
+- explicit FVP-comparison QBox evidence: `build/qbox-apollo-fvp`
 
 Apollo FVP remains a reference, comparison, and source-level debug path. Do
 not describe it as the active Yocto default.
@@ -94,15 +96,38 @@ python3 scripts/test/audit_qbox_core_boundary.py
 ./local_build.sh qbox
 source layers/poky/oe-init-build-env build
 bitbake <recipe> -c compile
+bitbake nexios-bsp-initramfs -c rootfs
+./yocto_build.sh --bsp
 ./yocto_build.sh
 ```
 
-QBox full-system runtime:
+`./yocto_build.sh` builds the standalone BusyBox BSP image before the full
+product image. `--bsp` builds only `nexios-bsp-initramfs`. The local flow uses
+a separate Buildroot CPIO while reusing `nexios-bsp-init` and the BSP self-test
+contract.
+
+Interactive QBox login/BSP launch:
+
+```bash
+./run_qbox_local.sh
+./run_qbox_yocto.sh
+./run_qbox_yocto.sh --bsp
+```
+
+These launchers replace only current-UID managed QBox sessions by default;
+`--multi-session` preserves existing sessions. They intentionally disable the
+shared post-login probe. QBox full-system qualification uses:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
   --si-mode live-cl0-cl1 --timeout 600
 ```
+
+QBox debug supports `qbox`, `rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and
+`linux` through `run_qbox_local.sh` or `run_qbox_yocto.sh`. Use
+`run_qbox_local_debug.sh` for the multi-domain fixed-port layout. FVP QVP
+debug uses `run_fvp.sh --machine apollo-qvp --debug <target>` with
+lite-cornea/Iris.
 
 Explicit FVP comparison runtime:
 

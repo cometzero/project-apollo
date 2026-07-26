@@ -21,7 +21,8 @@ Current baseline:
 - Poky/Yocto: 5.2.4
 - machine: `apollo-qvp`
 - template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp`
-- image: `nexios-image`
+- default images: `nexios-bsp-initramfs`, then `nexios-image`
+- BSP-only selection: `./yocto_build.sh --bsp`
 - TMPDIR: `build/tmp_baremetal`
 - variant: cfg2
 
@@ -33,9 +34,10 @@ source layers/poky/oe-init-build-env build
 
 ## Layer Ownership
 
-- product, distro, image, template, and dynamic-layer policy:
+- product, distro, BSP/product image recipes, template, and dynamic-layer
+  policy:
   `hsoc-stack/yocto/meta-hsoc-auto-solutions`
-- BSP, firmware, kernel, module signing, OP-TEE, and machine integration:
+- machine, WIC, firmware, kernel, module signing, OP-TEE, and BSP integration:
   `hsoc-stack/yocto/meta-hsoc-bsp`
 - shared automotive metadata: `sw-ref-stack/yocto/meta-arm-auto-solutions`
 - reference Zena metadata: `arm-zena-css/yocto`
@@ -83,9 +85,18 @@ bitbake <recipe> -c install
 bitbake <recipe> -c package
 bitbake <recipe> -c package_qa
 bitbake <recipe> -c populate_lic
+bitbake nexios-bsp-initramfs -c rootfs
+bitbake nexios-bsp-initramfs -c image_complete
 bitbake nexios-image -c rootfs
+./yocto_build.sh --bsp
 ./yocto_build.sh
 ```
+
+For BSP initramfs, UKI, WIC, qboxconf/fvpconf, boot-state, kernel-module, or
+PFDI changes, validate the narrow owning recipe first and then
+`nexios-bsp-initramfs`. A successful rootfs task does not prove the UKI/WIC or
+runtime boot contract. Require the deployed artifacts and, when requested, the
+`NEXIOS_BSP_INITRAMFS_READY` plus `nexios-bsp#` runtime markers.
 
 Use `$yocto-review` for review-only work. Route read-only diagnosis with
 `agent_type = "yocto-expert"` (`gpt-5.6-sol`, high) and metadata

@@ -11,8 +11,9 @@ The traditional Yocto build directory is initialized under `build/`:
 - top-level `yocto_build.sh`
 
 Current selected values are `MACHINE = "apollo-qvp"`, cfg2, four Primary
-Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and image target
-`nexios-image`. Poky is pinned to the Yocto 5.2.4 baseline.
+Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and default image targets
+`nexios-bsp-initramfs` plus `nexios-image`. `./yocto_build.sh --bsp` selects
+only the BSP image. Poky is pinned to the Yocto 5.2.4 baseline.
 
 ## Source Zones
 
@@ -36,6 +37,7 @@ Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and image target
 - QVP deploy images: `build/tmp_baremetal/deploy/images/apollo-qvp/`
 - local component build: `build/local-${MACHINE}/`
 - QBox full-system runtime: `build/qbox-apollo-qvp/full-<timestamp>/`
+- explicit FVP-comparison QBox runtime: `build/qbox-apollo-fvp/`
 - explicit FVP runtime: `build/local-apollo-fvp/fvp-boot/`
 
 Generated evidence can be stale relative to source. Record the command and
