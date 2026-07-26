@@ -2,7 +2,8 @@
 
 작성일: 2026-07-21
 
-대상: 로컬 빌드 `apollo-fvp`와 `FVP_Zena_CSS_Cfg2`
+대상: Yocto `apollo-qvp`, 로컬 빌드 `apollo-fvp`,
+`FVP_Zena_CSS_Cfg2`
 
 기본 Iris endpoint: `localhost:7100`
 
@@ -16,18 +17,70 @@
 | --- | --- |
 | `scripts/debug/run_local_fvp_debug.sh` | local FVP를 기본 halted 상태로 실행하고 Iris server를 열며, 선택적으로 symbolic breakpoint까지 자동 설치한다. |
 | `scripts/debug/local_debug_iris.py` | `symbols.json`을 읽어 Iris target을 찾고 program breakpoint를 설치한 뒤 실행/정지/종료한다. |
+| `run_fvp.sh --machine apollo-qvp --debug TARGET` | Yocto FVP를 halted 상태로 실행하고 `lite-cornea`를 통해 interactive GDB pane을 연다. |
+| `scripts/debug/run_fvp_cornea_gdb.sh` | Iris server 준비를 기다린 후 component GDB command file과 `lite-cornea` proxy를 연결한다. |
 | `scripts/setup/setup_local_debug_env.py` | unstripped ELF를 찾아 `symbols.json`과 component별 GDB command file을 생성한다. |
 | `scripts/run/run_local_fvp_tmux.sh` | FVP process, UART log 및 tmux session을 관리하는 하위 실행기이다. |
 
-`FVP_Zena_CSS_Cfg2`는 GDB remote stub 대신 Iris debug server를 제공한다. 따라서
-live target 제어는 Iris 또는 Iris-capable debugger를 사용하고,
-`gdb-multiarch`는 ELF symbol, source line 및 주소를 사전 확인하는 용도로
-사용한다.
+`FVP_Zena_CSS_Cfg2` 자체는 GDB remote stub 대신 Iris debug server를 제공한다.
+로컬 one-shot 자동화는 Iris Python API를 직접 사용한다. Yocto interactive
+디버깅은 Apache-2.0 `lite-cornea`가 GDB RSP와 Iris를 변환하므로
+`gdb-multiarch`에서 symbol, source, breakpoint, step 및 Ctrl+C run-control을
+사용할 수 있다.
 
 [Arm의 Iris 소개](https://developer.arm.com/community/arm-community-blogs/b/tools-software-ides-blog/posts/iris-the-new-debug-and-trace-interface-in-arm-models)는
 Iris가 network connection과 Python API를 통해 simulation, debug 및 trace를
 제어하는 interface임을 설명한다. 최신 Fast Models에서는 `--iris-server`를
 사용해 server를 활성화한다.
+
+### 1.1 GDB backend 선정
+
+세 후보를 현재 FVP 11.31과 소스 수준으로 비교했다.
+
+| 후보 | 장점 | 결정적인 한계 | 판정 |
+| --- | --- | --- | --- |
+| Iris Python 직접 구현 | 설치된 공식 API만 사용하며 모든 Iris target을 제어할 수 있다. | GDB의 DWARF expression, backtrace, source UI를 다시 구현해야 한다. 기존 helper는 RSE의 여러 memory space에 breakpoint를 자동 복제하지 않아 동일 시험에서 timeout 되었다. | one-shot 자동화에 유지 |
+| [`lite-cornea`](https://github.com/Linaro/lite-cornea) | Apache-2.0, Rust `gdbstub` 기반이며 AArch64/Thumb, breakpoint, watchpoint, step, Ctrl+C를 구현한다. GDB pipe 안에서 바로 실행된다. | 2024년 이후 archived이며 single-core GDB view이고 register/memory write는 아직 지원하지 않는다. | interactive backend로 선정 |
+| [`iris-gdb-wrapper`](https://github.com/santongding/iris-gdb-wrapper) | Python 파일 수가 적다. | 라이선스가 없고 Iris 경로와 RSP port가 하드코딩되어 있다. 단일 `recv()`가 RSP packet 하나라고 가정하며 Ctrl+C, thread, write, watchpoint 처리가 없다. | 채택하지 않음 |
+
+`lite-cornea-native` recipe는 GitHub `SRC_URI`에서
+`eebf9124814b7fad02920989d9d635891e22c1e1` revision을 받아 재현 가능한 Cargo
+native build를 수행한다. Apollo QVP machine 설정의 `EXTRA_IMAGEDEPENDS`가
+일반 image와 BSP initramfs image의 task graph에 이 host tool을 추가하므로
+`yocto_build.sh`는 image target만 요청한다. Launcher는
+`tmp_baremetal/sysroots-components/<build-arch>/lite-cornea-native/usr/bin/cornea`
+만 사용하며 별도 source checkout이나 host Cargo build를 수행하지 않는다. 이
+revision의 미지원 write 동작을 감안하여 현재 통합은 source inspection, read,
+breakpoint, watchpoint, step 및 continue 용도로 한정한다.
+
+Apollo QVP FVP 11.31 실기 시험에서는 RSE CPU에 연결한 뒤 GDB가
+`Reset_Handler`의 `startup_rse_bl1_1.c:270`에서 정지하고 PC
+`0x110004f4`, source와 disassembly를 모두 표시했다.
+
+### 1.2 Yocto Apollo QVP 실행
+
+인자 없이 `--debug`를 사용하면 지원 target만 출력한다.
+
+```bash
+./run_fvp.sh --machine apollo-qvp --debug
+```
+
+대상을 선택하면 FVP는 halted 상태로 시작하며 마지막 tmux shell pane이 GDB
+pane으로 바뀐다.
+
+```bash
+./run_fvp.sh --machine apollo-qvp --debug rse
+./run_fvp.sh --machine apollo-qvp --debug si_cl0
+./run_fvp.sh --machine apollo-qvp --debug si_cl1
+./run_fvp.sh --machine apollo-qvp --debug tf-a
+./run_fvp.sh --machine apollo-qvp --debug u-boot
+./run_fvp.sh --machine apollo-qvp --debug linux
+```
+
+Launcher는 선택한 recipe의 최신 unstripped Yocto ELF를 찾고
+`<out-dir>/debug/symbols.json`과 GDB command file을 생성한다. GDB가 연결되면
+model을 실행하여 target의 기본 entrypoint에서 정지한다. 이후 일반 GDB처럼
+`break`, `continue`, `step`, `info registers`, `x`와 Ctrl+C를 사용한다.
 
 ## 2. 전체 흐름
 
@@ -253,10 +306,10 @@ tmux list-sessions
 tmux kill-session -t apollo-fvp-iris
 ```
 
-## 6. GDB로 symbol과 source를 사전 확인
+## 6. GDB command file로 symbol과 source 확인
 
-GDB command file은 live control용이 아니라 ELF의 symbol/address/source mapping을
-검증하기 위한 것이다.
+같은 GDB command file을 offline symbol/address/source 사전 확인과
+`run_fvp.sh --debug TARGET`의 live target 연결에 함께 사용한다.
 
 ```bash
 gdb-multiarch -x build/local-apollo-fvp/debug/gdb/u-boot.gdb
