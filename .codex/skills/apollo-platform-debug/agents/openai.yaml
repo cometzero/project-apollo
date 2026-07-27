@@ -1,0 +1,4 @@
+interface:
+  display_name: "Apollo Platform Debug"
+  short_description: "Run bounded FVP and QBox debug probes"
+  default_prompt: "Use $apollo-platform-debug to run a bounded breakpoint probe and analyze its artifacts."
