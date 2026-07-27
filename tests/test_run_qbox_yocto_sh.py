@@ -361,6 +361,35 @@ def test_run_qbox_yocto_debug_rejects_headless_mode(tmp_path: Path) -> None:
     assert "--debug requires the interactive tmux layout" in result.stderr
 
 
+def test_run_qbox_yocto_probe_mode_uses_headless_agent_runner(
+    tmp_path: Path,
+) -> None:
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=[
+            "--debug",
+            "tf-a",
+            "--debug-mode",
+            "probe",
+            "--debug-timeout",
+            "90",
+        ],
+    )
+
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_command_argv(result.stdout)
+    assert argv[1].endswith("run_agent_qbox_debug.py")
+    assert argv[argv.index("--mode") + 1] == "probe"
+    assert argv[argv.index("--breakpoint") + 1] == "bl2_main"
+    assert argv[argv.index("--timeout") + 1] == "90"
+    assert not any("gdb_snapshot_hold" in value for value in argv)
+    assert argv[argv.index("--wait-marker") + 1] == (
+        "QBox GDB entry breakpoint reached:"
+    )
+    assert "run_qbox_apollo_fvp_full_tmux.sh" not in argv
+    assert any(value.endswith("run_qbox_apollo_fvp_full.py") for value in argv)
+
+
 def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     result = run_dry_run(tmp_path)
 

@@ -168,6 +168,32 @@ def test_debug_accepts_custom_iris_port(tmp_path: Path) -> None:
     assert "--iris-server --iris-port 7110 --print-port-number" in result.stdout
 
 
+def test_probe_mode_uses_headless_agent_runner(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(
+        tmp_path,
+        "--debug",
+        "tf-a",
+        "--debug-mode",
+        "probe",
+        "--debug-timeout",
+        "90",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "debug mode: probe" in result.stdout
+    assert "run_agent_fvp_debug.py" in result.stdout
+    assert "--breakpoint bl2_main" in result.stdout
+    assert "--timeout 90" in result.stdout
+    assert "run_qbox_apollo_fvp_full_tmux.sh" not in result.stdout
+
+
+def test_debug_mode_requires_target(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(tmp_path, "--debug-mode", "probe")
+
+    assert result.returncode != 0
+    assert "--debug-mode requires --debug TARGET" in result.stderr
+
+
 def test_cornea_gdb_primes_iris_before_remote_attach(tmp_path: Path) -> None:
     fake_bin_dir = tmp_path / "bin"
     fake_bin_dir.mkdir()

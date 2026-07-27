@@ -32,6 +32,11 @@ DEBUG_DIR=""
 DEBUG_MANIFEST=""
 DEBUG_GDB_SCRIPT=""
 DEBUG_ELF=""
+DEBUG_ENTRY_ADDRESS=""
+DEBUG_MODE="${DEBUG_MODE:-interactive}"
+DEBUG_MODE_SET=0
+DEBUG_TIMEOUT="${DEBUG_TIMEOUT:-600}"
+DEBUG_RESULT="${DEBUG_RESULT:-}"
 
 usage()
 {
@@ -57,6 +62,9 @@ Options:
   --runfvp-bin PATH    runfvp executable (default: ${RUNFVP_BIN})
   --debug TARGET       run GDB through lite-cornea and Iris; TARGET is one of
                        rse, si_cl0, si_cl1, tf-a, u-boot, or linux
+  --debug-mode MODE    interactive, probe, or server (default: ${DEBUG_MODE})
+  --debug-timeout SEC  probe/server deadline in seconds (default: ${DEBUG_TIMEOUT})
+  --debug-result PATH  probe/server JSON result path
   --iris-port PORT     Iris TCP port for --debug (default: ${IRIS_PORT})
   --no-attach          start tmux but do not attach
   --dry-run            print the resolved command and log layout only
@@ -758,6 +766,7 @@ EOF
 
 FVP debug
   debug backend: lite-cornea
+  debug mode: ${DEBUG_MODE}
   debug target: ${DEBUG_TARGET}
   component: ${DEBUG_COMPONENT}
   entrypoint: ${DEBUG_ENTRYPOINT}
@@ -765,14 +774,52 @@ FVP debug
   iris port: ${IRIS_PORT}
   manifest: ${DEBUG_MANIFEST}
   cornea: ${CORNEA_BIN}
+  timeout: ${DEBUG_TIMEOUT}
+  result: ${DEBUG_RESULT}
 EOF
     fi
 }
 
+run_fvp_agent_debug()
+{
+    mapfile -t EXTRA_ARGS <"${EXTRA_ARGS_FILE}"
+    local -a runfvp_cmd=("${RUNFVP_BIN}" "-t" "none" "${FVP_CONF}")
+    if ((${#EXTRA_ARGS[@]} > 0)); then
+        runfvp_cmd+=("--" "${EXTRA_ARGS[@]}")
+    fi
+    local -a agent_cmd=(
+        python3 "${ROOT_DIR}/scripts/debug/run_agent_fvp_debug.py"
+        --mode "${DEBUG_MODE}"
+        --target "${DEBUG_TARGET}"
+        --component "${DEBUG_COMPONENT}"
+        --breakpoint "${DEBUG_ENTRYPOINT}"
+        --expected-pc "${DEBUG_ENTRY_ADDRESS}"
+        --iris-instance "${DEBUG_IRIS_INSTANCE}"
+        --iris-port "${IRIS_PORT}"
+        --manifest "${DEBUG_MANIFEST}"
+        --cornea "${CORNEA_BIN}"
+        --out-dir "${OUT_DIR}"
+        --result "${DEBUG_RESULT}"
+        --timeout "${DEBUG_TIMEOUT}"
+        --runner-cwd "${ROOT_DIR}"
+        --
+        "${runfvp_cmd[@]}"
+    )
+
+    if ((DRY_RUN)); then
+        print_dry_run
+        printf '  agent command: %s\n' "$(quote_args "${agent_cmd[@]}")"
+        return 0
+    fi
+    exec "${agent_cmd[@]}"
+}
+
 start_tmux()
 {
-    validate_tmux_name "${TMUX_SESSION}"
-    require_command "${TMUX_BIN}"
+    if [[ "${DEBUG_MODE}" == "interactive" ]]; then
+        validate_tmux_name "${TMUX_SESSION}"
+        require_command "${TMUX_BIN}"
+    fi
     require_command python3
 
     [[ -x "${RUNFVP_BIN}" ]] || die "runfvp not executable: ${RUNFVP_BIN}"
@@ -797,6 +844,8 @@ start_tmux()
             fvp_debug_port_in_use &&
                 die "Iris port is already in use: ${IRIS_PORT}"
             fvp_debug_prepare_manifest
+        else
+            DEBUG_ENTRY_ADDRESS="<resolved-from-manifest>"
         fi
     fi
 
@@ -812,6 +861,11 @@ start_tmux()
         printf '%s\n' "${arg}" >>"${extra_args_file}"
     done
     EXTRA_ARGS_FILE="${extra_args_file}"
+
+    if [[ -n "${DEBUG_TARGET}" && "${DEBUG_MODE}" != "interactive" ]]; then
+        run_fvp_agent_debug
+        return 0
+    fi
 
     if ((DRY_RUN)); then
         print_dry_run
@@ -955,6 +1009,22 @@ while (($# > 0)); do
             DEBUG_TARGET="$2"
             shift 2
             ;;
+        --debug-mode)
+            (($# >= 2)) || die "--debug-mode requires a value"
+            DEBUG_MODE="$2"
+            DEBUG_MODE_SET=1
+            shift 2
+            ;;
+        --debug-timeout)
+            (($# >= 2)) || die "--debug-timeout requires a value"
+            DEBUG_TIMEOUT="$2"
+            shift 2
+            ;;
+        --debug-result)
+            (($# >= 2)) || die "--debug-result requires a value"
+            DEBUG_RESULT="$2"
+            shift 2
+            ;;
         --iris-port)
             (($# >= 2)) || die "--iris-port requires a value"
             IRIS_PORT="$2"
@@ -1007,6 +1077,13 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
         die "invalid Iris port: ${IRIS_PORT}"
     fi
     fvp_debug_configure_target
+    case "${DEBUG_MODE}" in
+        interactive|probe|server) ;;
+        *) die "invalid --debug-mode: ${DEBUG_MODE}" ;;
+    esac
+    [[ "${DEBUG_TIMEOUT}" =~ ^[0-9]+([.][0-9]+)?$ ]] &&
+        [[ "${DEBUG_TIMEOUT}" != "0" && "${DEBUG_TIMEOUT}" != "0.0" ]] ||
+        die "invalid --debug-timeout: ${DEBUG_TIMEOUT}"
     for arg in "${EXTRA_FVP_ARGS[@]}"; do
         case "${arg}" in
             --iris-server|--iris-port|--iris-connect|--print-port-number|--run)
@@ -1020,6 +1097,8 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
         --print-port-number
         "${EXTRA_FVP_ARGS[@]}"
     )
+elif ((DEBUG_MODE_SET)); then
+    die "--debug-mode requires --debug TARGET"
 fi
 DEPLOY_DIR="$(abspath "$(resolve_deploy_dir)")"
 resolved_fvpconf="$(resolve_fvpconf "${DEPLOY_DIR}" || true)"
@@ -1057,5 +1136,10 @@ if [[ -z "${OUT_DIR}" ]]; then
     fi
 fi
 OUT_DIR="$(abspath "${OUT_DIR}")"
+if [[ -z "${DEBUG_RESULT}" ]]; then
+    DEBUG_RESULT="${OUT_DIR}/debug-result.json"
+else
+    DEBUG_RESULT="$(abspath "${DEBUG_RESULT}")"
+fi
 
 start_tmux

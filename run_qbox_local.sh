@@ -25,6 +25,7 @@ KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 MULTI_SESSION="${MULTI_SESSION:-0}"
+HEADLESS="${HEADLESS:-0}"
 LEGACY_FILE_BACKED_SRAM=0
 RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
@@ -44,6 +45,10 @@ DEBUG_WAIT_LOG=""
 DEBUG_WAIT_MARKER=""
 DEBUG_CPU_PARAM=""
 DEBUG_PLATFORM_PARAMS=()
+DEBUG_MODE="${DEBUG_MODE:-interactive}"
+DEBUG_MODE_SET=0
+DEBUG_TIMEOUT="${DEBUG_TIMEOUT:-600}"
+DEBUG_RESULT="${DEBUG_RESULT:-}"
 
 QBOX_BUILD_DIR_EXPLICIT=0
 QBOX_CONF_EXPLICIT=0
@@ -130,6 +135,13 @@ Options:
   --debug TARGET
                    run GDB in the interactive shell pane; TARGET is one of
                    qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
+  --debug-mode MODE
+                   interactive, probe, or server (default: interactive)
+  --debug-timeout SEC
+                   probe/server deadline in seconds (default: 600)
+  --debug-result PATH
+                   probe/server JSON result path
+  --headless       run without tmux and write logs under --out-dir
   --no-attach
   --multi-session    preserve existing QBox and tmux sessions
   --dry-run
@@ -363,6 +375,26 @@ parse_args()
                 DEBUG_TARGET="$2"
                 shift 2
                 ;;
+            --debug-mode)
+                (($# >= 2)) || die "--debug-mode requires a value"
+                DEBUG_MODE="$2"
+                DEBUG_MODE_SET=1
+                shift 2
+                ;;
+            --debug-timeout)
+                (($# >= 2)) || die "--debug-timeout requires a value"
+                DEBUG_TIMEOUT="$2"
+                shift 2
+                ;;
+            --debug-result)
+                (($# >= 2)) || die "--debug-result requires a value"
+                DEBUG_RESULT="$2"
+                shift 2
+                ;;
+            --headless)
+                HEADLESS=1
+                shift
+                ;;
             --no-attach)
                 TMUX_RUNNER_ARGS+=("$1")
                 shift
@@ -558,6 +590,21 @@ main()
     require_safe_token MACHINE "${MACHINE}"
     if [[ -n "${DEBUG_TARGET}" ]]; then
         configure_debug_target
+        case "${DEBUG_MODE}" in
+            interactive|probe|server) ;;
+            *) die "invalid --debug-mode: ${DEBUG_MODE}" ;;
+        esac
+        [[ "${DEBUG_TIMEOUT}" =~ ^[0-9]+([.][0-9]+)?$ ]] &&
+            [[ "${DEBUG_TIMEOUT}" != "0" && "${DEBUG_TIMEOUT}" != "0.0" ]] ||
+            die "invalid --debug-timeout: ${DEBUG_TIMEOUT}"
+        if [[ "${DEBUG_MODE}" == "interactive" ]]; then
+            [[ "${HEADLESS}" == "0" ]] ||
+                die "--debug requires the interactive tmux layout; remove --headless"
+        else
+            HEADLESS=1
+        fi
+    elif [[ "${DEBUG_MODE_SET}" == "1" ]]; then
+        die "--debug-mode requires --debug TARGET"
     fi
 
     YOCTO_BUILD_DIR="$(abspath "${YOCTO_BUILD_DIR}")"
@@ -645,6 +692,8 @@ main()
             debug_port="${DEBUG_ENDPOINT##*:}"
             port_in_use "${debug_port}" &&
                 die "GDB port is already in use: ${debug_port}"
+        else
+            DEBUG_ENTRY_ADDRESS="<resolved-from-manifest>"
         fi
     fi
 
@@ -723,12 +772,14 @@ main()
     local netdev
     ssh_port="$(find_free_port)"
     netdev="${QBOX_NETDEV:-type=user,hostfwd=tcp::${ssh_port}-:22}"
+    export QBOX_APOLLO_NETDEV="${netdev}"
 
     printf 'Apollo QBox local launch\n'
     printf '  machine: %s\n' "${MACHINE}"
     printf '  qboxconf: %s\n' "${QBOX_CONF_FILE:-}"
     printf '  session: %s\n' "${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
     printf '  multi_session: %s\n' "${MULTI_SESSION}"
+    printf '  headless: %s\n' "${HEADLESS}"
     printf '  out_dir: %s\n' "${OUT_DIR}"
     printf '  local_build_dir: %s\n' "${LOCAL_BUILD_DIR}"
     printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
@@ -749,12 +800,14 @@ main()
     printf '  netdev: %s\n' "${netdev}"
     if [[ -n "${DEBUG_TARGET}" ]]; then
         printf '  debug_target: %s\n' "${DEBUG_TARGET}"
+        printf '  debug_mode: %s\n' "${DEBUG_MODE}"
         printf '  debug_component: %s\n' "${DEBUG_COMPONENT}"
         printf '  debug_entrypoint: %s\n' "${DEBUG_ENTRYPOINT}"
         [[ -n "${DEBUG_ENTRY_ADDRESS}" ]] &&
             printf '  debug_entry_address: %s\n' "${DEBUG_ENTRY_ADDRESS}"
         printf '  debug_endpoint: %s\n' "${DEBUG_ENDPOINT}"
         printf '  debug_manifest: %s\n' "${DEBUG_MANIFEST}"
+        printf '  debug_timeout: %s\n' "${DEBUG_TIMEOUT}"
         if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
             printf '  debug_attach_gate: %s contains %s\n' \
                 "${DEBUG_WAIT_LOG}" "${DEBUG_WAIT_MARKER}"
@@ -766,26 +819,48 @@ main()
         rse_fast_boot_mode="--rse-fast-boot-aliases"
     fi
 
-    local runner_cmd=(
-        "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
-        --session "${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
-        --out-dir "${OUT_DIR}"
-        --local-build-dir "${LOCAL_BUILD_DIR}"
-        --qbox-build-dir "${QBOX_BUILD_DIR}"
-        --conf "${QBOX_CONF}"
-        --timeout "${TIMEOUT}"
-        --jobs "${JOBS}"
-        --skip-build
-        --rootfs-bootargs-profile none
-        --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
-        --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
-        --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
-        --qbox-performance-preset
-        --cc3xx-qemu-native-backend
-        --netdev "${netdev}"
-        --tmux-layout fvp-like
-    )
-    if [[ -n "${DEBUG_TARGET}" ]]; then
+    local runner_cmd
+    if [[ "${HEADLESS}" == "1" ]]; then
+        runner_cmd=(
+            "${PYTHON:-python3}"
+            "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
+            --conf "${QBOX_CONF}"
+            --local-build-dir "${LOCAL_BUILD_DIR}"
+            --qbox-build-dir "${QBOX_BUILD_DIR}"
+            --out-dir "${OUT_DIR}"
+            --timeout "${TIMEOUT}"
+            --jobs "${JOBS}"
+            --skip-build
+            --rootfs-bootargs-profile none
+            --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
+            --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
+            --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
+            --range-limited-flash-dmi
+            --qbox-performance-preset
+            --cc3xx-qemu-native-backend
+        )
+    else
+        runner_cmd=(
+            "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
+            --session "${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
+            --out-dir "${OUT_DIR}"
+            --local-build-dir "${LOCAL_BUILD_DIR}"
+            --qbox-build-dir "${QBOX_BUILD_DIR}"
+            --conf "${QBOX_CONF}"
+            --timeout "${TIMEOUT}"
+            --jobs "${JOBS}"
+            --skip-build
+            --rootfs-bootargs-profile none
+            --primary-login-prompt "${PRIMARY_LOGIN_PROMPT}"
+            --primary-shell-marker "${PRIMARY_SHELL_MARKER}"
+            --primary-shell-prompt-re "${PRIMARY_SHELL_PROMPT_RE}"
+            --qbox-performance-preset
+            --cc3xx-qemu-native-backend
+            --netdev "${netdev}"
+            --tmux-layout fvp-like
+        )
+    fi
+    if [[ -n "${DEBUG_TARGET}" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(
             --debug-target "${DEBUG_TARGET}"
             --debug-component "${DEBUG_COMPONENT}"
@@ -801,17 +876,19 @@ main()
     fi
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         runner_cmd+=(--keep-running-after-pass)
-    else
+    elif [[ "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(--exit-after-pass)
     fi
-    if [[ "${DRY_RUN}" == "1" ]]; then
+    if [[ "${DRY_RUN}" == "1" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(--dry-run)
     fi
-    if [[ "${MULTI_SESSION}" == "1" ]]; then
+    if [[ "${MULTI_SESSION}" == "1" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(--multi-session)
     fi
-    runner_cmd+=("${TMUX_RUNNER_ARGS[@]}")
-    runner_cmd+=(--)
+    if [[ "${HEADLESS}" == "0" ]]; then
+        runner_cmd+=("${TMUX_RUNNER_ARGS[@]}")
+        runner_cmd+=(--)
+    fi
     runner_cmd+=(
         --no-post-login-probe
         --rse-rom "${RSE_ROM}"
@@ -868,6 +945,56 @@ main()
     )
     runner_cmd+=("${EXTRA_CHILD_ARGS[@]}")
 
+    if [[ -z "${DEBUG_RESULT}" ]]; then
+        DEBUG_RESULT="${OUT_DIR}/debug-result.json"
+    else
+        DEBUG_RESULT="$(abspath "${DEBUG_RESULT}")"
+    fi
+    local -a agent_cmd=()
+    if [[ -n "${DEBUG_TARGET}" && "${DEBUG_MODE}" != "interactive" ]]; then
+        agent_cmd=(
+            "${PYTHON:-python3}"
+            "${ROOT_DIR}/scripts/debug/run_agent_qbox_debug.py"
+            --mode "${DEBUG_MODE}"
+            --target "${DEBUG_TARGET}"
+            --component "${DEBUG_COMPONENT}"
+            --breakpoint "${DEBUG_ENTRYPOINT}"
+            --expected-pc "${DEBUG_ENTRY_ADDRESS}"
+            --endpoint "${DEBUG_ENDPOINT}"
+            --manifest "${DEBUG_MANIFEST}"
+            --out-dir "${OUT_DIR}"
+            --result "${DEBUG_RESULT}"
+            --timeout "${DEBUG_TIMEOUT}"
+            --runner-cwd "${ROOT_DIR}"
+        )
+        if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+            agent_cmd+=(
+                --wait-log "${OUT_DIR}/${DEBUG_WAIT_LOG}"
+                --wait-marker "${DEBUG_WAIT_MARKER}"
+            )
+        fi
+        agent_cmd+=(-- "${runner_cmd[@]}")
+    fi
+
+    if [[ "${DRY_RUN}" == "1" && "${HEADLESS}" == "1" ]]; then
+        printf 'Headless QBox runner command:\n  '
+        if ((${#agent_cmd[@]} > 0)); then
+            printf '%q ' "${agent_cmd[@]}"
+        else
+            printf '%q ' "${runner_cmd[@]}"
+        fi
+        printf '\n'
+        return 0
+    fi
+    if [[ "${HEADLESS}" == "1" ]]; then
+        export QBOX_MANAGED_SESSION=1
+        export QBOX_SESSION_OWNER_UID
+        export QBOX_SESSION_OUT_DIR="${OUT_DIR}"
+        QBOX_SESSION_OWNER_UID="$(id -u)"
+    fi
+    if ((${#agent_cmd[@]} > 0)); then
+        exec "${agent_cmd[@]}"
+    fi
     exec "${runner_cmd[@]}"
 }
 

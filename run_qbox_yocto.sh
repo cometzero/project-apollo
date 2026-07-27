@@ -51,6 +51,10 @@ Options:
   --exit-after-pass           Stop QBox after the pass condition
   --debug TARGET              Run GDB in the interactive pane; TARGET is one of
                               qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
+  --debug-mode MODE           interactive, probe, or server
+                              (default: interactive)
+  --debug-timeout SEC         probe/server deadline in seconds (default: 600)
+  --debug-result PATH         probe/server JSON result path
   --no-attach                 Start tmux session without attaching
   --multi-session             Preserve existing QBox and tmux sessions
   --dry-run                   Print the underlying QBox runner command
@@ -721,6 +725,10 @@ DEBUG_WAIT_LOG=""
 DEBUG_WAIT_MARKER=""
 DEBUG_CPU_PARAM=""
 DEBUG_PLATFORM_PARAMS=()
+DEBUG_MODE="${DEBUG_MODE:-interactive}"
+DEBUG_MODE_SET=0
+DEBUG_TIMEOUT="${DEBUG_TIMEOUT:-600}"
+DEBUG_RESULT="${DEBUG_RESULT:-}"
 
 ROOTFS_OVERRIDE="${ROOTFS:-}"
 EFI_CAPSULE_DISK_OVERRIDE="${EFI_CAPSULE_DISK:-}"
@@ -889,6 +897,22 @@ while (($#)); do
             DEBUG_TARGET="$2"
             shift 2
             ;;
+        --debug-mode)
+            [[ $# -ge 2 ]] || die "--debug-mode requires a value"
+            DEBUG_MODE="$2"
+            DEBUG_MODE_SET=1
+            shift 2
+            ;;
+        --debug-timeout)
+            [[ $# -ge 2 ]] || die "--debug-timeout requires a value"
+            DEBUG_TIMEOUT="$2"
+            shift 2
+            ;;
+        --debug-result)
+            [[ $# -ge 2 ]] || die "--debug-result requires a value"
+            DEBUG_RESULT="$2"
+            shift 2
+            ;;
         --no-attach)
             NO_ATTACH=1
             shift
@@ -1001,8 +1025,21 @@ fi
 
 if [[ -n "${DEBUG_TARGET}" ]]; then
     qbox_debug_configure_target
-    [[ "${HEADLESS}" == "0" ]] ||
-        die "--debug requires the interactive tmux layout; remove --headless"
+    case "${DEBUG_MODE}" in
+        interactive|probe|server) ;;
+        *) die "invalid --debug-mode: ${DEBUG_MODE}" ;;
+    esac
+    [[ "${DEBUG_TIMEOUT}" =~ ^[0-9]+([.][0-9]+)?$ ]] &&
+        [[ "${DEBUG_TIMEOUT}" != "0" && "${DEBUG_TIMEOUT}" != "0.0" ]] ||
+        die "invalid --debug-timeout: ${DEBUG_TIMEOUT}"
+    if [[ "${DEBUG_MODE}" == "interactive" ]]; then
+        [[ "${HEADLESS}" == "0" ]] ||
+            die "--debug requires the interactive tmux layout; remove --headless"
+    else
+        HEADLESS=1
+    fi
+elif [[ "${DEBUG_MODE_SET}" == "1" ]]; then
+    die "--debug-mode requires --debug TARGET"
 fi
 
 BOOT_PROFILE="product"
@@ -1269,6 +1306,8 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
         debug_port="${DEBUG_ENDPOINT##*:}"
         debug_port_in_use "${debug_port}" &&
             die "GDB port is already in use: ${debug_port}"
+    else
+        DEBUG_ENTRY_ADDRESS="<resolved-from-manifest>"
     fi
 fi
 
@@ -1445,6 +1484,38 @@ fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
 
+if [[ -z "${DEBUG_RESULT}" ]]; then
+    DEBUG_RESULT="${OUT_DIR}/debug-result.json"
+elif [[ "${DEBUG_RESULT}" != /* ]]; then
+    DEBUG_RESULT="${PWD}/${DEBUG_RESULT}"
+fi
+
+AGENT_CMD=()
+if [[ -n "${DEBUG_TARGET}" && "${DEBUG_MODE}" != "interactive" ]]; then
+    AGENT_CMD=(
+        "${PYTHON:-python3}"
+        "${ROOT_DIR}/scripts/debug/run_agent_qbox_debug.py"
+        --mode "${DEBUG_MODE}"
+        --target "${DEBUG_TARGET}"
+        --component "${DEBUG_COMPONENT}"
+        --breakpoint "${DEBUG_ENTRYPOINT}"
+        --expected-pc "${DEBUG_ENTRY_ADDRESS}"
+        --endpoint "${DEBUG_ENDPOINT}"
+        --manifest "${DEBUG_MANIFEST}"
+        --out-dir "${OUT_DIR}"
+        --result "${DEBUG_RESULT}"
+        --timeout "${DEBUG_TIMEOUT}"
+        --runner-cwd "${ROOT_DIR}"
+    )
+    if [[ -n "${DEBUG_WAIT_LOG}" ]]; then
+        AGENT_CMD+=(
+            --wait-log "${OUT_DIR}/${DEBUG_WAIT_LOG}"
+            --wait-marker "${DEBUG_WAIT_MARKER}"
+        )
+    fi
+    AGENT_CMD+=(-- "${RUNNER_CMD[@]}")
+fi
+
 cat <<EOF
 Apollo QBox Yocto launch
   machine:       ${MACHINE}
@@ -1470,10 +1541,13 @@ EOF
 if [[ -n "${DEBUG_TARGET}" ]]; then
     cat <<EOF
   debug target:  ${DEBUG_TARGET}
+  debug mode:    ${DEBUG_MODE}
   component:     ${DEBUG_COMPONENT}
   entrypoint:    ${DEBUG_ENTRYPOINT}
   gdb endpoint:  ${DEBUG_ENDPOINT}
   manifest:      ${DEBUG_MANIFEST}
+  debug timeout: ${DEBUG_TIMEOUT}
+  debug result:  ${DEBUG_RESULT}
 EOF
     if [[ -n "${DEBUG_ARTIFACT_ELF}" ]]; then
         printf '  debug ELF:     %s\n' "${DEBUG_ARTIFACT_ELF}"
@@ -1486,7 +1560,11 @@ fi
 
 if [[ "${HEADLESS}" == "1" && "${DRY_RUN}" == "1" ]]; then
     printf 'Headless QBox runner command:\n  '
-    printf '%q ' "${RUNNER_CMD[@]}"
+    if ((${#AGENT_CMD[@]} > 0)); then
+        printf '%q ' "${AGENT_CMD[@]}"
+    else
+        printf '%q ' "${RUNNER_CMD[@]}"
+    fi
     printf '\n'
     exit 0
 fi
@@ -1498,4 +1576,7 @@ if [[ "${HEADLESS}" == "1" ]]; then
     QBOX_SESSION_OWNER_UID="$(id -u)"
 fi
 
+if ((${#AGENT_CMD[@]} > 0)); then
+    exec "${AGENT_CMD[@]}"
+fi
 exec "${RUNNER_CMD[@]}"

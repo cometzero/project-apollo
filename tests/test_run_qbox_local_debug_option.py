@@ -12,13 +12,16 @@ SCRIPT = ROOT / "run_qbox_local.sh"
 
 
 def run_dry_run(
-    tmp_path: Path, target: str | None
+    tmp_path: Path,
+    target: str | None,
+    *extra_args: str,
 ) -> subprocess.CompletedProcess[str]:
     conf = tmp_path / "apollo-qvp.lua"
     conf.write_text("return {}\n", encoding="utf-8")
     command = [str(SCRIPT), "--dry-run", "--no-attach", "--no-copy-disks"]
     if target is not None:
         command.extend(("--debug", target))
+        command.extend(extra_args)
     else:
         command.append("--debug")
     env = os.environ | {
@@ -154,3 +157,24 @@ def test_debug_without_target_lists_supported_targets(tmp_path: Path) -> None:
     assert "Available --debug targets:" in result.stdout
     for target in ("qbox", "rse", "si_cl0", "si_cl1", "tf-a", "u-boot", "linux"):
         assert target in result.stdout
+
+
+def test_probe_mode_uses_headless_agent_runner(tmp_path: Path) -> None:
+    result = run_dry_run(
+        tmp_path,
+        "tf-a",
+        "--debug-mode",
+        "probe",
+        "--debug-timeout",
+        "90",
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "  headless: 1" in result.stdout
+    assert "  debug_mode: probe" in result.stdout
+    assert "run_agent_qbox_debug.py" in result.stdout
+    assert "--breakpoint bl2_main" in result.stdout
+    assert "--timeout 90" in result.stdout
+    assert "gdb_snapshot_hold" not in result.stdout
+    assert "--wait-marker QBox\\ GDB\\ entry\\ breakpoint\\ reached:" in result.stdout
+    assert "run_qbox_apollo_fvp_full_tmux.sh" not in result.stdout

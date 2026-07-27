@@ -129,6 +129,12 @@ if entrypoint not in component.get("source_locations", {}):
     raise SystemExit(
         f"error: {component_name} has no source line for {entrypoint}"
     )
+try:
+    print(component["symbols"][entrypoint])
+except (KeyError, TypeError):
+    raise SystemExit(
+        f"error: {component_name} has no symbol address for {entrypoint}"
+    )
 PY
 }
 
@@ -140,7 +146,8 @@ fvp_debug_prepare_manifest()
         --local-build-dir "${YOCTO_BUILD_DIR}" \
         --out-dir "${DEBUG_DIR}" \
         --elf "${DEBUG_COMPONENT}=${DEBUG_ELF}"
-    fvp_debug_validate_manifest
+    DEBUG_ENTRY_ADDRESS="$(fvp_debug_validate_manifest)"
+    export DEBUG_ENTRY_ADDRESS
 }
 
 fvp_debug_resolve_cornea()
