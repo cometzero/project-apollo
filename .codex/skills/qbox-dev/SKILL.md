@@ -89,13 +89,14 @@ Interactive boot/login launchers:
 ./run_qbox_yocto.sh --bsp
 ```
 
-They use `live-cl0-cl1`, disable the shared post-login probe, and replace only
-current-UID managed QBox sessions unless `--multi-session` is set. Do not use
-their tmux/login marker alone as a full qualification claim.
+They use the fixed full Safety Island topology, disable the shared post-login
+probe, and replace only current-UID managed QBox sessions unless
+`--multi-session` is set. Do not use their tmux/login marker alone as a full
+qualification claim.
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode live-cl0-cl1 --timeout 600
+  --timeout 600
 ```
 
 Inspect the generated `result.json`, per-domain UART logs, and coverage audit.

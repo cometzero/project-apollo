@@ -383,8 +383,7 @@ Use the narrowest meaningful command first, then broaden only when needed.
      platform wiring changes.
 4. Runtime checks:
    - For Apollo full-system local-build boot on QBox, use
-     `python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode
-     live-cl0-cl1 --timeout 600` and inspect
+     `python3 scripts/run/run_qbox_apollo_fvp_full.py --timeout 600` and inspect
      `build/qbox-apollo-qvp/full-<timestamp>/`.
    - For an interactive local or Yocto BSP shell, use
      `./run_qbox_local.sh` or `./run_qbox_yocto.sh --bsp` and require

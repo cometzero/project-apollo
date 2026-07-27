@@ -120,7 +120,7 @@ shared post-login probe. QBox full-system qualification uses:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode live-cl0-cl1 --timeout 600
+  --timeout 600
 ```
 
 QBox debug supports `qbox`, `rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and

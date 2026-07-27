@@ -68,16 +68,13 @@ exported.
 1. Run static map and boundary checks.
 2. Run the narrow component test.
 3. Use a root interactive launcher only for login/BSP/manual debugging.
-4. Run the full Apollo service-model mode for focused AP changes.
-5. Run the full Apollo system for cross-domain changes.
-6. Run the headless regression wrapper for timing/error comparisons.
-7. Audit full-system coverage from the generated `result.json`.
+4. Run the fixed Apollo full system for AP and cross-domain changes.
+5. Run the headless regression wrapper for timing/error comparisons.
+6. Audit full-system coverage from the generated `result.json`.
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode service-model --timeout 600
-python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode live-cl0-cl1 --timeout 600
+  --timeout 600
 ./run_qbox_boot_regression.sh --record-baseline
 ./run_qbox_boot_regression.sh
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
