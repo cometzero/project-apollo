@@ -396,11 +396,13 @@ def test_si_cl0_absolute_intids_are_converted_to_qbox_spi_indices() -> None:
 
     assert "SI_CL0_RSE_MHU_INTID = 105" in si_cl0
     assert "SI_CL0_CL1_MHU_INTID = 107" in si_cl0
+    assert "SI_CL0_SYSTEM_TIMER_INTID = 34" in si_cl0
     assert "SI_CL0_UART_INTID = 40" in si_cl0
     assert "SI_CL0_FMU_CRITICAL_INTID = 128" in si_cl0
     assert "SI_CL0_FMU_NON_CRITICAL_INTID = 129" in si_cl0
     assert "SI_CL0_RSE_MHU_INTID - GIC_SPI_BASE_INTID" in si_cl0
     assert "SI_CL0_CL1_MHU_INTID - GIC_SPI_BASE_INTID" in si_cl0
+    assert "SI_CL0_SYSTEM_TIMER_INTID - GIC_SPI_BASE_INTID" in si_cl0
     assert "SI_CL0_UART_INTID - GIC_SPI_BASE_INTID" in si_cl0
     assert "SI_CL0_FMU_CRITICAL_INTID - GIC_SPI_BASE_INTID" in si_cl0
     assert "SI_CL0_FMU_NON_CRITICAL_INTID - GIC_SPI_BASE_INTID" in si_cl0
@@ -414,6 +416,12 @@ def test_si_cl0_absolute_intids_are_converted_to_qbox_spi_indices() -> None:
         ("AP_SI_PFDI_MHU_MBX_IRQ", 119),
     ):
         assert f"{name} = {irq}" in config
+
+    signal_routes = (CONTRACT_DIR / "signal_routes.lua").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "si_cl0_system_timer"' in signal_routes
+    assert 'id = 34; owner = "si_cl0"' in signal_routes
 
 
 def test_si_cl0_gic_view0_overlays_multiview_extensions_on_functional_alias() -> None:
