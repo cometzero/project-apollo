@@ -1,5 +1,10 @@
 # QBox Apollo FVP Full-System Tasks
 
+> 2026-07-27: Apollo QVP의 service/live Safety Island mode는 제거되었고
+> 실제 CL0 SCP-firmware와 CL1 Zephyr를 항상 사용하는 단일 full-system
+> 토폴로지로 통합되었다. 아래 mode별 작업과 G1-G4 단계는 완료된 과거
+> 구현 이력이며 새 작업의 실행 계약으로 사용하지 않는다.
+
 Generated: 2026-06-03
 
 Status: implemented and verified

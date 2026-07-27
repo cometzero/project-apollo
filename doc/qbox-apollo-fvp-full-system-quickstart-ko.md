@@ -1,6 +1,7 @@
 # QBox Apollo FVP Full-System Quickstart
 
 생성일: 2026-06-08
+최종 갱신: 2026-07-27
 
 이 문서는 Apollo FVP local build 산출물을 QBox full-system에서 바로 실행해
 볼 수 있는 최소 절차를 정리한다. 자세한 검증 절차와 completion gate는
@@ -23,7 +24,7 @@ JOBS=8 ./local_build.sh qbox
 
 - `build/qbox-apollo-fvp/full-ready-check/result.json`: `passed: true`
 - `build/qbox-apollo-fvp/full-ready-build/result.json`: `passed: true`
-- Safety Island mode: `live-cl0-cl1`
+- Safety Island topology: real CL0 SCP-firmware + real CL1 Zephyr
 - 필요한 local boot artifact 누락: 없음
 - `tmux -V`: `tmux 3.4`
 
@@ -38,7 +39,7 @@ workspace top directory인 `/build/arm/arm-auto-solutions`에서 실행한다.
 
 `run_qbox_local.sh`는 다음 동작을 자동으로 수행한다.
 
-- `live-cl0-cl1` Safety Island mode 선택
+- 단일 full-system Safety Island 토폴로지 구성
 - QEMU-native CC3XX backend와 현재 RSE fast-path 옵션 적용
 - `2222`부터 빈 SSH host-forward port 자동 선택
 - 기본으로 local build rootfs와 EFI capsule disk를 직접 사용
@@ -96,7 +97,7 @@ tmux kill-session -t <session-name>
 실행 결과는 `--out-dir` 아래에 남는다.
 
 ```bash
-jq '{passed, verdict, blocker, safety_island_mode, marker_groups}' \
+jq '{passed, verdict, blocker, safety_island_topology, marker_groups}' \
   <out-dir>/result.json
 ```
 

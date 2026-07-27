@@ -248,10 +248,10 @@ U-Boot EFI disk and A/B UKIs. The Yocto launcher resolves the selected WIC,
 firmware, QBox provider, native sysroot, and `.qboxconf` from the matching
 machine deploy/work directories.
 
-Both convenience launchers use `--si-mode live-cl0-cl1`, keep QBox alive after
-the login/pass marker, and disable the shared runner's post-login probe. Their
-purpose is interactive boot/login work; use the canonical Python runner when a
-full post-login qualification gate is required.
+Both convenience launchers use the fixed full Safety Island topology, keep
+QBox alive after the login/pass marker, and disable the shared runner's
+post-login probe. Their purpose is interactive boot/login work; use the
+canonical Python runner when a full post-login qualification gate is required.
 
 By default, a new QBox launch stops only managed QBox tmux sessions and
 headless processes owned by the current Unix UID. It does not stop another
@@ -272,7 +272,6 @@ Use the canonical runner for structured QBox evidence:
 
 ```bash
 python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --si-mode live-cl0-cl1 \
   --timeout 600
 ```
 

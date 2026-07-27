@@ -1,5 +1,11 @@
 # QBox Apollo FVP Full-System 실행 가이드
 
+> 2026-07-27: Apollo QVP는 이제 실제 CL0 SCP-firmware와 CL1 Zephyr를
+> 항상 구성하는 단일 full-system 토폴로지만 지원한다. 아래에 남아 있는
+> `--si-mode` 기반 절차와 `full-live-*` 경로는 전환 전 실험 기록이며 현재
+> 실행 계약이 아니다. 현재 실행은
+> `python3 scripts/run/run_qbox_apollo_fvp_full.py --timeout 600`을 사용한다.
+
 생성일: 2026-06-03
 
 상태: 구현 및 검증 완료

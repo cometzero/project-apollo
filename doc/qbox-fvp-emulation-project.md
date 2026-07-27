@@ -477,7 +477,7 @@ cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target platforms-vp --parallel 8
 ./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
 make -C hsoc-stack/components/system_mgmt/scp-firmware -f Makefile.cmake \
   mod_test BUILD_PATH=<repo>/build/tests/scp-firmware-unit
-python3 scripts/run/run_qbox_apollo_fvp_full.py --si-mode live-cl0-cl1 --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
+python3 scripts/run/run_qbox_apollo_fvp_full.py --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-qvp/<run-id>/result.json --output build/qbox-apollo-qvp/<run-id>/full-coverage-audit.json
 ```
 

@@ -1,5 +1,10 @@
 # QBox Apollo FVP Full-System Goal And Verification
 
+> 2026-07-27: Safety Island service/live mode 선택은 제거되었다. 현재
+> completion 계약은 고정 full-system 토폴로지에 대해 G0 정적 계약,
+> G1 AP probe, G2 통합 런타임, G3 FVP 비교 sidecar를 검증한다. 이 문서의
+> 기존 G1-G4 mode별 기록은 이전 구현의 추적 자료로만 유지한다.
+
 Generated: 2026-06-03
 
 Status: final verified
