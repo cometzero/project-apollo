@@ -229,7 +229,7 @@ def fake_runtime_script(path: Path) -> None:
                 "if mode == 'fail':",
                 "    result.write_text(json.dumps({'passed': False}))",
                 "    raise SystemExit(1)",
-                "marker.write_text('live ran')",
+                "marker.write_text('full-system ran')",
                 "result.write_text(json.dumps({'passed': True, 'blocker': None}))",
             ]
         )
@@ -289,7 +289,7 @@ def patch_qbox_lanes(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, check_mode
         "runtime_lanes",
         lambda inputs: [
             fake_lane(tmp_path, "qbox-full-check-only", check_mode),
-            fake_lane(tmp_path, "qbox-full-live-cl0-cl1", "pass"),
+            fake_lane(tmp_path, "qbox-full-system", "pass"),
         ],
     )
 
@@ -324,8 +324,8 @@ def test_qbox_lanes_are_planned(tmp_path: Path) -> None:
     assert any("validate_qbox_apollo_fvp_boot_sequence.py --static-only --output" in command for command in commands)
     assert any("ctest --test-dir build/local-apollo-fvp/work/qbox-platform -N" in command for command in commands)
     assert any("ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R" in command for command in commands)
-    assert any("run_qbox_apollo_fvp_full.py --check-only --si-mode live-cl0-cl1" in command for command in commands)
-    assert any("run_qbox_apollo_fvp_full.py --skip-build --si-mode live-cl0-cl1" in command for command in commands)
+    assert any("run_qbox_apollo_fvp_full.py --check-only --out-dir" in command for command in commands)
+    assert any("run_qbox_apollo_fvp_full.py --skip-build --timeout" in command for command in commands)
 
 
 def test_timeout_fvp_updates_planned_qbox_live_command(tmp_path: Path) -> None:
@@ -350,12 +350,12 @@ def test_timeout_fvp_updates_planned_qbox_live_command(tmp_path: Path) -> None:
     )
     extra_result = run_extra_lanes(out_dir, stamp, timeout_fvp="321")
 
-    # Then: the live QBox runtime record carries the selected timeout.
+    # Then: the full-system QBox runtime record carries the selected timeout.
     assert result.returncode == 0, result.stderr
     assert extra_result.returncode == 0, extra_result.stderr
     commands = load_commands(ROOT / out_dir)
-    live = command_by_name(commands, "qbox-full-live-cl0-cl1")
-    assert "--timeout 321" in argv_text(live)
+    full = command_by_name(commands, "qbox-full-system")
+    assert "--timeout 321" in argv_text(full)
 
 
 def test_qvp_yocto_regression_lane_uses_qvp_result_root(
@@ -459,7 +459,7 @@ def test_include_qbox_runtime_missing_build_blocks(tmp_path: Path) -> None:
     )
 
 
-def test_live_runtime_is_blocked_when_check_only_blocks(
+def test_full_system_runtime_is_blocked_when_check_only_blocks(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -469,23 +469,23 @@ def test_live_runtime_is_blocked_when_check_only_blocks(
     # When: QBox runtime lanes execute through the non-dry-run lane runner.
     rc = run_test_qbox_lanes.run_qbox_lanes(qbox_inputs(tmp_path))
 
-    # Then: live runtime is not launched and the run is BLOCKED, not FAIL.
+    # Then: full-system runtime is not launched and the run is BLOCKED, not FAIL.
     assert rc == 2
-    assert not (tmp_path / "qbox-full-live-cl0-cl1-ran.txt").exists()
+    assert not (tmp_path / "qbox-full-system-ran.txt").exists()
     commands = load_commands(tmp_path / "run")
     check = command_by_name(commands, "qbox-full-check-only")
-    live = command_by_name(commands, "qbox-full-live-cl0-cl1")
+    full = command_by_name(commands, "qbox-full-system")
     assert check["status"] == "blocked"
     assert check["blockers"] == [{"reason": "blocked_missing_runtime_artifact"}]
     assert "exit_code" not in check
-    assert live["status"] == "blocked"
-    assert live["reason"] == "blocked_qbox_check_only_preflight"
+    assert full["status"] == "blocked"
+    assert full["reason"] == "blocked_qbox_check_only_preflight"
     summary, exit_code = summarize_run(tmp_path / "run")
     assert summary["status"] == "BLOCKED"
     assert exit_code == 2
 
 
-def test_live_runtime_is_skipped_when_check_only_fails(
+def test_full_system_runtime_is_skipped_when_check_only_fails(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -495,22 +495,22 @@ def test_live_runtime_is_skipped_when_check_only_fails(
     # When: QBox runtime lanes execute through the non-dry-run lane runner.
     rc = run_test_qbox_lanes.run_qbox_lanes(qbox_inputs(tmp_path))
 
-    # Then: live runtime is not launched and the run remains a normal FAIL.
+    # Then: full-system runtime is not launched and the run remains a normal FAIL.
     assert rc == 1
-    assert not (tmp_path / "qbox-full-live-cl0-cl1-ran.txt").exists()
+    assert not (tmp_path / "qbox-full-system-ran.txt").exists()
     commands = load_commands(tmp_path / "run")
     check = command_by_name(commands, "qbox-full-check-only")
-    live = command_by_name(commands, "qbox-full-live-cl0-cl1")
+    full = command_by_name(commands, "qbox-full-system")
     assert check["status"] == "fail"
     assert check["exit_code"] == 1
-    assert live["status"] == "skipped"
-    assert live["reason"] == "skipped_failed_qbox_check_only"
+    assert full["status"] == "skipped"
+    assert full["reason"] == "skipped_failed_qbox_check_only"
     summary, exit_code = summarize_run(tmp_path / "run")
     assert summary["status"] == "FAIL"
     assert exit_code == 1
 
 
-def test_live_runtime_runs_by_default_when_build_exists_and_check_only_passes(
+def test_full_system_runtime_runs_by_default_when_build_exists_and_check_only_passes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -520,16 +520,16 @@ def test_live_runtime_runs_by_default_when_build_exists_and_check_only_passes(
     # When: QBox lanes execute in the default mode.
     rc = run_test_qbox_lanes.run_qbox_lanes(qbox_inputs(tmp_path, include_runtime=False))
 
-    # Then: the live runtime process is launched by default.
+    # Then: the full-system runtime process is launched by default.
     assert rc == 0
-    assert (tmp_path / "qbox-full-live-cl0-cl1-ran.txt").exists()
+    assert (tmp_path / "qbox-full-system-ran.txt").exists()
     commands = load_commands(tmp_path / "run")
-    live = command_by_name(commands, "qbox-full-live-cl0-cl1")
-    assert live["status"] == "pass"
-    assert live["exit_code"] == 0
+    full = command_by_name(commands, "qbox-full-system")
+    assert full["status"] == "pass"
+    assert full["exit_code"] == 0
 
 
-def test_live_runtime_is_skipped_when_runtime_is_skipped(
+def test_full_system_runtime_is_skipped_when_runtime_is_skipped(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -539,14 +539,14 @@ def test_live_runtime_is_skipped_when_runtime_is_skipped(
     # When: QBox lanes execute with the public skip-runtime policy.
     rc = run_test_qbox_lanes.run_qbox_lanes(qbox_inputs(tmp_path, skip_runtime=True))
 
-    # Then: neither check-only nor live runtime is launched.
+    # Then: neither check-only nor full-system runtime is launched.
     assert rc == 0
     assert not (tmp_path / "qbox-full-check-only-ran.txt").exists()
-    assert not (tmp_path / "qbox-full-live-cl0-cl1-ran.txt").exists()
+    assert not (tmp_path / "qbox-full-system-ran.txt").exists()
     commands = load_commands(tmp_path / "run")
     check = command_by_name(commands, "qbox-full-check-only")
-    live = command_by_name(commands, "qbox-full-live-cl0-cl1")
+    full = command_by_name(commands, "qbox-full-system")
     assert check["status"] == "skipped"
     assert check["reason"] == "skipped_runtime_requested"
-    assert live["status"] == "skipped"
-    assert live["reason"] == "skipped_runtime_requested"
+    assert full["status"] == "skipped"
+    assert full["reason"] == "skipped_runtime_requested"

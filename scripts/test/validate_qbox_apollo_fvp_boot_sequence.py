@@ -61,21 +61,21 @@ def validate_static(root: Path) -> list[str]:
         errors,
         si_cl0,
         si_cl0_text,
-        'power_on_load = apollo_live_cl0 and {bind = "&si_cl0_loader.reset"} or nil;',
+        'power_on_load = {bind = "&si_cl0_loader.reset"};',
         "RSE SI CL0 PPU-to-loader binding",
     )
     require_contains(
         errors,
         si_cl0,
         si_cl0_text,
-        'power_on_reset = apollo_live_cl0 and {bind = "&si_cl0_cpu_0.reset"} or nil;',
+        'power_on_reset = {bind = "&si_cl0_cpu_0.reset"};',
         "RSE SI CL0 PPU-to-CPU reset binding",
     )
     require_contains(
         errors,
         si_cl1,
         si_cl1_text,
-        'power_on_load = apollo_live_cl1 and {bind = "&si_cl1_loader.reset"} or nil;',
+        'power_on_load = {bind = "&si_cl1_loader.reset"};',
         "RSE SI CL1 cluster PPU-to-loader binding",
     )
     require_contains(

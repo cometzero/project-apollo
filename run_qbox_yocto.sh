@@ -34,7 +34,6 @@ Options:
   --conf FILE                 QBox Lua configuration
   --session NAME              tmux session name
   --out-dir DIR               Runtime output directory
-  --si-mode MODE              Safety Island mode (default: live-cl0-cl1)
   --timeout SECONDS           Runner timeout, 0 keeps interactive run alive
   --jobs N                    Build jobs when the QBox runner builds dependencies
   --rootfs-bootargs-profile P Rootfs bootargs profile (default: none)
@@ -77,7 +76,7 @@ Artifact overrides:
 Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
   QBOX_CONF_FILE, LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
-  OUT_DIR, TMUX_SESSION, SI_MODE, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
+  OUT_DIR, TMUX_SESSION, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
   RUN_QBOX_RECORD_INITIAL_STATE, QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
 EOF
 }
@@ -690,7 +689,6 @@ RSE_SYMBOLS_EXPLICIT=0
 
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-yocto-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-}"
-SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(nproc)}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
@@ -816,11 +814,6 @@ while (($#)); do
         --out-dir)
             [[ $# -ge 2 ]] || die "--out-dir requires a value"
             OUT_DIR="$2"
-            shift 2
-            ;;
-        --si-mode)
-            [[ $# -ge 2 ]] || die "--si-mode requires a value"
-            SI_MODE="$2"
             shift 2
             ;;
         --timeout)
@@ -1343,7 +1336,6 @@ if [[ "${HEADLESS}" == "1" ]]; then
         --conf "${QBOX_CONF}"
         --local-build-dir "${LOCAL_BUILD_DIR}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
-        --si-mode "${SI_MODE}"
         --out-dir "${OUT_DIR}"
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
@@ -1364,7 +1356,6 @@ else
         --local-build-dir "${LOCAL_BUILD_DIR}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
         --conf "${QBOX_CONF}"
-        --si-mode "${SI_MODE}"
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --skip-build

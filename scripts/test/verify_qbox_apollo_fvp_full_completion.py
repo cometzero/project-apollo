@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify Apollo FVP full-system QBox completion evidence."""
+"""Verify the canonical Apollo QBox full-system evidence bundle."""
 
 from __future__ import annotations
 
@@ -11,220 +11,15 @@ import sys
 from typing import Any
 
 
-GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
-EXPECTED_AP_CPUS = 16
-AP_CPU_COUNT_RE = re.compile(r"^ap cpus:\s*(?P<count>\d+)\s*$", re.MULTILINE)
-LINUX_CPU_ONLINE_RE = re.compile(r"^online=(?P<online>\S+)\s*$", re.MULTILINE)
-LINUX_CPUINFO_PROCESSORS_RE = re.compile(
-    r"^cpuinfo_processors=(?P<count>\d+)\s*$",
-    re.MULTILINE,
-)
-FINAL_OUTPUT_NAME = "final-verification.json"
-REQUIRED_FULL_LOGS = [
-    "rse",
-    "si_cl0",
-    "si_cl1",
-    "secure_console",
-    "primary_console",
-]
-GOAL_ID = "qbox-apollo-fvp-full-system-g0-g5"
-REQUIRED_MARKER_GROUPS = [
-    "rse",
-    "si_cl0",
-    "si_cl1",
-    "ap_firmware",
-    "linux",
-    "post_login",
+GATES = ("G0", "G1", "G2", "G3")
+REQUIRED_LOGS = ("rse", "si_cl0", "si_cl1", "secure_console", "primary_console")
+REQUIRED_MARKER_GROUPS = (
+    "rse", "si_cl0", "si_cl1", "ap_firmware", "linux", "post_login",
     "maps_and_interrupts",
-]
-FINAL_EVIDENCE_BUNDLE = [
-    "result.json",
-    "comparison.json",
-    "map-comparison.json",
-    "coverage-audit.json",
-    FINAL_OUTPUT_NAME,
-]
-GOAL_DEFINITION = {
-    "goal_id": GOAL_ID,
-    "objective": (
-        "Boot local Apollo FVP artifacts in QBox through the FVP-equivalent "
-        "subsystem chain: RSE TF-M, SI CL0 SCP-firmware, SI CL1 Zephyr, "
-        "and AP TF-A/OP-TEE/U-Boot/Linux."
-    ),
-    "target_machine": "apollo-fvp",
-    "subsystem_chain": [
-        "RSE TF-M",
-        "SI CL0 SCP-firmware",
-        "SI CL1 Zephyr",
-        "AP TF-A",
-        "AP OP-TEE",
-        "AP U-Boot",
-        "AP Linux",
-    ],
-    "required_live_domains_for_completion": [
-        "RSE",
-        "SI CL0",
-        "SI CL1",
-        "Primary Compute",
-    ],
-    "not_completion_points": [
-        "A focused full-system AP probe reaches login",
-        "RSE-first service-model boot reaches Linux",
-        "live CL1 integration without live CL0 SCP-firmware",
-        "tmux-only console output without saved result.json and UART logs",
-    ],
-    "completion_point": (
-        "Strict final verification passes after one integrated live CL0/CL1 "
-        "run plus FVP comparison, map comparison, and coverage audit evidence."
-    ),
-}
-COMPLETION_POLICY = {
-    "required_gates": {gate: "pass" for gate in GATES},
-    "strict_final_required": True,
-    "required_final_run": "full-live-cl0-cl1",
-    "required_final_logs": REQUIRED_FULL_LOGS,
-    "required_marker_groups": REQUIRED_MARKER_GROUPS,
-    "required_final_sidecars": FINAL_EVIDENCE_BUNDLE,
-    "required_final_output": (
-        "build/qbox-apollo-fvp/full-live-cl0-cl1/final-verification.json"
-    ),
-    "completion_claim_allowed_when": (
-        "strict_final is true, the final output path is canonical, "
-        "completion_ready is true, and all G0..G5 gates are pass."
-    ),
-    "failure_policy": (
-        "Any missing required marker, absent boot-critical block, or "
-        "unclassified fidelity gap is fail for strict final completion."
-    ),
-}
-COMPLETION_LEVELS = {
-    "G0": {
-        "name": "Contract readiness",
-        "objective": (
-            "Local artifacts, Cortex-R82 support, map ledger, and coverage "
-            "contract are available."
-        ),
-        "completion_role": "required precondition",
-    },
-    "G1": {
-        "name": "Full-system AP probe",
-        "objective": (
-            "The canonical Apollo QVP reaches AP firmware, Linux, and the "
-            "post-login probe."
-        ),
-        "completion_role": "required regression guardrail",
-    },
-    "G2": {
-        "name": "Service-model full boot",
-        "objective": (
-            "RSE-first QBox boot reaches AP Linux while Safety Island CPU "
-            "fidelity debt is explicit."
-        ),
-        "completion_role": "required milestone, not final completion",
-    },
-    "G3": {
-        "name": "Live CL1 integration",
-        "objective": (
-            "Zephyr CL1 runs live on Cortex-R82 and AP Linux HIPC/RPMsg or "
-            "PFDI evidence uses live CL1 behavior."
-        ),
-        "completion_role": "required milestone, not final completion",
-    },
-    "G4": {
-        "name": "Live CL0/CL1 integration",
-        "objective": (
-            "RSE, live CL0 SCP-firmware, live CL1 Zephyr, AP firmware, "
-            "U-Boot, Linux, and post-login marker groups pass in one run."
-        ),
-        "completion_role": "final runtime candidate",
-    },
-    "G5": {
-        "name": "FVP equivalence closure",
-        "objective": (
-            "The full live QBox run matches required FVP markers, documented "
-            "maps, and boot-critical hardware coverage."
-        ),
-        "completion_role": "final acceptance gate",
-    },
-}
-GOAL_VERIFICATION_PLAN = [
-    {
-        "gate": "G0",
-        "name": "Contract readiness",
-        "required_evidence": [
-            "full-check-only/result.json",
-            "full-check-only/map-validation.json",
-            "full-check-only/coverage-audit.json",
-            "Cortex-R82 and platforms-vp build evidence",
-        ],
-        "completion_role": "required precondition",
-    },
-    {
-        "gate": "G1",
-        "name": "Full-system AP probe",
-        "required_evidence": [
-            "full-service-model/result.json",
-            "secure and primary console logs",
-            "AP firmware, Linux, and post-login marker groups",
-        ],
-        "completion_role": "required regression guardrail",
-    },
-    {
-        "gate": "G2",
-        "name": "Service-model full boot",
-        "required_evidence": [
-            "full-service-model/result.json",
-            "full-service-model/comparison.json",
-            "file-backed RSE, SI, secure, and primary console logs",
-        ],
-        "completion_role": "required milestone, not final completion",
-    },
-    {
-        "gate": "G3",
-        "name": "Live CL1 integration",
-        "required_evidence": [
-            "full-live-cl1/result.json",
-            "CL1 Zephyr markers",
-            "AP Linux HIPC/RPMsg/PFDI post-login markers",
-        ],
-        "completion_role": "required milestone, not final completion",
-    },
-    {
-        "gate": "G4",
-        "name": "Live CL0/CL1 integration",
-        "required_evidence": [
-            "full-live-cl0-cl1/result.json",
-            "RSE, SI CL0, SI CL1, AP firmware, Linux, and post-login marker groups",
-            "file-backed subsystem logs",
-        ],
-        "completion_role": "final runtime candidate",
-    },
-    {
-        "gate": "G5",
-        "name": "FVP equivalence closure",
-        "required_evidence": [
-            "full-live-cl0-cl1/comparison.json",
-            "full-live-cl0-cl1/map-comparison.json",
-            "full-live-cl0-cl1/coverage-audit.json",
-            "full-live-cl0-cl1/final-verification.json",
-        ],
-        "completion_role": "final acceptance gate",
-    },
-]
-FINAL_ACCEPTANCE_ARTIFACTS = {
-    "evidence_directory": "build/qbox-apollo-fvp/full-live-cl0-cl1",
-    "required_files": FINAL_EVIDENCE_BUNDLE,
-    "required_logs": REQUIRED_FULL_LOGS,
-    "required_marker_groups": REQUIRED_MARKER_GROUPS,
-    "not_accepted_as_completion": GOAL_DEFINITION["not_completion_points"],
-}
-REVIEW_RULES = [
-    "Final completion is authorized only by --strict-final verifier success.",
-    "All G0..G5 gates must be pass in the same final verification output.",
-    "Service-model and focused live-domain runs are milestone evidence only.",
-    "Every runtime claim must cite result.json and file-backed subsystem logs.",
-    "Unclassified missing markers or absent boot-critical hardware are failures.",
-]
+)
+FINAL_SIDECARS = ("result.json", "comparison.json", "map-comparison.json", "coverage-audit.json")
+LINUX_CPU_ONLINE_RE = re.compile(r"^online=(?P<online>\S+)\s*$", re.MULTILINE)
+LINUX_CPUINFO_RE = re.compile(r"^cpuinfo_processors=(?P<count>\d+)\s*$", re.MULTILINE)
 
 
 def workspace_root() -> Path:
@@ -239,53 +34,38 @@ def read_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
-def file_presence(path: Path) -> dict[str, Any]:
-    exists = path.exists()
-    return {
-        "path": str(path.resolve()),
-        "exists": exists,
-        "size": path.stat().st_size if exists and path.is_file() else None,
+def read_log(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def add_check(checks: list[dict[str, Any]], gate: str, name: str, passed: bool,
+              *, path: Path, status: str | None = None) -> None:
+    check: dict[str, Any] = {
+        "gate": gate,
+        "name": name,
+        "passed": passed,
+        "path": str(path),
     }
+    if status is not None:
+        check["status"] = status
+    checks.append(check)
 
 
-def final_bundle_contract(live_dir: Path, output_path: Path) -> dict[str, Any]:
-    expected_output = live_dir / FINAL_OUTPUT_NAME
-    output_is_canonical = output_path.resolve() == expected_output.resolve()
-    required_files: dict[str, Any] = {}
-    for filename in FINAL_EVIDENCE_BUNDLE:
-        if filename == FINAL_OUTPUT_NAME:
-            required_files[filename] = {
-                "path": str(output_path.resolve()),
-                "expected_path": str(expected_output.resolve()),
-                "created_by_this_command": True,
-                "output_is_canonical": output_is_canonical,
-            }
-        else:
-            required_files[filename] = file_presence(live_dir / filename)
-    return {
-        "evidence_directory": str(live_dir.resolve()),
-        "expected_final_output": str(expected_output.resolve()),
-        "actual_output": str(output_path.resolve()),
-        "output_is_canonical": output_is_canonical,
-        "required_files": required_files,
-    }
+def gate_value(result: dict[str, Any], gate: str) -> str:
+    gates = result.get("completion_gates")
+    if not isinstance(gates, dict):
+        return "missing"
+    return str(gates.get(gate, "missing"))
 
 
-def all_marker_hits_pass(marker_groups: Any) -> bool:
-    if not isinstance(marker_groups, dict) or not marker_groups:
-        return False
-    for markers in marker_groups.values():
-        if not isinstance(markers, dict) or not markers:
-            return False
-        if not all(bool(value) for value in markers.values()):
-            return False
-    return True
-
-
-def required_marker_groups_pass(marker_groups: Any) -> bool:
+def marker_groups_pass(result: dict[str, Any], groups: tuple[str, ...]) -> bool:
+    marker_groups = result.get("marker_groups")
     if not isinstance(marker_groups, dict):
         return False
-    for group in REQUIRED_MARKER_GROUPS:
+    for group in groups:
         markers = marker_groups.get(group)
         if not isinstance(markers, dict) or not markers:
             return False
@@ -294,682 +74,190 @@ def required_marker_groups_pass(marker_groups: Any) -> bool:
     return True
 
 
-def log_files_present(result: dict[str, Any], names: list[str]) -> bool:
-    logs = result.get("console_logs")
-    if not isinstance(logs, dict):
-        return False
-    for name in names:
-        path = Path(str(logs.get(name, "")))
-        if not path.exists() or path.stat().st_size == 0:
-            return False
-    return True
-
-
 def console_log_path(result: dict[str, Any], name: str) -> Path:
     logs = result.get("console_logs")
     if not isinstance(logs, dict):
-        return Path("")
+        return Path()
     return Path(str(logs.get(name, "")))
 
 
-def read_log(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
+def logs_present(result: dict[str, Any], names: tuple[str, ...]) -> bool:
+    return all(console_log_path(result, name).is_file() for name in names)
 
 
-def ap_cpu_count(result: dict[str, Any]) -> int | None:
+def configured_cpu_count(result: dict[str, Any]) -> tuple[int | None, int | None]:
     observations = result.get("platform_observations")
-    if isinstance(observations, dict) and isinstance(observations.get("ap_cpus"), int):
-        return int(observations["ap_cpus"])
-    platform_text = read_log(console_log_path(result, "platform"))
-    match = AP_CPU_COUNT_RE.search(platform_text)
-    return int(match.group("count")) if match else None
+    if not isinstance(observations, dict):
+        return None, None
+    actual = observations.get("ap_cpus")
+    expected = observations.get("expected_ap_cpus")
+    if not isinstance(actual, int) or not isinstance(expected, int):
+        return None, None
+    return actual, expected
 
 
-def ap_cpus_enabled(result: dict[str, Any]) -> bool:
-    return ap_cpu_count(result) == EXPECTED_AP_CPUS
-
-
-def linux_cpu_enumeration(result: dict[str, Any]) -> tuple[bool, str]:
-    primary_text = read_log(primary_console_log_path(result))
-    online_match = LINUX_CPU_ONLINE_RE.search(primary_text)
-    cpuinfo_match = LINUX_CPUINFO_PROCESSORS_RE.search(primary_text)
+def linux_cpu_topology(result: dict[str, Any]) -> tuple[bool, str]:
+    actual, expected = configured_cpu_count(result)
+    text = read_log(console_log_path(result, "primary_console"))
+    online_match = LINUX_CPU_ONLINE_RE.search(text)
+    cpuinfo_match = LINUX_CPUINFO_RE.search(text)
     online = online_match.group("online") if online_match else "missing"
-    processors = int(cpuinfo_match.group("count")) if cpuinfo_match else -1
-    stale_maxcpus_4 = "maxcpus=4" in primary_text
+    cpuinfo = int(cpuinfo_match.group("count")) if cpuinfo_match else None
+    expected_online = "missing" if expected is None else (
+        "0" if expected == 1 else f"0-{expected - 1}"
+    )
     passed = (
-        online == "0-15"
-        and processors == EXPECTED_AP_CPUS
-        and not stale_maxcpus_4
+        actual is not None
+        and expected is not None
+        and actual == expected
+        and online == expected_online
+        and cpuinfo == expected
     )
-    status = (
-        f"online={online} "
-        f"cpuinfo_processors={processors if processors >= 0 else 'missing'} "
-        f"maxcpus_4={stale_maxcpus_4}"
-    )
+    status = f"ap_cpus={actual} expected={expected} online={online} cpuinfo_processors={cpuinfo}"
     return passed, status
-
-
-def secure_console_has_ap_bl2(result: dict[str, Any]) -> bool:
-    observations = result.get("secure_console_observations")
-    if isinstance(observations, dict) and observations.get("ap_bl2_console") is not None:
-        return bool(observations.get("ap_bl2_console"))
-    secure_text = read_log(console_log_path(result, "secure_console"))
-    return "NOTICE:  BL2:" in secure_text
-
-
-def secure_console_has_bl31(result: dict[str, Any]) -> bool:
-    observations = result.get("secure_console_observations")
-    if isinstance(observations, dict) and observations.get("bl31_console") is not None:
-        return bool(observations.get("bl31_console"))
-    secure_text = read_log(console_log_path(result, "secure_console"))
-    return "NOTICE:  BL31:" in secure_text
-
-
-def secure_console_has_optee(result: dict[str, Any]) -> bool:
-    observations = result.get("secure_console_observations")
-    if isinstance(observations, dict) and observations.get("optee_console") is not None:
-        return bool(observations.get("optee_console"))
-    secure_text = read_log(console_log_path(result, "secure_console"))
-    return "OP-TEE version:" in secure_text
-
-
-def primary_console_log_path(result: dict[str, Any]) -> Path:
-    return console_log_path(result, "primary_console")
-
-
-def primary_console_has_u_boot(result: dict[str, Any]) -> bool:
-    observations = result.get("primary_console_observations")
-    if isinstance(observations, dict) and observations.get("u_boot_console") is not None:
-        return bool(observations.get("u_boot_console"))
-    primary_text = read_log(primary_console_log_path(result))
-    return "U-Boot " in primary_text
-
-
-def gate_value(result: dict[str, Any], gate: str) -> str | None:
-    gates = result.get("completion_gates")
-    if not isinstance(gates, dict):
-        return None
-    value = gates.get(gate)
-    return value if isinstance(value, str) else None
-
-
-def choose_existing(root: Path, preferred: str, fallback: str | None = None) -> Path:
-    preferred_path = root / preferred
-    if preferred_path.exists() or fallback is None:
-        return preferred_path
-    fallback_path = root / fallback
-    return fallback_path if fallback_path.exists() else preferred_path
-
-
-def choose_result_dir(root: Path, preferred: str, fallback: str | None = None) -> Path:
-    preferred_path = root / preferred
-    if (preferred_path / "result.json").exists() or fallback is None:
-        return preferred_path
-    fallback_path = root / fallback
-    if (fallback_path / "result.json").exists():
-        return fallback_path
-    return choose_existing(root, preferred, fallback)
-
-
-def add_check(
-    checks: list[dict[str, Any]],
-    gate: str,
-    name: str,
-    passed: bool,
-    *,
-    path: Path | None = None,
-    status: str | None = None,
-    detail: str | None = None,
-) -> None:
-    entry: dict[str, Any] = {
-        "gate": gate,
-        "name": name,
-        "passed": bool(passed),
-    }
-    if path is not None:
-        entry["path"] = str(path.resolve())
-    if status is not None:
-        entry["status"] = status
-    if detail is not None:
-        entry["detail"] = detail
-    checks.append(entry)
 
 
 def verify_g0(checks: list[dict[str, Any]], check_dir: Path) -> str:
     result_path = check_dir / "result.json"
-    map_path = check_dir / "map-validation.json"
-    coverage_path = check_dir / "coverage-audit.json"
     result = read_json(result_path)
-    map_result = read_json(map_path)
-    coverage = read_json(coverage_path)
-    expected_gates = all(
-        gate_value(result, gate) == ("pass" if gate == "G0" else "not_run")
-        for gate in GATES
+    candidates = (
+        ("check-only result passed", bool(result.get("passed")), result_path),
+        ("check-only gate contract", gate_value(result, "G0") == "pass", result_path),
+        ("static map validation passed",
+         bool(read_json(check_dir / "map-validation.json").get("passed")),
+         check_dir / "map-validation.json"),
+        ("static coverage audit passed",
+         bool(read_json(check_dir / "coverage-audit.json").get("passed")),
+         check_dir / "coverage-audit.json"),
     )
-    add_check(checks, "G0", "check-only result exists", bool(result), path=result_path)
-    add_check(checks, "G0", "check-only passed", bool(result.get("passed")), path=result_path)
-    add_check(checks, "G0", "check-only gate contract", expected_gates, path=result_path)
-    add_check(checks, "G0", "map validation passed", bool(map_result.get("passed")), path=map_path)
-    add_check(
-        checks,
-        "G0",
-        "coverage audit passed",
-        bool(coverage.get("passed")),
-        path=coverage_path,
-    )
-    return "pass" if all(check["passed"] for check in checks if check["gate"] == "G0") else "fail"
+    for name, passed, path in candidates:
+        add_check(checks, "G0", name, passed, path=path)
+    return "pass" if all(passed for _, passed, _ in candidates) else "fail"
 
 
 def verify_g1(checks: list[dict[str, Any]], full_dir: Path) -> str:
-    result_path = full_dir / "result.json"
-    result = read_json(result_path)
-    marker_groups = result.get("marker_groups")
-    post_login_probe = result.get("post_login_probe")
-    ap_groups_pass = isinstance(marker_groups, dict) and all(
-        isinstance(marker_groups.get(group), dict)
-        and bool(marker_groups[group])
-        and all(bool(value) for value in marker_groups[group].values())
-        for group in ("ap_firmware", "linux", "post_login")
+    path = full_dir / "result.json"
+    result = read_json(path)
+    probe = result.get("post_login_probe")
+    candidates = (
+        ("full-system result passed", bool(result.get("passed")), path),
+        ("full-system topology recorded",
+         result.get("safety_island_topology") == "full-system", path),
+        ("full-system AP gate passed", gate_value(result, "G1") == "pass", path),
+        ("full-system AP marker groups passed",
+         marker_groups_pass(result, ("ap_firmware", "linux", "post_login")), path),
+        ("full-system AP post-login probe passed",
+         isinstance(probe, dict) and bool(probe.get("requested"))
+         and bool(probe.get("passed")), path),
+        ("full-system AP logs present",
+         logs_present(result, ("secure_console", "primary_console")), path),
     )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP result exists",
-        bool(result),
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP result passed",
-        bool(result.get("passed")),
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP service-model mode recorded",
-        result.get("safety_island_mode") == "service-model",
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP gate passed",
-        gate_value(result, "G1") == "pass",
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP marker groups passed",
-        ap_groups_pass,
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP post-login probe passed",
-        isinstance(post_login_probe, dict)
-        and bool(post_login_probe.get("requested"))
-        and bool(post_login_probe.get("passed")),
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G1",
-        "full-system AP logs present",
-        log_files_present(result, ["secure_console", "primary_console"]),
-        path=result_path,
-    )
-    return "pass" if all(check["passed"] for check in checks if check["gate"] == "G1") else "fail"
+    for name, passed, source in candidates:
+        add_check(checks, "G1", name, passed, path=source)
+    return "pass" if all(passed for _, passed, _ in candidates) else "fail"
 
 
-def verify_g2(checks: list[dict[str, Any]], service_dir: Path) -> str:
-    result_path = service_dir / "result.json"
-    comparison_path = service_dir / "comparison.json"
-    result = read_json(result_path)
-    comparison = read_json(comparison_path)
-    add_check(checks, "G2", "service-model result exists", bool(result), path=result_path)
-    add_check(checks, "G2", "service-model result passed", bool(result.get("passed")), path=result_path)
-    add_check(
-        checks,
-        "G2",
-        "service-model mode recorded",
-        result.get("safety_island_mode") == "service-model",
-        path=result_path,
+def verify_g2(checks: list[dict[str, Any]], full_dir: Path) -> str:
+    path = full_dir / "result.json"
+    result = read_json(path)
+    actual, expected = configured_cpu_count(result)
+    linux_ok, linux_status = linux_cpu_topology(result)
+    secure = result.get("secure_console_observations")
+    primary = result.get("primary_console_observations")
+    candidates = (
+        ("full-system runtime gate passed", gate_value(result, "G2") == "pass", None),
+        ("full-system required marker groups passed",
+         marker_groups_pass(result, REQUIRED_MARKER_GROUPS), None),
+        ("full-system subsystem logs present", logs_present(result, REQUIRED_LOGS), None),
+        ("full-system AP CPU topology", actual is not None and actual == expected,
+         f"ap_cpus={actual}"),
+        ("full-system Linux CPU topology", linux_ok, linux_status),
+        ("full-system secure firmware observed",
+         isinstance(secure, dict) and all(
+             bool(secure.get(name))
+             for name in ("ap_bl2_console", "bl31_console", "optee_console")
+         ), None),
+        ("full-system U-Boot observed",
+         isinstance(primary, dict) and bool(primary.get("u_boot_console")), None),
     )
-    add_check(
-        checks,
-        "G2",
-        "service-model gate passed",
-        gate_value(result, "G2") == "pass",
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G2",
-        "service-model marker groups passed",
-        all_marker_hits_pass(result.get("marker_groups")),
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G2",
-        "service-model subsystem logs present",
-        log_files_present(result, REQUIRED_FULL_LOGS),
-        path=result_path,
-    )
-    add_check(
-        checks,
-        "G2",
-        "service-model FVP comparison passed",
-        bool(comparison.get("passed")),
-        path=comparison_path,
-    )
-    return "pass" if all(check["passed"] for check in checks if check["gate"] == "G2") else "fail"
+    for name, passed, status in candidates:
+        add_check(checks, "G2", name, passed, path=path, status=status)
+    return "pass" if all(passed for _, passed, _ in candidates) else "fail"
 
 
-def verify_live_gate(
-    checks: list[dict[str, Any]],
-    gate: str,
-    run_dir: Path,
-    *,
-    mode: str,
-    accepted_blocker_prefixes: list[str],
-    strict_final: bool,
-) -> str:
-    result_path = run_dir / "result.json"
-    result = read_json(result_path)
-    add_check(checks, gate, f"{mode} result exists", bool(result), path=result_path)
-    if not result:
-        return "fail"
-    blocker = result.get("blocker")
-    recorded_gate = gate_value(result, gate)
-    add_check(
-        checks,
-        gate,
-        f"{mode} mode recorded",
-        result.get("safety_island_mode") == mode,
-        path=result_path,
-        status=str(result.get("safety_island_mode")),
-    )
-    if bool(result.get("passed")) and recorded_gate == "pass":
-        add_check(checks, gate, f"{mode} gate passed", True, path=result_path)
-        add_check(
-            checks,
-            gate,
-            f"{mode} marker groups passed",
-            all_marker_hits_pass(result.get("marker_groups")),
-            path=result_path,
+def verify_g3(checks: list[dict[str, Any]], full_dir: Path, output: Path,
+              *, strict_final: bool) -> str:
+    candidates = [
+        (
+            f"full-system bundle contains {name}",
+            bool(read_json(full_dir / name).get("passed")),
+            full_dir / name,
         )
-        add_check(
-            checks,
-            gate,
-            f"{mode} subsystem logs present",
-            log_files_present(result, REQUIRED_FULL_LOGS),
-            path=result_path,
-        )
-        if gate == "G4":
-            linux_cpus_ok, linux_cpus_status = linux_cpu_enumeration(result)
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 AP CPUs enabled",
-                ap_cpus_enabled(result),
-                path=console_log_path(result, "platform"),
-                status=f"ap_cpus={ap_cpu_count(result)}",
-            )
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 Linux enumerated 16 CPUs",
-                linux_cpus_ok,
-                path=primary_console_log_path(result),
-                status=linux_cpus_status,
-            )
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 AP BL2 ran on secure console",
-                secure_console_has_ap_bl2(result),
-                path=console_log_path(result, "secure_console"),
-            )
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 BL31 ran on secure console",
-                secure_console_has_bl31(result),
-                path=console_log_path(result, "secure_console"),
-            )
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 OP-TEE ran on secure console",
-                secure_console_has_optee(result),
-                path=console_log_path(result, "secure_console"),
-            )
-            add_check(
-                checks,
-                gate,
-                "live-cl0-cl1 U-Boot ran on primary console",
-                primary_console_has_u_boot(result),
-                path=primary_console_log_path(result),
-            )
-        return "pass" if all(check["passed"] for check in checks if check["gate"] == gate) else "fail"
-
-    blocked = (
-        recorded_gate == "blocked"
-        and isinstance(blocker, str)
-        and any(blocker.startswith(prefix) for prefix in accepted_blocker_prefixes)
-    )
-    add_check(
-        checks,
-        gate,
-        f"{mode} blocked classification recorded",
-        blocked,
-        path=result_path,
-        status=str(blocker),
-    )
-    if strict_final and blocked:
-        add_check(
-            checks,
-            gate,
-            f"{mode} must pass for strict final completion",
-            False,
-            path=result_path,
-            status=str(blocker),
-        )
-    return "fail" if strict_final else ("blocked" if blocked else "fail")
-
-
-def verify_g5(
-    checks: list[dict[str, Any]],
-    live_dir: Path,
-    *,
-    strict_final: bool,
-) -> str:
-    result_path = live_dir / "result.json"
-    comparison_path = live_dir / "comparison.json"
-    map_path = live_dir / "map-comparison.json"
-    coverage_path = live_dir / "coverage-audit.json"
-    result = read_json(result_path)
-    comparison = read_json(comparison_path)
-    map_result = read_json(map_path)
-    coverage = read_json(coverage_path)
-    linux_cpus_ok, linux_cpus_status = linux_cpu_enumeration(result)
-    runtime_gate_contract = (
-        bool(result)
-        and gate_value(result, "G0") == "pass"
-        and gate_value(result, "G4") == "pass"
-    )
-    checks_to_add = [
-        (
-            "full live result passed in live-cl0-cl1 mode",
-            bool(result.get("passed"))
-            and result.get("verdict") == "pass"
-            and result.get("safety_island_mode") == "live-cl0-cl1",
-            result_path,
-        ),
-        (
-            "full live result runtime gate contract",
-            runtime_gate_contract,
-            result_path,
-        ),
-        (
-            "full live required marker groups passed",
-            required_marker_groups_pass(result.get("marker_groups")),
-            result_path,
-        ),
-        (
-            "full live subsystem logs present",
-            log_files_present(result, REQUIRED_FULL_LOGS),
-            result_path,
-        ),
-        ("full live AP CPUs enabled", ap_cpus_enabled(result), console_log_path(result, "platform")),
-        (
-            "full live Linux enumerated 16 CPUs",
-            linux_cpus_ok,
-            primary_console_log_path(result),
-        ),
-        (
-            "full live AP BL2 ran on secure console",
-            secure_console_has_ap_bl2(result),
-            console_log_path(result, "secure_console"),
-        ),
-        (
-            "full live BL31 ran on secure console",
-            secure_console_has_bl31(result),
-            console_log_path(result, "secure_console"),
-        ),
-        (
-            "full live OP-TEE ran on secure console",
-            secure_console_has_optee(result),
-            console_log_path(result, "secure_console"),
-        ),
-        (
-            "full live U-Boot ran on primary console",
-            primary_console_has_u_boot(result),
-            primary_console_log_path(result),
-        ),
-        ("full live FVP comparison passed", bool(comparison.get("passed")), comparison_path),
-        ("full live map comparison passed", bool(map_result.get("passed")), map_path),
-        ("full live coverage audit passed", bool(coverage.get("passed")), coverage_path),
+        for name in FINAL_SIDECARS[1:]
     ]
-    for name, passed, path in checks_to_add:
-        status = linux_cpus_status if name == "full live Linux enumerated 16 CPUs" else None
-        add_check(checks, "G5", name, passed, path=path, status=status)
-    gate_checks = [check for check in checks if check["gate"] == "G5"]
-    if all(check["passed"] for check in gate_checks):
-        return "pass"
-    return "fail" if strict_final else "not_run"
+    if strict_final:
+        candidates.append((
+            "strict final output is canonical",
+            output.resolve() == (full_dir / "final-verification.json").resolve(),
+            output,
+        ))
+    for name, passed, path in candidates:
+        add_check(checks, "G3", name, passed, path=path)
+    return "pass" if all(passed for _, passed, _ in candidates) else "fail"
 
 
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--evidence-root",
-        type=Path,
-        default=root / "build/qbox-apollo-fvp",
-    )
+    parser.add_argument("--evidence-root", type=Path,
+                        default=root / "build/qbox-apollo-fvp")
     parser.add_argument("--check-only-dir", default="full-check-only")
-    parser.add_argument("--service-model-dir")
-    parser.add_argument("--live-cl1-dir", default="full-live-cl1")
-    parser.add_argument("--live-cl0-cl1-dir", default="full-live-cl0-cl1")
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=root / "build/qbox-apollo-fvp/full-completion-verification.json",
-    )
-    parser.add_argument(
-        "--strict-final",
-        action="store_true",
-        help="Return success only when G0 through G5 are complete.",
-    )
+    parser.add_argument("--full-system-dir", default="full-system")
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--strict-final", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     evidence_root = args.evidence_root.resolve()
-    service_dir = (
-        evidence_root / args.service_model_dir
-        if args.service_model_dir
-        else choose_result_dir(
-            evidence_root,
-            "full-service-model",
-            "full-service-model-apollo-profile",
-        )
-    )
-    dirs = {
-        "G0": evidence_root / args.check_only_dir,
-        "G1": service_dir,
-        "G2": service_dir,
-        "G3": evidence_root / args.live_cl1_dir,
-        "G4": evidence_root / args.live_cl0_cl1_dir,
-        "G5": evidence_root / args.live_cl0_cl1_dir,
-    }
+    check_dir = evidence_root / args.check_only_dir
+    full_dir = evidence_root / args.full_system_dir
+    output = args.output.resolve() if args.output is not None else (
+        full_dir / "final-verification.json"
+    ).resolve()
     checks: list[dict[str, Any]] = []
-    overall_gates = {
-        "G0": verify_g0(checks, dirs["G0"]),
-        "G1": verify_g1(checks, dirs["G1"]),
-        "G2": verify_g2(checks, dirs["G2"]),
-        "G3": verify_live_gate(
-            checks,
-            "G3",
-            dirs["G3"],
-            mode="live-cl1",
-            accepted_blocker_prefixes=[
-                "live_cl1_not_implemented:",
-                "live_cl1_map_blocked:",
-                "live_cl1_marker_blocked:",
-                "live_cl1_hipc_rpmsg_blocked:",
-                "qbox_platform_timeout",
-                "qbox_post_login_probe_not_reached",
-            ],
-            strict_final=args.strict_final,
-        ),
-        "G4": verify_live_gate(
-            checks,
-            "G4",
-            dirs["G4"],
-            mode="live-cl0-cl1",
-            accepted_blocker_prefixes=[
-                "live_cl0_cl1_not_implemented:",
-                "live_cl0_cl1_map_blocked:",
-                "live_cl0_cl1_marker_blocked:",
-                "live_cl0_cl1_hipc_rpmsg_blocked:",
-                "qbox_platform_timeout",
-                "qbox_post_login_probe_not_reached",
-            ],
-            strict_final=args.strict_final,
-        ),
-        "G5": verify_g5(checks, dirs["G5"], strict_final=args.strict_final),
+    overall = {
+        "G0": verify_g0(checks, check_dir),
+        "G1": verify_g1(checks, full_dir),
+        "G2": verify_g2(checks, full_dir),
+        "G3": verify_g3(checks, full_dir, output, strict_final=args.strict_final),
     }
-    final_bundle = final_bundle_contract(dirs["G5"], args.output)
-    if args.strict_final:
-        canonical_live_dir = (evidence_root / "full-live-cl0-cl1").resolve()
-        final_run_is_canonical = dirs["G5"].resolve() == canonical_live_dir
-        add_check(
-            checks,
-            "G5",
-            "strict final live directory is canonical full-live-cl0-cl1",
-            final_run_is_canonical,
-            path=dirs["G5"],
-            detail=f"expected {canonical_live_dir}",
-        )
-        if not final_run_is_canonical:
-            overall_gates["G5"] = "fail"
-        add_check(
-            checks,
-            "G5",
-            "strict final output is canonical final-verification.json",
-            bool(final_bundle["output_is_canonical"]),
-            path=args.output,
-            detail=f"expected {final_bundle['expected_final_output']}",
-        )
-        if not final_bundle["output_is_canonical"]:
-            overall_gates["G5"] = "fail"
-        for filename, record in final_bundle["required_files"].items():
-            if filename == FINAL_OUTPUT_NAME:
-                continue
-            exists = bool(record.get("exists"))
-            add_check(
-                checks,
-                "G5",
-                f"strict final bundle contains {filename}",
-                exists,
-                path=Path(str(record.get("path", ""))),
-            )
-            if not exists:
-                overall_gates["G5"] = "fail"
-
-    gate_blockers = {
-        str(check["gate"]): str(check["status"])
-        for check in checks
-        if check.get("passed")
-        and isinstance(check.get("status"), str)
-        and "blocked classification recorded" in str(check.get("name", ""))
-    }
-    first_incomplete_gate = next(
-        (gate for gate in GATES if overall_gates.get(gate) != "pass"),
-        None,
-    )
-    first_failed_check = next((check for check in checks if not check["passed"]), None)
-    if first_incomplete_gate is None:
-        completion_rejection_reason = None
-    elif first_incomplete_gate in gate_blockers:
-        completion_rejection_reason = gate_blockers[first_incomplete_gate]
-    elif first_failed_check is not None:
-        completion_rejection_reason = (
-            f"{first_failed_check['gate']}:{first_failed_check['name']}"
-        )
-    else:
-        completion_rejection_reason = (
-            f"{first_incomplete_gate}:{overall_gates[first_incomplete_gate]}"
-        )
-
-    final_complete = all(overall_gates.get(gate) == "pass" for gate in GATES)
-    completion_claim_allowed = bool(args.strict_final and final_complete)
-    current_progress_ok = all(
-        overall_gates.get(gate) == "pass" for gate in ["G0", "G1", "G2"]
-    ) and overall_gates.get("G3") in {"blocked", "pass"}
-    if args.strict_final:
-        verdict = "pass" if final_complete else "fail"
-    else:
-        verdict = "pass" if final_complete else ("blocked" if current_progress_ok else "fail")
-    result = {
-        "goal_definition": GOAL_DEFINITION,
-        "completion_policy": COMPLETION_POLICY,
-        "goal_verification_plan": GOAL_VERIFICATION_PLAN,
-        "passed": final_complete if args.strict_final else current_progress_ok,
-        "strict_final": args.strict_final,
-        "verdict": verdict,
-        "completion_ready": final_complete,
-        "completion_claim_allowed": completion_claim_allowed,
-        "first_incomplete_gate": first_incomplete_gate,
-        "gate_blockers": gate_blockers,
-        "first_blocker": completion_rejection_reason,
-        "completion_rejection_reason": completion_rejection_reason,
-        "first_failed_check": first_failed_check,
-        "completion_levels": COMPLETION_LEVELS,
-        "final_acceptance_artifacts": FINAL_ACCEPTANCE_ARTIFACTS,
-        "final_bundle_contract": final_bundle,
-        "review_rules": REVIEW_RULES,
-        "overall_gates": overall_gates,
-        "evidence_directories": {gate: str(path.resolve()) for gate, path in dirs.items()},
+    complete = all(overall[gate] == "pass" for gate in GATES)
+    status = {
+        "verdict": "pass" if complete else "fail",
+        "completion_ready": complete,
+        "completion_claim_allowed": bool(args.strict_final and complete),
+        "strict_final": bool(args.strict_final),
+        "overall_gates": overall,
         "checks": checks,
-        "required_final_result": {
-            "verdict": "pass",
-            "safety_island_mode": "live-cl0-cl1",
-            "completion_gates": {"G0": "pass", "G4": "pass"},
-            "sidecar_gates": {
-                "comparison.json": "pass",
-                "map-comparison.json": "pass",
-                "coverage-audit.json": "pass",
-            },
-        },
+        "evidence_root": str(evidence_root),
+        "full_system_dir": str(full_dir),
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
-    print(args.output)
-    print(f"verdict: {result['verdict']}")
-    print("overall_gates:")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(status, indent=2, sort_keys=True) + "\n")
+    print(output)
+    print(f"verdict: {status['verdict']}")
     for gate in GATES:
-        print(f"  {gate}: {overall_gates[gate]}")
-    if args.strict_final and not final_complete:
-        for check in checks:
-            if not check["passed"]:
-                print(
-                    f"FAIL {check['gate']} {check['name']}: "
-                    f"{check.get('status', check.get('path', ''))}",
-                    file=sys.stderr,
-                )
-    return 0 if result["passed"] else 1
+        print(f"  {gate}: {overall[gate]}")
+    for check in checks:
+        if not check["passed"]:
+            print(
+                f"FAIL {check['gate']} {check['name']}: "
+                f"{check.get('status', check['path'])}",
+                file=sys.stderr,
+            )
+    return 0 if complete else 1
 
 
 if __name__ == "__main__":

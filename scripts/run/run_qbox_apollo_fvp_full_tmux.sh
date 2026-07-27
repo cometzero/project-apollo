@@ -24,7 +24,6 @@ QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
-SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 ROOTFS_BOOTARGS_PROFILE="${ROOTFS_BOOTARGS_PROFILE:-none}"
@@ -80,8 +79,6 @@ Options:
   --qbox-build-dir P   QBox CMake build directory
                        (default: <local-build-dir>/work/qbox-platform)
   --conf PATH          QBox Lua config (default: ${QBOX_CONF})
-  --si-mode MODE       service-model, live-cl1, or live-cl0-cl1
-                       (default: ${SI_MODE})
   --timeout SECONDS    runner timeout, 0 means no timeout (default: ${TIMEOUT})
   --jobs N             build jobs passed to the runner (default: ${JOBS})
   --build              build QBox targets before running
@@ -148,7 +145,7 @@ fast-boot SRAM DMI/shared-memory mode. Use
 Environment overrides:
   PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR
   QBOX_CORE_DIR QBOX_PLATFORM_DIR QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
-  SI_MODE TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
+  TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
   TMUX_LAYOUT MULTI_SESSION
   TMUX_UART_INPUT_FIFOS
   ROOTFS_BOOTARGS_PROFILE
@@ -217,14 +214,6 @@ validate_bool()
     case "$2" in
         0|1) ;;
         *) die "$1 must be 0 or 1: $2" ;;
-    esac
-}
-
-validate_si_mode()
-{
-    case "$1" in
-        service-model|live-cl1|live-cl0-cl1) ;;
-        *) die "invalid --si-mode: $1" ;;
     esac
 }
 
@@ -326,7 +315,6 @@ runner_command()
         --conf "${QBOX_CONF}"
         --local-build-dir "${LOCAL_BUILD_DIR}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
-        --si-mode "${SI_MODE}"
         --out-dir "${OUT_DIR}"
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
@@ -900,7 +888,6 @@ print_dry_run()
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   multi_session: ${MULTI_SESSION}
-  si_mode: ${SI_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
   explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
@@ -1353,7 +1340,6 @@ start_fvp_like_log_panes()
 start_tmux()
 {
     validate_tmux_name "${TMUX_SESSION}"
-    validate_si_mode "${SI_MODE}"
     validate_bool "QBOX_PERFORMANCE_PRESET" "${QBOX_PERFORMANCE_PRESET}"
     validate_bool "LEGACY_FILE_BACKED_SRAM" "${LEGACY_FILE_BACKED_SRAM}"
     validate_bool "RANGE_LIMITED_FLASH_DMI" "${RANGE_LIMITED_FLASH_DMI}"
@@ -1444,8 +1430,8 @@ start_tmux()
         printf 'QBOX_SESSION_OUT_DIR=%q ' "${OUT_DIR}"
         printf 'QBOX_CORE_DIR=%q QBOX_PLATFORM_DIR=%q QBOX_PLATFORM_BUILD_DIR=%q ' \
             "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
-        printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q SI_MODE=%q TIMEOUT=%q JOBS=%q ' \
-            "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${SI_MODE}" "${TIMEOUT}" "${JOBS}"
+        printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q TIMEOUT=%q JOBS=%q ' \
+            "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${TIMEOUT}" "${JOBS}"
         printf 'PRIMARY_LOGIN_PROMPT=%q PRIMARY_SHELL_MARKER=%q PRIMARY_SHELL_PROMPT_RE=%q ' \
             "${PRIMARY_LOGIN_PROMPT}" "${PRIMARY_SHELL_MARKER}" "${PRIMARY_SHELL_PROMPT_RE}"
         if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
@@ -1625,11 +1611,6 @@ while (($# > 0)); do
         --conf)
             (($# >= 2)) || die "--conf requires a value"
             QBOX_CONF="$2"
-            shift 2
-            ;;
-        --si-mode)
-            (($# >= 2)) || die "--si-mode requires a value"
-            SI_MODE="$2"
             shift 2
             ;;
         --timeout)

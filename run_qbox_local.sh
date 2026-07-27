@@ -16,7 +16,6 @@ OUT_DIR="${OUT_DIR:-}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-}}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_CONF="${QBOX_CONF:-}"
-SI_MODE="${SI_MODE:-live-cl0-cl1}"
 TIMEOUT="${TIMEOUT:-0}"
 JOBS="${JOBS:-$(( ($(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2) + 1) / 2 ))}"
 SSH_PORT_START="${SSH_PORT_START:-2222}"
@@ -117,7 +116,6 @@ Options:
   --conf FILE
   --session NAME
   --out-dir DIR
-  --si-mode MODE
   --timeout SECONDS
   --jobs N
   --copy-disks
@@ -303,11 +301,6 @@ parse_args()
             --out-dir)
                 (($# >= 2)) || die "--out-dir requires a value"
                 OUT_DIR="$2"
-                shift 2
-                ;;
-            --si-mode)
-                (($# >= 2)) || die "--si-mode requires a value"
-                SI_MODE="$2"
                 shift 2
                 ;;
             --timeout)
@@ -780,7 +773,6 @@ main()
         --local-build-dir "${LOCAL_BUILD_DIR}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
         --conf "${QBOX_CONF}"
-        --si-mode "${SI_MODE}"
         --timeout "${TIMEOUT}"
         --jobs "${JOBS}"
         --skip-build

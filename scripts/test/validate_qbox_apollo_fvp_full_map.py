@@ -65,19 +65,19 @@ CHECKS = {
         ("irq:cl1-dts", "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts", r"gic"),
         ("irq:multiview-task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-029"),
         (
-            "irq:ap-to-live-cl1-mhu-pair",
+            "irq:ap-to-si-cl1-mhu-pair",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'pair\s*=\s*ctx\.apollo_live_cl1\s+and\s+"apollo_ap_to_si_cl1"\s+or\s+"ap_si_cl1"',
+            r'pair\s*=\s*"apollo_ap_to_si_cl1"',
         ),
         (
-            "irq:live-cl1-to-ap-mhu-pair",
+            "irq:si-cl1-to-ap-mhu-pair",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'pair\s*=\s*ctx\.apollo_live_cl1\s+and\s+"apollo_si_cl1_to_ap"\s+or\s+"ap_si_cl1"',
+            r'pair\s*=\s*"apollo_si_cl1_to_ap"',
         ),
         (
-            "irq:live-cl1-real-doorbell-bridge",
+            "irq:si-cl1-real-doorbell-bridge",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'protocol\s*=\s*ctx\.apollo_live_cl1\s+and\s+"doorbell-bridge"\s+or\s+"doorbell"',
+            r'protocol\s*=\s*"doorbell-bridge"',
         ),
         (
             "timer:ap-refclk-ns-spi49",
@@ -214,9 +214,12 @@ CHECKS = {
             r"power_domain_reset_count\s*=\s*AP_NUM_CPUS",
         ),
         (
-            "reset:ap-power-domain-cpu1-through-last",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'for\s+i=1,\(AP_NUM_CPUS-1\)\s+do[\s\S]*power_domain_reset_"\.\.i[\s\S]*"&ap_cpu_"\.\.i\.\."\.reset"',
+            "reset:ap-ppu-cpu0-through-last",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
+            r'for\s+cluster=0,\(SI_CL0_AP_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
+            r'for\s+core=0,\(SI_CL0_AP_CORE_PER_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
+            r'power_on_reset\s*=\s*cpu_active\s+and\s+\{[\s\S]*'
+            r'"&ap_cpu_"\.\.cpu_index\.\."\.reset"',
         ),
     ],
 }

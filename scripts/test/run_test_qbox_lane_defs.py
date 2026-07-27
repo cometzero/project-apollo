@@ -172,7 +172,7 @@ def ctest_lanes(inputs: QboxInputs) -> list[QboxLane]:
 
 def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
     check_dir = inputs.run_dir / "extra/qbox-full/check-only"
-    live_dir = inputs.run_dir / "extra/qbox-full/live-cl0-cl1"
+    full_dir = inputs.run_dir / "extra/qbox-full/full-system"
     lanes = [
         QboxLane(
             "qbox-full-check-only",
@@ -180,8 +180,6 @@ def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
                 "python3",
                 "scripts/run/run_qbox_apollo_fvp_full.py",
                 "--check-only",
-                "--si-mode",
-                "live-cl0-cl1",
                 "--out-dir",
                 str(check_dir),
             ],
@@ -189,8 +187,6 @@ def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
                 "python3",
                 "scripts/run/run_qbox_apollo_fvp_full.py",
                 "--check-only",
-                "--si-mode",
-                "live-cl0-cl1",
                 "--out-dir",
                 str(check_dir),
             ],
@@ -201,33 +197,29 @@ def runtime_lanes(inputs: QboxInputs) -> list[QboxLane]:
             True,
         ),
         QboxLane(
-            "qbox-full-live-cl0-cl1",
+            "qbox-full-system",
             [
                 "python3",
                 "scripts/run/run_qbox_apollo_fvp_full.py",
                 "--skip-build",
-                "--si-mode",
-                "live-cl0-cl1",
                 "--timeout",
                 inputs.timeout_fvp,
                 "--out-dir",
-                str(live_dir),
+                str(full_dir),
             ],
             [
                 "python3",
                 "scripts/run/run_qbox_apollo_fvp_full.py",
                 "--skip-build",
-                "--si-mode",
-                "live-cl0-cl1",
                 "--timeout",
                 inputs.timeout_fvp,
                 "--out-dir",
-                str(live_dir),
+                str(full_dir),
             ],
             inputs.root,
-            live_dir / "stdout.log",
-            live_dir / "stderr.log",
-            live_dir,
+            full_dir / "stdout.log",
+            full_dir / "stderr.log",
+            full_dir,
             True,
         ),
     ]

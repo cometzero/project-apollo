@@ -27,7 +27,7 @@ BOOT_CRITICAL_BLOCKS = [
     "subsystem logs",
     "GIC multi-view",
 ]
-GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
+GATES = ["G0", "G1", "G2"]
 DEFAULT_AP_MAP_AUDIT = Path("build/qbox-apollo-qvp/ap-map-9-1-1/ap-map-audit.json")
 AP_MAP_PASSING_CLASSIFICATIONS = {"covered", "partial_model", "explicit_placeholder"}
 
@@ -82,19 +82,10 @@ def runtime_gate_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
     gates = result.get("completion_gates", {})
     if not isinstance(gates, dict):
         return [{"name": "completion_gates", "passed": False, "status": "missing"}]
-    required = {"G0"}
+    required = {"G0", "G2"}
     probe = result.get("post_login_probe", {})
     if isinstance(probe, dict) and probe.get("requested"):
         required.add("G1")
-    mode_gate = {
-        "service-model": "G2",
-        "live-cl1": "G3",
-        "live-cl0-cl1": "G4",
-    }.get(result.get("safety_island_mode"))
-    if mode_gate:
-        required.add(mode_gate)
-    if result.get("fvp_differential"):
-        required.add("G5")
     checks = [
         {
             "name": f"gate:{gate}",
@@ -104,6 +95,13 @@ def runtime_gate_checks(result: dict[str, Any]) -> list[dict[str, Any]]:
         }
         for gate in GATES
     ]
+    checks.append(
+        {
+            "name": "safety_island_topology",
+            "status": str(result.get("safety_island_topology", "missing")),
+            "passed": result.get("safety_island_topology") == "full-system",
+        }
+    )
     checks.append(
         {
             "name": "runtime_result_passed",

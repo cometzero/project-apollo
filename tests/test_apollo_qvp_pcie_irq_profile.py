@@ -109,7 +109,7 @@ def test_documented_profile_uses_canonical_full_system_runner() -> None:
     assert section.count("run_qbox_apollo_fvp_full.py") == 2
     assert "run_qbox_apollo_fvp_linux.py" not in section
     assert section.count("QBOX_APOLLO_NUM_CPUS=4") == 2
-    assert section.count("--si-mode live-cl0-cl1") == 2
+    assert "--si-mode" not in section
     assert section.count("--rootfs-bootargs-profile none") == 2
     assert "--msix-log <msix-output>/qbox-primary-console.log" in section
     assert "--intx-log <intx-output>/qbox-primary-console.log" in section

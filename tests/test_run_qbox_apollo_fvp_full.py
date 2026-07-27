@@ -25,6 +25,13 @@ SI_CL1_LUA = (
 APOLLO_QVP_CONFIG = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
 )
+APOLLO_QVP_ENTRY = (
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua"
+)
+SYSTEM_MGMT_LUA = (
+    ROOT
+    / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua"
+)
 
 
 def load_runner():
@@ -53,7 +60,6 @@ def make_args(tmp_path, *, post_login_probe=True):
         post_login_probe=post_login_probe,
         primary_login_prompt="apollo-qvp login:",
         primary_shell_marker="~ #",
-        si_mode="live-cl0-cl1",
     )
 
 
@@ -108,7 +114,6 @@ def make_child_command_args(tmp_path):
         rse_lms_accel=True,
         rse_lms_max_data_bytes=0,
         rse_lms_verify_addr=None,
-        si_mode="live-cl0-cl1",
         skip_build=False,
         smmu_backend="systemc-mmu720ae",
         timeout=60,
@@ -206,7 +211,7 @@ def test_child_runtime_evidence_keeps_runtime_fields():
     }
 
 
-def test_child_command_uboot_only_skips_live_cl1_completion_markers(tmp_path):
+def test_child_command_uboot_only_skips_si_cl1_completion_markers(tmp_path):
     runner = load_runner()
     args = make_child_command_args(tmp_path)
     args.uboot_only = True
@@ -231,7 +236,7 @@ def test_clear_run_outputs_preserves_tmux_primary_uart_fifo(tmp_path):
     assert not stale_result.exists()
 
 
-def test_child_command_requires_live_cl1_readiness(tmp_path):
+def test_child_command_requires_si_cl1_readiness(tmp_path):
     runner = load_runner()
 
     cmd = runner.child_command(
@@ -241,10 +246,10 @@ def test_child_command_requires_live_cl1_readiness(tmp_path):
 
     cl1_log = str((tmp_path / "qbox-safety-island-cl1.log").resolve())
     assert cmd.count("--required-pass-marker") == len(
-        runner.LIVE_CL1_REQUIRED_MARKERS
+        runner.SI_CL1_REQUIRED_MARKERS
     )
     assert cl1_log in cmd
-    for marker in runner.LIVE_CL1_REQUIRED_MARKERS.values():
+    for marker in runner.SI_CL1_REQUIRED_MARKERS.values():
         assert marker in cmd
 
 
@@ -319,24 +324,47 @@ def test_full_system_qemu_defaults_use_per_cpu_wake_conditions():
         '"QBOX_APOLLO_FULL_SI_CL0_TCG_MODE", "MULTI"' in si_cl0_text
     )
 
-def test_live_cl1_gate_requires_pfdi_readiness():
+
+def test_apollo_qvp_uses_one_full_safety_island_topology():
+    config = APOLLO_QVP_CONFIG.read_text(encoding="utf-8")
+    entrypoint = APOLLO_QVP_ENTRY.read_text(encoding="utf-8")
+    system_mgmt = SYSTEM_MGMT_LUA.read_text(encoding="utf-8")
+
+    for removed_setting in (
+        "QBOX_APOLLO_FULL_SI_MODE",
+        "QBOX_APOLLO_FULL_LIVE_CL0",
+        "QBOX_APOLLO_FULL_LIVE_CL1",
+        "apollo_si_mode",
+        "apollo_live_cl0",
+        "apollo_live_cl1",
+    ):
+        assert removed_setting not in config
+        assert removed_setting not in entrypoint
+        assert removed_setting not in system_mgmt
+
+    assert "si_cl0.enable(ctx, platform)" in entrypoint
+    assert "si_cl1.enable(ctx, platform)" in entrypoint
+    assert 'protocol = "doorbell-bridge"' in system_mgmt
+
+
+def test_si_gate_requires_pfdi_readiness():
     runner = load_runner()
     marker_groups = {
         "maps_and_interrupts": {"map_ok": True},
         "si_cl0": {"cl0_ok": True},
         "si_cl1": {
             name: name != "pfdi_agent"
-            for name in runner.LIVE_CL1_REQUIRED_MARKERS
+            for name in runner.SI_CL1_REQUIRED_MARKERS
         },
     }
 
-    blocker = runner.live_cl1_gate_blocker(
-        SimpleNamespace(si_mode="live-cl0-cl1"),
+    blocker = runner.si_gate_blocker(
+        SimpleNamespace(out_dir=None),
         marker_groups,
         {"passed": True},
     )
 
-    assert blocker == "live_cl0_cl1_marker_blocked:pfdi_agent"
+    assert blocker == "si_marker_blocked:pfdi_agent"
 
 
 @pytest.mark.parametrize(
@@ -495,6 +523,7 @@ def test_timer_probe_rejects_a_stale_pass_snapshot(tmp_path):
 @pytest.mark.parametrize(
     "forward_args",
     [
+        ["--si-mode", "service-model"],
         ["--rse-cpu-mode", "remote"],
         ["--remotepass-dmi-cache"],
         ["--rse-hotpath-tlm-fallback"],
@@ -613,7 +642,7 @@ def write_passing_logs(tmp_path):
     )
 
 
-def test_keep_running_child_status_requires_live_cl1_rpmsg_endpoint(tmp_path):
+def test_keep_running_child_status_requires_si_cl1_rpmsg_endpoint(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
     cl1_log = tmp_path / "qbox-safety-island-cl1.log"
@@ -638,7 +667,7 @@ def test_keep_running_child_status_requires_live_cl1_rpmsg_endpoint(tmp_path):
     )
 
 
-def test_keep_running_child_status_waits_for_live_cl1(tmp_path):
+def test_keep_running_child_status_waits_for_si_cl1(tmp_path):
     runner = load_runner()
     write_passing_logs(tmp_path)
     (tmp_path / "qbox-safety-island-cl1.log").unlink()
@@ -762,7 +791,7 @@ def test_keep_running_child_status_rejects_pfdi_timeout(tmp_path):
     assert status["fail_patterns"]["ret=-116"] is True
 
 
-def test_live_cl1_gate_rejects_pfdi_timeout(tmp_path):
+def test_si_gate_rejects_pfdi_timeout(tmp_path):
     runner = load_runner()
     (tmp_path / "qbox-safety-island-cl1.log").write_text(
         "PFDI Agent setup complete\n"
@@ -773,19 +802,19 @@ def test_live_cl1_gate_rejects_pfdi_timeout(tmp_path):
     marker_groups = {
         "maps_and_interrupts": {"map_ok": True},
         "si_cl0": {"cl0_ok": True},
-        "si_cl1": {name: True for name in runner.LIVE_CL1_REQUIRED_MARKERS},
+        "si_cl1": {name: True for name in runner.SI_CL1_REQUIRED_MARKERS},
     }
 
-    blocker = runner.live_cl1_gate_blocker(
-        SimpleNamespace(si_mode="live-cl0-cl1", out_dir=tmp_path),
+    blocker = runner.si_gate_blocker(
+        SimpleNamespace(out_dir=tmp_path),
         marker_groups,
         {"passed": True},
     )
 
-    assert blocker == "live_cl0_cl1_error:pfdi_status_timeout"
+    assert blocker == "si_error:pfdi_status_timeout"
 
 
-def test_live_cl1_gate_rejects_pfdi_initialization_failure(tmp_path):
+def test_si_gate_rejects_pfdi_initialization_failure(tmp_path):
     runner = load_runner()
     (tmp_path / "qbox-safety-island-cl1.log").write_text(
         "PFDI Agent setup complete\n"
@@ -797,17 +826,17 @@ def test_live_cl1_gate_rejects_pfdi_initialization_failure(tmp_path):
     marker_groups = {
         "maps_and_interrupts": {"map_ok": True},
         "si_cl0": {"cl0_ok": True},
-        "si_cl1": {name: True for name in runner.LIVE_CL1_REQUIRED_MARKERS},
+        "si_cl1": {name: True for name in runner.SI_CL1_REQUIRED_MARKERS},
     }
 
-    blocker = runner.live_cl1_gate_blocker(
-        SimpleNamespace(si_mode="live-cl0-cl1", out_dir=tmp_path),
+    blocker = runner.si_gate_blocker(
+        SimpleNamespace(out_dir=tmp_path),
         marker_groups,
         {"passed": True},
     )
 
     assert blocker == (
-        "live_cl0_cl1_error:pfdi_protocol_version_timeout,"
+        "si_error:pfdi_protocol_version_timeout,"
         "pfdi_agent_not_ready"
     )
 
@@ -836,7 +865,6 @@ def test_gate_status_records_post_login_qualification():
     args = SimpleNamespace(
         build_only=False,
         post_login_probe=True,
-        si_mode="live-cl0-cl1",
         uboot_only=False,
     )
     child_status = {
@@ -857,7 +885,7 @@ def test_gate_status_records_post_login_qualification():
     )
 
     assert gates["G1"] == "pass"
-    assert gates["G4"] == "pass"
+    assert gates["G2"] == "pass"
 
 
 def test_post_login_probe_promotes_root_shell_marker(tmp_path):
@@ -883,6 +911,16 @@ def test_post_login_probe_promotes_root_shell_marker(tmp_path):
     assert groups["linux"]["root_shell"] is True
     assert groups["post_login"]["probe"] is True
     assert groups["linux_boot"]["~ #"] is True
+
+
+def test_disabled_post_login_probe_is_not_a_failing_marker(tmp_path):
+    runner = load_runner()
+    write_passing_logs(tmp_path)
+    args = make_args(tmp_path, post_login_probe=False)
+
+    groups = runner.build_marker_groups(args, {"marker_hits": {}})
+
+    assert groups["post_login"]["probe"] is True
 
 
 def test_post_login_probe_rejects_incomplete_driver_contract():

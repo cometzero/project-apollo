@@ -113,7 +113,7 @@ EXTRA_LANES: Final = [
     "qbox-ctest-list",
     "qbox-ctest-rse-components",
     "qbox-full-check-only",
-    "qbox-full-live-cl0-cl1",
+    "qbox-full-system",
 ]
 
 

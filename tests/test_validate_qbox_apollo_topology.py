@@ -487,7 +487,7 @@ def test_rse_and_si_cl0_keep_runtime_proven_execution_contracts() -> None:
     si_cl1_cluster_ppu = si_cl1.split(
         "platform.host_si_cl1_clus_ppu = {", 1
     )[1].split("\n    }", 1)[0]
-    assert "assert_power_on_load = apollo_live_cl1" in si_cl1_cluster_ppu
+    assert "assert_power_on_load = true" in si_cl1_cluster_ppu
     assert "power_on_load_pulse_width_ns = 0" in si_cl1_cluster_ppu
     assert topology.count('sync_policy = "multithread-quantum"') == 2
     assert 'sync_policy = "multithread-unconstrained"' not in topology
@@ -562,10 +562,9 @@ def test_ap_ppus_drive_primary_cold_boot_and_live_secondary_resets() -> None:
     assert "power_on_reset = cpu_active and {" in ap_core_ppu
     assert 'bind = "&ap_cpu_"..cpu_index..".reset";' in ap_core_ppu
 
-    synthetic_reset = system_mgmt.split(
-        "if platform.host_ap_si_scmi_mhu_pbx ~= nil and", 1
-    )[1].split("\n    end", 1)[0]
-    assert "not ctx.apollo_live_cl0 then" in synthetic_reset
+    assert "not ctx.apollo_live_cl0" not in system_mgmt
+    assert 'pair = "apollo_ap_to_si_cl1";' in system_mgmt
+    assert 'pair = "apollo_si_cl1_to_ap";' in system_mgmt
 
 
 def test_ap_16_core_affinity_and_reset_targets_execute_in_lua() -> None:

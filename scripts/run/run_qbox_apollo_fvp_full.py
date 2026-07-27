@@ -36,7 +36,7 @@ RD_ASPEN_CHILD_RESULT = "rd-aspen-result.json"
 RSE_LCS_CM = "0xcccc3c3c"
 RSE_LCS_SE = 0xEEEEA5A5
 
-GATES = ["G0", "G1", "G2", "G3", "G4", "G5"]
+GATES = ["G0", "G1", "G2"]
 DEFAULT_EXPECTED_AP_CPUS = 4
 APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-qvp login:"
 APOLLO_PRIMARY_SHELL_MARKER = "~ #"
@@ -97,7 +97,7 @@ KEEP_RUNNING_PROGRESS_MARKERS = [
     ("primary_login_prompt", "Linux login prompt", APOLLO_PRIMARY_LOGIN_PROMPT),
 ]
 AP_CPU_COUNT_RE = re.compile(r"^ap cpus:\s*(?P<count>\d+)\s*$", re.MULTILINE)
-LIVE_CL1_REQUIRED_MARKERS = {
+SI_CL1_REQUIRED_MARKERS = {
     "cpu0_oor": "Out of Reset (OoR) completed on CPU: 0",
     "zephyr_boot": "Booting Zephyr OS",
     "pfdi_agent": "PFDI Agent setup complete",
@@ -111,7 +111,7 @@ LIVE_CL1_FAIL_PATTERNS = {
     "pfdi_protocol_version_timeout": "PROTOCOL_VERSION timed out",
     "pfdi_agent_not_ready": "PFDI Agent device not ready",
 }
-LIVE_CL0_REQUIRED_MARKERS = {
+SI_CL0_REQUIRED_MARKERS = {
     "scp_started": "[SI0_PLATFORM] SCP started",
     "module_init_complete": "[FWK] Module initialization complete!",
     "gic_multiview_configured": "GIC-multiview configured successfully",
@@ -387,23 +387,20 @@ def synthesize_keep_running_child_status(
         args.primary_login_prompt: args.primary_login_prompt in combined,
         args.primary_shell_marker: args.primary_shell_marker in combined,
     }
-    cl1_log = ""
-    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
-        cl1_log = rse_runner.read_required_pass_marker_file(
-            args.out_dir / CONSOLE_LOGS["si_cl1"]
-        )
-        marker_groups["si_cl1"] = {
-            marker: marker in cl1_log
-            for marker in LIVE_CL1_REQUIRED_MARKERS.values()
-        }
-    if args.si_mode == "live-cl0-cl1":
-        cl0_log = rse_runner.read_required_pass_marker_file(
-            args.out_dir / CONSOLE_LOGS["si_cl0"]
-        )
-        marker_groups["si_cl0"] = {
-            marker: marker in cl0_log
-            for marker in LIVE_CL0_REQUIRED_MARKERS.values()
-        }
+    cl1_log = rse_runner.read_required_pass_marker_file(
+        args.out_dir / CONSOLE_LOGS["si_cl1"]
+    )
+    marker_groups["si_cl1"] = {
+        marker: marker in cl1_log
+        for marker in SI_CL1_REQUIRED_MARKERS.values()
+    }
+    cl0_log = rse_runner.read_required_pass_marker_file(
+        args.out_dir / CONSOLE_LOGS["si_cl0"]
+    )
+    marker_groups["si_cl0"] = {
+        marker: marker in cl0_log
+        for marker in SI_CL0_REQUIRED_MARKERS.values()
+    }
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
     fail_hits.update(
         {pattern: pattern in cl1_log for pattern in LIVE_CL1_FAIL_PATTERNS.values()}
@@ -430,7 +427,6 @@ def synthesize_keep_running_child_status(
     passed = bool(
         non_linux_hit and linux_hit and probe_ready and not any(fail_hits.values())
     )
-    scp_strategy = "real-si-scp" if args.si_mode == "live-cl0-cl1" else "service-model"
     rse_flash_state = read_json(
         args.out_dir / rse_runner.RSE_FLASH_STATE_STATUS_FILE
     )
@@ -444,8 +440,8 @@ def synthesize_keep_running_child_status(
         ),
         "post_login_probe": probe,
         "scp_service_model": {
-            "strategy": scp_strategy,
-            "live_scp_cpu_gdb": scp_strategy == "real-si-scp",
+            "strategy": "real-si-scp",
+            "live_scp_cpu_gdb": True,
         },
         "runtime_artifacts": {},
         "rse_flash_state": rse_flash_state
@@ -700,7 +696,6 @@ def clone_args(args: argparse.Namespace) -> argparse.Namespace:
 def make_rse_otp_provision_args(args: argparse.Namespace) -> argparse.Namespace:
     provision_args = clone_args(args)
     provision_args.out_dir = args.out_dir / "rse-otp-provisioning-pass"
-    provision_args.si_mode = "service-model"
     provision_args.post_login_probe = False
     provision_args.keep_running_after_pass = False
     provision_args.live_trace = False
@@ -749,7 +744,6 @@ def auto_provision_rse_otp(
         {
             "out_dir": str(provision_args.out_dir.resolve()),
             "lcs": RSE_LCS_CM,
-            "si_mode": provision_args.si_mode,
             "timeout": provision_args.timeout,
         }
     )
@@ -796,12 +790,7 @@ def gate_status(
         if args.post_login_probe:
             probe = post_login_probe(child_status)
             gates["G1"] = "pass" if probe.get("passed") else "blocked"
-        if args.si_mode == "service-model":
-            gates["G2"] = "blocked"
-        elif args.si_mode == "live-cl1":
-            gates["G3"] = "blocked"
-        elif args.si_mode == "live-cl0-cl1":
-            gates["G4"] = "blocked"
+        gates["G2"] = "blocked"
         return gates
 
     gates["G0"] = "pass"
@@ -818,12 +807,7 @@ def gate_status(
             "blocked" if child_blocker else "fail"
         )
 
-    if args.si_mode == "service-model":
-        gates["G2"] = "pass" if child_passed else ("blocked" if child_blocker else "fail")
-    elif args.si_mode == "live-cl1":
-        gates["G3"] = "pass" if child_passed else ("blocked" if child_blocker else "fail")
-    elif args.si_mode == "live-cl0-cl1":
-        gates["G4"] = "pass" if child_passed else ("blocked" if child_blocker else "fail")
+    gates["G2"] = "pass" if child_passed else ("blocked" if child_blocker else "fail")
     return gates
 
 
@@ -960,7 +944,7 @@ def build_marker_groups(
         ),
     }
     groups["post_login"] = {
-        "probe": bool(probe.get("passed")),
+        "probe": not args.post_login_probe or bool(probe.get("passed")),
     }
     if "linux_boot" in groups:
         groups["linux_boot"][args.primary_shell_marker] = groups["linux"][
@@ -971,46 +955,27 @@ def build_marker_groups(
         "rse_scp_handoff": all_hits(rse_scp),
     }
 
-    if args.si_mode == "service-model":
-        groups["si_cl0"] = {
-            "service_model_recorded": True,
-            "si_cl0_image_manifest": bool(measured_boot.get("SI_CL0")),
-        }
-        groups["si_cl1"] = {
-            "service_model_recorded": True,
-        }
-    elif args.si_mode == "live-cl1":
-        groups["si_cl0"] = {
-            "service_model_recorded": True,
-            "si_cl0_image_manifest": bool(measured_boot.get("SI_CL0")),
-        }
-        groups["si_cl1"] = {
-            name: marker in cl1_log
-            for name, marker in LIVE_CL1_REQUIRED_MARKERS.items()
-        }
-    else:
-        cl0_log = rse_runner.read_required_pass_marker_file(
-            args.out_dir / CONSOLE_LOGS["si_cl0"]
-        )
-        child_scp = (child_status or {}).get("scp_service_model", {})
-        live_scp_cpu = (
-            isinstance(child_scp, dict)
-            and bool(child_scp.get("live_scp_cpu_gdb"))
-            and child_scp.get("strategy") == "real-si-scp"
-        )
-        groups["si_cl0"] = {
-            "scp_log_present": bool(cl0_log.strip()),
-            **{
-                name: marker in cl0_log
-                for name, marker in LIVE_CL0_REQUIRED_MARKERS.items()
-            },
-            "live_scp_strategy_recorded": live_scp_cpu,
-            "service_model_not_used": live_scp_cpu,
-        }
-        groups["si_cl1"] = {
-            name: marker in cl1_log
-            for name, marker in LIVE_CL1_REQUIRED_MARKERS.items()
-        }
+    cl0_log = rse_runner.read_required_pass_marker_file(
+        args.out_dir / CONSOLE_LOGS["si_cl0"]
+    )
+    child_scp = (child_status or {}).get("scp_service_model", {})
+    real_scp_cpu = (
+        isinstance(child_scp, dict)
+        and bool(child_scp.get("live_scp_cpu_gdb"))
+        and child_scp.get("strategy") == "real-si-scp"
+    )
+    groups["si_cl0"] = {
+        "scp_log_present": bool(cl0_log.strip()),
+        **{
+            name: marker in cl0_log
+            for name, marker in SI_CL0_REQUIRED_MARKERS.items()
+        },
+        "real_scp_strategy_recorded": real_scp_cpu,
+    }
+    groups["si_cl1"] = {
+        name: marker in cl1_log
+        for name, marker in SI_CL1_REQUIRED_MARKERS.items()
+    }
 
     return groups
 
@@ -1019,9 +984,7 @@ def missing_markers(markers: dict[str, bool]) -> list[str]:
     return [name for name, value in markers.items() if not value]
 
 
-def live_cl1_error_hits(args: argparse.Namespace) -> dict[str, bool]:
-    if args.si_mode not in {"live-cl1", "live-cl0-cl1"}:
-        return {}
+def si_error_hits(args: argparse.Namespace) -> dict[str, bool]:
     out_dir = getattr(args, "out_dir", None)
     if out_dir is None:
         return {name: False for name in LIVE_CL1_FAIL_PATTERNS}
@@ -1034,33 +997,29 @@ def live_cl1_error_hits(args: argparse.Namespace) -> dict[str, bool]:
     }
 
 
-def live_cl1_gate_blocker(
+def si_gate_blocker(
     args: argparse.Namespace,
     marker_groups: dict[str, dict[str, bool]],
     child_status: dict[str, Any] | None,
 ) -> str | None:
-    if args.si_mode not in {"live-cl1", "live-cl0-cl1"}:
-        return None
-    prefix = "live_cl1" if args.si_mode == "live-cl1" else "live_cl0_cl1"
     if child_status and not child_status.get("passed"):
         child_blocker = child_status.get("blocker")
         if child_blocker:
             return str(child_blocker)
     error_hits = [
-        name for name, hit in live_cl1_error_hits(args).items() if hit
+        name for name, hit in si_error_hits(args).items() if hit
     ]
     if error_hits:
-        return f"{prefix}_error:" + ",".join(error_hits)
+        return "si_error:" + ",".join(error_hits)
     map_missing = missing_markers(marker_groups.get("maps_and_interrupts", {}))
     if map_missing:
-        return f"{prefix}_map_blocked:" + ",".join(map_missing)
-    if args.si_mode == "live-cl0-cl1":
-        cl0_missing = missing_markers(marker_groups.get("si_cl0", {}))
-        if cl0_missing:
-            return f"{prefix}_marker_blocked:" + ",".join(cl0_missing)
+        return "si_map_blocked:" + ",".join(map_missing)
+    cl0_missing = missing_markers(marker_groups.get("si_cl0", {}))
+    if cl0_missing:
+        return "si_marker_blocked:" + ",".join(cl0_missing)
     cl1_missing = missing_markers(marker_groups.get("si_cl1", {}))
     if cl1_missing:
-        return f"{prefix}_marker_blocked:" + ",".join(cl1_missing)
+        return "si_marker_blocked:" + ",".join(cl1_missing)
     return None
 
 
@@ -1083,7 +1042,7 @@ def write_result(
         {name: artifact_record(path) for name, path in sorted(artifacts.items())}
     )
     marker_groups = build_marker_groups(args, child_status)
-    si_cl1_error_hits = live_cl1_error_hits(args)
+    si_errors = si_error_hits(args)
     platform_obs = platform_observations(args.out_dir)
     secure_obs = secure_console_observations(args.out_dir)
     primary_obs = primary_console_observations(
@@ -1093,7 +1052,7 @@ def write_result(
     )
     gate_blocker = None
     if not check_only and not args.build_only and not args.uboot_only:
-        gate_blocker = live_cl1_gate_blocker(args, marker_groups, child_status)
+        gate_blocker = si_gate_blocker(args, marker_groups, child_status)
     if not blocker and gate_blocker:
         blocker = gate_blocker
     gates = gate_status(
@@ -1114,20 +1073,10 @@ def write_result(
         name: str((args.out_dir / filename).resolve())
         for name, filename in CONSOLE_LOGS.items()
     }
-    service_model_debt = []
-    if args.si_mode == "service-model":
-        service_model_debt = [
-            "Safety Island CL0 SCP-firmware is represented by the RD-Aspen "
-            "RSE/SCP service model for this gate.",
-            "Safety Island CL1 Zephyr behavior is represented by the "
-            "service-model AP-SI RPMsg/HIPC path for this gate.",
-        ]
-    mhu_trace_logs = {}
-    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
-        mhu_trace_logs = {
-            "ap_si": str((args.out_dir / "ap-si-mhuv3-trace.log").resolve()),
-            "si_cl1": str((args.out_dir / "si-cl1-mhuv3-trace.log").resolve()),
-        }
+    mhu_trace_logs = {
+        "ap_si": str((args.out_dir / "ap-si-mhuv3-trace.log").resolve()),
+        "si_cl1": str((args.out_dir / "si-cl1-mhuv3-trace.log").resolve()),
+    }
     qbox_performance_options = {
         "rse_hotpath_accel": bool(args.rse_hotpath_accel),
         "rse_bl2_libc_hotpath": bool(args.rse_bl2_libc_hotpath),
@@ -1147,7 +1096,7 @@ def write_result(
         "verdict": "pass" if passed else ("blocked" if blocker else "fail"),
         "boot_mode": "apollo-full-system",
         "validation_scope": "uboot-only" if args.uboot_only else "full-system",
-        "safety_island_mode": args.si_mode,
+        "safety_island_topology": "full-system",
         "ap_tcg_mode": effective_platform_param(
             args,
             "platform.ap_qemu_inst.tcg_mode",
@@ -1201,7 +1150,7 @@ def write_result(
         "secure_console_observations": secure_obs,
         "primary_console_observations": primary_obs,
         "marker_groups": marker_groups,
-        "si_cl1_error_hits": si_cl1_error_hits,
+        "si_error_hits": si_errors,
         "first_failing_marker": (
             None if check_only or args.build_only else first_failing_marker(marker_groups)
         ),
@@ -1211,8 +1160,7 @@ def write_result(
         "cc3xx_stats": (child_status or {}).get("cc3xx_stats"),
         "qbox_perf_profile": (child_status or {}).get("qbox_perf_profile"),
         "completion_gate_blocker": gate_blocker,
-        "child_scp_service_model": (child_status or {}).get("scp_service_model"),
-        "service_model_debt": service_model_debt,
+        "child_scp_runtime": (child_status or {}).get("scp_service_model"),
         "blocker": blocker or (child_status or {}).get("blocker"),
         "child_result": str((args.out_dir / RD_ASPEN_CHILD_RESULT).resolve())
         if child_status
@@ -1231,7 +1179,7 @@ def write_result(
         f"verdict: {status['verdict']}",
         f"boot_mode: {status['boot_mode']}",
         f"validation_scope: {status['validation_scope']}",
-        f"safety_island_mode: {args.si_mode}",
+        f"safety_island_topology: {status['safety_island_topology']}",
         f"ap_tcg_mode: {status['ap_tcg_mode']}",
         f"si_cl0_tcg_mode: {status['si_cl0_tcg_mode']}",
         f"si_cl1_tcg_mode: {status['si_cl1_tcg_mode']}",
@@ -1296,21 +1244,11 @@ def copy_child_logs(args: argparse.Namespace) -> None:
         "qbox-secure-console.log": "qbox-secure-console.log",
         "qbox-primary-console.log": "qbox-primary-console.log",
     }
-    if args.si_mode != "live-cl0-cl1":
-        aliases["qbox-scp.log"] = "qbox-safety-island-cl0.log"
     for src_name, dst_name in aliases.items():
         src = args.out_dir / src_name
         dst = args.out_dir / dst_name
         if src.exists() and src != dst:
             shutil.copy2(src, dst)
-    cl1 = args.out_dir / "qbox-safety-island-cl1.log"
-    if not cl1.exists():
-        write_text(
-            cl1,
-            "Apollo full-system CL1 log placeholder.\n"
-            f"safety_island_mode: {args.si_mode}\n"
-            "live CL1 is not yet wired in the service-model baseline.\n",
-        )
 
 
 def clear_run_outputs(out_dir: Path) -> None:
@@ -1413,7 +1351,7 @@ def full_system_platform_params(args: argparse.Namespace) -> list[str]:
     explicit_keys = {param.partition("=")[0] for param in params}
     defaults = []
     for key, env_name, default in FULL_SYSTEM_QEMU_DEFAULTS:
-        if args.build_only or ("si_cl1" in key and args.si_mode == "service-model"):
+        if args.build_only:
             continue
         if key not in explicit_keys:
             defaults.append(f"{key}={env_or_default(env_name, default)}")
@@ -1432,9 +1370,6 @@ def effective_platform_param(
 
 def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[str]:
     root = workspace_root()
-    scp_strategy = "service-model"
-    if args.si_mode == "live-cl0-cl1":
-        scp_strategy = "real-si-scp"
     cmd = [
         sys.executable,
         str(root / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"),
@@ -1469,7 +1404,7 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         "--qbox-build-dir",
         str(args.qbox_build_dir),
         "--scp-strategy",
-        scp_strategy,
+        "real-si-scp",
         "--smmu-backend",
         args.smmu_backend,
         "--rootfs-bootargs-profile",
@@ -1567,9 +1502,9 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe and not args.uboot_only:
         cmd.append("--post-login-probe")
-    if not args.uboot_only and args.si_mode in {"live-cl1", "live-cl0-cl1"}:
+    if not args.uboot_only:
         cl1_log = (args.out_dir / "qbox-safety-island-cl1.log").resolve()
-        for marker in LIVE_CL1_REQUIRED_MARKERS.values():
+        for marker in SI_CL1_REQUIRED_MARKERS.values():
             cmd.extend(["--required-pass-marker", str(cl1_log), marker])
     if args.keep_running_after_pass:
         cmd.append("--keep-running-after-pass")
@@ -1587,7 +1522,6 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     env = os.environ.copy()
     env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
-    env["QBOX_APOLLO_FULL_SI_MODE"] = args.si_mode
     if args.timer_probe:
         env["QBOX_APOLLO_TIMER_SNAPSHOT"] = "1"
         env["QBOX_APOLLO_TIMER_SNAPSHOT_RUN_ID"] = args.timer_probe_run_id
@@ -1602,37 +1536,32 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
         # runs by default, which is useful for RSE-only diagnostics but is not
         # a valid Apollo full-system runtime shape.
         env["QBOX_RDASPEN_ENABLE_AP_CPUS"] = "true"
-    if args.si_mode == "live-cl0-cl1":
-        env["QBOX_APOLLO_FULL_LIVE_CL0"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL0_IMAGE"] = str(artifacts["si_cl0_image"])
-        env["QBOX_APOLLO_FULL_SI_CL0_LOG"] = str(
-            (args.out_dir / "qbox-safety-island-cl0.log").resolve()
+    env["QBOX_APOLLO_FULL_SI_CL0_IMAGE"] = str(artifacts["si_cl0_image"])
+    env["QBOX_APOLLO_FULL_SI_CL0_LOG"] = str(
+        (args.out_dir / "qbox-safety-island-cl0.log").resolve()
+    )
+    env["QBOX_APOLLO_FULL_SI_CL1_IMAGE"] = str(artifacts["si_cl1_image"])
+    env["QBOX_APOLLO_FULL_SI_CL1_LOG"] = str(
+        (args.out_dir / "qbox-safety-island-cl1.log").resolve()
+    )
+    if args.live_trace:
+        env["QBOX_APOLLO_FULL_SI_GIC_MULTIVIEW_TRACE"] = "true"
+        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE"] = "true"
+        env["QBOX_APOLLO_FULL_SI_CL0_EXCEPTION_TRACE"] = "true"
+        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_LIMIT"] = "4096"
+        env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_FILE"] = str(
+            (args.out_dir / "si-cl0-pc-trace.log").resolve()
         )
-        if args.live_trace:
-            env["QBOX_APOLLO_FULL_SI_GIC_MULTIVIEW_TRACE"] = "true"
-            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE"] = "true"
-            env["QBOX_APOLLO_FULL_SI_CL0_EXCEPTION_TRACE"] = "true"
-            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_LIMIT"] = "4096"
-            env["QBOX_APOLLO_FULL_SI_CL0_PC_TRACE_FILE"] = str(
-                (args.out_dir / "si-cl0-pc-trace.log").resolve()
-            )
-    if args.si_mode in {"live-cl1", "live-cl0-cl1"}:
-        env["QBOX_APOLLO_FULL_LIVE_CL1"] = "true"
-        env["QBOX_APOLLO_FULL_SI_CL1_IMAGE"] = str(artifacts["si_cl1_image"])
-        env["QBOX_APOLLO_FULL_SI_CL1_LOG"] = str(
-            (args.out_dir / "qbox-safety-island-cl1.log").resolve()
+        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE"] = "true"
+        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_LIMIT"] = "8192"
+        env["QBOX_RDASPEN_MHU_TRACE"] = "true"
+        env["QBOX_RDASPEN_MHU_TRACE_LIMIT"] = "8192"
+        env["QBOX_RDASPEN_MHU_TRACE_FILE"] = str(
+            (args.out_dir / "ap-si-mhuv3-trace.log").resolve()
         )
-        if args.live_trace:
-            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE"] = "true"
-            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_LIMIT"] = "8192"
-            env["QBOX_RDASPEN_MHU_TRACE"] = "true"
-            env["QBOX_RDASPEN_MHU_TRACE_LIMIT"] = "8192"
-            env["QBOX_RDASPEN_MHU_TRACE_FILE"] = str(
-                (args.out_dir / "ap-si-mhuv3-trace.log").resolve()
-            )
-            env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_FILE"] = str(
-                (args.out_dir / "si-cl1-mhuv3-trace.log").resolve()
-            )
+        env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_FILE"] = str(
+            (args.out_dir / "si-cl1-mhuv3-trace.log").resolve()
+        )
     if args.keep_running_after_pass and not args.build_only:
         env["QBOX_RDASPEN_RESULT_PATH"] = str(
             (args.out_dir / RD_ASPEN_CHILD_RESULT).resolve()
@@ -1685,11 +1614,6 @@ def parse_args() -> argparse.Namespace:
             "QBox CMake build directory. Defaults to "
             "<local-build-dir>/work/qbox-platform."
         ),
-    )
-    parser.add_argument(
-        "--si-mode",
-        choices=["service-model", "live-cl1", "live-cl0-cl1"],
-        default="service-model",
     )
     parser.add_argument(
         "--out-dir",

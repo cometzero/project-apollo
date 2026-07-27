@@ -112,7 +112,7 @@ def test_plan_suite_resolution_when_active_config_is_current(tmp_path: Path) -> 
         "extra-project-pytest",
         "qbox-static-full-map",
         "qbox-full-check-only",
-        "qbox-full-live-cl0-cl1",
+        "qbox-full-system",
     }.issubset(plan["included"]["extra"])
 
 
