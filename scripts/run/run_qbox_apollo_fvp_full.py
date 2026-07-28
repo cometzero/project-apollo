@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
 import datetime as _dt
-import io
 import json
 import os
 from pathlib import Path
@@ -21,7 +19,8 @@ import uuid
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-import run_qbox_fvp_rd_aspen_rse as rse_runner  # noqa: E402
+import qbox_apollo_fidelity as fidelity_runner  # noqa: E402
+import qbox_apollo_runtime as runtime_engine  # noqa: E402
 
 
 CONSOLE_LOGS = {
@@ -295,7 +294,7 @@ def clean_console_text(text: str) -> str:
 
 def keep_running_child_logs(out_dir: Path) -> dict[str, str]:
     return {
-        role: rse_runner.read_required_pass_marker_file(out_dir / filename)
+        role: runtime_engine.read_required_pass_marker_file(out_dir / filename)
         for role, filename in CHILD_LOG_ALIASES.items()
     }
 
@@ -307,7 +306,7 @@ def keep_running_probe_state(
     requested: bool,
 ) -> dict[str, Any]:
     clean_primary = clean_console_text(primary_console)
-    evaluated = rse_runner.evaluate_post_login_probe(primary_console)
+    evaluated = runtime_engine.evaluate_post_login_probe(primary_console)
     return {
         "requested": requested,
         "secure_service_requested": False,
@@ -387,14 +386,14 @@ def synthesize_keep_running_child_status(
         args.primary_login_prompt: args.primary_login_prompt in combined,
         args.primary_shell_marker: args.primary_shell_marker in combined,
     }
-    cl1_log = rse_runner.read_required_pass_marker_file(
+    cl1_log = runtime_engine.read_required_pass_marker_file(
         args.out_dir / CONSOLE_LOGS["si_cl1"]
     )
     marker_groups["si_cl1"] = {
         marker: marker in cl1_log
         for marker in SI_CL1_REQUIRED_MARKERS.values()
     }
-    cl0_log = rse_runner.read_required_pass_marker_file(
+    cl0_log = runtime_engine.read_required_pass_marker_file(
         args.out_dir / CONSOLE_LOGS["si_cl0"]
     )
     marker_groups["si_cl0"] = {
@@ -428,7 +427,7 @@ def synthesize_keep_running_child_status(
         non_linux_hit and linux_hit and probe_ready and not any(fail_hits.values())
     )
     rse_flash_state = read_json(
-        args.out_dir / rse_runner.RSE_FLASH_STATE_STATUS_FILE
+        args.out_dir / runtime_engine.RSE_FLASH_STATE_STATUS_FILE
     )
     return {
         "passed": passed,
@@ -594,10 +593,6 @@ def is_blank_file(path: Path) -> bool:
                 return False
 
 
-def forwarded_arg_present(args: argparse.Namespace, name: str) -> bool:
-    return any(item == name or item.startswith(name + "=") for item in args.forward_args)
-
-
 def platform_param_value(args: argparse.Namespace, key: str) -> str | None:
     prefix = key + "="
     for param in args.platform_param:
@@ -674,8 +669,6 @@ def should_auto_provision_rse_otp(
         return False, "explicit_rse_otp"
     if args.no_copy_writable_flash:
         return False, "no_copy_writable_flash"
-    if forwarded_arg_present(args, "--allow-blank-rse-otp"):
-        return False, "explicit_blank_otp_experiment"
     if not rse_lcm_uses_se_fast_path(args):
         return False, "non_se_lifecycle"
     otp = artifacts["rse_otp"]
@@ -689,7 +682,6 @@ def should_auto_provision_rse_otp(
 def clone_args(args: argparse.Namespace) -> argparse.Namespace:
     values = vars(args).copy()
     values["platform_param"] = list(args.platform_param)
-    values["forward_args"] = list(args.forward_args)
     return argparse.Namespace(**values)
 
 
@@ -915,7 +907,7 @@ def build_marker_groups(
         args.primary_login_prompt,
         args.primary_shell_marker,
     )
-    cl1_log = rse_runner.read_required_pass_marker_file(
+    cl1_log = runtime_engine.read_required_pass_marker_file(
         args.out_dir / CONSOLE_LOGS["si_cl1"]
     )
 
@@ -955,7 +947,7 @@ def build_marker_groups(
         "rse_scp_handoff": all_hits(rse_scp),
     }
 
-    cl0_log = rse_runner.read_required_pass_marker_file(
+    cl0_log = runtime_engine.read_required_pass_marker_file(
         args.out_dir / CONSOLE_LOGS["si_cl0"]
     )
     child_scp = (child_status or {}).get("scp_service_model", {})
@@ -988,7 +980,7 @@ def si_error_hits(args: argparse.Namespace) -> dict[str, bool]:
     out_dir = getattr(args, "out_dir", None)
     if out_dir is None:
         return {name: False for name in LIVE_CL1_FAIL_PATTERNS}
-    cl1_log = rse_runner.read_required_pass_marker_file(
+    cl1_log = runtime_engine.read_required_pass_marker_file(
         Path(out_dir) / CONSOLE_LOGS["si_cl1"]
     )
     return {
@@ -1265,7 +1257,7 @@ def clear_run_outputs(out_dir: Path) -> None:
         "si-cl1-mhuv3-trace.log",
         "si-cl0-pc-trace.log",
         "post-login-probe-actions.log",
-        rse_runner.RSE_FLASH_STATE_STATUS_FILE,
+        runtime_engine.RSE_FLASH_STATE_STATUS_FILE,
     }
     stale_files.update(CONSOLE_LOGS.values())
     stale_files.add("qbox-scp.log")
@@ -1372,7 +1364,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
     root = workspace_root()
     cmd = [
         sys.executable,
-        str(root / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"),
+        str(root / "scripts/run/run_qbox_apollo_fvp_full.py"),
+        "--runtime-child",
         "--conf",
         str(args.conf),
         "--rse-rom",
@@ -1512,7 +1505,7 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--check-only")
     for param in full_system_platform_params(args):
         cmd.extend(["--platform-param", param])
-    return cmd + args.forward_args
+    return cmd
 
 
 def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int, list[str]]:
@@ -1576,27 +1569,18 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     return proc.returncode, cmd
 
 
-def validate_child_forward_args(
-    parser: argparse.ArgumentParser,
-    forward_args: list[str],
-) -> None:
-    if not forward_args:
-        return
-    child_parser = rse_runner.build_parser()
-    try:
-        with contextlib.redirect_stderr(io.StringIO()):
-            child_parser.parse_args(forward_args)
-    except SystemExit as exc:
-        if exc.code:
-            parser.error("unrecognized arguments: " + " ".join(forward_args))
-
-
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = workspace_root()
     qbox_platform_dir = Path(
         os.environ.get("QBOX_PLATFORM_DIR", str(root / "hsoc-stack/tools/qbox-platform"))
     )
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        epilog=(
+            "Fidelity mode: run_qbox_apollo_fvp_full.py --fidelity "
+            "--artifacts {local,yocto} [options]"
+        ),
+    )
     parser.add_argument(
         "--conf",
         type=Path,
@@ -1936,9 +1920,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--si-cl0-image", type=Path)
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
-    args, forward_args = parser.parse_known_args()
-    validate_child_forward_args(parser, forward_args)
-    args.forward_args = forward_args
+    args = parser.parse_args(argv)
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     if args.qbox_build_dir is None:
@@ -1972,18 +1954,12 @@ def parse_args() -> argparse.Namespace:
             args.rse_fast_boot_aliases = True
         else:
             args.rse_fast_boot_sram_dmi = True
-    if args.legacy_file_backed_sram and (
-        args.rse_fast_boot_sram_dmi
-        or forwarded_arg_present(args, "--rse-fast-boot-sram-dmi")
-    ):
+    if args.legacy_file_backed_sram and args.rse_fast_boot_sram_dmi:
         parser.error(
             "--legacy-file-backed-sram cannot be used with "
             "--rse-fast-boot-sram-dmi"
         )
-    if args.rse_fast_boot_sram_dmi and (
-        args.rse_fast_boot_aliases
-        or forwarded_arg_present(args, "--rse-fast-boot-aliases")
-    ):
+    if args.rse_fast_boot_sram_dmi and args.rse_fast_boot_aliases:
         parser.error(
             "--rse-fast-boot-sram-dmi cannot be used with "
             "--rse-fast-boot-aliases"
@@ -2025,8 +2001,14 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    mode_args = sys.argv[1:] if argv is None else argv
+    if mode_args[:1] == ["--runtime-child"]:
+        return runtime_engine.main(mode_args[1:])
+    if mode_args[:1] == ["--fidelity"]:
+        return fidelity_runner.main(mode_args[1:])
+
+    args = parse_args(mode_args)
     args.timer_probe_run_id = uuid.uuid4().hex
     args.provision_blank_rse_otp = False
     args.rse_otp_auto_provision = {

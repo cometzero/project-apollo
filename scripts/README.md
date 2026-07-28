@@ -69,7 +69,8 @@ contract.
 | --- | --- | --- |
 | `run_qbox_apollo_fvp_full_tmux.sh` | keep | Shared tmux launcher used by local, Yocto, and QBox debug entrypoints. |
 | `run_qbox_apollo_fvp_full.py` | keep | Canonical Apollo full-system QBox runner. |
-| `run_qbox_fvp_rd_aspen_rse.py` | keep | RSE-first child runner used by the full-system runner, build packaging checks, and debug helpers. |
+| `qbox_apollo_runtime.py` | internal | Runtime engine entered only through the canonical runner's private `--runtime-child` mode. |
+| `qbox_apollo_fidelity.py` | internal | Fidelity orchestration entered through the canonical runner's public `--fidelity` mode. |
 | `run_local_fvp_tmux.sh` | keep | Interactive FVP tmux runner used by `scripts/debug/run_local_fvp_debug.sh` for local-build debug sessions. |
 | `runfvp_log_boot.py` | keep | Headless FVP log-capture runner used for FVP baseline and QBox comparison. |
 

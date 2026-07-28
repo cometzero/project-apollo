@@ -256,10 +256,10 @@ legacy file-backed SRAM alias는 명시적 debug/compatibility rollback 경로�
 ./run_qbox_local.sh --legacy-file-backed-sram
 ```
 
-RSE runner를 직접 디버그할 때만 legacy preset을 명시적으로 전달한다.
+private RSE runtime을 직접 디버그할 때만 legacy preset을 명시적으로 전달한다.
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -278,12 +278,12 @@ flash command-state fidelity 검증에는 legacy preset을 끄고 shared-memory 
 DMI 또는 기존 flash path를 사용한다.
 
 RSE 부팅 시간 자체를 FVP와 비교하는 짧은 smoke에서는 full-system wrapper보다
-RSE runner를 직접 쓰는 편이 빠르다. T8 기준 기본 QBox-side 성능 조합은
+private RSE runtime을 직접 쓰는 편이 빠르다. T8 기준 기본 QBox-side 성능 조합은
 qemu-native CC3XX backend, LMS verifier accelerator, shared-memory SRAM DMI
 fast path이다.
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \
@@ -330,7 +330,8 @@ run은 `[ERR]` 없이 image 4/3/2/0 load, AP power-on, first image slot까지
 최단 run인 22.668초와 거의 같지만 넘어서지는 못했으므로, BL2 accelerator는
 다음 image-level accelerator 개발을 위한 기능 검증 옵션으로 둔다.
 
-BL2 hook 기반 profile/accelerator를 사용할 때 RSE runner는 `--rse-bl2-elf`
+BL2 hook 기반 profile/accelerator를 사용할 때 private RSE runtime은
+`--rse-bl2-elf`
 에서 `boot_load_image_to_sram`, `boot_enc_decrypt`, `bootutil_img_hash`,
 `bootutil_verify_sig` 등의 symbol 주소를 자동으로 resolve한다. full-system
 wrapper는 local-build TF-M BL2 ELF를 자동으로 전달하므로 일반적으로 별도
@@ -341,7 +342,7 @@ BL2 image-level accelerator 후보를 profiling하려면 다음 옵션을 추가
 성능 비교가 아니라 hook/counter 확인이 목적이다.
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --skip-build \
   --cc3xx-qemu-native-backend \
   --rse-lms-accel \

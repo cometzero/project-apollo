@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+"""Internal fidelity orchestration for the canonical Apollo QBox runner."""
+
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,7 @@ def timestamp() -> str:
     return dt.datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the Apollo four-CPU fidelity smoke with local or Yocto artifacts."
     )
@@ -44,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) // 2))
     parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.cpus != 4:
         parser.error("this phase accepts exactly four CPUs (CPU0-CPU3)")
     if args.timeout <= 0:
@@ -77,8 +78,9 @@ def runtime_command(args: argparse.Namespace) -> list[str]:
             "--jobs",
             str(args.jobs),
             "--skip-build",
+            "--no-post-login-probe",
             "--rootfs-bootargs-profile",
-            "quiet-console",
+            "none",
         ]
     return [
         str(YOCTO_RUNNER),
@@ -267,8 +269,8 @@ def run_json_tool(command: list[str]) -> dict[str, Any]:
     }
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
     command = runtime_command(args)
     if args.dry_run:
         print(json.dumps({"artifacts": args.artifacts, "command": command}, indent=2))
@@ -383,7 +385,3 @@ def main() -> int:
     )
     print(args.out_dir)
     return 0 if passed else 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

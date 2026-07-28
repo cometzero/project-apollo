@@ -145,7 +145,7 @@ scripts/debug/run_local_gdb.py qbox-host --attach "$(pidof platforms-vp)"
 자식 프로세스로 실행되게 한다.
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --host-gdb-script build/local-apollo-qvp/debug/gdb/qbox-host.gdb \
   --timeout 0
 ```

@@ -467,7 +467,7 @@ Linux `ptrace_scope=1`, because the platform process is started by the runner.
 Use the runner-side host GDB wrapper instead:
 
 ```bash
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --skip-build \
   --timeout 900 \
   --out-dir build/qbox-fvp-rd-aspen/rse-host-gdb \
@@ -1757,7 +1757,7 @@ Validation:
 
 ```bash
 luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
-python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py
+python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/qbox_apollo_runtime.py
 git -C tools/qbox diff --check
 cmake --build build/local-apollo-fvp/work/qbox-platform --target platforms-vp --parallel 4
 ./scripts/test/validate_qbox_fvp_rd_aspen_map.py
@@ -2439,7 +2439,7 @@ QBOX_RDASPEN_BOOT_FLASH_DMI=false \
 QBOX_RDASPEN_RSE_DTCM_DMI=true \
 QBOX_RDASPEN_RSE_ITCM_DMI=true \
 QBOX_RDASPEN_RSE_VM_DMI=true \
-python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \
   --skip-build \
   --timeout 480 \
   --fwu-probe \
@@ -3143,7 +3143,7 @@ git -C tools/qbox diff --check -- \
 luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 python3 -m py_compile \
   scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
-  scripts/run/run_qbox_fvp_rd_aspen_rse.py \
+  scripts/run/qbox_apollo_runtime.py \
   scripts/analyze/analyze_qbox_mhu_trace.py
 timeout 120s cmake --build build/local-apollo-fvp/work/qbox-platform --target strata_flash_j3-tests --parallel 8
 timeout 60s ctest --test-dir build/local-apollo-fvp/work/qbox-platform -R '^strata_flash_j3-tests$' --output-on-failure
@@ -3231,7 +3231,7 @@ sector erases, and backing-file writeback.
 Focused validation:
 
 ```bash
-python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/analyze/analyze_qbox_mhu_trace.py
+python3 -m py_compile scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py scripts/run/qbox_apollo_runtime.py scripts/analyze/analyze_qbox_mhu_trace.py
 luac -p tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua
 rg -n '[ \t]+$' \
   tools/qbox/systemc-components/strata_flash_j3/include/strata_flash_j3.h \

@@ -48,7 +48,6 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
   `scripts/package.sh`,
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
   `scripts/run/run_qbox_apollo_fvp_full.py`,
-  `scripts/run/run_qbox_fvp_rd_aspen_rse.py`,
   `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
 
 ## Source Boundaries
@@ -390,8 +389,9 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `NEXIOS_BSP_INITRAMFS_READY` plus `nexios-bsp#`.
    - Use `--keep-running-after-pass` only for interactive demos that should not
      exit after the boot pass condition.
-   - Use `scripts/run/run_qbox_fvp_rd_aspen_rse.py` only as the lower-level
-     RSE/RD-Aspen compatibility runner when focused RSE evidence is needed.
+   - For focused RSE/RD-Aspen debug evidence, use
+     `scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`. It routes the private
+     runtime child through the canonical full-system runner.
    - For Apollo FVP local boot, build with `./local_build.sh build`, then use
      `python3 scripts/run/runfvp_log_boot.py --machine apollo-fvp --fvpconf
      build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf --out-dir

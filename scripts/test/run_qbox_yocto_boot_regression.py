@@ -55,7 +55,6 @@ QBOX_PROCESS_PATTERNS = [
     "platforms-vp",
     "run_qbox_yocto.sh",
     "run_qbox_apollo_fvp_full.py",
-    "run_qbox_fvp_rd_aspen_rse.py",
 ]
 IMAGE_OPTIONS = {
     "--rootfs",

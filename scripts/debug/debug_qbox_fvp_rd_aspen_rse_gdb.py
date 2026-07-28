@@ -9,7 +9,6 @@ import json
 import os
 from pathlib import Path
 import re
-import shlex
 import signal
 import subprocess
 import textwrap
@@ -2157,7 +2156,8 @@ def write_ap_secure_services_probe_script(
 def runner_command(root: Path, args: argparse.Namespace, run_dir: Path) -> list[str]:
     cmd = [
         "python3",
-        str(root / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"),
+        str(root / "scripts/run/run_qbox_apollo_fvp_full.py"),
+        "--runtime-child",
         "--skip-build",
         "--timeout",
         str(args.runner_timeout),
@@ -2249,7 +2249,7 @@ def write_readme(
 
         ```bash
         {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
-        python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \\
+        python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
           --scp-strategy {args.scp_strategy} \\
@@ -2263,7 +2263,7 @@ def write_readme(
 
         ```bash
         {shell_env_block(run_dir, "        ", args.range_limited_flash_dmi, args.flash_stats, args.flash_stats_interval, args.mhu_trace, args.mhu_trace_limit)} \\
-        python3 scripts/run/run_qbox_fvp_rd_aspen_rse.py \\
+        python3 scripts/run/run_qbox_apollo_fvp_full.py --runtime-child \\
           --skip-build \\
           --timeout {args.runner_timeout} \\
           --scp-strategy {args.scp_strategy} \\

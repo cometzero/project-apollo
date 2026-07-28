@@ -71,7 +71,6 @@ def make_child_command_args(tmp_path):
         cc3xx_stats_interval=1024,
         cc3xx_status_read_fastpath=False,
         conf=tmp_path / "apollo-qvp.lua",
-        forward_args=[],
         jobs=1,
         keep_running_after_pass=False,
         local_build_dir=tmp_path / "local-apollo-fvp",
@@ -153,8 +152,36 @@ def test_child_command_omits_removed_rse_remote_flags(tmp_path):
     )
     for flag in removed_flags:
         assert flag not in cmd
+    assert cmd[1].endswith("scripts/run/run_qbox_apollo_fvp_full.py")
+    assert cmd[2] == "--runtime-child"
     assert "--rse-hotpath-accel" in cmd
     assert "--rse-lms-accel" in cmd
+
+
+def test_private_runtime_mode_dispatches_before_full_parser(monkeypatch):
+    runner = load_runner()
+    received = []
+    monkeypatch.setattr(
+        runner.runtime_engine,
+        "main",
+        lambda argv: received.append(argv) or 17,
+    )
+
+    assert runner.main(["--runtime-child", "--build-only"]) == 17
+    assert received == [["--build-only"]]
+
+
+def test_public_fidelity_mode_dispatches_without_recursion(monkeypatch):
+    runner = load_runner()
+    received = []
+    monkeypatch.setattr(
+        runner.fidelity_runner,
+        "main",
+        lambda argv: received.append(argv) or 19,
+    )
+
+    assert runner.main(["--fidelity", "--artifacts", "local", "--dry-run"]) == 19
+    assert received == [["--artifacts", "local", "--dry-run"]]
 
 
 def test_local_uki_runner_defaults_match_buildroot_boot_contract(monkeypatch):
@@ -445,38 +472,6 @@ def test_apollo_qvp_config_rejects_enabled_zero_ap_cpus():
 
     assert result.returncode != 0
     assert "QBOX_APOLLO_NUM_CPUS must be 1..16" in result.stderr
-
-
-@pytest.mark.parametrize(
-    "child_args",
-    [
-        ["--allow-blank-rse-otp"],
-        ["--qemu-trace"],
-        ["--secure-service-probe"],
-        ["--rse-direct-file-aliases", "0x1000:0x10:0:ro:/tmp/qbox-alias.bin"],
-        ["--rse-bl2-load-profile"],
-    ],
-)
-def test_parse_args_forwards_supported_child_options(tmp_path, monkeypatch, child_args):
-    runner = load_runner()
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "run_qbox_apollo_fvp_full.py",
-            "--check-only",
-            "--out-dir",
-            str(tmp_path / "out"),
-            *child_args,
-        ],
-    )
-
-    args = runner.parse_args()
-    cmd = runner.child_command(args, make_child_artifacts(tmp_path))
-
-    assert args.forward_args == child_args
-    for item in child_args:
-        assert item in cmd
 
 
 def test_parse_args_and_artifacts_default_to_active_apollo_qvp(monkeypatch):

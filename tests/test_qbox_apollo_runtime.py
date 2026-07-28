@@ -8,7 +8,7 @@ import pytest  # pyright: ignore[reportMissingImports]
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/run/run_qbox_fvp_rd_aspen_rse.py"
+SCRIPT = ROOT / "scripts/run/qbox_apollo_runtime.py"
 
 
 def load_runner():
@@ -130,7 +130,7 @@ def test_fast_boot_sram_dmi_preserves_explicit_flash_dmi_disable(monkeypatch):
         sys,
         "argv",
         [
-            "run_qbox_fvp_rd_aspen_rse.py",
+            "qbox_apollo_runtime.py",
             "--build-only",
             "--rse-fast-boot-sram-dmi",
             "--no-range-limited-flash-dmi",
@@ -192,7 +192,7 @@ def test_secure_service_probe_enables_post_login_driver(monkeypatch):
         sys,
         "argv",
         [
-            "run_qbox_fvp_rd_aspen_rse.py",
+            "qbox_apollo_runtime.py",
             "--build-only",
             "--secure-service-probe",
         ],

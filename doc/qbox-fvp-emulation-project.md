@@ -208,7 +208,7 @@ runtime helpers:
 
 - `./local_build.sh qbox`
 - `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
-- `scripts/run/run_qbox_fvp_rd_aspen_rse.py`
+- `scripts/run/run_qbox_apollo_fvp_full.py --runtime-child`
 - `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`
 
 The latest local coverage evidence reports 19 tracked primary-compute blocks
@@ -219,10 +219,11 @@ PMU, RAS FFH, SMMUv3, MHUv3 SCMI transport, and SI remoteproc/RPMsg.
 
 An RSE-oriented skeleton now exists at
 `hsoc-stack/tools/qbox-platform/platforms/fvp-rd-aspen-rse/conf.lua` with the
-runner `scripts/run/run_qbox_fvp_rd_aspen_rse.py`. It uses the existing QBox
-`RemoteCPU` Cortex-M55 wrapper so the CPU-local NVIC/SCS window remains inside
-the M-profile CPU process, and it records file-backed per-console logs plus
-`result.json`. Limited CC3XX, DTCM/ITCM alias, DMA350, RSE system-control,
+private runtime engine behind
+`scripts/run/run_qbox_apollo_fvp_full.py --runtime-child`. It uses the existing
+QBox `RemoteCPU` Cortex-M55 wrapper so the CPU-local NVIC/SCS window remains
+inside the M-profile CPU process, and it records file-backed per-console logs
+plus `result.json`. Limited CC3XX, DTCM/ITCM alias, DMA350, RSE system-control,
 ATU, LCM/OTP, KMU, Integrity Checker, host PPU, RSE Strata boot-flash,
 AP handoff host windows, and RSE-SI MHUv3/SCMI SystemC/TLM models now let the
 generated RSE ROM pass the earlier `0x501541c4` CC3XX Data Abort, complete the
@@ -465,7 +466,7 @@ For each IP:
 Use these before claiming progress:
 
 ```bash
-python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/run_qbox_fvp_rd_aspen_rse.py scripts/test/validate_qbox_apollo_topology.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/qbox_apollo_runtime.py scripts/run/qbox_apollo_fidelity.py scripts/test/validate_qbox_apollo_topology.py
 git -C hsoc-stack/tools/qbox-platform diff --check
 git -C hsoc-stack/tools/qbox diff --check
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py

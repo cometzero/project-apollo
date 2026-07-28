@@ -1,5 +1,8 @@
-#!/usr/bin/env python3
-"""Run or preflight the Apollo RSE-oriented QBox boot path."""
+"""Internal Apollo QBox runtime engine.
+
+This module is not a standalone entrypoint. The canonical full-system runner
+invokes it through its private ``--runtime-child`` process boundary.
+"""
 
 from __future__ import annotations
 
@@ -4049,8 +4052,12 @@ def drive_post_login_probe(
             for pattern in LOGIN_READY_PATTERNS
         )
     )
-    login_attempts = int(state.get("login_attempts", 0))
-    last_login_time = float(state.get("last_login_time", 0.0))
+    login_attempts_value = state.get("login_attempts", 0)
+    last_login_time_value = state.get("last_login_time", 0.0)
+    assert isinstance(login_attempts_value, int)
+    assert isinstance(last_login_time_value, int | float)
+    login_attempts = int(login_attempts_value)
+    last_login_time = float(last_login_time_value)
     shell_prompt_matches = list(
         re.finditer(args.primary_shell_prompt_re, clean_primary, re.MULTILINE)
     )
@@ -4072,8 +4079,12 @@ def drive_post_login_probe(
         state["login_attempts"] = login_attempts + 1
         state["last_login_time"] = time.monotonic()
         actions.append(f"sent_login_attempt_{login_attempts + 1}")
-    command_index = int(state.get("command_index", 0))
-    last_prompt_end = int(state.get("last_prompt_end", 0))
+    command_index_value = state.get("command_index", 0)
+    last_prompt_end_value = state.get("last_prompt_end", 0)
+    assert isinstance(command_index_value, int)
+    assert isinstance(last_prompt_end_value, int)
+    command_index = int(command_index_value)
+    last_prompt_end = int(last_prompt_end_value)
     commands = post_login_probe_commands(args)
     command_ready = bool(
         state["sent_login"]
@@ -4089,10 +4100,9 @@ def drive_post_login_probe(
         state["command_index"] = command_index + 1
         state["last_prompt_end"] = shell_prompt_end
         actions.append(f"sent_probe_command_{command_index + 1}")
-    if (
-        int(state.get("command_index", 0)) >= len(commands)
-        and PROBE_DONE_MARKER in clean_primary
-    ):
+    completed_command_index = state.get("command_index", 0)
+    assert isinstance(completed_command_index, int)
+    if completed_command_index >= len(commands) and PROBE_DONE_MARKER in clean_primary:
         state["complete"] = True
     if args.fwu_probe and fwu_probe_stage_complete(logs):
         state["complete"] = True
@@ -5734,10 +5744,10 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = workspace_root()
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     required_marker_error = required_pass_marker_argument_error(
         args.required_pass_marker
     )
@@ -5873,9 +5883,9 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     root = workspace_root()
-    args = parse_args()
+    args = parse_args(argv)
     args.out_dir = args.out_dir.resolve()
     if args.ap_bl2_elf:
         args.ap_bl2_elf = args.ap_bl2_elf.resolve()
@@ -6348,7 +6358,3 @@ def main() -> int:
         progress_marker_first_hits=progress_marker_first_hits,
         shared_memory_cleanup=shared_memory_cleanup,
     )
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

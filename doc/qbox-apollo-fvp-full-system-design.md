@@ -63,10 +63,10 @@ The design is based on the current workspace state:
   Cortex-M55, AP firmware chain, AP reset release, AP/RSE/SI MHUv3 paths,
   AP-SI HIPC/RPMsg service-model hooks, PFDI monitor plumbing, and
   file-backed multi-console logs.
-- `scripts/run/run_qbox_fvp_rd_aspen_rse.py` already implements artifact
-  preparation, per-run writable flash/OTP copies, flash decompression and
-  padding, marker evaluation, post-login probes, FWU probes, and structured
-  `result.json` output.
+- `scripts/run/qbox_apollo_runtime.py` implements the private runtime engine:
+  artifact preparation, per-run writable flash/OTP copies, flash
+  decompression and padding, marker evaluation, post-login probes, FWU probes,
+  and structured `result.json` output.
 - `scripts/inspect/probe_qemu_cortex_r82.py --source-root .` currently passes source
   probes for the QEMU Cortex-R82 CPU model, EL2 MPU sysregs, 64-bit PMSAv8
   storage, and the QBox `cpu_arm_cortexR82` wrapper.

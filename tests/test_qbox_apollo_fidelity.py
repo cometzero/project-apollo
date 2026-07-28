@@ -7,11 +7,12 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fidelity.py"
+SCRIPT = ROOT / "scripts/run/run_qbox_apollo_fvp_full.py"
+MODULE = ROOT / "scripts/run/qbox_apollo_fidelity.py"
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("run_qbox_apollo_fidelity", SCRIPT)
+    spec = importlib.util.spec_from_file_location("qbox_apollo_fidelity", MODULE)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -23,6 +24,7 @@ def test_local_dry_run_selects_only_local_full_system_runner(tmp_path: Path) -> 
         [
             sys.executable,
             str(SCRIPT),
+            "--fidelity",
             "--artifacts",
             "local",
             "--cpus",
@@ -43,6 +45,9 @@ def test_local_dry_run_selects_only_local_full_system_runner(tmp_path: Path) -> 
     assert completed.returncode == 0, completed.stderr
     assert "run_qbox_apollo_fvp_full.py" in completed.stdout
     assert "build/local-apollo-qvp" in completed.stdout
+    assert '"--rootfs-bootargs-profile",\n    "none"' in completed.stdout
+    assert "quiet-console" not in completed.stdout
+    assert "--no-post-login-probe" in completed.stdout
     assert "run_qbox_yocto.sh" not in completed.stdout
 
 
@@ -51,6 +56,7 @@ def test_yocto_dry_run_selects_provider_aware_launcher(tmp_path: Path) -> None:
         [
             sys.executable,
             str(SCRIPT),
+            "--fidelity",
             "--artifacts",
             "yocto",
             "--out-dir",
@@ -101,6 +107,7 @@ def test_non_four_cpu_request_is_rejected(tmp_path: Path) -> None:
         [
             sys.executable,
             str(SCRIPT),
+            "--fidelity",
             "--artifacts",
             "local",
             "--cpus",
