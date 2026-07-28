@@ -82,8 +82,9 @@ build_linux()
         elif [[ "${LOCAL_LINUX_DM_VERITY:-0}" != "0" ]]; then
             die "LOCAL_LINUX_DM_VERITY must be 0 or 1: ${LOCAL_LINUX_DM_VERITY}"
         fi
-        make -C "${LINUX_SRC}" O="${LINUX_BUILD_DIR}" ARCH=arm64 \
-            CROSS_COMPILE="${AARCH64_PREFIX}" "${kbuild_ccache_args[@]}" \
+        run_logged linux-olddefconfig make -C "${LINUX_SRC}" \
+            O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
+            "${kbuild_ccache_args[@]}" \
             LOCALVERSION= olddefconfig
 
         if [[ -n "${modsign_key}" ]]; then
@@ -99,10 +100,6 @@ build_linux()
             fi
         fi
 
-        run_logged linux-olddefconfig make -C "${LINUX_SRC}" \
-            O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-            "${kbuild_ccache_args[@]}" \
-            olddefconfig
         printf '%s\n' "${config_digest}" > "${config_marker}"
     fi
 
@@ -112,15 +109,7 @@ build_linux()
         make -C "${LINUX_SRC}" \
         O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
         "${kbuild_ccache_args[@]}" \
-        Image dtbs modules -j "${JOBS}"
-
-    run_logged linux-build-selected-dtb env \
-        KBUILD_BUILD_TIMESTAMP="${APOLLO_KBUILD_BUILD_TIMESTAMP:-Thu Jan 1 00:00:00 UTC 1970}" \
-        KBUILD_BUILD_VERSION="${APOLLO_KBUILD_BUILD_VERSION:-1}" \
-        make -C "${LINUX_SRC}" \
-        O="${LINUX_BUILD_DIR}" ARCH=arm64 CROSS_COMPILE="${AARCH64_PREFIX}" \
-        "${kbuild_ccache_args[@]}" \
-        "${KERNEL_DEVICETREE}" -j "${JOBS}"
+        Image "${KERNEL_DEVICETREE}" modules -j "${JOBS}"
 
     local image="${LINUX_BUILD_DIR}/arch/arm64/boot/Image"
     local dtb="${LINUX_BUILD_DIR}/arch/arm64/boot/dts/${KERNEL_DEVICETREE}"

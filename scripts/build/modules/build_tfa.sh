@@ -79,7 +79,8 @@ build_tfa()
     PYTHONPATH="${tfa_work}/recipe-sysroot-native/usr/lib/python3.13/site-packages${PYTHONPATH:+:${PYTHONPATH}}"
     export PYTHONPATH
 
-    run_logged tfa-build make -C "${TFA_SRC}" -j1 \
+    run_logged tfa-build make --jobserver-style=pipe \
+        -C "${TFA_SRC}" -j "${JOBS}" \
         LD="${AARCH64_PREFIX}ld" \
         "${tfa_ccache_args[@]}" \
         BUILD_BASE="${TFA_BUILD_DIR}" \
