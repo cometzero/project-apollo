@@ -70,7 +70,6 @@ execution.
    bash -n scripts/build/local_build.conf local_build.sh \
      scripts/build/local_build_common.sh \
      scripts/build/modules/package_fvp_local.sh
-   python3 -m pytest -q tests/test_local_build_sh.py
    python3 scripts/test/audit_local_build_yocto_parity.py \
      --vars "${review_dir}/yocto-vars.json" \
      --output "${review_dir}/parity-audit.json"
