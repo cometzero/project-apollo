@@ -619,8 +619,10 @@ resolve_yocto_debug_elf() {
                 "${YOCTO_WORK_DIR}/u-boot/*/build/u-boot"
             ;;
         linux)
-            resolve_file_with_glob \
+            resolve_file_with_two_globs \
                 "Yocto Linux debug ELF" \
+                "" \
+                "${YOCTO_WORK_DIR}/linux-*/*/image/boot/vmlinux-*" \
                 "" \
                 "${YOCTO_WORK_DIR}/linux-*/*/build/vmlinux"
             ;;
