@@ -9,6 +9,7 @@ RUN_ID="$(date +%Y%m%d-%H%M%S)"
 OUTPUT_DIR="${ROOT_DIR}/build/codebase-memory-index/${RUN_ID}"
 
 INDEX_ENTRIES=(
+    "arm-auto-solutions-top|."
     "apollo-meta-hsoc-auto-solutions|hsoc-stack/yocto/meta-hsoc-auto-solutions"
     "apollo-meta-hsoc-bsp|hsoc-stack/yocto/meta-hsoc-bsp"
     "apollo-hsoc-tests|hsoc-stack/tests"
@@ -51,8 +52,8 @@ usage()
 Usage: scripts/update_codebase_indexes.sh [options]
 
 Options:
-  --directory DIR   Update one registered submodule index; may be repeated
-  --all             Update all 30 top-level submodule indexes sequentially
+  --directory DIR   Update one registered repository index; may be repeated
+  --all             Update all registered repository indexes sequentially
   --list            List registered project names and directories
   -h, --help        Show this help
 
@@ -60,6 +61,7 @@ DIR may be absolute or relative to:
   ${ROOT_DIR}
 
 Examples:
+  scripts/update_codebase_indexes.sh --directory .
   scripts/update_codebase_indexes.sh --directory layers/meta-arm
   scripts/update_codebase_indexes.sh --directory layers/meta-arm --directory hsoc-stack/tools/buildroot
   scripts/update_codebase_indexes.sh --all
@@ -108,9 +110,13 @@ entry_for_directory()
         absolute="$(realpath -m -- "${ROOT_DIR}/${input#./}")"
     fi
     [[ -d "${absolute}" ]] || die "directory does not exist: ${input}"
-    [[ "${absolute}" == "${ROOT_DIR}/"* ]] ||
+    if [[ "${absolute}" == "${ROOT_DIR}" ]]; then
+        relative="."
+    elif [[ "${absolute}" == "${ROOT_DIR}/"* ]]; then
+        relative="${absolute#"${ROOT_DIR}/"}"
+    else
         die "directory is outside the workspace: ${input}"
-    relative="${absolute#"${ROOT_DIR}/"}"
+    fi
 
     for entry in "${INDEX_ENTRIES[@]}"; do
         IFS='|' read -r project path <<<"${entry}"
@@ -119,7 +125,7 @@ entry_for_directory()
             return 0
         fi
     done
-    die "directory is not a registered top-level submodule: ${relative}"
+    die "directory is not registered for indexing: ${relative}"
 }
 
 add_selected_entry()
@@ -131,6 +137,37 @@ add_selected_entry()
         [[ "${entry}" == "${candidate}" ]] && return 0
     done
     SELECTED_ENTRIES+=("${candidate}")
+}
+
+root_ignore_has_pattern()
+{
+    local expected="$1"
+    local line
+
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        [[ "${line}" == "${expected}" ]] && return 0
+    done <"${ROOT_DIR}/.cbmignore"
+    return 1
+}
+
+validate_root_index_exclusions()
+{
+    local entry
+    local path
+    local pattern
+
+    [[ -f "${ROOT_DIR}/.cbmignore" ]] ||
+        die "root index requires ${ROOT_DIR}/.cbmignore"
+    root_ignore_has_pattern "/build/" ||
+        die "root index exclusion is missing from .cbmignore: /build/"
+
+    for entry in "${INDEX_ENTRIES[@]}"; do
+        IFS='|' read -r _ path <<<"${entry}"
+        [[ "${path}" == "." ]] && continue
+        pattern="/${path%/}/"
+        root_ignore_has_pattern "${pattern}" ||
+            die "root index exclusion is missing from .cbmignore: ${pattern}"
+    done
 }
 
 write_summary_row()
@@ -225,8 +262,13 @@ index_entry()
     local summary_row
 
     IFS='|' read -r project relative_path <<<"${entry}"
-    repo_path="${ROOT_DIR}/${relative_path}"
-    [[ -d "${repo_path}" ]] || die "submodule directory is missing: ${relative_path}"
+    if [[ "${relative_path}" == "." ]]; then
+        repo_path="${ROOT_DIR}"
+        validate_root_index_exclusions
+    else
+        repo_path="${ROOT_DIR}/${relative_path}"
+    fi
+    [[ -d "${repo_path}" ]] || die "repository directory is missing: ${relative_path}"
     git -C "${repo_path}" rev-parse --is-inside-work-tree >/dev/null 2>&1 ||
         die "not an initialized Git worktree: ${relative_path}"
 
