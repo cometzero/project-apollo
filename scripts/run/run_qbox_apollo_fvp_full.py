@@ -21,7 +21,7 @@ import uuid
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
-import run_qbox_fvp_rd_aspen_rse as rse_runner
+import run_qbox_fvp_rd_aspen_rse as rse_runner  # noqa: E402
 
 
 CONSOLE_LOGS = {
@@ -39,7 +39,7 @@ RSE_LCS_SE = 0xEEEEA5A5
 GATES = ["G0", "G1", "G2"]
 DEFAULT_EXPECTED_AP_CPUS = 4
 APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-qvp login:"
-APOLLO_PRIMARY_SHELL_MARKER = "~ #"
+APOLLO_PRIMARY_SHELL_MARKER = "nexios-bsp#"
 CHILD_FAIL_PATTERNS = [
     "Kernel panic",
     "Unable to mount root fs",
@@ -1699,12 +1699,20 @@ def parse_args() -> argparse.Namespace:
         help="Forwarded SMMU backend for the AP side of the QBox platform.",
     )
     parser.add_argument("--no-copy-writable-flash", action="store_true")
-    parser.add_argument("--rootfs-bootargs-profile", default="quiet-console")
+    parser.add_argument(
+        "--rootfs-bootargs-profile",
+        choices=["none", "quiet-console", "verbose-console"],
+        default="none",
+        help=(
+            "Patch a legacy WIC boot entry before launch. Local UKI images "
+            "already embed their command line and use the default 'none'."
+        ),
+    )
     parser.add_argument("--primary-login-prompt", default=APOLLO_PRIMARY_LOGIN_PROMPT)
     parser.add_argument("--primary-shell-marker", default=APOLLO_PRIMARY_SHELL_MARKER)
     parser.add_argument(
         "--primary-shell-prompt-re",
-        default=r"(?:root@apollo-qvp[^\n]*[#>]|\S+ #)\s*$",
+        default=r"(?:nexios-bsp#|root@apollo-qvp[^\n]*[#>]|\S+ #)\s*$",
     )
     perf_group = parser.add_mutually_exclusive_group()
     perf_group.add_argument(

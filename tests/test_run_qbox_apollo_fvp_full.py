@@ -157,6 +157,17 @@ def test_child_command_omits_removed_rse_remote_flags(tmp_path):
     assert "--rse-lms-accel" in cmd
 
 
+def test_local_uki_runner_defaults_match_buildroot_boot_contract(monkeypatch):
+    runner = load_runner()
+    monkeypatch.setattr(sys, "argv", [str(SCRIPT)])
+
+    args = runner.parse_args()
+
+    assert args.rootfs_bootargs_profile == "none"
+    assert args.primary_shell_marker == "nexios-bsp#"
+    assert "nexios-bsp#" in args.primary_shell_prompt_re
+
+
 def test_child_command_forwards_persistent_rse_flash_state(tmp_path):
     runner = load_runner()
     args = make_child_command_args(tmp_path)
