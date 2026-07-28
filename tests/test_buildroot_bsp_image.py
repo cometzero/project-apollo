@@ -119,14 +119,16 @@ write_buildroot_defconfig
     assert result.returncode == 0, result.stderr
     config = Path(result.stdout.strip()).read_text(encoding="utf-8")
     for symbol in (
+        "BR2_TOOLCHAIN_EXTERNAL_OPENMP=y",
         "BR2_PACKAGE_UTIL_LINUX=y",
         "BR2_PACKAGE_UTIL_LINUX_BINARIES=y",
-        "BR2_LINUX_KERNEL=y",
-        "BR2_PACKAGE_LINUX_TOOLS_PERF=y",
+        "BR2_PACKAGE_APOLLO_PERF=y",
         "BR2_PACKAGE_ZSTD=y",
         "BR2_PACKAGE_APOLLO_PFDI_BSP=y",
     ):
         assert symbol in config
+    assert "BR2_LINUX_KERNEL" not in config
+    assert "BR2_PACKAGE_LINUX_TOOLS_PERF" not in config
     assert "BR2_PACKAGE_UTIL_LINUX_MOUNT=y" not in config
 
 

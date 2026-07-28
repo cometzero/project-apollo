@@ -45,6 +45,7 @@ prepare_buildroot_toolchain()
         [[ -f "${manifest}" ]] &&
         [[ -x "${BUILDROOT_TOOLCHAIN_DIR}/bin/${AARCH64_PREFIX}gcc" ]] &&
         [[ -d "${BUILDROOT_TOOLCHAIN_SYSROOT}" ]] &&
+        [[ -e "${BUILDROOT_TOOLCHAIN_SYSROOT}/lib/ld-linux-aarch64.so.1" ]] &&
         [[ "$(cat "${manifest}")" == "${current_manifest}" ]]; then
         log "Buildroot toolchain cache is up to date"
         return 0
@@ -55,6 +56,11 @@ prepare_buildroot_toolchain()
     rm -rf "${BUILDROOT_TOOLCHAIN_DIR}"
     mkdir -p "${BUILDROOT_TOOLCHAIN_DIR}/bin" "${BUILDROOT_TOOLCHAIN_SYSROOT}"
     cp -al "${SDK_TARGET_SYSROOT}/." "${BUILDROOT_TOOLCHAIN_SYSROOT}/"
+    # Yocto recipe sysroots use usrmerge, while Buildroot's external-toolchain
+    # validation and library importer expect the dynamic loader below /lib.
+    if [[ ! -e "${BUILDROOT_TOOLCHAIN_SYSROOT}/lib" ]]; then
+        ln -s usr/lib "${BUILDROOT_TOOLCHAIN_SYSROOT}/lib"
+    fi
     rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf"
     rm -rf "${BUILDROOT_TOOLCHAIN_SYSROOT}/etc/ld.so.conf.d"
     rm -f "${BUILDROOT_TOOLCHAIN_SYSROOT}/usr/bin/sudo"
@@ -219,19 +225,9 @@ prepare_buildroot_external()
     require_file "${BUILDROOT_EXTERNAL}/Config.in"
     require_file "${BUILDROOT_EXTERNAL}/external.mk"
     require_file \
+        "${BUILDROOT_EXTERNAL}/package/apollo-perf/apollo-perf.mk"
+    require_file \
         "${BUILDROOT_EXTERNAL}/package/apollo-pfdi-bsp/apollo-pfdi-bsp.mk"
-}
-
-prepare_buildroot_linux_config()
-{
-    require_file "${LINUX_BUILD_DIR}/.config"
-    require_file "${LINUX_BUILD_DIR}/modsign_key.pem"
-
-    sed \
-        -e 's/^CONFIG_MODULES=y$/# CONFIG_MODULES is not set/' \
-        -e "s|^CONFIG_MODULE_SIG_KEY=.*|CONFIG_MODULE_SIG_KEY=\"${LINUX_BUILD_DIR}/modsign_key.pem\"|" \
-        "${LINUX_BUILD_DIR}/.config" |
-        write_file_if_changed "${BUILDROOT_LINUX_CONFIG}"
 }
 
 write_buildroot_defconfig()
@@ -260,6 +256,7 @@ BR2_TOOLCHAIN_EXTERNAL_GCC_14=y
 BR2_TOOLCHAIN_EXTERNAL_HEADERS_${headers_major}_${headers_patchlevel}=y
 BR2_TOOLCHAIN_EXTERNAL_CUSTOM_GLIBC=y
 BR2_TOOLCHAIN_EXTERNAL_CXX=y
+BR2_TOOLCHAIN_EXTERNAL_OPENMP=y
 BR2_TOOLCHAIN_EXTERNAL_HAS_SSP=y
 BR2_TOOLCHAIN_EXTERNAL_HAS_SSP_STRONG=y
 BR2_ENABLE_DEBUG=y
@@ -289,15 +286,7 @@ BR2_PACKAGE_APOLLO_PFDI_BSP=y
 BR2_TARGET_ROOTFS_CPIO=y
 BR2_TARGET_ROOTFS_CPIO_GZIP=y
 # BR2_TARGET_ROOTFS_TAR is not set
-BR2_LINUX_KERNEL=y
-BR2_LINUX_KERNEL_CUSTOM_VERSION=y
-BR2_LINUX_KERNEL_CUSTOM_VERSION_VALUE="6.18"
-BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
-BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE="${BUILDROOT_LINUX_CONFIG}"
-BR2_LINUX_KERNEL_IMAGE_TARGET_CUSTOM=y
-BR2_LINUX_KERNEL_IMAGE_TARGET_NAME="Image"
-BR2_PACKAGE_LINUX_TOOLS_PERF=y
-BR2_PACKAGE_LINUX_TOOLS_PERF_NEEDS_HOST_PYTHON3=y
+BR2_PACKAGE_APOLLO_PERF=y
 EOF
     printf '%s\n' "${defconfig}"
 }
@@ -337,7 +326,7 @@ buildroot_make()
     buildroot_env make -C "${BUILDROOT_SRC}" \
         O="${BUILDROOT_BUILD_DIR}" \
         BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
-        LINUX_OVERRIDE_SRCDIR="${LINUX_SRC}" \
+        APOLLO_LINUX_SOURCE_DIR="${LINUX_SRC}" \
         APOLLO_PFDI_BSP_SOURCE_DIR="${PFDI_BSP_SRC}" \
         APOLLO_PFDI_BSP_CONFIG_PACK="${PFDI_BSP_CONFIG_PACK}" \
         "$@"
@@ -353,8 +342,7 @@ validate_buildroot_zena_packages()
         "BR2_PACKAGE_KMOD_TOOLS=y"
         "BR2_PACKAGE_IPROUTE2=y"
         "BR2_PACKAGE_UTIL_LINUX=y"
-        "BR2_LINUX_KERNEL=y"
-        "BR2_PACKAGE_LINUX_TOOLS_PERF=y"
+        "BR2_PACKAGE_APOLLO_PERF=y"
         "BR2_PACKAGE_APOLLO_PFDI_BSP=y"
         "BR2_PACKAGE_LIBMNL=y"
         "BR2_PACKAGE_LIBCAP=y"
@@ -370,6 +358,72 @@ validate_buildroot_zena_packages()
     done
 
     log "Validated Buildroot Arm Zena CSS package selection"
+}
+
+buildroot_perf_source_manifest()
+{
+    local -a source_paths=(
+        COPYING
+        Makefile
+        arch/arm64/include
+        include
+        scripts
+        tools/arch
+        tools/build
+        tools/include
+        tools/lib
+        tools/perf
+        tools/scripts
+    )
+
+    require_dir "${LINUX_SRC}/tools/perf"
+    require_file "${LINUX_SRC}/COPYING"
+    printf 'LINUX_SRC=%s\n' "$(canonical_dir "${LINUX_SRC}")"
+
+    if git -C "${LINUX_SRC}" rev-parse --is-inside-work-tree \
+        >/dev/null 2>&1; then
+        git -C "${LINUX_SRC}" rev-parse HEAD
+        git -C "${LINUX_SRC}" diff --no-ext-diff --binary HEAD -- \
+            "${source_paths[@]}" |
+            sha256sum |
+            awk '{print "tracked-diff=" $1}'
+        while IFS= read -r -d '' source; do
+            fingerprint_file_hash "${LINUX_SRC}/${source}" \
+                "untracked/${source}"
+        done < <(
+            git -C "${LINUX_SRC}" ls-files -z --others \
+                --exclude-standard -- "${source_paths[@]}" |
+                LC_ALL=C sort -z
+        )
+    else
+        local source
+        for source in "${source_paths[@]}"; do
+            if [[ -d "${LINUX_SRC}/${source}" ]]; then
+                fingerprint_tree_metadata "${LINUX_SRC}/${source}" \
+                    "linux/${source}"
+            else
+                fingerprint_file_hash "${LINUX_SRC}/${source}" \
+                    "linux/${source}"
+            fi
+        done
+    fi
+}
+
+refresh_buildroot_perf_source()
+{
+    local marker="${BUILDROOT_BUILD_DIR}/.apollo-perf-source.manifest"
+    local manifest
+
+    mkdir -p "${BUILDROOT_BUILD_DIR}"
+    manifest="$(buildroot_perf_source_manifest)"
+    if [[ -f "${marker}" ]] &&
+        [[ "$(cat "${marker}")" == "${manifest}" ]]; then
+        log "Buildroot perf source is up to date"
+        return 0
+    fi
+
+    run_logged buildroot-perf-dirclean buildroot_make apollo-perf-dirclean
+    printf '%s\n' "${manifest}" > "${marker}"
 }
 
 validate_buildroot_runtime_files()
@@ -571,7 +625,7 @@ buildroot_initramfs_manifest()
     printf 'PFDI_MONITOR_SUPPORT=%s\n' "${PFDI_MONITOR_SUPPORT}"
     fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.config" buildroot-config
     fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.apollo-defconfig.sha256" buildroot-defconfig
-    fingerprint_file_hash "${BUILDROOT_LINUX_CONFIG}" buildroot-linux-config
+    fingerprint_file_hash "${BUILDROOT_BUILD_DIR}/.apollo-perf-source.manifest" buildroot-perf-source
     fingerprint_file_hash "${BUILDROOT_TOOLCHAIN_DIR}/.apollo-toolchain.manifest" buildroot-toolchain
     fingerprint_file_hash "${BUILDROOT_OVERLAY}/lib/modules/${release}/.apollo-modules.manifest" kernel-modules-overlay
     fingerprint_tree_metadata "${NEXIOS_BSP_INIT_DIR}" nexios-bsp-init
@@ -597,7 +651,6 @@ build_buildroot_initramfs()
     prepare_buildroot_toolchain
     prepare_pfdi_bsp_config
     prepare_buildroot_external
-    prepare_buildroot_linux_config
     prepare_buildroot_overlay
     install_kernel_modules_overlay
 
@@ -605,6 +658,7 @@ build_buildroot_initramfs()
     defconfig="$(write_buildroot_defconfig)"
     configure_buildroot_if_needed "${defconfig}"
     validate_buildroot_zena_packages
+    refresh_buildroot_perf_source
 
     local release
     release="$(kernel_release)"
@@ -633,7 +687,8 @@ build_buildroot_initramfs()
     rm -rf "${BUILDROOT_BUILD_DIR}/target/lib/modules"
     run_logged buildroot-build buildroot_make \
         ROOTFS_CPIO_COMPRESS_CMD="${compressor}" \
-        -j "${JOBS}"
+        -j "${JOBS}" ||
+        return $?
     validate_buildroot_runtime_files
 
     require_file "${BUILDROOT_BUILD_DIR}/images/rootfs.cpio.gz"
