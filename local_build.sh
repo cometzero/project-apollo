@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${ROOT_DIR}/scripts/build/local_build_common.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_qbox.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_recipe_toolchain.sh"
+source "${ROOT_DIR}/scripts/build/modules/build_scheduler.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_sdk.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_tfm.sh"
 source "${ROOT_DIR}/scripts/build/modules/build_scp.sh"
@@ -26,6 +28,7 @@ KCONFIG_COMPONENTS=(u-boot linux zephyr)
 DRY_RUN=0
 CCACHE_REPORT_ONLY=0
 REFRESH_SDK=0
+TOOLCHAIN_MODE="${APOLLO_LOCAL_BUILD_TOOLCHAIN:-recipe}"
 PACKAGE_MODE=auto
 ACTION=build
 JOBS_ARG="${JOBS}"
@@ -71,11 +74,13 @@ Options:
   --qbox-systemc-tests alias for --qbox-unit-tests
   --package           package local FVP deploy output; package-only if no component is selected
   --no-package        skip the default package step
+  --toolchain MODE    use recipe sysroots (default) or an installed SDK
   --refresh-sdk       force-populate and reinstall the Yocto SDK; SDK-only if no component is selected
   --jobs N            parallel build jobs (default: ${JOBS})
   --dry-run           print resolved actions without changing files
   --ccache-report     print ccache status for every component and exit
   APOLLO_LOCAL_BUILD_CCACHE=0 disables ccache; default is auto-detect
+  APOLLO_LOCAL_BUILD_COMPONENT_LANES=N limits concurrent components; default is 2
   QBOX_CMAKE_BUILD_TYPE overrides QBox type; default is RelWithDebInfo
   -h, --help          show this help
 
@@ -87,6 +92,7 @@ Examples:
   ./local_build.sh --qbox-unit-tests
   ./local_build.sh linux clean-build --no-package
   ./local_build.sh linux menuconfig --no-package
+  ./local_build.sh linux --toolchain sdk
   ./local_build.sh --refresh-sdk
   ./local_build.sh --package
   ./local_build.sh --dry-run
@@ -147,6 +153,22 @@ parse_args()
                 ;;
             --refresh-sdk)
                 REFRESH_SDK=1
+                TOOLCHAIN_MODE=sdk
+                shift
+                ;;
+            --toolchain)
+                (($# >= 2)) || die "--toolchain requires recipe or sdk"
+                case "$2" in
+                    recipe|sdk) TOOLCHAIN_MODE="$2" ;;
+                    *) die "--toolchain requires recipe or sdk" ;;
+                esac
+                shift 2
+                ;;
+            --toolchain=*)
+                case "${1#*=}" in
+                    recipe|sdk) TOOLCHAIN_MODE="${1#*=}" ;;
+                    *) die "--toolchain requires recipe or sdk" ;;
+                esac
                 shift
                 ;;
             --jobs)
@@ -401,16 +423,25 @@ print_component_dry_run()
 dry_run()
 {
     local order="${SELECTED_COMPONENTS[*]}"
+    local component_lanes=serial
     if ((REFRESH_SDK)); then
         order="sdk-refresh${order:+ ${order}}"
+    fi
+    if [[ "${ACTION}" == build || "${ACTION}" == clean-build ]] &&
+        ((${#SELECTED_COMPONENTS[@]} > 0)); then
+        component_lanes="$(
+            scheduler_lane_count "${#SELECTED_COMPONENTS[@]}"
+        )"
     fi
     cat <<EOF
 DRY-RUN: ./local_build.sh
 jobs: ${JOBS_ARG}
+component lanes: ${component_lanes}
 pc cpus: ${PC_CPUS_COUNT}
 tfa linux dts: ${TFA_LINUX_DTS}
 bootargs tail: ${BOOTLOADER_LINUX_APPEND}
 order: ${order}$([[ "${PACKAGE_MODE}" != disabled ]] && printf ' package')
+toolchain: ${TOOLCHAIN_MODE}
 component steps:
 EOF
     if ((REFRESH_SDK)); then
@@ -462,8 +493,24 @@ ensure_sdk_available()
     SDK_ENV_READY=1
 }
 
+ensure_component_build_environment()
+{
+    local component="$1"
+
+    case "${component}" in
+        qbox|zephyr|fvpconf|debug-manifest) return 0 ;;
+    esac
+    if [[ "${TOOLCHAIN_MODE}" == sdk ]]; then
+        ensure_sdk_available
+    else
+        activate_component_recipe_toolchain "${component}"
+        setup_recipe_build_environment "${component}"
+    fi
+}
+
 needs_initial_sdk_check()
 {
+    [[ "${TOOLCHAIN_MODE}" == sdk ]] || return 1
     ((${#SELECTED_COMPONENTS[@]} > 0)) || return 1
 
     case "${ACTION}" in
@@ -471,10 +518,22 @@ needs_initial_sdk_check()
         defconfig|menuconfig|savedefconfig)
             local component
             for component in "${SELECTED_COMPONENTS[@]}"; do
-                [[ "${component}" == zephyr ]] && continue
+                case "${component}" in
+                    qbox|zephyr|fvpconf|debug-manifest) continue ;;
+                esac
                 return 0
             done
             ;;
+    esac
+    return 1
+}
+
+needs_recipe_toolchain_prepare()
+{
+    [[ "${TOOLCHAIN_MODE}" == recipe ]] || return 1
+    ((${#SELECTED_COMPONENTS[@]} > 0)) || return 1
+    case "${ACTION}" in
+        build|clean-build|defconfig|menuconfig|savedefconfig) return 0 ;;
     esac
     return 1
 }
@@ -592,7 +651,7 @@ run_kconfig()
                 die "ZEPHYR_SDK_INSTALL_DIR is required for Zephyr ${action}; build or unpack zephyr-demos-cl1 with Yocto first."
             ;;
         *)
-            ensure_sdk_available
+            ensure_component_build_environment "${component}"
             ;;
     esac
     case "${component}" in
@@ -628,9 +687,7 @@ run_component()
     case "${action}" in
         build)
             fn="$(component_function "${component}")"
-            if [[ "${component}" != qbox ]]; then
-                ensure_sdk_available
-            fi
+            ensure_component_build_environment "${component}"
             "${fn}"
             ;;
         clean)
@@ -639,9 +696,7 @@ run_component()
         clean-build)
             run_clean "${component}"
             fn="$(component_function "${component}")"
-            if [[ "${component}" != qbox ]]; then
-                ensure_sdk_available
-            fi
+            ensure_component_build_environment "${component}"
             "${fn}"
             ;;
         defconfig|menuconfig|savedefconfig)
@@ -651,6 +706,14 @@ run_component()
 }
 
 parse_args "$@"
+
+case "${TOOLCHAIN_MODE}" in
+    recipe|sdk) ;;
+    *) die "toolchain mode must be recipe or sdk: ${TOOLCHAIN_MODE}" ;;
+esac
+if ((REFRESH_SDK)); then
+    TOOLCHAIN_MODE=sdk
+fi
 
 if [[ "${COMPONENT_SET}" == 0 ]]; then
     if [[ "${PACKAGE_MODE}" == enabled || "${REFRESH_SDK}" == 1 ]]; then
@@ -695,13 +758,14 @@ if ((REFRESH_SDK)); then
     SDK_INSTALL_CHECKED=1
 elif needs_initial_sdk_check; then
     run_step "sdk-check" ensure_yocto_sdk_installed
+elif needs_recipe_toolchain_prepare; then
+    run_step "recipe-toolchain-prepare" \
+        prepare_selected_component_toolchains "${SELECTED_COMPONENTS[@]}"
 fi
 
 print_ccache_report
 
-for component in "${SELECTED_COMPONENTS[@]}"; do
-    run_step "${component}-${ACTION}" run_component "${component}" "${ACTION}"
-done
+run_selected_components "${ACTION}" "${SELECTED_COMPONENTS[@]}"
 
 if [[ "${PACKAGE_MODE}" == enabled ]]; then
     run_step "package" package_local_fvp_outputs

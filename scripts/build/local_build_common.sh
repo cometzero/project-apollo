@@ -272,13 +272,20 @@ local_build_kbuild_ccache_args()
     local -n out="$1"
     local cross_prefix="$2"
     local ccache_bin
+    local target_compiler="${cross_prefix}gcc"
 
     out=()
-    local_build_ccache_resolve ccache_bin || return 0
-    out+=(
-        "CC=${ccache_bin} ${cross_prefix}gcc"
-        "HOSTCC=${ccache_bin} gcc"
-    )
+    if [[ -n "${RECIPE_TOOLCHAIN_SYSROOT_FLAG:-}" ]]; then
+        target_compiler+=" ${RECIPE_TOOLCHAIN_SYSROOT_FLAG}"
+    fi
+    if local_build_ccache_resolve ccache_bin; then
+        out+=(
+            "CC=${ccache_bin} ${target_compiler}"
+            "HOSTCC=${ccache_bin} gcc"
+        )
+    elif [[ -n "${RECIPE_TOOLCHAIN_SYSROOT_FLAG:-}" ]]; then
+        out+=("CC=${target_compiler}")
+    fi
 }
 
 local_build_tfa_ccache_args()
@@ -423,6 +430,9 @@ run_logged()
         log "Completed ${name} in $(format_elapsed "${elapsed}")"
     else
         log "Failed ${name} after $(format_elapsed "${elapsed}") (exit ${status})"
+        if [[ "${LOCAL_BUILD_STEP_FAILURE:-0}" == 0 ]]; then
+            LOCAL_BUILD_STEP_FAILURE="${status}"
+        fi
     fi
     local_build_record_timing command "${name}" "${status}" "${elapsed}" \
         "${LOG_DIR}/${name}.log"
@@ -438,10 +448,14 @@ run_step()
     local status
     start="$(timer_now)"
     log "Starting ${name}"
+    LOCAL_BUILD_STEP_FAILURE=0
     set +e
     "$@"
     status="$?"
     set -e
+    if [[ "${status}" == 0 && "${LOCAL_BUILD_STEP_FAILURE}" != 0 ]]; then
+        status="${LOCAL_BUILD_STEP_FAILURE}"
+    fi
     end="$(timer_now)"
     local elapsed="$((end - start))"
     if [[ "${status}" == 0 ]]; then
@@ -1006,7 +1020,15 @@ setup_build_environment()
 {
     source_sdk
     add_yocto_native_paths
+    require_local_build_host_tools
 
+    require_command "${AARCH64_PREFIX}gcc"
+    require_command "${ARM_NONE_EABI_PREFIX}gcc"
+    require_command "${AARCH64_NONE_ELF_PREFIX}gcc"
+}
+
+require_local_build_host_tools()
+{
     require_command cmake
     require_command ninja
     require_command make
@@ -1022,8 +1044,21 @@ setup_build_environment()
     require_command sgdisk
     require_command mkfs.vfat
     require_command mcopy
-    require_command "${ARM_NONE_EABI_PREFIX}gcc"
-    require_command "${AARCH64_NONE_ELF_PREFIX}gcc"
+}
+
+setup_recipe_build_environment()
+{
+    local component="$1"
+
+    add_yocto_native_paths
+    require_local_build_host_tools
+    case "${component}" in
+        tf-m) require_command "${ARM_NONE_EABI_PREFIX}gcc" ;;
+        scp-firmware) require_command "${AARCH64_NONE_ELF_PREFIX}gcc" ;;
+        optee|u-boot|tf-a|linux|buildroot)
+            require_command "${AARCH64_PREFIX}gcc"
+            ;;
+    esac
 }
 
 setup_zephyr_build_environment()

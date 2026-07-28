@@ -823,6 +823,7 @@ def test_missing_sdk_is_populated_and_installed_by_local_build(
     (tools_dir / "bitbake").chmod(0o755)
     env = {
         "APOLLO_LOCAL_BUILD_USE_YOCTO_VARS": "0",
+        "APOLLO_LOCAL_BUILD_TOOLCHAIN": "sdk",
         "APOLLO_TEST_BITBAKE_LOG": str(bitbake_log),
         "APOLLO_TEST_MAKE_LOG": str(make_log),
         "APOLLO_TEST_NATIVE_SYSROOT": str(tmp_path / "native-sysroot"),
@@ -1110,8 +1111,8 @@ def test_refresh_sdk_restores_previous_sdk_when_install_fails(tmp_path: Path) ->
     assert not list(tmp_path.glob("sdk.refresh-backup.*"))
 
 
-def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
-    # Given: QBox is requested and the Yocto SDK is not installed yet.
+def test_qbox_build_does_not_populate_sdk_before_cmake(tmp_path: Path) -> None:
+    # Given: QBox is requested and the Yocto SDK is not installed.
     tools_dir = tmp_path / "host-tools"
     bitbake_log = tmp_path / "bitbake.log"
     cmake_log = tmp_path / "cmake.log"
@@ -1190,15 +1191,14 @@ def test_qbox_build_checks_sdk_before_cmake(tmp_path: Path) -> None:
     # When: QBox is built through local_build.sh.
     result = run_local_build("qbox", extra_env=env)
 
-    # Then: SDK installation is checked before the QBox CMake build starts.
+    # Then: QBox reaches CMake without populating or installing the SDK.
     assert result.returncode == 0, output_of(result)
     output = output_of(result)
-    assert output.index("Yocto SDK not found") < output.index("Starting qbox-build")
+    assert "Yocto SDK not found" not in output
+    assert "Starting qbox-build" in output
     assert "Starting package" not in output
-    assert (sdk_dir / "environment-setup-apollo-test").is_file()
-    assert "nexios-image -c populate_sdk" in bitbake_log.read_text(
-        encoding="utf-8"
-    )
+    assert not (sdk_dir / "environment-setup-apollo-test").exists()
+    assert not bitbake_log.exists()
     cmake_args = cmake_log.read_text(encoding="utf-8")
     assert f"-S {qbox_platform}" in cmake_args
     assert "--target apollo_fvp_full_system" in cmake_args
