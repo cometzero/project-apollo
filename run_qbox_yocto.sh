@@ -1311,6 +1311,9 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
     else
         DEBUG_ENTRY_ADDRESS="<resolved-from-manifest>"
     fi
+    if [[ -n "${DEBUG_CPU_PARAM}" ]]; then
+        DEBUG_PLATFORM_PARAMS+=("${DEBUG_CPU_PARAM}.gdb_pause_all=true")
+    fi
 fi
 
 RUN_ROOTFS="${ROOTFS}"
@@ -1473,7 +1476,6 @@ if [[ "${UBOOT_ONLY}" == "1" ]]; then
     RUNNER_CMD+=(--uboot-only)
 fi
 if [[ -n "${DEBUG_TARGET}" ]]; then
-    RUNNER_CMD+=(--ignore-fail-patterns)
     if [[ "${DEBUG_TARGET}" == "qbox" ]]; then
         export QBOX_HOST_GDB_EXEC="${ROOT_DIR}/scripts/debug/gdbserver_gdb_wrapper.sh"
         export QBOX_HOST_GDBSERVER_ENDPOINT="${DEBUG_ENDPOINT}"
