@@ -1,0 +1,115 @@
+format_version: 1
+matrix_id: apollo-gic720ae
+criteria_policy:
+  allowed_statuses: [PASS, PARTIAL, FAIL, BLOCKED]
+  execution_state_location: content-addressed-overlay-only
+  unverifiable_is_pass: false
+rows:
+  - id: ap-gicd-gicr-topology
+    domain: ap
+    applicability: active
+    priority: P0
+    validation_surface: qemu-qtest-and-linux-discovery
+    required_artifacts: [qemu-qtest, qbox-ap-discovery]
+    required_checks: [gicd, four-gicr, canonical-qemu-state]
+  - id: ap-sgi-ppi-spi-delivery
+    domain: ap
+    applicability: active
+    priority: P0
+    validation_surface: opt-in-linux-probe
+    required_artifacts: [linux-probe-profile, interrupt-counter-delta]
+    required_checks: [sgi, ppi, spi, cpu-target]
+  - id: ap-affinity-hotplug
+    domain: ap
+    applicability: active
+    priority: P1
+    validation_surface: opt-in-linux-probe
+    required_artifacts: [linux-probe-profile, cpu-recovery-log]
+    required_checks: [affinity, hotplug, recovery]
+  - id: ap-its-physical-lpi
+    domain: ap
+    applicability: active
+    priority: P1
+    validation_surface: production-pcie-msi
+    required_artifacts: [pcie-profile, msi-counter-delta]
+    required_checks: [its, lpi, msi]
+  - id: ap-software-vlpi
+    domain: ap
+    applicability: conditional
+    priority_if_active: P1
+    priority_if_unavailable: P2
+    validation_surface: opt-in-kvm-probe
+    required_artifacts: [vlpi-profile, capability-preflight]
+    required_checks: [vlpi-state, software-delivery]
+  - id: ap-hardware-vlpi-forwarding
+    domain: ap
+    applicability: conditional
+    priority_if_active: P1
+    priority_if_unavailable: P2
+    validation_surface: vfio-irq-bypass-preflight
+    required_artifacts: [vfio-route-preflight]
+    required_checks: [hardware-forwarding-or-structured-gap]
+  - id: si-cl0-standard-delivery
+    domain: si
+    applicability: active
+    priority: P0
+    validation_surface: scp-production-firmware
+    required_artifacts: [scp-runtime, scp-symbols]
+    required_checks: [timer, mhu, owned-spi]
+  - id: si-cl1-smp-delivery
+    domain: si
+    applicability: active
+    priority: P0
+    validation_surface: zephyr-opt-in-ztest
+    required_artifacts: [zephyr-standard-runtime, zephyr-symbols]
+    required_checks: [four-core-smp, ipi, timer, rpmsg, pfdi]
+  - id: si-multiview-isolation
+    domain: si
+    applicability: active
+    priority: P0
+    validation_surface: qbox-single-and-split
+    required_artifacts: [single-si-runtime, split-rollback-runtime]
+    required_checks: [owner-delivery, non-owner-zero, rollback]
+  - id: si-extended-interrupt-ranges
+    domain: si
+    applicability: active
+    priority: P1
+    validation_surface: zephyr-extirq-profile
+    required_artifacts: [zephyr-extirq-runtime, extirq-symbols]
+    required_checks: [espi-4096-5119, eppi-1056-1119]
+  - id: si-power-reset-debug
+    domain: si
+    applicability: active
+    priority: P1
+    validation_surface: guarded-scp-power-command
+    required_artifacts: [scp-power-profile, five-thread-gdb]
+    required_checks: [power, reset, wake, debug-attach]
+  - id: si-fmu-ras-four-case
+    domain: si
+    applicability: active
+    priority: P1
+    validation_surface: guarded-scp-fmu-commands
+    required_artifacts: [qbox-four-command-log, qbox-four-exact-markers]
+    required_checks: [fmu-critical, fmu-noncritical, ras-correctable, ras-uncorrectable]
+  - id: fvp-si-event-differential
+    domain: fvp
+    applicability: active
+    priority: P1
+    validation_surface: fvp-si-profile-differential
+    required_artifacts: [qbox-si-receipts, fvp-si-receipts]
+    required_checks: [standard, extirq, power, fmu-ras-four-case]
+  - id: fvp-ap-discovery-reference
+    domain: fvp
+    applicability: active
+    priority: P1
+    validation_surface: discovery-only
+    required_artifacts: [fvp-ap-discovery-log, reference-contract]
+    required_checks: [no-ap-event-differential-claim]
+  - id: conditional-collator
+    domain: si
+    applicability: conditional
+    priority_if_active: P1
+    priority_if_unavailable: P2
+    validation_surface: frozen-preflight-selected
+    required_artifacts: [collator-preflight]
+    required_checks: [scope-classification, zero-production-path-if-unverifiable]

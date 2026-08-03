@@ -1,0 +1,161 @@
+format_version: 1
+sources:
+  linux-gicv3:
+    path: hsoc-stack/components/primary_compute/linux/drivers/irqchip/irq-gic-v3.c
+    sha256: d33e823766f386380608fe985dac9a2eacb9178435f200c03f8ac87fe5fd0db3
+  zephyr-gicv3:
+    path: hsoc-stack/components/system_mgmt/zephyrproject/zephyr/drivers/interrupt_controller/intc_gicv3.c
+    sha256: 39b84daa71539e57769ce966d4cb1d2abf51b7650f96ecb7b56f56dbafbb2007
+  scp-test-fmu:
+    path: hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/module/test_fmu/src/mod_test_fmu.c
+    sha256: 49fcb7d9b1f089466a0a390e9a1006f58078125af36b94997768c5dd9e1bfe9a
+  scp-si0-firmware:
+    path: hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-qvp/si0_ramfw/Firmware.cmake
+    sha256: 63f9243e351cc9d68f01406514286ac77300f72fb40d1551f30a2662dcbc88f9
+features:
+  - id: linux-basic-irq
+    active: true
+    stages:
+      - stage: 1
+        status: selected
+        surface_type: production-driver
+        rationale: Production delivery is directly observable with the existing driver and /proc/interrupts counter delta.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 249-421,993-1029,1608-1672
+            anchor: irq_domain_set_info
+      - stage: 2
+        status: not-applicable
+        surface_type: safe-guarded-knob
+        rationale: Stage 1 already supplies production stimulus; proc is its observation surface, not a separate stimulus.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 1608-1672
+            anchor: irq_domain_set_info
+      - stage: 3
+        status: not-applicable
+        surface_type: opt-in-test-driver
+        rationale: A permanent test ABI is unnecessary for basic production IRQ delivery.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 1608-1672
+            anchor: irq_domain_set_info
+      - stage: 4
+        status: not-applicable
+        surface_type: minimal-bare-metal
+        rationale: OS production driver stimulus exists.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 1608-1672
+            anchor: irq_domain_set_info
+  - id: scp-fmu-guarded-command
+    active: true
+    stages:
+      - stage: 1
+        status: unavailable
+        surface_type: production-driver
+        rationale: The GIC FMU injection entry point is implemented by test_fmu rather than a production command API.
+        source_evidence:
+          - source: scp-test-fmu
+            lines: 271-275,642-695
+            anchor: test_inject_gic_fmu
+      - stage: 2
+        status: selected
+        surface_type: safe-guarded-knob
+        rationale: The existing command is explicit test-only stimulus and avoids adding a production ABI.
+        source_evidence:
+          - source: scp-test-fmu
+            lines: 271-275,642-695
+            anchor: test_inject_gic_fmu
+          - source: scp-si0-firmware
+            lines: 62-70
+            anchor: test_fmu
+      - stage: 3
+        status: not-applicable
+        surface_type: opt-in-test-driver
+        rationale: The guarded command already provides a bounded opt-in stimulus.
+        source_evidence:
+          - source: scp-test-fmu
+            lines: 271-275
+            anchor: test_inject_gic_fmu
+      - stage: 4
+        status: not-applicable
+        surface_type: minimal-bare-metal
+        rationale: Firmware test_fmu provides an OS-independent guarded command.
+        source_evidence:
+          - source: scp-test-fmu
+            lines: 271-275
+            anchor: test_inject_gic_fmu
+  - id: scp-redistributor-power
+    active: true
+    stages:
+      - stage: 1
+        status: not-applicable
+        surface_type: production-driver
+        rationale: The production API controls GICR_WAKER but cannot safely exercise SI integration power sequencing by itself.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 367-399
+            anchor: GICR_WAKER
+      - stage: 2
+        status: unavailable
+        surface_type: safe-guarded-knob
+        rationale: No stable safe knob is evidenced by the current SCP test_fmu command set.
+        source_evidence:
+          - source: scp-test-fmu
+            lines: 642-695
+            anchor: test_inject_gic_fmu
+      - stage: 3
+        status: selected
+        surface_type: opt-in-test-driver
+        rationale: Integration sequencing needs an explicitly opt-in test package without permanent production ABI exposure.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 367-399
+            anchor: GICR_WAKER
+          - source: scp-si0-firmware
+            lines: 62-70
+            anchor: test_fmu
+      - stage: 4
+        status: not-applicable
+        surface_type: minimal-bare-metal
+        rationale: An opt-in integration Test Driver can supply the required firmware stimulus.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 367-399
+            anchor: GICR_WAKER
+  - id: zephyr-extended-range
+    active: true
+    stages:
+      - stage: 1
+        status: not-applicable
+        surface_type: production-driver
+        rationale: The production driver handles baseline and LPI paths but does not expose an extended-range test stimulus contract.
+        source_evidence:
+          - source: zephyr-gicv3
+            lines: 100-285
+            anchor: arm_gic_irq_set_priority
+      - stage: 2
+        status: unavailable
+        surface_type: safe-guarded-knob
+        rationale: Zephyr firmware has no stable sysfs-like runtime control surface for this range.
+        source_evidence:
+          - source: zephyr-gicv3
+            lines: 155-265
+            anchor: arm_gic_irq_set_priority
+      - stage: 3
+        status: selected
+        surface_type: opt-in-test-driver
+        rationale: An isolated opt-in driver can issue the range-specific stimulus without changing the production ABI.
+        source_evidence:
+          - source: zephyr-gicv3
+            lines: 100-285
+            anchor: arm_gic_irq_set_priority
+      - stage: 4
+        status: not-applicable
+        surface_type: minimal-bare-metal
+        rationale: The opt-in Zephyr Test Driver can produce the required firmware stimulus.
+        source_evidence:
+          - source: zephyr-gicv3
+            lines: 100-285
+            anchor: arm_gic_irq_set_priority

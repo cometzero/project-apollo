@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "description": "Fresh Apollo cfg2 Fast Models GIC-720AE reference contract.",
+  "expected": {
+    "ap": {"spi_blocks": 30, "ppi": 16, "eppi": 0, "its": 1, "iidr": 117445691, "views": 1},
+    "si": {"spi_blocks": 62, "standard_spi_blocks": 30, "ppi": 16, "eppi": 64, "pe": 5, "iidr": 117445691},
+    "inactive": {"a4s": 0, "consolidators": "", "wake": 0, "nmi": 0, "invalidate": 0}
+  },
+  "collator": {"classification": "unverifiable", "status": "BLOCKED/P1-conditional", "until_task": 33, "rule": "Fast Models consolidators is not the GIC-720AE internal SPI Collator and parameter presence or chip-count never proves an active message path."}
+}

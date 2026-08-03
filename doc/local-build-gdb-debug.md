@@ -39,11 +39,11 @@ interactive shell pane을 QBox host GDB로 교체한다.
 
 `qbox` window의 `gdb-host` pane은 `platforms-vp`를 `gdbserver`로 시작해
 `main`, `sc_main`, `libqemu_init`에 breakpoint를 설정한다. 별도의
-`gdb-targets` window에는 다음 네 GDB가 열린다.
+`gdb-targets` window에는 다음 세 GDB가 열린다.
 
 - RSE `127.0.0.1:12340`: TF-M BL1_1, BL1_2, BL2, secure runtime
-- SI0 `127.0.0.1:12341`: SCP-firmware
-- SI1 `127.0.0.1:12342`: Zephyr
+- SI `127.0.0.1:12341`: 5개 PE 중 thread 1은 SI0 SCP-firmware,
+  thread 2는 SI1 CPU0 Zephyr
 - AP `127.0.0.1:12343`: TF-A BL2/BL31, OP-TEE, U-Boot, Linux symbols
 
 각 domain command file은 단계별 ELF를 한 GDB에 함께 로드하고 각 컴포넌트의
@@ -51,8 +51,10 @@ interactive shell pane을 QBox host GDB로 교체한다.
 `info line` 결과가 출력된다. 단계별 이미지가 주소 공간을 재사용하더라도
 breakpoint에 도달하면 해당 ELF가 active symbol file로 자동 전환된다.
 이후 `list`, `info source`, `bt` 같은 일반 GDB 명령으로 소스와 호출 경로를
-확인할 수 있다. QBox host는 `127.0.0.1:12339`를 사용한다. 이 다섯 포트는
-실행 전에 비어 있어야 한다.
+확인할 수 있다. QBox host는 `127.0.0.1:12339`를 사용한다. 네 debug port는
+실행 전에 비어 있어야 한다. 과거 SI1 port `127.0.0.1:12342`는 listener를
+열지 않는다. 해당 주소를 사용한 자동화는 `127.0.0.1:12341`로 바꾸고
+SI0은 thread 1/MPIDR `0x0`, SI1 CPU0은 thread 2/MPIDR `0x10000`을 선택한다.
 
 target이 실행 중일 때 GDB pane에서 `Ctrl+C`를 누르면 target만 interrupt하고
 같은 pane의 GDB prompt로 돌아온다. GDB와 pane을 종료할 때만 `quit`을 사용한다.
@@ -87,8 +89,10 @@ TF-A BL2/BL31, OP-TEE `_start`, 또는 RSE/SCP/Zephyr entry를 먼저 확인하�
 
 권장 extension의 `Microsoft C/C++` 디버거를 설치한 뒤 Run and Debug에서
 `Apollo QBox: all domains`를 선택한다. VS Code는
-`run_qbox_local_debug.sh --vscode`로 동일한 QBox를 시작하고, host/RSE/SI0/
-SI1/AP debugger를 각 포트에 연결한다. 단일 domain만 선택할 때는 먼저 VS Code
+`run_qbox_local_debug.sh --vscode`로 동일한 QBox를 시작하고 host/RSE/SI0/AP
+debugger를 연결한다. SI0과 SI1은 한 QEMU GDB stub을 공유하므로 compound에서
+동시에 연결하지 않는다. SI1은 `Apollo QBox: SI1`을 단독으로 선택한다.
+단일 domain만 선택할 때는 먼저 VS Code
 task `Apollo QBox: start debug servers`를 실행한 뒤 해당 debugger를 선택한다.
 `all domains` compound는 이 start task가 debug manifest와 domain GDB script를
 모두 생성하고 새 runtime log를 준비한 뒤에만 개별 debugger를 시작한다.
@@ -190,10 +194,22 @@ python3 scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py \
 개별 RSE 포트가 열려 있으면 `tfm-bl1_1`, `tfm-bl1_2`, `tfm-bl2`, `tfm-s`를
 `run_local_gdb.py COMPONENT --remote HOST:PORT`로 연결할 수 있다.
 
-`run_qbox_local_debug.sh`는 `live-cl0-cl1` 경로를 사용하고 SI0/SI1 CPU의
-`gdb_port`를 명시적으로 열기 때문에 SCP-firmware와 Zephyr도 실시간
-breakpoint를 사용할 수 있다. 기본 `run_qbox_local.sh`의 GDB port는 계속
-비활성 상태다.
+`run_qbox_local_debug.sh`는 단일 SI QEMU/GIC 경로를 선택하고 SI0 CPU에
+공유 `gdb_port=12341`을 열기 때문에 SCP-firmware와 Zephyr 모두 실시간
+breakpoint를 사용할 수 있다. `scripts/debug/run_local_gdb.py`는 manifest의
+`gdb_thread`를 읽어 `si_cl0`은 thread 1, `si_cl1`은 thread 2를 선택한다.
+실제 5-thread attach contract는 다음 명령으로 검증한다.
+
+```bash
+python3 scripts/debug/run_gic720ae_si_gdb_smoke.py \
+  --launcher ./run_qbox_local_debug.sh \
+  --symbols-json build/local-apollo-qvp/debug/symbols.json \
+  --require-manifest-hash --endpoint 127.0.0.1:12341 \
+  --cl0-symbol arch_exception_reset --cl1-symbol z_cstart \
+  --expect-threads 5 --timeout 120 --out-dir build/si-gdb-smoke
+```
+
+기본 `run_qbox_local.sh`의 GDB port는 계속 비활성 상태다.
 
 FVP는 GDB remote stub 대신 Iris를 제공한다. FVP의 실시간 breakpoint는
 `scripts/debug/run_local_fvp_debug.sh`와
