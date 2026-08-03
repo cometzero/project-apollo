@@ -24,6 +24,8 @@ import subprocess
 import sys
 import time
 
+from gic720ae_operation_manifest import load_operations, serialize_operation
+
 
 REQUIRED_TARGETS = [
     "platforms-vp",
@@ -3538,7 +3540,12 @@ def write_placeholder_logs(out_dir: Path, reason: str) -> dict[str, str]:
 
 
 def probe_requires_ap_cpus(args: argparse.Namespace) -> bool:
-    return bool(args.post_login_probe or args.secure_service_probe or args.fwu_probe)
+    return bool(
+        args.post_login_probe
+        or args.secure_service_probe
+        or args.fwu_probe
+        or args.primary_operation_manifest is not None
+    )
 
 
 def env_flag(name: str) -> bool:
@@ -4005,6 +4012,10 @@ def write_primary_uart(fd: int, text: str) -> None:
     os.write(fd, text.encode("utf-8"))
 
 
+def write_primary_uart_bytes(fd: int, data: bytes) -> None:
+    os.write(fd, data)
+
+
 def open_post_login_probe_fifo(out_dir: Path) -> tuple[Path, int]:
     fifo_path = out_dir / "primary-uart-input.fifo"
     try:
@@ -4017,8 +4028,22 @@ def open_post_login_probe_fifo(out_dir: Path) -> tuple[Path, int]:
 
 
 def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
+    operations: list[dict[str, object]] = []
+    if args.primary_operation_manifest is not None:
+        operations = load_operations(
+            args.primary_operation_manifest,
+            args.primary_operation_schema,
+        )
     return {
-        "requested": bool(args.post_login_probe),
+        "requested": bool(args.post_login_probe or operations),
+        "operation_manifest_requested": bool(operations),
+        "operations": operations,
+        "operation_records": [],
+        "operation_module_path": (
+            str(args.primary_operation_module_path)
+            if args.primary_operation_module_path is not None
+            else ""
+        ),
         "secure_service_requested": bool(args.secure_service_probe),
         "fwu_requested": bool(args.fwu_probe),
         "sent_login": False,
@@ -4040,7 +4065,8 @@ def drive_post_login_probe(
     state: dict[str, object],
     fifo_fd: int | None,
 ) -> None:
-    if not args.post_login_probe or fifo_fd is None:
+    operation_mode = bool(state.get("operation_manifest_requested"))
+    if not args.post_login_probe and not operation_mode or fifo_fd is None:
         return
     clean_primary = clean_text(logs.get("primary_console", ""))
     actions = state.setdefault("actions", [])
@@ -4094,15 +4120,64 @@ def drive_post_login_probe(
             or shell_prompt_end > last_prompt_end
         )
     )
-    if command_ready and command_index < len(commands):
-        write_primary_uart(fifo_fd, commands[command_index] + "\n")
+    records = state.get("operation_records")
+    assert isinstance(records, list)
+    if (
+        operation_mode
+        and state["sent_probe"]
+        and shell_prompt_end > last_prompt_end
+        and len(records) < command_index
+    ):
+        operations = state.get("operations")
+        assert isinstance(operations, list)
+        stdout = clean_primary[last_prompt_end:shell_prompt_end]
+        counters = [
+            {
+                "kind": kind,
+                "target_cpu": int(cpu),
+                "count": int(count),
+            }
+            for kind, cpu, count in re.findall(
+                r"\b(ipi|spi) target=(\d+)(?: cpu=\d+)? count=(\d+)",
+                stdout,
+            )
+        ]
+        records.append({
+            "index": command_index - 1,
+            "operation": operations[command_index - 1],
+            "stdout": stdout,
+            "exit_status": None,
+            "exit_status_observed": False,
+            "counters": counters,
+            "completed": True,
+        })
+    operations_value = state.get("operations")
+    assert isinstance(operations_value, list)
+    command_count = len(operations_value) if operation_mode else len(commands)
+    if command_ready and command_index < command_count:
+        if operation_mode:
+            module_path = Path(str(state.get("operation_module_path", "")))
+            chunks = serialize_operation(
+                operations_value[command_index],
+                module_path=module_path,
+            )
+            for chunk in chunks:
+                write_primary_uart_bytes(fifo_fd, chunk)
+        else:
+            write_primary_uart(fifo_fd, commands[command_index] + "\n")
         state["sent_probe"] = True
         state["command_index"] = command_index + 1
         state["last_prompt_end"] = shell_prompt_end
-        actions.append(f"sent_probe_command_{command_index + 1}")
+        actions.append(f"sent_primary_operation_{command_index + 1}")
     completed_command_index = state.get("command_index", 0)
     assert isinstance(completed_command_index, int)
-    if completed_command_index >= len(commands) and PROBE_DONE_MARKER in clean_primary:
+    if (
+        operation_mode
+        and completed_command_index >= command_count
+        and len(records) >= command_count
+    ):
+        state["complete"] = True
+    elif completed_command_index >= len(commands) and PROBE_DONE_MARKER in clean_primary:
         state["complete"] = True
     if args.fwu_probe and fwu_probe_stage_complete(logs):
         state["complete"] = True
@@ -4142,7 +4217,7 @@ def run_platform(
     env = qbox_env(root, args, artifacts)
     post_login_probe = make_probe_state(args)
     primary_uart_fd: int | None = None
-    if args.post_login_probe:
+    if args.post_login_probe or args.primary_operation_manifest is not None:
         fifo_path, primary_uart_fd = open_post_login_probe_fifo(out_dir)
         env["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(fifo_path)
         post_login_probe["input_path"] = str(fifo_path)
@@ -4198,8 +4273,12 @@ def run_platform(
                     args.required_pass_marker
                 )
                 probe_complete = bool(post_login_probe.get("complete"))
-                if (
+                probe_requested = bool(
                     args.post_login_probe
+                    or args.primary_operation_manifest is not None
+                )
+                if (
+                    probe_requested
                     and probe_complete
                     and not args.keep_running_after_pass
                 ):
@@ -4208,7 +4287,7 @@ def run_platform(
                 pass_condition_hit = (
                     status["passed"]
                     and not required_markers_missing
-                    and (not args.post_login_probe or probe_complete)
+                    and (not probe_requested or probe_complete)
                     and not args.keep_running_after_pass
                 )
                 if pass_condition_hit:
@@ -4280,26 +4359,29 @@ def run_platform(
     )
 
     rc = proc.returncode if proc.returncode is not None else 1
-    probe_eval = evaluate_post_login_probe(
-        logs.get("primary_console", ""),
-        logs.get("secure_console", ""),
-        logs.get("rse", ""),
-    )
-    post_login_probe.update(probe_eval)
-    fwu_probe = object_dict(probe_eval.get("fwu_probe"))
-    fwu_complete = bool(fwu_probe.get("complete"))
-    if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
-        post_login_probe["complete"] = True
-    post_login_probe["passed"] = bool(
-        args.post_login_probe
-        and post_login_probe.get("sent_probe")
-        and post_login_probe.get("complete")
-        and all(
-            bool(value)
-            for value in object_dict(probe_eval.get("driver_patterns")).values()
+    if args.primary_operation_manifest is not None:
+        post_login_probe["passed"] = bool(post_login_probe.get("complete"))
+    else:
+        probe_eval = evaluate_post_login_probe(
+            logs.get("primary_console", ""),
+            logs.get("secure_console", ""),
+            logs.get("rse", ""),
         )
-    )
-    if args.post_login_probe:
+        post_login_probe.update(probe_eval)
+        fwu_probe = object_dict(probe_eval.get("fwu_probe"))
+        fwu_complete = bool(fwu_probe.get("complete"))
+        if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
+            post_login_probe["complete"] = True
+        post_login_probe["passed"] = bool(
+            args.post_login_probe
+            and post_login_probe.get("sent_probe")
+            and post_login_probe.get("complete")
+            and all(
+                bool(value)
+                for value in object_dict(probe_eval.get("driver_patterns")).values()
+            )
+        )
+    if args.post_login_probe or args.primary_operation_manifest is not None:
         action_log = out_dir / "post-login-probe-actions.log"
         action_lines = [
             f"requested: {post_login_probe['requested']}",
@@ -4936,6 +5018,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--ap-dtb",
+        type=Path,
+        help="AP DTB identity forwarded by the full-system front runner.",
+    )
+    parser.add_argument(
         "--rse-bl2-elf",
         type=Path,
         help=(
@@ -5085,6 +5172,9 @@ def build_parser() -> argparse.ArgumentParser:
             "service probes before accepting a full-system pass."
         ),
     )
+    parser.add_argument("--primary-operation-manifest", type=Path)
+    parser.add_argument("--primary-operation-schema", type=Path)
+    parser.add_argument("--primary-operation-module-path", type=Path)
     parser.add_argument(
         "--secure-service-probe",
         action="store_true",
@@ -5748,6 +5838,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = workspace_root()
     parser = build_parser()
     args = parser.parse_args(argv)
+    operation_args = (
+        args.primary_operation_manifest,
+        args.primary_operation_schema,
+        args.primary_operation_module_path,
+    )
+    if any(value is not None for value in operation_args) and not all(
+        value is not None for value in operation_args
+    ):
+        parser.error(
+            "--primary-operation-manifest, --primary-operation-schema, and "
+            "--primary-operation-module-path must be used together"
+        )
     required_marker_error = required_pass_marker_argument_error(
         args.required_pass_marker
     )

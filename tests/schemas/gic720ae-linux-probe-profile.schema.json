@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "format_version", "verdict", "reason", "machine", "package",
+    "provider", "artifacts", "sources", "configuration", "task_provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "machine": {"const": "apollo-qvp"},
+    "package": {"const": "gic720ae-selftest"},
+    "provider": {"type": "string"},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "path", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "sources": {"type": "object"},
+    "configuration": {"type": "object"},
+    "task_provenance": {"type": "array"}
+  }
+}

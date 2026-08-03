@@ -4,16 +4,23 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import datetime as _dt
+import errno
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import signal
 import shutil
+import stat
 import subprocess
 import sys
 import time
+from types import FrameType
 from typing import Any
+from typing import Literal, TypedDict
 import uuid
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -115,12 +122,60 @@ SI_CL0_REQUIRED_MARKERS = {
     "module_init_complete": "[FWK] Module initialization complete!",
     "gic_multiview_configured": "GIC-multiview configured successfully",
 }
-FULL_SYSTEM_QEMU_DEFAULTS = (
+SI_TOPOLOGY_DRY_RUN_SCRIPT = """
+local function json_escape(value)
+    return value:gsub("\\\\", "\\\\\\\\")
+        :gsub('"', '\\\\"')
+        :gsub("\\n", "\\\\n")
+        :gsub("\\r", "\\\\r")
+        :gsub("\\t", "\\\\t")
+end
+local function encode_json(value)
+    local value_type=type(value)
+    if value_type=="nil" then return "null" end
+    if value_type=="boolean" or value_type=="number" then
+        return tostring(value)
+    end
+    if value_type=="string" then return '"'..json_escape(value)..'"' end
+    assert(value_type=="table", "unsupported topology contract value")
+    local count=0
+    local array=true
+    for key,_ in pairs(value) do
+        if type(key)~="number" or key<1 or key%1~=0 then
+            array=false
+            break
+        end
+        if key>count then count=key end
+    end
+    if array then
+        local items={}
+        for index=1,count do items[#items+1]=encode_json(value[index]) end
+        return "["..table.concat(items,",").."]"
+    end
+    local keys={}
+    for key,_ in pairs(value) do
+        assert(type(key)=="string", "topology contract keys must be strings")
+        keys[#keys+1]=key
+    end
+    table.sort(keys)
+    local items={}
+    for _,key in ipairs(keys) do
+        items[#items+1]='"'..json_escape(key)..'":'..encode_json(value[key])
+    end
+    return "{"..table.concat(items,",").."}"
+end
+local topology=dofile(os.getenv("QBOX_APOLLO_TOPOLOGY_PATH"))
+assert(topology.safety_island_contract, "missing safety_island_contract")
+print(encode_json(topology.safety_island_contract))
+"""
+FULL_SYSTEM_AP_QEMU_DEFAULTS = (
     (
         "platform.ap_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_AP_TCG_MODE",
         "MULTI",
     ),
+)
+FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
     (
         "platform.si_cl0_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
@@ -137,6 +192,18 @@ FULL_SYSTEM_QEMU_DEFAULTS = (
         "multithread-quantum",
     ),
 )
+FULL_SYSTEM_SI_SINGLE_QEMU_DEFAULTS = (
+    (
+        "platform.si_qemu_inst.tcg_mode",
+        "QBOX_APOLLO_FULL_SI_TCG_MODE",
+        "MULTI",
+    ),
+    (
+        "platform.si_qemu_inst.sync_policy",
+        "QBOX_APOLLO_FULL_SI_SYNC_POLICY",
+        "multithread-quantum",
+    ),
+)
 MARKER_GROUP_PRIORITY = [
     "rse",
     "si_cl0",
@@ -145,6 +212,141 @@ MARKER_GROUP_PRIORITY = [
     "linux",
     "maps_and_interrupts",
 ]
+type SafetyIslandTopologyMode = Literal["single", "split"]
+
+
+class SafetyIslandPeJson(TypedDict):
+    pe: int
+    name: str
+    cluster: str
+    qemu_instance: str
+    mp_affinity: int
+    affinity: str
+    image: str
+    image_loader: str
+    router: str
+    reset: str
+
+
+class SafetyIslandGicJson(TypedDict, total=False):
+    name: str
+    qemu_instance: str
+    redistributor_regions: list[int]
+    cpu_interfaces: int
+    normal_spi_count: int
+    state_owner: str
+    canonical: bool
+    scope: str
+
+
+class SafetyIslandQemuInstanceJson(TypedDict, total=False):
+    name: str
+    domain: str
+    architecture: str
+    cpu: str
+    acceleration: str
+    tcg_mode: str
+    sync_policy: str
+    ram_owner: str
+    scope: str
+
+
+class SafetyIslandTraceTargetJson(TypedDict, total=False):
+    kind: str
+    name: str
+    domain: str
+    qemu_instance: str
+    pe: int
+    affinity: str
+    image: str
+    cpu_interfaces: int
+
+
+class SafetyIslandTopologyJson(TypedDict):
+    env_var: str
+    mode: SafetyIslandTopologyMode
+    enabled: bool
+    qemu_instances: list[SafetyIslandQemuInstanceJson]
+    pes: list[SafetyIslandPeJson]
+    gics: list[SafetyIslandGicJson]
+    reset_targets: list[str]
+    trace_targets: list[SafetyIslandTraceTargetJson]
+    rollback_command: str
+
+
+class SafetyIslandResultFields(TypedDict):
+    safety_island_gic_topology: SafetyIslandTopologyJson
+    si_gic_topology_mode: SafetyIslandTopologyMode
+    si_qemu_instance_count: int
+    si_pe_map: list[SafetyIslandPeJson]
+    si_reset_fanout: list[str]
+    si_trace_targets: list[SafetyIslandTraceTargetJson]
+    si_rollback_command: str
+    si_topology_source: str
+    si_topology_source_sha256: str
+    si_topology_contract_sha256: str
+    runner_source_sha256: str
+
+
+class SafetyIslandChildEnvironment(TypedDict, total=False):
+    QBOX_APOLLO_FULL_SI_SINGLE_GIC: str
+    QBOX_APOLLO_FULL_SI_ACCEL: str
+    QBOX_APOLLO_FULL_SI_TCG_MODE: str
+    QBOX_APOLLO_FULL_SI_SYNC_POLICY: str
+    QBOX_APOLLO_FULL_SI_CL0_ACCEL: str
+    QBOX_APOLLO_FULL_SI_CL0_TCG_MODE: str
+    QBOX_APOLLO_FULL_SI_CL0_SYNC_POLICY: str
+    QBOX_APOLLO_FULL_SI_CL1_ACCEL: str
+    QBOX_APOLLO_FULL_SI_CL1_TCG_MODE: str
+    QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY: str
+    QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE: str
+
+
+class SiCl0CommandRecord(TypedDict):
+    command: str
+    sha256: str
+    raw_uart_sha256: str
+    started_at: str
+    done_at: str | None
+    exit_at: str | None
+    timed_out: bool
+    timeout_seconds: float
+    transport_returncode: int
+    bytes_sent: int
+
+
+class SiCl0TransportReceipt(TypedDict):
+    schema_version: int
+    requested: bool
+    fifo_path: str
+    fifo_created_before_child: bool
+    stale_fifo_removed: bool
+    fifo_cleaned: bool
+    child_pid: int | None
+    child_returncode: int | None
+    cancelled: bool
+    commands: list[SiCl0CommandRecord]
+
+
+@dataclass(frozen=True, slots=True)
+class SafetyIslandTopologyContractError(Exception):
+    detail: str
+
+    def __str__(self) -> str:
+        return self.detail
+
+
+@dataclass(frozen=True, slots=True)
+class SiCl0CommandValidationError(Exception):
+    detail: str
+
+    def __str__(self) -> str:
+        return self.detail
+
+
+@dataclass(frozen=True, slots=True)
+class SiCl0TransportSignal(Exception):
+    signum: int
 
 
 def has_unexpected_shadowed_range(platform_log: str) -> bool:
@@ -220,6 +422,202 @@ def workspace_root() -> Path:
 
 def timestamp() -> str:
     return _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def selected_si_topology_mode(
+    args: argparse.Namespace,
+) -> SafetyIslandTopologyMode:
+    return "single" if args.si_single_gic else "split"
+
+
+def decode_si_topology_contract(payload: str) -> SafetyIslandTopologyJson:
+    try:
+        decoded = json.loads(payload)
+        mode = decoded["mode"]
+        if mode not in ("single", "split"):
+            raise SafetyIslandTopologyContractError(
+                f"unsupported Safety Island topology mode: {mode!r}"
+            )
+        return {
+            "env_var": decoded["env_var"],
+            "mode": mode,
+            "enabled": decoded["enabled"],
+            "qemu_instances": decoded["qemu_instances"],
+            "pes": decoded["pes"],
+            "gics": decoded["gics"],
+            "reset_targets": decoded["reset_targets"],
+            "trace_targets": decoded["trace_targets"],
+            "rollback_command": decoded["rollback_command"],
+        }
+    except (json.JSONDecodeError, KeyError, TypeError) as error:
+        raise SafetyIslandTopologyContractError(
+            f"invalid Safety Island topology contract: {error}"
+        ) from error
+
+
+def load_si_topology_contract(
+    args: argparse.Namespace,
+) -> SafetyIslandTopologyJson:
+    topology = args.conf.parent / "hw-block/topology.lua"
+    env = os.environ.copy()
+    env["QBOX_APOLLO_TOPOLOGY_PATH"] = str(topology)
+    env["QBOX_APOLLO_FULL_SI_SINGLE_GIC"] = (
+        "true" if args.si_single_gic else "false"
+    )
+    command = ["lua", "-e", SI_TOPOLOGY_DRY_RUN_SCRIPT]
+    print("+ lua -e <si-topology-contract>", flush=True)
+    completed = subprocess.run(
+        command,
+        cwd=workspace_root(),
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or f"lua exited {completed.returncode}"
+        raise SafetyIslandTopologyContractError(detail)
+    contract = decode_si_topology_contract(completed.stdout)
+    selected = selected_si_topology_mode(args)
+    if contract["mode"] != selected:
+        raise SafetyIslandTopologyContractError(
+            f"selected topology {selected} produced {contract['mode']}"
+        )
+    return contract
+
+
+def si_topology_result_fields(
+    args: argparse.Namespace,
+    contract: SafetyIslandTopologyJson,
+) -> SafetyIslandResultFields:
+    topology_source = args.conf.parent / "hw-block/topology.lua"
+    topology_source_sha256 = (
+        hashlib.sha256(topology_source.read_bytes()).hexdigest()
+        if topology_source.is_file()
+        else ""
+    )
+    contract_payload = json.dumps(
+        contract,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return {
+        "safety_island_gic_topology": contract,
+        "si_gic_topology_mode": contract["mode"],
+        "si_qemu_instance_count": len(contract["qemu_instances"]),
+        "si_pe_map": contract["pes"],
+        "si_reset_fanout": contract["reset_targets"],
+        "si_trace_targets": contract["trace_targets"],
+        "si_rollback_command": contract["rollback_command"],
+        "si_topology_source": str(topology_source.resolve()),
+        "si_topology_source_sha256": topology_source_sha256,
+        "si_topology_contract_sha256": hashlib.sha256(
+            contract_payload
+        ).hexdigest(),
+        "runner_source_sha256": hashlib.sha256(
+            Path(__file__).resolve().read_bytes()
+        ).hexdigest(),
+    }
+
+
+def run_si_topology_dry_run(args: argparse.Namespace) -> int:
+    artifacts = resolved_artifacts(args)
+    command = child_command(args, artifacts)
+    platform_params = full_system_platform_params(args)
+    topology = args.si_topology_contract
+    status = {
+        "schema_version": 1,
+        "passed": True,
+        "verdict": "automated-contract-only",
+        "dry_run": True,
+        "automated_contract_only": True,
+        "boot_mode": "apollo-full-system",
+        "safety_island_topology": "full-system",
+        **si_topology_result_fields(args, topology),
+        "child_command": command,
+        "command": command,
+        "child_environment": si_topology_child_environment(args),
+        "platform_params": platform_params,
+        "runner_argv": sys.argv,
+    }
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    (args.out_dir / "result.json").write_text(
+        json.dumps(status, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (args.out_dir / "summary.txt").write_text(
+        "\n".join(
+            [
+                "passed: True",
+                "verdict: automated-contract-only",
+                f"si_gic_topology_mode: {topology['mode']}",
+                f"si_qemu_instance_count: {len(topology['qemu_instances'])}",
+                "si_pe_map: " + json.dumps(topology["pes"], sort_keys=True),
+                "si_reset_fanout: "
+                + json.dumps(topology["reset_targets"], sort_keys=True),
+                f"si_rollback_command: {topology['rollback_command']}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(args.out_dir)
+    return 0
+
+
+def write_si_topology_contract_failure(
+    args: argparse.Namespace,
+    error: SafetyIslandTopologyContractError,
+) -> int:
+    mode = selected_si_topology_mode(args)
+    rollback = (
+        "python3 scripts/run/run_qbox_apollo_fvp_full.py --si-split-gic"
+    )
+    unavailable: SafetyIslandTopologyJson = {
+        "env_var": "QBOX_APOLLO_FULL_SI_SINGLE_GIC",
+        "mode": mode,
+        "enabled": mode == "single",
+        "qemu_instances": [],
+        "pes": [],
+        "gics": [],
+        "reset_targets": [],
+        "trace_targets": [],
+        "rollback_command": rollback,
+    }
+    status = {
+        "schema_version": 1,
+        "passed": False,
+        "verdict": "blocked",
+        "dry_run": bool(args.dry_run),
+        "boot_mode": "apollo-full-system",
+        "safety_island_topology": "full-system",
+        **si_topology_result_fields(args, unavailable),
+        "blocker": "si_topology_contract_invalid",
+        "detail": str(error),
+        "runner_argv": sys.argv,
+    }
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    (args.out_dir / "result.json").write_text(
+        json.dumps(status, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    (args.out_dir / "summary.txt").write_text(
+        "\n".join(
+            [
+                "passed: False",
+                "verdict: blocked",
+                f"si_gic_topology_mode: {mode}",
+                "si_qemu_instance_count: 0",
+                f"si_rollback_command: {rollback}",
+                "blocker: si_topology_contract_invalid",
+                f"detail: {error}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    print(args.out_dir)
+    return 1
 
 
 def artifact_record(path: Path) -> dict[str, Any]:
@@ -457,6 +855,8 @@ def synthesize_keep_running_child_status(
         "qbox_perf_profile": None,
         "platform_returncode": child_returncode,
         "command": command,
+        "child_environment": si_topology_child_environment(args),
+        **si_topology_result_fields(args, args.si_topology_contract),
     }
 
 
@@ -1089,6 +1489,7 @@ def write_result(
         "boot_mode": "apollo-full-system",
         "validation_scope": "uboot-only" if args.uboot_only else "full-system",
         "safety_island_topology": "full-system",
+        **si_topology_result_fields(args, args.si_topology_contract),
         "ap_tcg_mode": effective_platform_param(
             args,
             "platform.ap_qemu_inst.tcg_mode",
@@ -1160,6 +1561,23 @@ def write_result(
         "child_status": child_status or {},
         "child_returncode": child_returncode,
         "command": command,
+        "child_environment": si_topology_child_environment(args),
+        "si_cl0_command_transport": getattr(
+            args,
+            "si_cl0_command_transport",
+            {
+                "schema_version": 1,
+                "requested": bool(args.si_cl0_command),
+                "fifo_path": str(si_cl0_uart_fifo_path(args)),
+                "fifo_created_before_child": False,
+                "stale_fifo_removed": False,
+                "fifo_cleaned": True,
+                "child_pid": None,
+                "child_returncode": None,
+                "cancelled": False,
+                "commands": [],
+            },
+        ),
         "runner_argv": sys.argv,
     }
 
@@ -1172,6 +1590,12 @@ def write_result(
         f"boot_mode: {status['boot_mode']}",
         f"validation_scope: {status['validation_scope']}",
         f"safety_island_topology: {status['safety_island_topology']}",
+        f"si_gic_topology_mode: {status['si_gic_topology_mode']}",
+        f"si_qemu_instance_count: {status['si_qemu_instance_count']}",
+        "si_pe_map: " + json.dumps(status["si_pe_map"], sort_keys=True),
+        "si_reset_fanout: "
+        + json.dumps(status["si_reset_fanout"], sort_keys=True),
+        f"si_rollback_command: {status['si_rollback_command']}",
         f"ap_tcg_mode: {status['ap_tcg_mode']}",
         f"si_cl0_tcg_mode: {status['si_cl0_tcg_mode']}",
         f"si_cl1_tcg_mode: {status['si_cl1_tcg_mode']}",
@@ -1338,11 +1762,222 @@ def env_or_default(name: str, default: str) -> str:
     return os.environ.get(name) or default
 
 
+def si_cl0_uart_fifo_path(args: argparse.Namespace) -> Path:
+    return (args.out_dir / "si-cl0-uart-input.fifo").resolve()
+
+
+def si_cl0_command_payload(command: str) -> bytes:
+    if re.fullmatch(r"[\x20-\x7e]{1,512}", command) is None:
+        raise SiCl0CommandValidationError(
+            "SI0 commands must be 1-512 printable ASCII bytes without line breaks"
+        )
+    return b"\x05" + command.encode("ascii") + b"\n\x04"
+
+
+def utc_timestamp() -> str:
+    return _dt.datetime.now(_dt.UTC).isoformat()
+
+
+def terminate_process_group(proc: subprocess.Popen[bytes]) -> int:
+    returncode = proc.poll()
+    if returncode is not None:
+        return returncode
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+        return proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        return proc.wait(timeout=5)
+    except ProcessLookupError:
+        return proc.wait(timeout=5)
+
+
+def write_si_cl0_command(
+    args: argparse.Namespace,
+    proc: subprocess.Popen[bytes],
+    command: str,
+) -> SiCl0CommandRecord:
+    fifo_path = si_cl0_uart_fifo_path(args)
+    timeout_seconds = args.si_cl0_command_timeout
+    payload = si_cl0_command_payload(command)
+    command_bytes = command.encode("ascii")
+    record: SiCl0CommandRecord = {
+        "command": command,
+        "sha256": hashlib.sha256(command_bytes).hexdigest(),
+        "raw_uart_sha256": hashlib.sha256(payload).hexdigest(),
+        "started_at": utc_timestamp(),
+        "done_at": None,
+        "exit_at": None,
+        "timed_out": False,
+        "timeout_seconds": timeout_seconds,
+        "transport_returncode": 1,
+        "bytes_sent": 0,
+    }
+    deadline = time.monotonic() + timeout_seconds
+    writer_fd: int | None = None
+    while writer_fd is None:
+        child_returncode = proc.poll()
+        if child_returncode is not None:
+            record["transport_returncode"] = 125
+            return record
+        try:
+            writer_fd = os.open(fifo_path, os.O_WRONLY | os.O_NONBLOCK)
+        except OSError as error:
+            if error.errno != errno.ENXIO:
+                raise
+            if time.monotonic() >= deadline:
+                record["timed_out"] = True
+                record["transport_returncode"] = 124
+                return record
+            time.sleep(0.01)
+
+    try:
+        entered = os.write(writer_fd, b"\x05")
+        command_sent = os.write(writer_fd, command_bytes + b"\n")
+        record["done_at"] = utc_timestamp()
+        exited = os.write(writer_fd, b"\x04")
+        record["exit_at"] = utc_timestamp()
+        record["bytes_sent"] = entered + command_sent + exited
+        record["transport_returncode"] = 0
+    except BlockingIOError:
+        record["timed_out"] = time.monotonic() >= deadline
+        record["transport_returncode"] = 124 if record["timed_out"] else 1
+    finally:
+        os.close(writer_fd)
+    return record
+
+
+def run_child_with_si_cl0_transport(
+    args: argparse.Namespace,
+    command: list[str],
+    env: dict[str, str],
+) -> int:
+    for si_command in args.si_cl0_command:
+        si_cl0_command_payload(si_command)
+
+    fifo_path = si_cl0_uart_fifo_path(args)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    stale_fifo_removed = False
+    try:
+        existing_mode = fifo_path.lstat().st_mode
+    except FileNotFoundError:
+        existing_mode = None
+    if existing_mode is not None:
+        if not stat.S_ISFIFO(existing_mode):
+            raise SiCl0CommandValidationError(
+                f"refusing to replace non-FIFO SI0 UART input: {fifo_path}"
+            )
+        fifo_path.unlink()
+        stale_fifo_removed = True
+    os.mkfifo(fifo_path, mode=0o600)
+    receipt: SiCl0TransportReceipt = {
+        "schema_version": 1,
+        "requested": True,
+        "fifo_path": str(fifo_path),
+        "fifo_created_before_child": True,
+        "stale_fifo_removed": stale_fifo_removed,
+        "fifo_cleaned": False,
+        "child_pid": None,
+        "child_returncode": None,
+        "cancelled": False,
+        "commands": [],
+    }
+    args.si_cl0_command_transport = receipt
+    child_env = env.copy()
+    child_env["QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE"] = str(fifo_path)
+    proc: subprocess.Popen[bytes] | None = None
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+
+    def handle_sigterm(signum: int, _frame: FrameType | None) -> None:
+        raise SiCl0TransportSignal(signum)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    try:
+        proc = subprocess.Popen(
+            command,
+            cwd=workspace_root(),
+            env=child_env,
+            start_new_session=True,
+        )
+        receipt["child_pid"] = proc.pid
+        for si_command in args.si_cl0_command:
+            command_record = write_si_cl0_command(
+                args,
+                proc,
+                si_command,
+            )
+            receipt["commands"].append(command_record)
+            if command_record["transport_returncode"] != 0:
+                receipt["child_returncode"] = terminate_process_group(proc)
+                return command_record["transport_returncode"]
+
+        child_returncode = proc.wait()
+        receipt["child_returncode"] = child_returncode
+        return child_returncode
+    except (KeyboardInterrupt, SiCl0TransportSignal):
+        receipt["cancelled"] = True
+        if proc is not None:
+            receipt["child_returncode"] = terminate_process_group(proc)
+        return 130
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm)
+        if proc is not None and proc.poll() is None:
+            receipt["child_returncode"] = terminate_process_group(proc)
+        fifo_path.unlink(missing_ok=True)
+        receipt["fifo_cleaned"] = True
+
+
+def si_topology_child_environment(
+    args: argparse.Namespace,
+) -> dict[str, str]:
+    if args.si_single_gic:
+        acceleration = env_or_default("QBOX_APOLLO_FULL_SI_ACCEL", "tcg")
+        tcg_mode = effective_platform_param(
+            args,
+            "platform.si_qemu_inst.tcg_mode",
+            "QBOX_APOLLO_FULL_SI_TCG_MODE",
+            "MULTI",
+        )
+        sync_policy = effective_platform_param(
+            args,
+            "platform.si_qemu_inst.sync_policy",
+            "QBOX_APOLLO_FULL_SI_SYNC_POLICY",
+            "multithread-quantum",
+        )
+        environment: dict[str, str] = {
+            "QBOX_APOLLO_FULL_SI_SINGLE_GIC": "true",
+            "QBOX_APOLLO_FULL_SI_ACCEL": acceleration,
+            "QBOX_APOLLO_FULL_SI_TCG_MODE": tcg_mode,
+            "QBOX_APOLLO_FULL_SI_SYNC_POLICY": sync_policy,
+            "QBOX_APOLLO_FULL_SI_CL0_ACCEL": acceleration,
+            "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE": tcg_mode,
+            "QBOX_APOLLO_FULL_SI_CL0_SYNC_POLICY": sync_policy,
+            "QBOX_APOLLO_FULL_SI_CL1_ACCEL": acceleration,
+            "QBOX_APOLLO_FULL_SI_CL1_TCG_MODE": tcg_mode,
+            "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY": sync_policy,
+        }
+    else:
+        environment = {"QBOX_APOLLO_FULL_SI_SINGLE_GIC": "false"}
+    if args.si_cl0_command:
+        environment["QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE"] = str(
+            si_cl0_uart_fifo_path(args)
+        )
+    return environment
+
+
 def full_system_platform_params(args: argparse.Namespace) -> list[str]:
     params = list(args.platform_param)
     explicit_keys = {param.partition("=")[0] for param in params}
     defaults = []
-    for key, env_name, default in FULL_SYSTEM_QEMU_DEFAULTS:
+    si_defaults = (
+        FULL_SYSTEM_SI_SINGLE_QEMU_DEFAULTS
+        if args.si_single_gic
+        else FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS
+    )
+    for key, env_name, default in (
+        *FULL_SYSTEM_AP_QEMU_DEFAULTS,
+        *si_defaults,
+    ):
         if args.build_only:
             continue
         if key not in explicit_keys:
@@ -1384,6 +2019,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         str(artifacts["rse_bl2_elf"]),
         "--rootfs",
         str(artifacts["rootfs"]),
+        "--ap-dtb",
+        str(artifacts["ap_dtb"]),
         "--efi-capsule-disk",
         str(artifacts["efi_capsule_disk"]),
         "--provisioning-bundle",
@@ -1495,6 +2132,15 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe and not args.uboot_only:
         cmd.append("--post-login-probe")
+    if args.primary_operation_manifest is not None and not args.uboot_only:
+        cmd.extend([
+            "--primary-operation-manifest",
+            str(args.primary_operation_manifest),
+            "--primary-operation-schema",
+            str(args.primary_operation_schema),
+            "--primary-operation-module-path",
+            str(args.primary_operation_module_path),
+        ])
     if not args.uboot_only:
         cl1_log = (args.out_dir / "qbox-safety-island-cl1.log").resolve()
         for marker in SI_CL1_REQUIRED_MARKERS.values():
@@ -1503,6 +2149,10 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--keep-running-after-pass")
     if args.build_only:
         cmd.append("--check-only")
+    if args.host_gdb_script is not None:
+        cmd.extend(["--host-gdb-script", str(args.host_gdb_script)])
+    if args.ignore_fail_patterns:
+        cmd.append("--ignore-fail-patterns")
     for param in full_system_platform_params(args):
         cmd.extend(["--platform-param", param])
     return cmd
@@ -1515,6 +2165,7 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
     env = os.environ.copy()
     env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     env["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
+    env.update(si_topology_child_environment(args))
     if args.timer_probe:
         env["QBOX_APOLLO_TIMER_SNAPSHOT"] = "1"
         env["QBOX_APOLLO_TIMER_SNAPSHOT_RUN_ID"] = args.timer_probe_run_id
@@ -1555,6 +2206,8 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
         env["QBOX_APOLLO_FULL_SI_CL1_MHU_TRACE_FILE"] = str(
             (args.out_dir / "si-cl1-mhuv3-trace.log").resolve()
         )
+    if args.si_cl0_command:
+        return run_child_with_si_cl0_transport(args, cmd, env), cmd
     if args.keep_running_after_pass and not args.build_only:
         env["QBOX_RDASPEN_RESULT_PATH"] = str(
             (args.out_dir / RD_ASPEN_CHILD_RESULT).resolve()
@@ -1629,6 +2282,38 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--build-only", action="store_true")
     parser.add_argument("--skip-build", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--host-gdb-script", type=Path)
+    parser.add_argument("--ignore-fail-patterns", action="store_true")
+    parser.add_argument(
+        "--si-cl0-command",
+        action="append",
+        default=[],
+        help=(
+            "Send one printable ASCII command to the real SI0 SCP CLI as raw "
+            "UART bytes: Ctrl+E, command plus newline, then Ctrl+D. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--si-cl0-command-timeout",
+        type=float,
+        default=30.0,
+        help="Per-command timeout while waiting for the SI0 UART FIFO reader.",
+    )
+    si_topology_group = parser.add_mutually_exclusive_group()
+    si_topology_group.add_argument(
+        "--si-single-gic",
+        dest="si_single_gic",
+        action="store_true",
+        help="Select the shared five-PE Safety Island QEMU instance.",
+    )
+    si_topology_group.add_argument(
+        "--si-split-gic",
+        dest="si_single_gic",
+        action="store_false",
+        help="Select the legacy split CL0/CL1 Safety Island QEMU instances.",
+    )
+    parser.set_defaults(si_single_gic=False)
     parser.add_argument(
         "--uboot-only",
         action="store_true",
@@ -1676,6 +2361,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_false",
         help="Disable the root-shell gate for focused boot diagnostics.",
     )
+    parser.add_argument("--primary-operation-manifest", type=Path)
+    parser.add_argument("--primary-operation-schema", type=Path)
+    parser.add_argument("--primary-operation-module-path", type=Path)
     parser.add_argument(
         "--smmu-backend",
         choices=["qemu-arm-smmuv3", "systemc-mmu720ae"],
@@ -1921,6 +2609,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
+    operation_args = (
+        args.primary_operation_manifest,
+        args.primary_operation_schema,
+        args.primary_operation_module_path,
+    )
+    if any(value is not None for value in operation_args) and not all(
+        value is not None for value in operation_args
+    ):
+        parser.error(
+            "--primary-operation-manifest, --primary-operation-schema, and "
+            "--primary-operation-module-path must be used together"
+        )
     args.conf = args.conf.resolve()
     args.local_build_dir = args.local_build_dir.resolve()
     if args.qbox_build_dir is None:
@@ -1994,6 +2694,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--rse-bl2-delay-expected-hits must be non-negative")
     if args.rse_otp_provision_timeout <= 0:
         parser.error("--rse-otp-provision-timeout must be positive")
+    if args.si_cl0_command_timeout <= 0:
+        parser.error("--si-cl0-command-timeout must be positive")
+    if args.si_cl0_command and args.keep_running_after_pass:
+        parser.error(
+            "--si-cl0-command cannot be used with --keep-running-after-pass"
+        )
+    for si_command in args.si_cl0_command:
+        try:
+            si_cl0_command_payload(si_command)
+        except SiCl0CommandValidationError as error:
+            parser.error(str(error))
     if args.reset_rse_flash_state and args.rse_flash_state is None:
         parser.error("--reset-rse-flash-state requires --rse-flash-state")
     if args.rse_bl2_verify_sig_skip:
@@ -2009,6 +2720,12 @@ def main(argv: list[str] | None = None) -> int:
         return fidelity_runner.main(mode_args[1:])
 
     args = parse_args(mode_args)
+    try:
+        args.si_topology_contract = load_si_topology_contract(args)
+    except SafetyIslandTopologyContractError as error:
+        return write_si_topology_contract_failure(args, error)
+    if args.dry_run:
+        return run_si_topology_dry_run(args)
     args.timer_probe_run_id = uuid.uuid4().hex
     args.provision_blank_rse_otp = False
     args.rse_otp_auto_provision = {

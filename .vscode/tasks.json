@@ -46,7 +46,7 @@
       "label": "Apollo QBox: wait for SI1 GDB",
       "type": "shell",
       "command": "${workspaceFolder}/scripts/debug/run_local_gdb.py",
-      "args": ["--wait-remote-only", "127.0.0.1:12342", "--wait-seconds", "600"],
+      "args": ["--wait-remote-only", "127.0.0.1:12341", "--wait-seconds", "600"],
       "problemMatcher": []
     },
     {

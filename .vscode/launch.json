@@ -95,12 +95,16 @@
       "cwd": "${workspaceFolder}",
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb-multiarch",
-      "miDebuggerServerAddress": "127.0.0.1:12342",
+      "miDebuggerServerAddress": "127.0.0.1:12341",
       "launchCompleteCommand": "None",
       "setupCommands": [
         {
           "description": "Load Safety Island cluster 1 Zephyr symbols",
           "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si1.gdb"
+        },
+        {
+          "description": "Select Safety Island cluster 1 CPU0",
+          "text": "thread 2"
         }
       ],
       "sourceFileMap": {
@@ -158,12 +162,16 @@
       "cwd": "${workspaceFolder}",
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb-multiarch",
-      "miDebuggerServerAddress": "127.0.0.1:12342",
+      "miDebuggerServerAddress": "127.0.0.1:12341",
       "launchCompleteCommand": "None",
       "setupCommands": [
         {
           "description": "Load Safety Island cluster 1 Zephyr symbols",
           "text": "source ${workspaceFolder}/build/local-apollo-qvp/debug/gdb/domain-si1.gdb"
+        },
+        {
+          "description": "Select Safety Island cluster 1 CPU0",
+          "text": "thread 2"
         }
       ],
       "sourceFileMap": {
@@ -222,7 +230,6 @@
         "Apollo QBox: host run",
         "Apollo QBox: RSE",
         "Apollo QBox: SI0",
-        "Apollo QBox: SI1",
         "Apollo QBox: AP"
       ],
       "stopAll": true

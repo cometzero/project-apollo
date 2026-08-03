@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "matrix_id", "criteria_policy", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "matrix_id": {"const": "apollo-gic720ae"},
+    "criteria_policy": {
+      "type": "object",
+      "required": ["allowed_statuses", "execution_state_location", "unverifiable_is_pass"],
+      "additionalProperties": false,
+      "properties": {
+        "allowed_statuses": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "PASS"}, {"const": "PARTIAL"},
+            {"const": "FAIL"}, {"const": "BLOCKED"}
+          ],
+          "items": false
+        },
+        "execution_state_location": {"const": "content-addressed-overlay-only"},
+        "unverifiable_is_pass": {"const": false}
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "domain", "applicability", "validation_surface",
+          "required_artifacts", "required_checks"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "domain": {"enum": ["ap", "si", "fvp"]},
+          "applicability": {"enum": ["active", "conditional"]},
+          "priority": {"enum": ["P0", "P1", "P2"]},
+          "priority_if_active": {"const": "P1"},
+          "priority_if_unavailable": {"const": "P2"},
+          "validation_surface": {"type": "string", "minLength": 1},
+          "required_artifacts": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "required_checks": {
+            "type": "array", "minItems": 1, "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"applicability": {"const": "active"}}},
+            "then": {"required": ["priority"]},
+            "else": {
+              "required": ["priority_if_active", "priority_if_unavailable"],
+              "not": {"required": ["priority"]}
+            }
+          }
+        ]
+      }
+    }
+  }
+}

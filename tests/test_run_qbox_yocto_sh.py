@@ -282,8 +282,8 @@ def test_run_qbox_yocto_debug_without_target_lists_targets() -> None:
             "si_cl1",
             "si-cl1-zephyr",
             "z_cstart",
-            "127.0.0.1:12342",
-            "platform.si_cl1_cpu_0.gdb_port=12342",
+            "127.0.0.1:12341",
+            "platform.si_cl0_cpu_0.gdb_port=12341",
         ),
         (
             "tf-a",

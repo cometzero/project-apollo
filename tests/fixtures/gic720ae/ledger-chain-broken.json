@@ -1,0 +1,1 @@
+{"fixture": "broken_chain", "expected_reason": "broken_ledger_chain", "records": [{"sequence": 0, "kind": "genesis", "payload": {"task": 1}, "previous_sha": "0000000000000000000000000000000000000000000000000000000000000000", "record_sha": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}]}

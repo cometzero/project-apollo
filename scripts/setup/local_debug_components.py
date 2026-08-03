@@ -42,6 +42,8 @@ class ComponentRecord(TypedDict):
     debug_file: NotRequired[str]
     members: NotRequired[list[str]]
     remote: NotRequired[str]
+    gdb_thread: NotRequired[int]
+    mpidr: NotRequired[str]
 
 
 AP_TARGET = "RD_ASD.css.app00.cluster.cpu0"

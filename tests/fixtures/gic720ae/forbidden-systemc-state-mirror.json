@@ -1,0 +1,1 @@
+{"fixture": "forbidden_scope", "violations": ["mirrored_gic_state"], "symbol": "SystemCGicStateMirror"}

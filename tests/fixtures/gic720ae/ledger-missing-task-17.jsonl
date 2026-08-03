@@ -1,0 +1,3 @@
+{"sequence":0,"kind":"genesis","payload":{"task":1},"previous_sha":"0000000000000000000000000000000000000000000000000000000000000000","record_sha":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
+{"sequence":1,"kind":"task","payload":{"task":16},"previous_sha":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","record_sha":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+{"sequence":2,"kind":"task","payload":{"task":18},"previous_sha":"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee","record_sha":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "fresh_builds", "transitions"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "fresh_builds": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "transitions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "format_version", "mode", "verdict", "reason", "entries",
+    "package_exclusion"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "mode": {"enum": ["complete-instance", "stable-contract"]},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "kind", "sha256", "mode"],
+        "additionalProperties": false,
+        "properties": {
+          "role": {"type": "string", "minLength": 1},
+          "kind": {"enum": ["regular", "symlink"]},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "mode": {"type": "integer", "minimum": 0},
+          "link_text": {"type": "string"},
+          "resolved_realpath": {"type": "string"}
+        }
+      }
+    },
+    "package_exclusion": {
+      "type": "object",
+      "required": ["gic720ae-selftest", "gic720ae_test.ko", "overlay"],
+      "additionalProperties": false,
+      "properties": {
+        "gic720ae-selftest": {"const": true},
+        "gic720ae_test.ko": {"const": true},
+        "overlay": {"const": true}
+      }
+    }
+  }
+}

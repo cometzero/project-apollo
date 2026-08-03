@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["reason", "rows"],
+  "properties": {
+    "reason": {"enum": ["reference_contract_pass", "reference_contract_drift"]},
+    "rows": {"type": "array", "minItems": 1}
+  }
+}

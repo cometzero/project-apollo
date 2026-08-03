@@ -1,0 +1,1 @@
+{"fixture": "collector_only_measurement", "expected_reason": "collector_only_measurement", "leaves": [{"type": "collector_summary", "value": "implementation-output", "digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]}

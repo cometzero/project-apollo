@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "genesis_sha", "final_root", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "genesis_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "final_root": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sequence", "kind", "payload_sha", "previous_sha", "record_sha"],
+        "additionalProperties": false,
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 0},
+          "kind": {"enum": ["genesis", "task", "wave", "final"]},
+          "payload_sha": {"$ref": "#/$defs/sha"},
+          "previous_sha": {"$ref": "#/$defs/sha"},
+          "record_sha": {"$ref": "#/$defs/sha"}
+        }
+      }
+    }
+  },
+  "$defs": {"sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

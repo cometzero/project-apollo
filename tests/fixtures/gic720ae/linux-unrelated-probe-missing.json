@@ -1,0 +1,10 @@
+{
+  "fixture": "linux-unrelated-probe-missing",
+  "gic_rows": {
+    "sgi": "PASS",
+    "ppi": "PASS",
+    "spi": "PASS"
+  },
+  "unrelated_probe": "pfdi-cli",
+  "present": false
+}

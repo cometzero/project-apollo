@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "violations", "input_shas"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "violations": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "input_shas": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+  }
+}

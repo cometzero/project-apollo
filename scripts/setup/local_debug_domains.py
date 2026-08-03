@@ -13,6 +13,8 @@ class DomainSpec:
     label: str
     members: tuple[str, ...]
     remote: str
+    gdb_thread: int | None = None
+    mpidr: str | None = None
 
 
 DOMAIN_SPECS = (
@@ -27,12 +29,16 @@ DOMAIN_SPECS = (
         "Safety Island cluster 0",
         ("scp-si0",),
         "127.0.0.1:12341",
+        1,
+        "0x0",
     ),
     DomainSpec(
         "si1",
         "Safety Island cluster 1",
         ("si-cl1-zephyr",),
-        "127.0.0.1:12342",
+        "127.0.0.1:12341",
+        2,
+        "0x10000",
     ),
     DomainSpec(
         "ap",
@@ -111,7 +117,7 @@ def make_domain_record(
             symbols[key] = address
             if name in record["source_locations"]:
                 locations[key] = record["source_locations"][name]
-    return {
+    result: ComponentRecord = {
         "label": spec.label,
         "domain": spec.name,
         "target": primary["target"],
@@ -132,6 +138,11 @@ def make_domain_record(
         "members": [member for member, _ in records],
         "remote": spec.remote,
     }
+    if spec.gdb_thread is not None:
+        result["gdb_thread"] = spec.gdb_thread
+    if spec.mpidr is not None:
+        result["mpidr"] = spec.mpidr
+    return result
 
 
 def add_domain_records(
@@ -143,6 +154,12 @@ def add_domain_records(
         ]
         if not records:
             continue
+        if spec.gdb_thread is not None:
+            for _, record in records:
+                record["remote"] = spec.remote
+                record["gdb_thread"] = spec.gdb_thread
+                if spec.mpidr is not None:
+                    record["mpidr"] = spec.mpidr
         script = out_dir / "gdb" / f"domain-{spec.name}.gdb"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(

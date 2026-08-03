@@ -1,0 +1,27 @@
+version: 1
+operations:
+  - op: insmod
+    module_role: gic720ae_test
+    args:
+      target_cpu: "1"
+  - op: write
+    path: /sys/kernel/debug/gic720ae_test/control
+    value: "ipi 1\n"
+  - op: write
+    path: /sys/kernel/debug/gic720ae_test/control
+    value: "spi 1\n"
+  - op: read
+    path: /proc/interrupts
+  - op: write
+    path: /sys/devices/system/cpu/cpu1/online
+    value: "0\n"
+  - op: write
+    path: /sys/devices/system/cpu/cpu1/online
+    value: "1\n"
+  - op: write
+    path: /sys/kernel/debug/gic720ae_test/control
+    value: "snapshot\n"
+  - op: read
+    path: /proc/interrupts
+  - op: rmmod
+    module: gic720ae_test

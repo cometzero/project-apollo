@@ -1,0 +1,5 @@
+{
+  "fixture": "linux-wrong-affinity",
+  "spi_target": 1,
+  "spi_observed_cpu": 0
+}

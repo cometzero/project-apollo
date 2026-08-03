@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "component", "action", "sources", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "component": {"type": "string", "minLength": 1},
+    "action": {"type": "string", "minLength": 1},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}, "minItems": 1},
+    "outputs": {"type": "array", "items": {"$ref": "#/$defs/output"}, "minItems": 1}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source": {
+      "type": "object", "required": ["path", "head"], "additionalProperties": false,
+      "properties": {"path": {"type": "string"}, "head": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"}}
+    },
+    "output": {
+      "type": "object", "required": ["role", "path", "sha256", "owner"], "additionalProperties": false,
+      "properties": {
+        "role": {"type": "string"}, "path": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha"}, "owner": {"type": "string"}
+      }
+    }
+  }
+}

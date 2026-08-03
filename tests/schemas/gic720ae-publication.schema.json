@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "mode", "repositories"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "mode": {"enum": ["audit", "dry-run", "push", "self-test"]},
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "changed", "selected", "order", "local_sha", "remote_sha", "remote", "remote_url", "remote_host", "remote_owner", "remote_repo", "branch"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"}, "changed": {"type": "boolean"},
+          "selected": {"type": "boolean"}, "order": {"type": "integer", "minimum": 0},
+          "local_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "remote_sha": {"type": "string", "pattern": "^$|^[0-9a-f]{40}$"},
+          "remote": {"type": "string"},
+          "remote_url": {"type": "string", "minLength": 1},
+          "remote_host": {"type": "string", "minLength": 1},
+          "remote_owner": {"type": "string", "minLength": 1},
+          "remote_repo": {"type": "string", "minLength": 1},
+          "branch": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -41,6 +41,8 @@ CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
 NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+SI_GIC_MODE="${SI_GIC_MODE:-split}"
+SI_GIC_MODE_OPTION=""
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
 MULTI_SESSION="${MULTI_SESSION:-0}"
@@ -83,6 +85,8 @@ Options:
   --jobs N             build jobs passed to the runner (default: ${JOBS})
   --build              build QBox targets before running
   --skip-build         skip QBox build before running (default)
+  --si-single-gic      select one shared five-PE Safety Island GIC
+  --si-split-gic       select legacy split CL0/CL1 GICs (default)
   --keep-running-after-pass
                        keep QBox alive after Linux boot/probes pass (default)
   --exit-after-pass    stop QBox when the normal pass condition is reached
@@ -350,6 +354,7 @@ runner_command()
     if [[ "${SKIP_BUILD}" == "1" ]]; then
         _out+=(--skip-build)
     fi
+    _out+=("--si-${SI_GIC_MODE}-gic")
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         _out+=(--keep-running-after-pass)
     fi
@@ -888,6 +893,7 @@ print_dry_run()
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   multi_session: ${MULTI_SESSION}
+  si_gic_mode: ${SI_GIC_MODE}
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
   explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
@@ -1351,6 +1357,10 @@ start_tmux()
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
     validate_bool "TMUX_UART_INPUT_FIFOS" "${TMUX_UART_INPUT_FIFOS}"
     validate_bool "MULTI_SESSION" "${MULTI_SESSION}"
+    case "${SI_GIC_MODE}" in
+        single|split) ;;
+        *) die "SI_GIC_MODE must be single or split, got: ${SI_GIC_MODE}" ;;
+    esac
     validate_tmux_layout "${TMUX_LAYOUT}"
     if [[ -n "${DEBUG_COMPONENT}" ]]; then
         [[ -n "${DEBUG_TARGET}" ]] || die "--debug-component requires --debug-target"
@@ -1474,6 +1484,7 @@ start_tmux()
         fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
+        printf 'SI_GIC_MODE=%q ' "${SI_GIC_MODE}"
         printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \
             "${TMUX_LAYOUT}" "${TMUX_UART_INPUT_FIFOS}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
@@ -1629,6 +1640,20 @@ while (($# > 0)); do
             ;;
         --skip-build)
             SKIP_BUILD=1
+            shift
+            ;;
+        --si-single-gic)
+            [[ "${SI_GIC_MODE_OPTION}" != "split" ]] ||
+                die "--si-single-gic cannot be used with --si-split-gic"
+            SI_GIC_MODE="single"
+            SI_GIC_MODE_OPTION="single"
+            shift
+            ;;
+        --si-split-gic)
+            [[ "${SI_GIC_MODE_OPTION}" != "single" ]] ||
+                die "--si-split-gic cannot be used with --si-single-gic"
+            SI_GIC_MODE="split"
+            SI_GIC_MODE_OPTION="split"
             shift
             ;;
         --keep-running-after-pass)

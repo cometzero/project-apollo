@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "repositories", "diff_sha"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "repositories": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "diff_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

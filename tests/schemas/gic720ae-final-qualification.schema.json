@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "format_version", "verdict", "reason", "domain", "fvp_domain",
+    "ap_reference_mode", "ap_event_differential_claim", "checks", "input_shas"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "domain": {"enum": ["ap", "si", "all", "self-test"]},
+    "fvp_domain": {"enum": ["none", "si"]},
+    "ap_reference_mode": {"enum": ["none", "discovery-only"]},
+    "ap_event_differential_claim": {"const": false},
+    "checks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "input_shas": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+  }
+}

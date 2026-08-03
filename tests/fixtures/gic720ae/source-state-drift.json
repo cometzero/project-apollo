@@ -1,0 +1,119 @@
+{
+  "captured_at_kst": "2026-07-30T10:20:58+09:00",
+  "expected_changed_fields": [
+    "repositories.qemu.head"
+  ],
+  "fast_models": {
+    "executables": [],
+    "images": []
+  },
+  "format_version": 1,
+  "pristine": {
+    "format_version": 1,
+    "manifest_sha256": "810d0214304372d8840dc3bade9c1af6216924c799b49246930038164734683e",
+    "record_count": 219426,
+    "records_sha256": "ed1866495ba3ae95c8b9d2e90d5f8659b5bffe8abb29633d7569862d49bfc33e"
+  },
+  "repositories": {
+    "arm-zena-css": {
+      "head": "294cfa7e215c87a47b8ae75e7db7c1e2559ec3bfabb33f16e5e3eb84f9abd529",
+      "index": "bc3944a2692bb86ff80105110d2525262dd7ce9d3f8943b83e61f9b04f053cc8",
+      "status": "ea9354480efdf12520b9e6a12acffca005dece91a12478c5d2a41a76dc020815"
+    },
+    "buildroot": {
+      "head": "ba1dd9901bc1a3cb7d25a37d9cedf7b482d5296484a9a81eac8bb46f28eb1a24",
+      "index": "9d91726a6d7ba92316e84d12f04ae3257eb2ec1afcc26e8d2a1ffedc52ef9c34",
+      "status": "0dde5f94d95b2b2dfbdaade1899e0b9993463ac97b2538df9759b03b326564a8"
+    },
+    "linux": {
+      "head": "a1b3fefc1528a9026f681e022bc5875e8e845df604d5be7e376508760752c525",
+      "index": "59b1c59898ffe1a31026b5994bba06a00c54e975c3967c16e9c25c6a1f3fbd98",
+      "status": "f1102d0877878fd55e95b31cbd7fc25811300e50a799282850fb7e68e3e03b83"
+    },
+    "meta-hsoc-auto-solutions": {
+      "head": "920b0b13a9f0c6e13eaa217d8aabf575996bb731f20b4ad2c7ff94c077aa150c",
+      "index": "78b7f4cfb04da97ab46719a99edb6f28faf6b1b24769d6844e3854182e8530a2",
+      "status": "967c0404c95b17b3cbc6c6824a0d3577c8955db21b321b7aa6bc45984a6166ad"
+    },
+    "meta-hsoc-bsp": {
+      "head": "27818c6eda57676b6bb37b2180cd2b52dd5eff2a3765aaccdc98ee9589aef121",
+      "index": "3add392bd3e248d0dc33b11ac520a8e27d5d91774a0c71d5b53e4ea72eb29e26",
+      "status": "18771f8ebcc4134f480d65a2c1557ab13a7d86115c2bcf5585f6dc27aee7f435"
+    },
+    "optee": {
+      "head": "d0e63f6cc02f84e23cd8d30a13b380d389f4c73171b5195e1543919487057dff",
+      "index": "44febc688e44ff3c5b486239a71f495b39944df7cff2698508cc90a8be4247ff",
+      "status": "ec2cd64a7eab89f27b435c0216413172febd6ecb3b3526448d4a8ade0d5d3a91"
+    },
+    "qbox": {
+      "head": "f07e8275718b577392663cbbd7138b03bbcce5f0ac3d3faf418b9aa669a2103a",
+      "index": "0c96d7b9b83928044150ab189f6374f811e8ba269235ab3d03473a6695eb687c",
+      "status": "ec739b9ac347e419a1470ee98b7fe7c482f5a6a4308cc4f7b8a39e9e891072b4"
+    },
+    "qbox-platform": {
+      "head": "2ebb6233e8f29886a381527475cd2512ba05cb23471f78ec1ba3423786bc369a",
+      "index": "05900e131d033c8032d126a2d9f2bfd3300919e329161ff8db5473d74bb96200",
+      "status": "6fad0b52a8ef75ab1c90efdd0e87299e072dec512352e04e8a0eac6408af0a32"
+    },
+    "qemu": {
+      "head": "0000000000000000000000000000000000000000000000000000000000000000",
+      "index": "2367d21bfe5f36ec4363b3dab3976956a81c2c64aef08a3e52b46a128907daa5",
+      "status": "1be5b668b5f2b62235e468d152f41ab7ce1dcdccddffbc0381faf31bd4381d40"
+    },
+    "scp": {
+      "head": "f6e78bea81798ba0612397c6239b1c39323b47c384fea1487a84c8b12b7d05d4",
+      "index": "2180fc5c7ddcf39e8fc7828e910e7560c04153cd4140a8736cf4e442a6605e39",
+      "status": "4488b251df5f1e5bb7b5c582b36d67baf60b67d4d99c8b0af724c62b68cb0cc7"
+    },
+    "tfa": {
+      "head": "105c3caa9d4919dd6975ce4e7e34e36ad6e9870eba2442508531d52772fc6e05",
+      "index": "5794dfcacbfb35463cd8d8e2a20775797ee25d9e4770ada13c17ba4244ecb74a",
+      "status": "a48f6be82b7b22ced6d8ee4e6a6a01fbd824c6589fc508b0847b82b2eab398aa"
+    },
+    "tfm": {
+      "head": "f094fa262b315ede3dd47fe136a2c5a52fba97364a0175f2e2263ab4a50e1f35",
+      "index": "daf9178c48310371ca8cf75cbba393567ec92bfab5af13504f787125492f768b",
+      "status": "1fcf386bb19644a8e1ab0c2ba617a48fbc1b3add0c414155f5e7dff409465ad6"
+    },
+    "top": {
+      "head": "e05c33072357cce3086fcf52adb01d86ae60527e84a755a59044f6b3fe0d37ac",
+      "index": "79f825d548a936acdd52b7d1f58f687ecf94248a7ff41dcedcca642579e07f28",
+      "status": "67cce0ac03f211e60ac9fedb9be8b557709a1e86ffb66c6d64e6f315c958c495"
+    },
+    "uboot": {
+      "head": "0cf9b6e75ac3bec3e1d09d5ea099ce11e19da60751ca8b7288789ad516a63c2a",
+      "index": "c5bb7dea01e29968b20d165f150c413fd62206efdfb98f0ecaef4661cf8f6ae1",
+      "status": "a9cbd2f83cd7bded1fce90b7e5d458e682d6612c7f1cb7973ddc395ac37ad9be"
+    },
+    "zephyr": {
+      "head": "d6fd681ee5c3cd7d912e74c92a3a463df41480cca57382a9123d3ebc1f5516a3",
+      "index": "c6124e9b6476aa56230c8414db2d27e21eea4a30a70a0deab73ecb94ff08dee7",
+      "status": "d00cd3377256787004848b2ad62c9e972cbe8fe8589b63284a2176f5a1fc42e5"
+    },
+    "zephyr-hsoc": {
+      "head": "420cdac24b70143c2faabadd1914722348f7f3c19ca193cab11499a62edfce3f",
+      "index": "8fec1d9dfe5cc4830854d475387d99c4deb5bb7c88d69e09b9dd813305356b6b",
+      "status": "5aa6c7dd0c7a6b6e03270b58e08889cdb5f4da505f28bf585eaa7c7e6d56e6be"
+    }
+  },
+  "yocto_configuration": {
+    "bblayers.conf": {
+      "bytes": 2215,
+      "path": "build/conf/bblayers.conf",
+      "sha256": "e8660703f64dfb92b1933cb69858989becdcc86349a7d0330beea0501b5d546e",
+      "value": "#\n# SPDX-License-Identifier: MIT\n#\n\nBBLAYERS ?= \" \\\n    /build/arm/arm-auto-solutions/layers/poky/../../arm-zena-css/yocto/meta-zena-css-bsp \\\n    /build/arm/arm-auto-solutions/layers/poky/../../arm-zena-css/yocto/meta-zena-css-safety-island \\\n    /build/arm/arm-auto-solutions/layers/poky/../../hsoc-stack/yocto/meta-hsoc-auto-solutions \\\n    /build/arm/arm-auto-solutions/layers/poky/../../hsoc-stack/yocto/meta-hsoc-bsp \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-arm/meta-arm \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-arm/meta-arm-toolchain \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-bluechi/meta-bluechi \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-cassini/meta-cassini-distro \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-clang \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-ewaol \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-openembedded/meta-filesystems \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-openembedded/meta-networking \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-openembedded/meta-oe \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-openembedded/meta-perl \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-openembedded/meta-python \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-ptx \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-secure-core/meta-efi-secure-boot \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-secure-core/meta-integrity \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-secure-core/meta-secure-core-common \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-secure-core/meta-signing-key \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-security \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-security/meta-parsec \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-virtualization \\\n    /build/arm/arm-auto-solutions/layers/poky/../meta-zephyr/meta-zephyr-core \\\n    /build/arm/arm-auto-solutions/layers/poky/meta \\\n    /build/arm/arm-auto-solutions/layers/poky/meta-poky \\\n    /build/arm/arm-auto-solutions/layers/poky/../../sw-ref-stack/yocto/meta-arm-auto-solutions \\\n\"\nBBPATH ?= \"${TOPDIR}\"\nBBFILES ??= \"\"\n"
+    },
+    "local.conf": {
+      "bytes": 1640,
+      "path": "build/conf/local.conf",
+      "sha256": "6e64568b9cc6bbac5e381d3a8f0f53877a3ee6d371d4a23f0cfdf40f19cbac8e",
+      "value": "#\n# SPDX-License-Identifier: MIT\n#\n\n# Apollo QVP build configuration for a traditional TEMPLATECONF workflow.\nRD_ASPEN_VARIANT = \"cfg2\"\nMACHINE ??= \"apollo-qvp\"\nPC_CPUS_COUNT_DEFAULT ??= \"4\"\nARM_FVP_EULA_ACCEPT = \"1\"\n\n# Keep the traditional TEMPLATECONF build aligned with the kas baremetal\n# environment. The demos image autoloads pfdi_misc, so firmware-side PFDI\n# support must be enabled too.\nPFDI_SUPPORT = \"1\"\nPFDI_MONITOR_SUPPORT = \"1\"\n\n# baremetal\nTMPDIR = \"${TOPDIR}/tmp_baremetal\"\nEXTRA_IMAGE_FEATURES:append = \" baremetal\"\n\n# base\nEXTRA_IMAGE_FEATURES:append = \" allow-empty-password allow-root-login \\\n  empty-root-password post-install-logging ssh-server-openssh\"\nCORE_IMAGE_EXTRA_INSTALL:append = \" ssh-pregen-hostkeys\"\nLICENSE_FLAGS_ACCEPTED:append = \" \\\n  ${@oe.utils.vartrue('ARM_FVP_EULA_ACCEPT', 'Arm-FVP-EULA', '', d)}\"\nIMAGE_CLASSES += \"testimage\"\n\n# build-capsule\nBUILD_UEFI_CAPSULE = \"1\"\n\n# cassini\nCASSINI_GENERIC_ARM64_FILESYSTEM = \"0\"\nDISTRO_FEATURES:remove = \"cassini-security cassini-ota cassini-parsec\"\nDISTRO_FEATURES:append = \" cassini-dev zephyr\"\nKERNEL_CLASSES:remove = \"containers_kernelcfg_check\"\n\n# cassini-base\nCONF_VERSION = \"2\"\nPACKAGECONFIG:remove:pn-qemu-system-native = \"gtk+ sdl\"\n\n# cassini-modsign\nDISTRO_FEATURES:append = \" modsign\"\n\n# demos\nEXTRA_IMAGE_FEATURES:append = \" demos\"\n\n# diskmon\nBB_DISKMON_DIRS = \"\\\n  STOPTASKS,${TMPDIR},1G,100K \\\n  STOPTASKS,${DL_DIR},1G,100K \\\n  STOPTASKS,${SSTATE_DIR},1G,100K \\\n  STOPTASKS,/tmp,100M,100K \\\n  HALT,${TMPDIR},100M,1K \\\n  HALT,${DL_DIR},100M,1K \\\n  HALT,${SSTATE_DIR},100M,1K \\\n  HALT,/tmp,10M,1K\"\n\nDISTRO ??= \"auto-ad-nexios\"\nBBMULTICONFIG ?= \"\"\n"
+    },
+    "templateconf.cfg": {
+      "bytes": 98,
+      "path": "build/conf/templateconf.cfg",
+      "sha256": "b9f898041d3514caf1d953a520bfd35474550ee2997d7bd1dd6994f88ec06191",
+      "value": "/build/arm/arm-auto-solutions/hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp\n"
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "sources", "features"],
+  "properties": {
+    "format_version": {"const": 1},
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^(?!/).+"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "features": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "active", "stages"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "active": {"type": "boolean"},
+          "stages": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["stage", "status", "surface_type", "rationale", "source_evidence"],
+              "properties": {
+                "stage": {"type": "integer", "minimum": 1, "maximum": 4},
+                "status": {"enum": ["selected", "not-applicable", "unavailable"]},
+                "surface_type": {
+                  "enum": [
+                    "production-driver",
+                    "safe-guarded-knob",
+                    "opt-in-test-driver",
+                    "minimal-bare-metal"
+                  ]
+                },
+                "rationale": {"type": "string", "minLength": 1},
+                "source_evidence": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["source", "lines", "anchor"],
+                    "properties": {
+                      "source": {"type": "string", "minLength": 1},
+                      "lines": {"type": "string", "pattern": "^[0-9]+(-[0-9]+)?(,[0-9]+(-[0-9]+)?)*$"},
+                      "anchor": {"type": "string", "minLength": 1}
+                    }
+                  }
+                },
+                "bare_metal": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["minimal_scope", "opt_in_package", "timeout_seconds", "cleanup"],
+                  "properties": {
+                    "minimal_scope": {"type": "string", "minLength": 1},
+                    "opt_in_package": {"type": "string", "minLength": 1},
+                    "timeout_seconds": {"type": "integer", "minimum": 1},
+                    "cleanup": {"type": "string", "minLength": 1}
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {"properties": {"stage": {"const": 4}, "status": {"const": "selected"}}, "required": ["stage", "status"]},
+                  "then": {"required": ["bare_metal"]},
+                  "else": {"not": {"required": ["bare_metal"]}}
+                },
+                {
+                  "if": {"properties": {"stage": {"const": 1}}, "required": ["stage"]},
+                  "then": {"properties": {"surface_type": {"const": "production-driver"}}}
+                },
+                {
+                  "if": {"properties": {"stage": {"const": 2}}, "required": ["stage"]},
+                  "then": {"properties": {"surface_type": {"const": "safe-guarded-knob"}}}
+                },
+                {
+                  "if": {"properties": {"stage": {"const": 3}}, "required": ["stage"]},
+                  "then": {"properties": {"surface_type": {"const": "opt-in-test-driver"}}}
+                },
+                {
+                  "if": {"properties": {"stage": {"const": 4}}, "required": ["stage"]},
+                  "then": {"properties": {"surface_type": {"const": "minimal-bare-metal"}}}
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

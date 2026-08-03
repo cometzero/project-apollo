@@ -25,6 +25,8 @@ class DebugComponent:
     gdb_script: Path
     has_debug_info: bool = False
     remote: str | None = None
+    gdb_thread: int | None = None
+    mpidr: str | None = None
 
 
 def workspace_root() -> Path:
@@ -63,6 +65,12 @@ def load_components(manifest: Path) -> dict[str, DebugComponent]:
             gdb_script=Path(gdb_script),
             has_debug_info=has_debug_info is True,
             remote=record.get("remote") if isinstance(record.get("remote"), str) else None,
+            gdb_thread=(
+                record.get("gdb_thread")
+                if isinstance(record.get("gdb_thread"), int)
+                else None
+            ),
+            mpidr=record.get("mpidr") if isinstance(record.get("mpidr"), str) else None,
         )
     return components
 
@@ -100,6 +108,8 @@ def build_gdb_command(
         command.extend(("-ex", f"shell {wait_command}"))
     if remote is not None:
         command.extend(("-ex", f"target remote {remote}"))
+        if component.gdb_thread is not None:
+            command.extend(("-ex", f"thread {component.gdb_thread}"))
     if attach_pid is not None:
         command.extend(("-p", str(attach_pid)))
     if resume:

@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "routes": [
+    {
+      "name": "si_cl0_system_timer",
+      "source": "si_cl0_timer_cntbase",
+      "controller": "si_cl0_gic",
+      "kind": "SPI",
+      "architectural_intid": 34,
+      "socket_class": "normal_spi",
+      "socket_index": 34,
+      "trigger": "level",
+      "polarity": "high",
+      "owner_view": "View1",
+      "target_semantics": "shared",
+      "target_pes": [0]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "criteria_sha": "771d75fa79b6d5906bb050847865bfc2600a1ad4d5fc3e40d0846797d6172849",
+  "plan_sha": "af88ab29bba53f8e8bcd423dfc09772706262695a9afa306b5b47b6072ca8be1",
+  "phase": "pre_freeze",
+  "producer_task": 19,
+  "source_state_sha": "0000000000000000000000000000000000000000000000000000000000000000",
+  "input_overlay_shas": [],
+  "rows": []
+}

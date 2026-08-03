@@ -1,0 +1,37 @@
+format_version: 1
+sources:
+  linux-gicv3:
+    path: hsoc-stack/components/primary_compute/linux/drivers/irqchip/irq-gic-v3.c
+    sha256: d33e823766f386380608fe985dac9a2eacb9178435f200c03f8ac87fe5fd0db3
+features:
+  - id: stage4-bypass
+    active: true
+    stages:
+      - stage: 1
+        status: unavailable
+        surface_type: production-driver
+        rationale: No usable production stimulus.
+        source_evidence: []
+      - stage: 2
+        status: unavailable
+        surface_type: safe-guarded-knob
+        rationale: No stable guarded knob.
+        source_evidence: []
+      - stage: 3
+        status: unavailable
+        surface_type: opt-in-test-driver
+        rationale: No opt-in test driver.
+        source_evidence: []
+      - stage: 4
+        status: selected
+        surface_type: minimal-bare-metal
+        rationale: Incorrect bypass fixture.
+        source_evidence:
+          - source: linux-gicv3
+            lines: 367-399
+            anchor: GICR_WAKER
+        bare_metal:
+          minimal_scope: One GICR_WAKER transition.
+          opt_in_package: gic720ae-stage4-probe
+          timeout_seconds: 30
+          cleanup: Restore the original GICR_WAKER state before exit.

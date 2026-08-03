@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "leaves", "contract_sha"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "contract_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "leaves": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "role", "realpath", "sha256", "producer_receipt_sha",
+          "producer_task", "lineage"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "role": {"type": "string", "minLength": 1},
+          "realpath": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "producer_receipt_sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "producer_task": {"type": "integer", "minimum": 1},
+          "lineage": {"type": "string", "pattern": "^(invocation|taskhash|clean-build):.+"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"fixture": "marker_only", "expected_reason": "insufficient_stimulus", "commands": [], "markers": ["test_inject_gic_fmu_critical:PASS", "test_inject_gic_fmu_noncritical:PASS", "test_gic_ras_correctable:PASS", "test_gic_ras_uncorrectable:PASS"]}

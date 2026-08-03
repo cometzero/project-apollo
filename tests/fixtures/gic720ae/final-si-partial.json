@@ -1,0 +1,1 @@
+{"expected_reason": "partial_si_gate", "required_si_gates": ["cl0", "cl1"], "observed_si_gates": ["cl0"], "pfdi_timeout_count": 1, "negative_counter": 1}

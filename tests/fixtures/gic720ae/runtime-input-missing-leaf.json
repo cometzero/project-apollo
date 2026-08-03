@@ -1,0 +1,1 @@
+{"fixture": "missing_runtime_leaf", "expected_reason": "unowned_runtime_input", "required_roles": ["qbox-executable", "libqemu", "rse-rom", "rse-flash", "rse-otp", "ap-flash", "provisioning-bundle", "boot-media", "rootfs", "dtb", "ap-elf", "rse-elf", "si0-elf", "si1-elf"], "leaves": [{"role": "qbox-executable"}]}

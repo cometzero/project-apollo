@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "plan_sha", "source_freeze_sha", "ledger_chain_sha", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "plan_sha": {"$ref": "#/$defs/sha"},
+    "source_freeze_sha": {"$ref": "#/$defs/sha"},
+    "ledger_chain_sha": {"$ref": "#/$defs/sha"},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "additionalProperties": false,
+        "properties": {"path": {"type": "string"}, "sha256": {"$ref": "#/$defs/sha"}}
+      }
+    }
+  },
+  "$defs": {"sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

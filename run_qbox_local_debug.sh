@@ -24,7 +24,8 @@ CHILD_ARGS=()
 HOST_ENDPOINT="127.0.0.1:12339"
 RSE_ENDPOINT="127.0.0.1:12340"
 SI0_ENDPOINT="127.0.0.1:12341"
-SI1_ENDPOINT="127.0.0.1:12342"
+SI1_ENDPOINT="127.0.0.1:12341"
+LEGACY_SI1_ENDPOINT="127.0.0.1:12342"
 AP_ENDPOINT="127.0.0.1:12343"
 AP_SAFE_MARKER="PFDI: OoR tests on core 3 succeeded."
 
@@ -54,8 +55,9 @@ Options:
   --dry-run               print the underlying QBox launch plan
   --help
 
-The fixed endpoints are host 12339, RSE 12340, SI0 12341, SI1 12342,
-and AP 12343 on 127.0.0.1.
+The fixed endpoints are host 12339, RSE 12340, shared five-PE SI 12341,
+and AP 12343 on 127.0.0.1. Port 12342 is retired; use 12341 and select
+domain-si0 (thread 1, MPIDR 0x0) or domain-si1 (thread 2, MPIDR 0x10000).
 EOF
 }
 
@@ -118,10 +120,7 @@ configure_cli_panes()
     "${TMUX_BIN}" select-pane -t "${pane}" -T gdb-rse
     pane="$(${TMUX_BIN} split-window -d -P -F '#{pane_id}' -t "${pane}" \
         bash -lc "$(gdb_body domain-si0 "${SI0_ENDPOINT}" 0 "${firmware_wait_log}")")"
-    "${TMUX_BIN}" select-pane -t "${pane}" -T gdb-si0
-    pane="$(${TMUX_BIN} split-window -d -P -F '#{pane_id}' -t "${pane}" \
-        bash -lc "$(gdb_body domain-si1 "${SI1_ENDPOINT}" 0 "${firmware_wait_log}")")"
-    "${TMUX_BIN}" select-pane -t "${pane}" -T gdb-si1
+    "${TMUX_BIN}" select-pane -t "${pane}" -T gdb-si
     pane="$(${TMUX_BIN} split-window -d -P -F '#{pane_id}' -t "${pane}" \
         bash -lc "$(gdb_body domain-ap "${AP_ENDPOINT}" 0 "${ap_wait_log}")")"
     "${TMUX_BIN}" select-pane -t "${pane}" -T gdb-ap
@@ -230,6 +229,7 @@ command=(
     --session "${SESSION}"
     --out-dir "${OUT_DIR}"
     --local-build-dir "${LOCAL_BUILD_DIR}"
+    --si-single-gic
     --no-attach
     "${RUNNER_ARGS[@]}"
 )
@@ -241,7 +241,6 @@ command+=(
     --ignore-fail-patterns
     --platform-param "platform.rse_cpu_pass.cpu_0.gdb_port=12340"
     --platform-param "platform.si_cl0_cpu_0.gdb_port=12341"
-    --platform-param "platform.si_cl1_cpu_0.gdb_port=12342"
     --platform-param "platform.ap_cpu_0.gdb_port=12343"
     "${CHILD_ARGS[@]}"
 )
@@ -254,6 +253,8 @@ if ((VSCODE)); then
     "${ROOT_DIR}/scripts/debug/run_local_gdb.py" \
         --wait-remote-only "${HOST_ENDPOINT}" --wait-seconds 600
     printf 'QBox debug servers started for VS Code in tmux session %s.\n' "${SESSION}"
+    printf 'Safety Island uses %s; %s is retired and has no listener.\n' \
+        "${SI0_ENDPOINT}" "${LEGACY_SI1_ENDPOINT}"
 elif ((NO_ATTACH)); then
     configure_cli_panes
 else

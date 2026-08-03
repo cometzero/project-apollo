@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/audit",
+  "$defs": {
+    "audit": {
+      "type": "object",
+      "required": ["format_version", "verdict", "reason", "input_shas", "checks", "missing_tasks"],
+      "additionalProperties": false,
+      "properties": {
+        "format_version": {"const": 1},
+        "verdict": {"enum": ["PASS", "FAIL"]},
+        "reason": {"type": "string"},
+        "input_shas": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+        "checks": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "missing_tasks": {"type": "array", "items": {"type": "integer"}, "uniqueItems": true}
+      }
+    }
+  }
+}

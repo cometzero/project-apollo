@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "repositories"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "head", "signed", "changed"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string"},
+          "head": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+          "signed": {"type": "boolean"},
+          "changed": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

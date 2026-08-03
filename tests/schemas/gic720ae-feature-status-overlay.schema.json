@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "format_version", "criteria_sha", "plan_sha", "phase",
+    "producer_task", "input_overlay_shas", "rows"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "criteria_sha": {"$ref": "#/$defs/sha"},
+    "plan_sha": {"$ref": "#/$defs/sha"},
+    "phase": {"enum": ["pre_freeze", "post_freeze"]},
+    "producer_task": {"type": "integer", "enum": [19, 40, 41, 42]},
+    "source_state_sha": {"$ref": "#/$defs/sha"},
+    "source_freeze_sha": {"$ref": "#/$defs/sha"},
+    "input_overlay_shas": {
+      "type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha"}
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "scope_class", "evidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["PASS", "PARTIAL", "FAIL", "BLOCKED"]},
+          "scope_class": {"enum": ["active", "unverifiable"]},
+          "reason": {"type": "string"},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "sha256", "producer_task"],
+              "additionalProperties": false,
+              "properties": {
+                "path": {"type": "string"},
+                "sha256": {"$ref": "#/$defs/sha"},
+                "producer_task": {"type": "integer", "minimum": 1}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {"sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+  "allOf": [
+    {
+      "if": {"properties": {"phase": {"const": "pre_freeze"}}},
+      "then": {"required": ["source_state_sha"], "not": {"required": ["source_freeze_sha"]}},
+      "else": {"required": ["source_freeze_sha"], "not": {"required": ["source_state_sha"]}}
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "codex_version", "session_id", "events_sha", "message_sha",
+    "codex_home_sha", "reviewer_identity", "run_id", "plan_sha",
+    "envelope_sha", "source_freeze_sha", "direct_measurement_sha",
+    "participated_tasks", "verdict"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "codex_version": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "events_sha": {"$ref": "#/$defs/sha"},
+    "message_sha": {"$ref": "#/$defs/sha"},
+    "codex_home_sha": {"$ref": "#/$defs/sha"},
+    "reviewer_identity": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "plan_sha": {"$ref": "#/$defs/sha"},
+    "envelope_sha": {"$ref": "#/$defs/sha"},
+    "source_freeze_sha": {"$ref": "#/$defs/sha"},
+    "direct_measurement_sha": {"$ref": "#/$defs/sha"},
+    "participated_tasks": {"type": "array", "maxItems": 0},
+    "verdict": {"enum": ["APPROVE", "REJECT"]}
+  },
+  "$defs": {"sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

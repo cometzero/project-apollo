@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "captured_at_utc", "executable", "descriptor_exec_path", "commands", "provenance_sha256", "version", "introspection"],
+  "properties": {
+    "format_version": {"const": 1},
+    "captured_at_utc": {"type": "string", "format": "date-time"},
+    "executable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_path", "realpath", "sha256"],
+      "properties": {
+        "input_path": {"type": "string", "minLength": 1},
+        "realpath": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "descriptor_exec_path": {"type": "string", "pattern": "^/proc/self/fd/[0-9]+$"},
+    "commands": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["argv", "exec_argv", "cwd", "env", "started_at_utc", "ended_at_utc", "exit_code", "stdout_path", "stderr_path", "stdout_sha256", "stderr_sha256"],
+        "properties": {
+          "argv": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
+          "exec_argv": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "string"}},
+          "cwd": {"type": "string", "minLength": 1},
+          "env": {"type": "object", "additionalProperties": {"type": "string"}},
+          "started_at_utc": {"type": "string", "format": "date-time"},
+          "ended_at_utc": {"type": "string", "format": "date-time"},
+          "exit_code": {"const": 0},
+          "stdout_path": {"type": "string", "minLength": 1},
+          "stderr_path": {"type": "string", "minLength": 1},
+          "stdout_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "stderr_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "provenance_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "version": {"type": "string", "minLength": 1},
+    "introspection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "bytes"],
+      "properties": {
+        "path": {"const": "fvp-gic-introspection.txt"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

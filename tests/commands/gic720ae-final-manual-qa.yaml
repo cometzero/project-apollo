@@ -1,0 +1,31 @@
+format_version: 1
+registry_id: gic720ae-final-manual-qa
+policy:
+  shell_text_allowed: false
+  network_allowed: false
+  timeout_seconds: 1800
+commands:
+  - id: recompute-descriptor-chain
+    argv: [python3, scripts/test/verify_gic720ae_ledger_chain.py]
+    measurement: command_replay
+  - id: audit-plan-compliance
+    argv: [python3, scripts/test/audit_gic720ae_plan_compliance.py]
+    measurement: command_replay
+  - id: collect-code-review-diff
+    argv: [python3, scripts/test/collect_gic720ae_review_diff.py]
+    measurement: command_replay
+  - id: run-final-qualification
+    argv: [python3, scripts/test/run_gic720ae_final_qualification.py]
+    measurement: command_replay
+  - id: audit-scope-fidelity
+    argv: [python3, scripts/test/audit_gic720ae_scope_fidelity.py]
+    measurement: command_replay
+  - id: git-head
+    argv: [git, rev-parse, HEAD]
+    measurement: git_head
+  - id: git-index
+    argv: [git, write-tree]
+    measurement: git_index
+  - id: file-sha256
+    argv: [sha256sum]
+    measurement: file_sha256

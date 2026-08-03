@@ -1,0 +1,6 @@
+{
+  "parameters": {
+    "css.gic_distributor.ITS-count": "2",
+    "css.smb.si.gic.has_nmi": "1"
+  }
+}

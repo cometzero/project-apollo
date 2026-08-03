@@ -1,0 +1,12 @@
+{
+  "markers": [
+    "GIC720AE_POWER_START scenario=pending-warm-reset pe=1 pass=1",
+    "GIC720AE_POWER_READY scenario=pending-warm-reset pe=1 pass=1",
+    "GIC720AE_POWER_DONE scenario=pending-warm-reset pe=1 pass=1"
+  ],
+  "scenarios": [
+    "pending-warm-reset",
+    "cl1-cpu-power-cycle",
+    "pwrr-timeout-negative"
+  ]
+}

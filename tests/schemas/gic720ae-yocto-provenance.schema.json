@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "machine", "layers", "recipes"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string"},
+    "machine": {"const": "apollo-qvp"},
+    "layers": {"type": "array", "items": {"$ref": "#/$defs/source"}, "minItems": 1},
+    "recipes": {"type": "array", "items": {"$ref": "#/$defs/recipe"}}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+    "source": {
+      "type": "object", "required": ["path", "head"], "additionalProperties": false,
+      "properties": {"path": {"type": "string"}, "head": {"$ref": "#/$defs/sha"}}
+    },
+    "recipe": {
+      "type": "object",
+      "required": ["name", "origin", "owner", "taskhash", "siginfo", "sstate"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"}, "origin": {"type": "string"},
+        "owner": {"type": "string"}, "taskhash": {"type": "string", "minLength": 1},
+        "siginfo": {"type": "string", "minLength": 1}, "sstate": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
