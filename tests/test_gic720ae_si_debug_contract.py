@@ -186,6 +186,33 @@ def test_pin_headless_interactive_debug_is_rejected() -> None:
     assert "--debug requires the interactive tmux layout" in result.stderr
 
 
+def test_noninteractive_si_debug_keeps_single_gic_topology(tmp_path: Path) -> None:
+    # Given: the public SI CL0 debug selector in noninteractive server mode.
+    result = subprocess.run(
+        [
+            str(LOCAL_LAUNCHER),
+            "--debug",
+            "si_cl0",
+            "--debug-mode",
+            "server",
+            "--debug-timeout",
+            "1",
+            "--out-dir",
+            str(tmp_path / "server"),
+            "--no-persistent-rse-state",
+            "--dry-run",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    # Then: the child full-system runner gets the canonical five-PE topology.
+    assert result.returncode == 0, result.stderr
+    assert "--si-single-gic" in result.stdout
+
+
 def test_single_si_selectors_share_endpoint_with_distinct_thread_and_mpidr() -> None:
     # Given: the real selector mapper after the canonical five-PE topology exists.
     # When: CL0 and CL1 are selected independently.

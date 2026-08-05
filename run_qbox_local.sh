@@ -593,9 +593,6 @@ main()
     require_safe_token MACHINE "${MACHINE}"
     if [[ -n "${DEBUG_TARGET}" ]]; then
         configure_debug_target
-        if [[ -n "${DEBUG_TOPOLOGY_OPTION}" ]]; then
-            TMUX_RUNNER_ARGS+=("${DEBUG_TOPOLOGY_OPTION}")
-        fi
         case "${DEBUG_MODE}" in
             interactive|probe|server) ;;
             *) die "invalid --debug-mode: ${DEBUG_MODE}" ;;
@@ -865,6 +862,9 @@ main()
             --netdev "${netdev}"
             --tmux-layout fvp-like
         )
+    fi
+    if [[ -n "${DEBUG_TOPOLOGY_OPTION}" ]]; then
+        runner_cmd+=("${DEBUG_TOPOLOGY_OPTION}")
     fi
     if [[ -n "${DEBUG_TARGET}" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(
