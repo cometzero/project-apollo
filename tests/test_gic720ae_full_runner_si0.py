@@ -251,6 +251,75 @@ def test_no_command_keeps_uart_read_file_unset(tmp_path: Path) -> None:
     )
 
 
+def test_monitor_uses_default_dashboard_port(tmp_path: Path) -> None:
+    # Given/When: the dashboard is enabled without an explicit port.
+    args = full_runner.parse_args(["--out-dir", str(tmp_path), "--monitor"])
+
+    # Then: the child receives the documented QBox monitor defaults.
+    assert args.monitor is True
+    assert args.monitor_port == 18080
+    assert full_runner.full_system_child_environment(args) == {
+        "QBOX_APOLLO_MONITOR": "true",
+        "QBOX_APOLLO_MONITOR_PORT": "18080",
+    }
+
+
+def test_monitor_port_enables_dashboard(tmp_path: Path) -> None:
+    # Given/When: a custom dashboard port is supplied on its own.
+    args = full_runner.parse_args(
+        ["--out-dir", str(tmp_path), "--monitor-port", "19090"]
+    )
+
+    # Then: selecting a port is sufficient to enable the dashboard.
+    assert args.monitor is True
+    assert args.monitor_port == 19090
+    assert full_runner.full_system_child_environment(args) == {
+        "QBOX_APOLLO_MONITOR": "true",
+        "QBOX_APOLLO_MONITOR_PORT": "19090",
+    }
+
+
+@pytest.mark.parametrize("port", ["0", "65536"])
+def test_monitor_port_rejects_values_outside_tcp_range(
+    tmp_path: Path,
+    port: str,
+) -> None:
+    # Given/When/Then: an invalid TCP port is rejected at the CLI boundary.
+    with pytest.raises(SystemExit):
+        full_runner.parse_args(
+            ["--out-dir", str(tmp_path), "--monitor-port", port]
+        )
+
+
+def test_monitor_is_recorded_in_final_result(tmp_path: Path) -> None:
+    # Given: a completed canonical run with a custom dashboard port.
+    args = full_runner.parse_args(
+        ["--out-dir", str(tmp_path), "--monitor-port", "19090"]
+    )
+
+    # When: the canonical result and summary are written.
+    returncode = full_runner.write_result(
+        args,
+        {},
+        command=[],
+        child_status=None,
+        child_returncode=None,
+        blocker=None,
+        check_only=True,
+    )
+
+    # Then: both artifacts preserve the browser endpoint.
+    result = json.loads((tmp_path / "result.json").read_text())
+    summary = (tmp_path / "summary.txt").read_text()
+    assert returncode == 0
+    assert result["monitor"] == {
+        "enabled": True,
+        "port": 19090,
+        "url": "http://127.0.0.1:19090/",
+    }
+    assert "monitor: http://127.0.0.1:19090/" in summary
+
+
 def test_command_rejects_keep_running_child_lifecycle(tmp_path: Path) -> None:
     # Given: mutually incompatible command cleanup and keep-running requests.
     argv = [

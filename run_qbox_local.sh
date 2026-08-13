@@ -26,6 +26,8 @@ UBOOT_ONLY="${UBOOT_ONLY:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 MULTI_SESSION="${MULTI_SESSION:-0}"
 HEADLESS="${HEADLESS:-0}"
+MONITOR=0
+MONITOR_PORT=18080
 LEGACY_FILE_BACKED_SRAM=0
 RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
@@ -144,6 +146,8 @@ Options:
   --debug-result PATH
                    probe/server JSON result path
   --headless       run without tmux and write logs under --out-dir
+  --monitor        enable the QBox web dashboard (default port: 18080)
+  --monitor-port P enable the dashboard on TCP port P
   --no-attach
   --multi-session    preserve existing QBox and tmux sessions
   --dry-run
@@ -397,6 +401,16 @@ parse_args()
                 HEADLESS=1
                 shift
                 ;;
+            --monitor)
+                MONITOR=1
+                shift
+                ;;
+            --monitor-port)
+                (($# >= 2)) || die "--monitor-port requires a value"
+                MONITOR=1
+                MONITOR_PORT="$2"
+                shift 2
+                ;;
             --no-attach)
                 TMUX_RUNNER_ARGS+=("$1")
                 shift
@@ -585,6 +599,9 @@ main()
 {
     reject_removed_environment_overrides
     parse_args "$@"
+    [[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
+        ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
+        die "--monitor-port must be in range 1..65535: ${MONITOR_PORT}"
     if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
         "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
             --stop-existing-sessions
@@ -782,6 +799,11 @@ main()
     printf '  session: %s\n' "${TMUX_SESSION:-apollo-qbox-demo-${RUN_STAMP}}"
     printf '  multi_session: %s\n' "${MULTI_SESSION}"
     printf '  headless: %s\n' "${HEADLESS}"
+    if [[ "${MONITOR}" == "1" ]]; then
+        printf '  monitor: http://127.0.0.1:%s/\n' "${MONITOR_PORT}"
+    else
+        printf '  monitor: disabled\n'
+    fi
     printf '  out_dir: %s\n' "${OUT_DIR}"
     printf '  local_build_dir: %s\n' "${LOCAL_BUILD_DIR}"
     printf '  qbox_platform_dir: %s\n' "${QBOX_PLATFORM_DIR}"
@@ -880,6 +902,9 @@ main()
         runner_cmd+=(--keep-running-after-pass)
     elif [[ "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(--exit-after-pass)
+    fi
+    if [[ "${MONITOR}" == "1" ]]; then
+        runner_cmd+=(--monitor --monitor-port "${MONITOR_PORT}")
     fi
     if [[ "${DRY_RUN}" == "1" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(--dry-run)

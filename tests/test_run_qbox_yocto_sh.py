@@ -421,6 +421,33 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
+@pytest.mark.parametrize("headless", [True, False])
+def test_run_qbox_yocto_forwards_monitor_dashboard_options(
+    tmp_path: Path,
+    headless: bool,
+) -> None:
+    # Given: either supported Yocto QBox launch surface.
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=["--monitor", "--monitor-port", "19090"],
+        headless=headless,
+    )
+
+    # When/Then: the canonical runner receives both monitor options unchanged.
+    assert result.returncode == 0, result.stderr
+    if headless:
+        argv = dry_run_command_argv(result.stdout)
+    else:
+        command_line = next(
+            line.removeprefix("  command: ")
+            for line in result.stdout.splitlines()
+            if line.startswith("  command: ")
+        )
+        argv = shlex.split(command_line)
+    assert "--monitor" in argv
+    assert argv[argv.index("--monitor-port") + 1] == "19090"
+
+
 def test_run_qbox_yocto_multi_session_is_explicit_opt_in(tmp_path: Path) -> None:
     result = run_dry_run(tmp_path, ["--multi-session"])
 

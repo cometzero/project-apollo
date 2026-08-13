@@ -41,6 +41,8 @@ CC3XX_LOCAL_MMIO_FASTPATH="${CC3XX_LOCAL_MMIO_FASTPATH:-0}"
 NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
+MONITOR="${MONITOR:-0}"
+MONITOR_PORT="${MONITOR_PORT:-18080}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
 MULTI_SESSION="${MULTI_SESSION:-0}"
@@ -86,6 +88,8 @@ Options:
   --keep-running-after-pass
                        keep QBox alive after Linux boot/probes pass (default)
   --exit-after-pass    stop QBox when the normal pass condition is reached
+  --monitor            enable the QBox web dashboard (default port: 18080)
+  --monitor-port PORT  enable the dashboard on the selected TCP port
   --rootfs-bootargs-profile NAME
                        runner bootargs profile (default: ${ROOTFS_BOOTARGS_PROFILE})
   --primary-login-prompt TEXT
@@ -352,6 +356,9 @@ runner_command()
     fi
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         _out+=(--keep-running-after-pass)
+    fi
+    if [[ "${MONITOR}" == "1" ]]; then
+        _out+=(--monitor --monitor-port "${MONITOR_PORT}")
     fi
     if ((${#extra_args[@]} > 0)); then
         _out+=("${extra_args[@]}")
@@ -888,6 +895,7 @@ print_dry_run()
 Apollo QBox full-system tmux run
   session: ${TMUX_SESSION}
   multi_session: ${MULTI_SESSION}
+  monitor: $([[ "${MONITOR}" == "1" ]] && printf 'http://127.0.0.1:%s/' "${MONITOR_PORT}" || printf disabled)
   qbox_performance_preset: ${QBOX_PERFORMANCE_PRESET}
   legacy_file_backed_sram: ${explicit_legacy_file_backed_sram}
   explicit_rse_fast_boot_sram_dmi: ${explicit_sram_dmi}
@@ -1349,6 +1357,10 @@ start_tmux()
     validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
+    validate_bool "MONITOR" "${MONITOR}"
+    [[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
+        ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
+        die "--monitor-port must be in range 1..65535: ${MONITOR_PORT}"
     validate_bool "TMUX_UART_INPUT_FIFOS" "${TMUX_UART_INPUT_FIFOS}"
     validate_bool "MULTI_SESSION" "${MULTI_SESSION}"
     validate_tmux_layout "${TMUX_LAYOUT}"
@@ -1474,6 +1486,7 @@ start_tmux()
         fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
+        printf 'MONITOR=%q MONITOR_PORT=%q ' "${MONITOR}" "${MONITOR_PORT}"
         printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \
             "${TMUX_LAYOUT}" "${TMUX_UART_INPUT_FIFOS}"
         printf 'RUNNER_ARGS_FILE=%q exec %q --supervise' \
@@ -1527,6 +1540,9 @@ start_tmux()
 
     printf 'started tmux session: %s\n' "${TMUX_SESSION}"
     printf 'logs: %s\n' "${OUT_DIR}"
+    if [[ "${MONITOR}" == "1" ]]; then
+        printf 'monitor dashboard: http://127.0.0.1:%s/\n' "${MONITOR_PORT}"
+    fi
     printf 'attach command: %s attach-session -t %s\n' "${TMUX_BIN}" "${TMUX_SESSION}"
     printf 'F12 stops QBox and kills the session.\n'
 
@@ -1638,6 +1654,16 @@ while (($# > 0)); do
         --exit-after-pass)
             KEEP_RUNNING_AFTER_PASS=0
             shift
+            ;;
+        --monitor)
+            MONITOR=1
+            shift
+            ;;
+        --monitor-port)
+            (($# >= 2)) || die "--monitor-port requires a value"
+            MONITOR=1
+            MONITOR_PORT="$2"
+            shift 2
             ;;
         --rootfs-bootargs-profile)
             (($# >= 2)) || die "--rootfs-bootargs-profile requires a value"

@@ -48,6 +48,31 @@ CHECKS = {
         ("platform:smd-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"smd_router\s*=\s*\{"),
         ("platform:system-to-smd-nci", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"system_to_smd_nci\s*=\s*\{"),
         ("platform:apollo-qvp-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
+        (
+            "platform:conditional-monitor",
+            "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua",
+            r"if\s+ctx\.config\.monitor\.enabled\s+then[\s\S]*?moduletype\s*=\s*\"monitor\"[\s\S]*?server_port\s*=\s*ctx\.config\.monitor\.port",
+        ),
+        (
+            "build:apollo-monitor-target",
+            "QBOX_PLATFORM_DIR/CMakeLists.txt",
+            r"QBOX_APOLLO_REQUIRED_TARGETS[\s\S]*?\n\s*monitor\s*\n",
+        ),
+        (
+            "monitor:nonblocking-external-scripts",
+            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
+            r"<script\s+async[^>]*src=\"https://cdn\.jsdelivr\.net/npm/@xterm/xterm@5\.5\.0/lib/xterm\.min\.js\"",
+        ),
+        (
+            "monitor:offline-terminal-fallback",
+            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
+            r"function createTerminalFallback\(\)[\s\S]*?function initializeTerminal\(\)",
+        ),
+        (
+            "monitor:startup-not-window-load-blocked",
+            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
+            r"fetchObjects\(\);\s*\n\s*window\.addEventListener\('resize'",
+        ),
         ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"Apollo RSE QBox skeleton config running"),
         ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"config\.create\(apollo_dir\)"),
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),

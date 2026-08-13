@@ -43,6 +43,7 @@ RSE_LCS_SE = 0xEEEEA5A5
 
 GATES = ["G0", "G1", "G2"]
 DEFAULT_EXPECTED_AP_CPUS = 4
+DEFAULT_MONITOR_PORT = 18080
 APOLLO_PRIMARY_LOGIN_PROMPT = "apollo-qvp login:"
 APOLLO_PRIMARY_SHELL_MARKER = "nexios-bsp#"
 CHILD_FAIL_PATTERNS = [
@@ -281,6 +282,15 @@ def run_full_system_dry_run(args: argparse.Namespace) -> int:
         "child_command": command,
         "command": command,
         "child_environment": full_system_child_environment(args),
+        "monitor": {
+            "enabled": args.monitor,
+            "port": args.monitor_port,
+            "url": (
+                f"http://127.0.0.1:{args.monitor_port}/"
+                if args.monitor
+                else None
+            ),
+        },
         "platform_params": platform_params,
         "runner_argv": sys.argv,
     }
@@ -294,6 +304,12 @@ def run_full_system_dry_run(args: argparse.Namespace) -> int:
             [
                 "passed: True",
                 "verdict: dry-run",
+                "monitor: "
+                + (
+                    f"http://127.0.0.1:{args.monitor_port}/"
+                    if args.monitor
+                    else "disabled"
+                ),
             ]
         )
         + "\n",
@@ -539,6 +555,15 @@ def synthesize_keep_running_child_status(
         "platform_returncode": child_returncode,
         "command": command,
         "child_environment": full_system_child_environment(args),
+        "monitor": {
+            "enabled": args.monitor,
+            "port": args.monitor_port,
+            "url": (
+                f"http://127.0.0.1:{args.monitor_port}/"
+                if args.monitor
+                else None
+            ),
+        },
     }
 
 
@@ -1243,6 +1268,15 @@ def write_result(
         "child_returncode": child_returncode,
         "command": command,
         "child_environment": full_system_child_environment(args),
+        "monitor": {
+            "enabled": args.monitor,
+            "port": args.monitor_port,
+            "url": (
+                f"http://127.0.0.1:{args.monitor_port}/"
+                if args.monitor
+                else None
+            ),
+        },
         "si_cl0_command_transport": getattr(
             args,
             "si_cl0_command_transport",
@@ -1286,6 +1320,7 @@ def write_result(
         + json.dumps(status["rse_flash_state"], sort_keys=True),
         f"range_limited_flash_dmi: {status['range_limited_flash_dmi']}",
         f"live_trace: {status['live_trace']}",
+        "monitor: " + (status["monitor"]["url"] or "disabled"),
         f"blocker: {status['blocker'] or 'none'}",
         "rse_boot_timing_profile: "
         + json.dumps(status["rse_boot_timing_profile"], sort_keys=True),
@@ -1602,6 +1637,9 @@ def full_system_child_environment(
     args: argparse.Namespace,
 ) -> dict[str, str]:
     environment = {}
+    if args.monitor:
+        environment["QBOX_APOLLO_MONITOR"] = "true"
+        environment["QBOX_APOLLO_MONITOR_PORT"] = str(args.monitor_port)
     if args.si_cl0_command:
         environment["QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE"] = str(
             si_cl0_uart_fifo_path(args)
@@ -1967,6 +2005,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "the pass condition."
         ),
     )
+    parser.add_argument(
+        "--monitor",
+        action="store_true",
+        help=(
+            "Enable the QBox web monitor dashboard on localhost. The default "
+            f"port is {DEFAULT_MONITOR_PORT}."
+        ),
+    )
+    parser.add_argument(
+        "--monitor-port",
+        type=int,
+        metavar="PORT",
+        help="Set the QBox dashboard TCP port and imply --monitor.",
+    )
     post_login_group = parser.add_mutually_exclusive_group()
     post_login_group.add_argument(
         "--post-login-probe",
@@ -2228,6 +2280,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
+    if args.monitor_port is not None:
+        if not 1 <= args.monitor_port <= 65535:
+            parser.error("--monitor-port must be in range 1..65535")
+        args.monitor = True
+    else:
+        args.monitor_port = DEFAULT_MONITOR_PORT
     operation_args = (
         args.primary_operation_manifest,
         args.primary_operation_schema,

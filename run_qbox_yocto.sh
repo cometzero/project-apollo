@@ -47,6 +47,8 @@ Options:
   --no-persistent-rse-state   Use a pristine per-run RSE flash copy
   --uboot-only                Validate only through U-Boot FWU Regular State
   --headless                  Run without tmux and write logs under --out-dir
+  --monitor                   Enable the QBox web dashboard (default port: 18080)
+  --monitor-port PORT         Enable the dashboard on the selected TCP port
   --keep-running-after-pass   Keep QBox alive after the pass condition (default)
   --exit-after-pass           Stop QBox after the pass condition
   --debug TARGET              Run GDB in the interactive pane; TARGET is one of
@@ -705,6 +707,8 @@ RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 RUN_QBOX_RECORD_INITIAL_STATE="${RUN_QBOX_RECORD_INITIAL_STATE:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
+MONITOR=0
+MONITOR_PORT=18080
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
 NO_ATTACH="${NO_ATTACH:-0}"
@@ -885,6 +889,16 @@ while (($#)); do
             HEADLESS=1
             shift
             ;;
+        --monitor)
+            MONITOR=1
+            shift
+            ;;
+        --monitor-port)
+            [[ $# -ge 2 ]] || die "--monitor-port requires a value"
+            MONITOR=1
+            MONITOR_PORT="$2"
+            shift 2
+            ;;
         --keep-running-after-pass)
             KEEP_RUNNING_AFTER_PASS=1
             shift
@@ -1019,6 +1033,10 @@ while (($#)); do
             ;;
     esac
 done
+
+[[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
+    ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
+    die "--monitor-port must be in range 1..65535: ${MONITOR_PORT}"
 
 reject_removed_env
 
@@ -1435,6 +1453,9 @@ if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
 elif [[ "${HEADLESS}" == "0" ]]; then
     RUNNER_CMD+=(--exit-after-pass)
 fi
+if [[ "${MONITOR}" == "1" ]]; then
+    RUNNER_CMD+=(--monitor --monitor-port "${MONITOR_PORT}")
+fi
 if [[ "${HEADLESS}" == "0" && "${NO_ATTACH}" == "1" ]]; then
     RUNNER_CMD+=(--no-attach)
 fi
@@ -1532,6 +1553,7 @@ Apollo QBox Yocto launch
   session:       ${TMUX_SESSION}
   multi session: ${MULTI_SESSION}
   headless:      ${HEADLESS}
+  monitor:       $([[ "${MONITOR}" == "1" ]] && printf 'http://127.0.0.1:%s/' "${MONITOR_PORT}" || printf disabled)
   qboxconf:      ${QBOX_CONF_FILE:-}
   qbox tools:    ${QBOX_TOOL_DIR}
   qbox conf:     ${QBOX_CONF}
