@@ -170,11 +170,13 @@ scripts/update_codebase_indexes.sh --all
 ```
 
 The helper updates indexes sequentially, verifies results, and writes
-`summary.tsv` plus logs below `build/codebase-memory-index/<timestamp>/`.
-Never refresh the large Linux index in parallel with Yocto, QBox, QEMU, or
-another memory-intensive index. Deleting and recreating a project is
-destructive local-state cleanup and requires explicit approval; normal source
-updates use the incremental refresh path.
+`summary.tsv`, command logs, and per-project `<project>-progress.log` files
+below `build/codebase-memory-index/<timestamp>/`. The progress log follows the
+new worker log created for that sequential request, so keep the documented
+no-parallel-index rule in place. Never refresh the large Linux index in
+parallel with Yocto, QBox, QEMU, or another memory-intensive index. Deleting
+and recreating a project is destructive local-state cleanup and requires
+explicit approval; normal source updates use the incremental refresh path.
 
 ## Explicit Apollo FVP Debugging
 

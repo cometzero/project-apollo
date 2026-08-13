@@ -4,9 +4,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}/codebase-memory-mcp"
+CACHE_DIR="${CBM_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/codebase-memory-mcp}"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 OUTPUT_DIR="${ROOT_DIR}/build/codebase-memory-index/${RUN_ID}"
+PROGRESS_MONITOR_PID=""
+PROGRESS_MARKER=""
+PROGRESS_LOG=""
 
 INDEX_ENTRIES=(
     "arm-auto-solutions-top|."
@@ -68,6 +71,8 @@ Examples:
 
 Each update uses the canonical project name and fast mode. Logs and a TSV
 summary are written below build/codebase-memory-index/<timestamp>/.
+During an update, worker progress is displayed and recorded in a separate
+<project>-progress.log file in the same output directory.
 EOF
 }
 
@@ -81,6 +86,149 @@ require_command()
 {
     command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
+
+latest_worker_log_since()
+{
+    local marker="$1"
+
+    [[ -d "${CACHE_DIR}/logs" ]] || return 1
+    find "${CACHE_DIR}/logs" -maxdepth 1 -type f -name '.worker-log-*' \
+        -newer "${marker}" -printf '%T@ %p\n' 2>/dev/null | \
+        sort -nr | sed -n '1{s/^[^ ]* //;p;}'
+}
+
+progress_log_line()
+{
+    local progress_log="$1"
+    shift
+
+    printf '%s\n' "$*" | tee -a "${progress_log}"
+}
+
+watch_index_progress()
+{
+    local marker="$1"
+    local progress_log="$2"
+    local worker_log=""
+    local candidate=""
+    local last_line=0
+    local last_percent=-1
+    local line_count
+    local line
+    local done_count
+    local total_count
+    local percent
+    local bucket
+    local pass
+
+    while :; do
+        candidate="$(latest_worker_log_since "${marker}" || true)"
+        if [[ -n "${candidate}" && "${candidate}" != "${worker_log}" ]]; then
+            worker_log="${candidate}"
+            last_line=0
+            last_percent=-1
+            progress_log_line "${progress_log}" "  [worker] Progress source: ${worker_log}"
+        fi
+
+        if [[ -n "${worker_log}" && -f "${worker_log}" ]]; then
+            line_count="$(wc -l <"${worker_log}" 2>/dev/null || printf '0')"
+            if [[ "${line_count}" =~ ^[0-9]+$ ]] && ((line_count > last_line)); then
+                while IFS= read -r line || [[ -n "${line}" ]]; do
+                    case "${line}" in
+                        *"msg=pipeline.discover"*)
+                            if [[ "${line}" =~ files=([0-9]+) ]]; then
+                                progress_log_line "${progress_log}" \
+                                    "  [worker] Discovering files (${BASH_REMATCH[1]} found)"
+                            fi
+                            ;;
+                        *"msg=pipeline.route"*)
+                            if [[ "${line}" == *"path=full"* ]]; then
+                                progress_log_line "${progress_log}" \
+                                    "  [worker] Starting full index"
+                            else
+                                progress_log_line "${progress_log}" \
+                                    "  [worker] Checking incremental manifest"
+                            fi
+                            ;;
+                        *"msg=pass.start"*)
+                            if [[ "${line}" =~ pass=([^[:space:]]+) ]]; then
+                                pass="${BASH_REMATCH[1]}"
+                                progress_log_line "${progress_log}" \
+                                    "  [worker] Starting ${pass}"
+                            fi
+                            ;;
+                        *"msg=parallel.extract.start"*)
+                            progress_log_line "${progress_log}" \
+                                "  [worker] Extracting definitions"
+                            ;;
+                        *"msg=parallel.extract.progress"*)
+                            if [[ "${line}" =~ done=([0-9]+) ]]; then
+                                done_count="${BASH_REMATCH[1]}"
+                                if [[ "${line}" =~ total=([0-9]+) ]]; then
+                                    total_count="${BASH_REMATCH[1]}"
+                                    if ((total_count > 0)); then
+                                        percent=$((done_count * 100 / total_count))
+                                        bucket=$((percent / 5 * 5))
+                                        if ((bucket > last_percent)); then
+                                            progress_log_line "${progress_log}" \
+                                                "  [worker] Extracting definitions: ${done_count}/${total_count} (${percent}%)"
+                                            last_percent="${bucket}"
+                                        fi
+                                    fi
+                                fi
+                            fi
+                            ;;
+                        *"msg=mem.pressure.warn"*)
+                            progress_log_line "${progress_log}" \
+                                "  [worker] Memory pressure: ${line#*msg=}"
+                            ;;
+                        *"msg=mem.backpressure.futile"*)
+                            progress_log_line "${progress_log}" \
+                                "  [worker] Memory backpressure reached a soft overshoot"
+                            ;;
+                        *"msg=pipeline.done"*)
+                            progress_log_line "${progress_log}" \
+                                "  [worker] Index pipeline completed"
+                            ;;
+                    esac
+                done < <(sed -n "$((last_line + 1)),${line_count}p" "${worker_log}")
+                last_line="${line_count}"
+            fi
+        fi
+        sleep 1
+    done
+}
+
+start_index_progress_monitor()
+{
+    local project="$1"
+
+    PROGRESS_MARKER="$(mktemp "${OUTPUT_DIR}/.${project}.progress-marker.XXXXXX")" ||
+        die "could not create progress marker for ${project}"
+    PROGRESS_LOG="${OUTPUT_DIR}/${project}-progress.log"
+    : >"${PROGRESS_LOG}"
+    watch_index_progress "${PROGRESS_MARKER}" "${PROGRESS_LOG}" &
+    PROGRESS_MONITOR_PID="$!"
+    printf 'Progress:  %s\n' "${PROGRESS_LOG}"
+}
+
+stop_index_progress_monitor()
+{
+    if [[ -n "${PROGRESS_MONITOR_PID}" ]]; then
+        kill "${PROGRESS_MONITOR_PID}" 2>/dev/null || true
+        wait "${PROGRESS_MONITOR_PID}" 2>/dev/null || true
+    fi
+    if [[ -n "${PROGRESS_MARKER}" ]]; then
+        rm -f -- "${PROGRESS_MARKER}"
+    fi
+    PROGRESS_MONITOR_PID=""
+    PROGRESS_MARKER=""
+    PROGRESS_LOG=""
+}
+
+trap stop_index_progress_monitor EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 list_entries()
 {
@@ -277,9 +425,10 @@ index_entry()
     time_log="${OUTPUT_DIR}/${project}-time.log"
 
     printf '\n==> %s (%s)\n' "${project}" "${relative_path}"
+    start_index_progress_monitor "${project}"
     set +e
     /usr/bin/time -v -o "${time_log}" \
-        codebase-memory-mcp cli index_repository \
+        codebase-memory-mcp cli --progress index_repository \
             --repo-path "${repo_path}" \
             --name "${project}" \
             --mode fast \
@@ -288,6 +437,7 @@ index_entry()
     command_rc="${pipeline_status[0]}"
     tee_rc="${pipeline_status[1]}"
     set -e
+    stop_index_progress_monitor
     [[ "${command_rc}" -eq 0 ]] || die "indexing failed for ${project}; see ${run_log}"
     [[ "${tee_rc}" -eq 0 ]] || die "could not write index log: ${run_log}"
 
@@ -361,6 +511,7 @@ printf 'project\troot_path\tstatus\tnodes\tedges\tdb_bytes\telapsed\tmax_rss_kb\
     >"${SUMMARY_FILE}"
 
 printf 'Workspace: %s\n' "${ROOT_DIR}"
+printf 'Cache:     %s\n' "${CACHE_DIR}"
 printf 'Output:    %s\n' "${OUTPUT_DIR}"
 printf 'Indexes:   %d\n' "${#SELECTED_ENTRIES[@]}"
 
