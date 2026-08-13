@@ -117,6 +117,9 @@ LIVE_CL1_FAIL_PATTERNS = {
     "pfdi_protocol_version_timeout": "PROTOCOL_VERSION timed out",
     "pfdi_agent_not_ready": "PFDI Agent device not ready",
 }
+LIVE_CL0_FAIL_PATTERNS = {
+    "pfdi_monitor_timeout": "PFDI monitor timeout",
+}
 SI_CL0_REQUIRED_MARKERS = {
     "scp_started": "[SI0_PLATFORM] SCP started",
     "module_init_complete": "[FWK] Module initialization complete!",
@@ -124,16 +127,73 @@ SI_CL0_REQUIRED_MARKERS = {
 }
 FULL_SYSTEM_AP_QEMU_DEFAULTS = (
     (
+        "platform.ap_qemu_inst.accel",
+        "QBOX_APOLLO_FULL_AP_ACCEL",
+        "tcg",
+    ),
+    (
         "platform.ap_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_AP_TCG_MODE",
         "MULTI",
     ),
+    (
+        "platform.ap_qemu_inst.sync_policy",
+        "QBOX_APOLLO_FULL_AP_SYNC_POLICY",
+        "multithread-quantum",
+    ),
+    (
+        "platform.ap_qemu_inst.time_sync_strategy",
+        "QBOX_APOLLO_FULL_AP_TIME_SYNC_STRATEGY",
+        "quantum_keeper",
+    ),
+)
+FULL_SYSTEM_RSE_QEMU_DEFAULTS = (
+    (
+        "platform.qemu_inst.accel",
+        "QBOX_RDASPEN_RSE_ACCEL",
+        "tcg",
+    ),
+    (
+        "platform.qemu_inst.tcg_mode",
+        "QBOX_RDASPEN_RSE_TCG_MODE",
+        "SINGLE",
+    ),
+    (
+        "platform.qemu_inst.sync_policy",
+        "QBOX_RDASPEN_RSE_SYNC_POLICY",
+        "multithread-quantum",
+    ),
+    (
+        "platform.qemu_inst.time_sync_strategy",
+        "QBOX_RDASPEN_RSE_TIME_SYNC_STRATEGY",
+        "quantum_keeper",
+    ),
 )
 FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
     (
+        "platform.si_cl0_qemu_inst.accel",
+        "QBOX_APOLLO_FULL_SI_CL0_ACCEL",
+        "tcg",
+    ),
+    (
         "platform.si_cl0_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
-        "MULTI",
+        "SINGLE",
+    ),
+    (
+        "platform.si_cl0_qemu_inst.sync_policy",
+        "QBOX_APOLLO_FULL_SI_CL0_SYNC_POLICY",
+        "multithread-quantum",
+    ),
+    (
+        "platform.si_cl0_qemu_inst.time_sync_strategy",
+        "QBOX_APOLLO_FULL_SI_CL0_TIME_SYNC_STRATEGY",
+        "quantum_keeper",
+    ),
+    (
+        "platform.si_cl1_qemu_inst.accel",
+        "QBOX_APOLLO_FULL_SI_CL1_ACCEL",
+        "tcg",
     ),
     (
         "platform.si_cl1_qemu_inst.tcg_mode",
@@ -144,6 +204,11 @@ FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
         "platform.si_cl1_qemu_inst.sync_policy",
         "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY",
         "multithread-quantum",
+    ),
+    (
+        "platform.si_cl1_qemu_inst.time_sync_strategy",
+        "QBOX_APOLLO_FULL_SI_CL1_TIME_SYNC_STRATEGY",
+        "quantum_keeper",
     ),
 )
 MARKER_GROUP_PRIORITY = [
@@ -500,6 +565,9 @@ def synthesize_keep_running_child_status(
     fail_hits = {pattern: pattern in combined for pattern in CHILD_FAIL_PATTERNS}
     fail_hits.update(
         {pattern: pattern in cl1_log for pattern in LIVE_CL1_FAIL_PATTERNS.values()}
+    )
+    fail_hits.update(
+        {pattern: pattern in cl0_log for pattern in LIVE_CL0_FAIL_PATTERNS.values()}
     )
     probe = keep_running_probe_state(
         logs.get("primary_console", ""),
@@ -1086,13 +1154,25 @@ def missing_markers(markers: dict[str, bool]) -> list[str]:
 def si_error_hits(args: argparse.Namespace) -> dict[str, bool]:
     out_dir = getattr(args, "out_dir", None)
     if out_dir is None:
-        return {name: False for name in LIVE_CL1_FAIL_PATTERNS}
+        return {
+            name: False
+            for name in (*LIVE_CL0_FAIL_PATTERNS, *LIVE_CL1_FAIL_PATTERNS)
+        }
+    cl0_log = runtime_engine.read_required_pass_marker_file(
+        Path(out_dir) / CONSOLE_LOGS["si_cl0"]
+    )
     cl1_log = runtime_engine.read_required_pass_marker_file(
         Path(out_dir) / CONSOLE_LOGS["si_cl1"]
     )
     return {
-        name: pattern in cl1_log
-        for name, pattern in LIVE_CL1_FAIL_PATTERNS.items()
+        **{
+            name: pattern in cl0_log
+            for name, pattern in LIVE_CL0_FAIL_PATTERNS.items()
+        },
+        **{
+            name: pattern in cl1_log
+            for name, pattern in LIVE_CL1_FAIL_PATTERNS.items()
+        },
     }
 
 
@@ -1196,6 +1276,7 @@ def write_result(
         "boot_mode": "apollo-full-system",
         "validation_scope": "uboot-only" if args.uboot_only else "full-system",
         "safety_island_topology": "full-system",
+        "qemu_platform_params": full_system_platform_params(args),
         "ap_tcg_mode": effective_platform_param(
             args,
             "platform.ap_qemu_inst.tcg_mode",
@@ -1206,7 +1287,7 @@ def write_result(
             args,
             "platform.si_cl0_qemu_inst.tcg_mode",
             "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
-            "MULTI",
+            "SINGLE",
         ).upper(),
         "si_cl1_tcg_mode": effective_platform_param(
             args,
@@ -1653,6 +1734,7 @@ def full_system_platform_params(args: argparse.Namespace) -> list[str]:
     defaults = []
     for key, env_name, default in (
         *FULL_SYSTEM_AP_QEMU_DEFAULTS,
+        *FULL_SYSTEM_RSE_QEMU_DEFAULTS,
         *FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS,
     ):
         if args.build_only:

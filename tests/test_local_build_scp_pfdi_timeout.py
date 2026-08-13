@@ -1,6 +1,9 @@
+import argparse
 import re
 from pathlib import Path
 from typing import Final
+
+from scripts.run import run_qbox_apollo_fvp_full as full_runner
 
 
 ROOT: Final = Path(__file__).resolve().parents[1]
@@ -34,7 +37,7 @@ QBOX_PFDI_MONITOR: Final = (
 )
 
 
-def test_si1_pfdi_watchdog_has_margin_in_full_system_builds() -> None:
+def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
     # Given: the heartbeat period and the SI0 watchdogs used by full-system builds.
     period_source = PFDI_KCONFIG.read_text(encoding="utf-8")
     agent_source = PFDI_AGENT_CONFIG.read_text(encoding="utf-8")
@@ -64,16 +67,20 @@ def test_si1_pfdi_watchdog_has_margin_in_full_system_builds() -> None:
         heartbeat_period_us + response_timeout_us + systemc_quantum_us
     )
 
-    # Then: transport and scheduler latency cannot race the watchdog deadline.
+    # Then: five complete request windows fit before a QBox watchdog deadline.
     for build_path in (LOCAL_SCP_BUILD, QBOX_YOCTO_SCP_BUILD):
         build_source = build_path.read_text(encoding="utf-8")
-        timeout_match = re.search(
-            r"SCP_SICL1_PFDI_ONLINE_TIMEOUT_US=(\d+)UL",
-            build_source,
-        )
-        assert timeout_match is not None
-        watchdog_timeout_us = int(timeout_match.group(1))
-        assert watchdog_timeout_us > qbox_request_budget_us, build_path
+        for timeout_name in (
+            "SCP_PFDI_ONLINE_TIMEOUT_US",
+            "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US",
+        ):
+            timeout_match = re.search(
+                rf"{timeout_name}=(\d+)UL",
+                build_source,
+            )
+            assert timeout_match is not None
+            watchdog_timeout_us = int(timeout_match.group(1))
+            assert watchdog_timeout_us >= 5 * qbox_request_budget_us, build_path
 
     reference_source = REFERENCE_YOCTO_SCP_BUILD.read_text(encoding="utf-8")
     reference_match = re.search(
@@ -82,6 +89,27 @@ def test_si1_pfdi_watchdog_has_margin_in_full_system_builds() -> None:
     )
     assert reference_match is not None
     assert int(reference_match.group(1)) > heartbeat_period_us
+
+
+def test_full_system_gate_detects_si0_pfdi_watchdog_timeout(
+    tmp_path: Path,
+) -> None:
+    # Given: SI0 reports a PFDI watchdog expiry while SI1 remains healthy.
+    (tmp_path / full_runner.CONSOLE_LOGS["si_cl0"]).write_text(
+        "[PFDI_MONITOR] Error! PFDI monitor timeout for AP cluster 0 core 0\n",
+        encoding="utf-8",
+    )
+    (tmp_path / full_runner.CONSOLE_LOGS["si_cl1"]).write_text(
+        "PFDI service ready\n",
+        encoding="utf-8",
+    )
+    args = argparse.Namespace(out_dir=tmp_path)
+
+    # When: the canonical full-system runner classifies Safety Island errors.
+    error_hits = full_runner.si_error_hits(args)
+
+    # Then: the SI0 watchdog expiry blocks a false-positive boot pass.
+    assert error_hits["pfdi_monitor_timeout"]
 
 
 def test_qbox_ap_secondary_cores_have_time_to_report_out_of_reset() -> None:
