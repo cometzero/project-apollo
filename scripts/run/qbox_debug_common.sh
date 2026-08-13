@@ -21,7 +21,6 @@ qbox_debug_configure_target()
     DEBUG_CPU_PARAM=""
     DEBUG_GDB_THREAD=""
     DEBUG_MPIDR=""
-    DEBUG_TOPOLOGY_OPTION=""
     DEBUG_PLATFORM_PARAMS=()
 
     case "${DEBUG_TARGET}" in
@@ -44,9 +43,6 @@ qbox_debug_configure_target()
             DEBUG_ENTRYPOINT="arch_exception_reset"
             DEBUG_ENDPOINT="127.0.0.1:12341"
             DEBUG_CPU_PARAM="platform.si_cl0_cpu_0"
-            DEBUG_GDB_THREAD="1"
-            DEBUG_MPIDR="0x0"
-            DEBUG_TOPOLOGY_OPTION="--si-single-gic"
             DEBUG_PLATFORM_PARAMS=(
                 "platform.si_cl0_cpu_0.gdb_port=12341"
             )
@@ -54,13 +50,10 @@ qbox_debug_configure_target()
         si_cl1)
             DEBUG_COMPONENT="si-cl1-zephyr"
             DEBUG_ENTRYPOINT="z_cstart"
-            DEBUG_ENDPOINT="127.0.0.1:12341"
+            DEBUG_ENDPOINT="127.0.0.1:12342"
             DEBUG_CPU_PARAM="platform.si_cl1_cpu_0"
-            DEBUG_GDB_THREAD="2"
-            DEBUG_MPIDR="0x10000"
-            DEBUG_TOPOLOGY_OPTION="--si-single-gic"
             DEBUG_PLATFORM_PARAMS=(
-                "platform.si_cl0_cpu_0.gdb_port=12341"
+                "platform.si_cl1_cpu_0.gdb_port=12342"
             )
             ;;
         tf-a)

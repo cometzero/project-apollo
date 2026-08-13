@@ -1,4 +1,5 @@
 from __future__ import annotations
+# noqa: SIZE_OK — one focused file owns the SI0 runner contract.
 
 import argparse
 import importlib
@@ -246,7 +247,7 @@ def test_no_command_keeps_uart_read_file_unset(tmp_path: Path) -> None:
     # Then: the legacy child environment and behavior remain opt-in free.
     assert args.si_cl0_command == []
     assert "QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE" not in (
-        full_runner.si_topology_child_environment(args)
+            full_runner.full_system_child_environment(args)
     )
 
 

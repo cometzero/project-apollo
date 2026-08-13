@@ -150,8 +150,9 @@ OP-TEE, U-Boot, and Linux login. See
 and evidence paths.
 
 The AP/SI non-secure MHU shared SRAM is address-visible in the AP view but
-owned and initialized by SMD/SI0 before AP release. Its machine contract now
-uses `preserve_on_ap_reset`, and AP reset fan-out does not clear that backing.
+owned and initialized by SMD/SI0 before AP release. The implementing hardware
+blocks preserve it across AP reset, and AP reset fan-out does not clear that
+backing.
 The post-review acceptance boot reaches Linux login and probes SCMI v2.0 with
 the same vendor and firmware marker as the recorded FVP boot, without the
 earlier `shmem_tx_prepare` warning and secondary SCMI response timeout.
@@ -466,11 +467,10 @@ For each IP:
 Use these before claiming progress:
 
 ```bash
-python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/qbox_apollo_runtime.py scripts/run/qbox_apollo_fidelity.py scripts/test/validate_qbox_apollo_topology.py
+python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/qbox_apollo_runtime.py
 git -C hsoc-stack/tools/qbox-platform diff --check
 git -C hsoc-stack/tools/qbox diff --check
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
-python3 scripts/test/validate_qbox_apollo_topology.py
 python3 scripts/test/audit_qbox_core_boundary.py
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-qvp/work/qbox-platform}"
 cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target <target> --parallel 8

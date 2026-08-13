@@ -46,7 +46,6 @@ DEBUG_WAIT_MARKER=""
 DEBUG_CPU_PARAM=""
 DEBUG_GDB_THREAD=""
 DEBUG_MPIDR=""
-DEBUG_TOPOLOGY_OPTION=""
 DEBUG_PLATFORM_PARAMS=()
 DEBUG_MODE="${DEBUG_MODE:-interactive}"
 DEBUG_MODE_SET=0
@@ -862,9 +861,6 @@ main()
             --netdev "${netdev}"
             --tmux-layout fvp-like
         )
-    fi
-    if [[ -n "${DEBUG_TOPOLOGY_OPTION}" ]]; then
-        runner_cmd+=("${DEBUG_TOPOLOGY_OPTION}")
     fi
     if [[ -n "${DEBUG_TARGET}" && "${HEADLESS}" == "0" ]]; then
         runner_cmd+=(

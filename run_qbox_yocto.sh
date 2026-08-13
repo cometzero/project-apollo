@@ -728,7 +728,6 @@ DEBUG_WAIT_MARKER=""
 DEBUG_CPU_PARAM=""
 DEBUG_GDB_THREAD=""
 DEBUG_MPIDR=""
-DEBUG_TOPOLOGY_OPTION=""
 DEBUG_PLATFORM_PARAMS=()
 DEBUG_MODE="${DEBUG_MODE:-interactive}"
 DEBUG_MODE_SET=0
@@ -1030,9 +1029,6 @@ fi
 
 if [[ -n "${DEBUG_TARGET}" ]]; then
     qbox_debug_configure_target
-    if [[ -n "${DEBUG_TOPOLOGY_OPTION}" ]]; then
-        TMUX_RUNNER_ARGS+=("${DEBUG_TOPOLOGY_OPTION}")
-    fi
     case "${DEBUG_MODE}" in
         interactive|probe|server) ;;
         *) die "invalid --debug-mode: ${DEBUG_MODE}" ;;

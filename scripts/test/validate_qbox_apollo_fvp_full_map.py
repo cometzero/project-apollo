@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Validate Apollo full-system QBox map, IRQ, and ATU planning evidence."""
+# noqa: SIZE_OK — the declarative CHECKS table is intentionally kept together.
 
 from __future__ import annotations
 
@@ -23,20 +24,39 @@ CHECKS = {
         ("platform:apollo-qvp-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/config\.lua"),
         ("platform:apollo-qvp-fabric", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/fabric\.lua"),
         ("platform:config-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua", r"Apollo QVP shared config running"),
+        (
+            "platform:config-no-hardware-map-constants",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
+            r"NOT:^(?-i:(?:local\s+)?[A-Z][A-Z0-9_]*(?:BASE|SIZE|IRQ|OFFSET|ADDRESS|STRIDE|CHANNELS|REGIONS)(?:_[A-Z0-9]+)*\s*=)",
+        ),
+        (
+            "platform:ap-map-locals",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"^local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_non_secure\s*=\s*49;",
+        ),
+        (
+            "platform:rse-map-locals",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"^local RSE_IRQ\s*=\s*\{[\s\S]*?timer0\s*=\s*3;",
+        ),
+        (
+            "platform:system-mgmt-map-locals",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"^local AP_SI_NS_MHU_PBX_IRQ\s*=\s*112$",
+        ),
         ("platform:fabric-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"function fabric\.create"),
         ("platform:smd-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"smd_router\s*=\s*\{"),
         ("platform:system-to-smd-nci", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"system_to_smd_nci\s*=\s*\{"),
         ("platform:apollo-qvp-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
         ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"Apollo RSE QBox skeleton config running"),
-        ("platform:machine-contract", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/machine_contract.lua", r"function machine_contract\.load"),
-        ("platform:transaction-route-contract", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/transaction_routes.lua", r"si_cl0_to_ap_hipc"),
+        ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"config\.create\(apollo_dir\)"),
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
         ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"function ap_compute\.enable_ap_router"),
         ("platform:ap-atu-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_router\.initiator_socket\""),
         ("platform:system-to-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.system_to_ap_flash_bridge"),
-        ("map:system-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua", r'name\s*=\s*"system_ap_flash"[^\n]*alias_of\s*=\s*"ap_flash"'),
+        ("map:system-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.system_to_ap_flash_bridge"),
         ("platform:ap-to-system-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.ap_to_system_rse_carveout_bridge"),
-        ("map:ap-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua", r'name\s*=\s*"ap_rse_carveout"[^\n]*backing\s*=\s*"ap-rse-carveout"'),
+        ("map:ap-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.ap_to_system_rse_carveout_bridge"),
         ("platform:live-ap-rse-default", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r'QBOX_RDASPEN_RSE_PS_PROXY",\s*false'),
         ("platform:ap-dram-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
         ("platform:ap-gic-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
@@ -81,38 +101,38 @@ CHECKS = {
         ),
         (
             "timer:ap-refclk-ns-spi49",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"AP_SYS_TIMER_IRQ_NS\s*=\s*49",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_non_secure\s*=\s*49;",
         ),
         (
             "timer:ap-refclk-secure-spi48",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"AP_SYS_TIMER_IRQ_S\s*=\s*48",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
+            r"local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_secure\s*=\s*48;",
         ),
         (
             "timer:rse-timer0-irq3",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"RSE_TIMER0_IRQ\s*=\s*3",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer0\s*=\s*3;",
         ),
         (
             "timer:rse-timer1-irq4",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"RSE_TIMER1_IRQ\s*=\s*4",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer1\s*=\s*4;",
         ),
         (
             "timer:rse-timer2-irq5",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"RSE_TIMER2_IRQ\s*=\s*5",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer2\s*=\s*5;",
         ),
         (
             "timer:rse-timer3-irq27",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"RSE_TIMER3_IRQ\s*=\s*27",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer3\s*=\s*27;",
         ),
         (
             "timer:rse-no-legacy-39-through-42",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"NOT:RSE_TIMER[0-3]_IRQ\s*=\s*(?:39|40|41|42)",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"NOT:timer[0-3]\s*=\s*(?:39|40|41|42);",
         ),
     ],
     "timer": [
@@ -124,7 +144,7 @@ CHECKS = {
         (
             "timer:css-provider-frequency-contract",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"input_frequency_hz\s*=\s*125000000[\s\S]*?integer_increment\s*=\s*1[\s\S]*?reported_frequency_hz\s*=\s*125000000",
+            r"local SYSTEM_COUNTER_FREQUENCY_HZ\s*=\s*125000000[\s\S]*?input_frequency_hz\s*=\s*SYSTEM_COUNTER_FREQUENCY_HZ[\s\S]*?reported_frequency_hz\s*=\s*SYSTEM_COUNTER_FREQUENCY_HZ",
         ),
         (
             "timer:ap-cpu-mirror-publisher",
@@ -194,11 +214,6 @@ CHECKS = {
             r"platform\.host_ap_bl2_header_sram\s*=\s*\{[\s\S]*?init_mem\s*=\s*false",
         ),
         (
-            "reset:hipc-contract-preserved",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/address_map.lua",
-            r'name\s*=\s*"ap_bl2_header_sram"[^\n]*reset_policy\s*=\s*"preserve_on_ap_reset"',
-        ),
-        (
             "reset:ap-cpu-count-default",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
             r'AP_NUM_CPUS\s*=\s*enable_ap_cpus\s+and\s+getenv_number_or\("QBOX_APOLLO_NUM_CPUS",\s*"4"\)',
@@ -216,8 +231,8 @@ CHECKS = {
         (
             "reset:ap-ppu-cpu0-through-last",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
-            r'for\s+cluster=0,\(SI_CL0_AP_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
-            r'for\s+core=0,\(SI_CL0_AP_CORE_PER_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
+            r'for\s+cluster=0,\(SI_CONST\.SI_CL0_AP_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
+            r'for\s+core=0,\(SI_CONST\.SI_CL0_AP_CORE_PER_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
             r'power_on_reset\s*=\s*cpu_active\s+and\s+\{[\s\S]*'
             r'"&ap_cpu_"\.\.cpu_index\.\."\.reset"',
         ),

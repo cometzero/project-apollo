@@ -1,4 +1,5 @@
 from __future__ import annotations
+# noqa: SIZE_OK — one focused file owns the QBox SI debug contract.
 
 import json
 import os
@@ -87,16 +88,14 @@ def produced_options(command: list[str]) -> set[str]:
     }
 
 
-def selector_surface(target: str) -> tuple[str, str, str, str, str]:
+def selector_surface(target: str) -> tuple[str, str]:
     command = f"""
 set -euo pipefail
 die() {{ printf 'error: %s\\n' "$*" >&2; exit 1; }}
 source {shlex.quote(str(DEBUG_COMMON))}
 DEBUG_TARGET={shlex.quote(target)}
 qbox_debug_configure_target
-printf '%s|%s|%s|%s|%s\\n' \
-  "$DEBUG_ENDPOINT" "${{DEBUG_GDB_THREAD:-}}" "${{DEBUG_MPIDR:-}}" \
-  "${{DEBUG_TOPOLOGY_OPTION:-}}" "${{DEBUG_PLATFORM_PARAMS[*]}}"
+printf '%s|%s\\n' "$DEBUG_ENDPOINT" "${{DEBUG_PLATFORM_PARAMS[*]}}"
 """
     result = subprocess.run(
         ["bash", "-c", command],
@@ -105,17 +104,17 @@ printf '%s|%s|%s|%s|%s\\n' \
         capture_output=True,
         text=True,
     )
-    endpoint, thread, mpidr, topology, params = result.stdout.strip().split("|")
-    return endpoint, thread, mpidr, topology, params
+    endpoint, params = result.stdout.strip().split("|")
+    return endpoint, params
 
 
-def test_si_selectors_use_distinct_firmware_on_one_endpoint() -> None:
+def test_si_selectors_use_distinct_firmware_and_endpoints() -> None:
     # Given: the unchanged shared target mapper used by local and Yocto launchers.
     # When: both Safety Island selectors are configured through the real shell API.
     cl0 = configured_selector("si_cl0")
     cl1 = configured_selector("si_cl1")
 
-    # Then: each ELF/symbol/CPU remains distinct on the canonical SI endpoint.
+    # Then: each ELF, CPU, and QEMU endpoint remains distinct.
     assert cl0 == (
         "scp-si0",
         "arch_exception_reset",
@@ -126,9 +125,9 @@ def test_si_selectors_use_distinct_firmware_on_one_endpoint() -> None:
     assert cl1 == (
         "si-cl1-zephyr",
         "z_cstart",
-        "127.0.0.1:12341",
+        "127.0.0.1:12342",
         "platform.si_cl1_cpu_0",
-        "platform.si_cl0_cpu_0.gdb_port=12341",
+        "platform.si_cl1_cpu_0.gdb_port=12342",
     )
 
 
@@ -156,12 +155,11 @@ def test_multi_debug_launcher_opens_one_five_pe_si_endpoint(
         text=True,
     )
 
-    # Then: the launcher requests one SI listener and the five-PE topology.
+    # Then: the launcher requests one listener for each split-SI instance.
     assert result.returncode == 0, result.stderr
     params = platform_params_from_dry_run(result.stdout)
     assert "platform.si_cl0_cpu_0.gdb_port=12341" in params
-    assert all("12342" not in param for param in params)
-    assert "--si-single-gic" in result.stdout
+    assert "platform.si_cl1_cpu_0.gdb_port=12342" in params
 
 
 def test_pin_headless_interactive_debug_is_rejected() -> None:
@@ -186,7 +184,7 @@ def test_pin_headless_interactive_debug_is_rejected() -> None:
     assert "--debug requires the interactive tmux layout" in result.stderr
 
 
-def test_noninteractive_si_debug_keeps_single_gic_topology(tmp_path: Path) -> None:
+def test_noninteractive_si_debug_uses_normal_full_system(tmp_path: Path) -> None:
     # Given: the public SI CL0 debug selector in noninteractive server mode.
     result = subprocess.run(
         [
@@ -208,39 +206,31 @@ def test_noninteractive_si_debug_keeps_single_gic_topology(tmp_path: Path) -> No
         text=True,
     )
 
-    # Then: the child full-system runner gets the canonical five-PE topology.
+    # Then: the child runner uses the normal full-system topology.
     assert result.returncode == 0, result.stderr
-    assert "--si-single-gic" in result.stdout
 
 
-def test_single_si_selectors_share_endpoint_with_distinct_thread_and_mpidr() -> None:
-    # Given: the real selector mapper after the canonical five-PE topology exists.
+def test_split_si_selectors_use_distinct_endpoints() -> None:
+    # Given: the real selector mapper for the normal split-SI topology.
     # When: CL0 and CL1 are selected independently.
     observed = {
         "cl0": selector_surface("si_cl0"),
         "cl1": selector_surface("si_cl1"),
     }
 
-    # Then: both use one endpoint while selecting different GDB threads and MPIDRs.
+    # Then: each QEMU instance uses its own endpoint and CPU parameter.
     expected = {
         "cl0": (
             "127.0.0.1:12341",
-            "1",
-            "0x0",
-            "--si-single-gic",
             "platform.si_cl0_cpu_0.gdb_port=12341",
         ),
         "cl1": (
-            "127.0.0.1:12341",
-            "2",
-            "0x10000",
-            "--si-single-gic",
-            "platform.si_cl0_cpu_0.gdb_port=12341",
+            "127.0.0.1:12342",
+            "platform.si_cl1_cpu_0.gdb_port=12342",
         ),
     }
     assert observed == expected, (
-        "expected one endpoint with CL0 thread/MPIDR 1/0x0 and CL1 "
-        f"thread/MPIDR 2/0x10000; observed={observed!r}"
+        f"expected distinct split-SI endpoints; observed={observed!r}"
     )
 
 
