@@ -52,8 +52,10 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
 
 ## Source Boundaries
 
-- `arm-zena-css/`: Arm Zena CSS BSP, RD-Aspen FVP docs, firmware, and Safety
-  Island sources.
+- `arm-zena-css/`: externally managed, read-only Arm Zena CSS BSP, RD-Aspen
+  FVP docs, firmware, and Safety Island sources. Never create commits in this
+  repository. Keep Apollo/QVP-specific changes in the project-owned
+  `hsoc-stack/` repositories or top-level tooling instead.
 - `sw-ref-stack/`: Arm Automotive Solutions images, demos, test automation,
   and CI fragments.
 - `hsoc-stack/components/primary_compute/`: Apollo primary-compute local
