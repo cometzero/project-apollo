@@ -10,7 +10,7 @@ from scripts.run import run_qbox_apollo_fvp_full as full_runner
 REQUESTED_QEMU_PARAMS = (
     "platform.ap_qemu_inst.accel=tcg",
     "platform.ap_qemu_inst.tcg_mode=MULTI",
-    "platform.ap_qemu_inst.sync_policy=multithread-quantum",
+    "platform.ap_qemu_inst.sync_policy=multithread-freerunning",
     "platform.ap_qemu_inst.time_sync_strategy=quantum_keeper",
     "platform.qemu_inst.accel=tcg",
     "platform.qemu_inst.tcg_mode=SINGLE",
@@ -46,17 +46,17 @@ def test_full_system_uses_requested_qemu_defaults(
     assert params == REQUESTED_QEMU_PARAMS
 
 
-def test_ap_freerunning_override_replaces_quantum_default(
+def test_ap_quantum_override_replaces_freerunning_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Given: the AP sync policy is overridden for the comparison boot.
-    override = "platform.ap_qemu_inst.sync_policy=multithread-freerunning"
+    # Given: the AP sync policy is overridden for a bounded comparison boot.
+    override = "platform.ap_qemu_inst.sync_policy=multithread-quantum"
     monkeypatch.delenv("QBOX_APOLLO_FULL_AP_SYNC_POLICY", raising=False)
     args = argparse.Namespace(platform_param=[override], build_only=False)
 
     # When: the canonical full-system runner assembles platform parameters.
     params = full_runner.full_system_platform_params(args)
 
-    # Then: only the explicit freerunning policy is sent for the AP instance.
+    # Then: only the explicit quantum policy is sent for the AP instance.
     assert params.count(override) == 1
-    assert "platform.ap_qemu_inst.sync_policy=multithread-quantum" not in params
+    assert "platform.ap_qemu_inst.sync_policy=multithread-freerunning" not in params

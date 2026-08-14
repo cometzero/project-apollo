@@ -139,7 +139,7 @@ FULL_SYSTEM_AP_QEMU_DEFAULTS = (
     (
         "platform.ap_qemu_inst.sync_policy",
         "QBOX_APOLLO_FULL_AP_SYNC_POLICY",
-        "multithread-quantum",
+        "multithread-freerunning",
     ),
     (
         "platform.ap_qemu_inst.time_sync_strategy",
