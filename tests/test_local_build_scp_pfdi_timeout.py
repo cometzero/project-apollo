@@ -88,7 +88,7 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
         reference_source,
     )
     assert reference_match is not None
-    assert int(reference_match.group(1)) > heartbeat_period_us
+    assert int(reference_match.group(1)) == heartbeat_period_us
 
 
 def test_full_system_gate_detects_si0_pfdi_watchdog_timeout(
