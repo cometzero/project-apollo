@@ -431,6 +431,7 @@ validate_buildroot_runtime_files()
     require_file "${BUILDROOT_BUILD_DIR}/target/sbin/ip"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/iperf"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/perf"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-cli"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-sample-app"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/lib/libpfdi.so.1.0"
     require_file \

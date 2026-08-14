@@ -13,6 +13,9 @@ APOLLO_PFDI_BSP_CONF_OPTS = -DPFDI_TARGET=Linux
 
 define APOLLO_PFDI_BSP_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 \
+		$(@D)/pfdi-demo/pfdi-cli/pfdi-cli \
+		$(TARGET_DIR)/usr/bin/pfdi-cli
+	$(INSTALL) -D -m 0755 \
 		$(@D)/pfdi-demo/pfdi-sample-app/pfdi-sample-app \
 		$(TARGET_DIR)/usr/bin/pfdi-sample-app
 	$(INSTALL) -D -m 0755 \

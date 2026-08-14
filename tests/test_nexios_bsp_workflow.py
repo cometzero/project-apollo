@@ -386,13 +386,25 @@ def test_bsp_image_uses_minimal_pfdi_runtime_package() -> None:
         / "dynamic-layers/meta-ewaol/recipes-demos/pfdi/"
         "platform-fault-detection.bbappend"
     ).read_text(encoding="utf-8")
+    buildroot_package = (
+        ROOT
+        / "scripts/build/buildroot-external/package/apollo-pfdi-bsp/"
+        "apollo-pfdi-bsp.mk"
+    ).read_text(encoding="utf-8")
+    buildroot_module = (
+        ROOT / "scripts/build/modules/build_buildroot.sh"
+    ).read_text(encoding="utf-8")
 
     # When: the BSP package set and upstream PFDI package split are inspected.
     # Then: the C runtime is included without the Python demo dependencies.
     assert "pfdi-bsp-app" in image
     assert 'RDEPENDS:pfdi-bsp-app = "libpfdi"' in split
+    assert "${bindir}/pfdi-cli" in split
     assert "${bindir}/pfdi-sample-app" in split
     assert "${sysconfdir}/pfdi/*.pack" in split
+    assert "$(@D)/pfdi-demo/pfdi-cli/pfdi-cli" in buildroot_package
+    assert "$(TARGET_DIR)/usr/bin/pfdi-cli" in buildroot_package
+    assert 'target/usr/bin/pfdi-cli"' in buildroot_module
 
 
 def test_bsp_init_starts_and_checks_pfdi_service() -> None:
