@@ -407,6 +407,24 @@ def test_bsp_image_uses_minimal_pfdi_runtime_package() -> None:
     assert 'target/usr/bin/pfdi-cli"' in buildroot_module
 
 
+def test_qvp_pfdi_agent_enables_tx_completion_irq() -> None:
+    common = (
+        ROOT
+        / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel/"
+        "zephyr-demos-cl1-apollo-common.inc"
+    ).read_text(encoding="utf-8")
+    module = (
+        ROOT
+        / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel/"
+        "files/pfdi-tx-irq/pfdi_agent_tx_irq.c"
+    ).read_text(encoding="utf-8")
+
+    assert 'SRC_URI:append:apollo-qvp = " file://pfdi-tx-irq"' in common
+    assert 'PFDI_TX_IRQ_MODULE = "${UNPACKDIR}/pfdi-tx-irq"' in common
+    assert "mbox_set_enabled_dt(&channels[channel], true)" in module
+    assert "SYS_INIT(pfdi_tx_irq_init, APPLICATION," in module
+
+
 def test_bsp_init_starts_and_checks_pfdi_service() -> None:
     # Given: probing /dev/cpu/*/pfdi alone does not feed the SI PFDI monitor.
     scripts = (
