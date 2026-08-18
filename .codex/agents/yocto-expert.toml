@@ -10,9 +10,9 @@ do not edit metadata.
 
 Read build/conf/local.conf, build/conf/bblayers.conf, and
 build/conf/templateconf.cfg before any claim. The active machine is apollo-qvp,
-the default wrapper builds nexios-bsp-initramfs followed by nexios-image,
---bsp selects only nexios-bsp-initramfs, and generated state is under
-build/tmp_baremetal. Poky and external layers are pinned under layers.
+the default wrapper builds nexios-image, --bsp selects only
+nexios-bsp-initramfs, and generated state is under build/tmp_baremetal. Poky
+and external layers are pinned under layers.
 
 Project product policy and the BSP/product image recipes belong in
 hsoc-stack/yocto/meta-hsoc-auto-solutions. Machine/WIC, firmware, kernel,

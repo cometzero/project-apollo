@@ -110,7 +110,8 @@ def test_yocto_build_sh_uses_default_qvp(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert "MACHINE=apollo-qvp bitbake " in result.stdout
     assert result.stdout.strip().endswith(" nexios-image")
-    assert "mc:apollo-qvp" not in result.stdout
+    assert "nexios-bsp-initramfs" not in result.stdout.split()
+    assert "APOLLO_BSP_BUILD_ONLY" not in result.stdout
 
 
 def test_yocto_build_sh_keeps_network_sandbox_by_default(

@@ -21,7 +21,7 @@ Current baseline:
 - Poky/Yocto: 5.2.4
 - machine: `apollo-qvp`
 - template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp`
-- default images: `nexios-bsp-initramfs`, then `nexios-image`
+- default image: `nexios-image`
 - BSP-only selection: `./yocto_build.sh --bsp`
 - TMPDIR: `build/tmp_baremetal`
 - variant: cfg2

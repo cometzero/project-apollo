@@ -143,15 +143,15 @@ def runner_argv(output: str) -> list[str]:
     return shlex.split(lines[marker_index + 1])
 
 
-def test_default_build_includes_product_and_bsp_targets(tmp_path: Path) -> None:
+def test_default_build_requests_only_product_target(tmp_path: Path) -> None:
     # Given: the default Apollo QVP build profile.
     # When: the public build wrapper is inspected through dry-run.
     result = run_build_dry_run(tmp_path, [])
 
-    # Then: both public image targets are requested.
+    # Then: only the product image target is requested.
     assert result.returncode == 0, result.stderr
-    assert "nexios-bsp-initramfs" in result.stdout.split()
     assert result.stdout.split()[-1] == "nexios-image"
+    assert "nexios-bsp-initramfs" not in result.stdout.split()
 
 
 def test_bsp_build_requests_only_bsp_target(tmp_path: Path) -> None:
@@ -163,16 +163,6 @@ def test_bsp_build_requests_only_bsp_target(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert result.stdout.split()[-1] == "nexios-bsp-initramfs"
     assert "nexios-image" not in result.stdout.split()
-
-
-def test_bsp_build_disables_product_initramfs_dependencies(tmp_path: Path) -> None:
-    # Given: the product distro normally injects dm-verity initramfs globally.
-    # When: the dedicated BSP build profile is selected.
-    result = run_build_dry_run(tmp_path, ["--bsp"])
-
-    # Then: BitBake receives the BSP-only dependency mode explicitly.
-    assert result.returncode == 0, result.stderr
-    assert "APOLLO_BSP_BUILD_ONLY=1" in result.stdout.split()
 
 
 def test_qbox_bsp_profile_selects_bsp_artifacts_and_markers(

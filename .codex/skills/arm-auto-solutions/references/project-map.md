@@ -11,9 +11,9 @@ The traditional Yocto build directory is initialized under `build/`:
 - top-level `yocto_build.sh`
 
 Current selected values are `MACHINE = "apollo-qvp"`, cfg2, four Primary
-Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and default image targets
-`nexios-bsp-initramfs` plus `nexios-image`. `./yocto_build.sh --bsp` selects
-only the BSP image. Poky is pinned to the Yocto 5.2.4 baseline.
+Compute CPUs, `TMPDIR = "${TOPDIR}/tmp_baremetal"`, and default image target
+`nexios-image`. `./yocto_build.sh --bsp` selects only the BSP image. Poky is
+pinned to the Yocto 5.2.4 baseline.
 
 ## Source Zones
 

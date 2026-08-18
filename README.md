@@ -54,7 +54,7 @@ The root entrypoints are the stable user interface:
 
 | Command | Result |
 | --- | --- |
-| `./yocto_build.sh` | Build `nexios-bsp-initramfs` and then the full `nexios-image`. |
+| `./yocto_build.sh` | Build the full `nexios-image`. |
 | `./yocto_build.sh --bsp` | Build only the minimal Yocto BSP initramfs image. |
 | `./local_build.sh` | Build local firmware, Linux, Buildroot BSP initramfs, UKIs, boot disk, FVP config, debug manifest, and package. |
 | `./local_build.sh qbox` | Build only the QBox/QEMU platform target set. |
@@ -76,7 +76,7 @@ The active template is:
 hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/
 ```
 
-The default build is intentionally a two-target build:
+The default build selects only the product image:
 
 ```bash
 ./yocto_build.sh
@@ -85,7 +85,7 @@ The default build is intentionally a two-target build:
 Equivalent BitBake target selection:
 
 ```text
-MACHINE=apollo-qvp bitbake nexios-bsp-initramfs nexios-image
+MACHINE=apollo-qvp bitbake nexios-image
 ```
 
 Build only the fast BSP validation image with:
@@ -94,10 +94,9 @@ Build only the fast BSP validation image with:
 ./yocto_build.sh --bsp
 ```
 
-This sets `APOLLO_BSP_BUILD_ONLY=1` for the invocation and selects only
-`nexios-bsp-initramfs`. It prevents the standalone BSP build from inheriting
-the full product image's dm-verity/initramfs dependency chain. It is a build
-selection control, not a persistent distro feature.
+This selects only `nexios-bsp-initramfs`. The BSP recipe owns its non-verity
+policy and clears the product initramfs and dm-verity dependencies without a
+wrapper environment override.
 
 The active QVP deploy directory is:
 

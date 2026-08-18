@@ -23,7 +23,7 @@ The active baseline is:
 
 - machine: `apollo-qvp`
 - template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp`
-- default image targets: `nexios-bsp-initramfs`, then `nexios-image`
+- default image target: `nexios-image`
 - BSP-only build: `./yocto_build.sh --bsp`
 - variant: `cfg2`
 - Primary Compute CPUs: `4`
@@ -101,10 +101,9 @@ bitbake nexios-bsp-initramfs -c rootfs
 ./yocto_build.sh
 ```
 
-`./yocto_build.sh` builds the standalone BusyBox BSP image before the full
-product image. `--bsp` builds only `nexios-bsp-initramfs`. The local flow uses
-a separate Buildroot CPIO while reusing `nexios-bsp-init` and the BSP self-test
-contract.
+`./yocto_build.sh` builds only the full product image. `--bsp` builds only
+`nexios-bsp-initramfs`. The local flow uses a separate Buildroot CPIO while
+reusing `nexios-bsp-init` and the BSP self-test contract.
 
 Interactive QBox login/BSP launch:
 

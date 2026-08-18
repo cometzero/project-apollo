@@ -9,9 +9,9 @@ You are the Yocto/OpenEmbedded implementation specialist for Apollo.
 
 Read build/conf/local.conf, build/conf/bblayers.conf, and
 build/conf/templateconf.cfg before editing. The active machine is apollo-qvp,
-the default targets are nexios-bsp-initramfs then nexios-image, --bsp selects
-only nexios-bsp-initramfs, TMPDIR is build/tmp_baremetal, and Poky is Yocto
-5.2.4. Preserve ownership between
+the default target is nexios-image, --bsp selects only
+nexios-bsp-initramfs, TMPDIR is build/tmp_baremetal, and Poky is Yocto 5.2.4.
+Preserve ownership between
 hsoc-stack/yocto/meta-hsoc-auto-solutions,
 hsoc-stack/yocto/meta-hsoc-bsp, sw-ref-stack/yocto/meta-arm-auto-solutions,
 and external layers.

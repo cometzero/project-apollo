@@ -207,13 +207,11 @@ if ((${#REQUESTED_TARGETS[@]})); then
 elif [[ "${BSP_ONLY}" == "1" ]]; then
     BITBAKE_TARGETS=("nexios-bsp-initramfs")
 else
-    BITBAKE_TARGETS=("nexios-bsp-initramfs" "nexios-image")
+    BITBAKE_TARGETS=("nexios-image")
 fi
 if [[ -n "${BITBAKE_TASK}" ]]; then
     BITBAKE_TASK_ARGS=(-c "${BITBAKE_TASK}")
 fi
-export APOLLO_BSP_BUILD_ONLY="${BSP_ONLY}"
-export BB_ENV_PASSTHROUGH_ADDITIONS="${BB_ENV_PASSTHROUGH_ADDITIONS:-} APOLLO_BSP_BUILD_ONLY"
 
 echo "notice: machine '${APOLLO_MACHINE}' uses shared build directory ${PWD}" >&2
 
@@ -241,7 +239,6 @@ if [[ "${APOLLO_AUTO_RESOURCE_LIMITS:-1}" != "0" ||
 fi
 
 if [[ "${DRY_RUN}" == "1" ]]; then
-    printf 'APOLLO_BSP_BUILD_ONLY=%q\n' "${APOLLO_BSP_BUILD_ONLY}"
     printf 'MACHINE=%q bitbake' "${APOLLO_MACHINE}"
     printf ' %q' "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGETS[@]}" \
         "${BITBAKE_TASK_ARGS[@]}"
@@ -250,6 +247,5 @@ if [[ "${DRY_RUN}" == "1" ]]; then
 fi
 
 MACHINE="${APOLLO_MACHINE}" \
-APOLLO_BSP_BUILD_ONLY="${APOLLO_BSP_BUILD_ONLY}" \
     bitbake "${BITBAKE_ARGS[@]}" "${BITBAKE_TARGETS[@]}" \
-        "${BITBAKE_TASK_ARGS[@]}"
+    "${BITBAKE_TASK_ARGS[@]}"
