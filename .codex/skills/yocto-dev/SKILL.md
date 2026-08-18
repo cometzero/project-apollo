@@ -1,6 +1,6 @@
 ---
 name: yocto-dev
-description: Yocto/OpenEmbedded/BitBake development workflow for Apollo. Use for layers, recipes, bbappend, bbclass, MACHINE/BSP/distro/image configuration, PACKAGECONFIG, fetch/patch/build/package/rootfs tasks, systemd integration, kernel/U-Boot metadata, SDK, QA, licenses, sstate, mirrors, or build debugging.
+description: Yocto/OpenEmbedded/BitBake development workflow for Apollo. Use for layers, recipes, bbappend, bbclass, MACHINE/BSP/distro/image configuration, PACKAGECONFIG, fetch/patch/build/package/rootfs tasks, systemd integration, kernel/U-Boot metadata, kernel defconfig and Kconfig dependency changes, SDK, QA, licenses, sstate, mirrors, or build debugging.
 ---
 
 # Yocto Development
@@ -57,9 +57,14 @@ change. Keep permanent product policy out of `build/conf/local.conf`.
 5. Preserve license checks, package ownership, patch `Upstream-Status`, layer
    compatibility, and source repository boundaries.
 6. Distinguish parse, task, image, deploy, and runtime evidence.
+7. Treat `apollo_qvp_defconfig` and `apollo_fvp_defconfig` as the only Apollo
+   kernel configuration sources; do not add Apollo-specific configuration
+   `.scc` or `.cfg` fragments.
 
 Read `references/workflows.md` for task-specific fetch, patch, packaging,
-systemd, rootfs, kernel, and layer workflows.
+systemd, rootfs, and layer workflows. Read
+`references/kernel-defconfig.md` for Apollo externalsrc kernel configuration,
+fragment migration, and dependency-aware defconfig updates.
 
 ## Inspection Commands
 

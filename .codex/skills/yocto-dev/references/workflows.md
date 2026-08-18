@@ -78,7 +78,6 @@ kernel metadata belongs in `hsoc-stack/yocto/meta-hsoc-bsp`. Use the kernel
 review skill for source, DTS, patches, or config fragments.
 
 ```bash
-bitbake virtual/kernel -c kernel_configcheck
 bitbake virtual/kernel -c compile
 ```
 
