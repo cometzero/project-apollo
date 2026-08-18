@@ -25,25 +25,32 @@ Apollo-specific configuration `.scc` or `.cfg` files through `SRC_URI` or
 
 ## Update Defconfigs
 
-Use the project wrapper for dependency-aware `y`, `m`, and `n` requests:
+Enter the active Yocto environment, then use the skill's deterministic helper
+inside the build directory:
 
 ```bash
-./yocto_build.sh --machine apollo-qvp \
-  --enable-config CONFIG_FOO_PARENT=y \
-  --enable-config CONFIG_FOO=y
-./yocto_build.sh --machine apollo-fvp \
-  --enable-config CONFIG_FOO_PARENT=y \
-  --enable-config CONFIG_FOO=y
+workspace_dir="$PWD"
+source layers/poky/oe-init-build-env build
+
+MACHINE=apollo-qvp \
+  "$workspace_dir/.codex/skills/yocto-dev/scripts/update_kernel_defconfig.sh" \
+  CONFIG_FOO_PARENT=y CONFIG_FOO=y CONFIG_BAR=m CONFIG_BAZ=n
 ```
 
-Linux `scripts/config` records requests but does not resolve dependencies.
-Let the wrapper run `olddefconfig`, compare requested and resolved states,
-save a candidate defconfig, regenerate `.config`, and verify it again. If a
-requested `y` or `m` resolves differently, inspect the symbol's `depends on`
-or `choice` expression and add only the required parent settings.
+Run the helper again with `MACHINE=apollo-fvp` when the setting applies to both
+machines. It obtains `S`, `B`, `ARCH`, compiler commands, and the source
+defconfig path from the effective `virtual/kernel` environment. It applies
+requests only to `${B}/.config`, runs `olddefconfig`, verifies resolved states,
+saves the source defconfig, regenerates `.config`, and verifies it again.
 
-Never run `scripts/config` directly against a source defconfig. Use an explicit
-target with `-c` only for a normal BitBake task:
+The helper rejects unknown or duplicate symbols, dependency mismatches, and a
+pre-existing source-defconfig diff. If a requested `y` or `m` resolves
+differently, inspect the symbol's `depends on` or `choice` expression and add
+only the required parent settings. Review `${B}/skill-kernel-diff.txt` and the
+source repository diff after every update.
+
+Never run Linux `scripts/config` directly against a source defconfig. Use an
+explicit target with `-c` only for a normal BitBake task:
 
 ```bash
 ./yocto_build.sh virtual/kernel -c menuconfig

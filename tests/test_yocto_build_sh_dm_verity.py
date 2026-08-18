@@ -241,63 +241,6 @@ def test_yocto_build_sh_rejects_invalid_machine(tmp_path: Path) -> None:
     assert "invalid-machine 'invalid-qvp'" in result.stderr
 
 
-def test_yocto_build_sh_prints_kernel_config_update_without_postfile(
-    tmp_path: Path,
-) -> None:
-    init_result = run_build_dry_run(tmp_path, [])
-    assert init_result.returncode == 0, init_result.stderr
-    sentinel = tmp_path / "build/conf/user.conf"
-    sentinel.write_text("preserve\n", encoding="utf-8")
-
-    result = run_build_dry_run(
-        tmp_path,
-        [
-            "--enable-config",
-            "CONFIG_IKCONFIG=y",
-            "--enable-config",
-            "CONFIG_IKCONFIG_PROC=m",
-            "--enable-config=CONFIG_UNUSED_KSYMS_WHITELIST=n",
-        ],
-    )
-
-    assert result.returncode == 0, result.stderr
-    assert sentinel.read_text(encoding="utf-8") == "preserve\n"
-    assert "MACHINE=apollo-qvp bitbake virtual/kernel -c defconfig -f" in result.stdout
-    assert '--enable CONFIG_IKCONFIG' in result.stdout
-    assert '--module CONFIG_IKCONFIG_PROC' in result.stdout
-    assert '--disable CONFIG_UNUSED_KSYMS_WHITELIST' in result.stdout
-    assert "olddefconfig" in result.stdout
-    assert "savedefconfig" in result.stdout
-    assert "nexios-image" not in result.stdout
-    assert " -R " not in result.stdout
-    assert "preserving existing configuration" in result.stderr
-
-
-def test_yocto_build_sh_rejects_invalid_kernel_config(tmp_path: Path) -> None:
-    result = run_build_dry_run(
-        tmp_path,
-        ["--enable-config", "CONFIG_IKCONFIG=maybe"],
-    )
-
-    assert result.returncode == 2
-    assert "invalid kernel config 'CONFIG_IKCONFIG=maybe'" in result.stderr
-
-
-def test_yocto_build_sh_rejects_duplicate_kernel_config(tmp_path: Path) -> None:
-    result = run_build_dry_run(
-        tmp_path,
-        [
-            "--enable-config",
-            "CONFIG_IKCONFIG=y",
-            "--enable-config",
-            "CONFIG_IKCONFIG=n",
-        ],
-    )
-
-    assert result.returncode == 2
-    assert "duplicate kernel config 'CONFIG_IKCONFIG'" in result.stderr
-
-
 def test_yocto_build_sh_forwards_kernel_menuconfig_task(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, ["virtual/kernel", "-c", "menuconfig"])
 

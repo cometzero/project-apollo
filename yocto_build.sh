@@ -17,7 +17,6 @@ DRY_RUN=0
 KEEP_CONF=0
 BSP_ONLY=0
 BITBAKE_TASK=""
-KERNEL_CONFIG_REQUESTS=()
 REQUESTED_TARGETS=()
 
 usage() {
@@ -30,8 +29,6 @@ Options:
   --machine apollo-fvp|apollo-qvp
                           Select the Apollo Yocto machine.
   --bsp                   Build only nexios-bsp-initramfs.
-  --enable-config CONFIG_NAME=y|m|n
-                          Update the kernel defconfig. Repeat for each symbol.
   -c TASK                 Run a BitBake task for the explicit targets.
   --keep-conf             Preserve the existing BUILD_DIR/conf directory.
   --dry-run               Print the BitBake command without running it.
@@ -80,18 +77,6 @@ while (($#)); do
             BSP_ONLY=1
             shift
             ;;
-        --enable-config)
-            [[ $# -ge 2 ]] || {
-                echo "error: $1 requires CONFIG_NAME=y, m, or n" >&2
-                exit 2
-            }
-            KERNEL_CONFIG_REQUESTS+=("$2")
-            shift 2
-            ;;
-        --enable-config=*)
-            KERNEL_CONFIG_REQUESTS+=("${1#*=}")
-            shift
-            ;;
         -c)
             [[ $# -ge 2 ]] || {
                 echo "error: -c requires a BitBake task" >&2
@@ -122,39 +107,7 @@ done
 
 APOLLO_MACHINE="$(normalize_machine "${APOLLO_MACHINE}")"
 
-normalize_kernel_config_requests() {
-    local request symbol value existing
-    local -a normalized=()
-
-    for request in "${KERNEL_CONFIG_REQUESTS[@]}"; do
-        if [[ ! "${request}" =~ ^(CONFIG_[A-Z0-9_]+)=(y|m|n)$ ]]; then
-            echo "error: invalid kernel config '${request}' (expected CONFIG_NAME=y, m, or n)" >&2
-            exit 2
-        fi
-        symbol="${BASH_REMATCH[1]}"
-        value="${BASH_REMATCH[2]}"
-        for existing in "${normalized[@]}"; do
-            if [[ "${existing%%=*}" == "${symbol}" ]]; then
-                echo "error: duplicate kernel config '${symbol}'" >&2
-                exit 2
-            fi
-        done
-        normalized+=("${symbol}=${value}")
-    done
-
-    KERNEL_CONFIG_REQUESTS=("${normalized[@]}")
-}
-
-normalize_kernel_config_requests
-
-if ((${#KERNEL_CONFIG_REQUESTS[@]})); then
-    if [[ "${BSP_ONLY}" == "1" || -n "${BITBAKE_TASK}" ||
-        ${#REQUESTED_TARGETS[@]} -gt 0 ]]; then
-        echo "error: --enable-config cannot be combined with --bsp, -c, or targets" >&2
-        exit 2
-    fi
-    KEEP_CONF=1
-elif [[ -n "${BITBAKE_TASK}" && ${#REQUESTED_TARGETS[@]} -eq 0 ]]; then
+if [[ -n "${BITBAKE_TASK}" && ${#REQUESTED_TARGETS[@]} -eq 0 ]]; then
     echo "error: -c requires at least one explicit target" >&2
     exit 2
 elif [[ "${BSP_ONLY}" == "1" && ${#REQUESTED_TARGETS[@]} -gt 0 ]]; then
@@ -246,183 +199,6 @@ set +u
 # shellcheck source=/dev/null
 source "${POKY_DIR}/oe-init-build-env" "${BUILD_DIR}"
 set -u
-
-run_kernel_config_update() {
-    local request symbol value action actual env_assignments
-    local kernel_s kernel_b kernel_arch kernel_path kernel_cflags
-    local kernel_toolchain_options kernel_build_cc kernel_build_cpp
-    local kernel_build_cflags kernel_build_ldflags kernel_cc kernel_ld
-    local kernel_objcopy kernel_strip kernel_defconfig kernel_defconfig_rel
-    local candidate backup dry_s dry_b host_path="${PATH}"
-
-    if [[ "${DRY_RUN}" == "1" ]]; then
-        printf -v dry_s '\044S'
-        printf -v dry_b '\044B'
-        printf 'MACHINE=%q bitbake virtual/kernel -c defconfig -f\n' \
-            "${APOLLO_MACHINE}"
-        for request in "${KERNEL_CONFIG_REQUESTS[@]}"; do
-            symbol="${request%%=*}"
-            value="${request#*=}"
-            case "${value}" in
-                y) action="enable" ;;
-                m) action="module" ;;
-                n) action="disable" ;;
-            esac
-            printf 'scripts/config --file "%s/.config" --%s %q\n' \
-                "${dry_b}" "${action}" "${symbol}"
-        done
-        printf 'make -C "%s" O="%s" olddefconfig\n' \
-            "${dry_s}" "${dry_b}"
-        printf 'make -C "%s" O="%s" savedefconfig\n' \
-            "${dry_s}" "${dry_b}"
-        printf 'MACHINE=%q bitbake virtual/kernel -c defconfig -f\n' \
-            "${APOLLO_MACHINE}"
-        return 0
-    fi
-
-    MACHINE="${APOLLO_MACHINE}" bitbake virtual/kernel -c defconfig -f
-
-    env_assignments="$(
-        MACHINE="${APOLLO_MACHINE}" bitbake -e virtual/kernel |
-            sed -n -E '/^(export )?(S|B|ARCH|PATH|CFLAGS|TOOLCHAIN_OPTIONS|BUILD_CC|BUILD_CPP|BUILD_CFLAGS|BUILD_LDFLAGS|KERNEL_CC|KERNEL_LD|KERNEL_OBJCOPY|KERNEL_STRIP|APOLLO_KERNEL_DEFCONFIG_PATH)=/p'
-    )"
-
-    local S='' B='' ARCH='' PATH='' CFLAGS='' TOOLCHAIN_OPTIONS=''
-    local BUILD_CC='' BUILD_CPP='' BUILD_CFLAGS='' BUILD_LDFLAGS=''
-    local KERNEL_CC='' KERNEL_LD='' KERNEL_OBJCOPY='' KERNEL_STRIP=''
-    local APOLLO_KERNEL_DEFCONFIG_PATH=''
-    eval "${env_assignments}"
-
-    kernel_s="${S}"
-    kernel_b="${B}"
-    kernel_arch="${ARCH}"
-    kernel_path="${PATH}"
-    PATH="${host_path}"
-    kernel_cflags="${CFLAGS}"
-    kernel_toolchain_options="${TOOLCHAIN_OPTIONS}"
-    kernel_build_cc="${BUILD_CC}"
-    kernel_build_cpp="${BUILD_CPP}"
-    kernel_build_cflags="${BUILD_CFLAGS}"
-    kernel_build_ldflags="${BUILD_LDFLAGS}"
-    kernel_cc="${KERNEL_CC}"
-    kernel_ld="${KERNEL_LD}"
-    kernel_objcopy="${KERNEL_OBJCOPY}"
-    kernel_strip="${KERNEL_STRIP}"
-    kernel_defconfig="${APOLLO_KERNEL_DEFCONFIG_PATH}"
-
-    [[ -x "${kernel_s}/scripts/config" ]] || {
-        echo "error: missing kernel scripts/config: ${kernel_s}/scripts/config" >&2
-        return 1
-    }
-    [[ -f "${kernel_b}/.config" ]] || {
-        echo "error: missing effective kernel config: ${kernel_b}/.config" >&2
-        return 1
-    }
-    [[ -f "${kernel_defconfig}" ]] || {
-        echo "error: missing kernel defconfig: ${kernel_defconfig}" >&2
-        return 1
-    }
-    [[ "${kernel_defconfig}" == "${kernel_s}/"* ]] || {
-        echo "error: kernel defconfig is outside the kernel source: ${kernel_defconfig}" >&2
-        return 1
-    }
-    kernel_defconfig_rel="${kernel_defconfig#"${kernel_s}/"}"
-    if [[ -n "$(git -C "${kernel_s}" status --short -- "${kernel_defconfig_rel}")" ]]; then
-        echo "error: kernel defconfig already has changes: ${kernel_defconfig}" >&2
-        return 1
-    fi
-
-    for request in "${KERNEL_CONFIG_REQUESTS[@]}"; do
-        symbol="${request%%=*}"
-        value="${request#*=}"
-        if ! rg -q "^[[:space:]]*(menu)?config[[:space:]]+${symbol#CONFIG_}([[:space:]]|$)" \
-            "${kernel_s}" --glob 'Kconfig*'; then
-            echo "error: unknown kernel config symbol '${symbol}'" >&2
-            return 1
-        fi
-        case "${value}" in
-            y)
-                "${kernel_s}/scripts/config" --file "${kernel_b}/.config" \
-                    --enable "${symbol}"
-                ;;
-            m)
-                "${kernel_s}/scripts/config" --file "${kernel_b}/.config" \
-                    --module "${symbol}"
-                ;;
-            n)
-                "${kernel_s}/scripts/config" --file "${kernel_b}/.config" \
-                    --disable "${symbol}"
-                ;;
-        esac
-    done
-
-    kernel_make() {
-        env PATH="${kernel_path}" \
-            make -C "${kernel_s}" O="${kernel_b}" \
-                "ARCH=${kernel_arch}" \
-                "CFLAGS=${kernel_cflags} ${kernel_toolchain_options}" \
-                "HOSTCC=${kernel_build_cc} ${kernel_build_cflags} ${kernel_build_ldflags}" \
-                "HOSTCPP=${kernel_build_cpp}" \
-                "CC=${kernel_cc}" \
-                "LD=${kernel_ld}" \
-                "OBJCOPY=${kernel_objcopy}" \
-                "STRIP=${kernel_strip}" \
-                "$@"
-    }
-
-    verify_kernel_config_requests() {
-        local verify_request verify_symbol expected
-        for verify_request in "${KERNEL_CONFIG_REQUESTS[@]}"; do
-            verify_symbol="${verify_request%%=*}"
-            expected="${verify_request#*=}"
-            actual="$(
-                "${kernel_s}/scripts/config" --file "${kernel_b}/.config" \
-                    --state "${verify_symbol}"
-            )"
-            case "${expected}:${actual}" in
-                y:y|m:m|n:n|n:undef)
-                    ;;
-                *)
-                    printf 'error: %s requested=%s resolved=%s; add its Kconfig dependencies and retry\n' \
-                        "${verify_symbol}" "${expected}" "${actual}" >&2
-                    return 1
-                    ;;
-            esac
-        done
-    }
-
-    kernel_make olddefconfig
-    verify_kernel_config_requests
-
-    kernel_make savedefconfig
-    candidate="${kernel_b}/defconfig"
-    [[ -f "${candidate}" ]] || {
-        echo "error: savedefconfig did not create ${candidate}" >&2
-        return 1
-    }
-
-    backup="$(mktemp "${kernel_b}/apollo-defconfig.backup.XXXXXX")"
-    install -m 0644 "${kernel_defconfig}" "${backup}"
-    install -m 0644 "${candidate}" "${kernel_defconfig}"
-    rm -f -- "${candidate}"
-
-    if ! MACHINE="${APOLLO_MACHINE}" bitbake virtual/kernel -c defconfig -f ||
-        ! verify_kernel_config_requests; then
-        install -m 0644 "${backup}" "${kernel_defconfig}"
-        rm -f -- "${backup}"
-        echo "error: saved defconfig failed regeneration; restored the original" >&2
-        return 1
-    fi
-    rm -f -- "${backup}"
-
-    echo "notice: updated ${kernel_defconfig}" >&2
-    git -C "${kernel_s}" diff -- "${kernel_defconfig_rel}"
-}
-
-if ((${#KERNEL_CONFIG_REQUESTS[@]})); then
-    run_kernel_config_update
-    exit $?
-fi
 
 BITBAKE_ARGS=()
 BITBAKE_TASK_ARGS=()
