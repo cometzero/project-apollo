@@ -104,18 +104,13 @@ def test_yocto_build_sh_accepts_bb_num_threads_alias(tmp_path: Path) -> None:
     assert 'PARALLEL_MAKE = "-j11"' in resource_text
 
 
-def test_yocto_build_sh_uses_default_qvp_without_dm_verity_option(
-    tmp_path: Path,
-) -> None:
+def test_yocto_build_sh_uses_default_qvp(tmp_path: Path) -> None:
     result = run_build_dry_run(tmp_path, [])
 
     assert result.returncode == 0, result.stderr
     assert "MACHINE=apollo-qvp bitbake " in result.stdout
     assert result.stdout.strip().endswith(" nexios-image")
     assert "mc:apollo-qvp" not in result.stdout
-    assert not (
-        tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
-    ).exists()
 
 
 def test_yocto_build_sh_keeps_network_sandbox_by_default(
@@ -143,45 +138,6 @@ def test_yocto_build_sh_ignores_removed_network_sandbox_env(
     assert str(host_conf) not in result.stdout
     assert "network sandbox" not in result.stderr
     assert not host_conf.exists()
-
-
-def test_yocto_build_sh_selects_no_dm_verity_multiconfig(tmp_path: Path) -> None:
-    result = run_build_dry_run(tmp_path, ["--dm-verity=off"])
-
-    assert result.returncode == 0, result.stderr
-    assert "mc:apollo-qvp-no-dm-verity:nexios-image" in result.stdout
-    assert "mode 'off' uses multiconfig apollo-qvp-no-dm-verity" in result.stderr
-
-    multiconfig = tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
-    assert multiconfig.read_text(encoding="utf-8").splitlines()[-1] == (
-        'BBMULTICONFIG = "apollo-qvp-no-dm-verity"'
-    )
-
-
-def test_yocto_build_sh_selects_dm_verity_multiconfig_from_env(tmp_path: Path) -> None:
-    result = run_build_dry_run(tmp_path, [], {"APOLLO_DM_VERITY": "on"})
-
-    assert result.returncode == 0, result.stderr
-    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
-    assert "mode 'on' uses multiconfig apollo-qvp-dm-verity" in result.stderr
-
-
-def test_yocto_build_sh_selects_qvp_no_dm_verity_multiconfig(
-    tmp_path: Path,
-) -> None:
-    result = run_build_dry_run(
-        tmp_path,
-        ["--machine", "apollo-qvp", "--dm-verity=off"],
-    )
-
-    assert result.returncode == 0, result.stderr
-    assert "mc:apollo-qvp-no-dm-verity:nexios-image" in result.stdout
-    assert "mode 'off' uses multiconfig apollo-qvp-no-dm-verity" in result.stderr
-
-    multiconfig = tmp_path / "build/conf/apollo-dm-verity-multiconfig.conf"
-    assert multiconfig.read_text(encoding="utf-8").splitlines()[-1] == (
-        'BBMULTICONFIG = "apollo-qvp-no-dm-verity"'
-    )
 
 
 def test_yocto_build_sh_uses_requested_build_dir(
@@ -266,28 +222,16 @@ def test_yocto_build_sh_keep_conf_preserves_existing_configuration(
     assert "preserving existing configuration" in result.stderr
 
 
-def test_yocto_build_sh_selects_qvp_dm_verity_multiconfig(
-    tmp_path: Path,
-) -> None:
-    result = run_build_dry_run(
-        tmp_path,
-        ["--machine", "apollo-qvp", "--dm-verity=on"],
-    )
-
-    assert result.returncode == 0, result.stderr
-    assert "mc:apollo-qvp-dm-verity:nexios-image" in result.stdout
-    assert "mode 'on' uses multiconfig apollo-qvp-dm-verity" in result.stderr
-
-
 def test_yocto_build_sh_accepts_machine_from_env(tmp_path: Path) -> None:
     result = run_build_dry_run(
         tmp_path,
-        ["--dm-verity=on"],
+        [],
         {"MACHINE": "apollo-fvp"},
     )
 
     assert result.returncode == 0, result.stderr
-    assert "mc:apollo-fvp-dm-verity:nexios-image" in result.stdout
+    assert "MACHINE=apollo-fvp bitbake " in result.stdout
+    assert result.stdout.strip().endswith(" nexios-image")
 
 
 def test_yocto_build_sh_rejects_invalid_machine(tmp_path: Path) -> None:
@@ -297,8 +241,75 @@ def test_yocto_build_sh_rejects_invalid_machine(tmp_path: Path) -> None:
     assert "invalid-machine 'invalid-qvp'" in result.stderr
 
 
-def test_yocto_build_sh_rejects_invalid_dm_verity_mode(tmp_path: Path) -> None:
-    result = run_build_dry_run(tmp_path, ["--dm-verity=maybe"])
+def test_yocto_build_sh_prints_kernel_config_update_without_postfile(
+    tmp_path: Path,
+) -> None:
+    init_result = run_build_dry_run(tmp_path, [])
+    assert init_result.returncode == 0, init_result.stderr
+    sentinel = tmp_path / "build/conf/user.conf"
+    sentinel.write_text("preserve\n", encoding="utf-8")
+
+    result = run_build_dry_run(
+        tmp_path,
+        [
+            "--enable-config",
+            "CONFIG_IKCONFIG=y",
+            "--enable-config",
+            "CONFIG_IKCONFIG_PROC=m",
+            "--enable-config=CONFIG_UNUSED_KSYMS_WHITELIST=n",
+        ],
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert sentinel.read_text(encoding="utf-8") == "preserve\n"
+    assert "MACHINE=apollo-qvp bitbake virtual/kernel -c defconfig -f" in result.stdout
+    assert '--enable CONFIG_IKCONFIG' in result.stdout
+    assert '--module CONFIG_IKCONFIG_PROC' in result.stdout
+    assert '--disable CONFIG_UNUSED_KSYMS_WHITELIST' in result.stdout
+    assert "olddefconfig" in result.stdout
+    assert "savedefconfig" in result.stdout
+    assert "nexios-image" not in result.stdout
+    assert " -R " not in result.stdout
+    assert "preserving existing configuration" in result.stderr
+
+
+def test_yocto_build_sh_rejects_invalid_kernel_config(tmp_path: Path) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        ["--enable-config", "CONFIG_IKCONFIG=maybe"],
+    )
 
     assert result.returncode == 2
-    assert "invalid dm-verity mode 'maybe'" in result.stderr
+    assert "invalid kernel config 'CONFIG_IKCONFIG=maybe'" in result.stderr
+
+
+def test_yocto_build_sh_rejects_duplicate_kernel_config(tmp_path: Path) -> None:
+    result = run_build_dry_run(
+        tmp_path,
+        [
+            "--enable-config",
+            "CONFIG_IKCONFIG=y",
+            "--enable-config",
+            "CONFIG_IKCONFIG=n",
+        ],
+    )
+
+    assert result.returncode == 2
+    assert "duplicate kernel config 'CONFIG_IKCONFIG'" in result.stderr
+
+
+def test_yocto_build_sh_forwards_kernel_menuconfig_task(tmp_path: Path) -> None:
+    result = run_build_dry_run(tmp_path, ["virtual/kernel", "-c", "menuconfig"])
+
+    assert result.returncode == 0, result.stderr
+    command = result.stdout.splitlines()[-1].split()
+    assert command[-3:] == ["virtual/kernel", "-c", "menuconfig"]
+    assert "preserving existing configuration" in result.stderr
+
+
+def test_yocto_build_sh_forwards_bootloader_cleansstate_task(tmp_path: Path) -> None:
+    result = run_build_dry_run(tmp_path, ["virtual/bootloader", "-c", "cleansstate"])
+
+    assert result.returncode == 0, result.stderr
+    command = result.stdout.splitlines()[-1].split()
+    assert command[-3:] == ["virtual/bootloader", "-c", "cleansstate"]

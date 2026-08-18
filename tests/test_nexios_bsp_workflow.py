@@ -175,19 +175,6 @@ def test_bsp_build_disables_product_initramfs_dependencies(tmp_path: Path) -> No
     assert "APOLLO_BSP_BUILD_ONLY=1" in result.stdout.split()
 
 
-def test_bsp_build_preserves_multiconfig_selection(tmp_path: Path) -> None:
-    # Given: the dm-verity-on multiconfig and the BSP-only profile.
-    # When: both options are selected.
-    result = run_build_dry_run(tmp_path, ["--bsp", "--dm-verity=on"])
-
-    # Then: only the BSP target carries the selected multiconfig prefix.
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.split()[-1] == (
-        "mc:apollo-qvp-dm-verity:nexios-bsp-initramfs"
-    )
-    assert "mc:apollo-qvp-dm-verity:nexios-image" not in result.stdout
-
-
 def test_qbox_bsp_profile_selects_bsp_artifacts_and_markers(
     tmp_path: Path,
 ) -> None:

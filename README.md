@@ -126,21 +126,35 @@ source layers/poky/oe-init-build-env build
 bitbake <recipe> -c <task>
 ```
 
-`yocto_build.sh` refreshes `build/conf/` from the selected template by default.
-Use `--keep-conf` only when the existing configuration must be preserved. The
-script writes `build/conf/apollo-bitbake-resources.conf` and derives BitBake
-parallelism from host memory. Override it with `APOLLO_BUILD_THREADS`,
-`APOLLO_PARALLEL_MAKE`, or `APOLLO_AUTO_RESOURCE_LIMITS=0`.
-
-Explicit product dm-verity variants remain available:
+The wrapper can run the same targeted tasks while preserving `build/conf`:
 
 ```bash
-./yocto_build.sh --dm-verity=on
-./yocto_build.sh --dm-verity=off
+./yocto_build.sh virtual/kernel -c menuconfig
+./yocto_build.sh virtual/bootloader -c cleansstate
 ```
 
-These select machine-specific multiconfigs for `nexios-image`; they are
-separate from the standalone BSP initramfs.
+For a noninteractive Apollo kernel defconfig update, repeat `--enable-config`
+with the requested final state:
+
+```bash
+./yocto_build.sh \
+  --enable-config CONFIG_IKCONFIG=y \
+  --enable-config CONFIG_PROC_FS=y \
+  --enable-config CONFIG_IKCONFIG_PROC=y
+```
+
+The update mode preserves `build/conf`, resolves Kconfig dependencies with
+`olddefconfig`, verifies each requested state, and updates the machine
+defconfig without a BitBake `-R` postfile. It accepts `y`, `m`, and `n` and
+does not build an image.
+
+Normal image builds through `yocto_build.sh` refresh `build/conf/` from the
+selected template by default. Explicit target tasks and `--enable-config`
+preserve it automatically; use `--keep-conf` to preserve it during a normal
+image build. The script writes `build/conf/apollo-bitbake-resources.conf` and
+derives BitBake parallelism from host memory. Override it with
+`APOLLO_BUILD_THREADS`, `APOLLO_PARALLEL_MAKE`, or
+`APOLLO_AUTO_RESOURCE_LIMITS=0`.
 
 ### `nexios-bsp-initramfs`
 

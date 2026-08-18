@@ -55,13 +55,6 @@ Build the Apollo QVP image from the repository root:
 ./yocto_build.sh --machine apollo-qvp
 ```
 
-Optional dm-verity variants use QVP multiconfig names:
-
-```bash
-./yocto_build.sh --machine apollo-qvp --dm-verity=on
-./yocto_build.sh --machine apollo-qvp --dm-verity=off
-```
-
 The expected deploy image root is:
 
 ```text
