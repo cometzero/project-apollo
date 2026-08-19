@@ -20,6 +20,8 @@ OUT_DIR="${OUT_DIR:-}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 NO_ATTACH=0
 DRY_RUN=0
+HEADLESS=0
+TIMEOUT="${TIMEOUT:-900}"
 LOCAL_MODE=0
 BSP_MODE=0
 DEBUG_TARGET=""
@@ -66,13 +68,15 @@ Options:
   --debug-timeout SEC  probe/server deadline in seconds (default: ${DEBUG_TIMEOUT})
   --debug-result PATH  probe/server JSON result path
   --iris-port PORT     Iris TCP port for --debug (default: ${IRIS_PORT})
+  --headless           run without tmux through the canonical log runner
+  --timeout SEC        headless boot deadline in seconds (default: ${TIMEOUT})
   --no-attach          start tmux but do not attach
   --dry-run            print the resolved command and log layout only
   -h, --help           show this help
 
 Environment overrides:
   MACHINE YOCTO_BUILD_DIR DEPLOY_DIR RUNFVP_BIN FVP_CONF TMUX_SESSION OUT_DIR
-  RUN_STAMP TMUX_BIN SDK_DIR CORNEA_BIN
+  RUN_STAMP TMUX_BIN SDK_DIR CORNEA_BIN TIMEOUT
 
 Examples:
   ./yocto_build.sh
@@ -944,6 +948,31 @@ start_tmux()
     fi
 }
 
+run_headless()
+{
+    local -a cmd=(
+        python3 "${ROOT_DIR}/scripts/run/runfvp_log_boot.py"
+        --machine "${MACHINE}"
+        --fvpconf "${FVP_CONF}"
+        --runfvp-bin "${RUNFVP_BIN}"
+        --out-dir "${OUT_DIR}"
+        --timeout "${TIMEOUT}"
+        --require all
+    )
+    if ((${#EXTRA_FVP_ARGS[@]})); then
+        cmd+=(-- "${EXTRA_FVP_ARGS[@]}")
+    fi
+
+    if ((DRY_RUN)); then
+        printf '%s\n' "Headless FVP runner command:"
+        quote_args "${cmd[@]}"
+        printf '\n'
+        return 0
+    fi
+
+    "${cmd[@]}"
+}
+
 if [[ "${1:-}" == "--supervise" ]]; then
     supervise_run
     exit $?
@@ -1030,6 +1059,15 @@ while (($# > 0)); do
             IRIS_PORT="$2"
             shift 2
             ;;
+        --headless)
+            HEADLESS=1
+            shift
+            ;;
+        --timeout)
+            (($# >= 2)) || die "--timeout requires a value"
+            TIMEOUT="$2"
+            shift 2
+            ;;
         --no-attach)
             NO_ATTACH=1
             shift
@@ -1070,6 +1108,7 @@ case "${MACHINE}" in
     *) die "unsupported machine: ${MACHINE} (expected apollo-fvp or apollo-qvp)" ;;
 esac
 if [[ -n "${DEBUG_TARGET}" ]]; then
+    ((HEADLESS == 0)) || die "--headless cannot be combined with --debug"
     [[ "${MACHINE}" == "apollo-qvp" ]] ||
         die "--debug currently supports only --machine apollo-qvp"
     if [[ ! "${IRIS_PORT}" =~ ^[0-9]+$ ]] ||
@@ -1099,6 +1138,10 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
     )
 elif ((DEBUG_MODE_SET)); then
     die "--debug-mode requires --debug TARGET"
+fi
+if [[ ! "${TIMEOUT}" =~ ^[0-9]+([.][0-9]+)?$ ]] ||
+    [[ "${TIMEOUT}" == "0" || "${TIMEOUT}" == "0.0" ]]; then
+    die "invalid --timeout: ${TIMEOUT}"
 fi
 DEPLOY_DIR="$(abspath "$(resolve_deploy_dir)")"
 resolved_fvpconf="$(resolve_fvpconf "${DEPLOY_DIR}" || true)"
@@ -1131,6 +1174,8 @@ fi
 if [[ -z "${OUT_DIR}" ]]; then
     if ((LOCAL_MODE)); then
         OUT_DIR="${YOCTO_BUILD_DIR}/local-apollo-fvp/tmux-run/${RUN_STAMP}"
+    elif ((HEADLESS)); then
+        OUT_DIR="${YOCTO_BUILD_DIR}/fvp-headless/${MACHINE}-${RUN_STAMP}"
     else
         OUT_DIR="${YOCTO_BUILD_DIR}/fvp-tmux/${MACHINE}-${RUN_STAMP}"
     fi
@@ -1142,4 +1187,8 @@ else
     DEBUG_RESULT="$(abspath "${DEBUG_RESULT}")"
 fi
 
-start_tmux
+if ((HEADLESS)); then
+    run_headless
+else
+    start_tmux
+fi

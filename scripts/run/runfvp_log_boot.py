@@ -57,6 +57,7 @@ CHECKS = {
             " login:",
             "root@",
             "Multi-User System",
+            "NEXIOS_BSP_INITRAMFS_READY",
         ],
     },
     "terminal_sec_uart": {
