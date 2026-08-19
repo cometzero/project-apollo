@@ -8,7 +8,6 @@
 /hsoc-stack/components/system_mgmt/trusted-firmware-m/
 /hsoc-stack/components/system_mgmt/zephyrproject/zephyr/
 /hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/
-/hsoc-stack/tests/
 /hsoc-stack/tools/buildroot/
 /hsoc-stack/tools/qbox/
 /hsoc-stack/tools/qbox-platform/

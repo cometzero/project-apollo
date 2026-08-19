@@ -15,7 +15,6 @@ INDEX_ENTRIES=(
     "arm-auto-solutions-top|."
     "apollo-meta-hsoc-auto-solutions|hsoc-stack/yocto/meta-hsoc-auto-solutions"
     "apollo-meta-hsoc-bsp|hsoc-stack/yocto/meta-hsoc-bsp"
-    "apollo-hsoc-tests|hsoc-stack/tests"
     "apollo-meta-bluechi|layers/meta-bluechi"
     "apollo-meta-ewaol|layers/meta-ewaol"
     "apollo-meta-ptx|layers/meta-ptx"

@@ -4,7 +4,7 @@
     "layers/poky/bitbake/lib",
     "layers/poky/meta/lib",
     "layers/meta-arm/meta-arm/lib",
-    "hsoc-stack/tests",
+    "qa-tests",
     "scripts/test",
     "sw-ref-stack/yocto/meta-arm-auto-solutions/lib",
     "hsoc-stack/yocto/meta-hsoc-auto-solutions/lib",
