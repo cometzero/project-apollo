@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "pfdi-si-cl1",
+  "description": "Apollo BSP Safety Island CL1 PFDI validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_30_si_cl1_pfdi"],
+    "timeout_seconds": 1800
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "name": "ras_cpu",
+  "description": "Apollo Primary Compute CPU RAS validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_fvp_boot.FVPBootTest.test_fvp_boot",
+      "test_00_rse_boot.RseBootTest.test_normal_boot",
+      "test_00_tfa_secure_partition_boot.TfaSecurePartitionBootTest.test_secure_partition_boot",
+      "test_00_linux_boot.LinuxBootTest.test_linux_boot",
+      "test_40_tfa_cpu_topology.TfaCpuTopologyTest.test_configured_pc_cpus_in_tfa",
+      "test_41_tfa_ras"
+    ],
+    "timeout_seconds": 3600
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  }
+}

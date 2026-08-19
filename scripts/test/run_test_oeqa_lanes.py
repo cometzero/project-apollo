@@ -18,6 +18,11 @@ from time import monotonic
 from typing import Final
 
 from run_test_conf import ConfRequest, write_conf
+from run_test_artifacts import (
+    append_test_event,
+    normalize_console_logs,
+    write_profile_result,
+)
 from run_test_oeqa_result import OeqaResultState, classify_oeqa_result_path
 
 
@@ -131,12 +136,13 @@ def _append(inputs: OeqaInputs, record: JsonObject) -> None:
 def _conf_path(inputs: OeqaInputs, kind: str, manifest: JsonObject) -> Path:
     result = write_conf(
         ConfRequest(
-            inputs.root,
-            inputs.build_dir,
-            inputs.machine,
-            inputs.run_dir,
-            kind,
-            str(inputs.timeout_oeqa),
+            root=inputs.root,
+            build_dir=inputs.build_dir,
+            machine=inputs.machine,
+            run_dir=inputs.run_dir,
+            kind=kind,
+            image=inputs.image,
+            test_overall_timeout=str(inputs.timeout_oeqa),
         ),
         manifest,
     )
@@ -229,20 +235,28 @@ def _iter_oeqa_result_tests(data: JsonObject) -> list[tuple[str, str]]:
     return tests
 
 
-def _emit_test_start(lane: OeqaLane, test_name: str) -> None:
+def _emit_test_start(inputs: OeqaInputs, lane: OeqaLane, test_name: str) -> None:
     if lane.kind == "functional" and test_name.endswith(LINUX_BOOT_TEST):
         _log("START basic-boot")
         _log("PROGRESS basic-boot: waiting for FVP Linux root shell")
     _log(f"START {lane.name}:{test_name}")
+    append_test_event(inputs.run_dir, "test_started", test_name, "RUNNING")
 
 
-def _emit_test_done(lane: OeqaLane, test_name: str, status: str) -> None:
+def _emit_test_done(
+    inputs: OeqaInputs,
+    lane: OeqaLane,
+    test_name: str,
+    status: str,
+) -> None:
     _log(f"DONE {lane.name}:{test_name} ({status})")
     if lane.kind == "functional" and test_name.endswith(LINUX_BOOT_TEST):
         _log(f"DONE basic-boot ({status})")
+    append_test_event(inputs.run_dir, "test_finished", test_name, status.upper())
 
 
 def _emit_result_progress(
+    inputs: OeqaInputs,
     lane: OeqaLane,
     result_paths: list[Path],
     completed: set[str],
@@ -253,8 +267,8 @@ def _emit_result_progress(
             if key in completed:
                 continue
             completed.add(key)
-            _emit_test_start(lane, test_name)
-            _emit_test_done(lane, test_name, status)
+            _emit_test_start(inputs, lane, test_name)
+            _emit_test_done(inputs, lane, test_name, status)
 
 
 def _latest_testimage_log(inputs: OeqaInputs, min_mtime: float) -> Path | None:
@@ -280,7 +294,7 @@ def _emit_do_testimage_line(progress: OeqaProgressTail, line: str) -> None:
         test_name = class_path if class_path.endswith(f".{method}") else f"{class_path}.{method}"
         key = f"{progress.lane.name}:{test_name}"
         if key not in progress.completed:
-            _emit_test_start(progress.lane, test_name)
+            _emit_test_start(progress.inputs, progress.lane, test_name)
         progress.active_test = test_name
         return
 
@@ -292,6 +306,7 @@ def _emit_do_testimage_line(progress: OeqaProgressTail, line: str) -> None:
     if key not in progress.completed:
         progress.completed.add(key)
         _emit_test_done(
+            progress.inputs,
             progress.lane,
             test_name,
             _oeqa_note_status_label(done_match.group("status")),
@@ -436,11 +451,22 @@ def _record_run(inputs: OeqaInputs, lane: OeqaLane) -> str:
     _log(f"START {lane.name}")
     returncode, live_tests = _run_command(inputs, lane)
     result_paths = _result_paths(lane)
-    _emit_result_progress(lane, result_paths, live_tests)
+    console_logs = normalize_console_logs(inputs.run_dir, lane.output_dir / "logs")
+    manifest = _read_json(inputs.run_dir / "manifest.json")
+    profile_result = write_profile_result(inputs.run_dir, manifest)
+    _emit_result_progress(inputs, lane, result_paths, live_tests)
     json_states = [(path, classify_oeqa_result_path(path).state) for path in result_paths]
     failed_json = any(state == OeqaResultState.FAIL for _, state in json_states)
     malformed_json = [_rel(path, inputs.run_dir) for path, state in json_states if state == OeqaResultState.MALFORMED]
     artifacts = _artifacts(inputs, lane)
+    artifacts.extend(
+        {"kind": "console_log", "path": _rel(path, inputs.run_dir)}
+        for path in console_logs
+    )
+    if profile_result is not None:
+        artifacts.append(
+            {"kind": "profile_result", "path": _rel(profile_result, inputs.run_dir)}
+        )
     record: JsonObject = {
         "name": lane.name,
         "argv": _json_strings(lane.argv),

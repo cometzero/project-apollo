@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arm-auto-solutions.example/schema/test-profile.schema.json",
+  "title": "Apollo QA test profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "compatibility", "oeqa", "targets"],
+  "properties": {
+    "version": {"const": 1},
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
+    "description": {"type": "string"},
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backends", "images"],
+      "properties": {
+        "backends": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["fvp", "qbox"]}
+        },
+        "images": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["bsp", "product"]}
+        }
+      }
+    },
+    "oeqa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "selectors", "timeout_seconds"],
+      "properties": {
+        "kind": {"enum": ["functional", "power", "extended"]},
+        "selectors": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "timeout_seconds": {"type": "integer", "minimum": 1}
+      }
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "minLength": 1},
+      "minProperties": 1
+    }
+  }
+}

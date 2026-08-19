@@ -15,11 +15,13 @@ type JsonObject = dict[str, JsonValue]
 
 DEFAULT_TEST_OVERALL_TIMEOUT: Final = "10800"
 SELECTED_SUITES_ENV: Final = "APOLLO_VALIDATION_TEST_SUITES"
+SELECTED_TARGET_ENV: Final = "APOLLO_VALIDATION_TEST_TARGET"
 
 
 class WriteConfArgs(Protocol):
     build_dir: Path
     machine: str
+    image: str
     run_dir: Path
     kind: str
     test_overall_timeout: str
@@ -32,6 +34,7 @@ class ConfRequest:
     machine: str
     run_dir: Path
     kind: str
+    image: str = "nexios-image"
     test_overall_timeout: str = DEFAULT_TEST_OVERALL_TIMEOUT
 
 
@@ -184,7 +187,16 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
         f'MACHINE = "{request.machine}"',
     ]
     lines.extend(_device_assignments(manifest))
-    if request.kind == "functional":
+    selected_target = os.environ.get(SELECTED_TARGET_ENV)
+    if selected_target:
+        lines.extend(
+            _scoped_assignments(
+                "TEST_TARGET",
+                selected_target,
+                manifest,
+            )
+        )
+    elif request.kind == "functional":
         lines.extend(
             _scoped_assignments(
                 "TEST_TARGET",
@@ -222,6 +234,7 @@ def run_write_conf(args: WriteConfArgs) -> int:
         machine=args.machine,
         run_dir=args.run_dir,
         kind=args.kind,
+        image=args.image,
         test_overall_timeout=args.test_overall_timeout,
     )
     rejected = _rejection_message(request)
@@ -229,7 +242,12 @@ def run_write_conf(args: WriteConfArgs) -> int:
         print(rejected, file=sys.stderr)
         return 64
     manifest = inspect_manifest(
-        ManifestInputs(root=request.root, build_dir=request.build_dir, machine=request.machine)
+        ManifestInputs(
+            root=request.root,
+            build_dir=request.build_dir,
+            machine=request.machine,
+            image=request.image,
+        )
     )
     if manifest.get("status") == "blocked":
         print(manifest.get("message", "manifest inspection blocked"), file=sys.stderr)

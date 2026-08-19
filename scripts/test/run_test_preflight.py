@@ -31,6 +31,7 @@ class PreflightInputs:
     root: Path
     build_dir: Path
     machine: str
+    image: str = "nexios-image"
     fvpconf_path: Path | None = None
 
 
@@ -84,10 +85,10 @@ def _select_fvpconf(inputs: PreflightInputs) -> Path:
     if inputs.fvpconf_path is not None:
         return _resolve(inputs.root, inputs.fvpconf_path)
     deploy_dir = _deploy_dir(inputs)
-    stable = deploy_dir / f"nexios-image-{inputs.machine}.fvpconf"
+    stable = deploy_dir / f"{inputs.image}-{inputs.machine}.fvpconf"
     if stable.exists():
         return stable
-    latest = sorted(deploy_dir.glob(f"nexios-image-{inputs.machine}-*.fvpconf"))
+    latest = sorted(deploy_dir.glob(f"{inputs.image}-{inputs.machine}-*.fvpconf"))
     if latest:
         return latest[-1]
     return stable

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "safety-diagnostics-tests",
+  "description": "Apollo BSP Safety Island SSU and FMU diagnostics validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_20_si_cl0_diagnostics"],
+    "timeout_seconds": 1800
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  }
+}

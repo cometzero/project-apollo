@@ -28,6 +28,7 @@ class ManifestInputs:
     root: Path
     build_dir: Path
     machine: str
+    image: str = "nexios-image"
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,8 +145,8 @@ def merged_words(*values: str) -> list[str]:
 def selected_artifacts(inputs: ManifestInputs, tmpdir: str) -> tuple[Path, Path]:
     tmpdir_name = tmpdir.removeprefix("${TOPDIR}/")
     deploy_dir = inputs.root / inputs.build_dir / tmpdir_name / "deploy/images" / inputs.machine
-    testdata = deploy_dir / f"nexios-image-{inputs.machine}.testdata.json"
-    fvpconf = deploy_dir / f"nexios-image-{inputs.machine}.fvpconf"
+    testdata = deploy_dir / f"{inputs.image}-{inputs.machine}.testdata.json"
+    fvpconf = deploy_dir / f"{inputs.image}-{inputs.machine}.fvpconf"
     return testdata, fvpconf
 
 
@@ -154,6 +155,7 @@ def blocked_missing(inputs: ManifestInputs, path: Path) -> JsonObject:
         "status": "blocked",
         "reason": "blocked_missing_artifact",
         "machine": inputs.machine,
+        "image": inputs.image,
         "artifact": str(path),
         "message": f"missing required artifact for {inputs.machine}: {path}",
     }
@@ -258,7 +260,12 @@ def run_summarize(args: argparse.Namespace) -> int:
 
 
 def run_inspect(args: argparse.Namespace) -> int:
-    inputs = ManifestInputs(root=Path.cwd(), build_dir=args.build_dir, machine=args.machine)
+    inputs = ManifestInputs(
+        root=Path.cwd(),
+        build_dir=args.build_dir,
+        machine=args.machine,
+        image=args.image,
+    )
     result = inspect_manifest(inputs)
     write_json(args.out, result)
     if result.get("status") == "blocked":
@@ -269,7 +276,12 @@ def run_inspect(args: argparse.Namespace) -> int:
 
 
 def run_plan(args: argparse.Namespace) -> int:
-    inputs = ManifestInputs(root=Path.cwd(), build_dir=args.build_dir, machine=args.machine)
+    inputs = ManifestInputs(
+        root=Path.cwd(),
+        build_dir=args.build_dir,
+        machine=args.machine,
+        image=args.image,
+    )
     result = resolve_plan(inspect_manifest(inputs))
     write_json(args.out, result)
     if result.get("status") == "blocked":
@@ -280,7 +292,12 @@ def run_plan(args: argparse.Namespace) -> int:
 
 
 def run_preflight_command(args: argparse.Namespace) -> int:
-    inputs = PreflightInputs(root=Path.cwd(), build_dir=args.build_dir, machine=args.machine)
+    inputs = PreflightInputs(
+        root=Path.cwd(),
+        build_dir=args.build_dir,
+        machine=args.machine,
+        image=args.image,
+    )
     result = run_preflight(inputs)
     write_json(args.out, result)
     if result.get("status") == "blocked":
@@ -296,16 +313,19 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     inspect = subparsers.add_parser("inspect")
     inspect.add_argument("--build-dir", type=Path, default=Path("build"))
     inspect.add_argument("--machine", default="apollo-fvp")
+    inspect.add_argument("--image", default="nexios-image")
     inspect.add_argument("--out", type=Path, required=True)
     inspect.set_defaults(func=run_inspect)
     plan = subparsers.add_parser("plan")
     plan.add_argument("--build-dir", type=Path, default=Path("build"))
     plan.add_argument("--machine", default="apollo-fvp")
+    plan.add_argument("--image", default="nexios-image")
     plan.add_argument("--out", type=Path, required=True)
     plan.set_defaults(func=run_plan)
     preflight = subparsers.add_parser("preflight")
     preflight.add_argument("--build-dir", type=Path, default=Path("build"))
     preflight.add_argument("--machine", default="apollo-fvp")
+    preflight.add_argument("--image", default="nexios-image")
     preflight.add_argument("--out", type=Path, required=True)
     preflight.set_defaults(func=run_preflight_command)
     summarize = subparsers.add_parser("summarize")
@@ -315,6 +335,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     write_conf = subparsers.add_parser("write-conf")
     write_conf.add_argument("--build-dir", type=Path, default=Path("build"))
     write_conf.add_argument("--machine", default="apollo-fvp")
+    write_conf.add_argument("--image", default="nexios-image")
     write_conf.add_argument("--run-dir", type=Path, required=True)
     write_conf.add_argument(
         "--kind",
