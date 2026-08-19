@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 import pytest
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
 
 
+ROOT = Path(__file__).resolve().parents[1]
 REQUESTED_QEMU_PARAMS = (
     "platform.ap_qemu_inst.accel=tcg",
     "platform.ap_qemu_inst.tcg_mode=MULTI",
@@ -14,17 +16,34 @@ REQUESTED_QEMU_PARAMS = (
     "platform.ap_qemu_inst.time_sync_strategy=quantum_keeper",
     "platform.qemu_inst.accel=tcg",
     "platform.qemu_inst.tcg_mode=SINGLE",
-    "platform.qemu_inst.sync_policy=multithread-quantum",
+    "platform.qemu_inst.sync_policy=multithread-freerunning",
     "platform.qemu_inst.time_sync_strategy=quantum_keeper",
     "platform.si_cl0_qemu_inst.accel=tcg",
     "platform.si_cl0_qemu_inst.tcg_mode=SINGLE",
-    "platform.si_cl0_qemu_inst.sync_policy=multithread-quantum",
+    "platform.si_cl0_qemu_inst.sync_policy=multithread-freerunning",
     "platform.si_cl0_qemu_inst.time_sync_strategy=quantum_keeper",
     "platform.si_cl1_qemu_inst.accel=tcg",
     "platform.si_cl1_qemu_inst.tcg_mode=MULTI",
-    "platform.si_cl1_qemu_inst.sync_policy=multithread-quantum",
+    "platform.si_cl1_qemu_inst.sync_policy=multithread-freerunning",
     "platform.si_cl1_qemu_inst.time_sync_strategy=quantum_keeper",
 )
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    (
+        "platforms/apollo/hw-block/ap_compute.lua",
+        "platforms/apollo/hw-block/rse.lua",
+        "platforms/apollo/hw-block/si_cl0.lua",
+        "platforms/apollo/hw-block/si_cl1.lua",
+    ),
+)
+def test_lua_qemu_defaults_use_freerunning(relative_path: str) -> None:
+    path = ROOT / "hsoc-stack/tools/qbox-platform" / relative_path
+
+    assert 'sync_policy = "multithread-freerunning";' in path.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_full_system_uses_requested_qemu_defaults(

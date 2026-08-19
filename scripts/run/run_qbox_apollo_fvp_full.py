@@ -161,7 +161,7 @@ FULL_SYSTEM_RSE_QEMU_DEFAULTS = (
     (
         "platform.qemu_inst.sync_policy",
         "QBOX_RDASPEN_RSE_SYNC_POLICY",
-        "multithread-quantum",
+        "multithread-freerunning",
     ),
     (
         "platform.qemu_inst.time_sync_strategy",
@@ -183,7 +183,7 @@ FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
     (
         "platform.si_cl0_qemu_inst.sync_policy",
         "QBOX_APOLLO_FULL_SI_CL0_SYNC_POLICY",
-        "multithread-quantum",
+        "multithread-freerunning",
     ),
     (
         "platform.si_cl0_qemu_inst.time_sync_strategy",
@@ -203,7 +203,7 @@ FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
     (
         "platform.si_cl1_qemu_inst.sync_policy",
         "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY",
-        "multithread-quantum",
+        "multithread-freerunning",
     ),
     (
         "platform.si_cl1_qemu_inst.time_sync_strategy",
@@ -1299,7 +1299,7 @@ def write_result(
             args,
             "platform.si_cl1_qemu_inst.sync_policy",
             "QBOX_APOLLO_FULL_SI_CL1_SYNC_POLICY",
-            "multithread-quantum",
+            "multithread-freerunning",
         ),
         "smmu_backend": args.smmu_backend,
         "rse_flash_backend": args.rse_flash_backend,
