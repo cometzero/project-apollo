@@ -68,6 +68,17 @@ def test_si_cl1_profile_selects_full_safety_island_suite() -> None:
     assert profile.timeout_seconds == 1800
 
 
+def test_si_cl1_profile_selects_qbox_probe_contract() -> None:
+    # Given: the Safety Island CL1 PFDI profile and QBox BSP backend.
+    # When: the profile is resolved for QBox.
+    profile = load_test_profile(WORKSPACE, "pfdi-si-cl1", "qbox", "bsp")
+
+    # Then: the complete selectors route through the SI CL1 QBox probe.
+    assert profile.selectors == ("test_00_bsp_boot", "test_30_si_cl1_pfdi")
+    assert profile.test_target == "QBoxSICl1PFDIRunner"
+    assert profile.timeout_seconds == 1800
+
+
 def test_unknown_profile_reports_typed_error() -> None:
     # Given: a profile name with no repository definition.
     # When/Then: the loader reports its typed boundary error cleanly.

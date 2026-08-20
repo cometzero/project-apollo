@@ -26,6 +26,12 @@ import time
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
 from qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
+from qbox_si_cl1_pfdi_probe import (
+    SiCl1PFDIProbeState,
+    advance_si_cl1_pfdi_probe,
+    evaluate_si_cl1_pfdi_records,
+    new_si_cl1_pfdi_state,
+)
 
 
 REQUIRED_TARGETS = [
@@ -4035,8 +4041,11 @@ def write_primary_uart_bytes(fd: int, data: bytes) -> None:
     os.write(fd, data)
 
 
-def open_post_login_probe_fifo(out_dir: Path) -> tuple[Path, int]:
-    fifo_path = out_dir / "primary-uart-input.fifo"
+def open_post_login_probe_fifo(
+    out_dir: Path,
+    filename: str = "primary-uart-input.fifo",
+) -> tuple[Path, int]:
+    fifo_path = out_dir / filename
     try:
         fifo_path.unlink()
     except FileNotFoundError:
@@ -4066,6 +4075,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "secure_service_requested": bool(args.secure_service_probe),
         "fwu_requested": bool(args.fwu_probe),
         "pfdi_requested": bool(args.pfdi_probe),
+        "pfdi_si_cl1_requested": bool(args.pfdi_si_cl1_probe),
         "sent_login": False,
         "sent_probe": False,
         "complete": False,
@@ -4237,10 +4247,25 @@ def run_platform(
     env = qbox_env(root, args, artifacts)
     post_login_probe = make_probe_state(args)
     primary_uart_fd: int | None = None
-    if args.post_login_probe or args.primary_operation_manifest is not None:
+    si_cl1_uart_fd: int | None = None
+    si_cl1_fifo_path: Path | None = None
+    si_cl1_probe: SiCl1PFDIProbeState | None = None
+    if (
+        args.post_login_probe or args.primary_operation_manifest is not None
+    ) and not args.pfdi_si_cl1_probe:
         fifo_path, primary_uart_fd = open_post_login_probe_fifo(out_dir)
         env["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(fifo_path)
         post_login_probe["input_path"] = str(fifo_path)
+    if args.pfdi_si_cl1_probe:
+        si_cl1_fifo_path, si_cl1_uart_fd = open_post_login_probe_fifo(
+            out_dir,
+            "si-cl1-uart-input.fifo",
+        )
+        env["QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE"] = str(
+            si_cl1_fifo_path
+        )
+        post_login_probe["input_path"] = str(si_cl1_fifo_path)
+        si_cl1_probe = new_si_cl1_pfdi_state()
     timed_out = False
     interrupted = False
     logs = {role: "" for role in CONSOLE_LOGS}
@@ -4279,6 +4304,37 @@ def run_platform(
                     platform_stdout += decoded
                 logs = read_console_logs(out_dir)
                 drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
+                if si_cl1_probe is not None and si_cl1_uart_fd is not None:
+                    try:
+                        si_cl1_console = (
+                            out_dir / "qbox-safety-island-cl1.log"
+                        ).read_text(encoding="utf-8", errors="replace")
+                    except FileNotFoundError:
+                        si_cl1_console = ""
+                    next_command = advance_si_cl1_pfdi_probe(
+                        si_cl1_probe,
+                        clean_text(si_cl1_console),
+                    )
+                    if next_command is not None:
+                        write_primary_uart(si_cl1_uart_fd, next_command)
+                        actions = post_login_probe.get("actions")
+                        assert isinstance(actions, list)
+                        actions.append(
+                            "sent_si_cl1_operation_"
+                            + str(si_cl1_probe["command_index"])
+                        )
+                    si_cl1_result = evaluate_si_cl1_pfdi_records(
+                        si_cl1_probe["checks"],
+                        si_cl1_probe["outputs"],
+                    )
+                    post_login_probe["sent_probe"] = si_cl1_probe[
+                        "sent_probe"
+                    ]
+                    post_login_probe["sent_login"] = si_cl1_probe[
+                        "sent_probe"
+                    ]
+                    post_login_probe["complete"] = si_cl1_probe["complete"]
+                    post_login_probe["pfdi_si_cl1_probe"] = si_cl1_result
                 live_logs = {**logs, "platform_stdout": platform_stdout}
                 update_progress_marker_first_hits(
                     live_logs,
@@ -4300,6 +4356,10 @@ def run_platform(
                 if (
                     probe_requested
                     and probe_complete
+                    and (
+                        not args.pfdi_si_cl1_probe
+                        or status["passed"]
+                    )
                     and not args.keep_running_after_pass
                 ):
                     stop_process(proc)
@@ -4352,6 +4412,10 @@ def run_platform(
         stop_process(proc)
         if primary_uart_fd is not None:
             os.close(primary_uart_fd)
+        if si_cl1_uart_fd is not None:
+            os.close(si_cl1_uart_fd)
+        if si_cl1_fifo_path is not None:
+            si_cl1_fifo_path.unlink(missing_ok=True)
         if args.rse_fast_boot_sram_dmi and not interrupted:
             shared_memory_cleanup.append(
                 cleanup_sram_dmi_shared_memory("after_run")
@@ -4393,7 +4457,16 @@ def run_platform(
         fwu_complete = bool(fwu_probe.get("complete"))
         if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
             post_login_probe["complete"] = True
-        if args.pfdi_probe:
+        if args.pfdi_si_cl1_probe:
+            si_cl1_result = object_dict(
+                post_login_probe.get("pfdi_si_cl1_probe")
+            )
+            post_login_probe["passed"] = bool(
+                post_login_probe.get("sent_probe")
+                and post_login_probe.get("complete")
+                and si_cl1_result.get("passed")
+            )
+        elif args.pfdi_probe:
             post_login_probe["passed"] = bool(
                 post_login_probe.get("sent_probe")
                 and post_login_probe.get("complete")
@@ -4418,6 +4491,8 @@ def run_platform(
             f"secure_service_requested: {post_login_probe['secure_service_requested']}",
             f"fwu_requested: {post_login_probe['fwu_requested']}",
             f"pfdi_requested: {post_login_probe['pfdi_requested']}",
+            "pfdi_si_cl1_requested: "
+            f"{post_login_probe['pfdi_si_cl1_requested']}",
             f"input_path: {post_login_probe.get('input_path')}",
             f"sent_login: {post_login_probe['sent_login']}",
             f"sent_probe: {post_login_probe['sent_probe']}",
@@ -5211,6 +5286,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run the fixed Apollo BSP PFDI post-login qualification probe.",
     )
+    parser.add_argument(
+        "--pfdi-si-cl1-probe",
+        action="store_true",
+        help="Run the complete SI CL1 Zephyr-shell PFDI qualification probe.",
+    )
     parser.add_argument("--primary-operation-schema", type=Path)
     parser.add_argument("--primary-operation-module-path", type=Path)
     parser.add_argument(
@@ -5905,7 +5985,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error(str(exc))
     if args.exception_trace:
         args.pc_trace = True
-    if args.secure_service_probe or args.fwu_probe or args.pfdi_probe:
+    if (
+        args.secure_service_probe
+        or args.fwu_probe
+        or args.pfdi_probe
+        or args.pfdi_si_cl1_probe
+    ):
         args.post_login_probe = True
     if args.rse_sram_dmi_smoke:
         conflicts = [
@@ -5915,6 +6000,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                 ("--secure-service-probe", args.secure_service_probe),
                 ("--fwu-probe", args.fwu_probe),
                 ("--pfdi-probe", args.pfdi_probe),
+                ("--pfdi-si-cl1-probe", args.pfdi_si_cl1_probe),
             )
             if enabled
         ]

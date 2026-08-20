@@ -430,6 +430,18 @@ def test_run_qbox_yocto_forwards_pfdi_probe(tmp_path: Path) -> None:
     assert "--pfdi-probe" in dry_run_command_argv(result.stdout)
 
 
+def test_run_qbox_yocto_forwards_si_cl1_pfdi_probe(tmp_path: Path) -> None:
+    # Given: a headless QBox launch requesting the SI CL1 PFDI probe.
+    result = run_qvp_dry_run(
+        tmp_path,
+        extra_args=["--pfdi-si-cl1-probe"],
+    )
+
+    # When/Then: the canonical Python runner receives the probe selector.
+    assert result.returncode == 0, result.stderr
+    assert "--pfdi-si-cl1-probe" in dry_run_command_argv(result.stdout)
+
+
 @pytest.mark.parametrize("headless", [True, False])
 def test_run_qbox_yocto_forwards_monitor_dashboard_options(
     tmp_path: Path,

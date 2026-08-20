@@ -64,6 +64,8 @@ def qbox_launcher_command(
         command.append("--dry-run")
     if request.test_profile == "pfdi":
         command.append("--pfdi-probe")
+    if request.test_profile == "pfdi-si-cl1":
+        command.append("--pfdi-si-cl1-probe")
     return command
 
 
@@ -130,7 +132,10 @@ def _qbox_artifacts(request: QBoxRunRequest) -> list[JsonObject]:
 def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     request.out_dir.mkdir(parents=True, exist_ok=True)
     commands_path = request.out_dir / "commands.jsonl"
-    if category != "basic" and request.test_profile != "pfdi":
+    if category != "basic" and request.test_profile not in {
+        "pfdi",
+        "pfdi-si-cl1",
+    }:
         timestamp = now()
         append_record(
             commands_path,
