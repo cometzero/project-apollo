@@ -126,3 +126,19 @@ def test_qbox_ap_secondary_cores_have_time_to_report_out_of_reset() -> None:
 
     # Then: secondary cores are not diagnosed before the QVP boot deadline.
     assert oor_timeout_us >= 10_000_000
+
+
+def test_qbox_ap_pfdi_boot_watchdog_covers_product_login() -> None:
+    # Given: the QVP-only AP boot watchdog configuration.
+    for build_path in (LOCAL_SCP_BUILD, QBOX_YOCTO_SCP_BUILD):
+        build_source = build_path.read_text(encoding="utf-8")
+
+        # When: the configured boot timeout is resolved.
+        timeout_match = re.search(
+            r"SCP_PFDI_BOOT_TIMEOUT_US=(\d+)UL",
+            build_source,
+        )
+
+        # Then: Linux has at least 100 simulated seconds to report online.
+        assert timeout_match is not None, build_path
+        assert int(timeout_match.group(1)) >= 100_000_000, build_path
