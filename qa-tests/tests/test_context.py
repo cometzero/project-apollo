@@ -117,3 +117,38 @@ def test_context_selects_bsp_image_artifacts(tmp_path: Path) -> None:
     assert result["testdata_path"].endswith(
         "nexios-bsp-initramfs-apollo-fvp.testdata.json"
     )
+
+
+def test_context_selects_qbox_runtime_configuration(tmp_path: Path) -> None:
+    # Given: an Apollo QVP deploy with QBox and OEQA metadata.
+    conf = tmp_path / "build/conf"
+    conf.mkdir(parents=True)
+    (conf / "local.conf").write_text(
+        'MACHINE = "apollo-qvp"\nTMPDIR = "${TOPDIR}/tmp_baremetal"\n',
+        encoding="utf-8",
+    )
+    (conf / "bblayers.conf").write_text("", encoding="utf-8")
+    (conf / "templateconf.cfg").write_text("template\n", encoding="utf-8")
+    deploy = tmp_path / "build/tmp_baremetal/deploy/images/apollo-qvp"
+    deploy.mkdir(parents=True)
+    stem = deploy / "nexios-image-apollo-qvp"
+    stem.with_suffix(".testdata.json").write_text("{}\n", encoding="utf-8")
+    stem.with_suffix(".qboxconf").write_text(
+        json.dumps({"exe": "platforms-vp", "config": "apollo-qvp.lua"}),
+        encoding="utf-8",
+    )
+
+    # When: context inspection is scoped to the QBox backend.
+    result = inspect_context(
+        tmp_path,
+        Path("build"),
+        "apollo-qvp",
+        backend="qbox",
+    )
+
+    # Then: the QBox configuration is the required runtime artifact.
+    assert result["status"] == "ok"
+    assert result["runtime_config"]["kind"] == "qboxconf"
+    assert result["runtime_config"]["path"].endswith(
+        "nexios-image-apollo-qvp.qboxconf"
+    )

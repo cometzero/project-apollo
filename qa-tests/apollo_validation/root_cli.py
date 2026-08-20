@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
+from typing import assert_never, Final
+
+from .backend import Backend, ImageProfile
 
 
 CATEGORIES: Final = ("basic", "functional", "power", "extended", "stress")
@@ -12,10 +14,10 @@ CATEGORIES: Final = ("basic", "functional", "power", "extended", "stress")
 @dataclass(frozen=True, slots=True)
 class RootOptions:
     build_dir: Path
-    backend: str
+    backend: Backend
     machine: str
     image: str
-    image_profile: str
+    image_profile: ImageProfile
     out_dir: Path | None
     stamp: str | None
     list_suites: bool
@@ -28,7 +30,6 @@ class RootOptions:
     test_profile: str | None
     tui: bool
     headless: bool
-    include_qbox_runtime: bool
     timeout_oeqa: int
     timeout_oeqa_requested: bool
     timeout_fvp: int
@@ -63,13 +64,19 @@ def parse_root_args(argv: list[str]) -> RootOptions:
     ui_group = parser.add_mutually_exclusive_group()
     ui_group.add_argument("--headless", action="store_true")
     ui_group.add_argument("--tui", action="store_true")
-    parser.add_argument("--include-qbox-runtime", action="store_true")
     parser.add_argument("--timeout-oeqa", type=int, default=10800)
-    parser.add_argument("--timeout-fvp", type=int, default=300)
+    parser.add_argument("--timeout-fvp", type=int)
     parsed = parser.parse_args(argv)
-    backend = parsed.backend
-    if backend is None:
-        backend = "qbox" if parsed.machine == "apollo-qvp" else "fvp"
+    raw_backend = parsed.backend
+    if raw_backend is None:
+        raw_backend = "qbox" if parsed.machine == "apollo-qvp" else "fvp"
+    match raw_backend:
+        case "fvp":
+            backend: Backend = "fvp"
+        case "qbox":
+            backend = "qbox"
+        case unexpected:
+            assert_never(unexpected)
     machine = "apollo-qvp" if backend == "qbox" else "apollo-fvp"
     if _option_was_requested(argv, "--machine") and parsed.machine != machine:
         parser.error(f"--{backend} conflicts with --machine {parsed.machine}")
@@ -78,7 +85,9 @@ def parse_root_args(argv: list[str]) -> RootOptions:
         parsed.image != "nexios-bsp-initramfs"
     ):
         parser.error(f"--bsp conflicts with --image {parsed.image}")
-    image_profile = "bsp" if image == "nexios-bsp-initramfs" else "product"
+    image_profile: ImageProfile = (
+        "bsp" if image == "nexios-bsp-initramfs" else "product"
+    )
     return RootOptions(
         build_dir=parsed.build_dir,
         backend=backend,
@@ -97,10 +106,11 @@ def parse_root_args(argv: list[str]) -> RootOptions:
         test_profile=parsed.test_profile,
         tui=parsed.tui,
         headless=not parsed.tui,
-        include_qbox_runtime=parsed.include_qbox_runtime,
         timeout_oeqa=parsed.timeout_oeqa,
         timeout_oeqa_requested=_option_was_requested(argv, "--timeout-oeqa"),
-        timeout_fvp=parsed.timeout_fvp,
+        timeout_fvp=parsed.timeout_fvp
+        if parsed.timeout_fvp is not None
+        else (600 if backend == "qbox" else 300),
     )
 
 

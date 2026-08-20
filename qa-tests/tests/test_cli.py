@@ -62,3 +62,16 @@ def test_root_cli_rejects_headless_tui_conflict() -> None:
     # When/Then: parsing fails instead of choosing one silently.
     with pytest.raises(SystemExit):
         parse_root_args(argv)
+
+
+def test_root_cli_selects_qbox_runtime_defaults() -> None:
+    # Given: the public QBox backend selector without timeout overrides.
+    argv = ["--qbox", "--headless"]
+
+    # When: the root CLI parses the backend request.
+    options = parse_root_args(argv)
+
+    # Then: QBox uses the Apollo QVP machine and its boot timeout.
+    assert options.backend == "qbox"
+    assert options.machine == "apollo-qvp"
+    assert options.timeout_fvp == 600

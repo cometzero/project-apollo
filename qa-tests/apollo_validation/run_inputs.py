@@ -39,8 +39,8 @@ def capture_run_inputs(
     evidence_dir = run_dir / "evidence"
     input_paths = {
         "testdata": context.get("testdata_path"),
-        "runtime_config": context.get("fvpconf", {}).get("path")
-        if isinstance(context.get("fvpconf"), dict)
+        "runtime_config": context.get("runtime_config", {}).get("path")
+        if isinstance(context.get("runtime_config"), dict)
         else None,
     }
     entries = []
@@ -51,7 +51,7 @@ def capture_run_inputs(
         if not source.is_file():
             continue
         evidence_dir.mkdir(parents=True, exist_ok=True)
-        suffix = ".fvpconf" if kind == "runtime_config" else ".testdata.json"
+        suffix = source.suffix if kind == "runtime_config" else ".testdata.json"
         snapshot = evidence_dir / f"resolved{suffix}"
         shutil.copy2(source, snapshot)
         entries.append(

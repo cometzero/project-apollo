@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, assert_never
+
+from .backend import Backend
 
 
 JsonObject = dict[str, Any]
@@ -82,6 +84,7 @@ def inspect_context(
     build_dir: Path,
     machine: str,
     image: str = "nexios-image",
+    backend: Backend = "fvp",
 ) -> JsonObject:
     root = root.resolve()
     build_dir = build_dir if build_dir.is_absolute() else root / build_dir
@@ -97,15 +100,28 @@ def inspect_context(
     deploy_dir = _tmpdir_path(build_dir, tmpdir) / "deploy/images" / machine
     testdata_path = deploy_dir / f"{image}-{machine}.testdata.json"
     fvpconf_path = deploy_dir / f"{image}-{machine}.fvpconf"
+    qboxconf_path = deploy_dir / f"{image}-{machine}.qboxconf"
     testdata = _read_json(testdata_path)
     fvpconf = _read_json(fvpconf_path)
+    qboxconf = _read_json(qboxconf_path)
+    match backend:
+        case "fvp":
+            runtime_kind = "fvpconf"
+            runtime_path = fvpconf_path
+            runtime_data = fvpconf
+        case "qbox":
+            runtime_kind = "qboxconf"
+            runtime_path = qboxconf_path
+            runtime_data = qboxconf
+        case unexpected:
+            assert_never(unexpected)
     distro = local_conf.get("DISTRO") or _str(testdata, "DISTRO", "auto-ad-nexios")
     distro_conf = parse_conf(
         root
         / "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/distro"
         / f"{distro}.conf"
     )
-    status = "ok" if testdata_path.is_file() and fvpconf_path.is_file() else "blocked"
+    status = "ok" if testdata_path.is_file() and runtime_path.is_file() else "blocked"
     blockers = []
     if not testdata_path.is_file():
         blockers.append(
@@ -115,12 +131,12 @@ def inspect_context(
                 "name": "testdata",
             }
         )
-    if not fvpconf_path.is_file():
+    if not runtime_path.is_file():
         blockers.append(
             {
                 "reason": "blocked_missing_artifact",
-                "path": str(fvpconf_path),
-                "name": "fvpconf",
+                "path": str(runtime_path),
+                "name": runtime_kind,
             }
         )
     return {
@@ -160,12 +176,24 @@ def inspect_context(
         "test_target_ip": _str(testdata, "TEST_TARGET_IP"),
         "fvp_exe": _str(testdata, "FVP_EXE") or _str(fvpconf, "exe"),
         "testdata_path": str(testdata_path),
+        "runtime_config": {
+            "kind": runtime_kind,
+            "path": str(runtime_path),
+            "exe": _str(runtime_data, "exe"),
+            "config": _str(runtime_data, "config"),
+        },
         "fvpconf": {
             "path": str(fvpconf_path),
             "exe": _str(fvpconf, "exe"),
             "provider": _str(fvpconf, "provider"),
             "bindir": _str(fvpconf, "fvp-bindir"),
             "args": fvpconf.get("args", []),
+        },
+        "qboxconf": {
+            "path": str(qboxconf_path),
+            "exe": _str(qboxconf, "exe"),
+            "config": _str(qboxconf, "config"),
+            "provider": qboxconf.get("provider", {}),
         },
         "bblayers": words(bblayers_conf.get("BBLAYERS", "")),
         "templateconf": templateconf,

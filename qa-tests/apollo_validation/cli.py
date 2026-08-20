@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 from .evidence import write_json, write_reports
+from .qbox_entry import request_uses_qbox, run_qbox_root
 from .root_runner import run_root_compat
 from .runner import run_category, run_context
 from .suites import DEFAULT_PROFILE, list_suites
@@ -49,6 +50,8 @@ def cmd_root_run(args: argparse.Namespace) -> int:
     rest = list(args.args)
     if rest and rest[0] == "--":
         rest = rest[1:]
+    if request_uses_qbox(rest):
+        return run_qbox_root(args.root.resolve(), rest)
     return run_root_compat(args.root.resolve(), rest)
 
 

@@ -19,7 +19,13 @@ The public entrypoint is run from the workspace root:
 ```bash
 ./run_test.sh --list
 ./run_test.sh --fvp --headless --test-profile ras_cpu
+./run_test.sh --qbox --headless
 ```
+
+The QBox backend selects `apollo-qvp`, validates the deployed `qboxconf`, and
+runs the canonical Yocto QBox launcher in headless full-system mode. Add
+`--bsp` to boot `nexios-bsp-initramfs`. Named OEQA profiles remain FVP-only
+until their QBox target controllers are implemented and validated.
 
 The Python package can also be invoked directly:
 
