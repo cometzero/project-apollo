@@ -75,6 +75,67 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
 
 
 @pytest.mark.parametrize(
+    ("profile_id", "methods"),
+    [
+        (
+            "bsp-core",
+            (
+                "test_10_bsp_core.BSPCoreTest.test_firmware_boot_chain",
+                "test_10_bsp_core.BSPCoreTest.test_linux_topology_and_devices",
+                "test_10_bsp_core.BSPCoreTest.test_safety_island_cl1",
+            ),
+        ),
+        (
+            "si-cl1",
+            ("test_10_bsp_core.BSPCoreTest.test_safety_island_cl1",),
+        ),
+    ],
+)
+def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(
+    tmp_path: Path,
+    profile_id: str,
+    methods: tuple[str, ...],
+) -> None:
+    # Given: passing real-shaped OEQA result entries for the selected profile.
+    run_dir = _profile_run(tmp_path, profile_id, "fvp")
+    result_path = run_dir / "oeqa/testresults.json"
+    result_path.parent.mkdir(parents=True)
+    result_path.write_text(
+        json.dumps(
+            {
+                "runtime": {
+                    "result": {
+                        method: {"status": "PASSED"} for method in methods
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    append_record(
+        run_dir / "commands.jsonl",
+        {
+            "name": "oeqa",
+            "status": "pass",
+            "artifacts": [{"kind": "oeqa_result", "path": str(result_path)}],
+        },
+    )
+
+    # When: the public profile result is normalized.
+    normalized = normalize_profile_run(run_dir, profile_id, "fvp")
+
+    # Then: every expected assertion appears once with no blocker or skip.
+    assert normalized.result.verdict == "PASS"
+    assert normalized.counts.failed == 0
+    assert normalized.counts.blocked == 0
+    assert normalized.counts.skipped == 0
+    assert normalized.counts.passed == len(normalized.result.expected)
+    assert len({item.assertion_id for item in normalized.result.assertions}) == len(
+        normalized.result.expected
+    )
+
+
+@pytest.mark.parametrize(
     ("observed", "verdict", "reason"),
     [
         ((), "BLOCKED", "blocked_profile_zero_assertions"),

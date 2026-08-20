@@ -8,6 +8,9 @@ from typing import TypeAlias
 
 JsonScalar: TypeAlias = str | int | bool | None
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
+FvpConfig: TypeAlias = tuple[tuple[str, str], ...]
+SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
+FVP_CONFIG_PROFILES = frozenset({"bsp-core", "si-cl1"})
 
 
 class ProfileError(Exception):
@@ -29,6 +32,7 @@ class TestProfile:
     timeout_seconds: int
     backend: str
     image_profile: str
+    fvp_config: FvpConfig
 
 
 def _mapping(value: JsonValue, field: str) -> dict[str, JsonValue]:
@@ -55,6 +59,26 @@ def _positive_int(value: JsonValue, field: str) -> int:
     if type(value) is not int or value <= 0:
         raise ProfileError(f"profile field {field} must be a positive integer")
     return value
+
+
+def _fvp_config(value: JsonValue, profile_name: str) -> FvpConfig:
+    if value is None:
+        return ()
+    if profile_name not in FVP_CONFIG_PROFILES:
+        raise ProfileError(f"profile {profile_name} does not permit FVP config")
+    data = _mapping(value, "fvp_config")
+    entries: list[tuple[str, str]] = []
+    for key, raw_value in data.items():
+        if key != SI_CL1_UART:
+            raise ProfileError(f"unknown FVP config key: {key}")
+        if not isinstance(raw_value, str):
+            raise ProfileError(f"FVP config value for {key} must be a string")
+        if raw_value != "1":
+            raise ProfileError(f"unsafe FVP config value for {key}")
+        entries.append((key, raw_value))
+    if not entries:
+        raise ProfileError("profile field fvp_config must not be empty")
+    return tuple(entries)
 
 
 def load_test_profile(
@@ -97,4 +121,5 @@ def load_test_profile(
         ),
         backend=backend,
         image_profile=image_profile,
+        fvp_config=_fvp_config(data.get("fvp_config"), profile_name),
     )

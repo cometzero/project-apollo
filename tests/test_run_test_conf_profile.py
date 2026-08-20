@@ -44,6 +44,7 @@ PRODUCT_SUITES = (
     "test_80_trusted_services",
 )
 BSP_SUITES = ("test_00_bsp_boot",)
+SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
 
 
 def _bitbake_value(machine: str, image: str, variable: str) -> str:
@@ -90,6 +91,86 @@ def test_profile_target_overrides_functional_fvp_target(
     text = result.conf_path.read_text(encoding="utf-8")
     assert 'TEST_TARGET = "HSOCBSPFVPTarget"' in text
     assert "HSOCSingleSessionFVPTarget" not in text
+
+
+def test_selected_fvp_config_is_emitted_only_in_run_conf(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    # Given: the profile environment contains the one approved FVP override.
+    monkeypatch.setenv(
+        "APOLLO_VALIDATION_FVP_CONFIG",
+        json.dumps({SI_CL1_UART: "1"}),
+    )
+    request = ConfRequest(
+        root=tmp_path,
+        build_dir=Path("build"),
+        machine="apollo-fvp",
+        run_dir=Path("build/tests/profile-run"),
+        kind="extended",
+    )
+    manifest: JsonObject = {"machine": "apollo-fvp", "distro": "auto-ad-nexios"}
+
+    # When: the run-scoped OEQA configuration is generated.
+    result = write_conf(request, manifest)
+
+    # Then: it contains exactly the approved FVP assignment.
+    assert result.conf_path is not None
+    text = result.conf_path.read_text(encoding="utf-8")
+    assert f'FVP_CONFIG[{SI_CL1_UART}] = "1"' in text
+    assert (
+        'BB_ENV_PASSTHROUGH_ADDITIONS:append = " APOLLO_VALIDATION_FVP_CONFIG"'
+        in text
+    )
+    assert "export APOLLO_VALIDATION_FVP_CONFIG" in text
+
+
+def test_default_profile_conf_has_no_si_cl1_override(tmp_path: Path) -> None:
+    # Given: a normal functional run without a selected profile map.
+    request = ConfRequest(
+        root=tmp_path,
+        build_dir=Path("build"),
+        machine="apollo-fvp",
+        run_dir=Path("build/tests/default-run"),
+        kind="functional",
+    )
+    manifest: JsonObject = {"machine": "apollo-fvp", "distro": "auto-ad-nexios"}
+
+    # When: its run-scoped OEQA configuration is generated.
+    result = write_conf(request, manifest)
+
+    # Then: no profile-only SI CL1 policy leaks into the default configuration.
+    assert result.conf_path is not None
+    assert SI_CL1_UART not in result.conf_path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"unknown.parameter": "1"},
+        {SI_CL1_UART: ["1"]},
+        {SI_CL1_UART: '1\"\\nINJECT = "1'},
+    ],
+)
+def test_run_conf_rejects_malformed_fvp_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    payload: object,
+) -> None:
+    # Given: malformed data crossing the explicit environment boundary.
+    monkeypatch.setenv("APOLLO_VALIDATION_FVP_CONFIG", json.dumps(payload))
+    request = ConfRequest(
+        root=tmp_path,
+        build_dir=Path("build"),
+        machine="apollo-fvp",
+        run_dir=Path("build/tests/invalid-run"),
+        kind="extended",
+    )
+    manifest: JsonObject = {"machine": "apollo-fvp", "distro": "auto-ad-nexios"}
+
+    # When/Then: config generation rejects data that could escape the assignment.
+    with pytest.raises(ValueError, match="FVP config"):
+        write_conf(request, manifest)
 
 
 @pytest.mark.parametrize("machine", ["apollo-fvp", "apollo-qvp"])

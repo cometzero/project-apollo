@@ -1,15 +1,24 @@
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 
 import pytest
 
 from apollo_validation.profiles import ProfileError, load_test_profile
 from apollo_validation.root_cli import parse_root_args
-from apollo_validation.selection import prepare_selection, write_selection_evidence
+from apollo_validation.selection import (
+    prepare_selection,
+    selected_test_environment,
+    write_selection_evidence,
+)
 
 
 WORKSPACE = Path(__file__).resolve().parents[2]
+SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
+SELECTED_FVP_CONFIG_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
+BITBAKE_PASSTHROUGH_ENV = "BB_ENV_PASSTHROUGH_ADDITIONS"
 
 
 def test_pfdi_profile_selects_bsp_oeqa_contract() -> None:
@@ -23,6 +32,114 @@ def test_pfdi_profile_selects_bsp_oeqa_contract() -> None:
     assert profile.oeqa_kind == "extended"
     assert profile.test_target == "HSOCBSPFVPTarget"
     assert profile.timeout_seconds == 1800
+
+
+def test_bsp_core_profile_selects_the_complete_bsp_contract() -> None:
+    # Given: the dedicated Apollo BSP core profile.
+    # When: it is resolved for the FVP BSP backend.
+    profile = load_test_profile(WORKSPACE, "bsp-core", "fvp", "bsp")
+
+    # Then: BSP boot precedes all non-network BSP core assertions.
+    assert profile.selectors == ("test_00_bsp_boot", "test_10_bsp_core")
+    assert profile.test_target == "HSOCBSPFVPTarget"
+    assert profile.timeout_seconds == 1800
+    assert profile.fvp_config == ((SI_CL1_UART, "1"),)
+
+
+def test_si_cl1_profile_selects_only_its_bsp_method() -> None:
+    # Given: the focused Safety Island CL1 profile.
+    # When: it is resolved for the FVP BSP backend.
+    profile = load_test_profile(WORKSPACE, "si-cl1", "fvp", "bsp")
+
+    # Then: it cannot accidentally broaden to BSP core device coverage.
+    assert profile.selectors == (
+        "test_00_bsp_boot",
+        "test_10_bsp_core.BSPCoreTest.test_safety_island_cl1",
+    )
+    assert profile.test_target == "HSOCBSPFVPTarget"
+    assert profile.timeout_seconds == 1200
+    assert profile.fvp_config == ((SI_CL1_UART, "1"),)
+
+
+def test_profile_fvp_config_crosses_the_selected_environment_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: a selected BSP core profile and no inherited override.
+    monkeypatch.delenv(SELECTED_FVP_CONFIG_ENV, raising=False)
+    options = parse_root_args(
+        ["--fvp", "--bsp", "--headless", "--test-profile", "bsp-core"]
+    )
+    selection, _resolved = prepare_selection(WORKSPACE, options)
+    assert selection is not None
+
+    # When: the selected run owns its explicit environment boundary.
+    with selected_test_environment(selection):
+        selected = os.environ.get(SELECTED_FVP_CONFIG_ENV)
+        passthrough = os.environ.get(BITBAKE_PASSTHROUGH_ENV, "").split()
+
+    # Then: the exact typed map is serialized and the outer environment restored.
+    assert json.loads(selected or "null") == {SI_CL1_UART: "1"}
+    assert SELECTED_FVP_CONFIG_ENV in passthrough
+    assert SELECTED_FVP_CONFIG_ENV not in os.environ
+
+
+def test_pfdi_selection_clears_inherited_fvp_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: a PFDI profile process inheriting a stale SI CL1 override.
+    monkeypatch.setenv(
+        SELECTED_FVP_CONFIG_ENV,
+        json.dumps({SI_CL1_UART: "1"}),
+    )
+    options = parse_root_args(
+        ["--fvp", "--bsp", "--headless", "--test-profile", "pfdi"]
+    )
+    selection, _resolved = prepare_selection(WORKSPACE, options)
+    assert selection is not None
+
+    # When: the PFDI selection owns the run environment.
+    with selected_test_environment(selection):
+        selected = os.environ.get(SELECTED_FVP_CONFIG_ENV)
+
+    # Then: PFDI emits no FVP override and the inherited value is restored later.
+    assert selected is None
+    assert json.loads(os.environ[SELECTED_FVP_CONFIG_ENV]) == {SI_CL1_UART: "1"}
+
+
+@pytest.mark.parametrize(
+    ("profile_name", "fvp_config", "reason"),
+    [
+        ("bsp-core", {"unknown.parameter": "1"}, "unknown FVP config key"),
+        ("bsp-core", {SI_CL1_UART: ["1"]}, "must be a string"),
+        ("bsp-core", {SI_CL1_UART: '1\"\\nINJECT = "1'}, "unsafe FVP config value"),
+        ("pfdi", {SI_CL1_UART: "1"}, "does not permit FVP config"),
+    ],
+)
+def test_profile_rejects_invalid_fvp_config(
+    tmp_path: Path,
+    profile_name: str,
+    fvp_config: object,
+    reason: str,
+) -> None:
+    # Given: a repository-shaped profile carrying invalid FVP parameter data.
+    profile_dir = tmp_path / "qa-tests/profiles"
+    profile_dir.mkdir(parents=True)
+    payload = {
+        "version": 1,
+        "name": profile_name,
+        "description": "invalid fixture",
+        "compatibility": {"backends": ["fvp"], "images": ["bsp"]},
+        "oeqa": {"kind": "extended", "selectors": ["test_x"], "timeout_seconds": 1},
+        "targets": {"fvp": "Target"},
+        "fvp_config": fvp_config,
+    }
+    (profile_dir / f"{profile_name}.yaml").write_text(
+        json.dumps(payload), encoding="utf-8"
+    )
+
+    # When/Then: the typed profile boundary rejects it before selection.
+    with pytest.raises(ProfileError, match=reason):
+        load_test_profile(tmp_path, profile_name, "fvp", "bsp")
 
 
 def test_pfdi_profile_selects_qbox_probe_contract() -> None:
@@ -55,6 +172,24 @@ def test_profile_selection_applies_timeout_and_writes_snapshot(
     assert resolved.category == "functional"
     assert resolved.timeout_oeqa == 1800
     assert (tmp_path / "resolved-profile.yaml").is_file()
+
+
+def test_bsp_core_snapshot_captures_fvp_config(tmp_path: Path) -> None:
+    # Given: the public BSP core profile selection.
+    options = parse_root_args(
+        ["--fvp", "--bsp", "--headless", "--test-profile", "bsp-core"]
+    )
+    selection, _resolved = prepare_selection(WORKSPACE, options)
+    assert selection is not None
+
+    # When: the resolved profile snapshot is recorded.
+    write_selection_evidence(tmp_path, selection)
+    snapshot = json.loads(
+        (tmp_path / "resolved-profile.yaml").read_text(encoding="utf-8")
+    )
+
+    # Then: provenance consumers see the exact run-owned FVP parameter map.
+    assert snapshot["fvp_config"] == {SI_CL1_UART: "1"}
 
 
 def test_si_cl1_profile_selects_full_safety_island_suite() -> None:

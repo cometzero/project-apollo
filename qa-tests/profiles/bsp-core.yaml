@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "name": "bsp-core",
+  "description": "Apollo BSP core firmware and Linux validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_10_bsp_core"],
+    "timeout_seconds": 1800
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  },
+  "fvp_config": {
+    "css.smb.si.cluster1_pl011_uart.uart_enable": "1"
+  }
+}

@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass, replace
 import json
-import os
 from pathlib import Path
 
 from .evidence import append_record, now, write_json
 from .profiles import load_test_profile
 from .root_cli import RootOptions
+from .selection_environment import selected_test_environment as selected_test_environment
 from .suites import list_suites
 
-
-SELECTED_SUITES_ENV = "APOLLO_VALIDATION_TEST_SUITES"
-SELECTED_KIND_ENV = "APOLLO_VALIDATION_OEQA_KIND"
-SELECTED_TARGET_ENV = "APOLLO_VALIDATION_TEST_TARGET"
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +40,7 @@ class TestSelection:
     test_target: str | None = None
     backend: str | None = None
     image_profile: str | None = None
+    fvp_config: tuple[tuple[str, str], ...] = ()
 
     def as_json(self) -> dict[str, object]:
         return {
@@ -59,6 +54,7 @@ class TestSelection:
             "test_target": self.test_target,
             "backend": self.backend,
             "image_profile": self.image_profile,
+            "fvp_config": dict(self.fvp_config),
         }
 
 
@@ -195,6 +191,7 @@ def prepare_selection(
                 test_target=profile.test_target,
                 backend=profile.backend,
                 image_profile=profile.image_profile,
+                fvp_config=profile.fvp_config,
             ),
             replace(
                 options,
@@ -239,30 +236,3 @@ def write_selection_evidence(run_dir: Path, selection: TestSelection) -> None:
             "artifacts": artifacts,
         },
     )
-
-
-@contextmanager
-def selected_test_environment(selection: TestSelection | None) -> Iterator[None]:
-    previous_suites = os.environ.get(SELECTED_SUITES_ENV)
-    previous_kind = os.environ.get(SELECTED_KIND_ENV)
-    previous_target = os.environ.get(SELECTED_TARGET_ENV)
-    try:
-        if selection is not None and selection.oeqa_kind is not None:
-            os.environ[SELECTED_SUITES_ENV] = json.dumps(selection.ordered_tests)
-            os.environ[SELECTED_KIND_ENV] = selection.oeqa_kind
-        if selection is not None and selection.test_target is not None:
-            os.environ[SELECTED_TARGET_ENV] = selection.test_target
-        yield
-    finally:
-        if previous_suites is None:
-            os.environ.pop(SELECTED_SUITES_ENV, None)
-        else:
-            os.environ[SELECTED_SUITES_ENV] = previous_suites
-        if previous_kind is None:
-            os.environ.pop(SELECTED_KIND_ENV, None)
-        else:
-            os.environ[SELECTED_KIND_ENV] = previous_kind
-        if previous_target is None:
-            os.environ.pop(SELECTED_TARGET_ENV, None)
-        else:
-            os.environ[SELECTED_TARGET_ENV] = previous_target

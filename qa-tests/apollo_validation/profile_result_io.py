@@ -27,6 +27,21 @@ MATRIX_PATH = WORKSPACE_ROOT / "qa-tests/validation/arm-zena-css-v2.2-non-xen.ya
 
 
 _FVP_ALIASES: dict[str, tuple[str, ...]] = {
+    "bsp-core:test_firmware_boot_chain": (
+        "bsp-scp",
+        "bsp-uboot-boot",
+        "rse-normal-boot",
+        "rse-measured-boot",
+        "primary-fvp-boot",
+        "pc-cpus-tfa",
+        "secure-partition-optee",
+    ),
+    "bsp-core:test_linux_topology_and_devices": (
+        "ap-dsu-cluster",
+        "pc-cpus-linux",
+    ),
+    "bsp-core:test_safety_island_cl1": ("bsp-safety-island-cl1",),
+    "si-cl1:test_safety_island_cl1": ("safety-island-cluster1",),
     "pfdi:test_01_prerequisites": ("pfdi-app",),
     "pfdi:test_02_service": ("pfdi-systemd-service",),
     "pfdi:test_03_cli": ("pfdi-cli",),

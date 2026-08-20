@@ -8,6 +8,7 @@ import re
 import sys
 from typing import assert_never, Final, Literal, Protocol
 
+from run_test_fvp_config import fvp_config_assignments
 from run_test_suite_plan import resolve_plan
 
 
@@ -228,7 +229,7 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
         f'TEST_OVERALL_TIMEOUT = "{request.test_overall_timeout}"',
         f'MACHINE = "{request.machine}"',
     ]
-    lines.extend(_device_assignments(manifest))
+    lines += _device_assignments(manifest) + fvp_config_assignments(request.machine)
     selected_target = os.environ.get(SELECTED_TARGET_ENV)
     if selected_target:
         lines.extend(

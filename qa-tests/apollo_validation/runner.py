@@ -353,7 +353,7 @@ def run_basic(
     )
     _log("DONE runtime-preflight (pass)")
     if preflight_only:
-        return _write_summary(out_dir)
+        return 0
 
     boot_out = out_dir / "fvp"
     basic_argv = [

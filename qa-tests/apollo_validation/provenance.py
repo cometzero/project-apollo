@@ -9,6 +9,7 @@ from typing import Literal, TypeAlias, TypedDict
 
 from .backend import Backend, ImageProfile
 from .source_revisions import capture_source_revisions
+from .profiles import FvpConfig, load_test_profile
 from .validation_matrix import load_validation_matrix
 from .validation_types import CoverageKind
 
@@ -65,6 +66,7 @@ class ProfileProvenance:
     selectors: tuple[str, ...]
     expected_assertion_ids: tuple[str, ...]
     coverage_kind: CoverageKind
+    fvp_config: FvpConfig
     machine: str
     image: str
     image_profile: ImageProfile
@@ -92,6 +94,7 @@ class ProfileProvenance:
             "selectors": list(self.selectors),
             "expected_assertion_ids": list(self.expected_assertion_ids),
             "coverage_kind": self.coverage_kind,
+            "fvp_config": dict(self.fvp_config),
             "machine": self.machine,
             "image": self.image,
             "image_profile": self.image_profile,
@@ -195,6 +198,12 @@ def capture_profile_provenance(request: ProvenanceRequest) -> ProfileProvenance:
     if profile.cpu_count != request.cpu_count:
         raise ProvenanceError("blocked_fvp_reference_cpu_mismatch")
     profile_path = request.root / f"qa-tests/profiles/{request.profile_id}.yaml"
+    selected_profile = load_test_profile(
+        request.root,
+        request.profile_id,
+        request.backend,
+        request.image_profile,
+    )
     shared_paths = (
         matrix_path,
         profile_path,
@@ -215,6 +224,7 @@ def capture_profile_provenance(request: ProvenanceRequest) -> ProfileProvenance:
         "selectors": list(request.selectors),
         "expected_assertion_ids": list(profile.qbox_assertions),
         "coverage_kind": profile.coverage_kind,
+        "fvp_config": dict(selected_profile.fvp_config),
         "shared_inputs": shared_json,
     }
     semantic_bytes = json.dumps(semantic, sort_keys=True, separators=(",", ":")).encode()
@@ -225,6 +235,7 @@ def capture_profile_provenance(request: ProvenanceRequest) -> ProfileProvenance:
         request.selectors,
         profile.qbox_assertions,
         profile.coverage_kind,
+        selected_profile.fvp_config,
         request.machine,
         request.image,
         request.image_profile,

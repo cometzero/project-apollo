@@ -147,6 +147,40 @@ def test_canonical_matrix_matches_approved_profile_selector_contract() -> None:
     assert actual == APPROVED_FVP_SELECTORS
 
 
+def test_systemd_boot_action_is_owned_by_platform_devices() -> None:
+    # Given: the canonical profile matrix after BSP-only qualification.
+    matrix = load_validation_matrix(MATRIX_PATH)
+    profiles = {profile.profile_id: profile for profile in matrix.profiles}
+
+    # When: systemd-boot's assertion owner is checked independently.
+    bsp_assertions = profiles["bsp-core"].qbox_assertions
+    platform_assertions = profiles["platform-devices"].qbox_assertions
+
+    # Then: BSP does not claim a runtime EFI variable unavailable after bootefi.
+    assert "systemd-boot-message" not in bsp_assertions
+    assert "systemd-boot-message" in platform_assertions
+
+
+def test_platform_devices_owns_controller_and_boot_actions() -> None:
+    # Given: the canonical action mapping for BSP and product profiles.
+    matrix = load_validation_matrix(MATRIX_PATH)
+    actions_by_profile = {
+        area.profile_id: {action.action_id for action in area.actions}
+        for area in matrix.areas
+    }
+
+    # When: controller-network and systemd-boot action ownership is inspected.
+    bsp_actions = actions_by_profile["bsp-core"]
+    platform_actions = actions_by_profile["platform-devices"]
+
+    # Then: the BSP profile stays native while product owns transport and boot.
+    assert {"primary-ping", "primary-ssh", "systemd-boot-message"}.isdisjoint(
+        bsp_actions
+    )
+    assert {"primary-ping", "primary-ssh", "systemd-boot-message"} <= platform_actions
+    assert matrix.action_count == 100
+
+
 @pytest.mark.parametrize(
     ("mutation", "reason"),
     [

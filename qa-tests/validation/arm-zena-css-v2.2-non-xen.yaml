@@ -14,7 +14,7 @@
       "cpu_count": 4,
       "coverage_kind": "identical",
       "fvp_selectors": ["test_00_bsp_boot", "test_10_bsp_core"],
-      "qbox_assertions": ["bsp-scp", "bsp-uboot-boot", "bsp-safety-island-cl1", "rse-normal-boot", "rse-measured-boot", "primary-fvp-boot", "primary-ping", "primary-ssh", "ap-dsu-cluster", "systemd-boot-message", "pc-cpus-tfa", "pc-cpus-linux", "secure-partition-optee"]
+      "qbox_assertions": ["bsp-scp", "bsp-uboot-boot", "bsp-safety-island-cl1", "rse-normal-boot", "rse-measured-boot", "primary-fvp-boot", "ap-dsu-cluster", "pc-cpus-tfa", "pc-cpus-linux", "secure-partition-optee"]
     },
     {
       "id": "platform-devices",
@@ -22,7 +22,7 @@
       "cpu_count": 4,
       "coverage_kind": "semantic",
       "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"],
-      "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog"]
+      "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog", "primary-ping", "primary-ssh", "systemd-boot-message"]
     },
     {
       "id": "trusted-services",
@@ -133,10 +133,7 @@
         {"id": "rse-normal-boot", "assertion_id": "rse-normal-boot"},
         {"id": "rse-measured-boot", "assertion_id": "rse-measured-boot"},
         {"id": "primary-fvp-boot", "assertion_id": "primary-fvp-boot"},
-        {"id": "primary-ping", "assertion_id": "primary-ping"},
-        {"id": "primary-ssh", "assertion_id": "primary-ssh"},
         {"id": "ap-dsu-cluster", "assertion_id": "ap-dsu-cluster"},
-        {"id": "systemd-boot-message", "assertion_id": "systemd-boot-message"},
         {"id": "pc-cpus-tfa", "assertion_id": "pc-cpus-tfa"},
         {"id": "pc-cpus-linux", "assertion_id": "pc-cpus-linux"},
         {"id": "secure-partition-optee", "assertion_id": "secure-partition-optee"}
@@ -151,7 +148,10 @@
         {"id": "platform-device-rtc", "assertion_id": "platform-device-rtc"},
         {"id": "platform-device-cpu-hotplug", "assertion_id": "platform-device-cpu-hotplug"},
         {"id": "platform-device-virtiorng", "assertion_id": "platform-device-virtiorng"},
-        {"id": "platform-device-watchdog", "assertion_id": "platform-device-watchdog"}
+        {"id": "platform-device-watchdog", "assertion_id": "platform-device-watchdog"},
+        {"id": "primary-ping", "assertion_id": "primary-ping"},
+        {"id": "primary-ssh", "assertion_id": "primary-ssh"},
+        {"id": "systemd-boot-message", "assertion_id": "systemd-boot-message"}
       ]
     },
     {

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "name": "si-cl1",
+  "description": "Apollo BSP Safety Island CL1 boot validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_bsp_boot",
+      "test_10_bsp_core.BSPCoreTest.test_safety_island_cl1"
+    ],
+    "timeout_seconds": 1200
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  },
+  "fvp_config": {
+    "css.smb.si.cluster1_pl011_uart.uart_enable": "1"
+  }
+}

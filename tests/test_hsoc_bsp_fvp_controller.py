@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 import sys
 from threading import Lock
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +30,10 @@ class FakeMatch:
 class FakeLogger:
     def info(self, message: str) -> None:
         assert message
+
+    def debug(self, message: str, *values: str | Path) -> None:
+        assert message
+        assert values
 
 
 class FakeBspTarget(HSOCBSPFVPTarget):
@@ -82,3 +90,118 @@ def test_bsp_target_keeps_linux_session_for_on_transition() -> None:
 
     # Then: the running BSP session remains available without a reboot.
     assert target.state == OEFVPTargetState.LINUX
+
+
+SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
+PROFILE_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
+
+
+def _runtime_target(tmp_path: Path) -> tuple[HSOCBSPFVPTarget, Path]:
+    deploy = tmp_path / "deploy"
+    deploy.mkdir()
+    source_image = deploy / "flash.bin"
+    source_image.write_bytes(b"source flash")
+    source = deploy / "image.fvpconf"
+    source.write_text(
+        json.dumps(
+            {
+                "parameters": {
+                    SI_CL1_UART: "0",
+                    "ros.flash_loader.fname": str(source_image),
+                    "ros.flash_loader.fnameWrite": str(source_image),
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    target = HSOCBSPFVPTarget.__new__(HSOCBSPFVPTarget)
+    target.fvpconf = source
+    target.bootlog = str(tmp_path / "run/logs/default.log")
+    target.logger = FakeLogger()
+    return target, source
+
+
+def test_profile_config_uses_private_runtime_fvpconf(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: a selected profile map and an immutable deployed FVP config.
+    target, source = _runtime_target(tmp_path)
+    source_bytes = source.read_bytes()
+    monkeypatch.setenv(PROFILE_ENV, json.dumps({SI_CL1_UART: "1"}))
+
+    # When: the controller prepares writable runtime state.
+    target._reset_writable_flash()
+
+    # Then: only the private runtime copy carries the selected UART override.
+    assert source.read_bytes() == source_bytes
+    assert target.fvpconf != source
+    runtime = json.loads(target.fvpconf.read_text(encoding="utf-8"))
+    assert runtime["parameters"][SI_CL1_UART] == "1"
+    receipt = target.fvpconf.parent / "fvp-config-application.json"
+    evidence = json.loads(receipt.read_text(encoding="utf-8"))
+    assert evidence["applied_fvp_config"] == {SI_CL1_UART: "1"}
+    assert evidence["source_sha256"] == hashlib.sha256(source_bytes).hexdigest()
+
+
+def test_default_controller_preserves_deployed_uart_value(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: no selected profile FVP config.
+    target, source = _runtime_target(tmp_path)
+    monkeypatch.delenv(PROFILE_ENV, raising=False)
+
+    # When: normal writable runtime state is prepared.
+    target._reset_writable_flash()
+
+    # Then: the default UART value remains zero and no profile receipt exists.
+    assert source.read_bytes()
+    runtime = json.loads(target.fvpconf.read_text(encoding="utf-8"))
+    assert runtime["parameters"][SI_CL1_UART] == "0"
+    assert not (target.fvpconf.parent / "fvp-config-application.json").exists()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"unknown.parameter": "1"},
+        {SI_CL1_UART: ["1"]},
+        {SI_CL1_UART: '1\"\\nINJECT = "1'},
+    ],
+)
+def test_controller_rejects_malformed_profile_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    payload: object,
+) -> None:
+    # Given: malformed data at the controller environment boundary.
+    target, _source = _runtime_target(tmp_path)
+    monkeypatch.setenv(PROFILE_ENV, json.dumps(payload))
+
+    # When/Then: the controller rejects it before creating a runtime config.
+    with pytest.raises(ValueError, match="FVP config"):
+        target._reset_writable_flash()
+
+
+def test_profile_runtime_reset_restarts_from_immutable_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: a prior private runtime copy was externally changed after one run.
+    target, source = _runtime_target(tmp_path)
+    source_bytes = source.read_bytes()
+    monkeypatch.setenv(PROFILE_ENV, json.dumps({SI_CL1_UART: "1"}))
+    target._reset_writable_flash()
+    target.fvpconf.write_text(
+        json.dumps({"parameters": {SI_CL1_UART: "stale"}}),
+        encoding="utf-8",
+    )
+
+    # When: the controller resets for another transition.
+    target._reset_writable_flash()
+
+    # Then: it reapplies the selected map from the immutable deployed source.
+    runtime = json.loads(target.fvpconf.read_text(encoding="utf-8"))
+    assert runtime["parameters"][SI_CL1_UART] == "1"
+    assert source.read_bytes() == source_bytes

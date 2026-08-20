@@ -119,6 +119,7 @@ def reference_summary(root: Path) -> dict[str, JsonValue]:
         "selectors": list(SELECTORS),
         "expected_assertion_ids": list(EXPECTED),
         "coverage_kind": "identical",
+        "fvp_config": {},
         "shared_inputs": shared,
     }
     digest = sha256_bytes(
@@ -176,6 +177,7 @@ def reference_summary(root: Path) -> dict[str, JsonValue]:
             "selectors": list(SELECTORS),
             "expected_assertion_ids": list(EXPECTED),
             "coverage_kind": "identical",
+            "fvp_config": {},
             "machine": "apollo-fvp",
             "image": "nexios-bsp-initramfs",
             "image_profile": "bsp",
