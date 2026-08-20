@@ -117,6 +117,16 @@ four cluster fault IRQs. The `ras_cpu` QBox profile now covers Linux CPER
 decode, 14 TF-A fault interrupts, ten consecutive corrected records,
 rasdaemon, and SCP SSU transition to ERRC.
 
+The 2026-08-20 safety-diagnostics qualification adds the QBox backend for
+`./run_test.sh --machine apollo-qvp --bsp --test-profile
+safety-diagnostics-tests`. The System FMU now preserves the error syndrome
+after injection acknowledgement and implements count/threshold upgrade.
+Dedicated GIC/MHU and NI-710AE leaf FMUs cover all eleven device-FMU and six
+NI-710AE injection cases, propagate their configured parent records, and
+retain critical/non-critical classification during SCP-firmware traversal.
+The final run passed the SSU test and all 20 FMU tests. Evidence is under
+`build/tests/20260820-145753-qbox-bsp-safety-diagnostics-tests/`.
+
 The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
 QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
 MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI

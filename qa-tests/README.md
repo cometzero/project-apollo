@@ -26,11 +26,11 @@ The public entrypoint is run from the workspace root:
 
 The QBox backend selects `apollo-qvp`, validates the deployed `qboxconf`, and
 runs the canonical Yocto QBox launcher in headless full-system mode. Add
-`--bsp` to boot `nexios-bsp-initramfs`. The `pfdi`, `pfdi-si-cl1`, and
-`ras_cpu` profiles have QBox probes that execute their console contracts and
-retain command-level results in the QBox `result.json`. Other named OEQA
-profiles remain FVP-only until their QBox target controllers are implemented
-and validated.
+`--bsp` to boot `nexios-bsp-initramfs`. The `pfdi`, `pfdi-si-cl1`,
+`ras_cpu`, and `safety-diagnostics-tests` profiles have QBox probes that
+execute their console contracts and retain command-level results in the QBox
+`result.json`. Other named OEQA profiles remain FVP-only until their QBox
+target controllers are implemented and validated.
 
 The Python package can also be invoked directly:
 
