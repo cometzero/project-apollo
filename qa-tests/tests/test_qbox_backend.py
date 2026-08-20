@@ -116,3 +116,20 @@ def test_qbox_ras_cpu_command_selects_runtime_probe(tmp_path: Path) -> None:
 
     # Then: the runner enables the cross-console RAS CPU probe.
     assert "--ras-cpu-probe" in command
+
+
+def test_qbox_safety_diagnostics_command_selects_probe(
+    tmp_path: Path,
+) -> None:
+    # Given: the Apollo QVP BSP Safety Island diagnostics profile.
+    request = qbox_request(
+        tmp_path,
+        "bsp",
+        test_profile="safety-diagnostics-tests",
+    )
+
+    # When: its canonical QBox launcher command is built.
+    command = qbox_launcher_command(request, dry_run=False)
+
+    # Then: the runner enables the fixed SI0 SSU/FMU diagnostics probe.
+    assert "--safety-diagnostics-probe" in command

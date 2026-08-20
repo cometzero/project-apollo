@@ -105,6 +105,25 @@ def test_safety_diagnostics_profile_selects_ssu_fmu_suite() -> None:
     assert profile.timeout_seconds == 1800
 
 
+def test_safety_diagnostics_profile_selects_qbox_probe() -> None:
+    # Given: the Safety Island diagnostics profile and QBox BSP backend.
+    # When: the profile is resolved for QBox.
+    profile = load_test_profile(
+        WORKSPACE,
+        "safety-diagnostics-tests",
+        "qbox",
+        "bsp",
+    )
+
+    # Then: the complete SSU/FMU selectors route through the QBox probe.
+    assert profile.selectors == (
+        "test_00_bsp_boot",
+        "test_20_si_cl0_diagnostics",
+    )
+    assert profile.test_target == "QBoxSafetyDiagnosticsRunner"
+    assert profile.timeout_seconds == 1800
+
+
 def test_ras_cpu_profile_selects_complete_product_suite() -> None:
     # Given: the Primary Compute CPU RAS validation profile.
     # When: it is resolved for the FVP product-image backend.

@@ -27,6 +27,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 import qbox_apollo_runtime as runtime_engine  # noqa: E402
+from qbox_safety_diagnostics_probe import (  # noqa: E402
+    evaluate_safety_diagnostics,
+    safety_diagnostics_commands,
+)
 
 
 CONSOLE_LOGS = {
@@ -1229,6 +1233,26 @@ def write_result(
         args.primary_login_prompt,
         args.primary_shell_marker,
     )
+    safety_diagnostics = {
+        "requested": bool(args.safety_diagnostics_probe),
+        **evaluate_safety_diagnostics(
+            runtime_engine.clean_text(
+                runtime_engine.read_required_pass_marker_file(
+                    args.out_dir / CONSOLE_LOGS["si_cl0"]
+                )
+            )
+        ),
+    }
+    if (
+        args.safety_diagnostics_probe
+        and not check_only
+        and not args.build_only
+        and not safety_diagnostics["passed"]
+        and not blocker
+    ):
+        failed_checks = safety_diagnostics["failed_checks"]
+        assert isinstance(failed_checks, list)
+        blocker = "safety_diagnostics_failed:" + ",".join(failed_checks)
     gate_blocker = None
     if not check_only and not args.build_only and not args.uboot_only:
         gate_blocker = si_gate_blocker(args, marker_groups, child_status)
@@ -1317,6 +1341,7 @@ def write_result(
         "range_limited_flash_dmi": args.range_limited_flash_dmi,
         "live_trace": args.live_trace,
         "timer_probe": timer_probe,
+        "safety_diagnostics_probe": safety_diagnostics,
         "completion_gates": gates,
         "input_artifacts": input_artifacts,
         "runtime_artifacts": (child_status or {}).get("runtime_artifacts", {}),
@@ -1403,6 +1428,8 @@ def write_result(
         f"live_trace: {status['live_trace']}",
         "monitor: " + (status["monitor"]["url"] or "disabled"),
         f"blocker: {status['blocker'] or 'none'}",
+        "safety_diagnostics_probe: "
+        + json.dumps(status["safety_diagnostics_probe"], sort_keys=True),
         "rse_boot_timing_profile: "
         + json.dumps(status["rse_boot_timing_profile"], sort_keys=True),
         "completion_gates:",
@@ -2060,6 +2087,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Per-command timeout while waiting for the SI0 UART FIFO reader.",
     )
     parser.add_argument(
+        "--safety-diagnostics-probe",
+        action="store_true",
+        help="Run the complete SI0 SSU and FMU integration diagnostics.",
+    )
+    parser.add_argument(
         "--uboot-only",
         action="store_true",
         help=(
@@ -2383,6 +2415,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
+    if args.safety_diagnostics_probe:
+        if args.si_cl0_command:
+            parser.error(
+                "--safety-diagnostics-probe cannot be combined with "
+                "--si-cl0-command"
+            )
+        args.si_cl0_command = safety_diagnostics_commands()
     if args.pfdi_probe or args.pfdi_si_cl1_probe or args.ras_cpu_probe:
         args.post_login_probe = True
     if args.monitor_port is not None:

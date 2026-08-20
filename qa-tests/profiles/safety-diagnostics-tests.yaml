@@ -3,7 +3,7 @@
   "name": "safety-diagnostics-tests",
   "description": "Apollo BSP Safety Island SSU and FMU diagnostics validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["bsp"]
   },
   "oeqa": {
@@ -12,6 +12,7 @@
     "timeout_seconds": 1800
   },
   "targets": {
-    "fvp": "HSOCBSPFVPTarget"
+    "fvp": "HSOCBSPFVPTarget",
+    "qbox": "QBoxSafetyDiagnosticsRunner"
   }
 }
