@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "cpuidle",
+  "description": "Apollo FVP BSP CPU idle validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_31_bsp_cpuidle"],
+    "timeout_seconds": 3600
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  }
+}

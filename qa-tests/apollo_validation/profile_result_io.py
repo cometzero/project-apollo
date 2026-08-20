@@ -60,6 +60,14 @@ _FVP_ALIASES: dict[str, tuple[str, ...]] = {
     "smcf:test_02_execute_smcf_test": ("smcf-execute-test",),
     "smcf:test_03_run_smcf_3x": ("smcf-run-3x",),
     "smcf:test_04_smcf_client_sensor_monitor": ("smcf-sensor-monitor",),
+    "cpuidle:test_ensure_interface": ("cpuidle-ensure",),
+    "cpuidle:test_cpuidle_c_states": ("cpuidle-c-states",),
+    "cpuidle:test_default_status": ("cpuidle-default-status",),
+    "cpuidle:test_disable_state": ("cpuidle-disable-state",),
+    "cpuidle:test_residency_latency": ("cpuidle-residency-latency",),
+    "cpuidle:test_governors": ("cpuidle-governors",),
+    "cpuidle:test_governor_switching": ("cpuidle-governor-switching",),
+    "cpuidle:test_invalid_governor": ("cpuidle-invalid-governor",),
 }
 
 

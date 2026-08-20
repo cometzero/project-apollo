@@ -98,6 +98,19 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
                 "test_21_bsp_smcf.SmcfBspTest.test_04_smcf_client_sensor_monitor",
             ),
         ),
+        (
+            "cpuidle",
+            (
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_ensure_interface",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_cpuidle_c_states",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_default_status",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_disable_state",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_residency_latency",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_governors",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_governor_switching",
+                "test_31_bsp_cpuidle.BspCpuIdleTest.test_invalid_governor",
+            ),
+        ),
     ],
 )
 def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(
