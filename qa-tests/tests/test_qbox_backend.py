@@ -133,3 +133,22 @@ def test_qbox_safety_diagnostics_command_selects_probe(
 
     # Then: the runner enables the fixed SI0 SSU/FMU diagnostics probe.
     assert "--safety-diagnostics-probe" in command
+
+
+@pytest.mark.parametrize(
+    "profile_id",
+    ("pfdi", "pfdi-si-cl1", "ras_cpu", "safety-diagnostics-tests"),
+)
+def test_qbox_profile_command_uses_canonical_registry_flag(
+    tmp_path: Path,
+    profile_id: str,
+) -> None:
+    # Given: an existing QBox validation profile request.
+    image_profile: ImageProfile = "product" if profile_id == "ras_cpu" else "bsp"
+    request = qbox_request(tmp_path, image_profile, test_profile=profile_id)
+
+    # When: the canonical QBox launcher command is built.
+    command = qbox_launcher_command(request, dry_run=True)
+
+    # Then: the public registry selection accompanies its legacy adapter.
+    assert command[command.index("--validation-profile") + 1] == profile_id

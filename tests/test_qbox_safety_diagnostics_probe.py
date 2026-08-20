@@ -3,8 +3,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
-from qbox_safety_diagnostics_probe import (
+from scripts.run.qbox_validation.registry import (
+    canonical_matrix_path,
+    resolve_profile,
+)
+from scripts.run.qbox_validation.result import evaluate_profile_result
+from scripts.run.qbox_validation.types import ConsoleSnapshot
+from scripts.run.qbox_safety_diagnostics_probe import (
     evaluate_safety_diagnostics,
     safety_diagnostics_commands,
 )
@@ -103,6 +111,16 @@ def test_full_runner_rejects_failed_safety_diagnostics(
         ),
         encoding="utf-8",
     )
+    spec = resolve_profile(
+        "safety-diagnostics-tests",
+        canonical_matrix_path(),
+    )
+    args.validation_profile_result = evaluate_profile_result(
+        spec,
+        ConsoleSnapshot(
+            si0=(tmp_path / "qbox-safety-island-cl0.log").read_text()
+        ),
+    )
 
     # When: the canonical full-system result is written.
     returncode = full_runner.write_result(
@@ -119,4 +137,76 @@ def test_full_runner_rejects_failed_safety_diagnostics(
     result = json.loads((tmp_path / "result.json").read_text())
     assert returncode == 1
     assert result["passed"] is False
-    assert result["blocker"] == "safety_diagnostics_failed:fmu"
+    assert result["blocker"] == (
+        "validation_profile_failed:safety-diagnostics-tests"
+    )
+
+
+def test_registry_verdict_is_not_overridden_by_legacy_safety_evaluator(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    # Given: a passing live registry result and conflicting failing legacy log.
+    args = full_runner.parse_args(
+        ["--out-dir", str(tmp_path), "--safety-diagnostics-probe"]
+    )
+    args.validation_profile_result = {
+        "version": 1,
+        "profile_id": "safety-diagnostics-tests",
+        "backend": "qbox",
+        "verdict": "PASS",
+        "expected": ["safety-island-fmu", "safety-island-ssu"],
+        "assertions": [
+            {
+                "id": "safety-island-fmu",
+                "status": "PASS",
+                "coverage_kind": "identical",
+            },
+            {
+                "id": "safety-island-ssu",
+                "status": "PASS",
+                "coverage_kind": "identical",
+            },
+        ],
+    }
+    (tmp_path / "qbox-safety-island-cl0.log").write_text(
+        diagnostic_log("fmu", total=20, failures=1),
+        encoding="utf-8",
+    )
+    calls = 0
+
+    def conflicting_evaluator(console: str):
+        nonlocal calls
+        calls += 1
+        return {
+            "passed": False,
+            "diagnostics": {},
+            "failed_checks": ["fmu"],
+        }
+
+    monkeypatch.setattr(
+        full_runner,
+        "evaluate_safety_diagnostics",
+        conflicting_evaluator,
+        raising=False,
+    )
+    monkeypatch.setattr(full_runner, "si_gate_blocker", lambda *args: None)
+
+    # When: the canonical result boundary consumes the live registry result.
+    returncode = full_runner.write_result(
+        args,
+        {},
+        command=[],
+        child_status={"passed": True},
+        child_returncode=0,
+        blocker=None,
+        check_only=False,
+    )
+
+    # Then: legacy evaluation is never invoked or allowed to change verdict.
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert calls == 0
+    assert returncode == 0
+    assert result["passed"] is True
+    assert result["blocker"] is None
+    assert result["safety_diagnostics_probe"]["passed"] is True

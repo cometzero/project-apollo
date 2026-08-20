@@ -6,11 +6,27 @@ import os
 from pathlib import Path
 import signal
 import subprocess
+import sys
 from time import monotonic
 from typing import assert_never
 
 from .backend import ImageProfile
 from .evidence import JsonObject, append_record, now, run_log, write_reports
+
+WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+RUN_SCRIPT_DIR = WORKSPACE_ROOT / "scripts/run"
+
+def _profile_adapter(profile_id: str) -> tuple[str, str | None]:
+    for import_path in (WORKSPACE_ROOT, RUN_SCRIPT_DIR):
+        if str(import_path) not in sys.path:
+            sys.path.insert(0, str(import_path))
+    from scripts.run.qbox_validation.registry import (
+        canonical_matrix_path,
+        resolve_profile,
+    )
+
+    spec = resolve_profile(profile_id, canonical_matrix_path())
+    return spec.profile_id, spec.legacy_flag
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,14 +78,11 @@ def qbox_launcher_command(
             assert_never(unexpected)
     if dry_run:
         command.append("--dry-run")
-    if request.test_profile == "pfdi":
-        command.append("--pfdi-probe")
-    if request.test_profile == "pfdi-si-cl1":
-        command.append("--pfdi-si-cl1-probe")
-    if request.test_profile == "ras_cpu":
-        command.append("--ras-cpu-probe")
-    if request.test_profile == "safety-diagnostics-tests":
-        command.append("--safety-diagnostics-probe")
+    if request.test_profile is not None:
+        profile_id, legacy_flag = _profile_adapter(request.test_profile)
+        command.extend(["--validation-profile", profile_id])
+        if legacy_flag is not None:
+            command.append(legacy_flag)
     return command
 
 
@@ -136,12 +149,7 @@ def _qbox_artifacts(request: QBoxRunRequest) -> list[JsonObject]:
 def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     request.out_dir.mkdir(parents=True, exist_ok=True)
     commands_path = request.out_dir / "commands.jsonl"
-    if category != "basic" and request.test_profile not in {
-        "pfdi",
-        "pfdi-si-cl1",
-        "ras_cpu",
-        "safety-diagnostics-tests",
-    }:
+    if category != "basic" and request.test_profile is None:
         timestamp = now()
         append_record(
             commands_path,

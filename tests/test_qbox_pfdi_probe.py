@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
+from scripts.run.qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
 
 
 runtime = full_runner.runtime_engine
@@ -59,7 +60,7 @@ def pfdi_scp_log() -> str:
 
 def test_pfdi_probe_commands_cover_same_bsp_contract() -> None:
     # Given/When: the fixed QBox PFDI command sequence is built.
-    commands = runtime.pfdi_probe_commands()
+    commands = pfdi_probe_commands()
 
     # Then: it covers prerequisites, service, CLI, online, and fault injection.
     joined = "\n".join(commands)
@@ -76,7 +77,7 @@ def test_pfdi_probe_commands_cover_same_bsp_contract() -> None:
 def test_pfdi_probe_accepts_reordered_scp_markers() -> None:
     # Given: all primary and SCP evidence in a non-FVP marker order.
     # When: the QBox PFDI probe result is evaluated.
-    result = runtime.evaluate_pfdi_probe(pfdi_primary_log(), pfdi_scp_log())
+    result = evaluate_pfdi_probe(pfdi_primary_log(), pfdi_scp_log())
 
     # Then: every CPU and fault-propagation contract passes without ordering.
     assert result["passed"] is True
@@ -88,7 +89,7 @@ def test_pfdi_probe_fails_when_one_cpu_marker_is_missing() -> None:
     scp = pfdi_scp_log().replace("[SBISTC] SBISTC_EQ_FAIL_CORE2 detected", "")
 
     # When: the QBox PFDI result is evaluated.
-    result = runtime.evaluate_pfdi_probe(pfdi_primary_log(), scp)
+    result = evaluate_pfdi_probe(pfdi_primary_log(), scp)
 
     # Then: the missing CPU-specific propagation marker fails the probe.
     assert result["passed"] is False

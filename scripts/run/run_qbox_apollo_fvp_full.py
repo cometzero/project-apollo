@@ -20,16 +20,44 @@ import subprocess
 import sys
 import time
 from types import FrameType
-from typing import Any, TypedDict
+from typing import Any, NotRequired, TypedDict
 import uuid
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+WORKSPACE_DIR = SCRIPT_DIR.parents[1]
+if str(WORKSPACE_DIR) not in sys.path:
+    sys.path.insert(0, str(WORKSPACE_DIR))
 import qbox_apollo_runtime as runtime_engine  # noqa: E402
-from qbox_safety_diagnostics_probe import (  # noqa: E402
-    evaluate_safety_diagnostics,
-    safety_diagnostics_commands,
+from qbox_validation.result import (  # noqa: E402
+    blocked_profile_result,
+    safety_diagnostics_compatibility,
+)
+from qbox_validation.live import (  # noqa: E402
+    LiveProfileSession,
+    abort_live_profile,
+    drive_live_profile,
+    profile_environment,
+    profile_pipes,
+    start_live_profile,
+)
+from qbox_validation.registry import (  # noqa: E402
+    ProfileRegistryError,
+    resolve_profile,
+)
+from qbox_validation.selection import (  # noqa: E402
+    ProfileSelectionRequest,
+    select_profile,
+)
+from qbox_validation.transport import (  # noqa: E402
+    WriterOwner,
+    managed_profile_writers,
+)
+from qbox_validation.types import (  # noqa: E402
+    Console,
+    ConsoleSnapshot,
+    NormalizedResultJson,
 )
 
 
@@ -247,6 +275,9 @@ class SiCl0TransportReceipt(TypedDict):
     child_returncode: int | None
     cancelled: bool
     commands: list[SiCl0CommandRecord]
+    validation_profile_result: NotRequired[NormalizedResultJson]
+    profile_blocker: NotRequired[str | None]
+    profile_cleanup: NotRequired[dict[str, bool | str]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1206,6 +1237,38 @@ def si_gate_blocker(
     return None
 
 
+def validation_profile_evidence(
+    args: argparse.Namespace,
+    child_status: dict[str, Any] | None,
+) -> NormalizedResultJson | None:
+    if args.validation_profile is None:
+        return None
+    matrix_path = (
+        workspace_root()
+        / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+    )
+    spec = resolve_profile(args.validation_profile, matrix_path)
+    outer_result = getattr(args, "validation_profile_result", None)
+    if outer_result is not None:
+        return outer_result
+    probe = post_login_probe(child_status)
+    child_result = probe.get("validation_profile_result")
+    if child_result is not None:
+        return child_result
+    return blocked_profile_result(spec)
+
+
+def validation_profile_blocker(
+    args: argparse.Namespace,
+    child_status: dict[str, Any] | None,
+) -> str | None:
+    outer_blocker = getattr(args, "validation_profile_blocker", None)
+    if isinstance(outer_blocker, str):
+        return outer_blocker
+    child_blocker = post_login_probe(child_status).get("blocker")
+    return child_blocker if isinstance(child_blocker, str) else None
+
+
 def write_result(
     args: argparse.Namespace,
     artifacts: dict[str, Path],
@@ -1233,26 +1296,22 @@ def write_result(
         args.primary_login_prompt,
         args.primary_shell_marker,
     )
-    safety_diagnostics = {
-        "requested": bool(args.safety_diagnostics_probe),
-        **evaluate_safety_diagnostics(
-            runtime_engine.clean_text(
-                runtime_engine.read_required_pass_marker_file(
-                    args.out_dir / CONSOLE_LOGS["si_cl0"]
-                )
-            )
-        ),
-    }
+    profile_result = validation_profile_evidence(args, child_status)
+    profile_blocker = validation_profile_blocker(args, child_status)
+    safety_diagnostics = safety_diagnostics_compatibility(
+        profile_result,
+        requested=bool(args.safety_diagnostics_probe),
+    )
     if (
-        args.safety_diagnostics_probe
+        profile_result is not None
+        and profile_result["verdict"] != "PASS"
         and not check_only
         and not args.build_only
-        and not safety_diagnostics["passed"]
         and not blocker
     ):
-        failed_checks = safety_diagnostics["failed_checks"]
-        assert isinstance(failed_checks, list)
-        blocker = "safety_diagnostics_failed:" + ",".join(failed_checks)
+        blocker = profile_blocker or (
+            "validation_profile_failed:" + args.validation_profile
+        )
     gate_blocker = None
     if not check_only and not args.build_only and not args.uboot_only:
         gate_blocker = si_gate_blocker(args, marker_groups, child_status)
@@ -1342,6 +1401,10 @@ def write_result(
         "live_trace": args.live_trace,
         "timer_probe": timer_probe,
         "safety_diagnostics_probe": safety_diagnostics,
+        "validation_profile": profile_result,
+        "assertions": (
+            profile_result["assertions"] if profile_result is not None else []
+        ),
         "completion_gates": gates,
         "input_artifacts": input_artifacts,
         "runtime_artifacts": (child_status or {}).get("runtime_artifacts", {}),
@@ -1661,11 +1724,190 @@ def write_si_cl0_command(
     return record
 
 
+def si0_profile_command_record(command: str, timeout: float) -> SiCl0CommandRecord:
+    payload = si_cl0_command_payload(command)
+    timestamp = utc_timestamp()
+    return {
+        "command": command,
+        "sha256": hashlib.sha256(command.encode("ascii")).hexdigest(),
+        "raw_uart_sha256": hashlib.sha256(payload).hexdigest(),
+        "started_at": timestamp,
+        "done_at": timestamp,
+        "exit_at": timestamp,
+        "timed_out": False,
+        "timeout_seconds": timeout,
+        "transport_returncode": 0,
+        "bytes_sent": len(payload),
+    }
+
+
+def run_child_with_live_si0_profile(
+    args: argparse.Namespace,
+    command: list[str],
+    env: dict[str, str],
+) -> int:
+    spec = resolve_profile(
+        args.validation_profile,
+        workspace_root()
+        / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml",
+    )
+    pipes = profile_pipes(spec, args.out_dir)
+    fifo_path = si_cl0_uart_fifo_path(args)
+    stale_fifo_removed = False
+    try:
+        existing_mode = fifo_path.lstat().st_mode
+    except FileNotFoundError:
+        existing_mode = None
+    if existing_mode is not None:
+        if not stat.S_ISFIFO(existing_mode):
+            raise SiCl0CommandValidationError(
+                f"refusing to replace non-FIFO SI0 UART input: {fifo_path}"
+            )
+        fifo_path.unlink()
+        stale_fifo_removed = True
+    receipt: SiCl0TransportReceipt = {
+        "schema_version": 1,
+        "requested": True,
+        "fifo_path": str(fifo_path),
+        "fifo_created_before_child": True,
+        "stale_fifo_removed": stale_fifo_removed,
+        "fifo_cleaned": False,
+        "child_pid": None,
+        "child_returncode": None,
+        "cancelled": False,
+        "commands": [],
+    }
+    args.si_cl0_command_transport = receipt
+    child_env = env.copy()
+    proc: subprocess.Popen[bytes] | None = None
+    session: LiveProfileSession | None = None
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+
+    def handle_sigterm(signum: int, _frame: FrameType | None) -> None:
+        raise SiCl0TransportSignal(signum)
+
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    try:
+        with managed_profile_writers(pipes, WriterOwner.OUTER_CHILD) as writers:
+            active_session = start_live_profile(spec, writers, now=time.monotonic())
+            session = active_session
+            if active_session.state.phase == "blocked":
+                receipt["validation_profile_result"] = (
+                    active_session.state.result or blocked_profile_result(spec)
+                )
+                return 1
+            for key, value in profile_environment(pipes):
+                child_env[key] = value
+            proc = subprocess.Popen(
+                command,
+                cwd=workspace_root(),
+                env=child_env,
+                start_new_session=True,
+            )
+            receipt["child_pid"] = proc.pid
+            while active_session.state.phase == "running":
+                previous_state = active_session.state
+                child_returncode = proc.poll()
+                console = runtime_engine.read_required_pass_marker_file(
+                    args.out_dir / CONSOLE_LOGS["si_cl0"]
+                )
+                snapshot = ConsoleSnapshot(
+                    si0=runtime_engine.clean_text(console),
+                )
+                active_session = drive_live_profile(
+                    active_session,
+                    snapshot,
+                    now=time.monotonic(),
+                )
+                if (
+                    child_returncode is not None
+                    and active_session.state.phase == "running"
+                ):
+                    active_session = drive_live_profile(
+                        active_session,
+                        ConsoleSnapshot(
+                            si0=snapshot.si0,
+                            eof=spec.required_consoles,
+                        ),
+                        now=time.monotonic(),
+                    )
+                if (
+                    active_session.state.command_sent
+                    and (
+                        not previous_state.command_sent
+                        or active_session.state.next_step != previous_state.next_step
+                    )
+                ):
+                    step = spec.steps[active_session.state.next_step]
+                    receipt["commands"].append(
+                        si0_profile_command_record(
+                            step.command,
+                            step.timeout_s,
+                        )
+                    )
+                session = active_session
+                if active_session.state.phase == "running":
+                    time.sleep(0.01)
+            receipt["validation_profile_result"] = (
+                active_session.state.result or blocked_profile_result(spec)
+            )
+            args.validation_profile_result = receipt["validation_profile_result"]
+            receipt["profile_blocker"] = active_session.state.blocker
+            args.validation_profile_blocker = active_session.state.blocker
+            receipt["profile_cleanup"] = (
+                {
+                    "passed": active_session.state.cleanup.passed,
+                    "detail": active_session.state.cleanup.detail,
+                }
+                if active_session.state.cleanup is not None
+                else {"passed": False, "detail": "missing_cleanup_receipt"}
+            )
+            if active_session.state.phase != "passed":
+                if proc.poll() is None:
+                    receipt["child_returncode"] = terminate_process_group(proc)
+                return 124 if "timeout" in str(active_session.state.blocker) else 1
+            child_returncode = proc.wait()
+            receipt["child_returncode"] = child_returncode
+            return child_returncode
+    except (KeyboardInterrupt, SiCl0TransportSignal):
+        receipt["cancelled"] = True
+        if proc is not None:
+            receipt["child_returncode"] = terminate_process_group(proc)
+        return 130
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm)
+        if proc is not None and proc.poll() is None:
+            receipt["child_returncode"] = terminate_process_group(proc)
+        if session is not None and session.state.phase == "running":
+            cleanup_session = abort_live_profile(
+                session,
+                "profile_runtime_incomplete",
+            )
+            session = cleanup_session
+            receipt["validation_profile_result"] = (
+                cleanup_session.state.result or blocked_profile_result(spec)
+            )
+            args.validation_profile_result = receipt["validation_profile_result"]
+            receipt["profile_blocker"] = cleanup_session.state.blocker
+            args.validation_profile_blocker = cleanup_session.state.blocker
+            receipt["profile_cleanup"] = (
+                {
+                    "passed": cleanup_session.state.cleanup.passed,
+                    "detail": cleanup_session.state.cleanup.detail,
+                }
+                if cleanup_session.state.cleanup is not None
+                else {"passed": False, "detail": "missing_cleanup_receipt"}
+            )
+        receipt["fifo_cleaned"] = not fifo_path.exists()
+
+
 def run_child_with_si_cl0_transport(
     args: argparse.Namespace,
     command: list[str],
     env: dict[str, str],
 ) -> int:
+    if getattr(args, "validation_profile", None) is not None:
+        return run_child_with_live_si0_profile(args, command, env)
     for si_command in args.si_cl0_command:
         si_cl0_command_payload(si_command)
 
@@ -1918,6 +2160,12 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe and not args.uboot_only:
         cmd.append("--post-login-probe")
+    if (
+        args.validation_profile is not None
+        and not args.uboot_only
+        and not args.si_cl0_command
+    ):
+        cmd.extend(["--validation-profile", args.validation_profile])
     if args.pfdi_probe and not args.uboot_only:
         cmd.append("--pfdi-probe")
     if args.pfdi_si_cl1_probe and not args.uboot_only:
@@ -2167,6 +2415,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Forward the complete Primary Compute CPU RAS probe.",
     )
+    parser.add_argument(
+        "--validation-profile",
+        metavar="NAME",
+        help="Select a repository-owned QBox validation profile.",
+    )
     parser.add_argument("--primary-operation-manifest", type=Path)
     parser.add_argument("--primary-operation-schema", type=Path)
     parser.add_argument("--primary-operation-module-path", type=Path)
@@ -2415,13 +2668,40 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
-    if args.safety_diagnostics_probe:
+    matrix_path = root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+    try:
+        selection = select_profile(
+            ProfileSelectionRequest(
+                args.validation_profile,
+                args.pfdi_probe,
+                args.pfdi_si_cl1_probe,
+                args.ras_cpu_probe,
+                args.safety_diagnostics_probe,
+            ),
+            matrix_path,
+        )
+    except ProfileRegistryError as error:
+        parser.error(str(error))
+    args.validation_profile = selection.profile_id
+    args.pfdi_probe = selection.pfdi
+    args.pfdi_si_cl1_probe = selection.pfdi_si_cl1
+    args.ras_cpu_probe = selection.ras_cpu
+    args.safety_diagnostics_probe = selection.safety_diagnostics
+    validation_spec = selection.spec
+    if (
+        validation_spec is not None
+        and Console.SI0 in validation_spec.required_consoles
+    ):
         if args.si_cl0_command:
             parser.error(
-                "--safety-diagnostics-probe cannot be combined with "
+                "an SI0 validation profile cannot be combined with "
                 "--si-cl0-command"
             )
-        args.si_cl0_command = safety_diagnostics_commands()
+        args.si_cl0_command = [
+            step.command
+            for step in validation_spec.steps
+            if step.console == Console.SI0
+        ]
     if args.pfdi_probe or args.pfdi_si_cl1_probe or args.ras_cpu_probe:
         args.post_login_probe = True
     if args.monitor_port is not None:

@@ -7,6 +7,7 @@ invokes it through its private ``--runtime-child`` process boundary.
 from __future__ import annotations
 
 import argparse
+from contextlib import AbstractContextManager
 import datetime as _dt
 import fcntl
 import gzip
@@ -25,14 +26,25 @@ import sys
 import time
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
-from qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
-from qbox_ras_cpu_probe import evaluate_ras_cpu_probe, ras_cpu_probe_commands
-from qbox_si_cl1_pfdi_probe import (
-    SiCl1PFDIProbeState,
-    advance_si_cl1_pfdi_probe,
-    evaluate_si_cl1_pfdi_records,
-    new_si_cl1_pfdi_state,
+from qbox_validation.registry import (
+    ProfileRegistryError,
+    resolve_profile,
 )
+from qbox_validation.live import (
+    LiveProfileSession,
+    abort_live_profile,
+    drive_live_profile,
+    profile_environment,
+    profile_pipes,
+    start_live_profile,
+)
+from qbox_validation.selection import ProfileSelectionRequest, select_profile
+from qbox_validation.transport import (
+    ProfileWriters,
+    WriterOwner,
+    managed_profile_writers,
+)
+from qbox_validation.types import Console, ConsoleSnapshot
 
 
 REQUIRED_TARGETS = [
@@ -2235,10 +2247,6 @@ def secure_service_probe_commands(
 
 
 def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
-    if args.ras_cpu_probe:
-        return ras_cpu_probe_commands()
-    if args.pfdi_probe:
-        return pfdi_probe_commands()
     commands: list[str] = []
     done_command = f"echo {PROBE_DONE_MARKER}"
     for command in POST_LOGIN_PROBE_COMMANDS:
@@ -2379,7 +2387,6 @@ def evaluate_post_login_probe(
     primary_console: str,
     secure_console: str = "",
     rse_console: str = "",
-    scp_console: str = "",
 ) -> dict[str, object]:
     clean_primary = clean_text(primary_console)
     clean_secure = clean_text(secure_console)
@@ -2423,12 +2430,6 @@ def evaluate_post_login_probe(
         },
         "fwu_probe": evaluate_fwu_probe(
             clean_primary, clean_rse, clean_secure, rc_hits
-        ),
-        "pfdi_probe": evaluate_pfdi_probe(clean_primary, clean_text(scp_console)),
-        "ras_cpu_probe": evaluate_ras_cpu_probe(
-            clean_primary,
-            clean_secure,
-            clean_text(scp_console),
         ),
     }
 
@@ -4155,6 +4156,8 @@ def drive_post_login_probe(
         state["login_attempts"] = login_attempts + 1
         state["last_login_time"] = time.monotonic()
         actions.append(f"sent_login_attempt_{login_attempts + 1}")
+    if args.validation_profile is not None:
+        return
     command_index_value = state.get("command_index", 0)
     last_prompt_end_value = state.get("last_prompt_end", 0)
     assert isinstance(command_index_value, int)
@@ -4233,6 +4236,14 @@ def drive_post_login_probe(
         state["complete"] = True
 
 
+def drive_runtime_validation_profile(
+    session: LiveProfileSession,
+    snapshot: ConsoleSnapshot,
+    now: float,
+) -> LiveProfileSession:
+    return drive_live_profile(session, snapshot, now=now)
+
+
 def run_platform(
     root: Path, args: argparse.Namespace, artifacts: dict[str, Path]
 ) -> tuple[
@@ -4267,25 +4278,32 @@ def run_platform(
     env = qbox_env(root, args, artifacts)
     post_login_probe = make_probe_state(args)
     primary_uart_fd: int | None = None
-    si_cl1_uart_fd: int | None = None
-    si_cl1_fifo_path: Path | None = None
-    si_cl1_probe: SiCl1PFDIProbeState | None = None
+    profile_context: AbstractContextManager[ProfileWriters] | None = None
+    profile_session: LiveProfileSession | None = None
+    if args.validation_profile is not None:
+        profile_spec = resolve_profile(
+            args.validation_profile,
+            root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml",
+        )
+        pipes = profile_pipes(profile_spec, out_dir)
+        profile_context = managed_profile_writers(pipes, WriterOwner.RUNTIME)
+        profile_writers = profile_context.__enter__()
+        profile_session = start_live_profile(
+            profile_spec,
+            profile_writers,
+            now=time.monotonic(),
+        )
+        for key, value in profile_environment(pipes):
+            env[key] = value
+        primary_uart_fd = profile_writers.fd(Console.PRIMARY)
+        input_paths = [str(pipe.path) for pipe in pipes]
+        post_login_probe["input_path"] = ",".join(input_paths)
     if (
         args.post_login_probe or args.primary_operation_manifest is not None
-    ) and not args.pfdi_si_cl1_probe:
+    ) and args.validation_profile is None and not args.pfdi_si_cl1_probe:
         fifo_path, primary_uart_fd = open_post_login_probe_fifo(out_dir)
         env["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(fifo_path)
         post_login_probe["input_path"] = str(fifo_path)
-    if args.pfdi_si_cl1_probe:
-        si_cl1_fifo_path, si_cl1_uart_fd = open_post_login_probe_fifo(
-            out_dir,
-            "si-cl1-uart-input.fifo",
-        )
-        env["QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE"] = str(
-            si_cl1_fifo_path
-        )
-        post_login_probe["input_path"] = str(si_cl1_fifo_path)
-        si_cl1_probe = new_si_cl1_pfdi_state()
     timed_out = False
     interrupted = False
     logs = {role: "" for role in CONSOLE_LOGS}
@@ -4300,16 +4318,17 @@ def run_platform(
     print(f"log: {platform_log}", flush=True)
     print("+ " + " ".join(cmd), flush=True)
     start = time.monotonic()
-    proc = subprocess.Popen(
-        cmd,
-        cwd=root,
-        env=env,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
+    proc: subprocess.Popen[bytes] | None = None
     try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
         with platform_log.open("w", encoding="utf-8", errors="replace", buffering=1) as log:
             assert proc.stdout is not None
             os.set_blocking(proc.stdout.fileno(), False)
@@ -4324,37 +4343,55 @@ def run_platform(
                     platform_stdout += decoded
                 logs = read_console_logs(out_dir)
                 drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
-                if si_cl1_probe is not None and si_cl1_uart_fd is not None:
-                    try:
-                        si_cl1_console = (
-                            out_dir / "qbox-safety-island-cl1.log"
-                        ).read_text(encoding="utf-8", errors="replace")
-                    except FileNotFoundError:
-                        si_cl1_console = ""
-                    next_command = advance_si_cl1_pfdi_probe(
-                        si_cl1_probe,
-                        clean_text(si_cl1_console),
+                if profile_session is not None:
+                    active_profile = profile_session
+                    exited = proc.poll() is not None
+                    snapshot = ConsoleSnapshot(
+                        primary=clean_text(logs.get("primary_console", "")),
+                        si0=clean_text(pfdi_scp_console(out_dir, logs)),
+                        si1=clean_text(
+                            read_required_pass_marker_file(
+                                out_dir / "qbox-safety-island-cl1.log"
+                            )
+                        ),
+                        secure=clean_text(logs.get("secure_console", "")),
                     )
-                    if next_command is not None:
-                        write_primary_uart(si_cl1_uart_fd, next_command)
-                        actions = post_login_probe.get("actions")
-                        assert isinstance(actions, list)
-                        actions.append(
-                            "sent_si_cl1_operation_"
-                            + str(si_cl1_probe["command_index"])
+                    previous_step = active_profile.state.next_step
+                    active_profile = drive_runtime_validation_profile(
+                        active_profile,
+                        snapshot,
+                        time.monotonic(),
+                    )
+                    if exited and active_profile.state.phase == "running":
+                        active_profile = drive_runtime_validation_profile(
+                            active_profile,
+                            ConsoleSnapshot(
+                                primary=snapshot.primary,
+                                si0=snapshot.si0,
+                                si1=snapshot.si1,
+                                secure=snapshot.secure,
+                                eof=active_profile.spec.required_consoles,
+                            ),
+                            time.monotonic(),
                         )
-                    si_cl1_result = evaluate_si_cl1_pfdi_records(
-                        si_cl1_probe["checks"],
-                        si_cl1_probe["outputs"],
+                    profile_session = active_profile
+                    actions = post_login_probe.get("actions")
+                    assert isinstance(actions, list)
+                    if active_profile.state.next_step > previous_step:
+                        actions.append(
+                            "completed_validation_operation_"
+                            + str(active_profile.state.next_step)
+                        )
+                    post_login_probe["sent_probe"] = bool(
+                        active_profile.state.command_sent
+                        or active_profile.state.next_step > 0
                     )
-                    post_login_probe["sent_probe"] = si_cl1_probe[
-                        "sent_probe"
-                    ]
-                    post_login_probe["sent_login"] = si_cl1_probe[
-                        "sent_probe"
-                    ]
-                    post_login_probe["complete"] = si_cl1_probe["complete"]
-                    post_login_probe["pfdi_si_cl1_probe"] = si_cl1_result
+                    post_login_probe["complete"] = (
+                        active_profile.state.phase != "running"
+                    )
+                    post_login_probe["passed"] = (
+                        active_profile.state.phase == "passed"
+                    )
                 live_logs = {**logs, "platform_stdout": platform_stdout}
                 update_progress_marker_first_hits(
                     live_logs,
@@ -4423,19 +4460,34 @@ def run_platform(
                 time.sleep(0.1)
             else:
                 timed_out = True
+                if profile_session is not None:
+                    profile_session = abort_live_profile(
+                        profile_session,
+                        "profile_runtime_timeout",
+                    )
                 stop_process(proc)
     except KeyboardInterrupt:
         interrupted = True
-        stop_process(proc)
+        if profile_session is not None:
+            profile_session = abort_live_profile(
+                profile_session,
+                "profile_runtime_interrupted",
+            )
+        if proc is not None:
+            stop_process(proc)
     finally:
         elapsed_s = time.monotonic() - start
-        stop_process(proc)
-        if primary_uart_fd is not None:
+        if proc is not None:
+            stop_process(proc)
+        if primary_uart_fd is not None and profile_context is None:
             os.close(primary_uart_fd)
-        if si_cl1_uart_fd is not None:
-            os.close(si_cl1_uart_fd)
-        if si_cl1_fifo_path is not None:
-            si_cl1_fifo_path.unlink(missing_ok=True)
+        if profile_session is not None and profile_session.state.phase == "running":
+            profile_session = abort_live_profile(
+                profile_session,
+                "profile_runtime_incomplete",
+            )
+        if profile_context is not None:
+            profile_context.__exit__(*sys.exc_info())
         if args.rse_fast_boot_sram_dmi and not interrupted:
             shared_memory_cleanup.append(
                 cleanup_sram_dmi_shared_memory("after_run")
@@ -4462,55 +4514,47 @@ def run_platform(
         elapsed_s,
     )
 
+    assert proc is not None
     rc = proc.returncode if proc.returncode is not None else 1
-    if args.primary_operation_manifest is not None:
+    if profile_session is not None:
+        post_login_probe["complete"] = profile_session.state.phase != "running"
+        post_login_probe["passed"] = profile_session.state.phase == "passed"
+        post_login_probe["blocker"] = profile_session.state.blocker
+        post_login_probe["cleanup"] = (
+            {
+                "passed": profile_session.state.cleanup.passed,
+                "detail": profile_session.state.cleanup.detail,
+            }
+            if profile_session.state.cleanup is not None
+            else None
+        )
+        post_login_probe["validation_profile_result"] = (
+            profile_session.state.result or {}
+        )
+    elif args.primary_operation_manifest is not None:
         post_login_probe["passed"] = bool(post_login_probe.get("complete"))
     else:
         probe_eval = evaluate_post_login_probe(
             logs.get("primary_console", ""),
             logs.get("secure_console", ""),
             logs.get("rse", ""),
-            pfdi_scp_console(out_dir, logs),
         )
         post_login_probe.update(probe_eval)
         fwu_probe = object_dict(probe_eval.get("fwu_probe"))
         fwu_complete = bool(fwu_probe.get("complete"))
         if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
             post_login_probe["complete"] = True
-        if args.ras_cpu_probe:
-            ras_result = object_dict(probe_eval.get("ras_cpu_probe"))
-            post_login_probe["passed"] = bool(
-                post_login_probe.get("sent_probe")
-                and post_login_probe.get("complete")
-                and ras_result.get("passed")
+        post_login_probe["passed"] = bool(
+            args.post_login_probe
+            and post_login_probe.get("sent_probe")
+            and post_login_probe.get("complete")
+            and all(
+                bool(value)
+                for value in object_dict(
+                    probe_eval.get("driver_patterns")
+                ).values()
             )
-        elif args.pfdi_si_cl1_probe:
-            si_cl1_result = object_dict(
-                post_login_probe.get("pfdi_si_cl1_probe")
-            )
-            post_login_probe["passed"] = bool(
-                post_login_probe.get("sent_probe")
-                and post_login_probe.get("complete")
-                and si_cl1_result.get("passed")
-            )
-        elif args.pfdi_probe:
-            post_login_probe["passed"] = bool(
-                post_login_probe.get("sent_probe")
-                and post_login_probe.get("complete")
-                and object_dict(probe_eval.get("pfdi_probe")).get("passed")
-            )
-        else:
-            post_login_probe["passed"] = bool(
-                args.post_login_probe
-                and post_login_probe.get("sent_probe")
-                and post_login_probe.get("complete")
-                and all(
-                    bool(value)
-                    for value in object_dict(
-                        probe_eval.get("driver_patterns")
-                    ).values()
-                )
-            )
+        )
     if args.post_login_probe or args.primary_operation_manifest is not None:
         action_log = out_dir / "post-login-probe-actions.log"
         action_lines = [
@@ -4918,7 +4962,6 @@ def write_result(
                     logs.get("primary_console", ""),
                     logs.get("secure_console", ""),
                     logs.get("rse", ""),
-                    pfdi_scp_console(out_dir, logs),
                 ),
             },
             "shared_memory_cleanup": shared_memory_cleanup or [],
@@ -5323,6 +5366,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--ras-cpu-probe",
         action="store_true",
         help="Run the complete Primary Compute CPU RAS qualification probe.",
+    )
+    parser.add_argument(
+        "--validation-profile",
+        metavar="NAME",
+        help="Select a repository-owned QBox validation profile.",
     )
     parser.add_argument("--primary-operation-schema", type=Path)
     parser.add_argument("--primary-operation-module-path", type=Path)
@@ -5989,6 +6037,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = workspace_root()
     parser = build_parser()
     args = parser.parse_args(argv)
+    matrix_path = root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+    try:
+        selection = select_profile(
+            ProfileSelectionRequest(
+                args.validation_profile,
+                args.pfdi_probe,
+                args.pfdi_si_cl1_probe,
+                args.ras_cpu_probe,
+                False,
+            ),
+            matrix_path,
+        )
+    except ProfileRegistryError as error:
+        parser.error(str(error))
+    if (
+        selection.spec is not None
+        and Console.SI0 in selection.spec.required_consoles
+    ):
+        parser.error("unbound_console:si0")
+    args.validation_profile = selection.profile_id
+    args.pfdi_probe = selection.pfdi
+    args.pfdi_si_cl1_probe = selection.pfdi_si_cl1
+    args.ras_cpu_probe = selection.ras_cpu
     operation_args = (
         args.primary_operation_manifest,
         args.primary_operation_schema,
