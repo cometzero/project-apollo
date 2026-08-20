@@ -28,6 +28,7 @@ class RootOptions:
     category_requested: bool
     test_name: str | None
     test_profile: str | None
+    fvp_reference: Path | None
     tui: bool
     headless: bool
     timeout_oeqa: int
@@ -61,6 +62,7 @@ def parse_root_args(argv: list[str]) -> RootOptions:
     parser.add_argument("--category", choices=CATEGORIES, default="basic")
     parser.add_argument("--test", dest="test_name")
     parser.add_argument("--test-profile")
+    parser.add_argument("--fvp-reference", type=Path)
     ui_group = parser.add_mutually_exclusive_group()
     ui_group.add_argument("--headless", action="store_true")
     ui_group.add_argument("--tui", action="store_true")
@@ -104,6 +106,7 @@ def parse_root_args(argv: list[str]) -> RootOptions:
         category_requested=_category_was_requested(argv),
         test_name=parsed.test_name,
         test_profile=parsed.test_profile,
+        fvp_reference=parsed.fvp_reference,
         tui=parsed.tui,
         headless=not parsed.tui,
         timeout_oeqa=parsed.timeout_oeqa,

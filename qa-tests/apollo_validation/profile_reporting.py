@@ -56,6 +56,19 @@ def apply_profile_summary(run_dir: Path, summary: dict[str, JsonValue]) -> int:
         *_dict_items(summary, "artifacts"),
         {"kind": "profile_result", "path": "profile-result.json"},
     ]
+    try:
+        input_manifest: JsonValue = json.loads(
+            (run_dir / "evidence/input-manifest.json").read_text(encoding="utf-8")
+        )
+    except (FileNotFoundError, json.JSONDecodeError):
+        input_manifest = {}
+    if isinstance(input_manifest, dict):
+        provenance = input_manifest.get("provenance")
+        accepted = input_manifest.get("accepted_fvp_reference")
+        if isinstance(provenance, dict):
+            summary["provenance"] = provenance
+        if isinstance(accepted, dict):
+            summary["accepted_fvp_reference"] = accepted
     return verdict_exit_code(normalized.result.verdict)
 
 

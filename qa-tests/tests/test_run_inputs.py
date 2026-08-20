@@ -16,8 +16,10 @@ def test_qa_runner_revision_tracks_the_workspace(tmp_path: Path) -> None:
     capture_run_inputs(WORKSPACE, tmp_path, context)
 
     # Then: the QA runner and workspace resolve to the same commit.
-    assert context["input_revisions"]["qa_runner"]
+    revisions = context["input_revisions"]
+    assert isinstance(revisions, dict)
+    assert revisions["qa_runner"]
     assert (
-        context["input_revisions"]["qa_runner"]
-        == context["input_revisions"]["workspace"]
+        revisions["qa_runner"]
+        == revisions["workspace"]
     )

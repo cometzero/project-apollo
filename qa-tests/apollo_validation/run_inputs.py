@@ -1,15 +1,88 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 import shutil
 import subprocess
-from typing import Any
+from typing import TypeAlias
 
 from .evidence import write_json
+from .backend import Backend, ImageProfile
+from .provenance import (
+    JsonValue,
+    ProvenanceError,
+    ProvenanceRequest,
+    capture_profile_provenance,
+)
+from .profiles import load_test_profile
 
 
-JsonObject = dict[str, Any]
+JsonObject: TypeAlias = dict[str, JsonValue]
+
+
+def _mapping(value: JsonValue) -> JsonObject:
+    return value if isinstance(value, dict) else {}
+
+
+def _string(value: JsonValue) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _integer(value: JsonValue) -> int:
+    if type(value) is not int:
+        raise ProvenanceError("blocked_fvp_reference_cpu_mismatch")
+    return value
+
+
+def _attach_profile_provenance(
+    root: Path,
+    run_dir: Path,
+    context: JsonObject,
+) -> None:
+    profile_id = _string(context.get("test_profile"))
+    if not profile_id or isinstance(context.get("provenance"), dict):
+        return
+    selection_path = run_dir / "selection.json"
+    backends: dict[str, Backend] = {"fvp": "fvp", "qbox": "qbox"}
+    backend = backends.get(_string(context.get("backend")))
+    images: dict[str, ImageProfile] = {"bsp": "bsp", "product": "product"}
+    image_profile = images.get(_string(context.get("image_profile")))
+    if backend is None or image_profile is None:
+        raise ProvenanceError("blocked_fvp_reference_malformed")
+    if selection_path.is_file():
+        try:
+            loaded: JsonValue = json.loads(selection_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise ProvenanceError("blocked_fvp_reference_malformed") from error
+        raw_selectors = _mapping(loaded).get("ordered_tests")
+        if not isinstance(raw_selectors, list):
+            raise ProvenanceError("blocked_fvp_reference_selector_mismatch")
+        selectors = tuple(_string(item) for item in raw_selectors)
+    else:
+        selectors = load_test_profile(
+            root,
+            profile_id,
+            backend,
+            image_profile,
+        ).selectors
+    if not selectors or any(not item for item in selectors):
+        raise ProvenanceError("blocked_fvp_reference_selector_mismatch")
+    testdata_path = Path(_string(context.get("testdata_path")))
+    provenance = capture_profile_provenance(
+        ProvenanceRequest(
+            root=root,
+            build_dir=testdata_path.parents[4],
+            backend=backend,
+            machine=_string(context.get("machine")),
+            image=_string(context.get("image")),
+            image_profile=image_profile,
+            profile_id=profile_id,
+            selectors=selectors,
+            cpu_count=_integer(context.get("pc_cpus_count_default")),
+        )
+    )
+    context["provenance"] = provenance.as_json()
 
 
 def _git_revision(path: Path) -> str:
@@ -28,6 +101,7 @@ def capture_run_inputs(
     run_dir: Path,
     context: JsonObject,
 ) -> Path:
+    _attach_profile_provenance(root, run_dir, context)
     context["input_revisions"] = {
         "workspace": _git_revision(root),
         "qa_runner": _git_revision(root),
@@ -37,11 +111,10 @@ def capture_run_inputs(
         ),
     }
     evidence_dir = run_dir / "evidence"
+    runtime_config = _mapping(context.get("runtime_config"))
     input_paths = {
         "testdata": context.get("testdata_path"),
-        "runtime_config": context.get("runtime_config", {}).get("path")
-        if isinstance(context.get("runtime_config"), dict)
-        else None,
+        "runtime_config": runtime_config.get("path"),
     }
     entries = []
     for kind, raw_path in input_paths.items():
@@ -64,5 +137,12 @@ def capture_run_inputs(
             }
         )
     path = evidence_dir / "input-manifest.json"
-    write_json(path, {"inputs": entries})
+    payload: JsonObject = {"inputs": entries}
+    provenance = context.get("provenance")
+    if isinstance(provenance, dict):
+        payload["provenance"] = provenance
+    accepted = context.get("accepted_fvp_reference")
+    if isinstance(accepted, dict):
+        payload["accepted_fvp_reference"] = accepted
+    write_json(path, payload)
     return path
