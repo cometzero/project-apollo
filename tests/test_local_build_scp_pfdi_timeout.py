@@ -18,6 +18,25 @@ QBOX_YOCTO_SCP_BUILD: Final = (
     / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-bsp/scp-firmware"
     / "scp-firmware-apollo-qvp.inc"
 )
+QBOX_MACHINE_CONFIG: Final = (
+    ROOT / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-qvp.conf"
+)
+QBOX_PFDI_POLICY: Final = (
+    ROOT
+    / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/include"
+    / "apollo-qvp-qbox-timing.inc"
+)
+LOCAL_BUILD_CONFIG: Final = ROOT / "scripts/build/local_build.conf"
+FVP_PFDI_MONITOR: Final = (
+    ROOT
+    / "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd"
+    / "apollo-fvp/si0_ramfw/config_pfdi_monitor.c"
+)
+QVP_PFDI_MONITOR: Final = (
+    ROOT
+    / "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd"
+    / "apollo-qvp/si0_ramfw/config_pfdi_monitor.c"
+)
 PFDI_KCONFIG: Final = (
     ROOT
     / "arm-zena-css/components/safety_island/zephyr/src/subsys/pfdi/Kconfig"
@@ -30,11 +49,71 @@ PFDI_AGENT_CONFIG: Final = (
 QBOX_FABRIC: Final = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/fabric.lua"
 )
-QBOX_PFDI_MONITOR: Final = (
-    ROOT
-    / "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd"
-    / "apollo-qvp/si0_ramfw/config_pfdi_monitor.c"
-)
+
+
+def qbox_pfdi_policy_value(name: str) -> int:
+    source = QBOX_PFDI_POLICY.read_text(encoding="utf-8")
+    match = re.search(rf'{name}\s*\?=\s*"(\d+)UL"', source)
+    assert match is not None, name
+    return int(match.group(1))
+
+
+def source_macro_value(path: Path, name: str) -> int:
+    source = path.read_text(encoding="utf-8")
+    match = re.search(rf"#\s*define\s+{name}\s+(\d+)UL", source)
+    assert match is not None, name
+    return int(match.group(1))
+
+
+def test_qbox_pfdi_timing_policy_is_centralized() -> None:
+    # Given: the Apollo QVP machine policy and its local-build mirror.
+    machine_source = QBOX_MACHINE_CONFIG.read_text(encoding="utf-8")
+    policy_source = QBOX_PFDI_POLICY.read_text(encoding="utf-8")
+    local_source = LOCAL_BUILD_CONFIG.read_text(encoding="utf-8")
+    expected = {
+        "SCP_PFDI_OOR_PERIOD_US": 10_000_000,
+        "SCP_PFDI_BOOT_TIMEOUT_US": 100_000_000,
+        "SCP_PFDI_ONLINE_TIMEOUT_US": 500_000,
+        "SCP_SICL1_PFDI_OOR_PERIOD_US": 1_000_000,
+        "SCP_SICL1_PFDI_BOOT_TIMEOUT_US": 10_000_000,
+        "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US": 500_000,
+    }
+
+    # When: every timing value and consumer is resolved.
+    for name, value in expected.items():
+        policy_assignment = f'{name} ?= "{value}UL"'
+        local_assignment = f'{name}="${{{name}-{value}UL}}"'
+
+        # Then: one machine include owns policy and local builds stay aligned.
+        assert policy_assignment in policy_source
+        assert local_assignment in local_source
+        assert f"-D {name}=${{{name}}}" in QBOX_YOCTO_SCP_BUILD.read_text(
+            encoding="utf-8"
+        )
+        assert f'-D{name}="${{{name}}}"' in LOCAL_SCP_BUILD.read_text(
+            encoding="utf-8"
+        )
+    assert (
+        "require conf/machine/include/apollo-qvp-qbox-timing.inc"
+        in machine_source
+    )
+
+
+def test_qvp_pfdi_source_defaults_match_fvp() -> None:
+    # Given: the FVP and Apollo QVP PFDI monitor source defaults.
+    macro_pairs = (
+        ("OOR_PFDI_PERIOD_US", "OOR_PFDI_PERIOD_US"),
+        ("BOOT_TIMEOUT_US", "PFDI_BOOT_TIMEOUT_US"),
+        ("SICL1_OOR_PFDI_PERIOD_US", "SICL1_OOR_PFDI_PERIOD_US"),
+        ("SICL1_BOOT_TIMEOUT_US", "SICL1_BOOT_TIMEOUT_US"),
+    )
+
+    # When/Then: every QVP fallback preserves its FVP-derived value.
+    for fvp_name, qvp_name in macro_pairs:
+        assert source_macro_value(FVP_PFDI_MONITOR, fvp_name) == source_macro_value(
+            QVP_PFDI_MONITOR,
+            qvp_name,
+        )
 
 
 def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
@@ -68,19 +147,12 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
     )
 
     # Then: five complete request windows fit before a QBox watchdog deadline.
-    for build_path in (LOCAL_SCP_BUILD, QBOX_YOCTO_SCP_BUILD):
-        build_source = build_path.read_text(encoding="utf-8")
-        for timeout_name in (
-            "SCP_PFDI_ONLINE_TIMEOUT_US",
-            "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US",
-        ):
-            timeout_match = re.search(
-                rf"{timeout_name}=(\d+)UL",
-                build_source,
-            )
-            assert timeout_match is not None
-            watchdog_timeout_us = int(timeout_match.group(1))
-            assert watchdog_timeout_us >= 5 * qbox_request_budget_us, build_path
+    for timeout_name in (
+        "SCP_PFDI_ONLINE_TIMEOUT_US",
+        "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US",
+    ):
+        watchdog_timeout_us = qbox_pfdi_policy_value(timeout_name)
+        assert watchdog_timeout_us >= 5 * qbox_request_budget_us
 
     reference_source = REFERENCE_YOCTO_SCP_BUILD.read_text(encoding="utf-8")
     reference_match = re.search(
@@ -113,32 +185,16 @@ def test_full_system_gate_detects_si0_pfdi_watchdog_timeout(
 
 
 def test_qbox_ap_secondary_cores_have_time_to_report_out_of_reset() -> None:
-    # Given: the QVP-specific AP out-of-reset watchdog.
-    monitor_source = QBOX_PFDI_MONITOR.read_text(encoding="utf-8")
-    timeout_match = re.search(
-        r"#define OOR_PFDI_PERIOD_US\s+(\d+)UL",
-        monitor_source,
-    )
-    assert timeout_match is not None
+    # Given: the local and Yocto Apollo QVP SCP build configurations.
+    policy = qbox_pfdi_policy_value("SCP_PFDI_OOR_PERIOD_US")
 
-    # When: the timeout is compared with the full-system boot budget.
-    oor_timeout_us = int(timeout_match.group(1))
-
-    # Then: secondary cores are not diagnosed before the QVP boot deadline.
-    assert oor_timeout_us >= 10_000_000
+    # When/Then: secondary cores retain the established ten-second deadline.
+    assert policy >= 10_000_000
 
 
 def test_qbox_ap_pfdi_boot_watchdog_covers_product_login() -> None:
     # Given: the QVP-only AP boot watchdog configuration.
-    for build_path in (LOCAL_SCP_BUILD, QBOX_YOCTO_SCP_BUILD):
-        build_source = build_path.read_text(encoding="utf-8")
+    policy = qbox_pfdi_policy_value("SCP_PFDI_BOOT_TIMEOUT_US")
 
-        # When: the configured boot timeout is resolved.
-        timeout_match = re.search(
-            r"SCP_PFDI_BOOT_TIMEOUT_US=(\d+)UL",
-            build_source,
-        )
-
-        # Then: Linux has at least 100 simulated seconds to report online.
-        assert timeout_match is not None, build_path
-        assert int(timeout_match.group(1)) >= 100_000_000, build_path
+    # When/Then: Linux has at least 100 simulated seconds to report online.
+    assert policy >= 100_000_000
