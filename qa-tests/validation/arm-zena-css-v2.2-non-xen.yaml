@@ -1,0 +1,331 @@
+{
+  "version": 1,
+  "exclusions": [
+    {
+      "id": "xen",
+      "reason": "Xen integration tests are explicitly outside this non-Xen contract.",
+      "selectors": ["test_40_virtualization"]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "bsp-core",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_10_bsp_core"],
+      "qbox_assertions": ["bsp-scp", "bsp-uboot-boot", "bsp-safety-island-cl1", "rse-normal-boot", "rse-measured-boot", "primary-fvp-boot", "primary-ping", "primary-ssh", "ap-dsu-cluster", "systemd-boot-message", "pc-cpus-tfa", "pc-cpus-linux", "secure-partition-optee"]
+    },
+    {
+      "id": "platform-devices",
+      "image": "product",
+      "cpu_count": 4,
+      "coverage_kind": "semantic",
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"],
+      "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog"]
+    },
+    {
+      "id": "trusted-services",
+      "image": "product",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_80_trusted_services"],
+      "qbox_assertions": ["ts-psa-crypto-api-test", "ts-psa-ps-api-test", "ts-psa-its-api-test", "ts-psa-iat-api-test"]
+    },
+    {
+      "id": "pfdi",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_64_bsp_pfdi"],
+      "qbox_assertions": ["pfdi-systemd-service", "pfdi-app", "pfdi-cli", "pfdi-cli-force-error", "pfdi-app-monitoring", "pfdi-app-monitoring-error", "pfdi-sbistc"]
+    },
+    {
+      "id": "pfdi-si-cl1",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_30_si_cl1_pfdi", "test_31_bsp_si_pfdi_monitor"],
+      "qbox_assertions": ["si-pfdi-cluster-status", "si-pfdi-run-all-tests", "si-pfdi-run-block", "si-pfdi-run-invalid-params", "si-pfdi-run-block-valid", "si-pfdi-run-range-valid", "si-pfdi-invalid-cpu-value", "si-pfdi-cpu-out-of-range", "si-pfdi-count-blocks", "si-pfdi-count-block-parts", "si-pfdi-result", "si-pfdi-set-state-toggle", "si-pfdi-force-error-effect", "si-pfdi-multiple-runs-consistency", "si-pfdi-stress", "si-pfdi-info", "si-pfdi-monitoring"]
+    },
+    {
+      "id": "safety-diagnostics-tests",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_20_si_cl0_diagnostics"],
+      "qbox_assertions": ["safety-island-fmu", "safety-island-ssu"]
+    },
+    {
+      "id": "ras_cpu",
+      "image": "product",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_fvp_boot.FVPBootTest.test_fvp_boot", "test_00_rse_boot.RseBootTest.test_normal_boot", "test_00_tfa_secure_partition_boot.TfaSecurePartitionBootTest.test_secure_partition_boot", "test_00_linux_boot.LinuxBootTest.test_linux_boot", "test_40_tfa_cpu_topology.TfaCpuTopologyTest.test_configured_pc_cpus_in_tfa", "test_41_tfa_ras"],
+      "qbox_assertions": ["ras-inject-list", "ras-inject-invalid-cpu-error", "ras-inject-usage", "ras-inject-correctable-cpu-error", "ras-inject-deferred-cpu-error", "ras-inject-correctable-cpu-error-10x", "ras-inject-uncorrectable-cpu-error", "ras-inject-correctable-deferred-cpu-error", "ras-journalctl-service"]
+    },
+    {
+      "id": "si-cl1",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_10_bsp_core.BSPCoreTest.test_safety_island_cl1"],
+      "qbox_assertions": ["safety-island-cluster1"]
+    },
+    {
+      "id": "crypto-extension",
+      "image": "product",
+      "cpu_count": 4,
+      "coverage_kind": "semantic",
+      "fvp_selectors": ["test_00_linux_boot", "test_65_linux_crypto"],
+      "qbox_assertions": ["cryptographic-extension-performance"]
+    },
+    {
+      "id": "cpuidle",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_31_bsp_cpuidle"],
+      "qbox_assertions": ["cpuidle-ensure", "cpuidle-c-states", "cpuidle-default-status", "cpuidle-disable-state", "cpuidle-residency-latency", "cpuidle-governors", "cpuidle-governor-switching", "cpuidle-invalid-governor"]
+    },
+    {
+      "id": "cpufreq",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_32_bsp_cpufreq"],
+      "qbox_assertions": ["cpufreq-policy", "cpufreq-default-governors", "cpufreq-set-governors", "cpufreq-scaling-driver", "cpufreq-current-frequency-per-governor", "cpufreq-affected-cpus-per-policy", "cpufreq-invalid-governor", "cpufreq-scaling-min-frequencies", "cpufreq-scaling-max-frequencies", "cpufreq-min-max-negative"]
+    },
+    {
+      "id": "mbpp",
+      "image": "product",
+      "cpu_count": 16,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_72_power_cpufreq", "test_73_power_mbpp"],
+      "qbox_assertions": ["mbpp-script-exists", "mbpp-help-and-list", "mbpp-set-parking", "mbpp-idempotent-profiles", "mbpp-case-insensitive-profiles", "mbpp-invalid-profile", "mbpp-toggle-all-modes", "mbpp-all-cores-online", "mbpp-restore-default-governor"]
+    },
+    {
+      "id": "hipc",
+      "image": "product",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_si_cl1_boot", "test_31_si_cl1_hipc"],
+      "qbox_assertions": ["hipc-dt-and-shared-memory", "hipc-linux-stack", "hipc-memory-layout", "hipc-icmp-bidirectional", "hipc-udp-pc-to-cl1", "hipc-tcp-pc-to-cl1", "hipc-udp-cl1-to-pc", "hipc-tcp-cl1-to-pc", "hipc-boundary-payload-sizes", "hipc-boundary-multistream"]
+    },
+    {
+      "id": "smcf",
+      "image": "bsp",
+      "cpu_count": 4,
+      "coverage_kind": "identical",
+      "fvp_selectors": ["test_00_bsp_boot", "test_21_bsp_smcf"],
+      "qbox_assertions": ["smcf-client-start", "smcf-execute-test", "smcf-run-3x", "smcf-sensor-monitor"]
+    }
+  ],
+  "areas": [
+    {
+      "id": "oeqa-bsp",
+      "heading": "OEQA tests in the BSP",
+      "profile_id": "bsp-core",
+      "actions": [
+        {"id": "bsp-scp", "assertion_id": "bsp-scp"},
+        {"id": "bsp-uboot-boot", "assertion_id": "bsp-uboot-boot"},
+        {"id": "bsp-safety-island-cl1", "assertion_id": "bsp-safety-island-cl1"},
+        {"id": "rse-normal-boot", "assertion_id": "rse-normal-boot"},
+        {"id": "rse-measured-boot", "assertion_id": "rse-measured-boot"},
+        {"id": "primary-fvp-boot", "assertion_id": "primary-fvp-boot"},
+        {"id": "primary-ping", "assertion_id": "primary-ping"},
+        {"id": "primary-ssh", "assertion_id": "primary-ssh"},
+        {"id": "ap-dsu-cluster", "assertion_id": "ap-dsu-cluster"},
+        {"id": "systemd-boot-message", "assertion_id": "systemd-boot-message"},
+        {"id": "pc-cpus-tfa", "assertion_id": "pc-cpus-tfa"},
+        {"id": "pc-cpus-linux", "assertion_id": "pc-cpus-linux"},
+        {"id": "secure-partition-optee", "assertion_id": "secure-partition-optee"}
+      ]
+    },
+    {
+      "id": "fvp-devices",
+      "heading": "FVP device tests",
+      "profile_id": "platform-devices",
+      "actions": [
+        {"id": "platform-device-networking", "assertion_id": "platform-device-networking"},
+        {"id": "platform-device-rtc", "assertion_id": "platform-device-rtc"},
+        {"id": "platform-device-cpu-hotplug", "assertion_id": "platform-device-cpu-hotplug"},
+        {"id": "platform-device-virtiorng", "assertion_id": "platform-device-virtiorng"},
+        {"id": "platform-device-watchdog", "assertion_id": "platform-device-watchdog"}
+      ]
+    },
+    {
+      "id": "psa-apis",
+      "heading": "PSA APIs test suite integration on Primary Compute",
+      "profile_id": "trusted-services",
+      "actions": [
+        {"id": "ts-psa-crypto-api-test", "assertion_id": "ts-psa-crypto-api-test"},
+        {"id": "ts-psa-ps-api-test", "assertion_id": "ts-psa-ps-api-test"},
+        {"id": "ts-psa-its-api-test", "assertion_id": "ts-psa-its-api-test"},
+        {"id": "ts-psa-iat-api-test", "assertion_id": "ts-psa-iat-api-test"}
+      ]
+    },
+    {
+      "id": "pfdi",
+      "heading": "Platform Fault Detection Interface (PFDI) Test",
+      "profile_id": "pfdi",
+      "actions": [
+        {"id": "pfdi-systemd-service", "assertion_id": "pfdi-systemd-service"},
+        {"id": "pfdi-app", "assertion_id": "pfdi-app"},
+        {"id": "pfdi-cli", "assertion_id": "pfdi-cli"},
+        {"id": "pfdi-cli-force-error", "assertion_id": "pfdi-cli-force-error"},
+        {"id": "pfdi-app-monitoring", "assertion_id": "pfdi-app-monitoring"},
+        {"id": "pfdi-app-monitoring-error", "assertion_id": "pfdi-app-monitoring-error"},
+        {"id": "pfdi-sbistc", "assertion_id": "pfdi-sbistc"}
+      ]
+    },
+    {
+      "id": "pfdi-safety-island-cl1",
+      "heading": "PFDI Safety Island CL1 tests",
+      "profile_id": "pfdi-si-cl1",
+      "actions": [
+        {"id": "si-pfdi-cluster-status", "assertion_id": "si-pfdi-cluster-status"},
+        {"id": "si-pfdi-run-all-tests", "assertion_id": "si-pfdi-run-all-tests"},
+        {"id": "si-pfdi-run-block", "assertion_id": "si-pfdi-run-block"},
+        {"id": "si-pfdi-run-invalid-params", "assertion_id": "si-pfdi-run-invalid-params"},
+        {"id": "si-pfdi-run-block-valid", "assertion_id": "si-pfdi-run-block-valid"},
+        {"id": "si-pfdi-run-range-valid", "assertion_id": "si-pfdi-run-range-valid"},
+        {"id": "si-pfdi-invalid-cpu-value", "assertion_id": "si-pfdi-invalid-cpu-value"},
+        {"id": "si-pfdi-cpu-out-of-range", "assertion_id": "si-pfdi-cpu-out-of-range"},
+        {"id": "si-pfdi-count-blocks", "assertion_id": "si-pfdi-count-blocks"},
+        {"id": "si-pfdi-count-block-parts", "assertion_id": "si-pfdi-count-block-parts"},
+        {"id": "si-pfdi-result", "assertion_id": "si-pfdi-result"},
+        {"id": "si-pfdi-set-state-toggle", "assertion_id": "si-pfdi-set-state-toggle"},
+        {"id": "si-pfdi-force-error-effect", "assertion_id": "si-pfdi-force-error-effect"},
+        {"id": "si-pfdi-multiple-runs-consistency", "assertion_id": "si-pfdi-multiple-runs-consistency"},
+        {"id": "si-pfdi-stress", "assertion_id": "si-pfdi-stress"},
+        {"id": "si-pfdi-info", "assertion_id": "si-pfdi-info"}
+      ]
+    },
+    {
+      "id": "safety-diagnostics",
+      "heading": "Safety Diagnostics tests",
+      "profile_id": "safety-diagnostics-tests",
+      "actions": [
+        {"id": "safety-island-fmu", "assertion_id": "safety-island-fmu"},
+        {"id": "safety-island-ssu", "assertion_id": "safety-island-ssu"}
+      ]
+    },
+    {
+      "id": "primary-compute-cpus-ras",
+      "heading": "Primary Compute CPUs RAS tests",
+      "profile_id": "ras_cpu",
+      "actions": [
+        {"id": "ras-inject-list", "assertion_id": "ras-inject-list"},
+        {"id": "ras-inject-invalid-cpu-error", "assertion_id": "ras-inject-invalid-cpu-error"},
+        {"id": "ras-inject-usage", "assertion_id": "ras-inject-usage"},
+        {"id": "ras-inject-correctable-cpu-error", "assertion_id": "ras-inject-correctable-cpu-error"},
+        {"id": "ras-inject-deferred-cpu-error", "assertion_id": "ras-inject-deferred-cpu-error"},
+        {"id": "ras-inject-correctable-cpu-error-10x", "assertion_id": "ras-inject-correctable-cpu-error-10x"},
+        {"id": "ras-inject-uncorrectable-cpu-error", "assertion_id": "ras-inject-uncorrectable-cpu-error"},
+        {"id": "ras-inject-correctable-deferred-cpu-error", "assertion_id": "ras-inject-correctable-deferred-cpu-error"},
+        {"id": "ras-journalctl-service", "assertion_id": "ras-journalctl-service"}
+      ]
+    },
+    {
+      "id": "safety-island-cluster-1",
+      "heading": "Safety Island Cluster 1",
+      "profile_id": "si-cl1",
+      "actions": [
+        {"id": "safety-island-cluster1", "assertion_id": "safety-island-cluster1"}
+      ]
+    },
+    {
+      "id": "cryptographic-extension",
+      "heading": "Arm Cryptographic Extension Performance Tests",
+      "profile_id": "crypto-extension",
+      "actions": [
+        {"id": "cryptographic-extension-performance", "assertion_id": "cryptographic-extension-performance"}
+      ]
+    },
+    {
+      "id": "cpuidle",
+      "heading": "Power Management CPU idle power states (C-states)",
+      "profile_id": "cpuidle",
+      "actions": [
+        {"id": "cpuidle-ensure", "assertion_id": "cpuidle-ensure"},
+        {"id": "cpuidle-c-states", "assertion_id": "cpuidle-c-states"},
+        {"id": "cpuidle-default-status", "assertion_id": "cpuidle-default-status"},
+        {"id": "cpuidle-disable-state", "assertion_id": "cpuidle-disable-state"},
+        {"id": "cpuidle-residency-latency", "assertion_id": "cpuidle-residency-latency"},
+        {"id": "cpuidle-governors", "assertion_id": "cpuidle-governors"},
+        {"id": "cpuidle-governor-switching", "assertion_id": "cpuidle-governor-switching"},
+        {"id": "cpuidle-invalid-governor", "assertion_id": "cpuidle-invalid-governor"}
+      ]
+    },
+    {
+      "id": "cpufreq",
+      "heading": "Power Management CPU frequency scaling",
+      "profile_id": "cpufreq",
+      "actions": [
+        {"id": "cpufreq-policy", "assertion_id": "cpufreq-policy"},
+        {"id": "cpufreq-default-governors", "assertion_id": "cpufreq-default-governors"},
+        {"id": "cpufreq-set-governors", "assertion_id": "cpufreq-set-governors"},
+        {"id": "cpufreq-scaling-driver", "assertion_id": "cpufreq-scaling-driver"},
+        {"id": "cpufreq-current-frequency-per-governor", "assertion_id": "cpufreq-current-frequency-per-governor"},
+        {"id": "cpufreq-affected-cpus-per-policy", "assertion_id": "cpufreq-affected-cpus-per-policy"},
+        {"id": "cpufreq-invalid-governor", "assertion_id": "cpufreq-invalid-governor"},
+        {"id": "cpufreq-scaling-min-frequencies", "assertion_id": "cpufreq-scaling-min-frequencies"},
+        {"id": "cpufreq-scaling-max-frequencies", "assertion_id": "cpufreq-scaling-max-frequencies"},
+        {"id": "cpufreq-min-max-negative", "assertion_id": "cpufreq-min-max-negative"}
+      ]
+    },
+    {
+      "id": "mbpp",
+      "heading": "Mission Based Power Profile (MBPP) demonstration tests",
+      "profile_id": "mbpp",
+      "actions": [
+        {"id": "mbpp-script-exists", "assertion_id": "mbpp-script-exists"},
+        {"id": "mbpp-help-and-list", "assertion_id": "mbpp-help-and-list"},
+        {"id": "mbpp-set-parking", "assertion_id": "mbpp-set-parking"},
+        {"id": "mbpp-idempotent-profiles", "assertion_id": "mbpp-idempotent-profiles"},
+        {"id": "mbpp-case-insensitive-profiles", "assertion_id": "mbpp-case-insensitive-profiles"},
+        {"id": "mbpp-invalid-profile", "assertion_id": "mbpp-invalid-profile"},
+        {"id": "mbpp-toggle-all-modes", "assertion_id": "mbpp-toggle-all-modes"},
+        {"id": "mbpp-all-cores-online", "assertion_id": "mbpp-all-cores-online"},
+        {"id": "mbpp-restore-default-governor", "assertion_id": "mbpp-restore-default-governor"}
+      ]
+    },
+    {
+      "id": "hipc",
+      "heading": "HIPC Baremetal Network Tests",
+      "profile_id": "hipc",
+      "actions": [
+        {"id": "hipc-dt-and-shared-memory", "assertion_id": "hipc-dt-and-shared-memory"},
+        {"id": "hipc-linux-stack", "assertion_id": "hipc-linux-stack"},
+        {"id": "hipc-memory-layout", "assertion_id": "hipc-memory-layout"},
+        {"id": "hipc-icmp-bidirectional", "assertion_id": "hipc-icmp-bidirectional"},
+        {"id": "hipc-udp-pc-to-cl1", "assertion_id": "hipc-udp-pc-to-cl1"},
+        {"id": "hipc-tcp-pc-to-cl1", "assertion_id": "hipc-tcp-pc-to-cl1"},
+        {"id": "hipc-udp-cl1-to-pc", "assertion_id": "hipc-udp-cl1-to-pc"},
+        {"id": "hipc-tcp-cl1-to-pc", "assertion_id": "hipc-tcp-cl1-to-pc"},
+        {"id": "hipc-boundary-payload-sizes", "assertion_id": "hipc-boundary-payload-sizes"},
+        {"id": "hipc-boundary-multistream", "assertion_id": "hipc-boundary-multistream"}
+      ]
+    },
+    {
+      "id": "smcf",
+      "heading": "SMCF Integration Tests",
+      "profile_id": "smcf",
+      "actions": [
+        {"id": "smcf-client-start", "assertion_id": "smcf-client-start"},
+        {"id": "smcf-execute-test", "assertion_id": "smcf-execute-test"},
+        {"id": "smcf-run-3x", "assertion_id": "smcf-run-3x"},
+        {"id": "smcf-sensor-monitor", "assertion_id": "smcf-sensor-monitor"}
+      ]
+    },
+    {
+      "id": "pfdi-monitoring-safety-island",
+      "heading": "PFDI Monitoring on Safety Island Tests",
+      "profile_id": "pfdi-si-cl1",
+      "actions": [
+        {"id": "si-pfdi-monitoring", "assertion_id": "si-pfdi-monitoring"}
+      ]
+    }
+  ]
+}
