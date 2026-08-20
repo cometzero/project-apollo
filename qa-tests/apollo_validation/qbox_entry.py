@@ -84,7 +84,11 @@ def _qbox_request(
         machine=options.machine,
         image=options.image,
         image_profile=options.image_profile,
-        timeout=options.timeout_fvp,
+        timeout=(
+            options.timeout_oeqa
+            if options.test_profile is not None
+            else options.timeout_fvp
+        ),
         out_dir=run_dir,
         dry_run=options.dry_run or options.skip_runtime,
         preflight_only=options.preflight_only,
