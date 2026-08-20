@@ -100,6 +100,16 @@ an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
 recovery. Unimplemented combinations remain explicit extended-validation
 debt rather than boot-compatibility bridges.
 
+The 2026-08-20 four-CPU PFDI qualification adds the QBox backend for
+`./run_test.sh --machine apollo-qvp --bsp --test-profile pfdi`. AP SBIST FCTLR
+writes now reach a functional `apollo_sbist` SystemC model, inject SI0 FMU
+device 1 records 210 through 213, and propagate each child FMU fault through
+the root summary record expected by SCP-firmware. The AP PFDI MHU logical
+window is mapped explicitly to its SMD PBX endpoint. The final QBox run passed
+all prerequisite, service, CLI, OnL, monitoring, force-error, FMU, SBISTC, and
+PFDI-monitor failure checks for CPU0 through CPU3. Evidence is under
+`build/tests/20260820-100317-qbox-bsp-pfdi/`.
+
 The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
 QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
 MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI

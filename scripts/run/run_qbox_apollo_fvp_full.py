@@ -1891,6 +1891,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe and not args.uboot_only:
         cmd.append("--post-login-probe")
+    if args.pfdi_probe and not args.uboot_only:
+        cmd.append("--pfdi-probe")
     if args.primary_operation_manifest is not None and not args.uboot_only:
         cmd.extend([
             "--primary-operation-manifest",
@@ -2113,6 +2115,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="post_login_probe",
         action="store_false",
         help="Disable the root-shell gate for focused boot diagnostics.",
+    )
+    parser.add_argument(
+        "--pfdi-probe",
+        action="store_true",
+        help="Forward the fixed Apollo BSP PFDI post-login probe.",
     )
     parser.add_argument("--primary-operation-manifest", type=Path)
     parser.add_argument("--primary-operation-schema", type=Path)
@@ -2362,6 +2369,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
+    if args.pfdi_probe:
+        args.post_login_probe = True
     if args.monitor_port is not None:
         if not 1 <= args.monitor_port <= 65535:
             parser.error("--monitor-port must be in range 1..65535")

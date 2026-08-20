@@ -25,6 +25,17 @@ def test_pfdi_profile_selects_bsp_oeqa_contract() -> None:
     assert profile.timeout_seconds == 1800
 
 
+def test_pfdi_profile_selects_qbox_probe_contract() -> None:
+    # Given: the repository-owned PFDI profile and QBox BSP backend.
+    # When: the profile is resolved for QBox.
+    profile = load_test_profile(WORKSPACE, "pfdi", "qbox", "bsp")
+
+    # Then: the same selectors route through the QBox PFDI probe target.
+    assert profile.selectors == ("test_00_bsp_boot", "test_64_bsp_pfdi")
+    assert profile.test_target == "QBoxPFDIRunner"
+    assert profile.timeout_seconds == 1800
+
+
 def test_profile_selection_applies_timeout_and_writes_snapshot(
     tmp_path: Path,
 ) -> None:

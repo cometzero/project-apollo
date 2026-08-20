@@ -25,6 +25,7 @@ import sys
 import time
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
+from qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
 
 
 REQUIRED_TARGETS = [
@@ -2225,6 +2226,8 @@ def secure_service_probe_commands(
 
 
 def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
+    if args.pfdi_probe:
+        return pfdi_probe_commands()
     commands: list[str] = []
     done_command = f"echo {PROBE_DONE_MARKER}"
     for command in POST_LOGIN_PROBE_COMMANDS:
@@ -2362,7 +2365,10 @@ def parse_secure_service_progress(clean_primary: str) -> dict[str, object]:
 
 
 def evaluate_post_login_probe(
-    primary_console: str, secure_console: str = "", rse_console: str = ""
+    primary_console: str,
+    secure_console: str = "",
+    rse_console: str = "",
+    scp_console: str = "",
 ) -> dict[str, object]:
     clean_primary = clean_text(primary_console)
     clean_secure = clean_text(secure_console)
@@ -2407,6 +2413,7 @@ def evaluate_post_login_probe(
         "fwu_probe": evaluate_fwu_probe(
             clean_primary, clean_rse, clean_secure, rc_hits
         ),
+        "pfdi_probe": evaluate_pfdi_probe(clean_primary, clean_text(scp_console)),
     }
 
 
@@ -2501,6 +2508,18 @@ def read_console_logs(out_dir: Path) -> dict[str, str]:
         else:
             logs[role] = ""
     return logs
+
+
+def pfdi_scp_console(out_dir: Path, logs: dict[str, str]) -> str:
+    configured = os.environ.get("QBOX_APOLLO_FULL_SI_CL0_LOG", "").strip()
+    path = (
+        Path(configured)
+        if configured
+        else out_dir / "qbox-safety-island-cl0.log"
+    )
+    if path.exists():
+        return path.read_text(encoding="utf-8", errors="replace")
+    return logs.get("scp", "")
 
 
 def read_required_pass_marker_file(path: Path) -> str:
@@ -4046,6 +4065,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         ),
         "secure_service_requested": bool(args.secure_service_probe),
         "fwu_requested": bool(args.fwu_probe),
+        "pfdi_requested": bool(args.pfdi_probe),
         "sent_login": False,
         "sent_probe": False,
         "complete": False,
@@ -4366,27 +4386,38 @@ def run_platform(
             logs.get("primary_console", ""),
             logs.get("secure_console", ""),
             logs.get("rse", ""),
+            pfdi_scp_console(out_dir, logs),
         )
         post_login_probe.update(probe_eval)
         fwu_probe = object_dict(probe_eval.get("fwu_probe"))
         fwu_complete = bool(fwu_probe.get("complete"))
         if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
             post_login_probe["complete"] = True
-        post_login_probe["passed"] = bool(
-            args.post_login_probe
-            and post_login_probe.get("sent_probe")
-            and post_login_probe.get("complete")
-            and all(
-                bool(value)
-                for value in object_dict(probe_eval.get("driver_patterns")).values()
+        if args.pfdi_probe:
+            post_login_probe["passed"] = bool(
+                post_login_probe.get("sent_probe")
+                and post_login_probe.get("complete")
+                and object_dict(probe_eval.get("pfdi_probe")).get("passed")
             )
-        )
+        else:
+            post_login_probe["passed"] = bool(
+                args.post_login_probe
+                and post_login_probe.get("sent_probe")
+                and post_login_probe.get("complete")
+                and all(
+                    bool(value)
+                    for value in object_dict(
+                        probe_eval.get("driver_patterns")
+                    ).values()
+                )
+            )
     if args.post_login_probe or args.primary_operation_manifest is not None:
         action_log = out_dir / "post-login-probe-actions.log"
         action_lines = [
             f"requested: {post_login_probe['requested']}",
             f"secure_service_requested: {post_login_probe['secure_service_requested']}",
             f"fwu_requested: {post_login_probe['fwu_requested']}",
+            f"pfdi_requested: {post_login_probe['pfdi_requested']}",
             f"input_path: {post_login_probe.get('input_path')}",
             f"sent_login: {post_login_probe['sent_login']}",
             f"sent_probe: {post_login_probe['sent_probe']}",
@@ -4777,12 +4808,14 @@ def write_result(
                 "requested": bool(args.post_login_probe),
                 "secure_service_requested": bool(args.secure_service_probe),
                 "fwu_requested": bool(args.fwu_probe),
+                "pfdi_requested": bool(args.pfdi_probe),
                 "complete": False,
                 "passed": False,
                 **evaluate_post_login_probe(
                     logs.get("primary_console", ""),
                     logs.get("secure_console", ""),
                     logs.get("rse", ""),
+                    pfdi_scp_console(out_dir, logs),
                 ),
             },
             "shared_memory_cleanup": shared_memory_cleanup or [],
@@ -5173,6 +5206,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--primary-operation-manifest", type=Path)
+    parser.add_argument(
+        "--pfdi-probe",
+        action="store_true",
+        help="Run the fixed Apollo BSP PFDI post-login qualification probe.",
+    )
     parser.add_argument("--primary-operation-schema", type=Path)
     parser.add_argument("--primary-operation-module-path", type=Path)
     parser.add_argument(
@@ -5867,7 +5905,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error(str(exc))
     if args.exception_trace:
         args.pc_trace = True
-    if args.secure_service_probe or args.fwu_probe:
+    if args.secure_service_probe or args.fwu_probe or args.pfdi_probe:
         args.post_login_probe = True
     if args.rse_sram_dmi_smoke:
         conflicts = [
@@ -5876,6 +5914,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                 ("--post-login-probe", args.post_login_probe),
                 ("--secure-service-probe", args.secure_service_probe),
                 ("--fwu-probe", args.fwu_probe),
+                ("--pfdi-probe", args.pfdi_probe),
             )
             if enabled
         ]

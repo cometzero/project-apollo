@@ -10,7 +10,11 @@ from apollo_validation.backend import ImageProfile
 from apollo_validation.qbox_runner import QBoxRunRequest, qbox_launcher_command
 
 
-def qbox_request(tmp_path: Path, image_profile: ImageProfile) -> QBoxRunRequest:
+def qbox_request(
+    tmp_path: Path,
+    image_profile: ImageProfile,
+    test_profile: str | None = None,
+) -> QBoxRunRequest:
     image = "nexios-bsp-initramfs" if image_profile == "bsp" else "nexios-image"
     return QBoxRunRequest(
         root=tmp_path,
@@ -22,6 +26,7 @@ def qbox_request(tmp_path: Path, image_profile: ImageProfile) -> QBoxRunRequest:
         out_dir=tmp_path / "out",
         dry_run=False,
         preflight_only=False,
+        test_profile=test_profile,
     )
 
 
@@ -76,3 +81,14 @@ def test_qbox_bsp_command_selects_bsp_image(tmp_path: Path) -> None:
     assert "--bsp" in command
     assert "--dry-run" in command
     assert "--image-basename" not in command
+
+
+def test_qbox_pfdi_command_selects_runtime_probe(tmp_path: Path) -> None:
+    # Given: the Apollo QVP BSP PFDI profile.
+    request = qbox_request(tmp_path, "bsp", test_profile="pfdi")
+
+    # When: its canonical QBox launcher command is built.
+    command = qbox_launcher_command(request, dry_run=False)
+
+    # Then: the runner enables the fixed PFDI post-login probe.
+    assert "--pfdi-probe" in command

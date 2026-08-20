@@ -24,6 +24,7 @@ class QBoxRunRequest:
     out_dir: Path
     dry_run: bool
     preflight_only: bool
+    test_profile: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +62,8 @@ def qbox_launcher_command(
             assert_never(unexpected)
     if dry_run:
         command.append("--dry-run")
+    if request.test_profile == "pfdi":
+        command.append("--pfdi-probe")
     return command
 
 
@@ -127,7 +130,7 @@ def _qbox_artifacts(request: QBoxRunRequest) -> list[JsonObject]:
 def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     request.out_dir.mkdir(parents=True, exist_ok=True)
     commands_path = request.out_dir / "commands.jsonl"
-    if category != "basic":
+    if category != "basic" and request.test_profile != "pfdi":
         timestamp = now()
         append_record(
             commands_path,

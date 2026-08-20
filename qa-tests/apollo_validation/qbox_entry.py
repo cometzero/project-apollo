@@ -88,6 +88,7 @@ def _qbox_request(
         out_dir=run_dir,
         dry_run=options.dry_run or options.skip_runtime,
         preflight_only=options.preflight_only,
+        test_profile=options.test_profile,
     )
 
 
@@ -105,7 +106,7 @@ def run_qbox_root(root: Path, argv: list[str]) -> int:
         print("error: QBox validation currently requires --headless", file=sys.stderr)
         return 64
     try:
-        selection, _selected_options = prepare_selection(root, options)
+        selection, options = prepare_selection(root, options)
     except SelectionError as error:
         print(f"error: {error}", file=sys.stderr)
         return 64

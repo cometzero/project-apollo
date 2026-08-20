@@ -421,6 +421,15 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
+def test_run_qbox_yocto_forwards_pfdi_probe(tmp_path: Path) -> None:
+    # Given: a headless QBox launch requesting the fixed PFDI probe.
+    result = run_qvp_dry_run(tmp_path, extra_args=["--pfdi-probe"])
+
+    # When/Then: the canonical Python runner receives the probe selector.
+    assert result.returncode == 0, result.stderr
+    assert "--pfdi-probe" in dry_run_command_argv(result.stdout)
+
+
 @pytest.mark.parametrize("headless", [True, False])
 def test_run_qbox_yocto_forwards_monitor_dashboard_options(
     tmp_path: Path,
