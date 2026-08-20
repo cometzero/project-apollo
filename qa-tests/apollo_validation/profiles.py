@@ -10,7 +10,7 @@ JsonScalar: TypeAlias = str | int | bool | None
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 FvpConfig: TypeAlias = tuple[tuple[str, str], ...]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
-FVP_CONFIG_PROFILES = frozenset({"bsp-core", "si-cl1"})
+FVP_CONFIG_PROFILES = frozenset({"bsp-core", "pfdi-si-cl1", "si-cl1"})
 
 
 class ProfileError(Exception):

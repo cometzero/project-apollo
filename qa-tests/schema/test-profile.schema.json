@@ -47,6 +47,14 @@
       "type": "object",
       "additionalProperties": {"type": "string", "minLength": 1},
       "minProperties": 1
+    },
+    "fvp_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "css.smb.si.cluster1_pl011_uart.uart_enable": {"const": "1"}
+      }
     }
   }
 }

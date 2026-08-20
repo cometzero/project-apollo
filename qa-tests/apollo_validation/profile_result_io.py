@@ -52,6 +52,14 @@ _FVP_ALIASES: dict[str, tuple[str, ...]] = {
         "pfdi-app-monitoring-error",
     ),
     "pfdi:test_91_fault_propagation": ("pfdi-sbistc",),
+    "pfdi-si-cl1:test_14_pfdi_multiple_runs_consistency_3x": (
+        "si-pfdi-multiple-runs-consistency",
+    ),
+    "pfdi-si-cl1:test_15_pfdi_stress_5x": ("si-pfdi-stress",),
+    "smcf:test_01_smcf_client_start": ("smcf-client-start",),
+    "smcf:test_02_execute_smcf_test": ("smcf-execute-test",),
+    "smcf:test_03_run_smcf_3x": ("smcf-run-3x",),
+    "smcf:test_04_smcf_client_sensor_monitor": ("smcf-sensor-monitor",),
 }
 
 

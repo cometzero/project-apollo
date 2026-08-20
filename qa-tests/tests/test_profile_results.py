@@ -89,6 +89,15 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
             "si-cl1",
             ("test_10_bsp_core.BSPCoreTest.test_safety_island_cl1",),
         ),
+        (
+            "smcf",
+            (
+                "test_21_bsp_smcf.SmcfBspTest.test_01_smcf_client_start",
+                "test_21_bsp_smcf.SmcfBspTest.test_02_execute_smcf_test",
+                "test_21_bsp_smcf.SmcfBspTest.test_03_run_smcf_3x",
+                "test_21_bsp_smcf.SmcfBspTest.test_04_smcf_client_sensor_monitor",
+            ),
+        ),
     ],
 )
 def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(

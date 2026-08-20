@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "smcf",
+  "description": "Apollo BSP SMCF integration validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_21_bsp_smcf"],
+    "timeout_seconds": 2400
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  }
+}

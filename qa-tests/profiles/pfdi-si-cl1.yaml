@@ -8,11 +8,14 @@
   },
   "oeqa": {
     "kind": "extended",
-    "selectors": ["test_00_bsp_boot", "test_30_si_cl1_pfdi"],
-    "timeout_seconds": 1800
+    "selectors": ["test_00_bsp_boot", "test_30_si_cl1_pfdi", "test_31_bsp_si_pfdi_monitor"],
+    "timeout_seconds": 3600
   },
   "targets": {
     "fvp": "HSOCBSPFVPTarget",
     "qbox": "QBoxSICl1PFDIRunner"
+  },
+  "fvp_config": {
+    "css.smb.si.cluster1_pl011_uart.uart_enable": "1"
   }
 }

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import json
+import pytest
 
 from apollo_validation.evidence import append_record, summarize_records, write_reports
+from apollo_validation.reporting import _write_junit
 
 
 def test_summary_maps_failure_status(tmp_path: Path) -> None:
@@ -83,3 +86,29 @@ def test_final_reports_include_human_json_and_junit_results(
     assert "RESULT: PASS" in (tmp_path / "summary.txt").read_text(
         encoding="utf-8"
     )
+
+
+@pytest.mark.parametrize(("profile", "normalized", "raw"), [("smcf", 4, 5), ("pfdi-si-cl1", 17, 18)])
+def test_profile_junit_uses_normalized_assertion_counts(
+    tmp_path: Path,
+    profile: str,
+    normalized: int,
+    raw: int,
+) -> None:
+    # Given: a profile summary whose raw OEQA cases include one prerequisite.
+    summary = {
+        "test_profile": profile,
+        "duration_s": 1.0,
+        "counts": {"passed": normalized, "failed": 0, "blocked": 0, "skipped": 0, "total": normalized},
+        "tests": [{"name": f"raw-{index}", "status": "PASS", "duration_s": 0.0} for index in range(raw)],
+        "profile_result": {"assertions": [{"id": f"assertion-{index}", "status": "PASS"} for index in range(normalized)]},
+    }
+    path = tmp_path / "junit.xml"
+
+    # When: profile-mode JUnit is rendered.
+    _write_junit(path, summary)
+    root = ET.parse(path).getroot()
+
+    # Then: CI counts and testcase children match normalized assertions only.
+    assert root.attrib["tests"] == str(normalized)
+    assert len(root.findall("testcase")) == normalized

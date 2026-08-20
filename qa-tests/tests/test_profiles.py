@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from apollo_validation.profiles import ProfileError, load_test_profile
 from apollo_validation.root_cli import parse_root_args
@@ -198,9 +199,14 @@ def test_si_cl1_profile_selects_full_safety_island_suite() -> None:
     profile = load_test_profile(WORKSPACE, "pfdi-si-cl1", "fvp", "bsp")
 
     # Then: the BSP boot and complete SI CL1 OEQA module are selected.
-    assert profile.selectors == ("test_00_bsp_boot", "test_30_si_cl1_pfdi")
+    assert profile.selectors == (
+        "test_00_bsp_boot",
+        "test_30_si_cl1_pfdi",
+        "test_31_bsp_si_pfdi_monitor",
+    )
     assert profile.test_target == "HSOCBSPFVPTarget"
-    assert profile.timeout_seconds == 1800
+    assert profile.timeout_seconds == 3600
+    assert profile.fvp_config == ((SI_CL1_UART, "1"),)
 
 
 def test_si_cl1_profile_selects_qbox_probe_contract() -> None:
@@ -209,9 +215,50 @@ def test_si_cl1_profile_selects_qbox_probe_contract() -> None:
     profile = load_test_profile(WORKSPACE, "pfdi-si-cl1", "qbox", "bsp")
 
     # Then: the complete selectors route through the SI CL1 QBox probe.
-    assert profile.selectors == ("test_00_bsp_boot", "test_30_si_cl1_pfdi")
+    assert profile.selectors == (
+        "test_00_bsp_boot",
+        "test_30_si_cl1_pfdi",
+        "test_31_bsp_si_pfdi_monitor",
+    )
     assert profile.test_target == "QBoxSICl1PFDIRunner"
-    assert profile.timeout_seconds == 1800
+    assert profile.timeout_seconds == 3600
+
+
+def test_smcf_profile_selects_fvp_bsp_contract() -> None:
+    # Given: the BSP-native SMCF integration profile.
+    # When: it is resolved for its only supported backend and image.
+    profile = load_test_profile(WORKSPACE, "smcf", "fvp", "bsp")
+
+    # Then: it selects only BSP boot and the complete SMCF OEQA module.
+    assert profile.selectors == ("test_00_bsp_boot", "test_21_bsp_smcf")
+    assert profile.test_target == "HSOCBSPFVPTarget"
+    assert profile.timeout_seconds == 2400
+
+
+@pytest.mark.parametrize(
+    ("backend", "image"),
+    [("qbox", "bsp"), ("fvp", "product")],
+)
+def test_smcf_profile_rejects_unsupported_execution_boundary(
+    backend: str,
+    image: str,
+) -> None:
+    # Given: a backend or image outside the FVP BSP-only SMCF contract.
+    # When/Then: profile loading rejects the unsupported execution boundary.
+    with pytest.raises(ProfileError):
+        load_test_profile(WORKSPACE, "smcf", backend, image)
+
+
+@pytest.mark.parametrize("profile_name", ["smcf", "pfdi-si-cl1"])
+def test_bsp_profile_matches_the_strict_schema(profile_name: str) -> None:
+    # Given: each Todo 7 profile and the repository-owned strict profile schema.
+    schema_path = WORKSPACE / "qa-tests/schema/test-profile.schema.json"
+    profile_path = WORKSPACE / "qa-tests/profiles" / f"{profile_name}.yaml"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+
+    # When/Then: the schema accepts the exact public profile representation.
+    Draft202012Validator(schema).validate(profile)
 
 
 def test_unknown_profile_reports_typed_error() -> None:

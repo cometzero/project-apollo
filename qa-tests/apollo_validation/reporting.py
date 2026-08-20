@@ -226,7 +226,12 @@ def _write_junit(path: Path, summary: JsonObject) -> None:
         skipped=str(counts.get("skipped", 0)),
         time=str(summary.get("duration_s", 0.0)),
     )
-    tests = summary.get("tests", [])
+    profile_result = summary.get("profile_result")
+    tests = (
+        profile_result.get("assertions", [])
+        if isinstance(profile_result, dict)
+        else summary.get("tests", [])
+    )
     if isinstance(tests, list):
         for test in tests:
             if not isinstance(test, dict):
@@ -234,7 +239,7 @@ def _write_junit(path: Path, summary: JsonObject) -> None:
             case = ET.SubElement(
                 suite,
                 "testcase",
-                name=str(test.get("name", "unknown")),
+                name=str(test.get("id", test.get("name", "unknown"))),
                 time=str(test.get("duration_s", 0.0)),
             )
             match _normalized_test_status(str(test.get("status", ""))):
