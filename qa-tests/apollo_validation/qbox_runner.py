@@ -66,6 +66,8 @@ def qbox_launcher_command(
         command.append("--pfdi-probe")
     if request.test_profile == "pfdi-si-cl1":
         command.append("--pfdi-si-cl1-probe")
+    if request.test_profile == "ras_cpu":
+        command.append("--ras-cpu-probe")
     return command
 
 
@@ -135,6 +137,7 @@ def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     if category != "basic" and request.test_profile not in {
         "pfdi",
         "pfdi-si-cl1",
+        "ras_cpu",
     }:
         timestamp = now()
         append_record(

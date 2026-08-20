@@ -3,7 +3,7 @@
   "name": "ras_cpu",
   "description": "Apollo Primary Compute CPU RAS validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["product"]
   },
   "oeqa": {
@@ -19,6 +19,7 @@
     "timeout_seconds": 3600
   },
   "targets": {
-    "fvp": "HSOCSingleSessionFVPTarget"
+    "fvp": "HSOCSingleSessionFVPTarget",
+    "qbox": "QBoxRASCpuRunner"
   }
 }

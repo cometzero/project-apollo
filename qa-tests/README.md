@@ -21,15 +21,16 @@ The public entrypoint is run from the workspace root:
 ./run_test.sh --fvp --headless --test-profile ras_cpu
 ./run_test.sh --qbox --headless
 ./run_test.sh --machine apollo-qvp --bsp --test-profile pfdi-si-cl1
+./run_test.sh --machine apollo-qvp --test-profile ras_cpu
 ```
 
 The QBox backend selects `apollo-qvp`, validates the deployed `qboxconf`, and
 runs the canonical Yocto QBox launcher in headless full-system mode. Add
-`--bsp` to boot `nexios-bsp-initramfs`. The `pfdi` and `pfdi-si-cl1`
-profiles have QBox probes that execute their Linux or Zephyr console contracts
-and retain the command-level results in the QBox `result.json`. Other named
-OEQA profiles remain FVP-only until their QBox target controllers are
-implemented and validated.
+`--bsp` to boot `nexios-bsp-initramfs`. The `pfdi`, `pfdi-si-cl1`, and
+`ras_cpu` profiles have QBox probes that execute their console contracts and
+retain command-level results in the QBox `result.json`. Other named OEQA
+profiles remain FVP-only until their QBox target controllers are implemented
+and validated.
 
 The Python package can also be invoked directly:
 

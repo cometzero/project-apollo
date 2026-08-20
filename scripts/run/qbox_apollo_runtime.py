@@ -26,6 +26,7 @@ import time
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
 from qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
+from qbox_ras_cpu_probe import evaluate_ras_cpu_probe, ras_cpu_probe_commands
 from qbox_si_cl1_pfdi_probe import (
     SiCl1PFDIProbeState,
     advance_si_cl1_pfdi_probe,
@@ -84,6 +85,8 @@ REQUIRED_TARGETS = [
 ]
 
 PLATFORM_STDOUT_LOG = "qbox-platform.log"
+TERMINAL_STATUS_QUERY = "\x1b[6n"
+TERMINAL_STATUS_RESPONSE = b"\x1b[32766;32766R"
 QEMU_TRACE_LOG = "qemu-rse-trace.log"
 RSE_PC_TRACE_LOG = "rse-pc-trace.log"
 AP_PC_TRACE_LOG = "ap-pc-trace.log"
@@ -2232,6 +2235,8 @@ def secure_service_probe_commands(
 
 
 def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
+    if args.ras_cpu_probe:
+        return ras_cpu_probe_commands()
     if args.pfdi_probe:
         return pfdi_probe_commands()
     commands: list[str] = []
@@ -2420,6 +2425,11 @@ def evaluate_post_login_probe(
             clean_primary, clean_rse, clean_secure, rc_hits
         ),
         "pfdi_probe": evaluate_pfdi_probe(clean_primary, clean_text(scp_console)),
+        "ras_cpu_probe": evaluate_ras_cpu_probe(
+            clean_primary,
+            clean_secure,
+            clean_text(scp_console),
+        ),
     }
 
 
@@ -4076,6 +4086,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "fwu_requested": bool(args.fwu_probe),
         "pfdi_requested": bool(args.pfdi_probe),
         "pfdi_si_cl1_requested": bool(args.pfdi_si_cl1_probe),
+        "ras_cpu_requested": bool(args.ras_cpu_probe),
         "sent_login": False,
         "sent_probe": False,
         "complete": False,
@@ -4086,6 +4097,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "last_login_time": 0.0,
         "command_index": 0,
         "last_prompt_end": 0,
+        "terminal_status_responses": 0,
     }
 
 
@@ -4098,6 +4110,10 @@ def drive_post_login_probe(
     operation_mode = bool(state.get("operation_manifest_requested"))
     if not args.post_login_probe and not operation_mode or fifo_fd is None:
         return
+    raw_primary = logs.get("primary_console", "")
+    response_count_value = state.get("terminal_status_responses", 0)
+    assert isinstance(response_count_value, int)
+    query_count = raw_primary.count(TERMINAL_STATUS_QUERY)
     clean_primary = clean_text(logs.get("primary_console", ""))
     actions = state.setdefault("actions", [])
     assert isinstance(actions, list)
@@ -4108,6 +4124,10 @@ def drive_post_login_probe(
             for pattern in LOGIN_READY_PATTERNS
         )
     )
+    if login_ready:
+        for _query in range(response_count_value, query_count):
+            write_primary_uart_bytes(fifo_fd, TERMINAL_STATUS_RESPONSE)
+    state["terminal_status_responses"] = query_count
     login_attempts_value = state.get("login_attempts", 0)
     last_login_time_value = state.get("last_login_time", 0.0)
     assert isinstance(login_attempts_value, int)
@@ -4457,7 +4477,14 @@ def run_platform(
         fwu_complete = bool(fwu_probe.get("complete"))
         if (not args.fwu_probe and probe_eval.get("done_marker")) or fwu_complete:
             post_login_probe["complete"] = True
-        if args.pfdi_si_cl1_probe:
+        if args.ras_cpu_probe:
+            ras_result = object_dict(probe_eval.get("ras_cpu_probe"))
+            post_login_probe["passed"] = bool(
+                post_login_probe.get("sent_probe")
+                and post_login_probe.get("complete")
+                and ras_result.get("passed")
+            )
+        elif args.pfdi_si_cl1_probe:
             si_cl1_result = object_dict(
                 post_login_probe.get("pfdi_si_cl1_probe")
             )
@@ -4493,6 +4520,7 @@ def run_platform(
             f"pfdi_requested: {post_login_probe['pfdi_requested']}",
             "pfdi_si_cl1_requested: "
             f"{post_login_probe['pfdi_si_cl1_requested']}",
+            f"ras_cpu_requested: {post_login_probe['ras_cpu_requested']}",
             f"input_path: {post_login_probe.get('input_path')}",
             f"sent_login: {post_login_probe['sent_login']}",
             f"sent_probe: {post_login_probe['sent_probe']}",
@@ -5291,6 +5319,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run the complete SI CL1 Zephyr-shell PFDI qualification probe.",
     )
+    parser.add_argument(
+        "--ras-cpu-probe",
+        action="store_true",
+        help="Run the complete Primary Compute CPU RAS qualification probe.",
+    )
     parser.add_argument("--primary-operation-schema", type=Path)
     parser.add_argument("--primary-operation-module-path", type=Path)
     parser.add_argument(
@@ -5990,6 +6023,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         or args.fwu_probe
         or args.pfdi_probe
         or args.pfdi_si_cl1_probe
+        or args.ras_cpu_probe
     ):
         args.post_login_probe = True
     if args.rse_sram_dmi_smoke:
@@ -6001,6 +6035,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                 ("--fwu-probe", args.fwu_probe),
                 ("--pfdi-probe", args.pfdi_probe),
                 ("--pfdi-si-cl1-probe", args.pfdi_si_cl1_probe),
+                ("--ras-cpu-probe", args.ras_cpu_probe),
             )
             if enabled
         ]

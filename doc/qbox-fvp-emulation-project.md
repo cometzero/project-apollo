@@ -110,6 +110,13 @@ all prerequisite, service, CLI, OnL, monitoring, force-error, FMU, SBISTC, and
 PFDI-monitor failure checks for CPU0 through CPU3. Evidence is under
 `build/tests/20260820-100317-qbox-bsp-pfdi/`.
 
+The 2026-08-20 CPU RAS qualification adds QEMU pseudo-fault generation for
+correctable, deferred, and uncontainable CPU errors, a BQL-safe QEMU-to-SystemC
+signal path, the AP CPER backing window, and SI0 per-core RAS records with the
+four cluster fault IRQs. The `ras_cpu` QBox profile now covers Linux CPER
+decode, 14 TF-A fault interrupts, ten consecutive corrected records,
+rasdaemon, and SCP SSU transition to ERRC.
+
 The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
 QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
 MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI
@@ -437,7 +444,7 @@ and are not synthesized in QBox.
 | MHUv3 | Reusable PBX/MBX SystemC frames with live AP/RSE/SI peers, shared-memory doorbells, ordered combined IRQ updates, explicit frame reset, peer-offline hold, and post-reset retry | Continue TRM-based channel and exhaustive fault semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr/RSE evidence |
 | Safety Island CL0/CL1 | Live SI0 SCP and SI1 Zephyr CPUs with PFDI and guest-owned HIPC/RPMsg endpoint | Preserve boot, shared memory, MHU, OpenAMP, reset, and peer-failure behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
 | RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now uses real AP/RSE doorbell peers and the RSE-ATU/AP-flash route, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, reports FWU ABI 1.0, and boots in regular state. | Add secure-service userspace tests and preserve host SCR/PPU/MHU/shared-memory semantics before any further ATU or host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
-| FMU / SSU / SBISTC / SMCF / RAS | Some AP-visible RAS evidence; other safety IP mostly not modeled | Implement documented register and interrupt behavior needed for diagnostics and tests | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
+| FMU / SSU / SBISTC / SMCF / RAS | AP CPU CE/DE/UC injection, TF-A CPER publication, Linux estatus decode, SI0 per-core UC records, cluster fault IRQs, FMU/SSU propagation, and SBISTC records 210 through 213 are modeled | Extend remaining documented safety-IP records and fault classes | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
 | PFDI | Live SI CL1/SI0 messaging, per-CPU ready marker, secure pending-mailbox preservation, malformed-length recovery, reset-time cancellation, peer-offline hold, and requester-aware cross-instance deadline handling | Add exhaustive fault-injection and reconnect ordering | Zena PFDI docs, Linux/Zephyr/SCP code, FVP/QBox differential and component/runtime logs |
 | Power/performance control | AP-visible behavior only | Model SCMI-visible power/performance contracts before low-level PPU fidelity | Zena power/performance docs, SCMI logs |
 

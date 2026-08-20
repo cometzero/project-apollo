@@ -123,3 +123,14 @@ def test_ras_cpu_profile_selects_complete_product_suite() -> None:
     )
     assert profile.test_target == "HSOCSingleSessionFVPTarget"
     assert profile.timeout_seconds == 3600
+
+
+def test_ras_cpu_profile_selects_qbox_probe_contract() -> None:
+    # Given: the complete Primary Compute RAS profile and QBox product backend.
+    # When: the profile is resolved for QBox.
+    profile = load_test_profile(WORKSPACE, "ras_cpu", "qbox", "product")
+
+    # Then: all FVP selectors route through the QBox cross-console probe.
+    assert profile.selectors[-1] == "test_41_tfa_ras"
+    assert profile.test_target == "QBoxRASCpuRunner"
+    assert profile.timeout_seconds == 3600

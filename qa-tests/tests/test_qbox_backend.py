@@ -105,3 +105,14 @@ def test_qbox_si_cl1_pfdi_command_selects_runtime_probe(
 
     # Then: the runner enables the fixed SI CL1 Zephyr-shell probe.
     assert "--pfdi-si-cl1-probe" in command
+
+
+def test_qbox_ras_cpu_command_selects_runtime_probe(tmp_path: Path) -> None:
+    # Given: the Apollo QVP product-image RAS CPU profile.
+    request = qbox_request(tmp_path, "product", test_profile="ras_cpu")
+
+    # When: its canonical QBox launcher command is built.
+    command = qbox_launcher_command(request, dry_run=False)
+
+    # Then: the runner enables the cross-console RAS CPU probe.
+    assert "--ras-cpu-probe" in command
