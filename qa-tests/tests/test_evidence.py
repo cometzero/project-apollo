@@ -25,6 +25,21 @@ def test_summary_maps_empty_run_to_blocked(tmp_path: Path) -> None:
     assert exit_code == 2
 
 
+def test_legacy_category_summary_allows_passing_commands_without_tests(
+    tmp_path: Path,
+) -> None:
+    # Given: a legacy category run with one successful command and no profile.
+    append_record(tmp_path / "commands.jsonl", {"name": "basic", "status": "pass"})
+
+    # When: the category-only result is summarized.
+    summary, exit_code = summarize_records(tmp_path)
+
+    # Then: the established command-derived PASS contract remains unchanged.
+    assert exit_code == 0
+    assert summary["status"] == "PASS"
+    assert summary["counts"]["total"] == 0
+
+
 def test_final_reports_include_human_json_and_junit_results(
     tmp_path: Path,
 ) -> None:

@@ -1,0 +1,42 @@
+{
+  "runtime_nexios-bsp-initramfs_apollo-fvp_20260820091024": {
+    "configuration": {
+      "IMAGE_BASENAME": "nexios-bsp-initramfs",
+      "MACHINE": "apollo-fvp"
+    },
+    "result": {
+      "test_00_bsp_boot.BspBootTest.test_bsp_boot": {
+        "duration": 58.885903120040894,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_01_prerequisites": {
+        "duration": 0.19781970977783203,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_02_service": {
+        "duration": 0.5469708442687988,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_03_cli": {
+        "duration": 2.3878536224365234,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_04_online": {
+        "duration": 0.5316932201385498,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_05_monitoring_started": {
+        "duration": 0.0022988319396972656,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_90_force_error": {
+        "duration": 4.779739856719971,
+        "status": "PASSED"
+      },
+      "test_64_bsp_pfdi.PFDIBspTest.test_91_fault_propagation": {
+        "duration": 0.003220081329345703,
+        "status": "PASSED"
+      }
+    }
+  }
+}

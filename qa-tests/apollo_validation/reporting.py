@@ -2,13 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, TypeAlias, assert_never
 import xml.etree.ElementTree as ET
 
 from .evidence import now, read_records, write_json
+from .profile_reporting import (
+    apply_profile_summary,
+    write_normalized_profile_result,
+)
 
 
 JsonObject = dict[str, Any]
+TestStatus: TypeAlias = Literal["PASS", "FAIL", "BLOCKED", "SKIPPED"]
 
 
 def _read_json(path: Path) -> JsonObject:
@@ -19,7 +24,7 @@ def _read_json(path: Path) -> JsonObject:
     return loaded if isinstance(loaded, dict) else {}
 
 
-def _normalized_test_status(value: str) -> str:
+def _normalized_test_status(value: str) -> TestStatus:
     normalized = value.upper()
     if normalized in {"PASS", "PASSED", "OK"}:
         return "PASS"
@@ -146,6 +151,9 @@ def summarize_records(run_dir: Path) -> tuple[JsonObject, int]:
         "record_count": len(records),
         "blockers": blockers,
     }
+    profile_name = summary.get("test_profile")
+    if isinstance(profile_name, str) and profile_name:
+        exit_code = apply_profile_summary(run_dir, summary)
     return summary, exit_code
 
 
@@ -229,21 +237,24 @@ def _write_junit(path: Path, summary: JsonObject) -> None:
                 name=str(test.get("name", "unknown")),
                 time=str(test.get("duration_s", 0.0)),
             )
-            match test.get("status"):
+            match _normalized_test_status(str(test.get("status", ""))):
                 case "FAIL":
                     ET.SubElement(case, "failure", message="OEQA test failed")
                 case "BLOCKED":
                     ET.SubElement(case, "error", message="OEQA test blocked")
                 case "SKIPPED":
                     ET.SubElement(case, "skipped")
-                case _:
+                case "PASS":
                     pass
+                case unexpected:
+                    assert_never(unexpected)
     ET.indent(suite)
     ET.ElementTree(suite).write(path, encoding="unicode", xml_declaration=True)
 
 
 def write_reports(run_dir: Path) -> tuple[JsonObject, int]:
     summary, exit_code = summarize_records(run_dir)
+    write_normalized_profile_result(run_dir, summary)
     write_json(run_dir / "summary.json", summary)
     (run_dir / "summary.txt").write_text(
         _summary_text(summary, run_dir),

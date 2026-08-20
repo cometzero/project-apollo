@@ -60,7 +60,10 @@ def read_records(path: Path) -> list[JsonObject]:
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
-        data = json.loads(line)
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
         if isinstance(data, dict):
             records.append(data)
     return records
