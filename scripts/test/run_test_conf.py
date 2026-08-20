@@ -4,18 +4,25 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import re
 import sys
-from typing import Final, Protocol
+from typing import assert_never, Final, Literal, Protocol
 
 from run_test_suite_plan import resolve_plan
 
 
 type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
 type JsonObject = dict[str, JsonValue]
+type ConfKind = Literal["current", "functional", "power", "extended", "extra"]
 
 DEFAULT_TEST_OVERALL_TIMEOUT: Final = "10800"
 SELECTED_SUITES_ENV: Final = "APOLLO_VALIDATION_TEST_SUITES"
 SELECTED_TARGET_ENV: Final = "APOLLO_VALIDATION_TEST_TARGET"
+BITBAKE_RECIPE_NAME: Final = re.compile(r"[a-z0-9][a-z0-9+.-]*")
+
+
+class ConfInputError(ValueError):
+    pass
 
 
 class WriteConfArgs(Protocol):
@@ -23,7 +30,7 @@ class WriteConfArgs(Protocol):
     machine: str
     image: str
     run_dir: Path
-    kind: str
+    kind: ConfKind
     test_overall_timeout: str
 
 
@@ -33,7 +40,7 @@ class ConfRequest:
     build_dir: Path
     machine: str
     run_dir: Path
-    kind: str
+    kind: ConfKind
     image: str = "nexios-image"
     test_overall_timeout: str = DEFAULT_TEST_OVERALL_TIMEOUT
 
@@ -50,6 +57,13 @@ class ConfWriteResult:
     status: str
     conf_path: Path | None
     message: str
+
+
+@dataclass(frozen=True, slots=True)
+class AssignmentScope:
+    machine: str
+    distro: str
+    image: str
 
 
 def _resolve_under_root(root: Path, path: Path) -> Path:
@@ -105,7 +119,7 @@ def public_run_rejection_message(request: PublicRunRequest) -> str | None:
     return None
 
 
-def _lane_name(kind: str) -> str:
+def _lane_name(kind: ConfKind) -> str:
     match kind:
         case "current":
             return "current"
@@ -118,10 +132,14 @@ def _lane_name(kind: str) -> str:
         case "extra":
             return "extra"
         case unreachable:
-            raise AssertionError(f"unreachable conf kind: {unreachable}")
+            assert_never(unreachable)
 
 
-def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
+def _suite_assignment(
+    kind: ConfKind,
+    manifest: JsonObject,
+    scope: AssignmentScope,
+) -> str | None:
     match kind:
         case "current" | "extra":
             return None
@@ -130,7 +148,7 @@ def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
             if selected is not None:
                 loaded = json.loads(selected)
                 if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
-                    raise ValueError(f"{SELECTED_SUITES_ENV} must be a JSON string list")
+                    raise ConfInputError(f"{SELECTED_SUITES_ENV} must be a JSON string list")
                 tests = loaded
             else:
                 plan = resolve_plan(manifest)
@@ -143,14 +161,11 @@ def _suite_assignment(kind: str, manifest: JsonObject) -> str | None:
                     return ""
                 tests = [item for item in suite if isinstance(item, str)]
             suite_value = " ".join(tests)
-            assignments = [f'TEST_SUITES = "{suite_value}"']
-            machine = manifest.get("machine", "")
-            distro = manifest.get("distro", "")
-            if isinstance(machine, str) and machine and isinstance(distro, str) and distro:
-                assignments.append(f'TEST_SUITES:{machine}:{distro} = "{suite_value}"')
-            return "\n".join(assignments)
+            return "\n".join(
+                _image_scoped_assignments("TEST_SUITES", suite_value, scope)
+            )
         case unreachable:
-            raise AssertionError(f"unreachable conf kind: {unreachable}")
+            assert_never(unreachable)
 
 
 def _str_list(value: JsonValue) -> list[str]:
@@ -168,6 +183,32 @@ def _scoped_assignments(key: str, value: str, manifest: JsonObject) -> list[str]
     return assignments
 
 
+def _assignment_scope(request: ConfRequest, manifest: JsonObject) -> AssignmentScope:
+    if BITBAKE_RECIPE_NAME.fullmatch(request.image) is None:
+        raise ConfInputError(f"invalid BitBake recipe name: {request.image}")
+    machine = manifest.get("machine", "")
+    distro = manifest.get("distro", "")
+    return AssignmentScope(
+        machine=machine if isinstance(machine, str) else "",
+        distro=distro if isinstance(distro, str) else "",
+        image=request.image,
+    )
+
+
+def _image_scoped_assignments(
+    key: str,
+    value: str,
+    scope: AssignmentScope,
+) -> list[str]:
+    assignments = [f'{key} = "{value}"']
+    if scope.machine and scope.distro:
+        assignments.append(f'{key}:{scope.machine}:{scope.distro} = "{value}"')
+        assignments.append(
+            f'{key}:{scope.machine}:pn-{scope.image}:{scope.distro} = "{value}"'
+        )
+    return assignments
+
+
 def _device_assignments(manifest: JsonObject) -> list[str]:
     devices = " ".join(_str_list(manifest.get("test_fvp_devices")))
     if not devices:
@@ -177,6 +218,7 @@ def _device_assignments(manifest: JsonObject) -> list[str]:
 
 def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
     lane = _lane_name(request.kind)
+    scope = _assignment_scope(request, manifest)
     oeqa_dir = _resolve_under_root(request.root, request.run_dir) / "oeqa" / lane
     lines = [
         "# Generated by scripts/test/run_test_manifest.py write-conf.",
@@ -190,21 +232,21 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
     selected_target = os.environ.get(SELECTED_TARGET_ENV)
     if selected_target:
         lines.extend(
-            _scoped_assignments(
+            _image_scoped_assignments(
                 "TEST_TARGET",
                 selected_target,
-                manifest,
+                scope,
             )
         )
     elif request.kind == "functional":
         lines.extend(
-            _scoped_assignments(
+            _image_scoped_assignments(
                 "TEST_TARGET",
                 "HSOCSingleSessionFVPTarget",
-                manifest,
+                scope,
             )
         )
-    suite = _suite_assignment(request.kind, manifest)
+    suite = _suite_assignment(request.kind, manifest, scope)
     if suite is not None:
         lines.append(suite)
     return "\n".join(lines) + "\n"
