@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import assert_never, Literal, TypeAlias
 
 import pytest
+
+from apollo_validation.provenance import sha256_file
 
 from tests.provenance_fixtures import (
     JsonValue,
@@ -15,6 +18,22 @@ from tests.provenance_fixtures import (
 
 
 Mutation: TypeAlias = Literal["skipped", "missing", "duplicate", "xen"]
+
+
+def test_runtime_input_hashing_reads_files_in_bounded_chunks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = b"apollo-runtime-input\n" * (1024 * 512)
+    artifact = tmp_path / "image.wic"
+    artifact.write_bytes(payload)
+
+    def fail_if_buffered(_: Path) -> bytes:
+        pytest.fail("runtime artifact hashing must not call read_bytes")
+
+    monkeypatch.setattr(Path, "read_bytes", fail_if_buffered)
+
+    assert sha256_file(artifact) == hashlib.sha256(payload).hexdigest()
 
 
 def test_named_qbox_profile_requires_reference_before_subprocess(

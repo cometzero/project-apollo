@@ -122,6 +122,14 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _git_output(path: Path, *args: str) -> bytes:
     result = subprocess.run(
         ["git", "-C", str(path), *args],
@@ -177,10 +185,13 @@ def _runtime_inputs(request: ProvenanceRequest) -> tuple[RuntimeInput, ...]:
     for kind, path in paths:
         try:
             resolved = path.resolve(strict=True)
-            data = resolved.read_bytes()
         except (FileNotFoundError, OSError) as error:
             raise ProvenanceError(f"blocked_fvp_reference_{kind}_drift") from error
-        identities.append(RuntimeInput(kind, resolved, sha256_bytes(data)))
+        try:
+            digest = sha256_file(resolved)
+        except OSError as error:
+            raise ProvenanceError(f"blocked_fvp_reference_{kind}_drift") from error
+        identities.append(RuntimeInput(kind, resolved, digest))
     return tuple(identities)
 
 
