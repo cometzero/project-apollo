@@ -126,6 +126,19 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
                 "test_32_bsp_cpufreq.BspCpuFreqTest.test_update_min_max_scaling_frequencies_negative",
             ),
         ),
+        (
+            "platform-devices",
+            (
+                "test_00_systemd_boot.SystemdBootTest.test_systemd_boot",
+                "test_60_linux_connectivity.LinuxConnectivityTest.test_ping",
+                "test_60_linux_connectivity.LinuxConnectivityTest.test_ssh",
+                "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_networking",
+                "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_rtc",
+                "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_cpu_hotplug",
+                "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_virtiorng",
+                "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_watchdog",
+            ),
+        ),
     ],
 )
 def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(

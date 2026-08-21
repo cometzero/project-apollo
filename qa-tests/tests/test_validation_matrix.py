@@ -25,7 +25,17 @@ JsonMap: TypeAlias = dict[str, JsonValue]
 Mutation: TypeAlias = Callable[[JsonMap], None]
 APPROVED_FVP_SELECTORS: dict[str, tuple[str, ...]] = {
     "bsp-core": ("test_00_bsp_boot", "test_10_bsp_core"),
-    "platform-devices": ("test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"),
+    "platform-devices": (
+        "test_00_rse_boot",
+        "test_00_fvp_boot",
+        "test_00_uboot_boot",
+        "test_00_systemd_boot",
+        "test_00_linux_boot",
+        "test_60_linux_connectivity",
+        "test_61_linux_dsu",
+        "test_62_linux_cpu_topology",
+        "test_63_linux_fvp_devices",
+    ),
     "trusted-services": ("test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_80_trusted_services"),
     "pfdi": ("test_00_bsp_boot", "test_64_bsp_pfdi"),
     "pfdi-si-cl1": ("test_00_bsp_boot", "test_30_si_cl1_pfdi", "test_31_bsp_si_pfdi_monitor"),

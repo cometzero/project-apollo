@@ -21,7 +21,7 @@
       "image": "product",
       "cpu_count": 4,
       "coverage_kind": "semantic",
-      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"],
+      "fvp_selectors": ["test_00_rse_boot", "test_00_fvp_boot", "test_00_uboot_boot", "test_00_systemd_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"],
       "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog", "primary-ping", "primary-ssh", "systemd-boot-message"]
     },
     {

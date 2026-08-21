@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "platform-devices",
+  "description": "Apollo FVP product platform device validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_rse_boot",
+      "test_00_fvp_boot",
+      "test_00_uboot_boot",
+      "test_00_systemd_boot",
+      "test_00_linux_boot",
+      "test_60_linux_connectivity",
+      "test_61_linux_dsu",
+      "test_62_linux_cpu_topology",
+      "test_63_linux_fvp_devices"
+    ],
+    "timeout_seconds": 3600
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  }
+}

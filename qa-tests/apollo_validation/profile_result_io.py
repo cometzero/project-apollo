@@ -27,6 +27,7 @@ MATRIX_PATH = WORKSPACE_ROOT / "qa-tests/validation/arm-zena-css-v2.2-non-xen.ya
 
 
 _FVP_ALIASES: dict[str, tuple[str, ...]] = {
+    "platform-devices:test_systemd_boot": ("systemd-boot-message",),
     "bsp-core:test_firmware_boot_chain": (
         "bsp-scp",
         "bsp-uboot-boot",
