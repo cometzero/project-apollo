@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .evidence import append_record, now, write_json
-from .profiles import FvpTapNetwork, load_test_profile
+from .profiles import FvpTapNetwork, load_test_profile, merge_fvp_runtime_config
 from .root_cli import RootOptions
 from .selection_environment import selected_test_environment as selected_test_environment
 from .suites import list_suites
@@ -195,7 +195,10 @@ def prepare_selection(
                 test_target=profile.test_target,
                 backend=profile.backend,
                 image_profile=profile.image_profile,
-                fvp_config=profile.fvp_config,
+                fvp_config=merge_fvp_runtime_config(
+                    profile.fvp_config,
+                    profile.fvp_tap_network,
+                ),
                 fvp_tap_network=profile.fvp_tap_network,
             ),
             replace(

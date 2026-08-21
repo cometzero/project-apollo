@@ -15,8 +15,6 @@ FVP_TAP_HOST_IP: Final = "192.0.2.1"
 FVP_TAP_TARGET_IP: Final = "192.0.2.10"
 FVP_TAP_PREFIX_LENGTH: Final = 24
 FVP_TAP_NETWORK: Final = "192.0.2.0/24"
-FVP_USER_NETWORKING_KEY: Final = "ros.virtio_net.hostbridge.userNetworking"
-FVP_INTERFACE_NAME_KEY: Final = "ros.virtio_net.hostbridge.interfaceName"
 SETUP_HINT: Final = (
     "sudo scripts/setup/fvp_tap_network.sh setup && "
     "sudo scripts/setup/fvp_tap_network.sh status"
@@ -114,6 +112,4 @@ def tap_network_bitbake_assignments(machine: str) -> list[str]:
     return [
         f'BB_ENV_PASSTHROUGH_ADDITIONS:append = " {FVP_TAP_NETWORK_ENV}"',
         f"export {FVP_TAP_NETWORK_ENV}",
-        f'FVP_CONFIG[{FVP_USER_NETWORKING_KEY}] = "0"',
-        f'FVP_CONFIG[{FVP_INTERFACE_NAME_KEY}] = "{network.interface_name}"',
     ]

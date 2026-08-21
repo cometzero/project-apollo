@@ -8,7 +8,12 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from apollo_validation.profiles import ProfileError, load_test_profile
+from apollo_validation.profiles import (
+    FvpTapNetwork,
+    ProfileError,
+    load_test_profile,
+    merge_fvp_runtime_config,
+)
 from apollo_validation.root_cli import parse_root_args
 from apollo_validation.selection import (
     prepare_selection,
@@ -19,6 +24,8 @@ from apollo_validation.selection import (
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
+FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
+FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
 SELECTED_FVP_CONFIG_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
 SELECTED_FVP_TAP_NETWORK_ENV = "APOLLO_VALIDATION_FVP_TAP_NETWORK"
 BITBAKE_PASSTHROUGH_ENV = "BB_ENV_PASSTHROUGH_ADDITIONS"
@@ -266,10 +273,15 @@ def test_platform_devices_tap_network_crosses_the_selected_environment_boundary(
     )
     selection, _resolved = prepare_selection(WORKSPACE, options)
     assert selection is not None
+    assert selection.fvp_config == (
+        (FVP_USER_NETWORKING, "0"),
+        (FVP_INTERFACE_NAME, "apollo-fvp-tap0"),
+    )
 
     # When: the selected profile establishes its run-owned environment.
     with selected_test_environment(selection):
         selected = os.environ.get(SELECTED_FVP_TAP_NETWORK_ENV)
+        selected_config = os.environ.get(SELECTED_FVP_CONFIG_ENV)
         passthrough = os.environ.get(BITBAKE_PASSTHROUGH_ENV, "").split()
 
     # Then: only the fixed non-loopback TAP contract reaches BitBake.
@@ -279,8 +291,37 @@ def test_platform_devices_tap_network_crosses_the_selected_environment_boundary(
         "prefix_length": 24,
         "target_ip": "192.0.2.10",
     }
+    assert json.loads(selected_config or "null") == {
+        FVP_INTERFACE_NAME: "apollo-fvp-tap0",
+        FVP_USER_NETWORKING: "0",
+    }
+    assert SELECTED_FVP_CONFIG_ENV in passthrough
     assert SELECTED_FVP_TAP_NETWORK_ENV in passthrough
     assert SELECTED_FVP_TAP_NETWORK_ENV not in os.environ
+
+
+def test_runtime_fvp_config_merges_uart_and_tap_parameters() -> None:
+    # Given: independent typed UART and TAP policies selected for one FVP run.
+    network = FvpTapNetwork("apollo-fvp-tap0", "192.0.2.1", "192.0.2.10", 24)
+
+    # When: the runtime map is assembled at the selection boundary.
+    merged = merge_fvp_runtime_config(((SI_CL1_UART, "1"),), network)
+
+    # Then: each approved parameter appears once with its exact safe value.
+    assert merged == (
+        (SI_CL1_UART, "1"),
+        (FVP_USER_NETWORKING, "0"),
+        (FVP_INTERFACE_NAME, "apollo-fvp-tap0"),
+    )
+
+
+def test_runtime_fvp_config_rejects_duplicate_parameter() -> None:
+    # Given: an explicit profile map conflicts with a derived TAP parameter.
+    network = FvpTapNetwork("apollo-fvp-tap0", "192.0.2.1", "192.0.2.10", 24)
+
+    # When/Then: the merge rejects the duplicate before environment export.
+    with pytest.raises(ProfileError, match="duplicate FVP config key"):
+        merge_fvp_runtime_config(((FVP_USER_NETWORKING, "1"),), network)
 
 
 def test_pfdi_selection_clears_inherited_fvp_config(
@@ -345,6 +386,7 @@ def test_profile_rejects_invalid_fvp_config(
 @pytest.mark.parametrize(
     "tap_network",
     [
+        None,
         {"interface_name": "lo", "host_ip": "192.0.2.1", "target_ip": "192.0.2.10", "prefix_length": 24},
         {"interface_name": "apollo-fvp-tap0", "host_ip": "127.0.0.1", "target_ip": "192.0.2.10", "prefix_length": 24},
         {"interface_name": "apollo-fvp-tap0", "host_ip": "192.0.2.1", "target_ip": "127.0.0.1", "prefix_length": 24},

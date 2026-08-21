@@ -11,6 +11,8 @@ JsonScalar: TypeAlias = str | int | bool | None
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 FvpConfig: TypeAlias = tuple[tuple[str, str], ...]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
+FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
+FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
 FVP_CONFIG_PROFILES = frozenset({"bsp-core", "pfdi-si-cl1", "si-cl1"})
 FVP_TAP_NETWORK_PROFILES = frozenset({"platform-devices"})
 FVP_TAP_INTERFACE = "apollo-fvp-tap0"
@@ -56,6 +58,27 @@ class FvpTapNetwork:
             "target_ip": self.target_ip,
             "prefix_length": self.prefix_length,
         }
+
+    def runtime_fvp_config(self) -> FvpConfig:
+        return (
+            (FVP_USER_NETWORKING, "0"),
+            (FVP_INTERFACE_NAME, self.interface_name),
+        )
+
+
+def merge_fvp_runtime_config(
+    profile_config: FvpConfig,
+    tap_network: FvpTapNetwork | None,
+) -> FvpConfig:
+    network_config = () if tap_network is None else tap_network.runtime_fvp_config()
+    merged: list[tuple[str, str]] = []
+    selected_keys: set[str] = set()
+    for key, value in (*profile_config, *network_config):
+        if key in selected_keys:
+            raise ProfileError(f"duplicate FVP config key: {key}")
+        selected_keys.add(key)
+        merged.append((key, value))
+    return tuple(merged)
 
 
 def _mapping(value: JsonValue, field: str) -> dict[str, JsonValue]:
