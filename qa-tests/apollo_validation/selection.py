@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from .evidence import append_record, now, write_json
-from .profiles import load_test_profile
+from .profiles import FvpTapNetwork, load_test_profile
 from .root_cli import RootOptions
 from .selection_environment import selected_test_environment as selected_test_environment
 from .suites import list_suites
@@ -41,6 +41,7 @@ class TestSelection:
     backend: str | None = None
     image_profile: str | None = None
     fvp_config: tuple[tuple[str, str], ...] = ()
+    fvp_tap_network: FvpTapNetwork | None = None
 
     def as_json(self) -> dict[str, object]:
         return {
@@ -55,6 +56,9 @@ class TestSelection:
             "backend": self.backend,
             "image_profile": self.image_profile,
             "fvp_config": dict(self.fvp_config),
+            "fvp_tap_network": (
+                self.fvp_tap_network.as_json() if self.fvp_tap_network else None
+            ),
         }
 
 
@@ -192,6 +196,7 @@ def prepare_selection(
                 backend=profile.backend,
                 image_profile=profile.image_profile,
                 fvp_config=profile.fvp_config,
+                fvp_tap_network=profile.fvp_tap_network,
             ),
             replace(
                 options,

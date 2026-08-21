@@ -23,5 +23,11 @@
   },
   "targets": {
     "fvp": "HSOCSingleSessionFVPTarget"
+  },
+  "fvp_tap_network": {
+    "interface_name": "apollo-fvp-tap0",
+    "host_ip": "192.0.2.1",
+    "target_ip": "192.0.2.10",
+    "prefix_length": 24
   }
 }

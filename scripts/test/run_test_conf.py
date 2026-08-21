@@ -9,6 +9,7 @@ import sys
 from typing import assert_never, Final, Literal, Protocol
 
 from run_test_fvp_config import fvp_config_assignments
+from run_test_profile_network_conf import device_assignments, tap_network_values
 from run_test_suite_plan import resolve_plan
 
 
@@ -169,12 +170,6 @@ def _suite_assignment(
             assert_never(unreachable)
 
 
-def _str_list(value: JsonValue) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    return [item for item in value if isinstance(item, str)]
-
-
 def _scoped_assignments(key: str, value: str, manifest: JsonObject) -> list[str]:
     assignments = [f'{key} = "{value}"']
     machine = manifest.get("machine", "")
@@ -210,13 +205,6 @@ def _image_scoped_assignments(
     return assignments
 
 
-def _device_assignments(manifest: JsonObject) -> list[str]:
-    devices = " ".join(_str_list(manifest.get("test_fvp_devices")))
-    if not devices:
-        return []
-    return _scoped_assignments("TEST_FVP_DEVICES", devices, manifest)
-
-
 def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
     lane = _lane_name(request.kind)
     scope = _assignment_scope(request, manifest)
@@ -229,7 +217,14 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
         f'TEST_OVERALL_TIMEOUT = "{request.test_overall_timeout}"',
         f'MACHINE = "{request.machine}"',
     ]
-    lines += _device_assignments(manifest) + fvp_config_assignments(request.machine)
+    lines += device_assignments(manifest, _scoped_assignments)
+    lines += fvp_config_assignments(request.machine)
+    tap_values = tap_network_values(request.machine)
+    if tap_values is not None:
+        tap_assignments, target_ip, server_ip = tap_values
+        lines += tap_assignments
+        lines += _image_scoped_assignments("TEST_TARGET_IP", target_ip, scope)
+        lines += _image_scoped_assignments("TEST_SERVER_IP", server_ip, scope)
     selected_target = os.environ.get(SELECTED_TARGET_ENV)
     if selected_target:
         lines.extend(
