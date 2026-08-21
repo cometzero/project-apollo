@@ -68,6 +68,17 @@ _FVP_ALIASES: dict[str, tuple[str, ...]] = {
     "cpuidle:test_governors": ("cpuidle-governors",),
     "cpuidle:test_governor_switching": ("cpuidle-governor-switching",),
     "cpuidle:test_invalid_governor": ("cpuidle-invalid-governor",),
+    "cpufreq:test_cpufreq_policy": ("cpufreq-policy",),
+    "cpufreq:test_update_invalid_governor": ("cpufreq-invalid-governor",),
+    "cpufreq:test_update_scaling_min_frequencies": (
+        "cpufreq-scaling-min-frequencies",
+    ),
+    "cpufreq:test_update_scaling_max_frequencies": (
+        "cpufreq-scaling-max-frequencies",
+    ),
+    "cpufreq:test_update_min_max_scaling_frequencies_negative": (
+        "cpufreq-min-max-negative",
+    ),
 }
 
 

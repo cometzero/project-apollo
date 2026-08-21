@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "cpufreq",
+  "description": "Apollo FVP BSP CPU frequency validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["bsp"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": ["test_00_bsp_boot", "test_32_bsp_cpufreq"],
+    "timeout_seconds": 3600
+  },
+  "targets": {
+    "fvp": "HSOCBSPFVPTarget"
+  }
+}

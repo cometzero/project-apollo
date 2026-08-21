@@ -111,6 +111,21 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
                 "test_31_bsp_cpuidle.BspCpuIdleTest.test_invalid_governor",
             ),
         ),
+        (
+            "cpufreq",
+            (
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_policy",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_default_governors",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_set_governors",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_scaling_driver",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_current_frequency_per_governor",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_affected_cpus_per_policy",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_update_invalid_governor",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_update_scaling_min_frequencies",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_update_scaling_max_frequencies",
+                "test_32_bsp_cpufreq.BspCpuFreqTest.test_update_min_max_scaling_frequencies_negative",
+            ),
+        ),
     ],
 )
 def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(
@@ -155,6 +170,52 @@ def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(
     assert len({item.assertion_id for item in normalized.result.assertions}) == len(
         normalized.result.expected
     )
+
+
+@pytest.mark.parametrize(
+    ("method", "status", "reason"),
+    [
+        (
+            "test_72_power_cpufreq.CPUFrequencyTest.test_cpufreq_policy",
+            "PASSED",
+            "missing_profile_assertions",
+        ),
+        (
+            "test_32_bsp_cpufreq.BspCpuFreqTest.test_cpufreq_policy",
+            "MALFORMED",
+            "blocked_malformed_profile_evidence",
+        ),
+    ],
+)
+def test_cpufreq_rejects_stale_or_malformed_oeqa_evidence(
+    tmp_path: Path,
+    method: str,
+    status: str,
+    reason: str,
+) -> None:
+    # Given: a CPU frequency profile run with stale or malformed OEQA evidence.
+    run_dir = _profile_run(tmp_path, "cpufreq", "fvp")
+    result_path = run_dir / "oeqa/testresults.json"
+    result_path.parent.mkdir(parents=True)
+    result_path.write_text(
+        json.dumps({"runtime": {"result": {method: {"status": status}}}}),
+        encoding="utf-8",
+    )
+    append_record(
+        run_dir / "commands.jsonl",
+        {
+            "name": "oeqa",
+            "status": "pass",
+            "artifacts": [{"kind": "oeqa_result", "path": str(result_path)}],
+        },
+    )
+
+    # When: the public profile result is normalized.
+    normalized = normalize_profile_run(run_dir, "cpufreq", "fvp")
+
+    # Then: neither an old product result nor malformed status can pass BSP.
+    assert normalized.result.verdict == "BLOCKED"
+    assert reason in normalized.reasons
 
 
 @pytest.mark.parametrize(

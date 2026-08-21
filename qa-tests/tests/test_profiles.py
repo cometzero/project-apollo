@@ -44,6 +44,18 @@ def test_cpuidle_profile_selects_the_bsp_native_contract() -> None:
     assert profile.timeout_seconds == 3600
 
 
+def test_cpufreq_profile_selects_the_bsp_native_contract() -> None:
+    # Given: the repository-owned CPU frequency profile.
+    # When: it is parsed for the FVP BSP backend.
+    profile = load_test_profile(WORKSPACE, "cpufreq", "fvp", "bsp")
+
+    # Then: the BSP boot gate precedes the ten CPU frequency assertions.
+    assert profile.selectors == ("test_00_bsp_boot", "test_32_bsp_cpufreq")
+    assert profile.oeqa_kind == "extended"
+    assert profile.test_target == "HSOCBSPFVPTarget"
+    assert profile.timeout_seconds == 3600
+
+
 @pytest.mark.parametrize(("backend", "image"), [("qbox", "bsp"), ("fvp", "product")])
 def test_cpuidle_profile_rejects_unsupported_execution_boundary(
     backend: str,

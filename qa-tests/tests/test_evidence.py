@@ -90,7 +90,12 @@ def test_final_reports_include_human_json_and_junit_results(
 
 @pytest.mark.parametrize(
     ("profile", "normalized", "raw"),
-    [("smcf", 4, 5), ("pfdi-si-cl1", 17, 18), ("cpuidle", 8, 9)],
+    [
+        ("smcf", 4, 5),
+        ("pfdi-si-cl1", 17, 18),
+        ("cpuidle", 8, 9),
+        ("cpufreq", 10, 11),
+    ],
 )
 def test_profile_junit_uses_normalized_assertion_counts(
     tmp_path: Path,
