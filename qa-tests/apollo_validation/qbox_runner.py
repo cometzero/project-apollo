@@ -12,6 +12,7 @@ from typing import assert_never
 
 from .backend import ImageProfile
 from .evidence import JsonObject, append_record, now, run_log, write_reports
+from .qbox_network import NetworkForward, platform_network_server
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 RUN_SCRIPT_DIR = WORKSPACE_ROOT / "scripts/run"
@@ -53,6 +54,7 @@ def qbox_launcher_command(
     request: QBoxRunRequest,
     *,
     dry_run: bool,
+    validation_http_port: int | None = None,
 ) -> list[str]:
     command = [
         str(request.root / "run_qbox_yocto.sh"),
@@ -83,6 +85,8 @@ def qbox_launcher_command(
         command.extend(["--validation-profile", profile_id])
         if legacy_flag is not None:
             command.append(legacy_flag)
+    if validation_http_port is not None:
+        command.extend(["--validation-http-port", str(validation_http_port)])
     return command
 
 
@@ -143,6 +147,13 @@ def _qbox_artifacts(request: QBoxRunRequest) -> list[JsonObject]:
         "qbox-primary-console.log",
     ):
         artifacts.append({"kind": "qbox_console", "path": str(qbox_dir / name)})
+    if request.test_profile == "platform-devices":
+        artifacts.append(
+            {
+                "kind": "network_lifecycle",
+                "path": str(request.out_dir / "logs/platform-network.jsonl"),
+            }
+        )
     return artifacts
 
 
@@ -199,6 +210,7 @@ def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     if preflight.returncode != 0 or request.preflight_only:
         return write_reports(request.out_dir)[1]
 
+    network_log = request.out_dir / "logs/platform-network.jsonl"
     boot_command = qbox_launcher_command(request, dry_run=False)
     if request.dry_run:
         timestamp = now()
@@ -221,7 +233,18 @@ def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
     boot_stderr = request.out_dir / "logs/qbox-boot.stderr.log"
     run_log("START qbox-boot")
     started_at = now()
-    boot = _run_process(boot_command, request, boot_stdout, boot_stderr)
+    network: NetworkForward | None = None
+    if request.test_profile == "platform-devices":
+        with platform_network_server(network_log) as network:
+            boot_command = qbox_launcher_command(
+                request,
+                dry_run=False,
+                validation_http_port=network.host_port,
+            )
+            boot = _run_process(boot_command, request, boot_stdout, boot_stderr)
+    else:
+        boot_command = qbox_launcher_command(request, dry_run=False)
+        boot = _run_process(boot_command, request, boot_stdout, boot_stderr)
     result_path = request.out_dir / "qbox/result.json"
     result = _read_result(result_path)
     blocker = result.get("blocker")

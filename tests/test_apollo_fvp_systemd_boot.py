@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BSP_LAYER = ROOT / "hsoc-stack/yocto/meta-hsoc-bsp"
 FVP_MACHINE = BSP_LAYER / "conf/machine/apollo-fvp.conf"
+QVP_MACHINE = BSP_LAYER / "conf/machine/apollo-qvp.conf"
 FVP_BOOT_CONFIG = (
     BSP_LAYER
     / "recipes-bsp/u-boot/files/apollo-fvp-auto-ad-nexios.cfg"
@@ -27,14 +28,15 @@ def read(path: Path) -> str:
 def test_product_esp_exposes_systemd_discoverable_slot_ukis() -> None:
     # Given: the BSP and product images share one Apollo FVP machine.
     # When: product ESP additions are inspected.
-    machine = read(FVP_MACHINE)
+    machines = (read(FVP_MACHINE), read(QVP_MACHINE))
 
     # Then: only nexios-image exposes non-auto Type #2 UKI aliases and script.
-    assert "IMAGE_EFI_BOOT_FILES:append:pn-nexios-image" in machine
-    assert "${AUTO_AD_NEXIOS_UKI_A};EFI/Linux/nexios-a.efi" in machine
-    assert "${AUTO_AD_NEXIOS_UKI_B};EFI/Linux/nexios-b.efi" in machine
-    assert "auto-ad-nexios-systemd-boot.scr" in machine
-    assert "WKS_FILE_DEPENDS:append:pn-nexios-image" in machine
+    for machine in machines:
+        assert "IMAGE_EFI_BOOT_FILES:append:pn-nexios-image" in machine
+        assert "${AUTO_AD_NEXIOS_UKI_A};EFI/Linux/nexios-a.efi" in machine
+        assert "${AUTO_AD_NEXIOS_UKI_B};EFI/Linux/nexios-b.efi" in machine
+        assert "auto-ad-nexios-systemd-boot.scr" in machine
+        assert "WKS_FILE_DEPENDS:append:pn-nexios-image" in machine
 
 
 def test_fvp_bootcommand_preserves_bsp_direct_uki_fallback() -> None:
@@ -49,7 +51,8 @@ def test_fvp_bootcommand_preserves_bsp_direct_uki_fallback() -> None:
     assert "source ${scriptaddr}" in fvp
     assert "load virtio 0:${aanx_boot_part} ${loadaddr} ${aanx_uki}" in fvp
     assert "auto-ad-nexios: trying fallback ${aanx_fallback_uki}" in fvp
-    assert "auto-ad-nexios-systemd-boot.scr" not in qvp
+    assert "auto-ad-nexios-systemd-boot.scr" in qvp
+    assert "source ${scriptaddr}" in qvp
 
 
 def test_systemd_script_selects_the_matching_ab_entry() -> None:

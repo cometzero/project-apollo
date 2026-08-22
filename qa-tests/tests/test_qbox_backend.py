@@ -70,6 +70,25 @@ def test_qbox_product_command_uses_canonical_yocto_launcher(
     assert "--no-persistent-rse-state" in command
 
 
+def test_platform_devices_command_forwards_runner_owned_http_port(
+    tmp_path: Path,
+) -> None:
+    request = qbox_request(
+        tmp_path,
+        "product",
+        test_profile="platform-devices",
+    )
+
+    command = qbox_launcher_command(
+        request,
+        dry_run=False,
+        validation_http_port=43210,
+    )
+
+    index = command.index("--validation-http-port")
+    assert command[index + 1] == "43210"
+
+
 def test_qbox_bsp_command_selects_bsp_image(tmp_path: Path) -> None:
     # Given: an Apollo QVP BSP-image request.
     request = qbox_request(tmp_path, "bsp")

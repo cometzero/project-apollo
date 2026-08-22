@@ -56,6 +56,7 @@ def test_registry_enables_existing_and_reuse_profile_implementations() -> None:
         "cpufreq",
         "pfdi",
         "pfdi-si-cl1",
+        "platform-devices",
         "ras_cpu",
         "safety-diagnostics-tests",
         "si-cl1",
@@ -95,7 +96,7 @@ def test_compatibility_adapters_are_registry_metadata(
     ("profile_id", "reason"),
     (
         ("unknown", "unknown_validation_profile:unknown"),
-        ("platform-devices", "validation_profile_unavailable:platform-devices"),
+        ("trusted-services", "validation_profile_unavailable:trusted-services"),
     ),
 )
 def test_unknown_or_unimplemented_profile_rejects_preflight(

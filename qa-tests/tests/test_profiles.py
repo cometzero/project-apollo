@@ -277,7 +277,7 @@ def test_platform_devices_profile_rejects_missing_oeqa_prerequisite(
 
 @pytest.mark.parametrize(
     ("backend", "image"),
-    [("qbox", "product"), ("fvp", "bsp")],
+    [("fvp", "bsp"), ("qbox", "bsp")],
 )
 def test_platform_devices_profile_rejects_unsupported_execution_boundary(
     backend: str,
@@ -287,6 +287,18 @@ def test_platform_devices_profile_rejects_unsupported_execution_boundary(
     # When/Then: the typed profile loader rejects it before dispatch.
     with pytest.raises(ProfileError):
         load_test_profile(WORKSPACE, "platform-devices", backend, image)
+
+
+def test_platform_devices_profile_selects_qbox_product_contract() -> None:
+    profile = load_test_profile(
+        WORKSPACE,
+        "platform-devices",
+        "qbox",
+        "product",
+    )
+
+    assert profile.test_target == "QBoxPlatformDevicesRunner"
+    assert profile.timeout_seconds == 3600
 
 
 @pytest.mark.parametrize(

@@ -37,6 +37,7 @@ Options:
   --timeout SECONDS           Runner timeout, 0 keeps interactive run alive
   --jobs N                    Build jobs when the QBox runner builds dependencies
   --rootfs-bootargs-profile P Rootfs bootargs profile (default: none)
+  --validation-http-port P   Forward guest validation HTTP to host port P
   --copy-disks                Copy writable rootfs/EFI disks into --out-dir first
   --no-copy-disks             Use Yocto deploy disk images in place (default)
   --record-initial-state      Write a pre-run SHA-256 artifact manifest (slow)
@@ -737,6 +738,7 @@ DEBUG_MODE="${DEBUG_MODE:-interactive}"
 DEBUG_MODE_SET=0
 DEBUG_TIMEOUT="${DEBUG_TIMEOUT:-600}"
 DEBUG_RESULT="${DEBUG_RESULT:-}"
+VALIDATION_HTTP_PORT=""
 
 ROOTFS_OVERRIDE="${ROOTFS:-}"
 EFI_CAPSULE_DISK_OVERRIDE="${EFI_CAPSULE_DISK:-}"
@@ -845,6 +847,11 @@ while (($#)); do
         --rootfs-bootargs-profile)
             [[ $# -ge 2 ]] || die "--rootfs-bootargs-profile requires a value"
             ROOTFS_BOOTARGS_PROFILE="$2"
+            shift 2
+            ;;
+        --validation-http-port)
+            [[ $# -ge 2 ]] || die "--validation-http-port requires a value"
+            VALIDATION_HTTP_PORT="$2"
             shift 2
             ;;
         --copy-disks)
@@ -1037,6 +1044,11 @@ done
 [[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
     ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
     die "--monitor-port must be in range 1..65535: ${MONITOR_PORT}"
+if [[ -n "${VALIDATION_HTTP_PORT}" ]]; then
+    [[ "${VALIDATION_HTTP_PORT}" =~ ^[0-9]+$ ]] &&
+        ((VALIDATION_HTTP_PORT >= 1 && VALIDATION_HTTP_PORT <= 65535)) ||
+        die "--validation-http-port must be in range 1..65535: ${VALIDATION_HTTP_PORT}"
+fi
 
 reject_removed_env
 
@@ -1374,6 +1386,9 @@ fi
 
 SSH_PORT_VALUE="${SSH_PORT:-$(default_ssh_port_range)}"
 NETDEV="type=user,hostfwd=tcp::${SSH_PORT_VALUE}-:22"
+if [[ -n "${VALIDATION_HTTP_PORT}" ]]; then
+    NETDEV+=",guestfwd=tcp:10.0.2.100:18080-tcp:127.0.0.1:${VALIDATION_HTTP_PORT}"
+fi
 export QBOX_APOLLO_NETDEV="${NETDEV}"
 
 RSE_FAST_BOOT_MODE="--rse-fast-boot-sram-dmi"

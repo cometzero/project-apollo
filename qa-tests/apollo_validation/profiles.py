@@ -11,6 +11,7 @@ JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 FvpConfig: TypeAlias = tuple[tuple[str, str], ...]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
 FVP_CONFIG_PROFILES = frozenset({"bsp-core", "pfdi-si-cl1", "si-cl1"})
+QBOX_PROFILE_TARGETS = {"platform-devices": "QBoxPlatformDevicesRunner"}
 
 
 class ProfileError(Exception):
@@ -130,7 +131,8 @@ def load_test_profile(
     compatibility = _mapping(data.get("compatibility"), "compatibility")
     backends = _strings(compatibility.get("backends"), "compatibility.backends")
     images = _strings(compatibility.get("images"), "compatibility.images")
-    if backend not in backends:
+    qbox_target = QBOX_PROFILE_TARGETS.get(name) if backend == "qbox" else None
+    if backend not in backends and qbox_target is None:
         raise ProfileError(f"profile {name} does not support backend {backend}")
     if image_profile not in images:
         raise ProfileError(f"profile {name} does not support image {image_profile}")
@@ -141,7 +143,11 @@ def load_test_profile(
         path=path,
         selectors=_strings(oeqa.get("selectors"), "oeqa.selectors"),
         oeqa_kind=_string(oeqa.get("kind"), "oeqa.kind"),
-        test_target=_string(targets.get(backend), f"targets.{backend}"),
+        test_target=(
+            qbox_target
+            if qbox_target is not None
+            else _string(targets.get(backend), f"targets.{backend}")
+        ),
         timeout_seconds=_positive_int(
             oeqa.get("timeout_seconds"),
             "oeqa.timeout_seconds",

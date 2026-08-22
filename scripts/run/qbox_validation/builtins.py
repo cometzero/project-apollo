@@ -24,6 +24,7 @@ from .reuse_bsp import bsp_core_spec, si_cl1_spec
 from .reuse_cpuidle import cpuidle_spec
 from .reuse_cpufreq import cpufreq_spec
 from .reuse_si import si_cl1_pfdi_spec, smcf_spec
+from .reuse_platform_devices import platform_devices_spec
 
 
 PRIMARY_PROMPT: Final = r"(?m)(?:nexios-bsp#|root@apollo-qvp[^\n]*[#>])\s*$"
@@ -194,6 +195,7 @@ PROFILE_REGISTRATIONS: Final = (
     ProfileRegistration("cpufreq", cpufreq_spec),
     ProfileRegistration("pfdi", _pfdi_spec),
     ProfileRegistration("pfdi-si-cl1", si_cl1_pfdi_spec),
+    ProfileRegistration("platform-devices", platform_devices_spec),
     ProfileRegistration("ras_cpu", _ras_cpu_spec),
     ProfileRegistration("safety-diagnostics-tests", _safety_diagnostics_spec),
     ProfileRegistration("si-cl1", si_cl1_spec),
