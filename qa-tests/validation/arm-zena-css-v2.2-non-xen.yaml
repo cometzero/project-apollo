@@ -29,7 +29,7 @@
       "image": "product",
       "cpu_count": 4,
       "coverage_kind": "identical",
-      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_80_trusted_services"],
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_80_trusted_services"],
       "qbox_assertions": ["ts-psa-crypto-api-test", "ts-psa-ps-api-test", "ts-psa-its-api-test", "ts-psa-iat-api-test"]
     },
     {
@@ -77,7 +77,7 @@
       "image": "product",
       "cpu_count": 4,
       "coverage_kind": "semantic",
-      "fvp_selectors": ["test_00_linux_boot", "test_65_linux_crypto"],
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_65_linux_crypto"],
       "qbox_assertions": ["cryptographic-extension-performance"]
     },
     {

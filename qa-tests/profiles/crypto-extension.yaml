@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "crypto-extension",
+  "description": "Apollo FVP cryptographic extension HTTPS performance validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_fvp_boot",
+      "test_00_linux_boot",
+      "test_65_linux_crypto"
+    ],
+    "timeout_seconds": 2400
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  }
+}

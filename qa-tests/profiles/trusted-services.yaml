@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "trusted-services",
+  "description": "Apollo FVP Trusted Services PSA conformance validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_fvp_boot",
+      "test_00_linux_boot",
+      "test_80_trusted_services"
+    ],
+    "timeout_seconds": 7200
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  }
+}

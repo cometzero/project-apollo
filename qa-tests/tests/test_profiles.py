@@ -171,6 +171,43 @@ def test_platform_devices_profile_has_complete_oeqa_dependency_closure() -> None
     _assert_oeqa_dependency_closure(profile.selectors)
 
 
+def test_trusted_services_profile_selects_serial_product_contract() -> None:
+    # Given: the PSA conformance profile on the normal FVP user-network path.
+    # When: it is resolved for the product image.
+    profile = load_test_profile(WORKSPACE, "trusted-services", "fvp", "product")
+
+    # Then: it runs from the Linux serial boot gate without inheriting the
+    # deferred platform-device TAP contract.
+    assert profile.selectors == (
+        "test_00_fvp_boot",
+        "test_00_linux_boot",
+        "test_80_trusted_services",
+    )
+    assert profile.oeqa_kind == "extended"
+    assert profile.test_target == "HSOCSingleSessionFVPTarget"
+    assert profile.timeout_seconds == 7200
+    assert profile.fvp_tap_network is None
+    _assert_oeqa_dependency_closure(profile.selectors)
+
+
+def test_crypto_extension_profile_selects_plugin_backed_product_contract() -> None:
+    # Given: the FVP-only crypto performance profile.
+    # When: it is resolved for the product image.
+    profile = load_test_profile(WORKSPACE, "crypto-extension", "fvp", "product")
+
+    # Then: Linux boot precedes the plugin-backed HTTPS comparison only.
+    assert profile.selectors == (
+        "test_00_fvp_boot",
+        "test_00_linux_boot",
+        "test_65_linux_crypto",
+    )
+    assert profile.oeqa_kind == "extended"
+    assert profile.test_target == "HSOCSingleSessionFVPTarget"
+    assert profile.timeout_seconds == 2400
+    assert profile.fvp_tap_network is None
+    _assert_oeqa_dependency_closure(profile.selectors)
+
+
 @pytest.mark.parametrize(
     "removed",
     [
