@@ -4355,6 +4355,7 @@ def run_platform(
                             )
                         ),
                         secure=clean_text(logs.get("secure_console", "")),
+                        rse=clean_text(logs.get("rse", "")),
                     )
                     previous_step = active_profile.state.next_step
                     active_profile = drive_runtime_validation_profile(
@@ -4370,6 +4371,7 @@ def run_platform(
                                 si0=snapshot.si0,
                                 si1=snapshot.si1,
                                 secure=snapshot.secure,
+                                rse=snapshot.rse,
                                 eof=active_profile.spec.required_consoles,
                             ),
                             time.monotonic(),

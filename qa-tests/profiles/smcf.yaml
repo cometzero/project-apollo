@@ -3,7 +3,7 @@
   "name": "smcf",
   "description": "Apollo BSP SMCF integration validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["bsp"]
   },
   "oeqa": {
@@ -12,6 +12,7 @@
     "timeout_seconds": 2400
   },
   "targets": {
-    "fvp": "HSOCBSPFVPTarget"
+    "fvp": "HSOCBSPFVPTarget",
+    "qbox": "QBoxSMCFRunner"
   }
 }

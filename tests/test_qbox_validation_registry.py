@@ -44,17 +44,20 @@ class NoopCleanup:
         return CleanupReceipt(True, "clean")
 
 
-def test_registry_enables_only_existing_profile_implementations() -> None:
+def test_registry_enables_existing_and_reuse_profile_implementations() -> None:
     # Given: the canonical Task 1 validation matrix.
     # When: the repository-owned registry is loaded.
     profile_ids = enabled_profile_ids(MATRIX)
 
-    # Then: only the four pre-existing runtime probes are enabled.
+    # Then: legacy probes and the reuse-only BSP profiles are enabled.
     assert profile_ids == (
+        "bsp-core",
         "pfdi",
         "pfdi-si-cl1",
         "ras_cpu",
         "safety-diagnostics-tests",
+        "si-cl1",
+        "smcf",
     )
 
 
@@ -90,7 +93,7 @@ def test_compatibility_adapters_are_registry_metadata(
     ("profile_id", "reason"),
     (
         ("unknown", "unknown_validation_profile:unknown"),
-        ("bsp-core", "validation_profile_unavailable:bsp-core"),
+        ("platform-devices", "validation_profile_unavailable:platform-devices"),
     ),
 )
 def test_unknown_or_unimplemented_profile_rejects_preflight(

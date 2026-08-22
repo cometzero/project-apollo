@@ -9,9 +9,6 @@ from scripts.run.qbox_safety_diagnostics_probe import (
     evaluate_safety_diagnostics,
     safety_diagnostics_commands,
 )
-from scripts.run.qbox_si_cl1_pfdi_catalog import si_cl1_pfdi_checks
-from scripts.run.qbox_si_cl1_pfdi_probe import evaluate_si_cl1_pfdi_records
-
 from .types import (
     AssertionObservation,
     AssertionStatus,
@@ -23,6 +20,8 @@ from .types import (
     ProfileProbeSpec,
     ProfileRegistration,
 )
+from .reuse_bsp import bsp_core_spec, si_cl1_spec
+from .reuse_si import si_cl1_pfdi_spec, smcf_spec
 
 
 PRIMARY_PROMPT: Final = r"(?m)(?:nexios-bsp#|root@apollo-qvp[^\n]*[#>])\s*$"
@@ -127,55 +126,6 @@ class RasCpuEvaluator:
         )
 
 
-@dataclass(frozen=True, slots=True)
-class SiCl1PfdiEvaluator:
-    expected: tuple[str, ...]
-
-    def evaluate(
-        self,
-        snapshot: ConsoleSnapshot,
-        outputs: tuple[str, ...],
-    ) -> tuple[AssertionObservation, ...]:
-        checks = si_cl1_pfdi_checks()
-        result = evaluate_si_cl1_pfdi_records(checks, list(outputs))
-        records = result["records"]
-        prefix_groups: Final = (
-            ("test_01_",),
-            ("test_02_",),
-            ("test_03_invalid_", "test_03_valid_"),
-            ("test_04_",),
-            ("test_05_",),
-            ("test_06_",),
-            ("test_07_",),
-            ("test_08_",),
-            ("test_09_",),
-            ("test_10_",),
-            ("test_11_",),
-            ("test_12_",),
-            ("test_13_",),
-            ("test_14_",),
-            ("test_15_",),
-            ("test_16_",),
-        )
-        passed_by_group = tuple(
-            all(
-                record["passed"]
-                for record in records
-                if record["name"].startswith(prefixes)
-            )
-            for prefixes in prefix_groups
-        )
-        passed_by_group = (*passed_by_group, result["passed"])
-        return tuple(
-            AssertionObservation(item, _status(passed))
-            for item, passed in zip(
-                self.expected,
-                passed_by_group,
-                strict=True,
-            )
-        )
-
-
 def _pfdi_spec(
     profile_id: str,
     expected: tuple[str, ...],
@@ -193,26 +143,6 @@ def _pfdi_spec(
         PfdiEvaluator(expected),
         NoopCleanup(),
         "--pfdi-probe",
-    )
-
-
-def _si_cl1_pfdi_spec(
-    profile_id: str,
-    expected: tuple[str, ...],
-    coverage_kind: CoverageKind,
-) -> ProfileProbeSpec:
-    return ProfileProbeSpec(
-        profile_id,
-        frozenset({Console.SI1}),
-        tuple(
-            ProbeStep(Console.SI1, item.command, SI1_PROMPT, 60.0)
-            for item in si_cl1_pfdi_checks()
-        ),
-        expected,
-        coverage_kind,
-        SiCl1PfdiEvaluator(expected),
-        NoopCleanup(),
-        "--pfdi-si-cl1-probe",
     )
 
 
@@ -257,8 +187,11 @@ def _safety_diagnostics_spec(
 
 
 PROFILE_REGISTRATIONS: Final = (
+    ProfileRegistration("bsp-core", bsp_core_spec),
     ProfileRegistration("pfdi", _pfdi_spec),
-    ProfileRegistration("pfdi-si-cl1", _si_cl1_pfdi_spec),
+    ProfileRegistration("pfdi-si-cl1", si_cl1_pfdi_spec),
     ProfileRegistration("ras_cpu", _ras_cpu_spec),
     ProfileRegistration("safety-diagnostics-tests", _safety_diagnostics_spec),
+    ProfileRegistration("si-cl1", si_cl1_spec),
+    ProfileRegistration("smcf", smcf_spec),
 )

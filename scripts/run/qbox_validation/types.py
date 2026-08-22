@@ -145,6 +145,7 @@ class ConsoleSnapshot:
     si0: str = ""
     si1: str = ""
     secure: str = ""
+    rse: str = ""
     eof: frozenset[Console] = frozenset()
 
     @classmethod

@@ -589,7 +589,7 @@ def test_smcf_profile_selects_fvp_bsp_contract() -> None:
 
 @pytest.mark.parametrize(
     ("backend", "image"),
-    [("qbox", "bsp"), ("fvp", "product")],
+    [("fvp", "product"), ("qbox", "product")],
 )
 def test_smcf_profile_rejects_unsupported_execution_boundary(
     backend: str,
@@ -599,6 +599,27 @@ def test_smcf_profile_rejects_unsupported_execution_boundary(
     # When/Then: profile loading rejects the unsupported execution boundary.
     with pytest.raises(ProfileError):
         load_test_profile(WORKSPACE, "smcf", backend, image)
+
+
+@pytest.mark.parametrize(
+    ("profile_name", "target"),
+    (
+        ("bsp-core", "QBoxBSPCoreRunner"),
+        ("si-cl1", "QBoxSICl1Runner"),
+        ("smcf", "QBoxSMCFRunner"),
+    ),
+)
+def test_reuse_profile_selects_qbox_bsp_contract(
+    profile_name: str,
+    target: str,
+) -> None:
+    # Given: a reuse-only BSP profile implemented by the QBox registry.
+    # When: it is resolved for the QBox BSP backend.
+    profile = load_test_profile(WORKSPACE, profile_name, "qbox", "bsp")
+
+    # Then: the public profile keeps its selectors and selects its QBox target.
+    assert profile.selectors
+    assert profile.test_target == target
 
 
 @pytest.mark.parametrize("profile_name", ["smcf", "pfdi-si-cl1", "platform-devices"])

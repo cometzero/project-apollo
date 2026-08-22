@@ -3,7 +3,7 @@
   "name": "si-cl1",
   "description": "Apollo BSP Safety Island CL1 boot validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["bsp"]
   },
   "oeqa": {
@@ -15,7 +15,8 @@
     "timeout_seconds": 1200
   },
   "targets": {
-    "fvp": "HSOCBSPFVPTarget"
+    "fvp": "HSOCBSPFVPTarget",
+    "qbox": "QBoxSICl1Runner"
   },
   "fvp_config": {
     "css.smb.si.cluster1_pl011_uart.uart_enable": "1"
