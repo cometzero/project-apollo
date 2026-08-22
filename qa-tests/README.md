@@ -51,7 +51,7 @@ named profile remains available through the normal QBox launcher path.
 | `safety-diagnostics-tests` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile safety-diagnostics-tests` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
 | `cpuidle` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpuidle` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
 | `cpufreq` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpufreq` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
-| `platform-devices` | product | `./run_test.sh --machine apollo-fvp --test-profile platform-devices` | Deferred. QBox uses semantic network transport, not FVP-identical host ping/SSH. |
+| `platform-devices` | product | `./run_test.sh --machine apollo-fvp --test-profile platform-devices` | FVP PASS. QBox uses semantic network transport and requires this FVP summary. |
 | `trusted-services` | product | `./run_test.sh --machine apollo-fvp --test-profile trusted-services` | Deferred until current-SHA FVP reference is regenerated. |
 | `crypto-extension` | product | `./run_test.sh --machine apollo-fvp --test-profile crypto-extension` | Deferred. QBox coverage is semantic: deterministic crypto and instruction-use evidence, not FVP plugin wall-time comparison. |
 | `ras_cpu` | product | `./run_test.sh --machine apollo-fvp --test-profile ras_cpu` | Implemented QBox product profile; requires matching `--fvp-reference`. |
@@ -65,9 +65,10 @@ for the v2.2 non-Xen matrix:
 
 - 15 validation areas
 - 14 unique public profiles
-- 100 mapped action IDs
+- 100 documented action IDs: 99 required and 1 explicit exclusion
 - 0 Xen selectors in scope
 - 1 explicit Xen exclusion
+- `primary-ping` explicitly excluded for FVP user networking
 - 2 semantic QBox areas: `platform-devices` and `crypto-extension`
 
 The area-to-profile mapping is:
