@@ -97,13 +97,20 @@ class FakeConnectivityTarget:
         self.readiness = readiness
         self.ssh_status = ssh_status
         self.commands: list[tuple[str, int]] = []
+        self.boot_timeouts: list[int | None] = []
         self.diagnostics = {
             "ip -4 addr": (0, "inet 192.0.2.10/24 scope global ovsbr0"),
             "ip route": (0, "192.0.2.0/24 dev ovsbr0"),
             "networkctl --no-pager --full": (0, "ovsbr0 routable"),
         }
 
-    def run_serial(self, command: str, timeout: int) -> tuple[int, str]:
+    def run_serial(
+        self,
+        command: str,
+        timeout: int,
+        boot_timeout: int | None = None,
+    ) -> tuple[int, str]:
+        self.boot_timeouts.append(boot_timeout)
         self.commands.append((command, timeout))
         if command.startswith("ip -o -4 addr show"):
             result = self.readiness.pop(0) if self.readiness else (1, "not ready")
@@ -196,6 +203,8 @@ def test_guest_network_readiness_allows_delayed_dhcp(
     assert all("192.0.2.10" in command for command in readiness)
     assert all("ip route get 192.0.2.1" in command for command in readiness)
     assert all("ping -c 1" in command for command in readiness)
+    assert target.boot_timeouts[0] == connectivity.NETWORK_READY_TIMEOUT_SECONDS
+    assert all(timeout <= connectivity.SERIAL_COMMAND_TIMEOUT_SECONDS for _, timeout in target.commands)
 
 
 def test_guest_network_readiness_timeout_reports_exact_diagnostics(
