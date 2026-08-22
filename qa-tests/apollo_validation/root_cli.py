@@ -90,6 +90,16 @@ def parse_root_args(argv: list[str]) -> RootOptions:
     image_profile: ImageProfile = (
         "bsp" if image == "nexios-bsp-initramfs" else "product"
     )
+    category_requested = _category_was_requested(argv)
+    category = parsed.category
+    if (
+        backend == "fvp"
+        and parsed.bsp
+        and not category_requested
+        and parsed.test_name is None
+        and parsed.test_profile is None
+    ):
+        category = "functional"
     return RootOptions(
         build_dir=parsed.build_dir,
         backend=backend,
@@ -102,8 +112,8 @@ def parse_root_args(argv: list[str]) -> RootOptions:
         dry_run=parsed.dry_run,
         preflight_only=parsed.preflight_only,
         skip_runtime=parsed.skip_runtime,
-        category=parsed.category,
-        category_requested=_category_was_requested(argv),
+        category=category,
+        category_requested=category_requested,
         test_name=parsed.test_name,
         test_profile=parsed.test_profile,
         fvp_reference=parsed.fvp_reference,

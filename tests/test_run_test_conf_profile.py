@@ -43,7 +43,7 @@ PRODUCT_SUITES = (
     "test_72_power_cpufreq",
     "test_80_trusted_services",
 )
-BSP_SUITES = ("test_00_bsp_boot",)
+BSP_SUITES = ("test_00_bsp_boot", "test_01_bsp_ssh")
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
 FVP_TAP_NETWORK_ENV = "APOLLO_VALIDATION_FVP_TAP_NETWORK"
 FVP_TAP_NETWORK = {
@@ -101,6 +101,35 @@ def test_profile_target_overrides_functional_fvp_target(
     assert result.conf_path is not None
     text = result.conf_path.read_text(encoding="utf-8")
     assert 'TEST_TARGET = "HSOCBSPFVPTarget"' in text
+    assert "HSOCSingleSessionFVPTarget" not in text
+
+
+def test_default_bsp_functional_conf_preserves_bsp_manifest(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("APOLLO_VALIDATION_TEST_SUITES", raising=False)
+    monkeypatch.delenv("APOLLO_VALIDATION_TEST_TARGET", raising=False)
+    request = ConfRequest(
+        root=tmp_path,
+        build_dir=Path("build"),
+        machine="apollo-fvp",
+        run_dir=Path("build/tests/bsp-run"),
+        kind="functional",
+        image="nexios-bsp-initramfs",
+    )
+    manifest: JsonObject = {
+        "machine": "apollo-fvp",
+        "distro": "auto-ad-nexios",
+        "test_suites": ["test_00_bsp_boot", "test_01_bsp_ssh"],
+    }
+
+    result = write_conf(request, manifest)
+
+    assert result.conf_path is not None
+    text = result.conf_path.read_text(encoding="utf-8")
+    assert 'TEST_TARGET = "HSOCBSPFVPTarget"' in text
+    assert 'TEST_SUITES = "test_00_bsp_boot test_01_bsp_ssh"' in text
     assert "HSOCSingleSessionFVPTarget" not in text
 
 

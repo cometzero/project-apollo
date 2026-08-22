@@ -55,6 +55,13 @@ def test_root_cli_resolves_fvp_bsp_profile() -> None:
     assert options.tui is False
 
 
+def test_root_cli_runs_default_bsp_oeqa_suite() -> None:
+    options = parse_root_args(["--machine", "apollo-fvp", "--bsp"])
+
+    assert options.category == "functional"
+    assert options.category_requested is False
+
+
 def test_root_cli_rejects_headless_tui_conflict() -> None:
     # Given: two mutually exclusive presentation modes.
     argv = ["--fvp", "--headless", "--tui"]

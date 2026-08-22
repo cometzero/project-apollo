@@ -152,6 +152,11 @@ def _suite_assignment(
                 if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
                     raise ConfInputError(f"{SELECTED_SUITES_ENV} must be a JSON string list")
                 tests = loaded
+            elif scope.image == "nexios-bsp-initramfs":
+                loaded = manifest.get("test_suites", [])
+                if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
+                    raise ConfInputError("manifest test_suites must be a string list")
+                tests = loaded
             else:
                 plan = resolve_plan(manifest)
                 included = plan.get("included", {})
@@ -235,10 +240,15 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
             )
         )
     elif request.kind == "functional":
+        target = (
+            "HSOCBSPFVPTarget"
+            if request.image == "nexios-bsp-initramfs"
+            else "HSOCSingleSessionFVPTarget"
+        )
         lines.extend(
             _image_scoped_assignments(
                 "TEST_TARGET",
-                "HSOCSingleSessionFVPTarget",
+                target,
                 scope,
             )
         )

@@ -198,12 +198,55 @@ def test_bsp_metadata_contract_files_exist() -> None:
         auto_layer / "recipes-core/initrdscripts/nexios-bsp-init/init",
         auto_layer
         / "recipes-core/initrdscripts/nexios-bsp-init/nexios-bsp-selftest",
+        auto_layer
+        / "lib/oeqa/runtime/cases/test_01_bsp_ssh.py",
         bsp_layer / "wic/apollo-fvp-nexios-bsp-initramfs.wks.in",
         bsp_layer / "wic/apollo-qvp-nexios-bsp-initramfs.wks.in",
     )
 
     # Then: every BitBake-consumed metadata input exists.
     assert all(path.is_file() for path in expected)
+
+
+def test_bsp_image_and_init_provide_ssh_over_user_networking() -> None:
+    auto_layer = ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions"
+    image = (auto_layer / "recipes-core/images/nexios-bsp-initramfs.bb").read_text(
+        encoding="utf-8"
+    )
+    init = (
+        auto_layer / "recipes-core/initrdscripts/nexios-bsp-init/init"
+    ).read_text(encoding="utf-8")
+
+    assert "dropbear" in image
+    assert "allow-empty-password" in image
+    assert "allow-root-login" in image
+    assert "empty-root-password" in image
+    assert "udhcpc" in init
+    assert "dropbearkey -t rsa" in init
+    assert 'dropbear -r "${dropbear_key}" -p 22 -B' in init
+    assert "NEXIOS_BSP_NETWORK" in init
+    assert "NEXIOS_BSP_SSH" in init
+
+
+def test_bsp_default_oeqa_suite_requires_ssh_uname() -> None:
+    auto_layer = ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions"
+    distro = (auto_layer / "conf/distro/auto-ad-nexios.conf").read_text(
+        encoding="utf-8"
+    )
+    controller = (auto_layer / "lib/oeqa/controllers/hsocfvp.py").read_text(
+        encoding="utf-8"
+    )
+    ssh_case = (
+        auto_layer / "lib/oeqa/runtime/cases/test_01_bsp_ssh.py"
+    ).read_text(encoding="utf-8")
+
+    assert (
+        'HSOC_APOLLO_BSP_TEST_SUITES = '
+        '"test_00_bsp_boot test_01_bsp_ssh"'
+    ) in distro
+    assert "def run_ssh(" in controller
+    assert "self.target.run_ssh(\"uname -a\"" in ssh_case
+    assert "test_00_bsp_boot.BspBootTest.test_bsp_boot" in ssh_case
 
 
 def test_bsp_uki_uses_timestamp_stable_initramfs_link() -> None:
