@@ -82,6 +82,19 @@ def test_production_runtime_owns_live_registry_driver() -> None:
     assert callable(driver)
 
 
+def test_validation_profile_requires_probe_completion_before_boot_exit() -> None:
+    args = runtime.argparse.Namespace(
+        post_login_probe=False,
+        primary_operation_manifest=None,
+        validation_profile="platform-devices",
+    )
+
+    required = getattr(runtime, "probe_completion_required", None)
+
+    assert callable(required)
+    assert required(args) is True
+
+
 @pytest.mark.parametrize(
     ("shape", "owner"),
     (

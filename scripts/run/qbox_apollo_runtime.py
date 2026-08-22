@@ -4244,6 +4244,14 @@ def drive_runtime_validation_profile(
     return drive_live_profile(session, snapshot, now=now)
 
 
+def probe_completion_required(args: argparse.Namespace) -> bool:
+    return bool(
+        args.post_login_probe
+        or args.primary_operation_manifest is not None
+        or args.validation_profile is not None
+    )
+
+
 def run_platform(
     root: Path, args: argparse.Namespace, artifacts: dict[str, Path]
 ) -> tuple[
@@ -4408,10 +4416,7 @@ def run_platform(
                     args.required_pass_marker
                 )
                 probe_complete = bool(post_login_probe.get("complete"))
-                probe_requested = bool(
-                    args.post_login_probe
-                    or args.primary_operation_manifest is not None
-                )
+                probe_requested = probe_completion_required(args)
                 if (
                     probe_requested
                     and probe_complete
