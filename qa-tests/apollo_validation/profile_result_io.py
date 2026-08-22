@@ -80,6 +80,21 @@ _FVP_ALIASES: dict[str, tuple[str, ...]] = {
     "cpufreq:test_update_min_max_scaling_frequencies_negative": (
         "cpufreq-min-max-negative",
     ),
+    "mbpp:test_01_script_exists_and_is_executable": ("mbpp-script-exists",),
+    "mbpp:test_02_help_and_list": ("mbpp-help-and-list",),
+    "mbpp:test_03_dump_initial_then_set_parking_and_verify": (
+        "mbpp-set-parking",
+    ),
+    "mbpp:test_04_idempotent_all_profiles": ("mbpp-idempotent-profiles",),
+    "mbpp:test_05_case_insensitive_all_profiles": (
+        "mbpp-case-insensitive-profiles",
+    ),
+    "mbpp:test_06_invalid_profile_selection": ("mbpp-invalid-profile",),
+    "mbpp:test_07_toggle_all_modes": ("mbpp-toggle-all-modes",),
+    "mbpp:test_08_guard_when_not_all_cores_online": ("mbpp-all-cores-online",),
+    "mbpp:test_09_set_governor_to_default": (
+        "mbpp-restore-default-governor",
+    ),
     "hipc:test_01_mid_sanity_dt_and_shared_memory": (
         "hipc-dt-and-shared-memory",
     ),

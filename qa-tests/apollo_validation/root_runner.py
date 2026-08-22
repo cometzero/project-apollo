@@ -13,6 +13,7 @@ from .context import inspect_context
 from .evidence import append_record, now, run_log, write_json, write_reports
 from .listing import run_list
 from .run_inputs import capture_run_inputs
+from .profiles import load_test_profile, required_cpu_count_mismatch
 from .root_cli import RootOptions, parse_root_args, print_help
 from .runner import run_category
 from .selection import (
@@ -141,7 +142,36 @@ def _write_context(root: Path, args: RootOptions, run_dir: Path) -> int:
             "test_profile": args.test_profile,
         }
     )
-    input_manifest_path = capture_run_inputs(root, run_dir, context)
+    cpu_mismatch = None
+    if args.test_profile is not None:
+        profile = load_test_profile(
+            root,
+            args.test_profile,
+            args.backend,
+            args.image_profile,
+        )
+        actual_cpu_count = context.get("pc_cpus_count_default")
+        if type(actual_cpu_count) is int:
+            cpu_mismatch = required_cpu_count_mismatch(profile, actual_cpu_count)
+    if cpu_mismatch is not None:
+        context["status"] = "blocked"
+        blockers = context.get("blockers")
+        if not isinstance(blockers, list):
+            blockers = []
+            context["blockers"] = blockers
+        blockers.append(
+            {
+                "reason": cpu_mismatch.reason,
+                "required_cpu_count": cpu_mismatch.required,
+                "actual_cpu_count": cpu_mismatch.actual,
+            }
+        )
+    input_manifest_path = capture_run_inputs(
+        root,
+        run_dir,
+        context,
+        attach_profile_provenance=cpu_mismatch is None,
+    )
     manifest_path = run_dir / "manifest.json"
     write_json(manifest_path, context)
     status = "blocked" if context.get("status") == "blocked" else "pass"

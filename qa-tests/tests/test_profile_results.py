@@ -139,6 +139,20 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
                 "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_watchdog",
             ),
         ),
+        (
+            "mbpp",
+            (
+                "test_73_power_mbpp.MBPPTest.test_01_script_exists_and_is_executable",
+                "test_73_power_mbpp.MBPPTest.test_02_help_and_list",
+                "test_73_power_mbpp.MBPPTest.test_03_dump_initial_then_set_parking_and_verify",
+                "test_73_power_mbpp.MBPPTest.test_04_idempotent_all_profiles",
+                "test_73_power_mbpp.MBPPTest.test_05_case_insensitive_all_profiles",
+                "test_73_power_mbpp.MBPPTest.test_06_invalid_profile_selection",
+                "test_73_power_mbpp.MBPPTest.test_07_toggle_all_modes",
+                "test_73_power_mbpp.MBPPTest.test_08_guard_when_not_all_cores_online",
+                "test_73_power_mbpp.MBPPTest.test_09_set_governor_to_default",
+            ),
+        ),
     ],
 )
 def test_bsp_profile_oeqa_methods_normalize_each_assertion_once(

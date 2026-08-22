@@ -65,6 +65,47 @@ def test_cpufreq_profile_selects_the_bsp_native_contract() -> None:
     assert profile.timeout_seconds == 3600
 
 
+def test_mbpp_profile_selects_the_isolated_fvp_contract() -> None:
+    profile = load_test_profile(WORKSPACE, "mbpp", "fvp", "product")
+
+    assert profile.selectors == (
+        "test_00_fvp_boot",
+        "test_00_linux_boot",
+        "test_72_power_cpufreq",
+        "test_73_power_mbpp",
+    )
+    assert profile.oeqa_kind == "extended"
+    assert profile.test_target == "HSOCSingleSessionFVPTarget"
+    assert profile.timeout_seconds == 7200
+    assert profile.required_cpu_count == 16
+    _assert_oeqa_dependency_closure(profile.selectors)
+
+
+@pytest.mark.parametrize(
+    ("backend", "image"),
+    [("qbox", "product"), ("fvp", "bsp")],
+)
+def test_mbpp_profile_rejects_unsupported_execution_boundary(
+    backend: str,
+    image: str,
+) -> None:
+    with pytest.raises(ProfileError):
+        load_test_profile(WORKSPACE, "mbpp", backend, image)
+
+
+def test_mbpp_profile_matches_the_strict_schema() -> None:
+    schema = json.loads(
+        (WORKSPACE / "qa-tests/schema/test-profile.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    profile = json.loads(
+        (WORKSPACE / "qa-tests/profiles/mbpp.yaml").read_text(encoding="utf-8")
+    )
+
+    Draft202012Validator(schema).validate(profile)
+
+
 def test_platform_devices_profile_selects_product_runtime_contract() -> None:
     # Given: the product-only platform device validation profile.
     # When: it is resolved for the FVP product image.

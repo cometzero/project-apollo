@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "name": "mbpp",
+  "description": "Apollo FVP isolated 16-CPU MBPP validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_fvp_boot",
+      "test_00_linux_boot",
+      "test_72_power_cpufreq",
+      "test_73_power_mbpp"
+    ],
+    "timeout_seconds": 7200
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  },
+  "cpu_count": 16
+}

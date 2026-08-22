@@ -104,7 +104,7 @@ def _file_digest(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _plugin_receipts(context: JsonObject) -> list[JsonObject]:
+def _plugin_receipts(context: JsonObject) -> list[JsonValue]:
     runtime_config = _mapping(context.get("runtime_config"))
     fvpconf_path = Path(_string(runtime_config.get("path")))
     if not fvpconf_path.is_file():
@@ -116,11 +116,12 @@ def _plugin_receipts(context: JsonObject) -> list[JsonObject]:
     args = fvpconf.get("args")
     if not isinstance(args, list):
         return []
-    receipts: list[JsonObject] = []
+    receipts: list[JsonValue] = []
     for index, raw_arg in enumerate(args[:-1]):
-        if raw_arg != "--plugin" or not isinstance(args[index + 1], str):
+        plugin_path = args[index + 1]
+        if raw_arg != "--plugin" or not isinstance(plugin_path, str):
             continue
-        original = Path(args[index + 1])
+        original = Path(plugin_path)
         try:
             resolved = original.resolve(strict=True)
             if not resolved.is_file():
@@ -142,8 +143,11 @@ def capture_run_inputs(
     root: Path,
     run_dir: Path,
     context: JsonObject,
+    *,
+    attach_profile_provenance: bool = True,
 ) -> Path:
-    _attach_profile_provenance(root, run_dir, context)
+    if attach_profile_provenance:
+        _attach_profile_provenance(root, run_dir, context)
     context["input_revisions"] = {
         "workspace": _git_revision(root),
         "qa_runner": _git_revision(root),
@@ -158,7 +162,7 @@ def capture_run_inputs(
         "testdata": context.get("testdata_path"),
         "runtime_config": runtime_config.get("path"),
     }
-    entries = []
+    entries: list[JsonValue] = []
     for kind, raw_path in input_paths.items():
         if not isinstance(raw_path, str) or not raw_path:
             continue

@@ -42,6 +42,17 @@ class TestProfile:
     image_profile: str
     fvp_config: FvpConfig
     fvp_tap_network: "FvpTapNetwork | None"
+    required_cpu_count: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class CpuCountMismatch:
+    required: int
+    actual: int
+
+    @property
+    def reason(self) -> str:
+        return "not_applicable_cpu_count"
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,6 +116,22 @@ def _positive_int(value: JsonValue, field: str) -> int:
     if type(value) is not int or value <= 0:
         raise ProfileError(f"profile field {field} must be a positive integer")
     return value
+
+
+def _optional_positive_int(value: JsonValue, field: str) -> int | None:
+    if value is None:
+        return None
+    return _positive_int(value, field)
+
+
+def required_cpu_count_mismatch(
+    profile: TestProfile,
+    actual_cpu_count: int,
+) -> CpuCountMismatch | None:
+    required = profile.required_cpu_count
+    if required is None or required == actual_cpu_count:
+        return None
+    return CpuCountMismatch(required=required, actual=actual_cpu_count)
 
 
 def _fvp_config(value: JsonValue, profile_name: str) -> FvpConfig:
@@ -208,4 +235,5 @@ def load_test_profile(
         image_profile=image_profile,
         fvp_config=_fvp_config(data.get("fvp_config"), profile_name),
         fvp_tap_network=_fvp_tap_network(data.get("fvp_tap_network"), profile_name),
+        required_cpu_count=_optional_positive_int(data.get("cpu_count"), "cpu_count"),
     )

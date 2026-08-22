@@ -8,6 +8,7 @@ import subprocess
 from typing import Literal, TypeAlias, TypedDict
 
 from .backend import Backend, ImageProfile
+from .context import parse_conf
 from .source_revisions import capture_source_revisions
 from .profiles import FvpConfig, load_test_profile
 from .validation_matrix import load_validation_matrix
@@ -170,7 +171,15 @@ def _selector_path(root: Path, selector: str) -> Path:
 
 def _runtime_path(request: ProvenanceRequest, suffix: str) -> Path:
     build_dir = request.build_dir if request.build_dir.is_absolute() else request.root / request.build_dir
-    deploy = build_dir / "tmp_baremetal/deploy/images" / request.machine
+    local_conf = parse_conf(build_dir / "conf/local.conf")
+    tmpdir = local_conf.get("TMPDIR", "${TOPDIR}/tmp_baremetal")
+    if tmpdir.startswith("${TOPDIR}/"):
+        tmpdir_path = build_dir / tmpdir.removeprefix("${TOPDIR}/")
+    else:
+        tmpdir_path = Path(tmpdir)
+        if not tmpdir_path.is_absolute():
+            tmpdir_path = build_dir / tmpdir_path
+    deploy = tmpdir_path / "deploy/images" / request.machine
     return deploy / f"{request.image}-{request.machine}.{suffix}"
 
 

@@ -9,6 +9,7 @@
     "version": {"const": 1},
     "name": {"type": "string", "pattern": "^[a-z][a-z0-9_-]*$"},
     "description": {"type": "string"},
+    "cpu_count": {"type": "integer", "minimum": 1},
     "compatibility": {
       "type": "object",
       "additionalProperties": false,
