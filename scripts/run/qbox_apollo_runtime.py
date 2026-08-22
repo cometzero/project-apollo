@@ -4074,7 +4074,11 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
             args.primary_operation_schema,
         )
     return {
-        "requested": bool(args.post_login_probe or operations),
+        "requested": bool(
+            args.post_login_probe
+            or operations
+            or args.validation_profile is not None
+        ),
         "operation_manifest_requested": bool(operations),
         "operations": operations,
         "operation_records": [],

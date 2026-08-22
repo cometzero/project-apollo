@@ -107,6 +107,7 @@ def test_validation_profile_login_driver_writes_root_to_primary_fifo(
         ]
     )
     state = runtime.make_probe_state(args)
+    assert state["requested"] is True
     read_fd, write_fd = os.pipe()
     os.set_blocking(read_fd, False)
     try:
