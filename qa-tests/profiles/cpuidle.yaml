@@ -1,9 +1,9 @@
 {
   "version": 1,
   "name": "cpuidle",
-  "description": "Apollo FVP BSP CPU idle validation",
+  "description": "Apollo FVP and QBox BSP CPU idle validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["bsp"]
   },
   "oeqa": {
@@ -12,6 +12,7 @@
     "timeout_seconds": 3600
   },
   "targets": {
-    "fvp": "HSOCBSPFVPTarget"
+    "fvp": "HSOCBSPFVPTarget",
+    "qbox": "QBoxCpuIdleRunner"
   }
 }

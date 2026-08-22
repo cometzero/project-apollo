@@ -21,6 +21,7 @@ from .types import (
     ProfileRegistration,
 )
 from .reuse_bsp import bsp_core_spec, si_cl1_spec
+from .reuse_cpuidle import cpuidle_spec
 from .reuse_si import si_cl1_pfdi_spec, smcf_spec
 
 
@@ -188,6 +189,7 @@ def _safety_diagnostics_spec(
 
 PROFILE_REGISTRATIONS: Final = (
     ProfileRegistration("bsp-core", bsp_core_spec),
+    ProfileRegistration("cpuidle", cpuidle_spec),
     ProfileRegistration("pfdi", _pfdi_spec),
     ProfileRegistration("pfdi-si-cl1", si_cl1_pfdi_spec),
     ProfileRegistration("ras_cpu", _ras_cpu_spec),

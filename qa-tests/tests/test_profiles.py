@@ -283,13 +283,23 @@ def test_platform_devices_profile_rejects_unsupported_execution_boundary(
         load_test_profile(WORKSPACE, "platform-devices", backend, image)
 
 
-@pytest.mark.parametrize(("backend", "image"), [("qbox", "bsp"), ("fvp", "product")])
+@pytest.mark.parametrize(
+    ("backend", "image"), [("qbox", "product"), ("fvp", "product")]
+)
 def test_cpuidle_profile_rejects_unsupported_execution_boundary(
     backend: str,
     image: str,
 ) -> None:
     with pytest.raises(ProfileError):
         load_test_profile(WORKSPACE, "cpuidle", backend, image)
+
+
+def test_cpuidle_profile_selects_qbox_bsp_contract() -> None:
+    profile = load_test_profile(WORKSPACE, "cpuidle", "qbox", "bsp")
+
+    assert profile.selectors == ("test_00_bsp_boot", "test_31_bsp_cpuidle")
+    assert profile.test_target == "QBoxCpuIdleRunner"
+    assert profile.timeout_seconds == 3600
 
 
 def test_bsp_core_profile_selects_the_complete_bsp_contract() -> None:

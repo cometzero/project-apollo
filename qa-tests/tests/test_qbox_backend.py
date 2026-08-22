@@ -135,6 +135,15 @@ def test_qbox_safety_diagnostics_command_selects_probe(
     assert "--safety-diagnostics-probe" in command
 
 
+def test_qbox_cpuidle_command_selects_registry_profile(tmp_path: Path) -> None:
+    request = qbox_request(tmp_path, "bsp", test_profile="cpuidle")
+
+    command = qbox_launcher_command(request, dry_run=True)
+
+    assert command[command.index("--validation-profile") + 1] == "cpuidle"
+    assert not any(argument.endswith("-probe") for argument in command)
+
+
 @pytest.mark.parametrize(
     "profile_id",
     ("pfdi", "pfdi-si-cl1", "ras_cpu", "safety-diagnostics-tests"),
