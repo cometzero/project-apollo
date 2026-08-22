@@ -89,9 +89,11 @@ def _interface_is_owned(network: FvpTapNetwork, expected_owner: int) -> bool:
     rc, stdout, _stderr = _command_output(
         ["ip", "tuntap", "show", "dev", network.interface_name]
     )
-    return rc == 0 and stdout.splitlines() == [
-        f"{network.interface_name}: tap persist user {expected_owner}"
-    ]
+    descriptions = (
+        f"{network.interface_name}: tap persist user {expected_owner}",
+        f"{network.interface_name}: tap vnet_hdr persist user {expected_owner}",
+    )
+    return rc == 0 and stdout.splitlines() in ([value] for value in descriptions)
 
 
 def _interface_has_host_address(network: FvpTapNetwork) -> bool:

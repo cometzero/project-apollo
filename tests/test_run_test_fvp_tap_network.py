@@ -12,7 +12,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/test"))
 
-from run_test_fvp_tap_contract import FVP_TAP_NETWORK_ENV, JsonValue  # noqa: E402
+from run_test_fvp_tap_contract import (  # noqa: E402
+    FVP_TAP_NETWORK_ENV,
+    FvpTapNetwork,
+    JsonValue,
+)
 from run_test_fvp_tap_state import (  # noqa: E402
     TapNetworkState,
     _expected_dnsmasq_options,
@@ -20,6 +24,7 @@ from run_test_fvp_tap_state import (  # noqa: E402
     authenticated_tap_state,
 )
 from run_test_fvp_tap_network import (  # noqa: E402
+    _interface_is_owned,
     _nft_contract_matches,
     tap_network_preflight,
     verify_unprivileged_contract,
@@ -33,6 +38,37 @@ NETWORK = {
     "target_ip": "192.0.2.10",
     "prefix_length": 24,
 }
+
+
+@pytest.mark.parametrize(
+    ("output", "expected"),
+    [
+        ("apollo-fvp-tap0: tap persist user 1000\n", True),
+        ("apollo-fvp-tap0: tap vnet_hdr persist user 1000\n", True),
+        ("apollo-fvp-tap0: tap vnet_hdr persist user 999\n", False),
+        ("apollo-fvp-tap0: tap multi_queue persist user 1000\n", False),
+        ("apollo-fvp-tap0: tap vnet_hdr persist user 1000 extra\n", False),
+    ],
+)
+def test_tap_owner_accepts_only_kernel_vnet_header_flag(
+    monkeypatch: pytest.MonkeyPatch,
+    output: str,
+    expected: bool,
+) -> None:
+    # Given: the kernel's persistent TAP description before or after FVP use.
+    network = FvpTapNetwork(
+        "apollo-fvp-tap0",
+        "192.0.2.1",
+        "192.0.2.10",
+        24,
+    )
+    monkeypatch.setattr(
+        "run_test_fvp_tap_network._command_output",
+        lambda _argv: (0, output, ""),
+    )
+
+    # When/Then: only the owned base form and FVP-added vnet_hdr form pass.
+    assert _interface_is_owned(network, 1000) is expected
 
 
 def test_tap_preflight_blocks_absent_interface_before_fvp(
