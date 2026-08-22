@@ -96,6 +96,48 @@ def _git_revision(path: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def _file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _plugin_receipts(context: JsonObject) -> list[JsonObject]:
+    runtime_config = _mapping(context.get("runtime_config"))
+    fvpconf_path = Path(_string(runtime_config.get("path")))
+    if not fvpconf_path.is_file():
+        return []
+    try:
+        fvpconf = _mapping(json.loads(fvpconf_path.read_text(encoding="utf-8")))
+    except json.JSONDecodeError as error:
+        raise ProvenanceError("blocked_missing_crypto_plugin") from error
+    args = fvpconf.get("args")
+    if not isinstance(args, list):
+        return []
+    receipts: list[JsonObject] = []
+    for index, raw_arg in enumerate(args[:-1]):
+        if raw_arg != "--plugin" or not isinstance(args[index + 1], str):
+            continue
+        original = Path(args[index + 1])
+        try:
+            resolved = original.resolve(strict=True)
+            if not resolved.is_file():
+                raise OSError
+            digest = _file_digest(resolved)
+        except OSError as error:
+            raise ProvenanceError("blocked_missing_crypto_plugin") from error
+        receipts.append(
+            {
+                "path": str(original),
+                "resolved_path": str(resolved),
+                "sha256": digest,
+            }
+        )
+    return receipts
+
+
 def capture_run_inputs(
     root: Path,
     run_dir: Path,
@@ -138,6 +180,9 @@ def capture_run_inputs(
         )
     path = evidence_dir / "input-manifest.json"
     payload: JsonObject = {"inputs": entries}
+    plugins = _plugin_receipts(context)
+    if plugins:
+        payload["plugins"] = plugins
     provenance = context.get("provenance")
     if isinstance(provenance, dict):
         payload["provenance"] = provenance

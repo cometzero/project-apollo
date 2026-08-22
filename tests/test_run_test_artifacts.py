@@ -9,6 +9,24 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/test"))
 
 from run_test_artifacts import normalize_console_logs, write_profile_result  # noqa: E402
+from run_test_preflight import _plugin_check  # noqa: E402
+
+
+def test_plugin_check_hashes_dereferenced_content(tmp_path: Path) -> None:
+    # Given: a plugin symlink with a stable user-facing path.
+    plugin = tmp_path / "Crypto.so"
+    target = tmp_path / "Crypto-v1.so"
+    target.write_bytes(b"plugin-v1")
+    plugin.symlink_to(target.name)
+
+    # When: preflight resolves and hashes the plugin target.
+    first, _ = _plugin_check("plugin:Crypto.so", plugin, "blocked_missing_crypto_plugin")
+    target.write_bytes(b"plugin-v2")
+    second, _ = _plugin_check("plugin:Crypto.so", plugin, "blocked_missing_crypto_plugin")
+
+    # Then: a same-path content mutation cannot preserve the receipt.
+    assert first.resolved_path == str(target)
+    assert first.sha256 != second.sha256
 
 
 def test_pfdi_profile_result_uses_normalized_console_roles(

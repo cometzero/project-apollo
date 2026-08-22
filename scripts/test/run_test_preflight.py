@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -43,6 +44,8 @@ class CheckResult:
     status: str
     path: str
     reason: str = ""
+    resolved_path: str = ""
+    sha256: str = ""
 
 
 def _read_json(path: Path) -> JsonObject:
@@ -104,6 +107,26 @@ def _file_check(name: str, path: Path, reason: str) -> tuple[CheckResult, JsonOb
     if path.is_file():
         return CheckResult(name=name, status="ok", path=str(path)), None
     return CheckResult(name=name, status="blocked", path=str(path), reason=reason), _blocker(reason, path, name)
+
+
+def _plugin_check(name: str, path: Path, reason: str) -> tuple[CheckResult, JsonObject | None]:
+    try:
+        resolved = path.resolve(strict=True)
+        if not resolved.is_file():
+            raise OSError
+        digest = hashlib.sha256()
+        with resolved.open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError:
+        return CheckResult(name=name, status="blocked", path=str(path), reason=reason), _blocker(reason, path, name)
+    return CheckResult(
+        name=name,
+        status="ok",
+        path=str(path),
+        resolved_path=str(resolved),
+        sha256=digest.hexdigest(),
+    ), None
 
 
 def _path_check(name: str, path: Path, reason: str) -> tuple[CheckResult, JsonObject | None]:
@@ -274,7 +297,7 @@ def run_preflight(inputs: PreflightInputs) -> JsonObject:
     _append_check(checks, blockers, _file_check("fvp_executable", executable, "blocked_missing_fvp_executable"))
     for plugin in _plugin_paths(inputs, _str_list(fvpconf.get("args")), bindir):
         reason = "blocked_missing_crypto_plugin" if plugin.name == "Crypto.so" else "blocked_missing_fvp_plugin"
-        _append_check(checks, blockers, _file_check(f"plugin:{plugin.name}", plugin, reason))
+        _append_check(checks, blockers, _plugin_check(f"plugin:{plugin.name}", plugin, reason))
     raw_artifacts = _fvp_artifacts(fvpconf) + _testdata_artifacts(inputs, deploy_dir, testdata)
     artifacts = _dedupe([_resolve_artifact(inputs, artifact) for artifact in raw_artifacts])
     for artifact in artifacts:
