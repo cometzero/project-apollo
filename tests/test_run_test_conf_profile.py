@@ -45,17 +45,6 @@ PRODUCT_SUITES = (
 )
 BSP_SUITES = ("test_00_bsp_boot", "test_01_bsp_ssh")
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
-FVP_TAP_NETWORK_ENV = "APOLLO_VALIDATION_FVP_TAP_NETWORK"
-FVP_TAP_NETWORK = {
-    "interface_name": "apollo-fvp-tap0",
-    "host_ip": "192.0.2.1",
-    "target_ip": "192.0.2.10",
-    "prefix_length": 24,
-}
-FVP_RUNTIME_NETWORK_CONFIG = {
-    "ros.virtio_net.hostbridge.interfaceName": "apollo-fvp-tap0",
-    "ros.virtio_net.hostbridge.userNetworking": "0",
-}
 
 
 def _bitbake_value(machine: str, image: str, variable: str) -> str:
@@ -182,104 +171,6 @@ def test_default_profile_conf_has_no_si_cl1_override(tmp_path: Path) -> None:
     # Then: no profile-only SI CL1 policy leaks into the default configuration.
     assert result.conf_path is not None
     assert SI_CL1_UART not in result.conf_path.read_text(encoding="utf-8")
-
-
-def test_platform_tap_network_is_emitted_only_in_run_conf(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    # Given: the profile's typed host-to-guest TAP contract.
-    monkeypatch.setenv(FVP_TAP_NETWORK_ENV, json.dumps(FVP_TAP_NETWORK))
-    monkeypatch.setenv(
-        "APOLLO_VALIDATION_FVP_CONFIG",
-        json.dumps(FVP_RUNTIME_NETWORK_CONFIG),
-    )
-    request = ConfRequest(
-        root=tmp_path,
-        build_dir=Path("build"),
-        machine="apollo-fvp",
-        run_dir=Path("build/tests/platform-devices"),
-        kind="extended",
-    )
-    manifest: JsonObject = {
-        "machine": "apollo-fvp",
-        "distro": "auto-ad-nexios",
-        "image": "nexios-image",
-    }
-
-    # When: the run-scoped OEQA configuration is generated.
-    result = write_conf(request, manifest)
-
-    # Then: FVP leaves localhost forwarding and targets the TAP guest directly.
-    assert result.conf_path is not None
-    text = result.conf_path.read_text(encoding="utf-8")
-    assert 'FVP_CONFIG[ros.virtio_net.hostbridge.userNetworking] = "0"' in text
-    assert 'FVP_CONFIG[ros.virtio_net.hostbridge.interfaceName] = "apollo-fvp-tap0"' in text
-    assert 'TEST_TARGET_IP = "192.0.2.10"' in text
-    assert 'TEST_SERVER_IP = "192.0.2.1"' in text
-    assert FVP_TAP_NETWORK_ENV in text
-    assert text.count("FVP_CONFIG[ros.virtio_net.hostbridge.userNetworking]") == 1
-    assert text.count("FVP_CONFIG[ros.virtio_net.hostbridge.interfaceName]") == 1
-
-
-def test_tap_environment_alone_cannot_claim_runtime_fvp_config(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    # Given: TAP preflight data without the selected runtime FVP parameter map.
-    monkeypatch.setenv(FVP_TAP_NETWORK_ENV, json.dumps(FVP_TAP_NETWORK))
-    monkeypatch.delenv("APOLLO_VALIDATION_FVP_CONFIG", raising=False)
-    request = ConfRequest(
-        root=tmp_path,
-        build_dir=Path("build"),
-        machine="apollo-fvp",
-        run_dir=Path("build/tests/tap-only"),
-        kind="extended",
-    )
-
-    # When: the run-scoped configuration is generated.
-    result = write_conf(
-        request,
-        {"machine": "apollo-fvp", "distro": "auto-ad-nexios"},
-    )
-
-    # Then: TAP routing remains available without a misleading FVP override.
-    assert result.conf_path is not None
-    text = result.conf_path.read_text(encoding="utf-8")
-    assert FVP_TAP_NETWORK_ENV in text
-    assert "ros.virtio_net.hostbridge.userNetworking" not in text
-    assert "ros.virtio_net.hostbridge.interfaceName" not in text
-
-
-@pytest.mark.parametrize(
-    "payload",
-    [
-        {**FVP_TAP_NETWORK, "target_ip": "127.0.0.1"},
-        {**FVP_TAP_NETWORK, "interface_name": "tap0; injected"},
-        {**FVP_TAP_NETWORK, "prefix_length": 25},
-    ],
-)
-def test_run_conf_rejects_malformed_fvp_tap_network(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    payload: object,
-) -> None:
-    # Given: untrusted TAP data at the BitBake environment boundary.
-    monkeypatch.setenv(FVP_TAP_NETWORK_ENV, json.dumps(payload))
-    request = ConfRequest(
-        root=tmp_path,
-        build_dir=Path("build"),
-        machine="apollo-fvp",
-        run_dir=Path("build/tests/invalid-tap"),
-        kind="extended",
-    )
-
-    # When/Then: no shell or BitBake assignment is emitted for invalid data.
-    with pytest.raises(ValueError, match="FVP TAP network"):
-        write_conf(
-            request,
-            {"machine": "apollo-fvp", "distro": "auto-ad-nexios"},
-        )
 
 
 @pytest.mark.parametrize(

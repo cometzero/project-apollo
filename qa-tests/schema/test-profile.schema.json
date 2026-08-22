@@ -56,17 +56,6 @@
       "properties": {
         "css.smb.si.cluster1_pl011_uart.uart_enable": {"const": "1"}
       }
-    },
-    "fvp_tap_network": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["interface_name", "host_ip", "target_ip", "prefix_length"],
-      "properties": {
-        "interface_name": {"const": "apollo-fvp-tap0"},
-        "host_ip": {"const": "192.0.2.1"},
-        "target_ip": {"const": "192.0.2.10"},
-        "prefix_length": {"const": 24}
-      }
     }
   }
 }

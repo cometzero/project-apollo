@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import ipaddress
 import json
 from pathlib import Path
 from typing import TypeAlias
@@ -11,14 +10,7 @@ JsonScalar: TypeAlias = str | int | bool | None
 JsonValue: TypeAlias = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
 FvpConfig: TypeAlias = tuple[tuple[str, str], ...]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
-FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
-FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
 FVP_CONFIG_PROFILES = frozenset({"bsp-core", "pfdi-si-cl1", "si-cl1"})
-FVP_TAP_NETWORK_PROFILES = frozenset({"platform-devices"})
-FVP_TAP_INTERFACE = "apollo-fvp-tap0"
-FVP_TAP_HOST_IP = "192.0.2.1"
-FVP_TAP_TARGET_IP = "192.0.2.10"
-FVP_TAP_PREFIX_LENGTH = 24
 
 
 class ProfileError(Exception):
@@ -41,7 +33,6 @@ class TestProfile:
     backend: str
     image_profile: str
     fvp_config: FvpConfig
-    fvp_tap_network: "FvpTapNetwork | None"
     required_cpu_count: int | None
 
 
@@ -53,43 +44,6 @@ class CpuCountMismatch:
     @property
     def reason(self) -> str:
         return "not_applicable_cpu_count"
-
-
-@dataclass(frozen=True, slots=True)
-class FvpTapNetwork:
-    interface_name: str
-    host_ip: str
-    target_ip: str
-    prefix_length: int
-
-    def as_json(self) -> dict[str, JsonValue]:
-        return {
-            "interface_name": self.interface_name,
-            "host_ip": self.host_ip,
-            "target_ip": self.target_ip,
-            "prefix_length": self.prefix_length,
-        }
-
-    def runtime_fvp_config(self) -> FvpConfig:
-        return (
-            (FVP_USER_NETWORKING, "0"),
-            (FVP_INTERFACE_NAME, self.interface_name),
-        )
-
-
-def merge_fvp_runtime_config(
-    profile_config: FvpConfig,
-    tap_network: FvpTapNetwork | None,
-) -> FvpConfig:
-    network_config = () if tap_network is None else tap_network.runtime_fvp_config()
-    merged: list[tuple[str, str]] = []
-    selected_keys: set[str] = set()
-    for key, value in (*profile_config, *network_config):
-        if key in selected_keys:
-            raise ProfileError(f"duplicate FVP config key: {key}")
-        selected_keys.add(key)
-        merged.append((key, value))
-    return tuple(merged)
 
 
 def _mapping(value: JsonValue, field: str) -> dict[str, JsonValue]:
@@ -154,45 +108,6 @@ def _fvp_config(value: JsonValue, profile_name: str) -> FvpConfig:
     return tuple(entries)
 
 
-def _fvp_tap_network(value: JsonValue, profile_name: str) -> FvpTapNetwork | None:
-    if value is None:
-        if profile_name in FVP_TAP_NETWORK_PROFILES:
-            raise ProfileError(f"profile {profile_name} requires FVP TAP network")
-        return None
-    if profile_name not in FVP_TAP_NETWORK_PROFILES:
-        raise ProfileError(f"profile {profile_name} does not permit FVP TAP network")
-    data = _mapping(value, "fvp_tap_network")
-    expected = {"interface_name", "host_ip", "target_ip", "prefix_length"}
-    if set(data) != expected:
-        raise ProfileError("FVP TAP network has unknown or missing fields")
-    interface_name = _string(data.get("interface_name"), "fvp_tap_network.interface_name")
-    host_ip = _string(data.get("host_ip"), "fvp_tap_network.host_ip")
-    target_ip = _string(data.get("target_ip"), "fvp_tap_network.target_ip")
-    prefix_length = data.get("prefix_length")
-    if type(prefix_length) is not int:
-        raise ProfileError("FVP TAP network prefix_length must be an integer")
-    try:
-        host_address = ipaddress.ip_address(host_ip)
-        target_address = ipaddress.ip_address(target_ip)
-    except ValueError as error:
-        raise ProfileError("FVP TAP network addresses must be IPv4") from error
-    if (
-        not isinstance(host_address, ipaddress.IPv4Address)
-        or not isinstance(target_address, ipaddress.IPv4Address)
-        or host_address.is_loopback
-        or target_address.is_loopback
-    ):
-        raise ProfileError("FVP TAP network addresses must be non-loopback IPv4")
-    if (
-        interface_name != FVP_TAP_INTERFACE
-        or str(host_address) != FVP_TAP_HOST_IP
-        or str(target_address) != FVP_TAP_TARGET_IP
-        or prefix_length != FVP_TAP_PREFIX_LENGTH
-    ):
-        raise ProfileError("FVP TAP network does not match the project-owned contract")
-    return FvpTapNetwork(interface_name, str(host_address), str(target_address), prefix_length)
-
-
 def load_test_profile(
     root: Path,
     name: str,
@@ -234,6 +149,5 @@ def load_test_profile(
         backend=backend,
         image_profile=image_profile,
         fvp_config=_fvp_config(data.get("fvp_config"), profile_name),
-        fvp_tap_network=_fvp_tap_network(data.get("fvp_tap_network"), profile_name),
         required_cpu_count=_optional_positive_int(data.get("cpu_count"), "cpu_count"),
     )

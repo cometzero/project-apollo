@@ -7,6 +7,13 @@
       "selectors": ["test_40_virtualization"]
     }
   ],
+  "excluded_actions": [
+    {
+      "id": "primary-ping",
+      "profile_id": "platform-devices",
+      "reason": "Host ICMP is unavailable with FVP user networking; SSH through 127.0.0.1:2222 is required instead."
+    }
+  ],
   "profiles": [
     {
       "id": "bsp-core",
@@ -22,7 +29,7 @@
       "cpu_count": 4,
       "coverage_kind": "semantic",
       "fvp_selectors": ["test_00_rse_boot", "test_00_fvp_boot", "test_00_uboot_boot", "test_00_systemd_boot", "test_00_linux_boot", "test_60_linux_connectivity", "test_61_linux_dsu", "test_62_linux_cpu_topology", "test_63_linux_fvp_devices"],
-      "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog", "primary-ping", "primary-ssh", "systemd-boot-message"]
+      "qbox_assertions": ["platform-device-networking", "platform-device-rtc", "platform-device-cpu-hotplug", "platform-device-virtiorng", "platform-device-watchdog", "primary-ssh", "systemd-boot-message"]
     },
     {
       "id": "trusted-services",
@@ -149,7 +156,6 @@
         {"id": "platform-device-cpu-hotplug", "assertion_id": "platform-device-cpu-hotplug"},
         {"id": "platform-device-virtiorng", "assertion_id": "platform-device-virtiorng"},
         {"id": "platform-device-watchdog", "assertion_id": "platform-device-watchdog"},
-        {"id": "primary-ping", "assertion_id": "primary-ping"},
         {"id": "primary-ssh", "assertion_id": "primary-ssh"},
         {"id": "systemd-boot-message", "assertion_id": "systemd-boot-message"}
       ]

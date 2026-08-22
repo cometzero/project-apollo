@@ -8,9 +8,6 @@ import shutil
 import socket
 from typing import Final
 
-from run_test_fvp_tap_network import tap_network_preflight
-
-
 type JsonValue = None | bool | int | float | str | list[JsonValue] | dict[str, JsonValue]
 type JsonObject = dict[str, JsonValue]
 
@@ -259,35 +256,6 @@ def run_preflight(inputs: PreflightInputs) -> JsonObject:
     testdata_path = fvpconf_path.with_suffix(".testdata.json")
     _append_check(checks, blockers, _check_tool(inputs.root))
     _append_check(checks, blockers, _check_telnet())
-    tap_check = tap_network_preflight()
-    if tap_check.interface_name:
-        if tap_check.reason is None:
-            checks.append(
-                CheckResult(
-                    name="fvp_tap_network",
-                    status="ok",
-                    path=tap_check.interface_name,
-                )
-            )
-        else:
-            checks.append(
-                CheckResult(
-                    name="fvp_tap_network",
-                    status="blocked",
-                    path=tap_check.interface_name,
-                    reason=tap_check.reason,
-                )
-            )
-            blockers.append(
-                {
-                    "reason": tap_check.reason,
-                    "name": "fvp_tap_network",
-                    "interface_name": tap_check.interface_name,
-                    "host_ip": tap_check.host_ip,
-                    "target_ip": tap_check.target_ip,
-                    "hint": tap_check.hint,
-                }
-            )
     _append_check(checks, blockers, _file_check("fvpconf", fvpconf_path, "blocked_missing_fvpconf"))
     _append_check(checks, blockers, _file_check("testdata", testdata_path, "blocked_missing_testdata"))
     fvpconf = _read_json(fvpconf_path) if fvpconf_path.is_file() else {}

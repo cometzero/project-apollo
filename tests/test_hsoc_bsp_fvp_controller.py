@@ -19,14 +19,8 @@ for module_path in (
     sys.path.insert(0, str(module_path))
 
 from oeqa.controllers.fvp import OEFVPTargetState  # noqa: E402
-from apollo_validation.root_cli import parse_root_args  # noqa: E402
-from apollo_validation.selection import (  # noqa: E402
-    prepare_selection,
-    selected_test_environment,
-)
 from oeqa.controllers.hsocfvp import (  # noqa: E402
     HSOCBSPFVPTarget,
-    HSOCSingleSessionFVPTarget,
 )
 
 
@@ -102,8 +96,6 @@ def test_bsp_target_keeps_linux_session_for_on_transition() -> None:
 
 
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
-FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
-FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
 PROFILE_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
 
 
@@ -130,68 +122,6 @@ def _runtime_target(tmp_path: Path) -> tuple[HSOCBSPFVPTarget, Path]:
     target.bootlog = str(tmp_path / "run/logs/default.log")
     target.logger = FakeLogger()
     return target, source
-
-
-def _product_runtime_target(
-    tmp_path: Path,
-) -> tuple[HSOCSingleSessionFVPTarget, Path]:
-    deploy = tmp_path / "deploy"
-    deploy.mkdir()
-    source_image = deploy / "flash.bin"
-    source_image.write_bytes(b"source flash")
-    source = deploy / "image.fvpconf"
-    source.write_text(
-        json.dumps(
-            {
-                "parameters": {
-                    FVP_USER_NETWORKING: "1",
-                    "ros.flash_loader.fname": str(source_image),
-                    "ros.flash_loader.fnameWrite": str(source_image),
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-    target = HSOCSingleSessionFVPTarget.__new__(HSOCSingleSessionFVPTarget)
-    target.fvpconf = source
-    target.bootlog = str(tmp_path / "run/logs/default.log")
-    target.logger = FakeLogger()
-    return target, source
-
-
-def test_platform_profile_config_reaches_product_runtime_fvpconf(
-    tmp_path: Path,
-) -> None:
-    # Given: the selected platform profile and its immutable deployed config.
-    options = parse_root_args(
-        ["--fvp", "--headless", "--test-profile", "platform-devices"]
-    )
-    selection, _resolved = prepare_selection(ROOT, options)
-    assert selection is not None
-    target, source = _product_runtime_target(tmp_path)
-    source_bytes = source.read_bytes()
-
-    # When: the product controller prepares the selected runtime config.
-    with selected_test_environment(selection):
-        target._reset_writable_flash()
-
-    # Then: the private copy uses TAP networking and records both parameters.
-    assert source.read_bytes() == source_bytes
-    runtime = json.loads(target.fvpconf.read_text(encoding="utf-8"))
-    assert runtime["parameters"][FVP_USER_NETWORKING] == "0"
-    assert runtime["parameters"][FVP_INTERFACE_NAME] == "apollo-fvp-tap0"
-    receipt = json.loads(
-        (target.fvpconf.parent / "fvp-config-application.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert receipt["applied_fvp_config"] == {
-        FVP_INTERFACE_NAME: "apollo-fvp-tap0",
-        FVP_USER_NETWORKING: "0",
-    }
-    source_hash = hashlib.sha256(source_bytes).hexdigest()
-    assert receipt["source_sha256"] == source_hash
-    assert receipt["source_after_sha256"] == source_hash
 
 
 def test_profile_config_uses_private_runtime_fvpconf(
@@ -241,8 +171,6 @@ def test_default_controller_preserves_deployed_uart_value(
         {"unknown.parameter": "1"},
         {SI_CL1_UART: ["1"]},
         {SI_CL1_UART: '1\"\\nINJECT = "1'},
-        {FVP_USER_NETWORKING: "1"},
-        {FVP_INTERFACE_NAME: "tap0; injected"},
     ],
 )
 def test_controller_rejects_malformed_profile_config(

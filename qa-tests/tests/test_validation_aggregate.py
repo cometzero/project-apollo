@@ -201,7 +201,25 @@ def test_complete_non_xen_fixture_aggregates_public_cli(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     summary = json.loads((tmp_path / "out/summary.json").read_text())
     assert summary["status"] == "PASS"
-    assert summary["counts"] == {"areas": 15, "runs": 28, "actions": 100}
+    assert summary["counts"] == {
+        "areas": 15,
+        "runs": 28,
+        "actions": 100,
+        "required_actions": 99,
+        "excluded_actions": 1,
+    }
+    coverage = json.loads((tmp_path / "out/coverage.json").read_text())
+    assert coverage["excluded_actions"] == [
+        {
+            "id": "primary-ping",
+            "profile_id": "platform-devices",
+            "reason": (
+                "Host ICMP is unavailable with FVP user networking; SSH through "
+                "127.0.0.1:2222 is required instead."
+            ),
+            "status": "EXCLUDED",
+        }
+    ]
     assert (tmp_path / "out/coverage.json").is_file()
     assert (tmp_path / "out/summary.txt").is_file()
     assert (tmp_path / "out/junit.xml").is_file()

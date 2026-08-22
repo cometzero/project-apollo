@@ -6,6 +6,7 @@ from typing import Final, Iterable, TypeAlias
 
 from .validation_types import (
     CoverageKind,
+    ExcludedAction,
     ImageProfile,
     ValidationAction,
     ValidationArea,
@@ -157,6 +158,26 @@ def _parse_areas(raw_areas: JsonValue) -> tuple[ValidationArea, ...]:
     return tuple(areas)
 
 
+def _parse_excluded_actions(raw_actions: JsonValue) -> tuple[ExcludedAction, ...]:
+    actions: list[ExcludedAction] = []
+    for index, raw_action in enumerate(_list(raw_actions, "excluded_actions")):
+        field = f"excluded_actions[{index}]"
+        action = _mapping(raw_action, field)
+        actions.append(
+            ExcludedAction(
+                action_id=_string(action.get("id"), f"{field}.id"),
+                profile_id=_string(
+                    action.get("profile_id"), f"{field}.profile_id"
+                ),
+                reason=_string(action.get("reason"), f"{field}.reason"),
+            )
+        )
+    if not actions:
+        raise MatrixError("matrix field excluded_actions must be non-empty")
+    _ensure_unique((action.action_id for action in actions), "excluded action id")
+    return tuple(actions)
+
+
 def _excluded_xen_selector_count(raw_exclusions: JsonValue) -> int:
     count = 0
     for index, raw_exclusion in enumerate(_list(raw_exclusions, "exclusions")):
@@ -201,7 +222,19 @@ def _validate_contract(matrix: ValidationMatrix) -> None:
             action_ids.append(action.action_id)
             assertion_ids.append(action.assertion_id)
             profile_assertions[area.profile_id].append(action.assertion_id)
+    for action in matrix.excluded_actions:
+        profile = profile_by_id.get(action.profile_id)
+        if profile is None:
+            raise MatrixError(f"unknown profile: {action.profile_id}")
+        if action.action_id in profile.qbox_assertions:
+            raise MatrixError(
+                f"excluded action is a runtime assertion: {action.action_id}"
+            )
     _ensure_unique(action_ids, "action id")
+    _ensure_unique(
+        [*action_ids, *(action.action_id for action in matrix.excluded_actions)],
+        "documented action id",
+    )
     _ensure_unique(assertion_ids, "assertion id")
     for profile_id, assertions in profile_assertions.items():
         profile = profile_by_id[profile_id]
@@ -218,6 +251,7 @@ def parse_validation_matrix(value: JsonValue, path: Path) -> ValidationMatrix:
     matrix = ValidationMatrix(
         profiles=_parse_profiles(root.get("profiles")),
         areas=_parse_areas(root.get("areas")),
+        excluded_actions=_parse_excluded_actions(root.get("excluded_actions")),
         excluded_xen_selector_count=_excluded_xen_selector_count(root.get("exclusions")),
     )
     _validate_contract(matrix)

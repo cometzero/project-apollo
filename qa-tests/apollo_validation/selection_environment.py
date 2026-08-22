@@ -6,14 +6,10 @@ import json
 import os
 from typing import Protocol
 
-from .profiles import FvpTapNetwork
-
-
 SELECTED_SUITES_ENV = "APOLLO_VALIDATION_TEST_SUITES"
 SELECTED_KIND_ENV = "APOLLO_VALIDATION_OEQA_KIND"
 SELECTED_TARGET_ENV = "APOLLO_VALIDATION_TEST_TARGET"
 SELECTED_FVP_CONFIG_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
-SELECTED_FVP_TAP_NETWORK_ENV = "APOLLO_VALIDATION_FVP_TAP_NETWORK"
 BITBAKE_PASSTHROUGH_ENV = "BB_ENV_PASSTHROUGH_ADDITIONS"
 
 
@@ -30,10 +26,6 @@ class SelectedTest(Protocol):
     @property
     def fvp_config(self) -> tuple[tuple[str, str], ...]: ...
 
-    @property
-    def fvp_tap_network(self) -> FvpTapNetwork | None: ...
-
-
 @contextmanager
 def selected_test_environment(selection: SelectedTest | None) -> Iterator[None]:
     keys = (
@@ -41,7 +33,6 @@ def selected_test_environment(selection: SelectedTest | None) -> Iterator[None]:
         SELECTED_KIND_ENV,
         SELECTED_TARGET_ENV,
         SELECTED_FVP_CONFIG_ENV,
-        SELECTED_FVP_TAP_NETWORK_ENV,
         BITBAKE_PASSTHROUGH_ENV,
     )
     previous = {key: os.environ.get(key) for key in keys}
@@ -60,15 +51,6 @@ def selected_test_environment(selection: SelectedTest | None) -> Iterator[None]:
             os.environ[BITBAKE_PASSTHROUGH_ENV] = " ".join(sorted(passthrough))
         else:
             os.environ.pop(SELECTED_FVP_CONFIG_ENV, None)
-        if selection is not None and selection.fvp_tap_network is not None:
-            os.environ[SELECTED_FVP_TAP_NETWORK_ENV] = json.dumps(
-                selection.fvp_tap_network.as_json(), sort_keys=True
-            )
-            passthrough = set((os.environ.get(BITBAKE_PASSTHROUGH_ENV) or "").split())
-            passthrough.add(SELECTED_FVP_TAP_NETWORK_ENV)
-            os.environ[BITBAKE_PASSTHROUGH_ENV] = " ".join(sorted(passthrough))
-        else:
-            os.environ.pop(SELECTED_FVP_TAP_NETWORK_ENV, None)
         yield
     finally:
         for key, value in previous.items():

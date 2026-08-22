@@ -19,17 +19,12 @@ sys.path.insert(
 
 from oeqa.controllers import hsocfvp_copy as sparse_copy  # noqa: E402
 from oeqa.controllers.hsocfvp_config import (  # noqa: E402
-    PROFILE_ENV,
     RuntimeConfigRequest,
     prepare_runtime_config,
 )
 
 
 SPARSE_SIZE = 64 * 1024 * 1024
-FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
-FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
-
-
 class FakeLogger:
     def debug(self, message: str, *values: str | Path) -> None:
         assert message
@@ -53,7 +48,6 @@ def _sparse_file(path: Path, size: int = SPARSE_SIZE) -> None:
 
 def test_prepare_runtime_config_preserves_sparse_wic_extents(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Given: a product config containing sparse WIC and dense flash inputs.
     deploy = tmp_path / "deploy"
@@ -75,7 +69,6 @@ def test_prepare_runtime_config_preserves_sparse_wic_extents(
                     "ros.flash_loader.fname": str(dense_source),
                     "ros.flash_loader.fnameWrite": str(dense_source),
                     "ros.virtio_block0.image_path": str(sparse_source),
-                    FVP_USER_NETWORKING: "1",
                 }
             }
         ),
@@ -83,16 +76,6 @@ def test_prepare_runtime_config_preserves_sparse_wic_extents(
     )
     sparse_hash = _sha256(sparse_source)
     source_stat = sparse_source.stat()
-    monkeypatch.setenv(
-        PROFILE_ENV,
-        json.dumps(
-            {
-                FVP_USER_NETWORKING: "0",
-                FVP_INTERFACE_NAME: "apollo-fvp-tap0",
-            }
-        ),
-    )
-
     # When: the controller creates writable runtime images.
     runtime = prepare_runtime_config(
         RuntimeConfigRequest(

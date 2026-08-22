@@ -8,12 +8,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from apollo_validation.profiles import (
-    FvpTapNetwork,
-    ProfileError,
-    load_test_profile,
-    merge_fvp_runtime_config,
-)
+from apollo_validation.profiles import ProfileError, load_test_profile
 from apollo_validation.root_cli import parse_root_args
 from apollo_validation.selection import (
     prepare_selection,
@@ -24,10 +19,7 @@ from apollo_validation.selection import (
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 SI_CL1_UART = "css.smb.si.cluster1_pl011_uart.uart_enable"
-FVP_USER_NETWORKING = "ros.virtio_net.hostbridge.userNetworking"
-FVP_INTERFACE_NAME = "ros.virtio_net.hostbridge.interfaceName"
 SELECTED_FVP_CONFIG_ENV = "APOLLO_VALIDATION_FVP_CONFIG"
-SELECTED_FVP_TAP_NETWORK_ENV = "APOLLO_VALIDATION_FVP_TAP_NETWORK"
 BITBAKE_PASSTHROUGH_ENV = "BB_ENV_PASSTHROUGH_ADDITIONS"
 
 
@@ -133,10 +125,7 @@ def test_platform_devices_profile_selects_product_runtime_contract() -> None:
     assert profile.oeqa_kind == "extended"
     assert profile.test_target == "HSOCSingleSessionFVPTarget"
     assert profile.timeout_seconds == 3600
-    assert profile.fvp_tap_network is not None
-    assert profile.fvp_tap_network.interface_name == "apollo-fvp-tap0"
-    assert profile.fvp_tap_network.host_ip == "192.0.2.1"
-    assert profile.fvp_tap_network.target_ip == "192.0.2.10"
+    assert profile.fvp_config == ()
 
 
 def _oeqa_method_dependencies(module: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
@@ -218,6 +207,19 @@ def test_platform_devices_profile_has_complete_oeqa_dependency_closure() -> None
     _assert_oeqa_dependency_closure(profile.selectors)
 
 
+def test_platform_devices_uses_default_user_networking_without_ping() -> None:
+    profile = load_test_profile(WORKSPACE, "platform-devices", "fvp", "product")
+    raw_profile = json.loads(profile.path.read_text(encoding="utf-8"))
+    methods = dict(_oeqa_method_dependencies("test_60_linux_connectivity"))
+
+    assert "fvp_tap_network" not in raw_profile
+    assert profile.fvp_config == ()
+    assert not any(method.endswith(".test_ping") for method in methods)
+    assert methods[
+        "test_60_linux_connectivity.LinuxConnectivityTest.test_ssh"
+    ] == ("test_00_linux_boot.LinuxBootTest.test_linux_boot",)
+
+
 def test_trusted_services_profile_selects_serial_product_contract() -> None:
     # Given: the PSA conformance profile on the normal FVP user-network path.
     # When: it is resolved for the product image.
@@ -233,7 +235,6 @@ def test_trusted_services_profile_selects_serial_product_contract() -> None:
     assert profile.oeqa_kind == "extended"
     assert profile.test_target == "HSOCSingleSessionFVPTarget"
     assert profile.timeout_seconds == 7200
-    assert profile.fvp_tap_network is None
     _assert_oeqa_dependency_closure(profile.selectors)
 
 
@@ -251,7 +252,6 @@ def test_crypto_extension_profile_selects_plugin_backed_product_contract() -> No
     assert profile.oeqa_kind == "extended"
     assert profile.test_target == "HSOCSingleSessionFVPTarget"
     assert profile.timeout_seconds == 2400
-    assert profile.fvp_tap_network is None
     _assert_oeqa_dependency_closure(profile.selectors)
 
 
@@ -357,67 +357,6 @@ def test_profile_fvp_config_crosses_the_selected_environment_boundary(
     assert SELECTED_FVP_CONFIG_ENV not in os.environ
 
 
-def test_platform_devices_tap_network_crosses_the_selected_environment_boundary(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    # Given: the product FVP profile and no inherited network policy.
-    monkeypatch.delenv(SELECTED_FVP_TAP_NETWORK_ENV, raising=False)
-    options = parse_root_args(
-        ["--fvp", "--headless", "--test-profile", "platform-devices"]
-    )
-    selection, _resolved = prepare_selection(WORKSPACE, options)
-    assert selection is not None
-    assert selection.fvp_config == (
-        (FVP_USER_NETWORKING, "0"),
-        (FVP_INTERFACE_NAME, "apollo-fvp-tap0"),
-    )
-
-    # When: the selected profile establishes its run-owned environment.
-    with selected_test_environment(selection):
-        selected = os.environ.get(SELECTED_FVP_TAP_NETWORK_ENV)
-        selected_config = os.environ.get(SELECTED_FVP_CONFIG_ENV)
-        passthrough = os.environ.get(BITBAKE_PASSTHROUGH_ENV, "").split()
-
-    # Then: only the fixed non-loopback TAP contract reaches BitBake.
-    assert json.loads(selected or "null") == {
-        "host_ip": "192.0.2.1",
-        "interface_name": "apollo-fvp-tap0",
-        "prefix_length": 24,
-        "target_ip": "192.0.2.10",
-    }
-    assert json.loads(selected_config or "null") == {
-        FVP_INTERFACE_NAME: "apollo-fvp-tap0",
-        FVP_USER_NETWORKING: "0",
-    }
-    assert SELECTED_FVP_CONFIG_ENV in passthrough
-    assert SELECTED_FVP_TAP_NETWORK_ENV in passthrough
-    assert SELECTED_FVP_TAP_NETWORK_ENV not in os.environ
-
-
-def test_runtime_fvp_config_merges_uart_and_tap_parameters() -> None:
-    # Given: independent typed UART and TAP policies selected for one FVP run.
-    network = FvpTapNetwork("apollo-fvp-tap0", "192.0.2.1", "192.0.2.10", 24)
-
-    # When: the runtime map is assembled at the selection boundary.
-    merged = merge_fvp_runtime_config(((SI_CL1_UART, "1"),), network)
-
-    # Then: each approved parameter appears once with its exact safe value.
-    assert merged == (
-        (SI_CL1_UART, "1"),
-        (FVP_USER_NETWORKING, "0"),
-        (FVP_INTERFACE_NAME, "apollo-fvp-tap0"),
-    )
-
-
-def test_runtime_fvp_config_rejects_duplicate_parameter() -> None:
-    # Given: an explicit profile map conflicts with a derived TAP parameter.
-    network = FvpTapNetwork("apollo-fvp-tap0", "192.0.2.1", "192.0.2.10", 24)
-
-    # When/Then: the merge rejects the duplicate before environment export.
-    with pytest.raises(ProfileError, match="duplicate FVP config key"):
-        merge_fvp_runtime_config(((FVP_USER_NETWORKING, "1"),), network)
-
-
 def test_pfdi_selection_clears_inherited_fvp_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -475,40 +414,6 @@ def test_profile_rejects_invalid_fvp_config(
     # When/Then: the typed profile boundary rejects it before selection.
     with pytest.raises(ProfileError, match=reason):
         load_test_profile(tmp_path, profile_name, "fvp", "bsp")
-
-
-@pytest.mark.parametrize(
-    "tap_network",
-    [
-        None,
-        {"interface_name": "lo", "host_ip": "192.0.2.1", "target_ip": "192.0.2.10", "prefix_length": 24},
-        {"interface_name": "apollo-fvp-tap0", "host_ip": "127.0.0.1", "target_ip": "192.0.2.10", "prefix_length": 24},
-        {"interface_name": "apollo-fvp-tap0", "host_ip": "192.0.2.1", "target_ip": "127.0.0.1", "prefix_length": 24},
-        {"interface_name": "apollo-fvp-tap0", "host_ip": "192.0.2.1", "target_ip": "192.0.2.10", "prefix_length": "24"},
-    ],
-)
-def test_profile_rejects_malformed_fvp_tap_network(
-    tmp_path: Path,
-    tap_network: object,
-) -> None:
-    # Given: a profile whose TAP declaration cannot safely reach the host.
-    profile_dir = tmp_path / "qa-tests/profiles"
-    profile_dir.mkdir(parents=True)
-    payload = {
-        "version": 1,
-        "name": "platform-devices",
-        "compatibility": {"backends": ["fvp"], "images": ["product"]},
-        "oeqa": {"kind": "extended", "selectors": ["test_x"], "timeout_seconds": 1},
-        "targets": {"fvp": "Target"},
-        "fvp_tap_network": tap_network,
-    }
-    (profile_dir / "platform-devices.yaml").write_text(
-        json.dumps(payload), encoding="utf-8"
-    )
-
-    # When/Then: parsing rejects it before a runner can use host networking.
-    with pytest.raises(ProfileError, match="FVP TAP network"):
-        load_test_profile(tmp_path, "platform-devices", "fvp", "product")
 
 
 def test_pfdi_profile_selects_qbox_probe_contract() -> None:

@@ -25,6 +25,13 @@ class ValidationAction:
 
 
 @dataclass(frozen=True, slots=True)
+class ExcludedAction:
+    action_id: str
+    profile_id: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class ValidationArea:
     area_id: str
     heading: str
@@ -45,6 +52,7 @@ class ActionMapping:
 class ValidationMatrix:
     profiles: tuple[ValidationProfile, ...]
     areas: tuple[ValidationArea, ...]
+    excluded_actions: tuple[ExcludedAction, ...]
     excluded_xen_selector_count: int
 
     @property
@@ -57,7 +65,15 @@ class ValidationMatrix:
 
     @property
     def action_count(self) -> int:
+        return self.required_action_count + self.excluded_action_count
+
+    @property
+    def required_action_count(self) -> int:
         return sum(len(area.actions) for area in self.areas)
+
+    @property
+    def excluded_action_count(self) -> int:
+        return len(self.excluded_actions)
 
     @property
     def semantic_qbox_area_count(self) -> int:

@@ -145,8 +145,8 @@ def test_canonical_matrix_links_actions_to_profile_assertions() -> None:
     mappings = tuple(matrix.action_mappings())
 
     # Then: stable action and assertion IDs are unique and executable.
-    assert len({mapping.action_id for mapping in mappings}) == 100
-    assert len({mapping.assertion_id for mapping in mappings}) == 100
+    assert len({mapping.action_id for mapping in mappings}) == 99
+    assert len({mapping.assertion_id for mapping in mappings}) == 99
     assert all(mapping.assertion_id in mapping.qbox_assertions for mapping in mappings)
 
 
@@ -193,8 +193,30 @@ def test_platform_devices_owns_controller_and_boot_actions() -> None:
     assert {"primary-ping", "primary-ssh", "systemd-boot-message"}.isdisjoint(
         bsp_actions
     )
-    assert {"primary-ping", "primary-ssh", "systemd-boot-message"} <= platform_actions
+    assert {"primary-ssh", "systemd-boot-message"} <= platform_actions
+    assert "primary-ping" not in platform_actions
     assert matrix.action_count == 100
+
+
+def test_primary_ping_is_documented_only_as_an_excluded_action() -> None:
+    matrix = load_validation_matrix(MATRIX_PATH)
+    required = {
+        action.action_id for area in matrix.areas for action in area.actions
+    }
+
+    assert matrix.action_count == 100
+    assert matrix.required_action_count == 99
+    assert matrix.excluded_action_count == 1
+    assert "primary-ping" not in required
+    assert tuple(item.action_id for item in matrix.excluded_actions) == (
+        "primary-ping",
+    )
+    assert "user networking" in matrix.excluded_actions[0].reason
+    platform = next(
+        profile for profile in matrix.profiles
+        if profile.profile_id == "platform-devices"
+    )
+    assert "primary-ping" not in platform.qbox_assertions
 
 
 @pytest.mark.parametrize(

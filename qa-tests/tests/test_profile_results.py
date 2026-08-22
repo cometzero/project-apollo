@@ -74,6 +74,12 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
     )
 
 
+def test_platform_devices_never_expects_primary_ping() -> None:
+    profile = _profile("platform-devices")
+
+    assert "primary-ping" not in profile.qbox_assertions
+
+
 @pytest.mark.parametrize(
     ("profile_id", "methods"),
     [
@@ -130,7 +136,6 @@ def test_real_oeqa_result_normalizes_to_complete_pfdi_assertions(
             "platform-devices",
             (
                 "test_00_systemd_boot.SystemdBootTest.test_systemd_boot",
-                "test_60_linux_connectivity.LinuxConnectivityTest.test_ping",
                 "test_60_linux_connectivity.LinuxConnectivityTest.test_ssh",
                 "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_networking",
                 "test_63_linux_fvp_devices.LinuxFVPDevicesTest.test_rtc",

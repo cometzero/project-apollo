@@ -40,12 +40,23 @@ def write_aggregate_outputs(
         "areas": matrix.area_count,
         "runs": len(sources),
         "actions": matrix.action_count,
+        "required_actions": matrix.required_action_count,
+        "excluded_actions": matrix.excluded_action_count,
     }
     coverage: JsonMapping = {
         "version": 1,
         "status": "PASS",
         "counts": counts,
         "areas": areas,
+        "excluded_actions": [
+            {
+                "id": item.action_id,
+                "profile_id": item.profile_id,
+                "reason": item.reason,
+                "status": "EXCLUDED",
+            }
+            for item in matrix.excluded_actions
+        ],
         "sources": source_values,
     }
     summary: JsonMapping = {
@@ -61,7 +72,8 @@ def write_aggregate_outputs(
             encoding="utf-8",
         )
     (out_dir / "summary.txt").write_text(
-        "RESULT: PASS\nAREAS: 15/15\nRUNS: 28/28\nACTIONS: 100/100\n",
+        "RESULT: PASS\nAREAS: 15/15\nRUNS: 28/28\n"
+        "ACTIONS: 99/99\nEXCLUDED ACTIONS: 1\n",
         encoding="utf-8",
     )
     suite = ET.Element(

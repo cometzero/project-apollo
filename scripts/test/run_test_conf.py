@@ -9,7 +9,7 @@ import sys
 from typing import assert_never, Final, Literal, Protocol
 
 from run_test_fvp_config import fvp_config_assignments
-from run_test_profile_network_conf import device_assignments, tap_network_values
+from run_test_profile_network_conf import device_assignments
 from run_test_suite_plan import resolve_plan
 
 
@@ -151,12 +151,12 @@ def _suite_assignment(
                 loaded = json.loads(selected)
                 if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
                     raise ConfInputError(f"{SELECTED_SUITES_ENV} must be a JSON string list")
-                tests = loaded
+                tests = [item for item in loaded if isinstance(item, str)]
             elif scope.image == "nexios-bsp-initramfs":
                 loaded = manifest.get("test_suites", [])
                 if not isinstance(loaded, list) or not all(isinstance(item, str) for item in loaded):
                     raise ConfInputError("manifest test_suites must be a string list")
-                tests = loaded
+                tests = [item for item in loaded if isinstance(item, str)]
             else:
                 plan = resolve_plan(manifest)
                 included = plan.get("included", {})
@@ -224,12 +224,6 @@ def _conf_text(request: ConfRequest, manifest: JsonObject) -> str:
     ]
     lines += device_assignments(manifest, _scoped_assignments)
     lines += fvp_config_assignments(request.machine)
-    tap_values = tap_network_values(request.machine)
-    if tap_values is not None:
-        tap_assignments, target_ip, server_ip = tap_values
-        lines += tap_assignments
-        lines += _image_scoped_assignments("TEST_TARGET_IP", target_ip, scope)
-        lines += _image_scoped_assignments("TEST_SERVER_IP", server_ip, scope)
     selected_target = os.environ.get(SELECTED_TARGET_ENV)
     if selected_target:
         lines.extend(
