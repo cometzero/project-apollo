@@ -38,14 +38,19 @@ TRANSPORT_COMMAND: Final = (
 )
 
 NETWORK_COMMAND: Final = (
-    "iface=$(ls /sys/class/net | grep -v '^lo$' | head -1); "
-    "printf 'network_interface=%s\\n' \"${iface:-none}\"; "
-    "driver=$(basename \"$(readlink -f /sys/class/net/$iface/device/driver "
+    "printf 'network_interface=eth0\\n'; "
+    "driver=$(basename \"$(readlink -f /sys/class/net/eth0/device/driver "
     "2>/dev/null)\" 2>/dev/null || true); "
     "printf 'network_driver=%s\\n' \"${driver:-none}\"; "
-    "addr=$(ip -4 -o addr show dev \"$iface\" 2>/dev/null | "
+    "route_iface=; for retry in $(seq 1 20); do route_iface=$(ip route show "
+    "default 2>/dev/null | awk 'NR==1 {for (i=1; i<=NF; i++) if "
+    "($i == \"dev\") print $(i+1)}'); [ -n \"$route_iface\" ] && break; "
+    "sleep 1; done; printf 'network_route_interface=%s\\n' "
+    "\"${route_iface:-none}\"; "
+    "addr=$(ip -4 -o addr show dev \"$route_iface\" 2>/dev/null | "
     "awk 'NR==1 {print $4}'); printf 'network_ipv4=%s\\n' \"${addr:-none}\"; "
-    "route=$(ip route show default 2>/dev/null | awk 'NR==1 {print $3}'); "
+    "route=$(ip route show default dev \"$route_iface\" 2>/dev/null | "
+    "awk 'NR==1 {print $3}'); "
     "printf 'network_default_route=%s\\n' \"${route:-none}\"; "
     f"body=$(wget -qO- '{NETWORK_ENDPOINT}'); status=$?; "
     "printf 'network_http_status=%s\\n' \"$status\"; "
@@ -132,8 +137,9 @@ class PlatformDevicesEvaluator:
                 (
                     r"network_interface=[^\s]+",
                     r"network_driver=virtio_net",
-                    r"network_ipv4=(?!none)[^\s]+",
-                    r"network_default_route=(?!none)[^\s]+",
+                    r"network_route_interface=ovsbr0",
+                    r"network_ipv4=10\.0\.2\.[0-9]+/[0-9]+",
+                    r"network_default_route=10\.0\.2\.2",
                     r"network_http_status=0",
                     r"network_http_body=APOLLO_QBOX_NET_OK(?:\r?$)",
                 ),

@@ -33,6 +33,7 @@ transport_rc=0
         """
 network_interface=eth0
 network_driver=virtio_net
+network_route_interface=ovsbr0
 network_ipv4=10.0.2.15/24
 network_default_route=10.0.2.2
 network_http_status=0
@@ -94,7 +95,9 @@ def test_platform_device_profile_uses_real_guest_surfaces() -> None:
     assert spec.required_consoles == frozenset({Console.PRIMARY})
     assert len(spec.steps) == 6
     commands = "\n".join(step.command for step in spec.steps)
-    assert "/sys/class/net" in commands
+    assert "/sys/class/net/eth0/device/driver" in commands
+    assert "route_iface=$(ip route show default" in commands
+    assert "network_route_interface=%s" in commands
     assert "10.0.2.100:18080/apollo-qbox-net" in commands
     assert "/sys/class/rtc" in commands
     assert "/sys/devices/system/cpu" in commands
@@ -123,6 +126,7 @@ def test_platform_device_evaluator_accepts_complete_evidence() -> None:
         (0, "transport_dsu_counter=23", "transport_dsu_counter=none", "primary-ssh"),
         (1, "APOLLO_QBOX_NET_OK", "WRONG", "platform-device-networking"),
         (1, "network_driver=virtio_net", "network_driver=none", "platform-device-networking"),
+        (1, "network_route_interface=ovsbr0", "network_route_interface=brsi1", "platform-device-networking"),
         (2, "rtc_driver=rtc-pl031", "rtc_driver=none", "platform-device-rtc"),
         (3, "hotplug_restored=0-3", "hotplug_restored=0-2", "platform-device-cpu-hotplug"),
         (4, "rng_bytes=32", "rng_bytes=0", "platform-device-virtiorng"),
