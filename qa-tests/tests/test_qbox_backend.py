@@ -144,6 +144,15 @@ def test_qbox_cpuidle_command_selects_registry_profile(tmp_path: Path) -> None:
     assert not any(argument.endswith("-probe") for argument in command)
 
 
+def test_qbox_cpufreq_command_selects_registry_profile(tmp_path: Path) -> None:
+    request = qbox_request(tmp_path, "bsp", test_profile="cpufreq")
+
+    command = qbox_launcher_command(request, dry_run=True)
+
+    assert command[command.index("--validation-profile") + 1] == "cpufreq"
+    assert not any(argument.endswith("-probe") for argument in command)
+
+
 @pytest.mark.parametrize(
     "profile_id",
     ("pfdi", "pfdi-si-cl1", "ras_cpu", "safety-diagnostics-tests"),

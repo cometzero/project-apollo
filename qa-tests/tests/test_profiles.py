@@ -65,6 +65,12 @@ def test_cpufreq_profile_selects_the_bsp_native_contract() -> None:
     assert profile.timeout_seconds == 3600
 
 
+def test_cpufreq_profile_selects_qbox_bsp_contract() -> None:
+    profile = load_test_profile(WORKSPACE, "cpufreq", "qbox", "bsp")
+
+    assert profile.test_target == "QBoxCpuFreqRunner"
+
+
 def test_mbpp_profile_selects_the_isolated_fvp_contract() -> None:
     profile = load_test_profile(WORKSPACE, "mbpp", "fvp", "product")
 

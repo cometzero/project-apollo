@@ -53,6 +53,7 @@ def test_registry_enables_existing_and_reuse_profile_implementations() -> None:
     assert profile_ids == (
         "bsp-core",
         "cpuidle",
+        "cpufreq",
         "pfdi",
         "pfdi-si-cl1",
         "ras_cpu",
