@@ -163,16 +163,19 @@ class BootFailureConnectivityTarget:
     ip = "192.0.2.10"
     server_ip = "192.0.2.1"
 
+    def wait_for_linux(self, timeout: int) -> None:
+        raise FVPSerialBootError(
+            "Failed to start FVP.",
+            "Run /init as init process",
+        )
+
     def run_serial(
         self,
         command: str,
         timeout: int,
         boot_timeout: int | None = None,
     ) -> tuple[int, str]:
-        raise FVPSerialBootError(
-            "Failed to start FVP.",
-            "Run /init as init process",
-        )
+        raise AssertionError("network probe must not run before Linux login")
 
     def run(self, command: str, timeout: int) -> tuple[int, str]:
         raise AssertionError("SSH must not run before Linux login")
@@ -182,6 +185,7 @@ def test_guest_network_boot_failure_reports_console_not_retry() -> None:
     # Given: Linux login fails while the console still shows init progress.
     case = connectivity.LinuxConnectivityTest("test_ping")
     case.target = BootFailureConnectivityTarget()
+    case.td = {}
 
     # When/Then: readiness fails once with the captured console tail.
     with pytest.raises(AssertionError) as failure:
@@ -189,3 +193,97 @@ def test_guest_network_boot_failure_reports_console_not_retry() -> None:
     message = str(failure.value)
     assert "network diagnostics unavailable before shell login" in message
     assert "Run /init as init process" in message
+
+
+class PhaseSeparatedConnectivityTarget:
+    ip = "192.0.2.10"
+    server_ip = "192.0.2.1"
+
+    def __init__(self, clock: FakeClock, boot_delay: int) -> None:
+        self.clock = clock
+        self.boot_delay = boot_delay
+        self.booted = False
+        self.linux_timeouts: list[int] = []
+        self.probe_times: list[float] = []
+        self.probe_results = [(1, "network pending"), (0, "network ready")]
+
+    def wait_for_linux(self, timeout: int) -> None:
+        self.linux_timeouts.append(timeout)
+        if timeout < self.boot_delay:
+            self.clock.sleep(timeout)
+            raise FVPSerialBootError("boot timeout", "systemd udev")
+        self.clock.sleep(self.boot_delay)
+        self.booted = True
+
+    def run_serial(
+        self,
+        command: str,
+        timeout: int,
+        boot_timeout: int | None = None,
+    ) -> tuple[int, str]:
+        if not self.booted:
+            raise FVPSerialBootError("network deadline used for boot", "udev")
+        assert timeout <= connectivity.SERIAL_COMMAND_TIMEOUT_SECONDS
+        assert boot_timeout is None
+        self.probe_times.append(self.clock.monotonic())
+        return self.probe_results.pop(0)
+
+    def run(self, command: str, timeout: int) -> tuple[int, str]:
+        return 0, "Linux apollo-fvp"
+
+
+def test_connectivity_starts_network_deadline_after_documented_boot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: Linux login takes 300 seconds and testdata grants 1800 seconds.
+    clock = FakeClock()
+    target = PhaseSeparatedConnectivityTarget(clock, boot_delay=300)
+    case = connectivity.LinuxConnectivityTest("test_ping")
+    case.target = target
+    case.td = {"TEST_FVP_LINUX_BOOT_TIMEOUT": "1800"}
+    monkeypatch.setattr(connectivity.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(connectivity, "sleep", clock.sleep)
+
+    # When: guest boot completes and network readiness needs one retry.
+    case._wait_for_guest_network()
+
+    # Then: boot uses testdata and the network clock starts at second 300.
+    assert target.linux_timeouts == [1800]
+    assert target.probe_times == [300, 302]
+
+
+def test_connectivity_missing_boot_timeout_uses_controller_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: testdata omits Linux boot timeout and login takes 300 seconds.
+    clock = FakeClock()
+    target = PhaseSeparatedConnectivityTarget(clock, boot_delay=300)
+    case = connectivity.LinuxConnectivityTest("test_ping")
+    case.target = target
+    case.td = {}
+    monkeypatch.setattr(connectivity.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(connectivity, "sleep", clock.sleep)
+
+    # When: readiness resolves the established controller fallback.
+    case._wait_for_guest_network()
+
+    # Then: Linux receives 600 seconds before network time starts.
+    assert target.linux_timeouts == [600]
+    assert target.probe_times == [300, 302]
+
+
+@pytest.mark.parametrize("raw_timeout", ["invalid", "0", "-1", [], {}])
+def test_connectivity_rejects_malformed_boot_timeout_before_transition(
+    raw_timeout: str | list[str] | dict[str, str],
+) -> None:
+    # Given: untrusted testdata does not contain a positive boot timeout.
+    target = PhaseSeparatedConnectivityTarget(FakeClock(), boot_delay=1)
+    case = connectivity.LinuxConnectivityTest("test_ping")
+    case.target = target
+    case.td = {"TEST_FVP_LINUX_BOOT_TIMEOUT": raw_timeout}
+
+    # When/Then: parsing fails before Linux transition or network probing.
+    with pytest.raises(AssertionError, match="must be a positive integer"):
+        case._wait_for_guest_network()
+    assert target.linux_timeouts == []
+    assert target.probe_times == []
