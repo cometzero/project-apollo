@@ -12,6 +12,15 @@ from .backend import Backend
 MIXED_KEYS: Final = ("workspace", "qa_runner")
 SHARED_KEYS: Final = ("bsp_layer", "platform_layer")
 QBOX_ONLY_KEYS: Final = ("qbox_core", "qbox_platform", "qemu")
+QVP_ONLY_BSP_PATHS: Final = frozenset(
+    {
+        "conf/machine/apollo-qvp.conf",
+        "recipes-bsp/u-boot/files/apollo-qvp-auto-ad-nexios.cfg",
+        "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-qvp.conf",
+        "hsoc-stack/yocto/meta-hsoc-bsp/recipes-bsp/u-boot/files/"
+        "apollo-qvp-auto-ad-nexios.cfg",
+    }
+)
 FVP_KEYS: Final = frozenset((*MIXED_KEYS, *SHARED_KEYS))
 QBOX_KEYS: Final = frozenset((*FVP_KEYS, *QBOX_ONLY_KEYS))
 REVISION_PATTERN: Final = re.compile(r"[0-9a-f]{40}")
@@ -78,6 +87,23 @@ def _require_ancestor(root: Path, key: str, older: str, current: str) -> None:
         raise SourceRevisionError("blocked_fvp_reference_source_revision_non_ancestor")
 
 
+def _require_allowlisted_ancestor(
+    root: Path,
+    key: str,
+    older: str,
+    current: str,
+    allowed_paths: frozenset[str],
+) -> None:
+    _require_ancestor(root, key, older, current)
+    repository = root / REPOSITORIES[key]
+    result = _git(repository, "diff", "--name-only", f"{older}..{current}")
+    changed = frozenset(result.stdout.decode().splitlines())
+    if result.returncode != 0 or not changed <= allowed_paths:
+        raise SourceRevisionError(
+            "blocked_fvp_reference_source_revision_shared_drift"
+        )
+
+
 def validate_fvp_source_revisions(
     root: Path,
     reference: dict[str, str],
@@ -99,10 +125,22 @@ def validate_fvp_source_revisions(
     for key, revision in reference.items():
         _require_commit(root, key, revision)
     for key in SHARED_KEYS:
-        if reference[key] != current_by_key[key]:
-            raise SourceRevisionError(
-                "blocked_fvp_reference_source_revision_shared_drift"
+        revision = reference[key]
+        current_revision = current_by_key[key]
+        if revision == current_revision:
+            continue
+        if key == "bsp_layer" and shared_contract_matches:
+            _require_allowlisted_ancestor(
+                root,
+                key,
+                revision,
+                current_revision,
+                QVP_ONLY_BSP_PATHS,
             )
+            continue
+        raise SourceRevisionError(
+            "blocked_fvp_reference_source_revision_shared_drift"
+        )
     for key in MIXED_KEYS:
         revision = reference[key]
         current_revision = current_by_key[key]

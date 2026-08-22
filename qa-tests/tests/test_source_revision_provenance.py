@@ -6,7 +6,11 @@ from typing import Literal, TypeAlias, assert_never
 
 import pytest
 
-from apollo_validation.source_revisions import capture_source_revisions
+from apollo_validation.source_revisions import (
+    SourceRevisionError,
+    capture_source_revisions,
+    validate_fvp_source_revisions,
+)
 from tests.provenance_fixtures import (
     JsonValue,
     make_workspace,
@@ -166,3 +170,54 @@ def test_backend_revision_key_policy_is_explicit(tmp_path: Path) -> None:
         "qbox_platform",
         "qemu",
     }
+
+
+def test_qvp_only_bsp_revision_is_allowed_when_shared_contract_matches(
+    tmp_path: Path,
+) -> None:
+    make_workspace(tmp_path)
+    reference = dict(capture_source_revisions(tmp_path, "fvp"))
+    qvp_machine = tmp_path / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-qvp.conf"
+    qvp_machine.parent.mkdir(parents=True, exist_ok=True)
+    qvp_machine.write_text('MACHINE = "apollo-qvp"\n', encoding="utf-8")
+    subprocess.run(["git", "add", str(qvp_machine)], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "commit", "-qm", "qvp-only metadata"],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    current = tuple(
+        (key, reference["platform_layer"])
+        if key == "platform_layer"
+        else (key, revision)
+        for key, revision in capture_source_revisions(tmp_path, "qbox")
+    )
+
+    validate_fvp_source_revisions(tmp_path, reference, current, True)
+
+
+def test_fvp_bsp_revision_change_remains_rejected(tmp_path: Path) -> None:
+    make_workspace(tmp_path)
+    reference = dict(capture_source_revisions(tmp_path, "fvp"))
+    fvp_machine = tmp_path / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/apollo-fvp.conf"
+    fvp_machine.parent.mkdir(parents=True, exist_ok=True)
+    fvp_machine.write_text('MACHINE = "apollo-fvp"\n', encoding="utf-8")
+    subprocess.run(["git", "add", str(fvp_machine)], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "commit", "-qm", "fvp metadata drift"],
+        cwd=tmp_path,
+        check=True,
+    )
+    current = tuple(
+        (key, reference["platform_layer"])
+        if key == "platform_layer"
+        else (key, revision)
+        for key, revision in capture_source_revisions(tmp_path, "qbox")
+    )
+
+    with pytest.raises(
+        SourceRevisionError,
+        match="blocked_fvp_reference_source_revision_shared_drift",
+    ):
+        validate_fvp_source_revisions(tmp_path, reference, current, True)
