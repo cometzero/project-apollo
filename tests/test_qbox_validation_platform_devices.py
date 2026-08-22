@@ -38,6 +38,7 @@ network_ipv4=10.0.2.15/24
 network_default_route=10.0.2.2
 network_http_status=0
 network_http_body=APOLLO_QBOX_NET_OK
+root@apollo-qvp:~#
 """,
         """
 rtc_device=rtc0

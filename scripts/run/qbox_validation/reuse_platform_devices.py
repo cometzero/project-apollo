@@ -141,7 +141,7 @@ class PlatformDevicesEvaluator:
                     r"network_ipv4=10\.0\.2\.[0-9]+/[0-9]+",
                     r"network_default_route=10\.0\.2\.2",
                     r"network_http_status=0",
-                    r"network_http_body=APOLLO_QBOX_NET_OK(?:\r?$)",
+                    r"(?m)^network_http_body=APOLLO_QBOX_NET_OK\r?$",
                 ),
             ),
             "platform-device-rtc": _all(
