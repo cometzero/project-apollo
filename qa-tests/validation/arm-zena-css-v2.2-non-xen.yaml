@@ -109,7 +109,7 @@
       "image": "product",
       "cpu_count": 4,
       "coverage_kind": "identical",
-      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_si_cl1_boot", "test_31_si_cl1_hipc"],
+      "fvp_selectors": ["test_00_fvp_boot", "test_00_linux_boot", "test_00_si_cl0_boot", "test_00_si_cl1_boot", "test_31_si_cl1_hipc"],
       "qbox_assertions": ["hipc-dt-and-shared-memory", "hipc-linux-stack", "hipc-memory-layout", "hipc-icmp-bidirectional", "hipc-udp-pc-to-cl1", "hipc-tcp-pc-to-cl1", "hipc-udp-cl1-to-pc", "hipc-tcp-cl1-to-pc", "hipc-boundary-payload-sizes", "hipc-boundary-multistream"]
     },
     {

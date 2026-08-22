@@ -646,3 +646,32 @@ def test_ras_cpu_profile_selects_qbox_probe_contract() -> None:
     assert profile.selectors[-1] == "test_41_tfa_ras"
     assert profile.test_target == "QBoxRASCpuRunner"
     assert profile.timeout_seconds == 3600
+
+
+def test_hipc_profile_selects_complete_product_contract() -> None:
+    # Given: the Arm Zena CSS HIPC product-image profile.
+    # When: it is resolved for the FVP backend.
+    profile = load_test_profile(WORKSPACE, "hipc", "fvp", "product")
+
+    # Then: boot prerequisites and the full ten-method OEQA module are selected.
+    assert profile.selectors == (
+        "test_00_fvp_boot",
+        "test_00_linux_boot",
+        "test_00_si_cl0_boot",
+        "test_00_si_cl1_boot",
+        "test_31_si_cl1_hipc",
+    )
+    assert profile.test_target == "HSOCSingleSessionFVPTarget"
+    assert profile.timeout_seconds == 10800
+    _assert_oeqa_dependency_closure(profile.selectors)
+
+
+@pytest.mark.parametrize(("backend", "image"), [("qbox", "product"), ("fvp", "bsp")])
+def test_hipc_profile_rejects_unsupported_execution_boundary(
+    backend: str,
+    image: str,
+) -> None:
+    # Given: an unsupported backend or image for full HIPC traffic.
+    # When/Then: profile loading rejects the incomplete execution boundary.
+    with pytest.raises(ProfileError):
+        load_test_profile(WORKSPACE, "hipc", backend, image)

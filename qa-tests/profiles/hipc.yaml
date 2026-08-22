@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "name": "hipc",
+  "description": "Apollo FVP product HIPC baremetal network validation",
+  "compatibility": {
+    "backends": ["fvp"],
+    "images": ["product"]
+  },
+  "oeqa": {
+    "kind": "extended",
+    "selectors": [
+      "test_00_fvp_boot",
+      "test_00_linux_boot",
+      "test_00_si_cl0_boot",
+      "test_00_si_cl1_boot",
+      "test_31_si_cl1_hipc"
+    ],
+    "timeout_seconds": 10800
+  },
+  "targets": {
+    "fvp": "HSOCSingleSessionFVPTarget"
+  }
+}

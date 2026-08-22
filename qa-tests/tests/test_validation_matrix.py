@@ -53,7 +53,13 @@ APPROVED_FVP_SELECTORS: dict[str, tuple[str, ...]] = {
     "cpuidle": ("test_00_bsp_boot", "test_31_bsp_cpuidle"),
     "cpufreq": ("test_00_bsp_boot", "test_32_bsp_cpufreq"),
     "mbpp": ("test_00_fvp_boot", "test_00_linux_boot", "test_72_power_cpufreq", "test_73_power_mbpp"),
-    "hipc": ("test_00_fvp_boot", "test_00_linux_boot", "test_00_si_cl1_boot", "test_31_si_cl1_hipc"),
+    "hipc": (
+        "test_00_fvp_boot",
+        "test_00_linux_boot",
+        "test_00_si_cl0_boot",
+        "test_00_si_cl1_boot",
+        "test_31_si_cl1_hipc",
+    ),
     "smcf": ("test_00_bsp_boot", "test_21_bsp_smcf"),
 }
 

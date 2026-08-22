@@ -80,6 +80,18 @@ _FVP_ALIASES: dict[str, tuple[str, ...]] = {
     "cpufreq:test_update_min_max_scaling_frequencies_negative": (
         "cpufreq-min-max-negative",
     ),
+    "hipc:test_01_mid_sanity_dt_and_shared_memory": (
+        "hipc-dt-and-shared-memory",
+    ),
+    "hipc:test_02_enablement_linux_stack": ("hipc-linux-stack",),
+    "hipc:test_03_memory_layout": ("hipc-memory-layout",),
+    "hipc:test_04_icmp_bidirectional": ("hipc-icmp-bidirectional",),
+    "hipc:test_05_udp_pc_to_cl1": ("hipc-udp-pc-to-cl1",),
+    "hipc:test_06_tcp_pc_to_cl1": ("hipc-tcp-pc-to-cl1",),
+    "hipc:test_07_udp_cl1_to_pc": ("hipc-udp-cl1-to-pc",),
+    "hipc:test_08_tcp_cl1_to_pc": ("hipc-tcp-cl1-to-pc",),
+    "hipc:test_09_boundary_payload_sizes": ("hipc-boundary-payload-sizes",),
+    "hipc:test_10_boundary_multistream": ("hipc-boundary-multistream",),
 }
 
 
