@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Final, TypedDict
 
-from qbox_si_cl1_pfdi_catalog import (
+from scripts.run.qbox_si_cl1_pfdi_catalog import (
     SI_CL1_CPU_COUNT,
     SiCl1PFDICheck,
     si_cl1_pfdi_checks,
