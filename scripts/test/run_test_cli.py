@@ -6,6 +6,7 @@ from __future__ import annotations
 USAGE = "\n".join(
     (
         "Usage: ./run_test.sh [options]",
+        "       ./run_test.sh aggregate --matrix PATH --run-set PATH --out-dir PATH",
         "",
         "Run Apollo validation and save run-scoped evidence under build/tests/.",
         "Default behavior is headless: inspect the active Apollo Yocto config,",

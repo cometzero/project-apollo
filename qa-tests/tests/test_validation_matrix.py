@@ -290,25 +290,17 @@ def test_profile_result_schema_rejects_unknown_fields() -> None:
 
 
 def test_validation_run_set_schema_accepts_complete_results() -> None:
-    # Given: the strict run-set schema and a non-empty profile result set.
+    # Given: the strict run-set schema and a non-empty explicit source set.
     schema = _schema(RUN_SET_SCHEMA)
     fixture = {
         "version": 1,
         "matrix_sha256": "a" * 64,
+        "not_before": "2026-08-22T00:00:00Z",
         "results": [
             {
-                "version": 1,
-                "profile_id": "bsp-core",
-                "backend": "fvp",
-                "verdict": "PASS",
-                "expected": ["bsp-scp"],
-                "assertions": [
-                    {
-                        "id": "bsp-scp",
-                        "status": "PASS",
-                        "coverage_kind": "identical",
-                    }
-                ],
+                "path": "build/tests/fvp-bsp-core/summary.json",
+                "sha256": "b" * 64,
+                "captured_at": "2026-08-22T00:01:00Z",
             }
         ],
     }
@@ -325,7 +317,6 @@ def test_normalized_schemas_accept_every_canonical_public_profile_id() -> None:
     # Given: every public profile parsed from the canonical non-Xen matrix.
     matrix = load_validation_matrix(MATRIX_PATH)
     profile_validator = Draft202012Validator(_schema(PROFILE_RESULT_SCHEMA))
-    run_set_validator = Draft202012Validator(_schema(RUN_SET_SCHEMA))
 
     # When: each profile is represented by one schema-complete PASS result.
     for profile in matrix.profiles:
@@ -344,11 +335,8 @@ def test_normalized_schemas_accept_every_canonical_public_profile_id() -> None:
                 }
             ],
         }
-        run_set = {"version": 1, "matrix_sha256": "a" * 64, "results": [result]}
-
-        # Then: both result surfaces accept the same canonical public ID.
+        # Then: the normalized result surface accepts the canonical public ID.
         profile_validator.validate(result)
-        run_set_validator.validate(run_set)
 
 
 def test_normalized_schemas_reject_invalid_public_profile_id() -> None:
@@ -367,10 +355,6 @@ def test_normalized_schemas_reject_invalid_public_profile_id() -> None:
             }
         ],
     }
-    run_set = {"version": 1, "matrix_sha256": "a" * 64, "results": [result]}
-
-    # When/Then: both strict schemas reject the invalid public ID.
+    # When/Then: the strict normalized schema rejects the invalid public ID.
     with pytest.raises(ValidationError):
         Draft202012Validator(_schema(PROFILE_RESULT_SCHEMA)).validate(result)
-    with pytest.raises(ValidationError):
-        Draft202012Validator(_schema(RUN_SET_SCHEMA)).validate(run_set)

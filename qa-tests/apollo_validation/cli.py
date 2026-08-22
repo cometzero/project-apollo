@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 from .evidence import write_json, write_reports
+from .aggregate import AggregateError, aggregate_validation
 from .qbox_entry import request_uses_qbox, run_qbox_root
 from .root_runner import run_root_compat
 from .runner import run_category, run_context
@@ -55,6 +56,16 @@ def cmd_root_run(args: argparse.Namespace) -> int:
     return run_root_compat(args.root.resolve(), rest)
 
 
+def cmd_aggregate(args: argparse.Namespace) -> int:
+    try:
+        aggregate_validation(args.matrix, args.run_set, args.out_dir)
+    except AggregateError as error:
+        print(f"error: {error.reason}", file=sys.stderr)
+        return 2
+    print(args.out_dir / "summary.json")
+    return 0
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Apollo FVP validation runner")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
@@ -98,6 +109,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     root_run.add_argument("--root", type=Path, default=Path("."))
     root_run.add_argument("args", nargs=argparse.REMAINDER)
     root_run.set_defaults(func=cmd_root_run)
+
+    aggregate = subparsers.add_parser("aggregate", help="Aggregate non-Xen profile evidence")
+    aggregate.add_argument("--matrix", type=Path, required=True)
+    aggregate.add_argument("--run-set", type=Path, required=True)
+    aggregate.add_argument("--out-dir", type=Path, required=True)
+    aggregate.set_defaults(func=cmd_aggregate)
     return parser.parse_args(argv)
 
 
