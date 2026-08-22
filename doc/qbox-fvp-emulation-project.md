@@ -127,6 +127,54 @@ retain critical/non-critical classification during SCP-firmware traversal.
 The final run passed the SSU test and all 20 FMU tests. Evidence is under
 `build/tests/20260820-145753-qbox-bsp-safety-diagnostics-tests/`.
 
+## Runtime Validation Profile Status
+
+The repository now has a public non-Xen validation matrix for the Arm Zena CSS
+v2.2 run-time integration scope:
+
+- matrix source:
+  `qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml`
+- 15 non-Xen validation areas
+- 14 public profiles
+- 100 mapped actions
+- Xen selectors excluded from scope
+- semantic QBox coverage only for `platform-devices` transport/network checks
+  and `crypto-extension`
+
+The current public profile placement is:
+
+| Profile | Image | CPU count | Coverage label | Current state |
+| --- | --- | --- | --- | --- |
+| `bsp-core` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `si-cl1` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `smcf` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `pfdi` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `pfdi-si-cl1` | BSP | 4 | identical | FVP/QBox implementation exists for SI CL1 PFDI and SI monitoring; QBox requires matching `--fvp-reference`. |
+| `safety-diagnostics-tests` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `cpuidle` | BSP | 4 | identical | FVP/QBox implementation exists; current-SHA final runtime is deferred. |
+| `cpufreq` | BSP | 4 | identical guest contract | FVP/QBox implementation exists; current-SHA final runtime is deferred. QBox does not claim TCG execution-rate coupling. |
+| `platform-devices` | product | 4 | semantic for transport/network | FVP completion is deferred; QBox platform-devices work is blocked on that FVP reference. |
+| `trusted-services` | product | 4 | identical | FVP rerun and QBox enablement are deferred. |
+| `crypto-extension` | product | 4 | semantic | FVP rerun is deferred; QBox must not compare FVP crypto-plugin wall time with QEMU TCG wall time. |
+| `ras_cpu` | product | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `hipc` | product | 4 | identical | Blocked on final FVP HIPC reference. |
+| `mbpp` | product | 16 | identical guest contract | Blocked on isolated 16-CPU FVP and QBox prerequisites. The normal four-CPU lane is not applicable. |
+
+Named QBox profile runs use the same public entrypoint as FVP runs, with an
+additional required FVP reference:
+
+```bash
+./run_test.sh --machine apollo-fvp --bsp --test-profile cpuidle
+./run_test.sh --machine apollo-qvp --bsp --test-profile cpuidle \
+  --fvp-reference build/tests/<fvp-cpuidle-run>/summary.json
+```
+
+Do not treat the current implementation as a completed runtime-parity matrix.
+The real final aggregate artifacts are pending Todo 23, including any final
+`coverage.json` for 14 FVP plus 14 QBox results. Until Todo 23 completes, use
+`.work/validation-plan/final-review-backlog.md` for the exact deferred and
+blocked profile list.
+
 The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
 QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
 MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI

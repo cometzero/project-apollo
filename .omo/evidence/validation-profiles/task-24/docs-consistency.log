@@ -1,0 +1,7 @@
+profiles 14 bsp-core,cpufreq,cpuidle,crypto-extension,hipc,mbpp,pfdi,pfdi-si-cl1,platform-devices,ras_cpu,safety-diagnostics-tests,si-cl1,smcf,trusted-services
+areas 15
+actions 100
+semantic crypto-extension,platform-devices
+xen_in_scope 0
+fvp_reference_option build/tests/example/summary.json
+status PASS
