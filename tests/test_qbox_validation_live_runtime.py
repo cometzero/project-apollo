@@ -95,6 +95,39 @@ def test_validation_profile_requires_probe_completion_before_boot_exit() -> None
     assert required(args) is True
 
 
+def test_validation_profile_login_driver_writes_root_to_primary_fifo(
+    tmp_path: Path,
+) -> None:
+    args = runtime.parse_args(
+        [
+            "--out-dir",
+            str(tmp_path),
+            "--validation-profile",
+            "platform-devices",
+        ]
+    )
+    state = runtime.make_probe_state(args)
+    read_fd, write_fd = os.pipe()
+    os.set_blocking(read_fd, False)
+    try:
+        runtime.drive_post_login_probe(
+            args,
+            {"primary_console": f"booted\n{args.primary_login_prompt}\n"},
+            state,
+            write_fd,
+        )
+        try:
+            written = os.read(read_fd, 64)
+        except BlockingIOError:
+            written = b""
+    finally:
+        os.close(read_fd)
+        os.close(write_fd)
+
+    assert written == b"root\n"
+    assert state["login_attempts"] == 1
+
+
 @pytest.mark.parametrize(
     ("shape", "owner"),
     (

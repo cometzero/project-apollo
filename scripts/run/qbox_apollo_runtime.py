@@ -4109,7 +4109,11 @@ def drive_post_login_probe(
     fifo_fd: int | None,
 ) -> None:
     operation_mode = bool(state.get("operation_manifest_requested"))
-    if not args.post_login_probe and not operation_mode or fifo_fd is None:
+    if not (
+        args.post_login_probe
+        or operation_mode
+        or args.validation_profile is not None
+    ) or fifo_fd is None:
         return
     raw_primary = logs.get("primary_console", "")
     response_count_value = state.get("terminal_status_responses", 0)
