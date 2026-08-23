@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from apollo_validation.run_inputs import JsonObject, capture_run_inputs
 
@@ -23,3 +24,15 @@ def test_qa_runner_revision_tracks_the_workspace(tmp_path: Path) -> None:
         revisions["qa_runner"]
         == revisions["workspace"]
     )
+
+
+def test_standalone_comparison_mode_reaches_input_manifest(
+    tmp_path: Path,
+) -> None:
+    context: JsonObject = {"comparison_mode": "standalone"}
+
+    manifest_path = capture_run_inputs(WORKSPACE, tmp_path, context)
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["comparison_mode"] == "standalone"
+    assert "accepted_fvp_reference" not in manifest

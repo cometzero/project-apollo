@@ -153,7 +153,7 @@ The current public profile placement is:
 | `safety-diagnostics-tests` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
 | `cpuidle` | BSP | 4 | identical | FVP/QBox implementation exists; current-SHA final runtime is deferred. |
 | `cpufreq` | BSP | 4 | identical guest contract | FVP/QBox implementation exists; current-SHA final runtime is deferred. QBox does not claim TCG execution-rate coupling. |
-| `platform-devices` | product | 4 | semantic for transport/network | FVP completion is deferred; QBox platform-devices work is blocked on that FVP reference. |
+| `platform-devices` | product | 4 | semantic for transport/network | FVP and standalone QBox qualification pass; QBox records current provenance and does not require an FVP reference. |
 | `trusted-services` | product | 4 | identical | FVP rerun and QBox enablement are deferred. |
 | `crypto-extension` | product | 4 | semantic | FVP rerun is deferred; QBox must not compare FVP crypto-plugin wall time with QEMU TCG wall time. |
 | `ras_cpu` | product | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |

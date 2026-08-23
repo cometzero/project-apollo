@@ -29,15 +29,18 @@ The public entrypoint is run from the workspace root:
   --fvp-reference build/tests/<fvp-bsp-core-run>/summary.json
 ./run_test.sh --machine apollo-qvp --test-profile ras_cpu \
   --fvp-reference build/tests/<fvp-ras-cpu-run>/summary.json
+./run_test.sh --machine apollo-qvp --test-profile platform-devices
 ```
 
 The QBox backend selects `apollo-qvp`, validates the deployed `qboxconf`, and
 runs the canonical Yocto QBox launcher in headless full-system mode. Add
 `--bsp` to boot `nexios-bsp-initramfs`. A named QBox profile must provide
-`--fvp-reference <summary.json>` from the matching FVP run. The runner rejects
-missing, failed, skipped, stale, image-mismatched, CPU-count-mismatched, or
-contract-drifted references before launching QBox. Basic QBox boot without a
-named profile remains available through the normal QBox launcher path.
+`--fvp-reference <summary.json>` from the matching FVP run, except
+`platform-devices`, which runs standalone from current QBox provenance. The
+runner rejects missing, failed, skipped, stale, image-mismatched,
+CPU-count-mismatched, or contract-drifted references before launching QBox.
+Basic QBox boot without a named profile remains available through the normal
+QBox launcher path.
 
 ## Public Profiles
 
@@ -51,7 +54,7 @@ named profile remains available through the normal QBox launcher path.
 | `safety-diagnostics-tests` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile safety-diagnostics-tests` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
 | `cpuidle` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpuidle` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
 | `cpufreq` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpufreq` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
-| `platform-devices` | product | `./run_test.sh --machine apollo-fvp --test-profile platform-devices` | FVP PASS. QBox uses semantic network transport and requires this FVP summary. |
+| `platform-devices` | product | `./run_test.sh --machine apollo-fvp --test-profile platform-devices` | FVP and standalone QBox PASS. QBox transport/network coverage is semantic; an FVP reference is optional. |
 | `trusted-services` | product | `./run_test.sh --machine apollo-fvp --test-profile trusted-services` | Deferred until current-SHA FVP reference is regenerated. |
 | `crypto-extension` | product | `./run_test.sh --machine apollo-fvp --test-profile crypto-extension` | Deferred. QBox coverage is semantic: deterministic crypto and instruction-use evidence, not FVP plugin wall-time comparison. |
 | `ras_cpu` | product | `./run_test.sh --machine apollo-fvp --test-profile ras_cpu` | Implemented QBox product profile; requires matching `--fvp-reference`. |

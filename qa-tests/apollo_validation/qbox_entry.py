@@ -22,6 +22,7 @@ from .provenance import (
     capture_profile_provenance,
 )
 from .qbox_runner import QBoxRunRequest, run_qbox_category
+from .reference_policy import comparison_mode, profile_requires_fvp_reference
 from .root_cli import RootOptions, parse_root_args
 from .root_runner import (
     _acquire_lock,
@@ -97,13 +98,20 @@ def _write_qbox_context(
     if options.test_profile is not None:
         provenance = _profile_provenance(root, options, context)
         reference_path = options.fvp_reference
-        if reference_path is None:
+        if reference_path is None and profile_requires_fvp_reference(
+            options.test_profile
+        ):
             raise FVPReferenceError("blocked_fvp_reference_required")
-        accepted = validate_fvp_reference(
-            FVPReferenceRequest(root, reference_path, run_dir.name, provenance)
-        )
         context["provenance"] = provenance.as_json()
-        context["accepted_fvp_reference"] = accepted.as_json()
+        context["comparison_mode"] = comparison_mode(
+            options.test_profile,
+            reference_path is not None,
+        )
+        if reference_path is not None:
+            accepted = validate_fvp_reference(
+                FVPReferenceRequest(root, reference_path, run_dir.name, provenance)
+            )
+            context["accepted_fvp_reference"] = accepted.as_json()
     input_manifest = capture_run_inputs(root, run_dir, context)
     manifest_path = run_dir / "manifest.json"
     write_json(manifest_path, context)
@@ -169,7 +177,10 @@ def run_qbox_root(root: Path, argv: list[str]) -> int:
     except SelectionError as error:
         print(f"error: {error}", file=sys.stderr)
         return 64
-    if options.test_profile is not None and options.fvp_reference is None:
+    if (
+        profile_requires_fvp_reference(options.test_profile)
+        and options.fvp_reference is None
+    ):
         print("error: blocked_fvp_reference_required", file=sys.stderr)
         return 64
 

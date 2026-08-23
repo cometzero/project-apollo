@@ -193,5 +193,8 @@ def capture_run_inputs(
     accepted = context.get("accepted_fvp_reference")
     if isinstance(accepted, dict):
         payload["accepted_fvp_reference"] = accepted
+    comparison_mode = context.get("comparison_mode")
+    if isinstance(comparison_mode, str):
+        payload["comparison_mode"] = comparison_mode
     write_json(path, payload)
     return path

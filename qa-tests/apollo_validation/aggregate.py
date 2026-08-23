@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 from .aggregate_reporting import write_aggregate_outputs
 from .validation_matrix import load_validation_matrix
+from .reference_policy import profile_requires_fvp_reference
 from .validation_types import ValidationProfile
 
 
@@ -198,7 +199,14 @@ def _validate_references(results: dict[tuple[str, str], SourceResult]) -> None:
         if backend != "qbox":
             continue
         fvp = results[(profile_id, "fvp")]
-        accepted = _mapping(source.summary.get("accepted_fvp_reference"))
+        raw_accepted = source.summary.get("accepted_fvp_reference")
+        if not isinstance(raw_accepted, dict):
+            if source.summary.get("comparison_mode") != "standalone":
+                _fail("blocked_aggregate_fvp_reference_mismatch")
+            if profile_requires_fvp_reference(profile_id):
+                _fail("blocked_aggregate_fvp_reference_mismatch")
+            continue
+        accepted = raw_accepted
         fvp_provenance = _mapping(fvp.summary.get("provenance"))
         if (
             accepted.get("run_id") != fvp.summary.get("run_id")

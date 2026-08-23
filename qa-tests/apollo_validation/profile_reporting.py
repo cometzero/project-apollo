@@ -65,10 +65,13 @@ def apply_profile_summary(run_dir: Path, summary: dict[str, JsonValue]) -> int:
     if isinstance(input_manifest, dict):
         provenance = input_manifest.get("provenance")
         accepted = input_manifest.get("accepted_fvp_reference")
+        comparison_mode = input_manifest.get("comparison_mode")
         if isinstance(provenance, dict):
             summary["provenance"] = provenance
         if isinstance(accepted, dict):
             summary["accepted_fvp_reference"] = accepted
+        if isinstance(comparison_mode, str):
+            summary["comparison_mode"] = comparison_mode
     return verdict_exit_code(normalized.result.verdict)
 
 
