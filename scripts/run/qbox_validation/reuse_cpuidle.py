@@ -41,8 +41,14 @@ def cpuidle_spec(
         profile_id,
         frozenset({Console.PRIMARY}),
         tuple(
-            ProbeStep(Console.PRIMARY, command, PRIMARY_PROMPT, 600.0)
-            for command in cpuidle_probe_commands()
+            ProbeStep(
+                Console.PRIMARY,
+                item.command,
+                PRIMARY_PROMPT,
+                item.timeout_s,
+                completion_pattern=item.completion_pattern,
+            )
+            for item in cpuidle_probe_commands()
         ),
         expected,
         coverage_kind,

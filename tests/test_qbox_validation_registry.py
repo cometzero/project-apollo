@@ -162,6 +162,43 @@ def test_malformed_step_input_is_rejected(
         spec.validate()
 
 
+@pytest.mark.parametrize(
+    ("completion_pattern", "reason"),
+    (
+        ("", "profile_step_completion_pattern_empty"),
+        ("(", "profile_step_completion_pattern_invalid"),
+    ),
+)
+def test_malformed_completion_pattern_is_rejected(
+    completion_pattern: str,
+    reason: str,
+) -> None:
+    spec = ProfileProbeSpec(
+        profile_id="completion-pattern",
+        required_consoles=frozenset({Console.PRIMARY}),
+        steps=(
+            ProbeStep(
+                Console.PRIMARY,
+                "run",
+                r"READY> $",
+                1.0,
+                completion_pattern=completion_pattern,
+            ),
+        ),
+        expected_assertion_ids=("one",),
+        coverage_kind="identical",
+        evaluator=NoopEvaluator(),
+        cleanup=NoopCleanup(),
+        legacy_flag=None,
+    )
+
+    with pytest.raises(
+        ProfileRegistryError,
+        match=f"^{reason}:completion-pattern:0$",
+    ):
+        spec.validate()
+
+
 def test_one_registration_enables_a_new_repository_profile(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

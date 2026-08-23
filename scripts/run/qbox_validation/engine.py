@@ -55,18 +55,28 @@ def new_profile_state(
     if missing:
         names = ",".join(item.value for item in missing)
         return ProfileState(
-            "blocked", 0, False, None, (), (), f"unbound_console:{names}", None, None
+            phase="blocked",
+            next_step=0,
+            command_sent=False,
+            deadline=None,
+            cursors=(),
+            outputs=(),
+            blocker=f"unbound_console:{names}",
+            cleanup=None,
+            result=None,
         )
     return ProfileState(
-        "running",
-        0,
-        False,
-        now,
-        tuple(ConsoleCursor(item, 0) for item in sorted(bound_consoles)),
-        (),
-        None,
-        None,
-        None,
+        phase="running",
+        next_step=0,
+        command_sent=False,
+        deadline=now,
+        cursors=tuple(
+            ConsoleCursor(item, 0) for item in sorted(bound_consoles)
+        ),
+        outputs=(),
+        blocker=None,
+        cleanup=None,
+        result=None,
     )
 
 
@@ -177,6 +187,15 @@ def advance_profile(
                 )
             return AdvanceResult(state, None)
         output = content[previous_prompt_end:prompt_end]
+        if (
+            step.completion_pattern is not None
+            and re.search(step.completion_pattern, output) is None
+        ):
+            reason = (
+                f"command_record_missing:{state.next_step}:"
+                f"{step.console.value}"
+            )
+            return AdvanceResult(block_profile(spec, state, reason), None)
         progressed = replace(
             state,
             next_step=state.next_step + 1,

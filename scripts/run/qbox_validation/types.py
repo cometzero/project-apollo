@@ -46,6 +46,7 @@ class ProbeStep:
     command: str
     prompt_pattern: str
     timeout_s: float
+    completion_pattern: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +127,19 @@ class ProfileProbeSpec:
                 raise SpecError(
                     f"profile_step_prompt_invalid:{self.profile_id}:{index}"
                 ) from error
+            if step.completion_pattern is not None:
+                if not step.completion_pattern:
+                    raise SpecError(
+                        "profile_step_completion_pattern_empty:"
+                        f"{self.profile_id}:{index}"
+                    )
+                try:
+                    re.compile(step.completion_pattern)
+                except re.error as error:
+                    raise SpecError(
+                        "profile_step_completion_pattern_invalid:"
+                        f"{self.profile_id}:{index}"
+                    ) from error
             if step.timeout_s <= 0:
                 raise SpecError(
                     f"profile_step_timeout_invalid:{self.profile_id}:{index}"

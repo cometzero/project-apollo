@@ -78,18 +78,18 @@ def _state_map(
 
 
 def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
-    padded = (*outputs[:8], *("" for _missing in range(max(0, 8 - len(outputs)))))
-    ensure = _records(padded[0], "CPUIDLE_ENSURE")
+    combined = "\n".join(outputs)
+    ensure = _records(combined, "CPUIDLE_ENSURE")
     cstates = _state_map(
-        _records(padded[1], "CPUIDLE_CSTATE"),
+        _records(combined, "CPUIDLE_CSTATE"),
         frozenset({"cpu", "state", "name"}),
     )
     defaults = _state_map(
-        _records(padded[2], "CPUIDLE_DEFAULT"),
+        _records(combined, "CPUIDLE_DEFAULT"),
         frozenset({"cpu", "state", "value"}),
     )
     disabled = _state_map(
-        _records(padded[3], "CPUIDLE_DISABLE"),
+        _records(combined, "CPUIDLE_DISABLE"),
         frozenset(
             {
                 "cpu",
@@ -102,12 +102,14 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
                 "sample0_time",
                 "sample1_usage",
                 "sample1_time",
+                "peer_disable_before",
+                "peer_disable_after",
                 "restored",
             }
         ),
     )
     residency = _state_map(
-        _records(padded[4], "CPUIDLE_RESIDENCY"),
+        _records(combined, "CPUIDLE_RESIDENCY"),
         frozenset(
             {
                 "cpu",
@@ -118,25 +120,28 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
                 "usage_after",
                 "time_before",
                 "time_after",
+                "wake",
                 "restored",
             }
         ),
     )
-    governors = _records(padded[5], "CPUIDLE_GOVERNORS")
-    switches = _records(padded[6], "CPUIDLE_SWITCH")
-    restored = _records(padded[6], "CPUIDLE_SWITCH_RESTORE")
-    invalid = _records(padded[7], "CPUIDLE_INVALID")
+    governors = _records(combined, "CPUIDLE_GOVERNORS")
+    switches = _records(combined, "CPUIDLE_SWITCH")
+    restored = _records(combined, "CPUIDLE_SWITCH_RESTORE")
+    invalid = _records(combined, "CPUIDLE_INVALID")
     state_names = cstates is not None and all(
         cstates[(cpu, state)].value("name") == name
         for cpu, state, name, _res, _lat in EXPECTED_STATES
     )
     default_ok = defaults is not None and all(
-        record.value("value") in {"enabled", "absent"} for record in defaults.values()
+        record.value("value") == "enabled" for record in defaults.values()
     )
     disable_ok = disabled is not None and all(
         record.value("before") == "0"
         and record.value("after_write") == "1"
         and record.value("restored") == "0"
+        and record.value("peer_disable_before") == "0"
+        and record.value("peer_disable_after") == "0"
         and all(
             _integer(record, field) is not None
             for field in (
@@ -160,6 +165,7 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
         _integer(residency[(cpu, state)], "residency") == expected_res
         and _integer(residency[(cpu, state)], "latency") == expected_lat
         and residency[(cpu, state)].value("restored") == "1"
+        and residency[(cpu, state)].value("wake") == "natural-timer"
         and _increases(residency[(cpu, state)], "usage_before", "usage_after")
         and _increases(residency[(cpu, state)], "time_before", "time_after")
         for cpu, state, _name, expected_res, expected_lat in EXPECTED_STATES
@@ -169,13 +175,11 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
     available = tuple(item for item in available_raw.split(",") if item)
     original = governor.value("current")
     governors_ok = (
-        len(outputs) == 8
-        and _has_fields(
+        _has_fields(
             governor,
             frozenset({"available", "current", "current_ro"}),
         )
-        and bool(available)
-        and len(set(available)) == len(available)
+        and available == ("menu", "teo")
         and original in available
         and governor.value("current_ro") == original
     )
@@ -210,17 +214,26 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
         and len(invalid) == 1
         and _has_fields(
             invalid[0],
-            frozenset({"rejected", "original", "current", "current_ro", "restored"}),
+            frozenset(
+                {
+                    "rejected",
+                    "original",
+                    "current",
+                    "current_ro",
+                    "disable_zero",
+                    "restored",
+                }
+            ),
         )
         and invalid[0].value("rejected") == "1"
         and invalid[0].value("original") == original
         and invalid[0].value("current") == original
         and invalid[0].value("current_ro") == original
+        and invalid[0].value("disable_zero") == "12"
         and invalid[0].value("restored") == "1"
     )
     return (
-        len(outputs) == 8
-        and len(ensure) == 1
+        len(ensure) == 1
         and _has_fields(ensure[0], frozenset({"cpu_count", "states"}))
         and ensure[0].value("cpu_count") == "4"
         and ensure[0].value("states") == "12",
