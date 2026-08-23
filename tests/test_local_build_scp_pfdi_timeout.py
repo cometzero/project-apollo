@@ -72,8 +72,8 @@ def test_qbox_pfdi_timing_policy_is_centralized() -> None:
     local_source = LOCAL_BUILD_CONFIG.read_text(encoding="utf-8")
     expected = {
         "SCP_PFDI_OOR_PERIOD_US": 10_000_000,
-        "SCP_PFDI_BOOT_TIMEOUT_US": 100_000_000,
-        "SCP_PFDI_ONLINE_TIMEOUT_US": 500_000,
+        "SCP_PFDI_BOOT_TIMEOUT_US": 180_000_000,
+        "SCP_PFDI_ONLINE_TIMEOUT_US": 60_000_000,
         "SCP_SICL1_PFDI_OOR_PERIOD_US": 1_000_000,
         "SCP_SICL1_PFDI_BOOT_TIMEOUT_US": 10_000_000,
         "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US": 500_000,
@@ -192,9 +192,12 @@ def test_qbox_ap_secondary_cores_have_time_to_report_out_of_reset() -> None:
     assert policy >= 10_000_000
 
 
-def test_qbox_ap_pfdi_boot_watchdog_covers_product_login() -> None:
-    # Given: the QVP-only AP boot watchdog configuration.
-    policy = qbox_pfdi_policy_value("SCP_PFDI_BOOT_TIMEOUT_US")
+def test_qbox_ap_pfdi_watchdogs_cover_product_crypto() -> None:
+    # Given: the QVP-only AP PFDI watchdog configuration.
+    boot_policy = qbox_pfdi_policy_value("SCP_PFDI_BOOT_TIMEOUT_US")
+    online_policy = qbox_pfdi_policy_value("SCP_PFDI_ONLINE_TIMEOUT_US")
 
-    # When/Then: Linux has at least 100 simulated seconds to report online.
-    assert policy >= 100_000_000
+    # When/Then: product login and long secure calls fit without masking a
+    # permanently missing heartbeat.
+    assert boot_policy >= 180_000_000
+    assert online_policy >= 60_000_000
