@@ -113,15 +113,22 @@ def cpufreq_probe_commands() -> tuple[str, ...]:
         "done; done"
     )
     negative = _mutate(
-        "for policy in $policies; do path=$root/$policy; minimum=$(cat "
-        "$path/scaling_min_freq); maximum=$(cat $path/scaling_max_freq); "
-        "rejected_min=0; rejected_max=0; printf '%s\\n' $((maximum+100000)) "
-        "> $path/scaling_min_freq || rejected_min=1; printf '%s\\n' "
-        "$((minimum-100000)) > $path/scaling_max_freq || rejected_max=1; "
-        "test $(cat $path/scaling_min_freq) -le $(cat "
-        "$path/scaling_max_freq); printf 'CPUFREQ_NEGATIVE policy=%s "
-        "rejected_min=%s rejected_max=%s unchanged=1\\n' $policy "
-        "$rejected_min $rejected_max; done"
+        "for policy in $policies; do path=$root/$policy; before_min=$(cat "
+        "$path/scaling_min_freq); before_max=$(cat $path/scaling_max_freq); "
+        "rejected_min=0; if printf '%s\\n' $((before_max+100000)) > "
+        "$path/scaling_min_freq; then exit 1; else rejected_min=1; fi; "
+        "after_min=$(cat $path/scaling_min_freq); "
+        "after_max=$(cat $path/scaling_max_freq); "
+        "test x$after_min = x$before_min; test x$after_max = x$before_max; "
+        "rejected_max=0; if printf '%s\\n' $((before_min-100000)) > "
+        "$path/scaling_max_freq; then exit 1; else rejected_max=1; fi; "
+        "after_min=$(cat $path/scaling_min_freq); "
+        "after_max=$(cat $path/scaling_max_freq); "
+        "test x$after_min = x$before_min; test x$after_max = x$before_max; "
+        "printf 'CPUFREQ_NEGATIVE policy=%s rejected_min=%s "
+        "rejected_max=%s before_min=%s before_max=%s after_min=%s "
+        "after_max=%s\\n' $policy $rejected_min $rejected_max $before_min "
+        "$before_max $after_min $after_max; done"
     )
     return (
         policy,

@@ -99,7 +99,9 @@ def _passing_outputs(cpu_count: int) -> tuple[str, ...]:
         for frequency in OPPS
     )
     negative = "\n".join(
-        f"CPUFREQ_NEGATIVE policy={policy} rejected_min=1 rejected_max=1 unchanged=1"
+        f"CPUFREQ_NEGATIVE policy={policy} rejected_min=1 rejected_max=1 "
+        "before_min=1800000 before_max=2500000 "
+        "after_min=1800000 after_max=2500000"
         for policy in policies
     )
     restored = _restore(policies)
@@ -146,6 +148,7 @@ def test_cpufreq_evaluator_accepts_cluster_aligned_contract(cpu_count: int) -> N
         (2, "actual=ondemand", "actual=powersave", "cpufreq-set-governors"),
         (6, "rejected=1", "rejected=0", "cpufreq-invalid-governor"),
         (9, "rejected_max=1", "rejected_max=0", "cpufreq-min-max-negative"),
+        (9, "after_max=2500000", "after_max=2400000", "cpufreq-min-max-negative"),
         (9, "restored=1", "restored=0", "cpufreq-min-max-negative"),
     ),
 )
@@ -170,3 +173,14 @@ def test_cpufreq_commands_are_ten_primary_console_steps() -> None:
     assert spec.legacy_flag is None
     for command in cpufreq_probe_commands():
         assert subprocess.run(["sh", "-n", "-c", command], check=False).returncode == 0
+
+
+def test_cpufreq_negative_command_proves_exact_state_is_unchanged() -> None:
+    negative = cpufreq_probe_commands()[-1]
+
+    assert "then exit 1; else rejected_min=1; fi" in negative
+    assert "then exit 1; else rejected_max=1; fi" in negative
+    assert "test x$after_min = x$before_min" in negative
+    assert "test x$after_max = x$before_max" in negative
+    assert "before_min=%s before_max=%s after_min=%s after_max=%s" in negative
+    assert "unchanged=1" not in negative
