@@ -4,7 +4,20 @@ from typing import Final, Literal
 
 
 ComparisonMode = Literal["none", "standalone", "fvp-reference"]
-STANDALONE_QBOX_PROFILES: Final = frozenset({"platform-devices"})
+STANDALONE_QBOX_PROFILES: Final = frozenset(
+    {
+        "bsp-core",
+        "cpuidle",
+        "cpufreq",
+        "pfdi",
+        "pfdi-si-cl1",
+        "platform-devices",
+        "ras_cpu",
+        "safety-diagnostics-tests",
+        "si-cl1",
+        "smcf",
+    }
+)
 
 
 def profile_requires_fvp_reference(profile_id: str | None) -> bool:

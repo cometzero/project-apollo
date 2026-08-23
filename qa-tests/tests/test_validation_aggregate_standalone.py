@@ -13,6 +13,18 @@ from apollo_validation.aggregate import (
 
 
 REVISION = "1" * 40
+SUPPORTED = (
+    "bsp-core",
+    "cpuidle",
+    "cpufreq",
+    "pfdi",
+    "pfdi-si-cl1",
+    "platform-devices",
+    "ras_cpu",
+    "safety-diagnostics-tests",
+    "si-cl1",
+    "smcf",
+)
 
 
 def _source(
@@ -55,20 +67,25 @@ def _pair(
     }
 
 
-def test_platform_devices_standalone_needs_no_fvp_receipt(
+@pytest.mark.parametrize("profile_id", SUPPORTED)
+def test_supported_profile_standalone_needs_no_fvp_receipt(
     tmp_path: Path,
+    profile_id: str,
 ) -> None:
     results = _pair(
         tmp_path,
-        "platform-devices",
+        profile_id,
         {"comparison_mode": "standalone"},
     )
 
     _validate_references(results)
 
 
-@pytest.mark.parametrize("profile_id", ("pfdi", "platform-devices-extra"))
-def test_other_profile_cannot_claim_standalone(
+@pytest.mark.parametrize(
+    "profile_id",
+    ("trusted-services", "platform-devices-extra"),
+)
+def test_unsupported_profile_cannot_claim_standalone(
     tmp_path: Path,
     profile_id: str,
 ) -> None:

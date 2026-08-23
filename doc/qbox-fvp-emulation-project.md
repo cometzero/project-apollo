@@ -145,18 +145,18 @@ The current public profile placement is:
 
 | Profile | Image | CPU count | Coverage label | Current state |
 | --- | --- | --- | --- | --- |
-| `bsp-core` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
-| `si-cl1` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
-| `smcf` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
-| `pfdi` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
-| `pfdi-si-cl1` | BSP | 4 | identical | FVP/QBox implementation exists for SI CL1 PFDI and SI monitoring; QBox requires matching `--fvp-reference`. |
-| `safety-diagnostics-tests` | BSP | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
-| `cpuidle` | BSP | 4 | identical | FVP/QBox implementation exists; current-SHA final runtime is deferred. |
-| `cpufreq` | BSP | 4 | identical guest contract | FVP/QBox implementation exists; current-SHA final runtime is deferred. QBox does not claim TCG execution-rate coupling. |
+| `bsp-core` | BSP | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
+| `si-cl1` | BSP | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
+| `smcf` | BSP | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
+| `pfdi` | BSP | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
+| `pfdi-si-cl1` | BSP | 4 | identical | Standalone QBox SI CL1 PFDI and SI monitoring implementation exists; FVP reference is optional. |
+| `safety-diagnostics-tests` | BSP | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
+| `cpuidle` | BSP | 4 | identical | Standalone QBox preflight exists; current-SHA final runtime is deferred. |
+| `cpufreq` | BSP | 4 | identical guest contract | Standalone QBox preflight exists; current-SHA final runtime is deferred. QBox does not claim TCG execution-rate coupling. |
 | `platform-devices` | product | 4 | semantic for transport/network | FVP and standalone QBox qualification pass; QBox records current provenance and does not require an FVP reference. |
 | `trusted-services` | product | 4 | identical | FVP rerun and QBox enablement are deferred. |
 | `crypto-extension` | product | 4 | semantic | FVP rerun is deferred; QBox must not compare FVP crypto-plugin wall time with QEMU TCG wall time. |
-| `ras_cpu` | product | 4 | identical | FVP/QBox implementation exists; QBox requires matching `--fvp-reference`. |
+| `ras_cpu` | product | 4 | identical | Standalone QBox implementation exists; FVP reference is optional comparison evidence. |
 | `hipc` | product | 4 | identical | Blocked on final FVP HIPC reference. |
 | `mbpp` | product | 16 | identical guest contract | Blocked on isolated 16-CPU FVP and QBox prerequisites. The normal four-CPU lane is not applicable. |
 

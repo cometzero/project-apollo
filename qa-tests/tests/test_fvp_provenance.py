@@ -36,21 +36,24 @@ def test_runtime_input_hashing_reads_files_in_bounded_chunks(
     assert sha256_file(artifact) == hashlib.sha256(payload).hexdigest()
 
 
-def test_named_qbox_profile_requires_reference_before_subprocess(
+def test_supported_qbox_profile_runs_standalone_without_reference(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    # Given: a valid named QBox profile with no FVP reference.
     make_workspace(tmp_path)
 
-    # When: the public root runner handles the request.
     result, calls = run_qbox_profile(tmp_path, monkeypatch, None)
 
-    # Then: it rejects with a stable reason before any launcher subprocess.
-    assert result == 64
-    assert calls == []
-    assert capsys.readouterr().err.strip() == "error: blocked_fvp_reference_required"
+    assert result == 2
+    assert len(calls) == 1
+    manifest = json.loads(
+        (
+            tmp_path
+            / "build/tests/qbox-pfdi-run/evidence/input-manifest.json"
+        ).read_text()
+    )
+    assert manifest["comparison_mode"] == "standalone"
+    assert "accepted_fvp_reference" not in manifest
 
 
 def test_matching_fvp_reference_reaches_qbox_preflight(

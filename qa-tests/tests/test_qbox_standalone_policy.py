@@ -7,8 +7,27 @@ from pathlib import Path
 import pytest
 
 from apollo_validation import qbox_entry
+from apollo_validation.profiles import ProfileError, load_test_profile
 from apollo_validation.root_cli import parse_root_args
 from apollo_validation.provenance import JsonValue
+from apollo_validation.reference_policy import STANDALONE_QBOX_PROFILES
+from scripts.run.qbox_validation.registry import enabled_profile_ids
+
+
+ROOT = Path(__file__).resolve().parents[2]
+MATRIX = ROOT / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+SUPPORTED = (
+    "bsp-core",
+    "cpuidle",
+    "cpufreq",
+    "pfdi",
+    "pfdi-si-cl1",
+    "platform-devices",
+    "ras_cpu",
+    "safety-diagnostics-tests",
+    "si-cl1",
+    "smcf",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,15 +38,45 @@ class FakeProvenance:
         return {"profile_id": self.profile_id}
 
 
-def test_only_platform_devices_is_standalone() -> None:
+def test_every_supported_qbox_profile_is_standalone() -> None:
     requires = getattr(qbox_entry, "profile_requires_fvp_reference", None)
 
     assert callable(requires)
-    assert requires("platform-devices") is False
-    assert requires("pfdi") is True
+    assert enabled_profile_ids(MATRIX) == SUPPORTED
+    assert STANDALONE_QBOX_PROFILES == frozenset(SUPPORTED)
+    for profile_id in SUPPORTED:
+        image_profile = (
+            "product"
+            if profile_id in {"platform-devices", "ras_cpu"}
+            else "bsp"
+        )
+        profile = load_test_profile(
+            ROOT,
+            profile_id,
+            "qbox",
+            image_profile,
+        )
+        assert profile.backend == "qbox"
+        assert requires(profile_id) is False
+
+
+def test_near_name_and_unknown_profiles_do_not_gain_standalone_policy() -> None:
+    requires = qbox_entry.profile_requires_fvp_reference
+
     assert requires("platform-device") is True
     assert requires("platform-devices-extra") is True
     assert requires("unknown") is True
+
+
+@pytest.mark.parametrize(
+    "profile_id",
+    ("platform-devices-extra", "trusted-services"),
+)
+def test_unknown_or_unsupported_profile_fails_loader_selection(
+    profile_id: str,
+) -> None:
+    with pytest.raises(ProfileError):
+        load_test_profile(ROOT, profile_id, "qbox", "product")
 
 
 def test_platform_devices_without_reference_reaches_context(

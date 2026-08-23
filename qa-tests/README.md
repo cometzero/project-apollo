@@ -25,39 +25,37 @@ The public entrypoint is run from the workspace root:
 ./run_test.sh --list
 ./run_test.sh --machine apollo-fvp --bsp --test-profile bsp-core
 ./run_test.sh --machine apollo-fvp --test-profile trusted-services
-./run_test.sh --machine apollo-qvp --bsp --test-profile bsp-core \
-  --fvp-reference build/tests/<fvp-bsp-core-run>/summary.json
-./run_test.sh --machine apollo-qvp --test-profile ras_cpu \
-  --fvp-reference build/tests/<fvp-ras-cpu-run>/summary.json
+./run_test.sh --machine apollo-qvp --bsp --test-profile bsp-core
+./run_test.sh --machine apollo-qvp --test-profile ras_cpu
 ./run_test.sh --machine apollo-qvp --test-profile platform-devices
 ```
 
 The QBox backend selects `apollo-qvp`, validates the deployed `qboxconf`, and
 runs the canonical Yocto QBox launcher in headless full-system mode. Add
-`--bsp` to boot `nexios-bsp-initramfs`. A named QBox profile must provide
-`--fvp-reference <summary.json>` from the matching FVP run, except
-`platform-devices`, which runs standalone from current QBox provenance. The
-runner rejects missing, failed, skipped, stale, image-mismatched,
-CPU-count-mismatched, or contract-drifted references before launching QBox.
-Basic QBox boot without a named profile remains available through the normal
-QBox launcher path.
+`--bsp` to boot `nexios-bsp-initramfs`. Every implemented named QBox profile
+can run standalone from current QBox provenance. `--fvp-reference
+<summary.json>` is optional comparison evidence; when supplied, the runner
+still rejects failed, skipped, stale, image-mismatched, CPU-count-mismatched,
+or contract-drifted references before launching QBox. Unknown and FVP-only
+profiles remain selection errors. Basic QBox boot without a named profile
+remains available through the normal QBox launcher path.
 
 ## Public Profiles
 
 | Profile | Image | FVP command | QBox state |
 | --- | --- | --- | --- |
-| `bsp-core` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile bsp-core` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `si-cl1` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile si-cl1` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `smcf` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile smcf` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `pfdi` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile pfdi` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `pfdi-si-cl1` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile pfdi-si-cl1` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `safety-diagnostics-tests` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile safety-diagnostics-tests` | Implemented QBox BSP profile; requires matching `--fvp-reference`. |
-| `cpuidle` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpuidle` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
-| `cpufreq` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpufreq` | Implemented QBox BSP profile; final current-SHA runtime is deferred. |
+| `bsp-core` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile bsp-core` | Implemented standalone QBox BSP profile; FVP reference optional. |
+| `si-cl1` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile si-cl1` | Implemented standalone QBox BSP profile; FVP reference optional. |
+| `smcf` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile smcf` | Implemented standalone QBox BSP profile; FVP reference optional. |
+| `pfdi` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile pfdi` | Implemented standalone QBox BSP profile; FVP reference optional. |
+| `pfdi-si-cl1` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile pfdi-si-cl1` | Implemented standalone QBox SI CL1/monitor profile; FVP reference optional. |
+| `safety-diagnostics-tests` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile safety-diagnostics-tests` | Implemented standalone QBox BSP profile; FVP reference optional. |
+| `cpuidle` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpuidle` | Standalone QBox preflight is implemented; final current-SHA runtime is deferred. |
+| `cpufreq` | BSP | `./run_test.sh --machine apollo-fvp --bsp --test-profile cpufreq` | Standalone QBox preflight is implemented; final current-SHA runtime is deferred. |
 | `platform-devices` | product | `./run_test.sh --machine apollo-fvp --test-profile platform-devices` | FVP and standalone QBox PASS. QBox transport/network coverage is semantic; an FVP reference is optional. |
 | `trusted-services` | product | `./run_test.sh --machine apollo-fvp --test-profile trusted-services` | Deferred until current-SHA FVP reference is regenerated. |
 | `crypto-extension` | product | `./run_test.sh --machine apollo-fvp --test-profile crypto-extension` | Deferred. QBox coverage is semantic: deterministic crypto and instruction-use evidence, not FVP plugin wall-time comparison. |
-| `ras_cpu` | product | `./run_test.sh --machine apollo-fvp --test-profile ras_cpu` | Implemented QBox product profile; requires matching `--fvp-reference`. |
+| `ras_cpu` | product | `./run_test.sh --machine apollo-fvp --test-profile ras_cpu` | Implemented standalone QBox product profile; FVP reference optional. |
 | `hipc` | product | `./run_test.sh --machine apollo-fvp --test-profile hipc` | Blocked on final FVP HIPC reference. |
 | `mbpp` | product, 16 CPU only | `./run_test.sh --machine apollo-fvp --test-profile mbpp` from the isolated 16-CPU lane | Blocked on isolated 16-CPU FVP and QBox prerequisites. |
 
