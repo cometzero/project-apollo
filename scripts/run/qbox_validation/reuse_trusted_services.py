@@ -182,4 +182,5 @@ def trusted_services_spec(
         TrustedServicesEvaluator(expected),
         TrustedServicesCleanup(),
         None,
+        ("--cc3xx-qemu-native-backend",),
     )

@@ -61,6 +61,7 @@ def test_trusted_services_profile_runs_all_four_psa_binaries() -> None:
     assert spec.coverage_kind == "identical"
     assert spec.required_consoles == frozenset({Console.PRIMARY})
     assert spec.expected_assertion_ids == EXPECTED
+    assert spec.launcher_flags == ("--cc3xx-qemu-native-backend",)
     assert len(spec.steps) == 4
     commands = "\n".join(step.command for step in spec.steps)
     for binary in (

@@ -82,6 +82,7 @@ class ProfileProbeSpec:
     evaluator: ProfileEvaluator
     cleanup: ProfileCleanup
     legacy_flag: str | None
+    launcher_flags: tuple[str, ...] = ()
 
     def validate(self) -> None:
         if not self.required_consoles:
@@ -94,6 +95,13 @@ class ProfileProbeSpec:
             self.expected_assertion_ids
         ):
             raise SpecError(f"profile_assertions_duplicate:{self.profile_id}")
+        if len(set(self.launcher_flags)) != len(self.launcher_flags):
+            raise SpecError(f"profile_launcher_flags_duplicate:{self.profile_id}")
+        if any(
+            not item.startswith("--") or "\x00" in item
+            for item in self.launcher_flags
+        ):
+            raise SpecError(f"profile_launcher_flag_invalid:{self.profile_id}")
         for index, step in enumerate(self.steps):
             if step.console not in self.required_consoles:
                 raise SpecError(

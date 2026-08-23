@@ -172,6 +172,20 @@ def test_qbox_cpufreq_command_selects_registry_profile(tmp_path: Path) -> None:
     assert not any(argument.endswith("-probe") for argument in command)
 
 
+def test_qbox_trusted_services_selects_native_cc3xx_backend(
+    tmp_path: Path,
+) -> None:
+    request = qbox_request(
+        tmp_path,
+        "product",
+        test_profile="trusted-services",
+    )
+
+    command = qbox_launcher_command(request, dry_run=True)
+
+    assert "--cc3xx-qemu-native-backend" in command
+
+
 @pytest.mark.parametrize(
     "profile_id",
     ("pfdi", "pfdi-si-cl1", "ras_cpu", "safety-diagnostics-tests"),

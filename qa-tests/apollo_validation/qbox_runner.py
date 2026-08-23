@@ -12,12 +12,15 @@ from typing import assert_never
 
 from .backend import ImageProfile
 from .evidence import JsonObject, append_record, now, run_log, write_reports
+from .qbox_artifacts import qbox_artifacts
 from .qbox_network import NetworkForward, platform_network_server
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 RUN_SCRIPT_DIR = WORKSPACE_ROOT / "scripts/run"
 
-def _profile_adapter(profile_id: str) -> tuple[str, str | None]:
+def _profile_adapter(
+    profile_id: str,
+) -> tuple[str, str | None, tuple[str, ...]]:
     for import_path in (WORKSPACE_ROOT, RUN_SCRIPT_DIR):
         if str(import_path) not in sys.path:
             sys.path.insert(0, str(import_path))
@@ -27,7 +30,7 @@ def _profile_adapter(profile_id: str) -> tuple[str, str | None]:
     )
 
     spec = resolve_profile(profile_id, canonical_matrix_path())
-    return spec.profile_id, spec.legacy_flag
+    return spec.profile_id, spec.legacy_flag, spec.launcher_flags
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,10 +84,13 @@ def qbox_launcher_command(
     if dry_run:
         command.append("--dry-run")
     if request.test_profile is not None:
-        profile_id, legacy_flag = _profile_adapter(request.test_profile)
+        profile_id, legacy_flag, launcher_flags = _profile_adapter(
+            request.test_profile
+        )
         command.extend(["--validation-profile", profile_id])
         if legacy_flag is not None:
             command.append(legacy_flag)
+        command.extend(launcher_flags)
     if validation_http_port is not None:
         command.extend(["--validation-http-port", str(validation_http_port)])
     return command
@@ -130,31 +136,6 @@ def _read_result(path: Path) -> JsonObject:
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
     return loaded if isinstance(loaded, dict) else {}
-
-
-def _qbox_artifacts(request: QBoxRunRequest) -> list[JsonObject]:
-    qbox_dir = request.out_dir / "qbox"
-    artifacts: list[JsonObject] = [
-        {"kind": "qbox_result", "path": str(qbox_dir / "result.json")},
-        {"kind": "qbox_summary", "path": str(qbox_dir / "summary.txt")},
-    ]
-    for name in (
-        "qbox-platform.log",
-        "qbox-rse.log",
-        "qbox-safety-island-cl0.log",
-        "qbox-safety-island-cl1.log",
-        "qbox-secure-console.log",
-        "qbox-primary-console.log",
-    ):
-        artifacts.append({"kind": "qbox_console", "path": str(qbox_dir / name)})
-    if request.test_profile == "platform-devices":
-        artifacts.append(
-            {
-                "kind": "network_lifecycle",
-                "path": str(request.out_dir / "logs/platform-network.jsonl"),
-            }
-        )
-    return artifacts
 
 
 def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
@@ -224,7 +205,10 @@ def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
                 "started_at": timestamp,
                 "finished_at": timestamp,
                 "duration_s": 0.0,
-                "artifacts": _qbox_artifacts(request),
+                "artifacts": qbox_artifacts(
+                    request.out_dir,
+                    request.test_profile,
+                ),
             },
         )
         return write_reports(request.out_dir)[1]
@@ -261,7 +245,10 @@ def run_qbox_category(request: QBoxRunRequest, category: str) -> int:
         "duration_s": boot.duration_s,
         "stdout_log": str(boot_stdout),
         "stderr_log": str(boot_stderr),
-        "artifacts": _qbox_artifacts(request),
+        "artifacts": qbox_artifacts(
+            request.out_dir,
+            request.test_profile,
+        ),
     }
     if blocker:
         record["blockers"] = [
