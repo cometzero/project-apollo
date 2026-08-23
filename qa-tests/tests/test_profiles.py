@@ -238,6 +238,18 @@ def test_trusted_services_profile_selects_serial_product_contract() -> None:
     _assert_oeqa_dependency_closure(profile.selectors)
 
 
+def test_trusted_services_profile_selects_qbox_product_contract() -> None:
+    profile = load_test_profile(
+        WORKSPACE,
+        "trusted-services",
+        "qbox",
+        "product",
+    )
+
+    assert profile.test_target == "QBoxTrustedServicesRunner"
+    assert profile.timeout_seconds == 7200
+
+
 def test_crypto_extension_profile_selects_plugin_backed_product_contract() -> None:
     # Given: the FVP-only crypto performance profile.
     # When: it is resolved for the product image.

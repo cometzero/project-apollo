@@ -27,6 +27,7 @@ SUPPORTED = (
     "safety-diagnostics-tests",
     "si-cl1",
     "smcf",
+    "trusted-services",
 )
 
 
@@ -47,7 +48,7 @@ def test_every_supported_qbox_profile_is_standalone() -> None:
     for profile_id in SUPPORTED:
         image_profile = (
             "product"
-            if profile_id in {"platform-devices", "ras_cpu"}
+            if profile_id in {"platform-devices", "ras_cpu", "trusted-services"}
             else "bsp"
         )
         profile = load_test_profile(
@@ -70,7 +71,7 @@ def test_near_name_and_unknown_profiles_do_not_gain_standalone_policy() -> None:
 
 @pytest.mark.parametrize(
     "profile_id",
-    ("platform-devices-extra", "trusted-services"),
+    ("platform-devices-extra", "unknown"),
 )
 def test_unknown_or_unsupported_profile_fails_loader_selection(
     profile_id: str,

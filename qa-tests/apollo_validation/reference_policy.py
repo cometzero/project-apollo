@@ -16,6 +16,7 @@ STANDALONE_QBOX_PROFILES: Final = frozenset(
         "safety-diagnostics-tests",
         "si-cl1",
         "smcf",
+        "trusted-services",
     }
 )
 

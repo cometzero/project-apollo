@@ -1,9 +1,9 @@
 {
   "version": 1,
   "name": "trusted-services",
-  "description": "Apollo FVP Trusted Services PSA conformance validation",
+  "description": "Apollo FVP and QBox Trusted Services PSA conformance validation",
   "compatibility": {
-    "backends": ["fvp"],
+    "backends": ["fvp", "qbox"],
     "images": ["product"]
   },
   "oeqa": {
@@ -16,6 +16,7 @@
     "timeout_seconds": 7200
   },
   "targets": {
-    "fvp": "HSOCSingleSessionFVPTarget"
+    "fvp": "HSOCSingleSessionFVPTarget",
+    "qbox": "QBoxTrustedServicesRunner"
   }
 }

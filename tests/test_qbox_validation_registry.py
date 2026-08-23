@@ -61,6 +61,7 @@ def test_registry_enables_existing_and_reuse_profile_implementations() -> None:
         "safety-diagnostics-tests",
         "si-cl1",
         "smcf",
+        "trusted-services",
     )
 
 
@@ -96,7 +97,6 @@ def test_compatibility_adapters_are_registry_metadata(
     ("profile_id", "reason"),
     (
         ("unknown", "unknown_validation_profile:unknown"),
-        ("trusted-services", "validation_profile_unavailable:trusted-services"),
     ),
 )
 def test_unknown_or_unimplemented_profile_rejects_preflight(
