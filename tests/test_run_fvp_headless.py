@@ -27,6 +27,12 @@ def test_bsp_ready_marker_satisfies_primary_console() -> None:
     assert status["passed"] is True
 
 
+def test_bsp_shell_is_recognized_as_root_prompt() -> None:
+    text = "NEXIOS_BSP_INITRAMFS_READY machine=apollo-fvp\nnexios-bsp# "
+
+    assert runfvp_log_boot.latest_root_prompt_end(text) == len(text)
+
+
 def test_fvp_headless_routes_to_log_runner(tmp_path: Path) -> None:
     build_dir = tmp_path / "build"
     deploy_dir = build_dir / "tmp_baremetal/deploy/images/apollo-fvp"

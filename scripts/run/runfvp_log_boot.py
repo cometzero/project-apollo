@@ -167,7 +167,10 @@ LOGIN_RETRY_READY_PATTERNS = [
     re.compile(r"systemd\[1\]:"),
 ]
 LOGIN_MAX_ATTEMPTS = 80
-ROOT_PROMPT_RE = re.compile(r"root@[\w.-]+:[^\r\n]*[#>]")
+ROOT_PROMPT_RE = re.compile(
+    r"(?:root@[\w.-]+:[^\r\n]*[#>]|^nexios-bsp#[ \t]*)",
+    re.MULTILINE,
+)
 TERMINAL_STATUS_QUERY = "\x1b[6n"
 TERMINAL_STATUS_RESPONSE = "\x1b[32766;32766R"
 
@@ -791,7 +794,7 @@ def parse_args() -> argparse.Namespace:
         "--post-login-command",
         action="append",
         default=[],
-        help="Shell command to send after the root prompt appears. May be repeated.",
+        help="Shell command to send after the root shell appears. May be repeated.",
     )
     parser.add_argument(
         "--post-login-timeout",
@@ -830,10 +833,6 @@ def main() -> int:
     if not shutil.which("telnet"):
         print("error: telnet not found", file=sys.stderr)
         return 2
-    if args.no_login and args.post_login_command:
-        print("error: --post-login-command requires login", file=sys.stderr)
-        return 2
-
     config = load_fvpconf(args.fvpconf)
     configuration_errors = runtime_configuration_errors(config)
     if configuration_errors:
@@ -921,14 +920,21 @@ def main() -> int:
         while time.monotonic() - start_time < args.timeout:
             with lock:
                 default_capture = captures.get("terminal_ns_uart0")
-            if default_capture and not args.no_login and login_attempts < LOGIN_MAX_ATTEMPTS:
+            if default_capture and not args.no_login:
                 text = read_text(default_capture.log_path)
+                shell_ready = bool(ROOT_PROMPT_RE.search(text))
+                if shell_ready:
+                    login_sent = True
                 should_retry_login = (
                     login_sent
-                    and not ROOT_PROMPT_RE.search(text)
+                    and not shell_ready
                     and time.monotonic() - last_login_time >= 5.0
                 )
-                if (not login_sent and login_retry_ready(text)) or should_retry_login:
+                if (
+                    not shell_ready
+                    and login_attempts < LOGIN_MAX_ATTEMPTS
+                    and ((not login_sent and login_retry_ready(text)) or should_retry_login)
+                ):
                     default_capture.sendline("root")
                     login_sent = True
                     login_attempts += 1
@@ -936,7 +942,6 @@ def main() -> int:
 
             if (
                 default_capture
-                and login_sent
                 and args.post_login_command
                 and not post_login_started
             ):
