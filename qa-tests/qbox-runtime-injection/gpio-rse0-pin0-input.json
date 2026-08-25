@@ -1,0 +1,28 @@
+{
+  "name": "rse-gpio0-pin0-input-drive",
+  "requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin0",
+      "action": "set-direction",
+      "parameters": {
+        "direction": "input"
+      },
+      "clear_on_reset": true
+    },
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin0",
+      "action": "drive-high",
+      "clear_on_reset": true
+    }
+  ],
+  "release_requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin0",
+      "action": "release",
+      "clear_on_reset": true
+    }
+  ]
+}

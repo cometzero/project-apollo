@@ -1,0 +1,15 @@
+{
+  "name": "si-cl0-ssu-critical-event",
+  "requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.event.si-cl0-ssu-fault",
+      "action": "trigger-fault",
+      "parameters": {
+        "critical": true
+      },
+      "clear_on_reset": true
+    }
+  ],
+  "release_requests": []
+}

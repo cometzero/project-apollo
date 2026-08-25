@@ -1,0 +1,23 @@
+{
+  "name": "css-system-counter-control",
+  "requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.control.css-system-counter",
+      "action": "set-control",
+      "parameters": {
+        "enabled": true,
+        "halt_on_debug": true
+      },
+      "clear_on_reset": true
+    }
+  ],
+  "release_requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.control.css-system-counter",
+      "action": "clear",
+      "clear_on_reset": true
+    }
+  ]
+}

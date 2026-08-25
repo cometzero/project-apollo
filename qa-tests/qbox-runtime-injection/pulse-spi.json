@@ -1,0 +1,20 @@
+{
+  "name": "si-gic-pulse-spi",
+  "requests": [
+    {
+      "schema_version": 1,
+      "target": "platform.si_gic_multiview",
+      "action": "pulse-spi",
+      "trigger": {
+        "type": "immediate"
+      },
+      "parameters": {
+        "view": 1,
+        "intid": 105,
+        "duration_ns": 10000
+      },
+      "clear_on_reset": true
+    }
+  ],
+  "release_requests": []
+}

@@ -1,0 +1,37 @@
+{
+  "name": "rse-gpio0-pin1-output-control",
+  "requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin1",
+      "action": "set-direction",
+      "parameters": {
+        "direction": "output"
+      },
+      "clear_on_reset": true
+    },
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin1",
+      "action": "write-output-high",
+      "clear_on_reset": true
+    },
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin1",
+      "action": "observe",
+      "clear_on_reset": true
+    }
+  ],
+  "release_requests": [
+    {
+      "schema_version": 1,
+      "target": "apollo.gpio.rse0.pin1",
+      "action": "set-direction",
+      "parameters": {
+        "direction": "input"
+      },
+      "clear_on_reset": true
+    }
+  ]
+}
