@@ -100,6 +100,14 @@ an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
 recovery. Unimplemented combinations remain explicit extended-validation
 debt rather than boot-compatibility bridges.
 
+The 2026-08-25 GPIO implementation adds a reusable libqemu-backed PL061 QBox
+component. Apollo RSE GPIO0/1 use their secure and non-secure aliases,
+PPCEXP0 policy, combined NVIC IRQ 34, and the TF-M PL061 framework self-test.
+The SMD controller is decoded only at physical `0x20000D0310000`; AP Linux
+reaches logical `0x40750000` through firmware-programmed ATU region 9 and uses
+GIC SPI 193. The QBox BSP runtime registered the Linux PL061 driver, read the
+configured GPIO0 input value, and held GPIO1 as a `gpioset` output.
+
 The 2026-08-20 four-CPU PFDI qualification adds the QBox backend for
 `./run_test.sh --machine apollo-qvp --bsp --test-profile pfdi`. AP SBIST FCTLR
 writes now reach a functional `apollo_sbist` SystemC model, inject SI0 FMU

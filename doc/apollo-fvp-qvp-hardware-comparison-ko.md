@@ -209,6 +209,7 @@ FVP SI CL1 Zephyr DTS.
 | CPU security/power/identity regs | `0x5001_1000`, `0x5001_2000`, `0x5001_f000` | `rse_cpu0_*_regs` | `gs_memory` | placeholder/stub | register side effect가 없다. | `rse.lua:182-225` |
 | TRAM/integration registers | `0x5015_d000`, `0x5810_0000` | `rse_tram`, `rse_integ_layer_regs` | `gs_memory` | placeholder/stub | address window만 제공한다. | `rse.lua:432-441,535-544` |
 | RSE secure timers/watchdog | `0x5800_0000-0x5800_3fff`, `0x5804_0000/0x5804_1000` | 대응 인스턴스 없음 | - | 미구현 | active RSE Lua에 dedicated timer/watchdog module이 없다. | `09-programmers-model-for-zena-css.md:700-706` |
+| RSE GPIO0/1 | S/NS `0x5010_0000`/`0x4010_0000`, `0x5010_1000`/`0x4010_1000`; NVIC 34 | `rse_gpio_0`, `rse_gpio_1`, `rse_gpio_irq_or` | `qemu_pl061`, `signal_or`, `rse_ppc_filter` | 동작 모델 | PPCEXP0 보안 정책과 combined IRQ를 보존하며 TF-M PL061 self-test를 통과한다. | `rse.lua`; `qemu_pl061.h`; QBox RSE UART evidence |
 
 ## CSS/System Management
 
@@ -238,7 +239,7 @@ NI-710AE APU는 기본적으로 RSE 외 접근을 차단한다. 근거:
 | SYSTOP Power Integration | `d020_0000` | `host_systop_pik`, SI/AP PPU instances | `gs_memory`, `host_ppu` | placeholder/stub / 부분 모델 | SYSTOP PIK register window는 memory placeholder다. 필요한 power/reset 결과만 PPU/service hook로 분산해 재현한다. | `system_mgmt.lua:366-375`; `si_cl0.lua:623-733` |
 | DBGTOP Power Integration | `d021_0000` | 대응 인스턴스 없음 | - | 미구현 | DBGTOP register window와 독립 power-policy/IRQ 동작을 활성 QVP Lua가 제공하지 않는다. | `09-programmers-model-for-zena-css.md:298` |
 | SMD UART | `d030_0000`, AP/RSE/SI IRQ views | 대응 인스턴스 없음 | - | 미구현 | AP/SI/RSE 개별 UART는 있으나 SMD UART architectural window는 없다. | `09-programmers-model-for-zena-css.md:300` |
-| SMD GPIO | `d031_0000` | 대응 인스턴스 없음 | - | 미구현 | GPIO register/IRQ가 없다. | `09-programmers-model-for-zena-css.md:301` |
+| SMD GPIO | `d031_0000`, AP SPI 193 | `host_smd_gpio` | `qemu_pl061` | 동작 모델 | physical SMD target만 제공하며 AP `0x4075_0000` 접근은 ATU region 9를 경유한다. Linux gpiolib input/output을 검증했다. | `system_mgmt.lua`; `09-programmers-model-for-zena-css.md:301,1474` |
 | SMD System ID | `d040_0000` | 직접 대응 없음 | - | 미구현 | AP/SI local `host_scr`과 동일 주소 공간이 아니다. | `09-programmers-model-for-zena-css.md:303` |
 | Cross-domain MHUv3 | AP/RSE/SI MHU windows | `host_*_mhu_pbx/mbx` | `mhu320ae` | 서비스 모델 | register/doorbell과 SCMI, reset, PFDI, RPMsg helper를 함께 제공한다. | `system_mgmt.lua:82-348,421-503` |
 
@@ -283,7 +284,7 @@ NI-710AE APU는 기본적으로 RSE 외 접근을 차단한다. 근거:
    - AP secure watchdog, RSE OTP/TRAM/CPU control, SYSTOP PIK와 여러
      ATW/control aperture는 `gs_memory` placeholder/stub다.
 8. **명시적 미구현 IP**
-   - SI CL0 watchdog, RSE timers/watchdog, SMD UART/GPIO/System ID,
+   - SI CL0 watchdog, RSE timers/watchdog, SMD UART/System ID,
      DBGTOP Power Integration, 일부 RoS peripheral은 활성 QVP에 대응
      모델이 없다.
 9. **SMD shared SRAM coverage**

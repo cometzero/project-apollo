@@ -59,6 +59,16 @@ CHECKS = {
             r"QBOX_APOLLO_REQUIRED_TARGETS[\s\S]*?\n\s*monitor\s*\n",
         ),
         (
+            "build:apollo-qemu-pl061-target",
+            "QBOX_PLATFORM_DIR/CMakeLists.txt",
+            r"QBOX_APOLLO_REQUIRED_TARGETS[\s\S]*?\n\s*qemu_pl061\s*\n",
+        ),
+        (
+            "gpio:qemu-pl061-wrapper",
+            "hsoc-stack/tools/qbox/qemu-components/gpio/qemu_pl061/include/qemu_pl061.h",
+            r'QemuDevice\(name, inst, "pl061"\)[\s\S]*?gpio_in[\s\S]*?gpio_out',
+        ),
+        (
             "monitor:nonblocking-external-scripts",
             "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
             r"<script\s+async[^>]*src=\"https://cdn\.jsdelivr\.net/npm/@xterm/xterm@5\.5\.0/lib/xterm\.min\.js\"",
@@ -74,6 +84,26 @@ CHECKS = {
             r"fetchObjects\(\);\s*\n\s*window\.addEventListener\('resize'",
         ),
         ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"Apollo RSE QBox skeleton config running"),
+        (
+            "gpio:rse-pl061-pair",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r'for\s+gpio=0,1\s+do[\s\S]*?gpio_name\s*=\s*"rse_gpio_"\.\.gpio[\s\S]*?moduletype\s*=\s*"qemu_pl061"',
+        ),
+        (
+            "gpio:rse-ppcexp0-policy",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r'platform\[gpio_name\.\."_ppc"\][\s\S]*?ppc_register_offset\s*=\s*0x10',
+        ),
+        (
+            "gpio:smd-physical-target",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"SMD_GPIO\s*=\s*\{[\s\S]*?phys_base\s*=\s*0x20000D0310000[\s\S]*?host_smd_gpio[\s\S]*?bind\s*=\s*\"&smd_router\.initiator_socket\"",
+        ),
+        (
+            "gpio:smd-no-direct-ap-logical-target",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"NOT:address\s*=\s*0x40750000",
+        ),
         ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"config\.create\(apollo_dir\)"),
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
         ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"function ap_compute\.enable_ap_router"),
@@ -158,6 +188,16 @@ CHECKS = {
             "timer:rse-no-legacy-39-through-42",
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
             r"NOT:timer[0-3]\s*=\s*(?:39|40|41|42);",
+        ),
+        (
+            "gpio:rse-combined-irq34",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
+            r"gpio_combined\s*=\s*34;[\s\S]*?platform\.rse_gpio_irq_or[\s\S]*?RSE_IRQ\.gpio_combined",
+        ),
+        (
+            "gpio:smd-ap-spi193",
+            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
+            r"SMD_GPIO\s*=\s*\{[\s\S]*?ap_irq\s*=\s*193;[\s\S]*?host_smd_gpio[\s\S]*?ap_gic\.spi_in_\"\.\.SMD_GPIO\.ap_irq",
         ),
     ],
     "timer": [

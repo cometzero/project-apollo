@@ -71,6 +71,7 @@ REQUIRED_TARGETS = [
     "mmu720ae",
     "reset_gpio",
     "pl031",
+    "qemu_pl061",
     "sbsa_gwdt",
     "cpu_arm_cortexM55",
     "nvic_armv7m",
@@ -93,6 +94,7 @@ REQUIRED_TARGETS = [
     "host_smcf_mgi",
     "host_system_pll",
     "reset_fanout",
+    "signal_or",
     "rse_sysctrl",
 ]
 
