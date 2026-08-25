@@ -108,6 +108,30 @@ reaches logical `0x40750000` through firmware-programmed ATU region 9 and uses
 GIC SPI 193. The QBox BSP runtime registered the Linux PL061 driver, read the
 configured GPIO0 input value, and held GPIO1 as a `gpioset` output.
 
+The 2026-08-26 runtime-action implementation adds an opt-in, loopback-only
+Monitor mutation plane for the Apollo QVP. A typed C++14 service keeps Crow
+workers outside SystemC and executes interrupt, event, control, and GPIO
+actions through the existing `run_on_sysc()` boundary. Apollo exports a
+View-owner-checked SI GIC SPI pulse, an SI CL0 SSU fault event, CSS system
+counter set/clear control, and all 24 pins from the SMD and two RSE PL061
+controllers. GPIO input drive/pulse/release and output direction/write/observe
+use existing QEMU PL061 state and MMIO semantics; output force remains deferred
+because the current output sink has no safe extra-writer arbitration. The
+feature remains disabled unless both `QBOX_APOLLO_MONITOR=true` and
+`QBOX_APOLLO_RUNTIME_INJECTION=true` are set.
+
+The canonical scenario harness preserves capabilities, action status, and
+pre/post/release snapshots under `build/qbox-apollo-qvp/`. It tags the runner
+process tree for current-UID cleanup and rejects a nominal action PASS when a
+new fatal console pattern appears after canonical boot. The final five-scenario
+run passed GPIO input/output, counter control, View1 INTID 105 pulse, and SSU
+event actions with no post-action fatal log; evidence is under
+`build/qbox-apollo-qvp/runtime-actions-final-20260826/`. The normal post-login
+qualification remains independently blocked by the existing missing
+`pfdi-cli` and SMMUv3 event-source probes, and the full coverage audit remains
+failed on the existing AP memory-map gaps. These are not promoted to PASS by
+the runtime-action result.
+
 The 2026-08-20 four-CPU PFDI qualification adds the QBox backend for
 `./run_test.sh --machine apollo-qvp --bsp --test-profile pfdi`. AP SBIST FCTLR
 writes now reach a functional `apollo_sbist` SystemC model, inject SI0 FMU
