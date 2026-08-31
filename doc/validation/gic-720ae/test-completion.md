@@ -13,13 +13,15 @@
 
 이 FAIL은 QBox가 부팅하지 못한다는 뜻이 아니다. 현재 QBox는 AP Linux의
 GICv3/ITS 초기화, 4 CPU, timer PPI, FVP와 동일한 주요 discovery marker,
-SCP/Zephyr production image의 기본 SI liveness를 제공한다. 반면
-SI shared multiview routing, FuSa/RAS, power/reset, real-time/collator,
-현재 MSI/LPI delivery와 directed SI interrupt test는 완료되지 않았다.
+SCP/Zephyr production image의 기본 SI liveness를 제공한다. 또한 opt-in
+PCIe profile에서 QBox-only MSI-X→ITS physical LPI, INTx, SPI control
+증거를 확보했다. 반면 SI shared multiview routing, FuSa/RAS,
+power/reset, real-time/collator, directed SI interrupt test, FVP PCIe/ITS
+parity, vLPI delivery는 완료되지 않았다.
 
 | 도메인 | 결과 | 검증 수준 |
 | --- | --- | --- |
-| Primary Compute / Linux | 부분 PASS | GIC/ITS discovery, 4 CPU, per-CPU timer PPI |
+| Primary Compute / Linux | 부분 PASS | GIC/ITS discovery, 4 CPU, per-CPU timer PPI, opt-in QBox PCIe MSI-X/LPI·INTx·SPI control |
 | Safety Island CL0 / SCP-firmware | 부분 PASS | multiview 설정/liveness, generic host unit test |
 | Safety Island CL1 / Zephyr | build PASS, runtime BLOCKED | SMP/IPI test image compile/link, 주입 실행 timeout |
 | SI shared multiview | FAIL | 구현 자체가 독립 GIC/static route 구조 |
@@ -126,7 +128,7 @@ CTest는 종료 코드 0이었다.
 inactive redistributor discovery와 backend forwarding이다. 실제 IRQ
 delivery, view ownership, power/reset, message interrupt는 시험하지 않는다.
 
-### TP-04 FVP/QBox AP Linux discovery parity: PASS
+### TP-04 FVP/QBox AP Linux discovery comparison: PASS (discovery-only)
 
 입력:
 
@@ -147,9 +149,10 @@ DirectLPI VPE invalidation setup    PASS
 ```
 
 FVP와 QBox log 생성일이 다르고 parser는 Linux 문자열을 비교한다. 이
-PASS는 raw register bit equality 또는 interrupt delivery parity가 아니다.
+PASS는 raw register bit equality, PCIe/ITS device equivalence, 또는 interrupt
+delivery parity가 아니다.
 
-### TP-05 Primary Compute Linux runtime: 부분 PASS / overall BLOCKED
+### TP-05 Historical 2026-07-29 broad Primary Compute Linux probe: 부분 PASS / overall BLOCKED
 
 실행 결과:
 
@@ -175,20 +178,37 @@ GIC 관련 positive evidence:
 - UART, virtio-mmio, MHU 등 여러 SPI의 non-zero counter
 - SMMU, RTC, MMIO timer, DSU IRQ descriptor
 
-overall blocker는 GIC failure가 아니라 현재 BSP image에 `pfdi-cli`가 없어
-고정 post-login probe의 PFDI 항목이 실패한 것이다.
+이 historical broad TP-05 baseline의 overall blocker는 GIC failure가 아니라
+2026-07-29 BSP image에 `pfdi-cli`가 없어 고정 post-login probe의 PFDI 항목이
+실패한 것이다. 이 historical result는 보존하며 current image 상태를 말하지
+않는다.
 
-미완료:
+Current F3 r5 opt-in PCIe IRQ sub-gate 상태:
 
-- before/after controlled IRQ delta
-- IRQ affinity 변경
-- CPU offline/online과 redistributor 재초기화
-- MSI/MSI-X 및 physical LPI delivery
-- virtual LPI injection
+- opt-in QBox profile의 before/after IRQ delta, IRQ affinity 변경,
+  CPU offline/online fallback, replay, cleanup은 current F3 r5 Task9에서 PASS.
+- MSI/MSI-X 및 physical LPI delivery는 QBox opt-in profile에서만 PASS.
+- FVP PCIe/ITS parity는 immutable first-ECAM abort 때문에
+  `UNSUPPORTED`/`NOT_COMPARABLE`.
+- virtual LPI injection/vLPI는 current F3 r5 physical-LPI gate에서 검증하지
+  않았고, 범위 밖 non-PASS로 남는다.
 
-normal DT에는 PCI/MSI consumer가 없고 kernel은 virtualization/KVM을
-비활성화한다. opt-in PCI profile을 재생성하지 않았으므로 과거 성공
-문서를 현재 qualification으로 사용하지 않았다.
+normal DT에는 PCI/MSI test consumer가 없고 kernel은 virtualization/KVM을
+비활성화한다. 따라서 기본 boot discovery 문구는 physical LPI 또는 vLPI
+증거가 아니다. current scoped qualification은 F3 r5 opt-in PCIe IRQ sub-gate
+result
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/run-current-r5/result.json`
+SHA256 `db8e74ebdc13c27eb9ba61bde2b2f3d0e2ae181cd93f94c5f477e763817ff8e5`와
+Task10 boundary comparison
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/run-current-r5/boundary-comparison.json`
+SHA256 `131f94749f1aa39243e19d8605c6b32b019a0e65cf5348a3f261754bf0cf676f`에
+한정된다. Its nine phases, Task9, and Task10 are PASS, but this does not
+retroactively turn the historical broad TP-05 baseline into PASS. FVP gate
+PASS는 FVP qualification PASS가 아니다: `UNSUPPORTED`/`NOT_COMPARABLE`
+경계를 보존하며 r5는 FVP를 시작하지 않았다.
+freerunning RSE/SCP readiness는 r3에서 한 번 ordering failure가 있었지만
+quiet same-input r4와 current-source r5는 pass했다. retry wrapper, fixed
+sleep, source synchronization 변경은 없으며 원인은 causal confirmation 전이다.
 
 `linux-gic-custom-probe-20260729`는 임의 명령 주입을 위해 keep-alive로
 실행했으나 `--no-post-login-probe` 경로가 input FIFO를 만들지 않았다.
@@ -329,9 +349,9 @@ untracked 문서별 git diff --no-index --check          3/3 PASS
 
 | 테스트 | 이유 |
 | --- | --- |
-| AP MSI-X→ITS→LPI/INTx | normal DT에 consumer 없음, opt-in 두-image profile 미실행 |
+| AP MSI-X→ITS→LPI/INTx | normal DT에는 consumer 없음. opt-in QBox two-image profile은 current F3 r5 Task9에서 PASS했지만 FVP comparison은 `UNSUPPORTED`/`NOT_COMPARABLE` |
 | AP vLPI | active kernel에 KVM/VFIO 없음 |
-| AP affinity/hotplug delta | canonical runner에 arbitrary post-login command hook 없음 |
+| AP affinity/hotplug delta | 일반 boot runner 경로에서는 임의 post-login hook이 없었다. opt-in QBox PCIe profile은 current F3 r5 Task9에서 affinity, offline fallback, replay를 PASS했다. |
 | SCP `test fmu` | headless SI0 CLI driver 없음 |
 | SCP GIC/MHU FMU host test | CMake target 변수 덮어쓰기 |
 | CL1 SMP/IPI runtime | test image의 RSE Image 4/FWU 주입·release 경계에서 timeout |
@@ -344,12 +364,18 @@ untracked 문서별 git diff --no-index --check          3/3 PASS
 
 > 현재 QBox는 Apollo cfg2 4-CPU AP에서 Linux-visible GICv3/ITS 초기화,
 > 네 CPU timer interrupt, FVP와 일치하는 주요 GICv4.1 discovery
-> marker를 제공한다. SI production firmware도 기본 부팅과 multiview
-> configuration facade를 사용한다.
+> marker를 제공한다. opt-in PCIe profile에서는 QBox-only
+> MSI-X→ITS physical hwirq 8193, INTx hwirq 333, SPI hwirq 293 zero-PCI-delta,
+> affinity/offline/replay/cleanup 증거가 PASS했다. SI production firmware도
+> 기본 부팅과 multiview configuration facade를 사용한다.
 
 다음 주장은 불가능하다.
 
 > QBox가 FVP의 GIC-720AE 기능을 모두 구현하고 동작 검증했다.
+
+> Task10이 FVP/QBox device equivalence를 증명했다.
+
+> F3 r5가 FVP를 다시 실행해 FVP PCIe/ITS 성공을 증명했다.
 
 불가능한 이유는 단순 test 누락뿐 아니라 shared multiview, GIC safety,
 power/reset, real-time/collator 기능의 소스-level 구현 부재가 확인됐기

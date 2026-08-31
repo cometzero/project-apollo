@@ -95,10 +95,13 @@ generation remain explicit fidelity debt.
 The structural migration phase remains `A4_policy_routing`; compatibility
 debt is empty. The following four-CPU fidelity phase now implements common
 request context, SI CL0 primary NI-710AE permissions and policy-aware DMI,
-MMU-720AE/SMMUv3 LTI00 translation, a PCIe MSI-X/ITS/LPI and INTx test profile,
-an opt-in SMMU-event-to-FMU/SSU path, and bounded SCMI/PFDI/HIPC error
-recovery. Unimplemented combinations remain explicit extended-validation
-debt rather than boot-compatibility bridges.
+MMU-720AE/SMMUv3 LTI00 translation, a bounded QBox-only PCIe MSI-X/ITS/LPI
+and INTx test profile, an opt-in SMMU-event-to-FMU/SSU path, and bounded
+SCMI/PFDI/HIPC error recovery. The PCIe IRQ profile is not an FVP parity
+claim: current Task10 records `device_equivalence=NOT_COMPARABLE`, and F3 r5
+records `FVP started=false` with `fvp_qualification=UNSUPPORTED`.
+Unimplemented combinations remain explicit extended-validation debt rather
+than boot-compatibility bridges.
 
 The 2026-08-25 GPIO implementation adds a reusable libqemu-backed PL061 QBox
 component. Apollo RSE GPIO0/1 use their secure and non-secure aliases,
@@ -495,14 +498,53 @@ behavior, firmware side effects, safety diagnostics, error injection, power
 management, or all IP registers.
 
 The 2026-07-16 four-CPU fidelity sequence has completed I0 through I6. The
-active GPEX test profile now proves one `virtio-net-pci` endpoint at
-`0000:00:01.0` through both interrupt modes: MSI-X writes retain PCI requester
-ID `0x0008`, reach the ITS translator, and increment a CPU0 LPI; the same
-endpoint under `pci=nomsi` increments GIC SPI input 301 (architectural INTID
-333) on CPU0. The profile uses a single endpoint-only RID-to-SID mapping
-(`0x0008` to `0x0040`) and is opt-in, so it does not add a test device to the
-default machine. Exact commands and evidence are recorded in
-`doc/apollo-qvp-fidelity-stages/i4-gpex-msi-lpi-completion-2026-07-16-ko.md`.
+active GPEX test profile has since been re-qualified by the Apollo
+GIC-720AE/ITS gate. Its current F3 r5 result
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/run-current-r5/result.json`
+has SHA256
+`db8e74ebdc13c27eb9ba61bde2b2f3d0e2ae181cd93f94c5f477e763817ff8e5`.
+It records a bounded PASS only after the immutable FVP reference gate, QBox
+build, Task9 runtime, Task10 boundary comparison, and cleanup passed; r5 did
+not start FVP.
+
+The positive PCIe IRQ evidence is QBox-only. The opt-in profile instantiates
+one `virtio-net-pci` endpoint at `0000:00:01.0` with requester/ITS DeviceID
+`0x0008`, SMMU SID `0x0040`, ITS translator `0x20850040`, and Apollo
+collection-entry size 2. MSI-X selects virq 34 and shows a normalized
+PCI-MSIX EventID `0x1` -> ITS-MSI physical hwirq `0x2001` (8193) -> GICv3
+hwirq `0x2001` chain. The same endpoint under `pci=nomsi` uses INTx VIRQ 32
+and GICv3 hwirq `0x14d` (333). The companion virtio-mmio control uses SPI
+hwirq 293 and records a positive SPI delta with zero selected PCI vector
+delta. The evidence includes CPU0/CPU1 affinity movement, CPU1-offline
+fallback, replay, and cleanup restoration.
+
+FVP device equivalence remains unavailable. The current Task10 boundary
+comparison
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/run-current-r5/boundary-comparison.json`
+has SHA256
+`131f94749f1aa39243e19d8605c6b32b019a0e65cf5348a3f261754bf0cf676f` and
+contains 24 semantic rows: four FVP `UNSUPPORTED` rows and twenty QBox
+`PASS` rows, with `device_equivalence=NOT_COMPARABLE`. The immutable FVP
+reference gate is
+`.omo/evidence/apollo-gic-its/final/F2/cycle2/integration-current/fvp-reference-gate-current.json`
+with SHA256
+`5ceb377244eb0e4fddd6e4346a701fa1a75185d0dc689d2e396c917cb3549a82`.
+Downloaded Fast Models 11.31.25 components and configuration exist. The gate
+is PASS, but FVP PCIe/ITS qualification is `UNSUPPORTED`: it records that the
+packaged FVP applies the PCIe/ITS configuration, but the
+first AP-visible ECAM read at `0x10040000000` raises the EL3 SError tuple
+`ESR_EL3=0x00000000be000211`, `ELR_EL3=0xffff8000807d08f0` before endpoint
+enumeration or MSI-X/ITS delivery. It does not prove FVP physical ITS delivery
+or QBox/FVP device parity. Profile-v4 manifest SHA256 is
+`d0fd532fc4e07edbe02d62ae06cb6afb84663b69cdf0f139729bc3a3f65cf03b`; AP-map
+SHA256 is `ffcc45eaf34a271d4a4f4c6a22d7a12e2204bf045ea92109aebe64433bdcd3bd`.
+The FVP binary is prebuilt and source-unavailable; the v2.2 Arm Zena CSS
+release-note line `PCIe configuration is excluded.` is historical context only.
+
+Known runtime risk: one r3 freerunning RSE/SCP readiness ordering failure
+exists. Quiet same-input r4 and current-source r5 pass, but no retry wrapper,
+fixed sleep, or source synchronization change was added; the supported cause
+is not causally confirmed.
 I5 adds an opt-in QBox test profile that fans the real SMMU event-queue line
 to its existing GIC sink and a separate FMU observer. Component evidence
 proves FMU record/IRQ, SSU escalation, write-one-to-clear, recovery, disabled
@@ -524,7 +566,7 @@ and are not synthesized in QBox.
 | --- | --- | --- | --- |
 | Cortex-A720AE Primary Compute | QEMU/libqemu CPU model with default four-core SMP and opt-in sixteen-core/four-cluster PSCI/SCMI lifecycle; AArch64-only EL0 and supported QARMA3/FGT/ECV/PAN/WFxT profile | Preserve the verified 1..16 topology and exception/timer routing; keep unsupported MTE/AMU/MPAM explicit | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, FVP/QBox 16-core logs |
 | DSU-120AE / DSU PMU | Aff2-shared six-counter A720AE system-register bank; four Linux PMU sources and events `0x2a`/`0x2b` are schedulable | Add traffic-driven counting and overflow SPI behavior without regressing the verified programming model | `arm-zena-css/documentation/design/components.rst`, FVP/QBox `perf stat` logs |
-| GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS plus sixteen-frame SystemC multiview discovery and two-byte collection entries | Preserve distributor, redistributor, ITS, IRQ numbering, and multi-view behavior | FVP DTS, machine config, Linux `/proc/interrupts` |
+| GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS plus sixteen-frame SystemC multiview discovery, two-byte collection entries, and an opt-in QBox PCIe IRQ profile | Preserve distributor, redistributor, ITS, IRQ numbering, and multi-view behavior. PCIe MSI-X/LPI and INTx evidence is QBox-only; FVP PCIe/ITS qualification is `UNSUPPORTED` and Task10 device equivalence is `NOT_COMPARABLE`. | FVP DTS, machine config, Linux `/proc/interrupts`, F3 r5 result SHA `db8e74ebdc13c27eb9ba61bde2b2f3d0e2ae181cd93f94c5f477e763817ff8e5`, Task10 boundary SHA `131f94749f1aa39243e19d8605c6b32b019a0e65cf5348a3f261754bf0cf676f` |
 | CMN-CYPRUS | SystemC CFG2 r3p0 6x4 XP and child-node discovery graph | Preserve FVP-visible revision and topology discovery | SI0 firmware logs, FVP/QBox differential, component tests |
 | SMMUv3 | SystemC MMU-720AE profile with 52-bit internal PA walk and 32-bit SID advertisement | Maintain PCI bus, memory links, IRQs, Linux driver behavior, and FVP discovery signature | FVP DTS, Linux runtime driver probe, component tests |
 | PL011 UART | Reusable QBox UART configured as revision 3 on Apollo | Console compatibility, interrupt behavior, backend behavior, stop semantics | FVP config, QBox backend docs, Linux console logs |

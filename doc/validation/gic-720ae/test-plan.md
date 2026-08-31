@@ -98,7 +98,7 @@ MSI/LPI delivery 증명이 아니다.
 - 비관측: cross-view IRQ ownership, GIC state 공유, FuSa/RAS, message
   전달 의미론.
 
-### TP-04 AP Linux FVP/QBox discovery parity
+### TP-04 AP Linux FVP/QBox discovery comparison (discovery-only)
 
 - 입력: 동일 계열 이미지로 생성된 FVP와 QBox Primary Compute console.
 - 명령:
@@ -113,7 +113,8 @@ MSI/LPI delivery 증명이 아니다.
 
 - PASS: 960 SPI, DirectLPI/RVPEID/Valid+Dirty discovery, GICv4.1 ITS,
   32768 collection, VPE invalidation marker가 비교 기준을 만족한다.
-- 한계: 문자열 기반 discovery/init 비교이다.
+- 한계: 문자열 기반 discovery/init 비교이며 PCIe/ITS device equivalence나
+  interrupt delivery parity를 뜻하지 않는다.
 
 ### TP-05 AP Linux 실행 검증
 
@@ -127,8 +128,15 @@ MSI/LPI delivery 증명이 아니다.
   - 네 CPU redistributor와 CPU 0-3 online.
   - GIC/ITS 초기화 실패 없음.
   - `/proc/interrupts`의 알려진 source 전후 delta.
-  - MSI/MSI-X 장치가 있으면 ITS/LPI vector delta.
-  - MSI 장치가 없으면 해당 항목을 `검증 불가`로 기록.
+  - 기본 image에서는 PCI/MSI consumer가 없으면 해당 항목을 `검증 불가`로
+    기록한다.
+  - opt-in PCIe IRQ profile에서는 current F3 r5 Task9 기준 BDF `0000:00:01.0`,
+    MSI-X→ITS physical hwirq 8193, INTx hwirq 333, SPI hwirq 293 zero-PCI-delta,
+    affinity/offline/replay/cleanup을 확인한다. 이 결과는 QBox-only PASS이며
+    Task10의 FVP comparison은 `UNSUPPORTED`/`NOT_COMPARABLE`이어야 한다.
+  - freerunning RSE/SCP readiness r3 ordering failure는 known risk로 남긴다.
+    quiet same-input r4와 current-source r5 pass를 retry/sleep/synchronization
+    fix로 오해하지 않는다.
 - 선택 명령:
 
   ```bash

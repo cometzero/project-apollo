@@ -23,8 +23,9 @@ multiview register 호환 창을 제공한다. FVP와 QBox의 Linux discovery
    reset/power state 연동
 4. SPI Collator와 `RGIC2LGIC_MESSREG`의 실제 message/interrupt 의미론
 5. real-time SPI의 우선순위 보호 및 timing 의미론
-6. 현재 image에서 실행 가능한 AP MSI/LPI delivery와 virtual LPI
-   injection의 현재 시점 검증
+6. AP virtual LPI injection의 현재 시점 검증. AP physical PCIe
+   MSI-X→ITS→LPI는 opt-in QBox profile에서만 PASS이며, FVP parity는
+   `UNSUPPORTED`/`NOT_COMPARABLE`이다.
 7. SI의 64 extended PPI, PMU PPI 및 GIC maintenance PPI 경로
 
 따라서 올바른 표현은 다음과 같다.
@@ -180,7 +181,7 @@ AXI5-Stream ordering, wake/power handshake 또는 interrupt effect가 없다.
 | AP 960 SPI/16 PPI discovery | 활성 | 구현·현재 검증 | FVP/QBox Linux parity |
 | AP GICv3 CPU interface | 활성 | 구현·현재 검증 | Linux boot, per-CPU arch_timer IRQ counter |
 | AP 기본 SPI delivery | 활성 | 구현·부분 검증 | UART/virtio/MHU counter는 non-zero, controlled delta/affinity 없음 |
-| AP physical MSI/ITS/LPI | 활성 model, 정상 DT에는 consumer 없음 | 구현·현재 미검증 | QEMU ITS는 실모델, 과거 문서만 있고 현재 artifact 없음 |
+| AP physical MSI/ITS/LPI | FVP 구성요소와 설정은 존재하지만 첫 AP ECAM read에서 EL3 SError | QBox opt-in PASS, FVP parity 불가 | Current F3 r5 Task9은 QBox MSI-X→ITS physical hwirq `0x2001`(8193), INTx333, SPI293 control을 증명한다. Task10은 FVP `UNSUPPORTED`, `device_equivalence=NOT_COMPARABLE`로 고정한다. |
 | GICv4.1 feature discovery | 활성 | 구현·현재 검증 | DirectLPI/RVPEID/Valid+Dirty, Linux GICv4.1 |
 | GICv4.1 virtual injection | 활성 architecture | 부분 구현 | active Linux에 KVM/VFIO 없음, VMAPP/vPE 의미론 미검증 |
 | AP multiple view register | 활성 | 부분 구현 | 호환 창/forwarding은 있음, view policy 동작 자극 없음 |
@@ -213,11 +214,86 @@ Linux DT는 GICD, 16개 GICR region, ITS를 기술한다.
 - [`apollo-qvp.dts`](../../../hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/apollo-qvp.dts)
 
 현재 kernel은 `CONFIG_ARM_GIC_V3=y`, `CONFIG_ARM_GIC_V3_ITS=y`, SMP,
-CPU hotplug, PCI MSI를 활성화한다. 그러나 normal DT에는 PCI `msi-parent`
-또는 `msi-map` consumer가 없고 KVM/VFIO가 비활성이다. 따라서 boot
-로그의 LPI table 생성, DirectLPI, GICv4.1 문구는 초기화와 capability
-discovery 증거이지 physical LPI 전달이나 virtual LPI injection 증거가
-아니다.
+CPU hotplug, PCI MSI를 활성화한다. normal QVP DT에는 PCI test consumer가
+없으므로 기본 boot 로그의 LPI table 생성, DirectLPI, GICv4.1 문구는
+초기화와 capability discovery 증거이지 physical LPI 전달이나 virtual LPI
+injection 증거가 아니다.
+
+AP physical PCIe MSI-X→ITS→LPI 전달은 별도 opt-in QBox profile에서만
+검증됐다. 현재 authoritative result는 F3 r5
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/run-current-r5/result.json`
+SHA256 `db8e74ebdc13c27eb9ba61bde2b2f3d0e2ae181cd93f94c5f477e763817ff8e5`다.
+이 result는 FVP reference gate PASS, `fvp_qualification=UNSUPPORTED`,
+`FVP started=false`, QBox build/start PASS, Task9 PASS, Task10 PASS, cleanup
+PASS를 함께 요구한다. r5는 FVP를 시작하지 않았다.
+
+Task9 QBox runtime evidence는 BDF `0000:00:01.0`, requester/ITS DeviceID
+`0x0008`, SMMU SID `0x0040`, ITS translator `0x20850040`, collection entry
+size 2를 사용한다. MSI-X mode는 virq 34와
+PCI-MSIX EventID `0x1` -> ITS-MSI physical hwirq `0x2001`(8193) -> GICv3
+hwirq `0x2001` chain을 기록한다. INTx mode는 같은 BDF에서 `pci=nomsi`,
+`msi_state.count=0`, VIRQ 32, GICv3 hwirq `0x14d`(333)을 기록한다.
+virtio-mmio control은 SPI hwirq 293에서 positive delta와 selected PCI
+vector zero-delta를 기록한다.
+
+FVP의 상태는 별도로 기록해야 한다. 다운로드된 Fast Models 11.31.25
+components/configuration은 존재하고 current gate에서 configuration applied가
+확인됐다. 그러나 immutable FVP는 Linux가 AP-visible ECAM
+`0x10040000000`에 대해 첫 config read를 수행할 때
+`ESR_EL3=0x00000000be000211`, `ELR_EL3=0xffff8000807d08f0`으로 중단한다.
+따라서 domain 4 host bridge는 관측됐지만 endpoint `0004:00:1f.0`,
+MSI-X, ITS delivery는 FVP에서 관측되지 않았다. 이 boundary는
+`.omo/evidence/apollo-gic-its/final/F2/cycle2/integration-current/fvp-reference-gate-current.json`
+SHA256 `5ceb377244eb0e4fddd6e4346a701fa1a75185d0dc689d2e396c917cb3549a82`로
+고정한다. FVP PCIe/ITS qualification은 `UNSUPPORTED`이고 Task10 device
+equivalence는 `NOT_COMPARABLE`이다. Profile-v4 manifest SHA256은
+`d0fd532fc4e07edbe02d62ae06cb6afb84663b69cdf0f139729bc3a3f65cf03b`, AP-map
+SHA256은 `ffcc45eaf34a271d4a4f4c6a22d7a12e2204bf045ea92109aebe64433bdcd3bd`다.
+각 current artifact는
+`.omo/evidence/apollo-gic-its/final/F2/cycle2/integration-current/canonical-profile-v4/manifest.json`,
+`.omo/evidence/apollo-gic-its/final/F2/cycle2/integration-current/logs/ap-map-static.json`,
+`.omo/evidence/apollo-gic-its/final/F3/cycle2/verifier-r5/AdversarialVerify.json`,
+`.omo/evidence/apollo-gic-its/final/F2/r5/gate-post-fix/AdversarialVerify.json`다.
+F3 r5 verifier SHA256은
+`76636e9ad5da9ceaf9d3c5a9c81c893f41d04baaba5d110fcc2815f5fb5e1374`이고,
+F2 post-fix gate SHA256은
+`f109a3fbb2e9f2d6bb7a3c77a3840793025a4f942bc05234c94cee14b6c02f27`이다.
+
+FVP source ownership boundary is exact. The proprietary/prebuilt
+`FVP_Zena_CSS_Cfg2` model implementation belongs to the Arm Fast Models
+distribution; its component and top-integration source is not shipped in this
+workspace. `arm-zena-css/` is the externally managed read-only owner of BSP
+and integration metadata, recipe, documentation, and release notes; it is not
+the model implementation source. Project software enablement owners are
+SCP-firmware for CMN routes, TF-A for `HW_CONFIG`, Linux for DTS, top-level
+scripts/tests for the isolated profile, gate, and comparison, and
+qbox-platform for the QBox overlay and runtime profile. This boundary does not
+grant a right to modify Arm model source.
+
+known risk도 current authority의 일부다. freerunning RSE/SCP readiness는
+r3에서 한 번 ordering failure가 있었고, quiet same-input r4와 current-source
+r5는 pass했다. retry wrapper, fixed sleep, source synchronization 변경은 없고
+원인은 supported지만 causal confirmation은 아니다.
+
+공식 문서의 역할은 runtime 증거가 아니라 용어와 architecture/API
+기준이다. Arm IHI 0069 Hb(`GICv3.3 and v4.2 (rev H.b)`, published
+2024-04-16)는 ITS가 DeviceID/EventID를 LPI INTID와 Redistributor/PE로
+translation한다는 기준을 제공한다. Linux PCI MSI HOWTO는
+`pci_alloc_irq_vectors()`, `PCI_IRQ_AFFINITY`, `pci_irq_vector()`,
+`pci_irq_get_affinity()`, `pci_free_irq_vectors()` 기준을 제공한다.
+Linux GICv3 DT binding은 `arm,gic-v3-its`, `msi-controller`,
+`#msi-cells = <1>` DeviceID cell 기준을 제공한다.
+
+Todo 12의 source matrix와 link audit은 다음 artifact가 소유한다.
+
+- `.omo/evidence/apollo-gic-its/task-12/research/claim-source-matrix.md`
+- `.omo/evidence/apollo-gic-its/task-12/research/source-links.json`
+- Arm IHI 0069 Hb:
+  <https://support.arm.com/documentation/ihi0069/hb/>
+- Linux PCI MSI HOWTO:
+  <https://docs.kernel.org/PCI/msi-howto.html>
+- Linux GICv3 DT binding:
+  <https://www.kernel.org/doc/Documentation/devicetree/bindings/interrupt-controller/arm,gic-v3.txt>
 
 이번 검증은 FVP/QBox가 다음 Linux marker에서 일치함을 확인했다.
 
@@ -281,7 +357,8 @@ timer-interrupt-to-IPI 동작 자체를 확인하지 않는다. Zephyr upstream�
    `GICD_IVIEWR`가 실제 routing을 제어하도록 한다.
 2. GIC view/messreg component에 reset 입력과 reset-domain test를 추가한다.
 3. SI extended PPI, PMU PPI23, maintenance PPI25를 모델링한다.
-4. opt-in PCI profile로 현재 MSI-X→ITS→LPI와 INTx artifact를 재생성한다.
+4. opt-in PCI profile의 Task9/10/11 evidence hash를 유지하고, claim gate가
+   FVP `UNSUPPORTED`와 QBox-only PASS boundary를 계속 강제하도록 한다.
 5. AP/SI에서 controlled SGI/PPI/SPI counter, affinity, CPU hotplug 시험을
    공식 runner hook으로 제공한다.
 6. GIC FMU/RAS/GSPV와 PWRR/WAKER 내부 power effect를 구현하고
