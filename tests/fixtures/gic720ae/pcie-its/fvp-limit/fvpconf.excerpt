@@ -1,0 +1,3 @@
+css.gic_distributor.ITS-count=1
+pcie_group_0.pcie4.hierarchy_file_name=<default>
+pcie_group_0.pcie4.pcie_rc.ahci0.endpoint.ats_supported=true

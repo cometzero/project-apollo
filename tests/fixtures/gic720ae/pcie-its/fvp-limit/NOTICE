@@ -1,0 +1,18 @@
+Task7 offline fixture provenance and content rule
+
+Authority: this fixture is project-owned test data in the Arm Auto Solutions
+repository. Its content consists of project-authored JSON and minimal factual
+excerpts needed to test the immutable ECAM-boundary contract. It contains no
+Fast Models binary, no platform profile, no binary-derived bytes, and no
+runtime image.
+
+License status: no repository-root LICENSE, COPYING, or NOTICE authority was
+present when this notice was recorded. Therefore this notice does not assert
+an SPDX identifier, an external source license, or a redistribution grant.
+Use outside this repository requires authorization from the repository owner.
+
+Manifest rule: manifest.json is the sole non-hashed file to avoid a circular
+self-hash. Every other regular content file in this directory, including this
+NOTICE and README.md, must appear exactly once in manifest.json inputs with
+its SHA-256. The validator rejects missing, additional, renamed, or mutated
+content files.

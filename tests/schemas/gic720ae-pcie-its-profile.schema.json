@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["format_version", "verdict", "reason", "machine", "output_root"],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {"const": 1},
+    "verdict": {"enum": ["PASS", "FAIL"]},
+    "reason": {"type": "string", "minLength": 1},
+    "machine": {"const": "apollo-fvp"},
+    "output_root": {"type": "string", "minLength": 1},
+    "source_hashes": {"$ref": "#/$defs/hashRecords"},
+    "source_classification": {
+      "type": "object",
+      "required": ["tool_postprocessor", "bitbake_build_input", "runtime_input"],
+      "additionalProperties": false,
+      "properties": {
+        "tool_postprocessor": {
+          "type": "array", "minItems": 11, "maxItems": 11,
+          "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+        },
+        "bitbake_build_input": {
+          "type": "array", "minItems": 10, "maxItems": 10,
+          "uniqueItems": true, "items": {"type": "string", "minLength": 1}
+        },
+        "runtime_input": {
+          "const": ["layers/meta-arm/scripts/runfvp"]
+        }
+      }
+    },
+    "repository_heads": {
+      "type": "object",
+      "minProperties": 4,
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+    },
+    "artifacts": {"$ref": "#/$defs/hashRecords"},
+    "configuration": {
+      "type": "object",
+      "required": [
+        "configuration_declared", "baseline_contract", "baseline_fvpconf",
+        "final_fvpconf", "allowed_delta", "kernel_fragment", "kernel_config",
+        "bitbake_override", "default_fragment_value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "configuration_declared": {"const": true},
+        "baseline_contract": {"$ref": "#/$defs/hashRecord"},
+        "baseline_fvpconf": {"$ref": "#/$defs/hashRecord"},
+        "final_fvpconf": {"$ref": "#/$defs/hashRecord"},
+        "allowed_delta": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "kernel_fragment": {"$ref": "#/$defs/hashRecord"},
+        "kernel_config": {"$ref": "#/$defs/hashRecord"},
+        "bitbake_override": {"$ref": "#/$defs/hashRecord"},
+        "default_fragment_value": {"const": ""}
+      }
+    },
+    "task_provenance": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["recipe", "task", "taskhash", "sigdata"],
+        "additionalProperties": false,
+        "properties": {
+          "recipe": {"type": "string", "minLength": 1},
+          "task": {"type": "string", "pattern": "^do_"},
+          "taskhash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "sigdata": {"$ref": "#/$defs/hashRecord"}
+        }
+      }
+    },
+    "host_contract": {
+      "type": "object",
+      "required": ["node", "ecam_base", "its_base", "smmu_base"],
+      "additionalProperties": false,
+      "properties": {
+        "node": {"const": "/soc/pcie@10040000000"},
+        "ecam_base": {"const": "0x10040000000"},
+        "its_base": {"const": "0x20840000"},
+        "smmu_base": {"const": "0x1c0000000"}
+      }
+    },
+    "fvp_contract": {
+      "type": "object",
+      "required": ["hierarchy", "ats_supported", "its_count", "ahci_image_path"],
+      "additionalProperties": false,
+      "properties": {
+        "hierarchy": {"const": "<default>"},
+        "ats_supported": {"const": true},
+        "its_count": {"const": 1},
+        "ahci_image_path": {"type": "string", "minLength": 1}
+      }
+    },
+    "default_deploy": {
+      "type": "object",
+      "required": ["root", "before_sha256", "after_sha256", "unchanged", "active_sigdata_unchanged"],
+      "additionalProperties": false,
+      "properties": {
+        "root": {"type": "string", "minLength": 1},
+        "before_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "after_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "unchanged": {"const": true},
+        "active_sigdata_unchanged": {"const": true}
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "required": ["required_free_bytes", "observed_free_bytes", "probe_path"],
+      "additionalProperties": false,
+      "properties": {
+        "required_free_bytes": {"const": 51539607552},
+        "observed_free_bytes": {"type": "integer", "minimum": 51539607552},
+        "probe_path": {"type": "string", "minLength": 1}
+      }
+    },
+    "dt_delivery": {
+      "type": "object",
+      "required": [
+        "mode", "uki_slots", "firmware_fip_hw_config", "linux_raw_dtb",
+        "u_boot_candidate_order", "runtime_selection"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"const": "absent_firmware_fip_hw_config"},
+        "uki_slots": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["slot", "uki", "sections", "dtb_present"],
+            "additionalProperties": false,
+            "properties": {
+              "slot": {"enum": ["a", "b"]},
+              "uki": {"$ref": "#/$defs/hashRecord"},
+              "sections": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "pattern": "^\\."}
+              },
+              "dtb_present": {"const": false}
+            }
+          }
+        },
+        "firmware_fip_hw_config": {
+          "type": "object",
+          "required": ["extracted", "generated", "byte_identical", "host_contract"],
+          "additionalProperties": false,
+          "properties": {
+            "extracted": {"$ref": "#/$defs/hashRecord"},
+            "generated": {"$ref": "#/$defs/hashRecord"},
+            "byte_identical": {"const": true},
+            "host_contract": {"$ref": "#/$defs/hostContract"}
+          }
+        },
+        "linux_raw_dtb": {
+          "type": "object",
+          "required": ["artifact", "role", "runtime_consumption", "host_contract"],
+          "additionalProperties": false,
+          "properties": {
+            "artifact": {"$ref": "#/$defs/hashRecord"},
+            "role": {"const": "reference_only"},
+            "runtime_consumption": {"const": "deferred"},
+            "host_contract": {"$ref": "#/$defs/hostContract"}
+          }
+        },
+        "u_boot_candidate_order": {
+          "const": [
+            "fixed:0x8fc00000", "prior-stage-x1:0x80000000",
+            "prior-stage-x0", "internal-control-dtb"
+          ]
+        },
+        "runtime_selection": {"const": "deferred-to-todo7-live-fdt"}
+      }
+    },
+    "build_input_verification": {
+      "type": "object",
+      "required": [
+        "image_build_completed", "profile_override", "task_sigdata_valid",
+        "source_hashes_valid", "bitbake_rerun"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "image_build_completed": {"const": true},
+        "profile_override": {"$ref": "#/$defs/hashRecord"},
+        "task_sigdata_valid": {"const": true},
+        "source_hashes_valid": {"const": true},
+        "bitbake_rerun": {"type": "boolean"}
+      }
+    },
+    "provenance_refresh": {
+      "type": "object",
+      "required": [
+        "reason", "prior_receipt_sha256", "source_deltas",
+        "tool_sources_checked", "bitbake_build_inputs_checked",
+        "runtime_inputs_checked", "artifacts_checked", "task_sigdata_checked"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reason": {"const": "path_containment_remediation"},
+        "prior_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_deltas": {
+          "type": "array", "minItems": 6, "maxItems": 6, "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "required": [
+              "role", "path", "old_sha256", "new_sha256",
+              "classification", "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "enum": [
+                  "scripts/test/build_gic720ae_pcie_its_profile.py",
+                  "scripts/test/gic720ae_pcie_its_profile/contract.py",
+                  "scripts/test/gic720ae_pcie_its_profile/finalize.py",
+                  "scripts/test/gic720ae_pcie_its_profile/provenance.py",
+                  "scripts/test/gic720ae_pcie_its_profile/workflow.py",
+                  "tests/schemas/gic720ae-pcie-its-profile.schema.json"
+                ]
+              },
+              "path": {"type": "string", "minLength": 1},
+              "old_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "new_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "classification": {"const": "tool_postprocessor"},
+              "reason": {"const": "path_containment_remediation"}
+            }
+          }
+        },
+        "tool_sources_checked": {"const": 11},
+        "bitbake_build_inputs_checked": {"const": 10},
+        "runtime_inputs_checked": {"const": 1},
+        "artifacts_checked": {"const": 29},
+        "task_sigdata_checked": {"const": 2}
+      }
+    },
+    "final_argv": {
+      "type": "array",
+      "minItems": 4,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"verdict": {"const": "PASS"}}},
+      "then": {
+        "required": [
+          "source_hashes", "source_classification", "repository_heads", "artifacts", "configuration",
+          "task_provenance", "host_contract", "fvp_contract", "default_deploy",
+          "final_argv", "capacity", "dt_delivery", "build_input_verification"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "hashRecord": {
+      "type": "object",
+      "required": ["role", "path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "hashRecords": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/hashRecord"}
+    },
+    "hostContract": {
+      "type": "object",
+      "required": ["node", "ecam_base", "its_base", "smmu_base"],
+      "additionalProperties": false,
+      "properties": {
+        "node": {"const": "/soc/pcie@10040000000"},
+        "ecam_base": {"const": "0x10040000000"},
+        "its_base": {"const": "0x20840000"},
+        "smmu_base": {"const": "0x1c0000000"}
+      }
+    }
+  }
+}

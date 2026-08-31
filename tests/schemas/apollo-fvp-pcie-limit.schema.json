@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arm.example/schemas/apollo-fvp-pcie-limit.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "reference_gate", "fvp_qualification", "qbox_allowed", "reason", "source_boundary", "claims", "inputs"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "reference_gate": {"enum": ["PASS", "FAIL"]},
+    "fvp_qualification": {"const": "UNSUPPORTED"},
+    "qbox_allowed": {"type": "boolean"},
+    "reason": {"type": "string", "minLength": 1},
+    "source_boundary": {"const": "prebuilt_fvp_source_unavailable"},
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physical_its_delivery", "endpoint_enumeration", "qbox_equivalence"],
+      "properties": {
+        "physical_its_delivery": {"const": false},
+        "endpoint_enumeration": {"const": false},
+        "qbox_equivalence": {"const": false}
+      }
+    },
+    "tuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ecam", "esr_el3", "elr_el3", "endpoint"],
+      "properties": {
+        "ecam": {"const": "0x10040000000"},
+        "esr_el3": {"const": "0x00000000be000211"},
+        "elr_el3": {"const": "0xffff8000807d08f0"},
+        "endpoint": {"const": "0004:00:1f.0"}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_sha256", "fvp_argv_sha256"],
+      "properties": {
+        "profile_sha256": {"pattern": "^[0-9a-f]{64}$"},
+        "fvp_argv_sha256": {"pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"pattern": "^[0-9a-f]{64}$"}}}
+    },
+    "profile_fvp_path": {"type": "string", "minLength": 1}
+    ,"manifest_sha256": {"const": "fba17ada62536b3f4cacc1dbaeb43168464ffbff4593c1a699e673d68922d38f"}
+  },
+  "allOf": [{"if": {"properties": {"reference_gate": {"const": "PASS"}}}, "then": {"properties": {"qbox_allowed": {"const": true}, "reason": {"const": "immutable_ecam_limit"}}, "required": ["tuple", "runtime", "profile_fvp_path", "manifest_sha256"]}}, {"if": {"properties": {"reference_gate": {"const": "FAIL"}}}, "then": {"properties": {"qbox_allowed": {"const": false}}}}]
+}

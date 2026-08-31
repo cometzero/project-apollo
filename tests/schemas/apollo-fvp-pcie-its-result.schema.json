@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "status", "reason", "profile_sha256", "configuration_applied", "qbox_started"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["pass", "fail"]},
+    "reason": {"type": "string", "minLength": 1},
+    "profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{0,64}$"},
+    "configuration_applied": {"type": "boolean"},
+    "qbox_started": {"const": false},
+    "detail": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,8 @@
+{
+  "args": [],
+  "exe": "FVP_Zena_CSS_Cfg2",
+  "fvp-bindir": "/opt/fvp",
+  "parameters": {
+    "css.gic_distributor.ITS-count": "1"
+  }
+}

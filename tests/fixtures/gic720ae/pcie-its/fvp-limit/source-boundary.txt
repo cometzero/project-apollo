@@ -1,0 +1,2 @@
+No editable Fast Models platform project was found.
+The recorded FVP binary is proprietary and is not included in this fixture.

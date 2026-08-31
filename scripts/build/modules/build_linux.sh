@@ -70,6 +70,7 @@ build_linux()
                 --enable DEBUG_KERNEL \
                 --disable DEBUG_INFO_NONE \
                 --enable DEBUG_INFO_DWARF_TOOLCHAIN_DEFAULT \
+                --enable GENERIC_IRQ_DEBUGFS \
                 --enable GDB_SCRIPTS \
                 --enable KALLSYMS_ALL
         fi

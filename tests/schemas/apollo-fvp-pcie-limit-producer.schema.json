@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "reference_gate", "fvp_qualification", "qbox_allowed", "reason", "configuration_applied", "qbox_started", "hashes", "raw", "cleanup", "claims"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "reference_gate": {"enum": ["PASS", "FAIL"]},
+    "fvp_qualification": {"const": "UNSUPPORTED"},
+    "qbox_allowed": {"type": "boolean"},
+    "reason": {"type": "string", "minLength": 1},
+    "configuration_applied": {"type": "boolean"},
+    "qbox_started": {"const": false},
+    "hashes": {"type": "object"},
+    "raw": {"type": "object"},
+    "cleanup": {"type": "object"},
+    "claims": {"type": "object"}
+  },
+  "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "reference_gate": {"const": "PASS"},
+        "qbox_allowed": {"const": true},
+        "reason": {"const": "immutable_ecam_limit"},
+        "configuration_applied": {"const": true},
+        "hashes": {"$ref": "#/$defs/hashes"},
+        "raw": {"$ref": "#/$defs/pass_raw"},
+        "cleanup": {"$ref": "#/$defs/pass_cleanup"},
+        "claims": {"$ref": "#/$defs/claims"}
+      }
+    },
+    {
+      "properties": {
+        "reference_gate": {"const": "FAIL"},
+        "qbox_allowed": {"const": false},
+        "configuration_applied": {"const": false},
+        "hashes": {"$ref": "#/$defs/hashes"},
+        "raw": {"$ref": "#/$defs/fail_raw"},
+        "cleanup": {"$ref": "#/$defs/fail_cleanup"},
+        "claims": {"$ref": "#/$defs/claims"}
+      }
+    }
+  ],
+  "$defs": {
+    "hashes": {"type": "object", "required": ["manifest_sha256", "limit_receipt_sha256", "raw_result_sha256"], "properties": {"manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "limit_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "raw_result_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false},
+    "pass_raw": {"type": "object", "required": ["status", "reason", "runner_rc", "fvp_argv_sha256"], "properties": {"status": {"const": "fail"}, "reason": {"const": "canonical_runner_failed"}, "runner_rc": {"type": "integer", "maximum": -1}, "fvp_argv_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false},
+    "fail_raw": {"type": "object", "required": ["status", "reason", "runner_rc", "fvp_argv_sha256"], "properties": {"status": {"enum": ["unknown", "fail", "error"]}, "reason": {"type": "string", "minLength": 1}, "runner_rc": {"type": "integer"}, "fvp_argv_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}, "additionalProperties": false},
+    "pass_cleanup": {"type": "object", "required": ["status", "qbox_started"], "properties": {"status": {"const": "PASS"}, "qbox_started": {"const": false}}, "additionalProperties": false},
+    "fail_cleanup": {"type": "object", "required": ["status", "qbox_started"], "properties": {"status": {"const": "FAIL"}, "qbox_started": {"const": false}}, "additionalProperties": false},
+    "claims": {"type": "object", "required": ["physical_its_delivery", "endpoint_enumeration", "qbox_equivalence"], "properties": {"physical_its_delivery": {"const": false}, "endpoint_enumeration": {"const": false}, "qbox_equivalence": {"const": false}}, "additionalProperties": false}
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "configuration": {"its_count": 1, "pcie_hierarchy": "<default>", "pcie_ats_supported": true},
+  "machine": "apollo-fvp",
+  "source_identity": "source-identity.json"
+}

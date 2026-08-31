@@ -1,0 +1,4 @@
+pid=1493733
+model=FVP_Zena_CSS_Cfg2
+pcie_group_0.pcie4.cfg_start=0x10040000000
+pcie_group_0.pcie4.cfg_end=0x1004fffffff

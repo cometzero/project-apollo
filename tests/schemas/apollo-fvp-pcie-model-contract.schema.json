@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "captured_at_utc", "fvp", "model", "configuration", "interrupt_contract", "address_maps", "topology"],
+  "properties": {
+    "format_version": {"const": 1},
+    "captured_at_utc": {"type": "string", "format": "date-time"},
+    "fvp": {"type": "object", "required": ["input_path", "realpath", "sha256", "version", "commands"]},
+    "model": {"type": "object", "required": ["model_present", "objects", "defaults"], "properties": {"model_present": {"type": "boolean"}}},
+    "configuration": {"type": "object", "additionalProperties": false, "required": ["configuration_declared", "fvpconf", "declared"], "properties": {"configuration_declared": {"const": true}, "fvpconf": {"type": "object"}, "declared": {"type": "object"}}},
+    "interrupt_contract": {"type": "object", "required": ["msix_supported", "legacy_intx_supported"]},
+    "address_maps": {"type": "object", "required": ["component_local", "ap_visible"]},
+    "topology": {"type": "object", "required": ["files"]}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "binary": {"name": "FVP_Zena_CSS_Cfg2", "sha256": "28b63033b06f083b74fcf954ac05cd0f2bd8fcc6babac0bdc5cecd0159f96c05"},
+  "fvpconf_sha256": "939f75887144826e9779d0fee244162e5a5a3250fb0bd9edddcd805837ba0b7a",
+  "profile_sha256": "5ef9fa5f0c7720ab635bbcc24903ced40d4d4ae8261b3b692adf3fbbf8b044bf",
+  "recording": "Task7 immutable ECAM-boundary observation; proprietary bytes excluded"
+}

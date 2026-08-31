@@ -1,0 +1,12 @@
+{
+  "configuration_applied": true,
+  "detail": {
+    "configuration_applied": true,
+    "observed_fvp_processes": [{"argv": ["FVP_Zena_CSS_Cfg2", "--parameter", "css.gic_distributor.ITS-count=1", "--parameter", "pcie_group_0.pcie4.hierarchy_file_name=<default>", "--parameter", "pcie_group_0.pcie4.pcie_rc.ahci0.endpoint.ats_supported=true"], "pid": 1493733}],
+    "runner_command": ["runfvp_log_boot.py", "--out-dir", "runtime/boot"],
+    "runner_rc": -2
+  },
+  "qbox_started": false,
+  "reason": "canonical_runner_failed",
+  "status": "fail"
+}

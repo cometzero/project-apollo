@@ -1,0 +1,11 @@
+{
+  "args": ["--plugin", "/opt/fvp/Crypto.so"],
+  "exe": "FVP_Zena_CSS_Cfg2",
+  "fvp-bindir": "/opt/fvp",
+  "parameters": {
+    "css.gic_distributor.ITS-count": "1",
+    "pcie_group_0.pcie4.hierarchy_file_name": "<default>",
+    "pcie_group_0.pcie4.pcie_rc.ahci0.ahci.image_path": "",
+    "pcie_group_0.pcie4.pcie_rc.ahci0.endpoint.ats_supported": "true"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "fixture": "gic720ae-task7-fvp-ecam-limit-offline-v1",
+  "inputs": {
+    "notice": {"path": "NOTICE", "sha256": "3e16ddcaebd8593b513271e3b6bf87ce82e4f9b359b7137eafd8f2e3af1fdc7b"},
+    "readme": {"path": "README.md", "sha256": "f7043c5723aed306b6631bb0ecc8665032c22c518d4e2f5dfc73f55fcff6e92f"},
+    "cleanup": {"path": "cleanup.txt", "sha256": "8c174f87ccb30aa951469415b2b6d75d908c3df57aa4539e21adc75e285512b7"},
+    "fvpconf": {"path": "fvpconf.excerpt", "sha256": "03d5059d9f288cbe0326d659a99dbe86c11437215f03ca4025cf7a6a6e39196e"},
+    "ns_log": {"path": "ns.log", "sha256": "0b738a9e5b32a9fa1bfed988cf2db51a51107c9e4c09aa782e9f90c374ea5866"},
+    "outcome": {"path": "outcome.txt", "sha256": "3b01f4dc84ebb68373e95dcd1ecb4700505d9b0df7f15c09d08353283d42243a"},
+    "process": {"path": "process.log", "sha256": "255e341f0a7bd0a8a88d1f9f3839ca04d05f9dc76125a7c12dd6da419a5620dc"},
+    "profile": {"path": "profile.json", "sha256": "7fbe369db2ce3d88fccc9f8c171ee417ed90e06c9583f5a40d807627f744f1d6"},
+    "runtime_result": {"path": "runtime-result.json", "sha256": "f07f7c6caf32d5bd967063ffe3011f142c2f717f05cb929b3099254ceb70d1cc"},
+    "scp_log": {"path": "scp.log", "sha256": "6cd8197ce7d1741d677fb0bed5d019cf16187323c37be242649ea026c2b225a1"},
+    "secure_log": {"path": "secure.log", "sha256": "963c39ce72c85bb2abb5edb8599383779829f668af25efc4db1fe934fdfdee18"},
+    "source_boundary": {"path": "source-boundary.txt", "sha256": "be7561d057fd86913a2fc400e25d3e963bef57f59cec098f91e7b2f7d30b1b51"},
+    "source_identity": {"path": "source-identity.json", "sha256": "f15a7763c1b939452226a6d11a2b282345b16e03e9078b8148dcf6529cb98e6f"}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "fixture", "inputs"],
+  "properties": {
+    "format_version": {"const": 1},
+    "fixture": {"const": "gic720ae-task7-fvp-ecam-limit-offline-v1"},
+    "inputs": {
+      "type": "object",
+      "minProperties": 13,
+      "maxProperties": 13,
+      "additionalProperties": false,
+      "required": ["cleanup", "fvpconf", "notice", "ns_log", "outcome", "process", "profile", "readme", "runtime_result", "scp_log", "secure_log", "source_boundary", "source_identity"],
+      "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}
+    }
+  }
+}
