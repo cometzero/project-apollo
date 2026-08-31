@@ -1,0 +1,1 @@
+{"base":"qbox-msix.log","replacements":[["event=chain|virq=52|index=0","event=ignored|virq=52|index=0"],["event=chain|virq=52|index=1","event=ignored|virq=52|index=1"],["event=chain|virq=52|index=2","event=ignored|virq=52|index=2"]]}

@@ -1,0 +1,1 @@
+{"base":"qbox-msix.log","replacements":[["domain=PCI-MSIX-0000:00:01.0","domain=FAKE-LEAF"],["domain=ITS-MSI","domain=FAKE-ITS"],["domain=GICv3","domain=FAKE-GIC"]]}
