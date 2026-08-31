@@ -1,0 +1,1032 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "PASS"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "bindings": {
+            "maxProperties": 24,
+            "minProperties": 24,
+            "propertyNames": {
+              "enum": [
+                "contract_collection_entry_size",
+                "fvp_gate_schema_version",
+                "fvp_reference_gate_sha256",
+                "intx_ap_map_sha256",
+                "intx_coverage_sha256",
+                "intx_input_sha256",
+                "intx_log_sha256",
+                "intx_result_sha256",
+                "intx_rootfs_sha256",
+                "msix_ap_map_sha256",
+                "msix_coverage_sha256",
+                "msix_input_sha256",
+                "msix_log_sha256",
+                "msix_result_sha256",
+                "msix_rootfs_sha256",
+                "pair_result_sha256",
+                "pcie_runtime_schema_version",
+                "profile_schema_version",
+                "qbox_profile_manifest_sha256",
+                "qualification_schema_version",
+                "qualification_sha256",
+                "run_id",
+                "spi_result_sha256",
+                "spi_runtime_schema_version"
+              ]
+            },
+            "required": [
+              "contract_collection_entry_size",
+              "fvp_gate_schema_version",
+              "fvp_reference_gate_sha256",
+              "intx_ap_map_sha256",
+              "intx_coverage_sha256",
+              "intx_input_sha256",
+              "intx_log_sha256",
+              "intx_result_sha256",
+              "intx_rootfs_sha256",
+              "msix_ap_map_sha256",
+              "msix_coverage_sha256",
+              "msix_input_sha256",
+              "msix_log_sha256",
+              "msix_result_sha256",
+              "msix_rootfs_sha256",
+              "pair_result_sha256",
+              "pcie_runtime_schema_version",
+              "profile_schema_version",
+              "qbox_profile_manifest_sha256",
+              "qualification_schema_version",
+              "qualification_sha256",
+              "run_id",
+              "spi_result_sha256",
+              "spi_runtime_schema_version"
+            ]
+          },
+          "rows": {
+            "additionalProperties": false,
+            "maxProperties": 24,
+            "minProperties": 24,
+            "properties": {
+              "fvp_cleanup": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "fvp_reference_gate_sha256"
+                      ]
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "reference gate cleanup passed"
+                  },
+                  "id": {
+                    "const": "fvp_cleanup"
+                  },
+                  "scope": {
+                    "const": "FVP"
+                  },
+                  "status": {
+                    "const": "UNSUPPORTED"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "fvp_ecam_first_read_serror": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "fvp_reference_gate_sha256"
+                      ]
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "immutable ECAM limitation gate"
+                  },
+                  "id": {
+                    "const": "fvp_ecam_first_read_serror"
+                  },
+                  "scope": {
+                    "const": "FVP"
+                  },
+                  "status": {
+                    "const": "UNSUPPORTED"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "fvp_model_configuration": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "fvp_reference_gate_sha256"
+                      ]
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "immutable configuration applied"
+                  },
+                  "id": {
+                    "const": "fvp_model_configuration"
+                  },
+                  "scope": {
+                    "const": "FVP"
+                  },
+                  "status": {
+                    "const": "UNSUPPORTED"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "fvp_reference_gate": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "fvp_reference_gate_sha256"
+                      ]
+                    },
+                    "maxItems": 1,
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "reference gate PASS, qualification unsupported"
+                  },
+                  "id": {
+                    "const": "fvp_reference_gate"
+                  },
+                  "scope": {
+                    "const": "FVP"
+                  },
+                  "status": {
+                    "const": "UNSUPPORTED"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_ap_map": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_ap_map_sha256",
+                        "intx_coverage_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx AP-map audit passed"
+                  },
+                  "id": {
+                    "const": "qbox_intx_ap_map"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_cleanup": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_result_sha256",
+                        "qualification_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx cleanup passed"
+                  },
+                  "id": {
+                    "const": "qbox_intx_cleanup"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_coverage": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_coverage_sha256",
+                        "intx_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx coverage passed"
+                  },
+                  "id": {
+                    "const": "qbox_intx_coverage"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_empty_msi": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_result_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx chain has no MSI domain"
+                  },
+                  "id": {
+                    "const": "qbox_intx_empty_msi"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_hwirq333": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_result_sha256",
+                        "intx_rootfs_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 3,
+                    "minItems": 3,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx hwirq is 333"
+                  },
+                  "id": {
+                    "const": "qbox_intx_hwirq333"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_same_bdf": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_result_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx uses same PCI BDF"
+                  },
+                  "id": {
+                    "const": "qbox_intx_same_bdf"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_intx_workload": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "intx_log_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "INTx workload passed"
+                  },
+                  "id": {
+                    "const": "qbox_intx_workload"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_affinity": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "CPU0 and CPU1 affinity passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_affinity"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_ap_map": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_ap_map_sha256",
+                        "msix_coverage_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "MSI-X AP-map audit passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_ap_map"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_cleanup": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_result_sha256",
+                        "qualification_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "MSI-X cleanup passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_cleanup"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_coverage": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_coverage_sha256",
+                        "msix_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "MSI-X coverage passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_coverage"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_endpoint": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_result_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "same PCI endpoint is bound"
+                  },
+                  "id": {
+                    "const": "qbox_msix_endpoint"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_its_lpi": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_result_sha256",
+                        "msix_rootfs_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 3,
+                    "minItems": 3,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "ordered physical ITS LPI chain passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_its_lpi"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_offline_fallback": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "offline fallback reached CPU0"
+                  },
+                  "id": {
+                    "const": "qbox_msix_offline_fallback"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_replay": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "replay reached CPU1"
+                  },
+                  "id": {
+                    "const": "qbox_msix_replay"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_msix_workload": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "pair_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "endpoint workload passed"
+                  },
+                  "id": {
+                    "const": "qbox_msix_workload"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_spi_cleanup": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "qualification_sha256",
+                        "spi_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "SPI cleanup passed"
+                  },
+                  "id": {
+                    "const": "qbox_spi_cleanup"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_spi_hwirq293": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "spi_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "virtio-mmio hwirq is 293"
+                  },
+                  "id": {
+                    "const": "qbox_spi_hwirq293"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_spi_positive_delta": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "spi_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "isolated SPI delta is positive"
+                  },
+                  "id": {
+                    "const": "qbox_spi_positive_delta"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              },
+              "qbox_spi_zero_pci_delta": {
+                "additionalProperties": false,
+                "properties": {
+                  "bindings": {
+                    "items": {
+                      "enum": [
+                        "msix_log_sha256",
+                        "spi_result_sha256"
+                      ]
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array",
+                    "uniqueItems": true
+                  },
+                  "detail": {
+                    "const": "PCI vector delta is zero"
+                  },
+                  "id": {
+                    "const": "qbox_spi_zero_pci_delta"
+                  },
+                  "scope": {
+                    "const": "QBOX"
+                  },
+                  "status": {
+                    "const": "PASS"
+                  }
+                },
+                "required": [
+                  "id",
+                  "scope",
+                  "status",
+                  "detail",
+                  "bindings"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "fvp_model_configuration",
+              "fvp_ecam_first_read_serror",
+              "fvp_cleanup",
+              "fvp_reference_gate",
+              "qbox_msix_endpoint",
+              "qbox_msix_workload",
+              "qbox_msix_its_lpi",
+              "qbox_msix_affinity",
+              "qbox_msix_offline_fallback",
+              "qbox_msix_replay",
+              "qbox_msix_cleanup",
+              "qbox_intx_same_bdf",
+              "qbox_intx_empty_msi",
+              "qbox_intx_hwirq333",
+              "qbox_intx_workload",
+              "qbox_intx_cleanup",
+              "qbox_spi_hwirq293",
+              "qbox_spi_positive_delta",
+              "qbox_spi_zero_pci_delta",
+              "qbox_spi_cleanup",
+              "qbox_msix_coverage",
+              "qbox_intx_coverage",
+              "qbox_msix_ap_map",
+              "qbox_intx_ap_map"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "bindings": {
+      "type": "object"
+    },
+    "device_equivalence": {
+      "const": "NOT_COMPARABLE"
+    },
+    "fvp_qualification": {
+      "const": "UNSUPPORTED"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "rows": {
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "reason",
+    "fvp_qualification",
+    "device_equivalence",
+    "bindings",
+    "rows"
+  ],
+  "type": "object"
+}
