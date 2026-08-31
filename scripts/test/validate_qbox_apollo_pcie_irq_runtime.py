@@ -1,248 +1,247 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["jsonschema>=4.0"]
+# ///
+# ─── How to run ───
+# python3 scripts/test/validate_qbox_apollo_pcie_irq_runtime.py --help
 
 from __future__ import annotations
 
 import argparse
-import json
+import hashlib
+import os
 from pathlib import Path
-import re
-from typing import Any
+import subprocess
+import sys
+import tempfile
+
+import jsonschema
+
+try:
+    import qbox_apollo_pcie_irq_contract as profile_contract
+    import qbox_apollo_pcie_irq_inspect as profile_inspect
+except ModuleNotFoundError:
+    from scripts.test import qbox_apollo_pcie_irq_contract as profile_contract
+    from scripts.test import qbox_apollo_pcie_irq_inspect as profile_inspect
+
+CANONICAL_FVP_GATE = profile_contract.CANONICAL_FVP_GATE
+CANONICAL_FVP_GATE_SHA256 = profile_contract.CANONICAL_FVP_GATE_SHA256
+INPUT_SCHEMA = profile_contract.INPUT_SCHEMA
+PROFILE_SCHEMA = profile_contract.PROFILE_SCHEMA
+ROOT = profile_contract.ROOT
+SHARED_VALIDATOR = profile_contract.SHARED_VALIDATOR
+JsonObject = profile_contract.JsonObject
+JsonValue = profile_contract.JsonValue
+ProfileError = profile_contract.ProfileError
+contained = profile_contract.contained
+contract = profile_contract.contract
+has_symlink = profile_contract.has_symlink
+load_object = profile_contract.load_object
+object_field = profile_contract.object_field
+require_file = profile_contract.require_file
+sha256 = profile_contract.sha256
+string_field = profile_contract.string_field
+verify_reference_gate = profile_contract.verify_reference_gate
+artifact_path = profile_contract.verified_artifact_path
+validate_disk_slots = profile_inspect.validate_disk_slots
+validate_distinct_mode_artifacts = profile_inspect.validate_distinct_mode_artifacts
+validate_mode_payload = profile_inspect.validate_mode_payload
 
 
-DESCRIPTION = "Validate Apollo QBox PCIe MSI-X/LPI and legacy INTx evidence."
-GIC_SPI_INTID_BASE = 32
-LEGACY_INTX_SPI = 301
-LEGACY_INTX_INTID = GIC_SPI_INTID_BASE + LEGACY_INTX_SPI
-ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
-IRQ_RE = re.compile(
-    r"^\s*(?P<irq>\d+):\s+"
-    r"(?P<cpu0>\d+)\s+(?P<cpu1>\d+)\s+"
-    r"(?P<cpu2>\d+)\s+(?P<cpu3>\d+)\s+"
-    r"(?P<tail>.*)$"
-)
-BDF_RE = re.compile(
-    r"^__QBOX_PCIE_BDF__:(?P<domain>[0-9a-f]{4}):"
-    r"(?P<bus>[0-9a-f]{2}):(?P<device>[0-9a-f]{2})\."
-    r"(?P<function>[0-7])$",
-    re.MULTILINE | re.IGNORECASE,
-)
-
-
-def clean_text(value: str) -> str:
-    return ANSI_RE.sub("", value).replace("\r", "")
-
-
-def read_log(path: Path) -> str:
-    return clean_text(path.read_text(encoding="utf-8", errors="replace"))
-
-
-def marker_value(text: str, marker: str) -> str:
-    match = re.search(rf"^{re.escape(marker)}:(.*)$", text, re.MULTILINE)
-    return match.group(1).strip() if match else ""
-
-
-def section(text: str, start: str, end: str) -> str:
-    start_index = text.find(start)
-    if start_index < 0:
-        return ""
-    start_index = text.find("\n", start_index)
-    if start_index < 0:
-        return ""
-    end_index = text.find(end, start_index + 1)
-    if end_index < 0:
-        return ""
-    return text[start_index + 1 : end_index]
-
-
-def parse_interrupts(value: str) -> dict[int, dict[str, Any]]:
-    result: dict[int, dict[str, Any]] = {}
-    for line in value.splitlines():
-        match = IRQ_RE.match(line)
-        if match is None:
-            continue
-        irq = int(match.group("irq"))
-        result[irq] = {
-            "counts": [
-                int(match.group(f"cpu{cpu}"))
-                for cpu in range(4)
-            ],
-            "tail": match.group("tail").strip(),
-            "line": line.strip(),
-        }
-    return result
-
-
-def bdf_identity(text: str) -> dict[str, Any]:
-    match = BDF_RE.search(text)
-    if match is None:
-        return {}
-    bus = int(match.group("bus"), 16)
-    device = int(match.group("device"), 16)
-    function = int(match.group("function"), 16)
-    return {
-        "bdf": (
-            f"{match.group('domain').lower()}:{bus:02x}:"
-            f"{device:02x}.{function}"
-        ),
-        "device_id": (bus << 8) | (device << 3) | function,
+def validate_profile(path: Path) -> tuple[JsonObject, dict[str, str]]:
+    profile_path = require_file(path, "profile_manifest")
+    profile_dir = profile_path.parent
+    payload = load_object(profile_path, "profile_manifest")
+    schema = load_object(PROFILE_SCHEMA, "profile_schema")
+    try:
+        jsonschema.Draft202012Validator(schema).validate(payload)
+    except jsonschema.ValidationError as error:
+        raise ProfileError("profile_schema") from error
+    reference = object_field(payload.get("fvp_reference"), "fvp_reference")
+    if (
+        reference.get("path") != str(CANONICAL_FVP_GATE)
+        or reference.get("sha256") != CANONICAL_FVP_GATE_SHA256
+    ):
+        raise ProfileError("fvp_reference")
+    verify_reference_gate(Path(str(reference["path"])))
+    if payload.get("contract") != contract():
+        raise ProfileError("profile_contract")
+    inputs = object_field(payload.get("inputs"), "profile_inputs")
+    input_paths = {
+        name: artifact_path(entry, ROOT, f"profile_input:{name}")
+        for name, entry in inputs.items()
     }
-
-
-def interrupt_delta(
-    text: str,
-    *,
-    mode: str,
-) -> dict[str, Any]:
-    before = parse_interrupts(
-        section(
-            text,
-            "__QBOX_PCIE_IRQ_BEFORE__",
-            "__QBOX_PCIE_IRQ_BEFORE_END__",
+    generated = object_field(payload.get("artifacts"), "profile_artifacts")
+    try:
+        validate_distinct_mode_artifacts(generated)
+    except ProfileError as error:
+        raise ProfileError("mode_identity") from error
+    paths = {
+        name: artifact_path(entry, profile_dir, f"profile_artifact:{name}")
+        for name, entry in generated.items()
+    }
+    modes = object_field(payload.get("modes"), "profile_modes")
+    command = object_field(payload.get("command"), "profile_command")
+    input_schema = load_object(INPUT_SCHEMA, "input_schema")
+    argv = command.get("argv")
+    if not isinstance(argv, list) or not all(isinstance(value, str) for value in argv):
+        raise ProfileError("profile_command")
+    input_hashes: dict[str, str] = {}
+    for mode in ("msix", "intx"):
+        mode_entry = object_field(modes.get(mode), f"profile_mode:{mode}")
+        artifacts = object_field(mode_entry.get("artifacts"), f"profile_mode:{mode}")
+        for name in ("input_manifest", "uki", "initramfs", "disk"):
+            if artifacts.get(name) != generated.get(f"{mode}_{name}"):
+                raise ProfileError(f"profile_mode_artifact:{mode}:{name}")
+        mode_manifest = load_object(
+            paths[f"{mode}_input_manifest"], f"mode_manifest:{mode}"
         )
-    )
-    after = parse_interrupts(
-        section(
-            text,
-            "__QBOX_PCIE_IRQ_AFTER__",
-            "__QBOX_PCIE_IRQ_AFTER_END__",
+        try:
+            jsonschema.Draft202012Validator(input_schema).validate(mode_manifest)
+        except jsonschema.ValidationError as error:
+            raise ProfileError(f"mode_schema:{mode}") from error
+        mode_command = object_field(
+            mode_manifest.get("command"), f"mode_command:{mode}"
         )
-    )
-    candidates: list[dict[str, Any]] = []
-    for irq in sorted(before.keys() & after.keys()):
-        before_item = before[irq]
-        after_item = after[irq]
-        tail = str(after_item["tail"])
-        if "virtio" not in tail.lower():
-            continue
-        if mode == "msix" and re.search(
-            r"\bITS(?:-PCI)?-MSI(?:X)?\b", tail
-        ) is None:
-            continue
-        if mode == "intx" and (
-            "gic" not in tail.lower()
-            or re.search(rf"\b{LEGACY_INTX_INTID}\b", tail) is None
+        boot = object_field(mode_manifest.get("boot"), f"mode_boot:{mode}")
+        required = ["pci=nomsi"] if mode == "intx" else []
+        forbidden = [] if mode == "intx" else ["pci=nomsi"]
+        if mode_manifest.get("mode") != mode:
+            raise ProfileError("mode_identity")
+        if (
+            mode_manifest.get("platform") != "qbox"
+            or mode_manifest.get("contract") != contract()
+            or mode_manifest.get("inputs") != inputs
+            or mode_manifest.get("fvp_reference_gate_sha256")
+            != CANONICAL_FVP_GATE_SHA256
+            or mode_command != {"argv": argv, "profile_mode": mode}
+            or boot.get("required_arguments") != required
+            or boot.get("forbidden_arguments") != forbidden
         ):
-            continue
-        deltas = [
-            after_item["counts"][cpu] - before_item["counts"][cpu]
-            for cpu in range(4)
+            raise ProfileError(f"mode_manifest:{mode}")
+        boot_values = mode_entry.get("boot_arguments")
+        if not isinstance(boot_values, list) or not all(
+            isinstance(value, str) for value in boot_values
+        ):
+            raise ProfileError(f"mode_bootargs:{mode}")
+        boot_arguments = [
+            string_field(value, f"mode_bootargs:{mode}") for value in boot_values
         ]
-        candidates.append(
-            {
-                "irq": irq,
-                "before": before_item["counts"],
-                "after": after_item["counts"],
-                "delta": deltas,
-                "total_delta": sum(deltas),
-                "tail": tail,
-            }
-        )
-    if not candidates:
-        return {
-            "irq": None,
-            "cpu0_delta": 0,
-            "total_delta": 0,
-            "candidates": [],
-        }
-    selected = max(candidates, key=lambda item: item["total_delta"])
-    return {
-        **selected,
-        "cpu0_delta": selected["delta"][0],
-        "candidates": candidates,
-    }
-
-
-def validate_mode(path: Path, mode: str) -> dict[str, Any]:
-    text = read_log(path)
-    identity = bdf_identity(text)
-    delta = interrupt_delta(text, mode=mode)
-    begin = f"__QBOX_PCIE_IRQ_TEST_BEGIN__:{mode}" in text
-    done = f"__QBOX_PCIE_IRQ_TEST_DONE__:{mode}" in text
-    iface = marker_value(text, "__QBOX_PCIE_IFACE__")
-    checks = {
-        "begin_marker": begin,
-        "done_marker": done,
-        "endpoint_bdf": identity.get("bdf") == "0000:00:01.0",
-        "endpoint_iface": bool(iface),
-        "interrupt_increment": delta["total_delta"] > 0,
-        "cpu0_increment": delta["cpu0_delta"] > 0,
-    }
-    if mode == "msix":
-        checks["msix_enabled"] = bool(
-            "MSI-X: Enable+" in text
-            or (
-                delta.get("tail")
-                and re.search(
-                    r"\bITS(?:-PCI)?-MSI(?:X)?\b",
-                    str(delta["tail"]),
-                )
+        if any(value not in boot_arguments for value in required) or any(
+            value in boot_arguments for value in forbidden
+        ):
+            raise ProfileError(f"mode_bootargs:{mode}")
+        command_line_sha = hashlib.sha256(" ".join(boot_arguments).encode()).hexdigest()
+        if boot.get("command_line_sha256") != command_line_sha:
+            raise ProfileError(f"mode_bootargs:{mode}")
+        try:
+            validate_mode_payload(
+                mode,
+                paths[f"{mode}_input_manifest"],
+                paths[f"{mode}_uki"],
+                paths[f"{mode}_initramfs"],
+                paths["dtb"],
+                boot_arguments,
+                input_paths["guest_probe"],
+                input_paths["guest_wrapper"],
             )
-        )
-        checks["its_lpi"] = bool(
-            delta.get("tail")
-            and re.search(
-                r"\bITS(?:-PCI)?-MSI(?:X)?\b",
-                str(delta["tail"]),
-            )
-        )
-    else:
-        checks["pci_nomsi"] = "pci=nomsi" in marker_value(
-            text, "__QBOX_PCIE_CMDLINE__"
-        ).split()
-        checks["legacy_spi_301"] = bool(
-            delta.get("tail")
-            and re.search(
-                rf"\b{LEGACY_INTX_INTID}\b",
-                str(delta["tail"]),
-            )
-        )
-    return {
-        "status": "pass" if all(checks.values()) else "fail",
-        "path": str(path.resolve()),
-        "mode": mode,
-        "identity": identity,
-        "iface": iface,
-        "irq": delta.get("irq"),
-        "cpu0_delta": delta["cpu0_delta"],
-        "total_delta": delta["total_delta"],
-        "irq_evidence": delta,
-        "checks": checks,
-    }
+            validate_disk_slots(paths[f"{mode}_disk"], paths[f"{mode}_uki"])
+        except ProfileError as error:
+            raise ProfileError("mode_identity") from error
+        input_hashes[mode] = sha256(paths[f"{mode}_input_manifest"])
+    return payload, input_hashes
 
 
-def validate_pair(msix_log: Path, intx_log: Path) -> dict[str, Any]:
-    msix = validate_mode(msix_log, "msix")
-    intx = validate_mode(intx_log, "intx")
-    same_endpoint = (
-        msix["identity"].get("bdf")
-        and msix["identity"] == intx["identity"]
+def run_shared(log: Path, mode: str, digest: str, output: Path) -> JsonObject:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SHARED_VALIDATOR),
+            "--log",
+            str(log),
+            "--platform",
+            "qbox",
+            "--mode",
+            mode,
+            "--input-sha256",
+            digest,
+            "--output",
+            str(output),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
     )
-    identity = {
-        **msix["identity"],
-        "stream_id": 0x0040,
-        "event_id_base": 0,
-        "its_translator": "0x20850040",
-        "legacy_intx_spi": LEGACY_INTX_SPI,
-        "legacy_intx_intid": LEGACY_INTX_INTID,
+    payload = load_object(output, f"shared_validator:{mode}")
+    expected_rc = 0 if payload.get("status") == "pass" else 1
+    if result.returncode != expected_rc:
+        raise ProfileError(f"shared_validator_rc:{mode}")
+    return payload
+
+
+def validate_pair(profile_path: Path, msix_log: Path, intx_log: Path) -> JsonObject:
+    profile, hashes = validate_profile(profile_path)
+    logs = {
+        "msix": require_file(msix_log, "msix_log"),
+        "intx": require_file(intx_log, "intx_log"),
     }
+    with tempfile.TemporaryDirectory(prefix="apollo-qbox-pcie-validator-") as temporary:
+        directory = Path(temporary)
+        results = {
+            mode: run_shared(logs[mode], mode, hashes[mode], directory / f"{mode}.json")
+            for mode in ("msix", "intx")
+        }
     checks = {
-        "msix_lpi": msix["status"] == "pass",
-        "legacy_intx": intx["status"] == "pass",
-        "same_endpoint": bool(same_endpoint),
-        "device_id": identity.get("device_id") == 0x0008,
+        "profile_gate": True,
+        "mode_identity": True,
+        "msix_endpoint_bound": results["msix"].get("status") == "pass",
+        "intx_endpoint_bound": results["intx"].get("status") == "pass",
     }
+    profile_identity: JsonObject = {
+        "path": str(profile_path.absolute()),
+        "sha256": sha256(profile_path),
+    }
+    hash_payload: JsonObject = {}
+    for mode, digest in hashes.items():
+        hash_payload[mode] = digest
+    result_payload: JsonObject = {}
+    for mode, result in results.items():
+        result_payload[mode] = result
+    check_payload: JsonObject = {}
+    for name, passed in checks.items():
+        check_payload[name] = passed
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "pass" if all(checks.values()) else "fail",
-        "identity": identity,
-        "msix": msix,
-        "intx": intx,
-        "checks": checks,
+        "reason": "ok" if all(checks.values()) else "shared_contract",
+        "profile_manifest": profile_identity,
+        "fvp_reference": profile["fvp_reference"],
+        "contract": contract(),
+        "input_sha256": hash_payload,
+        "msix": result_payload["msix"],
+        "intx": result_payload["intx"],
+        "checks": check_payload,
     }
+
+
+def atomic_write(path: Path, payload: JsonObject) -> None:
+    absolute = path.absolute()
+    if not contained(absolute, ROOT) or has_symlink(absolute):
+        raise ProfileError("output_path")
+    absolute.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("wb", dir=absolute.parent, delete=False) as stream:
+        stream.write(profile_contract.canonical_bytes(payload))
+        temporary = Path(stream.name)
+    os.replace(temporary, absolute)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser = argparse.ArgumentParser(
+        description="Validate Apollo QBox PCIe IRQ evidence."
+    )
+    parser.add_argument("--profile-manifest", type=Path, required=True)
     parser.add_argument("--msix-log", type=Path, required=True)
     parser.add_argument("--intx-log", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -251,14 +250,21 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    result = validate_pair(args.msix_log.resolve(), args.intx_log.resolve())
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(result, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        payload = validate_pair(args.profile_manifest, args.msix_log, args.intx_log)
+    except (ProfileError, OSError) as error:
+        payload = {
+            "schema_version": 2,
+            "status": "fail",
+            "reason": str(error),
+        }
+    try:
+        atomic_write(args.output, payload)
+    except ProfileError as error:
+        print(error)
+        return 1
     print(args.output)
-    return 0 if result["status"] == "pass" else 1
+    return 0 if payload["status"] == "pass" else 1
 
 
 if __name__ == "__main__":

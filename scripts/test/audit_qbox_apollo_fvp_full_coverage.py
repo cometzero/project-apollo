@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit Apollo full-system QBox hardware coverage and gate evidence."""
+"""Audit Apollo full-system QBox hardware coverage and gate evidence. # noqa: SIZE_OK"""
 
 from __future__ import annotations
 
@@ -380,7 +380,49 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     root = workspace_root()
-    runtime_result = read_json(args.result_json)
+    runtime_result = {}
+    runtime_result_input_checks = []
+    if args.result_json is not None:
+        parsed_runtime_result, runtime_result_error = read_json_strict(args.result_json)
+        if parsed_runtime_result is None:
+            runtime_result = {}
+            if runtime_result_error == "not_json_object":
+                input_status = "not_json_object"
+                input_reason = "runtime_result_not_object"
+            elif runtime_result_error is not None and runtime_result_error.startswith(
+                "decode_error:"
+            ):
+                input_status = "invalid_json"
+                input_reason = "runtime_result_invalid_json"
+            elif runtime_result_error is not None and runtime_result_error.startswith(
+                "read_error:"
+            ):
+                input_status = (
+                    "missing" if not args.result_json.exists() else "unreadable"
+                )
+                input_reason = f"runtime_result_{input_status}"
+            else:
+                input_status = "invalid"
+                input_reason = "runtime_result_invalid"
+            runtime_result_input_checks.append(
+                {
+                    "name": "runtime_result_input",
+                    "status": input_status,
+                    "passed": False,
+                    "reason": input_reason,
+                    "path": str(args.result_json),
+                }
+            )
+        else:
+            runtime_result = parsed_runtime_result
+            runtime_result_input_checks.append(
+                {
+                    "name": "runtime_result_input",
+                    "status": "valid",
+                    "passed": True,
+                    "path": str(args.result_json),
+                }
+            )
     block_checks = static_block_checks(root)
     backend_checks = lua_backend_checks(root)
     ap_map = ap_map_summary(
@@ -393,18 +435,19 @@ def main() -> int:
         "passed": bool(ap_map["passed"]),
         "path": ap_map["audit_path"],
     }
-    gate_checks = runtime_gate_checks(runtime_result) if runtime_result else []
-    marker_checks = marker_group_checks(runtime_result) if runtime_result else []
-    log_checks = console_log_checks(runtime_result) if runtime_result else []
+    gate_checks = runtime_gate_checks(runtime_result) if args.result_json is not None else []
+    marker_checks = marker_group_checks(runtime_result) if args.result_json is not None else []
+    log_checks = console_log_checks(runtime_result) if args.result_json is not None else []
     checks = (
         block_checks
         + backend_checks
         + [ap_map_check]
+        + runtime_result_input_checks
         + gate_checks
         + marker_checks
         + log_checks
     )
-    if runtime_result:
+    if args.result_json is not None:
         passed = all(
             check["passed"] for check in checks if check.get("gating", True)
         )

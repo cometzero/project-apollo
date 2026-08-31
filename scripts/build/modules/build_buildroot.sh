@@ -198,6 +198,7 @@ prepare_buildroot_overlay()
     mkdir -p "${BUILDROOT_OVERLAY}"/{dev,proc,sys,tmp,run,etc}
     mkdir -p "${BUILDROOT_OVERLAY}/etc/pfdi"
     mkdir -p "${BUILDROOT_OVERLAY}/usr/libexec/nexios-bsp"
+    mkdir -p "${BUILDROOT_OVERLAY}/var/run/dropbear"
     rm -f \
         "${BUILDROOT_OVERLAY}/usr/bin/apollo-network-setup" \
         "${BUILDROOT_OVERLAY}/usr/bin/pfdi-local-agent" \
@@ -272,6 +273,7 @@ BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
 BR2_ROOTFS_OVERLAY="${BUILDROOT_OVERLAY}"
 BR2_PACKAGE_BUSYBOX=y
 BR2_PACKAGE_BUSYBOX_SHOW_OTHERS=y
+BR2_PACKAGE_DROPBEAR=y
 BR2_PACKAGE_KMOD=y
 BR2_PACKAGE_KMOD_TOOLS=y
 BR2_PACKAGE_IPROUTE2=y
@@ -429,6 +431,9 @@ refresh_buildroot_perf_source()
 validate_buildroot_runtime_files()
 {
     require_file "${BUILDROOT_BUILD_DIR}/target/sbin/ip"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/sbin/dropbear"
+    require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/dropbearkey"
+    require_dir "${BUILDROOT_BUILD_DIR}/target/var/run/dropbear"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/iperf"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/perf"
     require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/pfdi-cli"

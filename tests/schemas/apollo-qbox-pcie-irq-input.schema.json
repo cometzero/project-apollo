@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://arm.example/schemas/apollo-qbox-pcie-irq-input.schema.json",
+  "title": "Apollo QBox PCIe IRQ mode input",
+  "type": "object",
+  "required": ["schema_version", "profile", "platform", "mode", "fvp_reference_gate_sha256", "contract", "inputs", "boot", "command"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"const": "apollo-qvp-pcie-irq"},
+    "platform": {"const": "qbox"},
+    "mode": {"enum": ["msix", "intx"]},
+    "fvp_reference_gate_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "contract": {"$ref": "#/$defs/contract"},
+    "inputs": {"$ref": "#/$defs/inputs"},
+    "boot": {
+      "type": "object",
+      "required": ["command_line_sha256", "required_arguments", "forbidden_arguments"],
+      "properties": {
+        "command_line_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "required_arguments": {"type": "array", "items": {"type": "string"}},
+        "forbidden_arguments": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "command": {
+      "type": "object",
+      "required": ["argv", "profile_mode"],
+      "properties": {
+        "argv": {"type": "array", "minItems": 2, "items": {"type": "string", "minLength": 1}},
+        "profile_mode": {"enum": ["msix", "intx"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "mode": {"const": "msix"},
+        "boot": {
+          "properties": {
+            "required_arguments": {"maxItems": 0},
+            "forbidden_arguments": {"const": ["pci=nomsi"]}
+          }
+        },
+        "command": {"properties": {"profile_mode": {"const": "msix"}}}
+      }
+    },
+    {
+      "properties": {
+        "mode": {"const": "intx"},
+        "boot": {
+          "properties": {
+            "required_arguments": {"const": ["pci=nomsi"]},
+            "forbidden_arguments": {"maxItems": 0}
+          }
+        },
+        "command": {"properties": {"profile_mode": {"const": "intx"}}}
+      }
+    }
+  ],
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["path", "size", "sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^/"},
+        "size": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["base_disk", "base_dtb", "base_initramfs", "builder", "gic_overlay_module", "artifact_module", "inspect_module", "contract_module", "profile_schema", "input_schema", "fvp_reference_gate", "linux_image", "uki_stub", "uki_os_release", "kernel_release", "ukify", "uki_manifest", "overlay_source", "guest_probe", "guest_wrapper", "profile_validator", "shared_validator", "ap_compute"],
+      "properties": {
+        "base_disk": {"$ref": "#/$defs/artifact"},
+        "base_dtb": {"$ref": "#/$defs/artifact"},
+        "base_initramfs": {"$ref": "#/$defs/artifact"},
+        "builder": {"$ref": "#/$defs/artifact"},
+        "gic_overlay_module": {"$ref": "#/$defs/artifact"},
+        "artifact_module": {"$ref": "#/$defs/artifact"},
+        "inspect_module": {"$ref": "#/$defs/artifact"},
+        "contract_module": {"$ref": "#/$defs/artifact"},
+        "profile_schema": {"$ref": "#/$defs/artifact"},
+        "input_schema": {"$ref": "#/$defs/artifact"},
+        "fvp_reference_gate": {"$ref": "#/$defs/artifact"},
+        "linux_image": {"$ref": "#/$defs/artifact"},
+        "uki_stub": {"$ref": "#/$defs/artifact"},
+        "uki_os_release": {"$ref": "#/$defs/artifact"},
+        "kernel_release": {"$ref": "#/$defs/artifact"},
+        "ukify": {"$ref": "#/$defs/artifact"},
+        "uki_manifest": {"$ref": "#/$defs/artifact"},
+        "overlay_source": {"$ref": "#/$defs/artifact"},
+        "guest_probe": {"$ref": "#/$defs/artifact"},
+        "guest_wrapper": {"$ref": "#/$defs/artifact"},
+        "profile_validator": {"$ref": "#/$defs/artifact"},
+        "shared_validator": {"$ref": "#/$defs/artifact"},
+        "ap_compute": {"$ref": "#/$defs/artifact"}
+      },
+      "additionalProperties": false
+    },
+    "contract": {
+      "type": "object",
+      "required": ["bdf", "requester_id", "device_id", "stream_id", "event_id_base", "its_translator", "legacy_gpex_spi_input", "legacy_gic_intid", "virtio_mmio_hwirq", "collection_entry_size"],
+      "properties": {
+        "bdf": {"const": "0000:00:01.0"},
+        "requester_id": {"const": 8},
+        "device_id": {"const": 8},
+        "stream_id": {"const": 64},
+        "event_id_base": {"const": 0},
+        "its_translator": {"const": "0x20850040"},
+        "legacy_gpex_spi_input": {"const": 301},
+        "legacy_gic_intid": {"const": 333},
+        "virtio_mmio_hwirq": {"const": 293},
+        "collection_entry_size": {"const": 2}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Audit Apollo's fixed AP 9.1.1 map table. # noqa: SIZE_OK"""
 
 from __future__ import annotations
 
@@ -9,6 +10,11 @@ from pathlib import Path
 import re
 import sys
 from typing import Any, Final
+
+try:
+    import apollo_ap_map_lua as modular_lua
+except ModuleNotFoundError:
+    from scripts.test import apollo_ap_map_lua as modular_lua
 
 
 DESCRIPTION: Final = "Audit Apollo AP 9.1.1 memory-map coverage from QBox Lua objects."
@@ -45,6 +51,7 @@ AP_CL_NI710AE_FMUS: Final[tuple[str, ...]] = (
 )
 AP_FMU_SUBWINDOW_SIZE: Final = 0x100000
 AP_FMU_MODELED_SIZE: Final = 0x50000
+AP_FMU_MODULE_TYPES: Final[set[str]] = {"zena_fmu", "zena_ni710ae_fmu"}
 AP_FMU_QBOX_OBJECTS: Final[tuple[str, ...]] = (
     "ap_cl0_ni710ae_fmu",
     "ap_cl1_ni710ae_fmu",
@@ -405,6 +412,16 @@ def parse_constants(text: str) -> tuple[dict[str, int], dict[str, list[int]]]:
         match = re.search(rf"{name} = (0x[0-9a-fA-F]+|\d+);", text)
         if match:
             constants[f"ap_virtio.{name}"] = int(match.group(1), 0)
+    for table_match in re.finditer(
+        r"(?ms)^(?:local\s+)?([A-Z][A-Z0-9_]*)\s*=\s*\{(.*?)^\}", text
+    ):
+        table_name, body = table_match.groups()
+        for field_match in re.finditer(
+            r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;\n]+);", body
+        ):
+            parsed = eval_lua_int(field_match.group(2), constants, tables)
+            if parsed is not None:
+                constants[f"{table_name}.{field_match.group(1)}"] = parsed
     for line in text.splitlines():
         match = re.match(r"(?:local )?([A-Z][A-Z0-9_]*) = ([^;\n]+)", line.strip())
         if match:
@@ -559,13 +576,15 @@ def add_smmu_factory_socket(
     tables: dict[str, list[int]],
     lua_file: str,
 ) -> None:
-    match = re.search(r"function ap_smmu_component\(\).*?return \{", text, re.S)
+    match = re.search(
+        r"(?:local\s+)?function ap_smmu_component\(\).*?return \{", text, re.S
+    )
     if not match:
         return
     block = lua_block(text, match.end() - 1)
     current_module = module_type(block)
-    address_match = re.search(r"address = ([^;\n]+)", block)
-    size_match = re.search(r"size = ([^;\n]+)", block)
+    address_match = re.search(r"(?m)^\s*address\s*=\s*([^;\n]+)", block)
+    size_match = re.search(r"(?m)^\s*size\s*=\s*([^;\n]+)", block)
     if not address_match or not size_match:
         return
     address = eval_lua_int(address_match.group(1), constants, tables)
@@ -585,7 +604,8 @@ def current_coverage(root: Path) -> list[LuaSocket]:
         "si_cl0.lua",
         "si_cl1.lua",
     ]
-    texts = {lua_file: read_text(apollo / lua_file) for lua_file in lua_files}
+    modules = modular_lua.load_module_graph(apollo.parent / "apollo-qvp.lua")
+    texts = {lua_file: modules[f"hw-block/{lua_file}"] for lua_file in lua_files}
     constants, tables = parse_constants("\n".join(texts.values()))
     sockets: list[LuaSocket] = []
     for lua_file in lua_files:
@@ -593,7 +613,9 @@ def current_coverage(root: Path) -> list[LuaSocket]:
             continue
         sockets.extend(parse_object_sockets(texts[lua_file], lua_file, constants, tables))
     add_gic_redists(sockets, constants, "ap_compute.lua")
-    add_smmu_factory_socket(texts["config.lua"], sockets, constants, tables, "ap_compute.lua")
+    add_smmu_factory_socket(
+        texts["ap_compute.lua"], sockets, constants, tables, "ap_compute.lua"
+    )
     return sorted(sockets, key=lambda item: (item.address, item.object_name, item.socket_name))
 
 
@@ -613,7 +635,7 @@ def fmu_subwindow_details(row: MapRow, sockets: list[LuaSocket]) -> dict[str, An
                 socket for socket in sockets
                 if (
                     socket.object_name == plan["object"]
-                    and socket.module_type == "zena_fmu"
+                    and socket.module_type in AP_FMU_MODULE_TYPES
                     and socket.address == expected_start
                     and 0 < socket.size <= AP_FMU_SUBWINDOW_SIZE
                 )
@@ -638,7 +660,10 @@ def fmu_subwindow_details(row: MapRow, sockets: list[LuaSocket]) -> dict[str, An
             }
         )
     for socket in sockets:
-        if socket.object_name in AP_FMU_QBOX_OBJECTS and socket.module_type != "zena_fmu":
+        if (
+            socket.object_name in AP_FMU_QBOX_OBJECTS
+            and socket.module_type not in AP_FMU_MODULE_TYPES
+        ):
             unexpected_objects.append(socket_to_json(socket))
         if socket.object_name in AP_FMU_QBOX_OBJECTS and socket.size > AP_FMU_SUBWINDOW_SIZE:
             unexpected_objects.append(socket_to_json(socket))

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "closure_state": { "const": "PRE_AUDIT" } } },
+      "then": {
+        "properties": {
+          "ap_memory_map_audit": {
+            "additionalProperties": false,
+            "properties": { "status": { "const": "NOT_RUN" } },
+            "required": ["status"],
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "closure_state": { "const": "AUDIT_BOUND" } } },
+      "then": {
+        "properties": { "ap_memory_map_audit": { "$ref": "#/$defs/file" } }
+      }
+    }
+  ],
+  "properties": {
+    "command_order": {
+      "const": [
+        "./local_build.sh qbox",
+        "python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output ${RUN_ROOT}/ap-map-audit.json",
+        "python3 scripts/test/run_gic720ae_pcie_irq_validation_task9.py --fvp-reference-gate ${FVP_GATE} --qbox-profile-manifest ${QBOX_PROFILE} --run-root ${RUN_ROOT}/task9 --ap-map-audit ${RUN_ROOT}/ap-map-audit.json --ap-map-audit-sha256 ${AP_MAP_SHA256} --ap-map-audit-size ${AP_MAP_SIZE}",
+        "python3 scripts/test/run_gic720ae_pcie_irq_validation_task10.py --fvp-reference-gate ${FVP_GATE} --qbox-profile-manifest ${QBOX_PROFILE} --qbox-run-root ${RUN_ROOT}/task9 --output ${RUN_ROOT}/boundary-comparison.json"
+      ]
+    },
+    "closure_state": { "enum": ["PRE_AUDIT", "AUDIT_BOUND"] },
+    "ap_memory_map_audit": {
+      "oneOf": [
+        { "$ref": "#/$defs/file" },
+        {
+          "additionalProperties": false,
+          "properties": { "status": { "const": "NOT_RUN" } },
+          "required": ["status"],
+          "type": "object"
+        }
+      ]
+    },
+    "files": {
+      "additionalProperties": {
+        "$ref": "#/$defs/file"
+      },
+      "minProperties": 20,
+      "type": "object"
+    },
+    "fvp_qualification": {
+      "const": "UNSUPPORTED"
+    },
+    "qbox_binary": { "$ref": "#/$defs/binary" },
+    "repositories": {
+      "additionalProperties": false,
+      "properties": {
+        "linux": { "$ref": "#/$defs/repository" },
+        "meta_hsoc_bsp": { "$ref": "#/$defs/repository" },
+        "qbox_core": { "$ref": "#/$defs/repository" },
+        "qbox_platform": { "$ref": "#/$defs/repository" },
+        "qemu": { "$ref": "#/$defs/repository" },
+        "scp_firmware": { "$ref": "#/$defs/repository" },
+        "superproject": { "$ref": "#/$defs/repository" },
+        "trusted_firmware_a": { "$ref": "#/$defs/repository" }
+      },
+      "required": ["superproject", "linux", "trusted_firmware_a", "scp_firmware", "meta_hsoc_bsp", "qbox_core", "qbox_platform", "qemu"],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "PASS"
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "closure_state",
+    "fvp_qualification",
+    "ap_memory_map_audit",
+    "files",
+    "repositories",
+    "qbox_binary",
+    "command_order"
+  ],
+  "type": "object",
+  "$defs": {
+    "binary": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "path": { "minLength": 1, "type": "string" },
+            "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+            "status": { "const": "PRESENT" }
+          },
+          "required": ["status", "path", "sha256"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "path": { "minLength": 1, "type": "string" },
+            "status": { "const": "MISSING" }
+          },
+          "required": ["status", "path"],
+          "type": "object"
+        }
+      ]
+    },
+    "digest": {
+      "additionalProperties": false,
+      "properties": {
+        "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "size": { "minimum": 0, "type": "integer" }
+      },
+      "required": ["sha256", "size"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "path": { "minLength": 1, "type": "string" },
+        "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "size": { "minimum": 1, "type": "integer" }
+      },
+      "required": ["path", "sha256", "size"],
+      "type": "object"
+    },
+    "repository": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_state": { "enum": ["CLEAN", "DIRTY_ALLOWED"] },
+        "head": { "pattern": "^[0-9a-f]{40}$", "type": "string" },
+        "path": { "minLength": 1, "type": "string" },
+        "scope_paths": { "items": { "minLength": 1, "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+        "staged_diff": { "$ref": "#/$defs/digest" },
+        "status_entries": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "code": { "pattern": "^[ MADRCU?!]{2}$", "type": "string" },
+              "original_path": { "minLength": 1, "type": "string" },
+              "path": { "minLength": 1, "type": "string" }
+            },
+            "required": ["code", "path"],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "untracked_manifest_sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "untracked_sources": { "items": { "$ref": "#/$defs/scoped_file" }, "type": "array" },
+        "worktree_diff": { "$ref": "#/$defs/digest" }
+      },
+      "required": ["path", "head", "scope_paths", "expected_state", "staged_diff", "worktree_diff", "untracked_manifest_sha256", "untracked_sources", "status_entries"],
+      "type": "object"
+    },
+    "scoped_file": {
+      "additionalProperties": false,
+      "properties": {
+        "path": { "minLength": 1, "type": "string" },
+        "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "size": { "minimum": 0, "type": "integer" }
+      },
+      "required": ["path", "sha256", "size"],
+      "type": "object"
+    }
+  }
+}

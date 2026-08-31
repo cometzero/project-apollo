@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "overall": { "const": "PASS" } } },
+      "then": {
+        "required": ["ap_memory_map_audit"],
+        "properties": {
+          "cleanup": {
+            "properties": {
+              "receipts": { "minProperties": 2 },
+              "residual_pids": { "maxItems": 0 },
+              "status": { "const": "PASS" }
+            }
+          },
+          "children": {
+            "required": ["qbox_build", "ap_memory_map_audit", "task9", "task10"]
+          },
+          "ap_memory_map_audit": {
+            "properties": { "status": { "const": "PASS" } },
+            "required": ["status", "artifact"]
+          },
+          "qbox": {
+            "properties": {
+              "binary": {
+                "properties": { "status": { "const": "PRESENT" } }
+              },
+              "build": { "const": "PASS" },
+              "started": { "const": true }
+            },
+            "required": ["binary"]
+          },
+          "task9": {
+            "properties": {
+              "artifacts": { "minProperties": 15 },
+              "status": { "const": "PASS" }
+            }
+          },
+          "task10": {
+            "properties": {
+              "status": { "const": "PASS" }
+            },
+            "required": ["status", "comparison"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "qbox": { "properties": { "build": { "const": "PASS" } } }
+        }
+      },
+      "then": {
+        "properties": {
+          "qbox": {
+            "properties": {
+              "binary": { "properties": { "status": { "const": "PRESENT" } } }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phases": {
+            "contains": {
+              "properties": {
+                "name": { "const": "qbox_build" },
+                "status": { "const": "PASS" }
+              },
+              "required": ["name", "status"]
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["ap_memory_map_audit"],
+        "properties": {
+          "phases": {
+            "contains": {
+              "properties": {
+                "name": { "const": "ap_memory_map_audit" },
+                "status": { "enum": ["PASS", "FAIL"] }
+              },
+              "required": ["name", "status"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phases": {
+            "contains": {
+              "properties": {
+                "name": { "const": "ap_memory_map_audit" },
+                "status": { "const": "PASS" }
+              },
+              "required": ["name", "status"]
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["ap_memory_map_audit"],
+        "properties": {
+          "ap_memory_map_audit": {
+            "properties": { "status": { "const": "PASS" } },
+            "required": ["status", "artifact"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phases": {
+            "contains": {
+              "properties": {
+                "name": { "const": "ap_memory_map_audit" },
+                "status": { "const": "FAIL" }
+              },
+              "required": ["name", "status"]
+            }
+          }
+        }
+      },
+      "then": {
+        "required": ["ap_memory_map_audit"],
+        "properties": {
+          "ap_memory_map_audit": {
+            "properties": { "status": { "const": "FAIL" } },
+            "required": ["status"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phases": {
+            "contains": {
+              "properties": {
+                "name": { "const": "ap_memory_map_audit" },
+                "status": { "const": "NOT_RUN" }
+              },
+              "required": ["name", "status"]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ap_memory_map_audit": {
+            "properties": { "status": { "const": "NOT_RUN" } },
+            "required": ["status"]
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "ap_memory_map_audit": { "$ref": "#/$defs/ap_map_audit" },
+    "children": {
+      "additionalProperties": { "$ref": "#/$defs/child" },
+      "type": "object"
+    },
+    "cleanup": {
+      "additionalProperties": false,
+      "properties": {
+        "receipts": { "type": "object" },
+        "residual_pids": { "items": { "type": "integer" }, "type": "array" },
+        "status": { "enum": ["PASS", "FAIL"] }
+      },
+      "required": ["status", "residual_pids", "receipts"],
+      "type": "object"
+    },
+    "fvp": {
+      "additionalProperties": false,
+      "properties": {
+        "gate_sha256": { "const": "5ceb377244eb0e4fddd6e4346a701fa1a75185d0dc689d2e396c917cb3549a82" },
+        "qualification": { "const": "UNSUPPORTED" },
+        "reference_gate": { "const": "PASS" },
+        "started": { "const": false }
+      },
+      "required": ["reference_gate", "qualification", "started", "gate_sha256"],
+      "type": "object"
+    },
+    "overall": { "enum": ["PASS", "FAIL"] },
+    "phases": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "enum": ["PASS", "FAIL", "NOT_RUN"] }
+        },
+        "required": ["name", "status"],
+        "type": "object"
+      },
+      "maxItems": 9,
+      "minItems": 8,
+      "type": "array"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "status": { "const": "PASS" }
+      },
+      "required": ["status", "path", "sha256"],
+      "type": "object"
+    },
+    "qbox": {
+      "additionalProperties": false,
+      "properties": {
+        "binary": { "$ref": "#/$defs/binary" },
+        "build": { "enum": ["PASS", "FAIL"] },
+        "started": { "type": "boolean" }
+      },
+      "required": ["started", "build", "binary"],
+      "type": "object"
+    },
+    "reason": { "minLength": 1, "type": "string" },
+    "schema_version": { "const": 1 },
+    "task10": {
+      "additionalProperties": false,
+      "properties": {
+        "comparison": { "$ref": "#/$defs/file" },
+        "status": { "enum": ["PASS", "NOT_RUN"] }
+      },
+      "required": ["status"],
+      "type": "object"
+    },
+    "task9": { "additionalProperties": true, "required": ["status", "artifacts"], "type": "object" },
+    "timeout_seconds": { "minimum": 1, "type": "integer" }
+  },
+  "required": [
+    "schema_version",
+    "overall",
+    "reason",
+    "fvp",
+    "provenance",
+    "qbox",
+    "task9",
+    "task10",
+    "children",
+    "cleanup",
+    "phases",
+    "timeout_seconds"
+  ],
+  "type": "object",
+  "$defs": {
+    "ap_map_audit": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "artifact": { "$ref": "#/$defs/file" },
+            "status": { "const": "PASS" }
+          },
+          "required": ["status", "artifact"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": { "status": { "enum": ["FAIL", "NOT_RUN"] } },
+          "required": ["status"],
+          "type": "object"
+        }
+      ]
+    },
+    "binary": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "path": { "minLength": 1, "type": "string" },
+            "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+            "status": { "const": "PRESENT" }
+          },
+          "required": ["status", "path", "sha256"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "path": { "minLength": 1, "type": "string" },
+            "status": { "const": "MISSING" }
+          },
+          "required": ["status", "path"],
+          "type": "object"
+        }
+      ]
+    },
+    "child": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "items": { "minLength": 1, "type": "string" },
+          "minItems": 1,
+          "type": "array"
+        },
+        "log": { "$ref": "#/$defs/file" },
+        "returncode": { "type": "integer" }
+      },
+      "required": ["command", "returncode", "log"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "path": { "minLength": 1, "type": "string" },
+        "sha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+        "size": { "minimum": 0, "type": "integer" }
+      },
+      "required": ["path", "sha256", "size"],
+      "type": "object"
+    }
+  }
+}
