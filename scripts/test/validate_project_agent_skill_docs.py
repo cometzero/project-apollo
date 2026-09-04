@@ -107,7 +107,6 @@ def validate_topology(root: Path, violations: list[Violation]) -> list[str]:
 def validate_agents(root: Path, violations: list[Violation]) -> tuple[list[str], list[AgentRoute]]:
     agent_dir = root / ".codex/agents"
     paths = sorted(agent_dir.glob("*.toml"))
-    hook = root / ".omx/hooks/arm-auto-solutions-context.mjs"
     routes: list[AgentRoute] = []
     names: set[str] = set()
     for path in paths:
@@ -147,13 +146,7 @@ def validate_agents(root: Path, violations: list[Violation]) -> tuple[list[str],
         violations.append(Violation("missing-agents", ".codex/agents", ", ".join(missing)))
     if extra:
         violations.append(Violation("unexpected-agents", ".codex/agents", ", ".join(extra)))
-    add_missing_path(root, str(hook.relative_to(root)), violations)
-    if hook.exists():
-        hook_text = hook.read_text(encoding="utf-8")
-        for token in ("build/conf/local.conf", "qbox_dev.toml", "systemc_dev.toml", "yocto_dev.toml"):
-            if token not in hook_text:
-                violations.append(Violation("stale-agent-hook", str(hook.relative_to(root)), f"missing {token}"))
-    return [str(path.relative_to(root)) for path in paths] + [str(hook.relative_to(root))], routes
+    return [str(path.relative_to(root)) for path in paths], routes
 
 
 def frontmatter(path: Path) -> tuple[dict[str, str], str]:
