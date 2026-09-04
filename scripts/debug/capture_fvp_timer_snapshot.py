@@ -17,9 +17,12 @@ SCRIPT_DIR: Final = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-import local_debug_iris
-from fvp_secure_frame_access import enabled_secure_frame, enabled_secure_frame_memory
-from fvp_timer_specs import SampleSpec, ViewSpec, parse_sample, parse_view
+import local_debug_iris  # noqa: E402
+from fvp_secure_frame_access import (  # noqa: E402
+    enabled_secure_frame,
+    enabled_secure_frame_memory,
+)
+from fvp_timer_specs import ViewSpec, parse_sample, parse_view  # noqa: E402
 
 
 SCHEMA_VERSION: Final = 1
@@ -118,11 +121,8 @@ def add_program_breakpoint(
 
 
 def parse_args() -> argparse.Namespace:
-    root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--manifest", type=Path, default=root / "build/local-apollo-fvp/debug/symbols.json"
-    )
+    parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=7100)
     parser.add_argument("--machine", default="apollo-fvp")

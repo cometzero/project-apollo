@@ -156,8 +156,8 @@ HOST_COMPONENTS = (
 )
 
 
-def qbox_plugin_components(local_build: Path) -> tuple[Component, ...]:
-    build_dir = local_build / "work/qbox-platform"
+def qbox_plugin_components(artifact_root: Path) -> tuple[Component, ...]:
+    build_dir = artifact_root / "work/qbox-platform"
     components: list[Component] = []
     for elf in sorted(build_dir.glob("*.so")):
         if not elf.is_file():
@@ -167,7 +167,7 @@ def qbox_plugin_components(local_build: Path) -> tuple[Component, ...]:
             Component(
                 f"qbox-plugin-{stem}", f"QBox plugin {elf.stem}",
                 "qbox-plugin", "localhost",
-                (str(elf.relative_to(local_build)),), (),
+                (str(elf.relative_to(artifact_root)),), (),
                 ("hsoc-stack/tools/qbox", "hsoc-stack/tools/qbox-platform"),
                 debugger="gdb",
             )

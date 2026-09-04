@@ -4,11 +4,11 @@ Updated: 2026-06-18
 
 ## Summary
 
-The workspace contains large generated Yocto, local-build, and QBox runtime
+The workspace contains large generated Yocto and QBox runtime
 outputs under `build/`. Historical evidence in this document records an older
-`fvp-rd-aspen` baremetal image build. The current active source/build
-configuration uses `MACHINE = "apollo-fvp"` and writes local-build/QBox
-evidence under `build/local-apollo-fvp/` and `build/qbox-apollo-fvp/`.
+`fvp-rd-aspen` baremetal image build. The current active configuration uses
+`MACHINE = "apollo-qvp"` and writes deploy/QBox evidence below
+`build/tmp_baremetal/` and `build/qbox-apollo-qvp/`.
 
 ## Historical Build Evidence
 

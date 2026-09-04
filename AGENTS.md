@@ -19,7 +19,7 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
 - Active Yocto template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp/`
 - Build entrypoint: `./yocto_build.sh`
 - Current machine: `apollo-qvp`
-- Default image targets: `nexios-bsp-initramfs`, then `nexios-image`
+- Product build: `./yocto_build.sh`
 - BSP-only build: `./yocto_build.sh --bsp`
 - Current BitBake TMPDIR: `build/tmp_baremetal`
 - Current variant: `RD_ASPEN_VARIANT = "cfg2"`
@@ -36,16 +36,10 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
 - QBox-local QEMU/libqemu under active development:
   `hsoc-stack/tools/qemu/`
 - QBox helper scripts:
-  `./local_build.sh qbox`,
-  `./run_qbox_local.sh`,
   `./run_qbox_yocto.sh`,
-  `./run_qbox_local_debug.sh`,
-  `./run_qbox_boot_regression.sh`,
   `./run_fvp.sh`,
   `./run_test.sh`,
-  `scripts/build/build_qbox.sh`,
   `scripts/update_codebase_indexes.sh`,
-  `scripts/package.sh`,
   `scripts/test/validate_qbox_apollo_fvp_full_map.py`,
   `scripts/run/run_qbox_apollo_fvp_full.py`,
   `scripts/test/audit_qbox_apollo_fvp_full_coverage.py`
@@ -79,16 +73,16 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
   `apollo_fvp_full_system` aggregate target. Patch files under
   `hsoc-stack/tools/qbox-platform/patch-qbox/` are archived candidate
   QBox-core patches for later manual review or application. The normal local
-  build must not apply these patches automatically; QBox builds should use the
-  checked-out `hsoc-stack/tools/qbox/` source unless a task explicitly requests
-  applying one of those patches.
+  Yocto build must not apply these patches automatically; QBox builds use the
+  checked-out `hsoc-stack/tools/qbox/` source through
+  `qbox-apollo-qvp-native` unless a task explicitly requests applying one of
+  those patches.
 - `hsoc-stack/tools/qemu/`: active local QEMU/libqemu source used by QBox.
-- `hsoc-stack/tools/buildroot/`: Buildroot source used by local initramfs and
-  rootfs generation.
+- `hsoc-stack/tools/buildroot/`: retained Buildroot source; it is not part of
+  the supported root build workflow.
 - `scripts/`: categorized project orchestration helpers; root entrypoints
-  `yocto_build.sh`, `local_build.sh`, `run_qbox_local.sh`,
-  `run_qbox_yocto.sh`, `run_qbox_local_debug.sh`, `run_fvp.sh`,
-  `run_qbox_boot_regression.sh`, and `run_test.sh` call into these helpers.
+  `yocto_build.sh`, `run_qbox_yocto.sh`, `run_fvp.sh`, and `run_test.sh`
+  call into these helpers.
 - `tests/`: repository-local tests for Python tooling and QBox helper logic.
 - `build/conf/`: active local Yocto build configuration.
 - `build/` other than `build/conf/`: generated evidence only. Do not treat as
@@ -110,9 +104,6 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
      remoteproc, or PFDI Linux work.
    - `$update-codebase-indexes` for listing, refreshing, or verifying one or
      all canonical codebase-memory-mcp submodule indexes.
-   - `$update-local-build-conf` for explicitly comparing active Yocto recipe
-     values and refreshing the manually maintained
-     `scripts/build/local_build.conf`.
    When delegating, pass the exact registered role as `agent_type`; a
    `task_name` or role name in the message does not select its TOML model.
    The registrations and default model are in `.codex/config.toml`. If the
@@ -135,17 +126,14 @@ SystemC/TLM or libqemu-backed hardware models over register-only stubs.
    memory maps, register maps, boot flows, firmware/domain responsibilities,
    and other hardware/software interface details before changing code.
 8. Distinguish the build products:
-   - `./yocto_build.sh` builds both the standalone BSP image and the full
-     product image.
+   - `./yocto_build.sh` builds the full `nexios-image` product image.
    - `./yocto_build.sh --bsp` builds only `nexios-bsp-initramfs`.
-   - `./local_build.sh` creates a separate Buildroot BSP initramfs while
-     reusing the project `nexios-bsp-init` and self-test contract.
 9. QBox launchers replace only managed QBox tmux sessions and headless
    processes owned by the current Unix UID. Use `--multi-session` when existing
    QBox sessions must be preserved. Never broaden cleanup to other users or
    unrelated tmux sessions.
-10. Treat `run_qbox_local.sh` and `run_qbox_yocto.sh` as interactive
-    boot/login launchers: they intentionally disable the shared runner's
+10. Treat `run_qbox_yocto.sh` as an interactive boot/login launcher: it
+    intentionally disables the shared runner's
     post-login probe. Use the canonical Python runner for a full
     post-login qualification gate.
 
@@ -182,63 +170,15 @@ explicit approval; normal source updates use the incremental refresh path.
 
 ## Explicit Apollo FVP Debugging
 
-Use the local debug helpers when a component needs source symbols,
-breakpoints, or precise handoff analysis. The local build enables debug
-symbols by default:
-
-- Linux: `local_build.sh` enables `CONFIG_DEBUG_INFO`,
-  `CONFIG_GDB_SCRIPTS`, and `CONFIG_KALLSYMS_ALL` unless
-  `KERNEL_DEBUG_INFO=0` is set.
-- Buildroot userspace: `local_build.sh` builds with `BR2_ENABLE_DEBUG=y`,
-  `BR2_OPTIMIZE_G=y`, and no target stripping.
-- Firmware and boot components are built from their unstripped local build
-  ELF files.
-- Safety Island CL1 Zephyr is built locally from
-  `hsoc-stack/components/system_mgmt/zephyrproject/` by
-  `./local_build.sh zephyr` and as part of `./local_build.sh build`.
-
-Generate or refresh the debug manifest after a local build:
-
-```bash
-scripts/setup/setup_local_debug_env.py \
-  --local-build-dir build/local-apollo-fvp \
-  --out-dir build/local-apollo-fvp/debug
-```
-
-The generated `build/local-apollo-fvp/debug/symbols.json` records the ELF,
-architecture, FVP Iris target, and default breakpoint symbols for:
-
-- TF-M BL1_1, BL1_2, BL2, and secure runtime on the RSE CPU.
-- SCP-firmware on Safety Island cluster 0.
-- Safety Island cluster 1 Zephyr demo.
-- TF-A BL2 and BL31.
-- OP-TEE core.
-- U-Boot.
-- Linux `vmlinux`.
-- QBox host/core/plugins and libqemu.
-- Aggregate RSE, SI0, SI1, and AP domain GDB command files.
-
-Buildroot BusyBox is intentionally excluded from the debug manifest.
-
-Use GDB first for symbol/source inspection:
-
-```bash
-gdb-multiarch -x build/local-apollo-fvp/debug/gdb/u-boot.gdb
-gdb-multiarch -x build/local-apollo-fvp/debug/gdb/linux.gdb
-```
+Build the selected Yocto machine before debugging. Firmware and kernel ELFs
+come from the matching BitBake work directories, and the launcher generates a
+run-local debug manifest from those artifacts.
 
 `FVP_Zena_CSS_Cfg2` exposes an Iris debug server rather than a GDB remote
 stub. Yocto QVP debug uses `lite-cornea` as the GDB-to-Iris bridge:
 
 ```bash
 ./run_fvp.sh --machine apollo-qvp --debug linux
-```
-
-For local FVP command-line breakpoint smoke tests:
-
-```bash
-scripts/debug/run_local_fvp_debug.sh --no-attach --iris-port 7100 \
-  --break tfm-bl1_1:Reset_Handler
 ```
 
 When setting breakpoints manually, use component names and symbols from
@@ -248,76 +188,60 @@ When setting breakpoints manually, use component names and symbols from
 
 Boot issue escalation path:
 
-1. Build local images with `./local_build.sh build`, then run normal
+1. Build the Yocto FVP image with `./yocto_build.sh --machine apollo-fvp`,
+   then run normal
    log-backed boot validation with:
    ```bash
    python3 scripts/run/runfvp_log_boot.py \
      --machine apollo-fvp \
-     --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
-     --out-dir build/local-apollo-fvp/fvp-boot \
+     --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf \
+     --out-dir build/fvp-boot/apollo-fvp \
      --timeout 900 \
      --require all \
      --min-runtime 70 \
      --no-login
    ```
-2. Inspect `build/local-apollo-fvp/fvp-boot/result.json`,
+2. Inspect `build/fvp-boot/apollo-fvp/result.json`,
    `summary.txt`, `fvp_stdout.log`, and the per-UART logs for RSE,
    Safety Island CL0/CL1, TF-A, and U-Boot/Linux.
 3. Identify the earliest failing domain or firmware handoff from those logs.
-4. Refresh `build/local-apollo-fvp/debug/symbols.json`.
-5. Reproduce with `scripts/debug/run_local_fvp_debug.sh --break <component:symbol>`
-   or attach an Iris debugger to the reported Iris port.
-6. Use GDB command files to confirm symbol addresses, source paths, and
-   expected breakpoint locations before changing code.
+4. Reproduce with `./run_fvp.sh --machine apollo-qvp --debug <target>` or
+   attach an Iris debugger to the reported Iris port.
+5. Use the generated GDB command files to confirm symbol addresses, source
+   paths, and expected breakpoint locations before changing code.
 
 ## QBox Build, Run, and Debug Contracts
 
-The local QBox build uses the qbox-platform aggregate target:
+Build the BSP or product, including the Yocto-native QBox provider, with:
 
 ```bash
-./local_build.sh qbox
+./yocto_build.sh --bsp
+./yocto_build.sh
 ```
 
 Interactive boot/login launchers:
 
 ```bash
-./run_qbox_local.sh
 ./run_qbox_yocto.sh
 ./run_qbox_yocto.sh --bsp
 ```
 
-The local launcher boots the Buildroot BSP CPIO through local U-Boot,
-EFI, and A/B UKIs. `--bsp` selects the deployed Yocto
-`nexios-bsp-initramfs` WIC/qboxconf. Both paths expect
+`--bsp` selects the deployed Yocto `nexios-bsp-initramfs` WIC/qboxconf and
+expects
 `NEXIOS_BSP_INITRAMFS_READY` and `nexios-bsp#` for BSP login.
 
 Supported single-target GDB selections are `qbox`, `rse`, `si_cl0`, `si_cl1`,
 `tf-a`, `u-boot`, and `linux`:
 
 ```bash
-./run_qbox_local.sh --debug linux
 ./run_qbox_yocto.sh --bsp --debug linux
-./run_qbox_local_debug.sh
 ```
 
 Yocto QBox debug requires interactive tmux and rejects `--headless --debug`.
-The multi-domain debug launcher exposes fixed localhost endpoints 12339
-through 12343 for QBox host, RSE, SI0, SI1, and AP respectively.
 
 Normal QBox launchers stop only managed sessions/processes owned by the
 current UID. `--multi-session` preserves existing QBox sessions. An explicit
 duplicate session name remains an error, and dry-run never performs cleanup.
-
-For noninteractive boot/timing regression evidence, use:
-
-```bash
-./run_qbox_boot_regression.sh --record-baseline
-./run_qbox_boot_regression.sh
-```
-
-Create the JSON baseline before the first comparison. The wrapper owns and
-terminates its headless QBox process group. Inspect its baseline/comparison
-output and the canonical runner artifacts rather than tmux contents.
 
 ## FVP-To-QBox Implementation Rules
 
@@ -376,32 +300,31 @@ Use the narrowest meaningful command first, then broaden only when needed.
      `bitbake <recipe> -c configure` or `bitbake <recipe> -c compile`.
    - Use `bitbake nexios-bsp-initramfs -c rootfs` for BSP userspace changes.
    - Use `./yocto_build.sh --bsp` for a BSP-only image build.
-   - Use `./yocto_build.sh` for the configured BSP plus product image build.
+   - Use `./yocto_build.sh` for the full product image build.
 3. QBox build checks:
-   - Prefer `./local_build.sh qbox` for the Apollo overlay build contract.
-   - Targeted overlay builds use
-     `cmake --build build/local-${MACHINE}/work/qbox-platform --target
-     <target> --parallel <n>`.
-   - Build `platforms-vp` from the qbox-platform build directory when Lua
-     platform wiring changes.
+   - Use `./yocto_build.sh --bsp` for the BSP and its native QBox provider.
+   - Use `./yocto_build.sh qbox-apollo-qvp-native -c compile` for a targeted
+     provider compile.
+   - Run provider unit tests through the recipe `do_check` task when QBox
+     component behavior changes.
 4. Runtime checks:
-   - For Apollo full-system local-build boot on QBox, use
-     `python3 scripts/run/run_qbox_apollo_fvp_full.py --timeout 600` and inspect
-     `build/qbox-apollo-qvp/full-<timestamp>/`.
-   - For an interactive local or Yocto BSP shell, use
-     `./run_qbox_local.sh` or `./run_qbox_yocto.sh --bsp` and require
+   - For Apollo full-system Yocto boot on QBox, use
+     `./run_qbox_yocto.sh --headless --exit-after-pass` and inspect
+     `build/qbox-apollo-qvp/yocto-*/`.
+   - For an interactive Yocto BSP shell, use
+     `./run_qbox_yocto.sh --bsp` and require
      `NEXIOS_BSP_INITRAMFS_READY` plus `nexios-bsp#`.
    - Use `--keep-running-after-pass` only for interactive demos that should not
      exit after the boot pass condition.
-   - For focused RSE/RD-Aspen debug evidence, use
-     `scripts/debug/debug_qbox_fvp_rd_aspen_rse_gdb.py`. It routes the private
-     runtime child through the canonical full-system runner.
-   - For Apollo FVP local boot, build with `./local_build.sh build`, then use
+   - For focused source-level debug evidence, use
+     `./run_qbox_yocto.sh --debug <target> --debug-mode probe`.
+   - For Apollo FVP boot, build with
+     `./yocto_build.sh --machine apollo-fvp`, then use
      `python3 scripts/run/runfvp_log_boot.py --machine apollo-fvp --fvpconf
-     build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf --out-dir
-     build/local-apollo-fvp/fvp-boot --timeout 900 --require all
+     build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf
+     --out-dir build/fvp-boot/apollo-fvp --timeout 900 --require all
      --min-runtime 70 --no-login` and inspect
-     `build/local-apollo-fvp/fvp-boot/result.json` plus per-UART logs before
+     `build/fvp-boot/apollo-fvp/result.json` plus per-UART logs before
      using GDB/Iris.
 5. Coverage checks:
    - Run `python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py
@@ -413,9 +336,6 @@ Use the narrowest meaningful command first, then broaden only when needed.
      device-tree, driver probe, and service evidence.
 7. Root workflow checks:
    - Use `./run_test.sh --list` to inspect the categorized FVP suite.
-   - If no QBox timing baseline exists, use
-     `./run_qbox_boot_regression.sh --record-baseline --dry-run` to inspect the
-     first-run command, then run `--record-baseline` before a comparison.
 
 ## Documentation Requirements
 

@@ -11,7 +11,7 @@ description: QBox/SystemC/QEMU co-simulation workflow for Apollo. Use for QBox C
 - Apollo/RD-Aspen overlay: `hsoc-stack/tools/qbox-platform`
 - Apollo platform entrypoints: `hsoc-stack/tools/qbox-platform/platforms/apollo`
 - local QEMU/libqemu: `hsoc-stack/tools/qemu`
-- local build tree: `build/local-${MACHINE}/work/qbox-platform`
+- Yocto QBox provider: `qbox-apollo-qvp-native`
 - QVP full-system evidence: `build/qbox-apollo-qvp`
 - explicit FVP-comparison evidence: `build/qbox-apollo-fvp`
 
@@ -59,17 +59,18 @@ runtime checklists.
 Use the project entrypoint first:
 
 ```bash
-./local_build.sh qbox
+./yocto_build.sh --bsp
 ```
 
-For a narrow overlay target:
+For a narrow provider build:
 
 ```bash
-cmake --build build/local-${MACHINE}/work/qbox-platform \
-  --target <target> --parallel <jobs>
-ctest --test-dir build/local-${MACHINE}/work/qbox-platform \
-  -R <test-name> --output-on-failure
+./yocto_build.sh qbox-apollo-qvp-native -c compile
 ```
+
+Enable `QBOX_APOLLO_RUN_UNIT_TESTS` for the recipe in
+`build/conf/local.conf`, then run `bitbake qbox-apollo-qvp-native -c check
+-f` for provider unit tests.
 
 Run applicable map and ownership checks:
 
@@ -84,7 +85,6 @@ python3 scripts/test/audit_qbox_core_boundary.py
 Interactive boot/login launchers:
 
 ```bash
-./run_qbox_local.sh
 ./run_qbox_yocto.sh
 ./run_qbox_yocto.sh --bsp
 ```
@@ -95,14 +95,11 @@ probe, and replace only current-UID managed QBox sessions unless
 qualification claim.
 
 ```bash
-python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --timeout 600
+./run_qbox_yocto.sh --headless --exit-after-pass
 ```
 
 Inspect the generated `result.json`, per-domain UART logs, and coverage audit.
-For timing/error regression, create the first JSON baseline with
-`./run_qbox_boot_regression.sh --record-baseline`, then use
-`./run_qbox_boot_regression.sh` for comparisons. QBox GDB targets are `qbox`,
+QBox GDB targets are `qbox`,
 `rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and `linux`; Yocto debug is
 interactive and cannot be combined with `--headless`. Do not use tmux screen
 contents alone as proof. Report files changed, owning repositories, commands,

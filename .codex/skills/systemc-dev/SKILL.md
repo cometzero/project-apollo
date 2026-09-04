@@ -9,7 +9,7 @@ description: SystemC and TLM-2.0 development workflow for this Apollo QBox proje
 
 - reusable QBox components: `hsoc-stack/tools/qbox`
 - Apollo-specific components: `hsoc-stack/tools/qbox-platform/systemc-components`
-- active overlay build: `build/local-${MACHINE}/work/qbox-platform`
+- active provider recipe: `qbox-apollo-qvp-native`
 
 Read `build/conf/local.conf`, the owning repository README/CMake files, module
 header and implementation, construction site, Lua binding, and tests before
@@ -45,19 +45,20 @@ unavailable, use the project leader and do not claim specialist selection.
 
 ## Validation
 
-Build the smallest owning target first:
+Build the provider first:
 
 ```bash
-cmake --build build/local-${MACHINE}/work/qbox-platform \
-  --target <target> --parallel <jobs>
-ctest --test-dir build/local-${MACHINE}/work/qbox-platform \
-  -R <test-name> --output-on-failure
+./yocto_build.sh qbox-apollo-qvp-native -c compile
 ```
+
+Enable `QBOX_APOLLO_RUN_UNIT_TESTS` for the recipe in
+`build/conf/local.conf`, then run `bitbake qbox-apollo-qvp-native -c check
+-f` for component tests.
 
 Then run the project contract when the component is integrated:
 
 ```bash
-./local_build.sh qbox
+./yocto_build.sh --bsp
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
 ```
 

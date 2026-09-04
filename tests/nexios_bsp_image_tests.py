@@ -44,24 +44,6 @@ def test_bsp_image_and_init_provide_ssh_over_user_networking() -> None:
     assert "NEXIOS_BSP_SSH" in init
 
 
-def test_local_buildroot_defconfig_enables_dropbear_for_bsp_init() -> None:
-    # Given: the local BSP /init requires dropbearkey and dropbear before ready.
-    module = (ROOT / "scripts/build/modules/build_buildroot.sh").read_text(
-        encoding="utf-8"
-    )
-    defconfig = module.split("write_buildroot_defconfig()\n{\n", 1)[1].split(
-        "\n}\n\nbuildroot_defconfig_digest", 1
-    )[0]
-
-    # When: the generated Buildroot defconfig contract is inspected.
-    # Then: the daemon required by /init is selected for the target image.
-    assert "BR2_PACKAGE_DROPBEAR=y" in defconfig
-    assert 'mkdir -p "${BUILDROOT_OVERLAY}/var/run/dropbear"' in module
-    assert 'require_file "${BUILDROOT_BUILD_DIR}/target/usr/sbin/dropbear"' in module
-    assert 'require_file "${BUILDROOT_BUILD_DIR}/target/usr/bin/dropbearkey"' in module
-    assert 'require_dir "${BUILDROOT_BUILD_DIR}/target/var/run/dropbear"' in module
-
-
 def test_bsp_default_oeqa_suite_requires_ssh_uname() -> None:
     auto_layer = ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions"
     distro = (auto_layer / "conf/distro/auto-ad-nexios.conf").read_text(

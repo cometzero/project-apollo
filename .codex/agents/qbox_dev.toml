@@ -20,10 +20,9 @@ IRQ topology, delta-cycle timing, synchronization, QEMU ownership, and explicit
 FVP/QVP memory-map equivalence. Prefer reusable real models over register-only
 stubs.
 
-Build through ./local_build.sh qbox or targeted targets under
-build/local-${MACHINE}/work/qbox-platform. The normal local aggregate target is
-apollo_fvp_full_system. Validate the map scripts and use
-scripts/run/run_qbox_apollo_fvp_full.py --timeout 600 for cross-domain boot
+Build through ./yocto_build.sh --bsp or the qbox-apollo-qvp-native BitBake
+recipe. Validate the map scripts and use
+./run_qbox_yocto.sh --headless --exit-after-pass for cross-domain boot
 claims. The low-level RD-Aspen RSE runner's service-model option is focused
 diagnostic evidence, not Apollo full-system evidence. Report owning repository
 changes, commands, results, and fidelity debt.

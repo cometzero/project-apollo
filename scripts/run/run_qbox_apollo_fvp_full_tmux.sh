@@ -18,7 +18,7 @@ TMUX_BIN="${TMUX_BIN:-tmux}"
 RUN_STAMP="${RUN_STAMP:-$(date +%Y%m%d-%H%M%S)}"
 TMUX_SESSION="${TMUX_SESSION:-apollo-qbox-full-${RUN_STAMP}}"
 OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/full-tmux-${RUN_STAMP}}"
-LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-${ROOT_DIR}/build}"
 QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-}"
 QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-}"
@@ -77,9 +77,9 @@ Run the Apollo FVP full-system QBox path in tmux and tail subsystem logs.
 Options:
   --session NAME       tmux session name (default: ${TMUX_SESSION})
   --out-dir PATH       log/output directory (default: ${OUT_DIR})
-  --local-build-dir P  local build directory (default: ${LOCAL_BUILD_DIR})
+  --artifact-root P    artifact/provider root (default: ${ARTIFACT_ROOT})
   --qbox-build-dir P   QBox CMake build directory
-                       (default: <local-build-dir>/work/qbox-platform)
+                       (default: <artifact-root>/work/qbox-platform)
   --conf PATH          QBox Lua config (default: ${QBOX_CONF})
   --timeout SECONDS    runner timeout, 0 means no timeout (default: ${TIMEOUT})
   --jobs N             build jobs passed to the runner (default: ${JOBS})
@@ -147,7 +147,7 @@ fast-boot SRAM DMI/shared-memory mode. Use
 --legacy-file-backed-sram for the older direct file-backed SRAM alias mode.
 
 Environment overrides:
-  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP LOCAL_BUILD_DIR
+  PYTHON TMUX_BIN TMUX_SESSION OUT_DIR RUN_STAMP ARTIFACT_ROOT
   QBOX_CORE_DIR QBOX_PLATFORM_DIR QBOX_PLATFORM_BUILD_DIR QBOX_BUILD_DIR QBOX_CONF
   TIMEOUT JOBS SKIP_BUILD KEEP_RUNNING_AFTER_PASS
   TMUX_LAYOUT MULTI_SESSION
@@ -317,7 +317,7 @@ runner_command()
         "${PYTHON_BIN}"
         "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
         --conf "${QBOX_CONF}"
-        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --artifact-root "${ARTIFACT_ROOT}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
         --out-dir "${OUT_DIR}"
         --timeout "${TIMEOUT}"
@@ -1381,20 +1381,20 @@ start_tmux()
     require_command "${PYTHON_BIN}"
 
     [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
-    ((DRY_RUN)) || [[ -d "${LOCAL_BUILD_DIR}" ]] ||
-        die "local build directory not found: ${LOCAL_BUILD_DIR}. Run ./local_build.sh build first."
+    ((DRY_RUN)) || [[ -d "${ARTIFACT_ROOT}" ]] ||
+        die "QBox input directory not found: ${ARTIFACT_ROOT}"
 
     ROOT_DIR="$(abspath "${ROOT_DIR}")"
     SCRIPT_PATH="$(abspath "${SCRIPT_PATH}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"
-    LOCAL_BUILD_DIR="$(abspath "${LOCAL_BUILD_DIR}")"
+    ARTIFACT_ROOT="$(abspath "${ARTIFACT_ROOT}")"
     QBOX_CORE_DIR="$(abspath "${QBOX_CORE_DIR}")"
     QBOX_PLATFORM_DIR="$(abspath "${QBOX_PLATFORM_DIR}")"
     if [[ -z "${QBOX_PLATFORM_BUILD_DIR}" ]]; then
         if [[ -n "${QBOX_BUILD_DIR}" ]]; then
             QBOX_PLATFORM_BUILD_DIR="${QBOX_BUILD_DIR}"
         else
-            QBOX_PLATFORM_BUILD_DIR="${LOCAL_BUILD_DIR}/work/qbox-platform"
+            QBOX_PLATFORM_BUILD_DIR="${ARTIFACT_ROOT}/work/qbox-platform"
         fi
     fi
     QBOX_PLATFORM_BUILD_DIR="$(abspath "${QBOX_PLATFORM_BUILD_DIR}")"
@@ -1442,8 +1442,8 @@ start_tmux()
         printf 'QBOX_SESSION_OUT_DIR=%q ' "${OUT_DIR}"
         printf 'QBOX_CORE_DIR=%q QBOX_PLATFORM_DIR=%q QBOX_PLATFORM_BUILD_DIR=%q ' \
             "${QBOX_CORE_DIR}" "${QBOX_PLATFORM_DIR}" "${QBOX_PLATFORM_BUILD_DIR}"
-        printf 'LOCAL_BUILD_DIR=%q QBOX_BUILD_DIR=%q OUT_DIR=%q TIMEOUT=%q JOBS=%q ' \
-            "${LOCAL_BUILD_DIR}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${TIMEOUT}" "${JOBS}"
+        printf 'ARTIFACT_ROOT=%q QBOX_BUILD_DIR=%q OUT_DIR=%q TIMEOUT=%q JOBS=%q ' \
+            "${ARTIFACT_ROOT}" "${QBOX_BUILD_DIR}" "${OUT_DIR}" "${TIMEOUT}" "${JOBS}"
         printf 'PRIMARY_LOGIN_PROMPT=%q PRIMARY_SHELL_MARKER=%q PRIMARY_SHELL_PROMPT_RE=%q ' \
             "${PRIMARY_LOGIN_PROMPT}" "${PRIMARY_SHELL_MARKER}" "${PRIMARY_SHELL_PROMPT_RE}"
         if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
@@ -1613,9 +1613,9 @@ while (($# > 0)); do
             OUT_DIR="$2"
             shift 2
             ;;
-        --local-build-dir)
-            (($# >= 2)) || die "--local-build-dir requires a value"
-            LOCAL_BUILD_DIR="$2"
+        --artifact-root)
+            (($# >= 2)) || die "--artifact-root requires a value"
+            ARTIFACT_ROOT="$2"
             shift 2
             ;;
         --qbox-build-dir)

@@ -59,7 +59,7 @@ validate_platform_contract = profile_contract.validate_platform_contract
 verify_reference_gate = profile_contract.verify_reference_gate
 
 DESCRIPTION: Final = "Build gate-bound Apollo QBox PCIe MSI-X and INTx profiles."
-DEFAULT_DEPLOY: Final = ROOT / "build/local-apollo-qvp/deploy/boot"
+DEFAULT_DEPLOY: Final = ROOT / "build/tmp_baremetal/deploy/images/apollo-qvp"
 DEFAULT_OUT: Final = ROOT / "build/qbox-apollo-qvp/pcie-irq-profile"
 fdt_cells = gic_overlay.fdt_cells
 gic_symbol = gic_overlay.gic_symbol
@@ -233,15 +233,11 @@ def prepare(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--fvp-reference-gate", required=True, type=Path)
-    parser.add_argument(
-        "--base-disk", type=Path, default=DEFAULT_DEPLOY / "apollo-qvp-local-disk.img"
-    )
+    parser.add_argument("--base-disk", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.wic")
     parser.add_argument(
         "--base-dtb", type=Path, default=DEFAULT_DEPLOY / "apollo-qvp.dtb"
     )
-    parser.add_argument(
-        "--base-initramfs", type=Path, default=DEFAULT_DEPLOY / "initramfs.cpio.gz"
-    )
+    parser.add_argument("--base-initramfs", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.cpio.gz")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUT)
     return parser.parse_args()
 

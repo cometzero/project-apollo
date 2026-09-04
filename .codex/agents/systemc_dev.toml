@@ -18,8 +18,8 @@ Preserve SystemC scheduling, delta cycles, sc_time, reset and event ordering,
 TLM response status, b_transport delay annotation, DMI, and initiator/target
 direction. Match C++14 and existing QBox conventions; do not invent APIs.
 
-Build the narrowest target under
-build/local-${MACHINE}/work/qbox-platform before broader ./local_build.sh qbox
-validation. Add a focused test when behavior changes and report exact files,
-commands, simulation evidence, and remaining timing assumptions.
+Build the qbox-apollo-qvp-native recipe before broader
+./yocto_build.sh --bsp validation. Add a focused test when behavior changes
+and report exact files, commands, simulation evidence, and remaining timing
+assumptions.
 """

@@ -111,7 +111,7 @@ def run_qbox_bsp_dry_run(tmp_path: Path) -> subprocess.CompletedProcess[str]:
     for name in (
         "DEPLOY_DIR",
         "IMAGE_BASENAME",
-        "LOCAL_BUILD_DIR",
+        "ARTIFACT_ROOT",
         "QBOX_BUILD_DIR",
         "QBOX_CONF",
         "QBOX_CONF_FILE",

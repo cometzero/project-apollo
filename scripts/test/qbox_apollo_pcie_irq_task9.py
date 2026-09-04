@@ -7,7 +7,6 @@ import os
 import shlex
 import signal
 import stat
-import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -47,7 +46,7 @@ CANONICAL_PROFILE_SHA256: Final = (
 )
 GUEST_STAGING_PATH: Final = "/tmp/apollo-qbox-pcie-irq-task9.sh"
 GUEST_BASE64_PATH: Final = "/tmp/apollo-qbox-pcie-irq-task9.b64"
-RUNNER: Final = "scripts/run/run_qbox_apollo_fvp_full.py"
+RUNNER: Final = "./run_qbox_yocto.sh"
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,9 +181,9 @@ def canonical_command(mode: str, rootfs: Path, out_dir: Path) -> list[str]:
     if mode not in ("msix", "intx"):
         raise Task9Error("mode")
     return [
-        sys.executable,
         RUNNER,
-        "--skip-build",
+        "--headless",
+        "--keep-running-after-pass",
         "--timeout",
         "900",
         "--rootfs",

@@ -3,8 +3,6 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-# noqa: SIZE_OK - Task 6 requires one auditable wrapper for configure, provenance, and CTest.
-
 # ─── How to run ───
 # 1. Install uv (if not installed):
 #      curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -35,7 +33,6 @@ from typing import Final
 ROOT: Final = Path(__file__).resolve().parents[2]
 BUILD_NAME: Final = "gic720ae-qbox-platform-tests"
 DEFAULT_BUILD: Final = ROOT / f"build/{BUILD_NAME}"
-PRODUCTION_BUILD: Final = ROOT / "build/local-apollo-qvp/work/qbox-platform"
 SAFE_TARGET: Final = re.compile(r"^[A-Za-z0-9_.+-]+$")
 SAFE_REGEX: Final = re.compile(r"^[A-Za-z0-9_.+*?^$(){}\[\]|\\-]+$")
 SAFE_ARGUMENT: Final = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*=[A-Za-z0-9_./:=,+@%-]+$")
@@ -244,7 +241,7 @@ def parse_options(argv: Sequence[str] | None = None) -> Options:
         for path in (args.qbox_platform_source, args.qbox_source, args.qemu_source)
     )
     sources = (platform, qbox, qemu)
-    if build.name != BUILD_NAME or build == PRODUCTION_BUILD.resolve():
+    if build.name != BUILD_NAME:
         parser.error(f"--build-dir must be an isolated {BUILD_NAME} directory")
     if any(build == source or source in build.parents for source in sources):
         parser.error("--build-dir must not be a source tree")

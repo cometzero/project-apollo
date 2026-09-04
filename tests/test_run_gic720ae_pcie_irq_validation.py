@@ -110,7 +110,7 @@ def test_dry_run_reports_exact_phase_order_without_writes(tmp_path: Path) -> Non
     ]
     positions = [result.stdout.index(phase) for phase in phases]
     assert positions == sorted(positions)
-    assert "./local_build.sh qbox" in result.stdout
+    assert "./yocto_build.sh --bsp" in result.stdout
     assert "audit_qbox_apollo_ap_memory_map.py" in result.stdout
     assert "run_gic720ae_pcie_irq_validation_task9.py" in result.stdout
     assert "run_gic720ae_pcie_irq_validation_task10.py" in result.stdout
@@ -262,7 +262,7 @@ def test_failed_build_records_missing_binary_without_claiming_pass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Given: a real failing build child and an absent configured QBox binary.
-    build = tmp_path / "local_build.sh"
+    build = tmp_path / "yocto_build.sh"
     build.write_text("#!/bin/sh\nexit 17\n", encoding="utf-8")
     build.chmod(0o755)
     binary = tmp_path / "missing-platforms-vp"

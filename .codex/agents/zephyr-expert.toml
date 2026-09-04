@@ -18,8 +18,9 @@ Kconfig, CMake, drivers, OpenAMP/RPMsg, MHU, shared memory, and firmware image
 layout together. Keep SI CL0 SCP-firmware and SI CL1 Zephyr responsibilities
 separate. Trace HIPC/PFDI across both endpoints before claiming completeness.
 
-Use ./local_build.sh zephyr for local source builds and targeted BitBake tasks
-for metadata integration. Runtime boot claims require the SI CL1 UART log from
+Use targeted BitBake tasks for source and metadata integration, then
+./yocto_build.sh --bsp for the image. Runtime boot claims require the SI CL1
+UART log from
 the selected QBox or explicit FVP run. Report files, commands, artifacts, and
 remaining inter-domain assumptions.
 """

@@ -7,8 +7,8 @@ Generated: 2026-05-15
 The Safety Island is a Cortex-R82AE subsystem. In CFG2, Safety Island Cluster 1
 adds four SMP cores and runs Zephyr. Apollo now carries the full Zephyr project
 workspace under `hsoc-stack/components/system_mgmt/zephyrproject/` so the
-Safety Island CL1 image can be built either through Yocto `EXTERNALSRC` or
-through `./local_build.sh zephyr`. The important cross-domain features are HIPC
+Safety Island CL1 image is built through Yocto `EXTERNALSRC`. The important
+cross-domain features are HIPC
 over MHUv3/shared SRAM/RPMsg and PFDI on both Primary Compute and Safety Island
 CL1.
 
@@ -193,17 +193,15 @@ The current deploy directory contains Safety Island artifacts:
 These are local build outputs under
 `build/tmp_baremetal/deploy/images/fvp-rd-aspen/`, not source files.
 
-Apollo local builds produce the CL1 Zephyr image with:
+Build the CL1 Zephyr image as part of the Yocto BSP with:
 
 ```bash
-./local_build.sh zephyr
+./yocto_build.sh --bsp
 ```
 
-The generated files are installed under
-`build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.bin` and
-`build/local-apollo-fvp/deploy/firmware/zephyr-demos-cl1.elf`. The full
-`./local_build.sh build` flow uses those local artifacts when signing the
-Safety Island CL1 firmware image.
+The generated files are deployed below
+`build/tmp_baremetal/deploy/images/apollo-qvp/` and consumed by the matching
+Yocto image generation.
 
 ## Change Guidance
 

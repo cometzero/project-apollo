@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Set Apollo FVP Iris breakpoints from local debug symbols."""
+"""Set Apollo FVP Iris breakpoints from an artifact manifest."""
 
 from __future__ import annotations
 
@@ -77,13 +77,8 @@ def list_targets(model) -> None:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        default=root / "build/local-apollo-fvp/debug/symbols.json",
-    )
+    parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--host", default="localhost")
     parser.add_argument("--port", type=int, default=7100)
     parser.add_argument(

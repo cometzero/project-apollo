@@ -368,7 +368,7 @@ def main() -> int:
     parser.add_argument(
         "--tfm-build-dir",
         type=Path,
-        default=Path("build/local-apollo-fvp/work/trusted-firmware-m"),
+        required=True,
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--size", type=lambda value: int(value, 0), default=RSE_OTP_SIZE)

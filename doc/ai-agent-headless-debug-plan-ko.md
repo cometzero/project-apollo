@@ -67,7 +67,7 @@ FVP는 기존과 같이 `qbox` host target을 제외한다.
   --debug tf-a --debug-mode probe --debug-timeout 600 \
   --out-dir build/agent-debug/qbox-tfa
 
-./run_qbox_local.sh --headless \
+./run_qbox_yocto.sh --bsp --headless \
   --debug tf-a --debug-mode server \
   --out-dir build/agent-debug/qbox-server
 ```
@@ -129,11 +129,6 @@ lite-cornea/GDB는 DWARF source와 backtrace 수집에만 사용한다.
   - interactive mode에서만 `--headless --debug` 거부
   - probe/server mode는 기존 headless full-system command를 QBox agent helper에
     전달
-- `run_qbox_local.sh`
-  - `--headless` 추가
-  - Yocto launcher와 동일한 canonical Python full-system runner를 사용
-  - probe/server mode는 QBox agent helper 호출
-
 ## 5. 결과 계약
 
 `debug-result.json`의 최소 필드는 다음과 같다.
@@ -181,18 +176,17 @@ exit code 계약은 다음과 같다.
 - 각 root launcher의 debug mode option mapping
 - `interactive` 기본 동작 보존
 - Yocto `--headless --debug`는 probe/server에서 허용하고 interactive에서 거부
-- local QBox headless command가 tmux wrapper를 사용하지 않는지 확인
+- QBox headless command가 tmux wrapper를 사용하지 않는지 확인
 
 ### 6.2 정적 및 회귀 테스트
 
 ```bash
 python3 -m py_compile scripts/debug/*.py
-bash -n run_fvp.sh run_qbox_local.sh run_qbox_yocto.sh
+bash -n run_fvp.sh run_qbox_yocto.sh
 python3 -m pytest -q \
   tests/test_run_agent_fvp_debug.py \
   tests/test_run_agent_qbox_debug.py \
   tests/test_run_fvp_debug_option.py \
-  tests/test_run_qbox_local_debug_option.py \
   tests/test_run_qbox_yocto_sh.py
 ```
 

@@ -28,17 +28,16 @@ pinned to the Yocto 5.2.4 baseline.
 | `hsoc-stack/tools/qbox/` | Reusable QBox core |
 | `hsoc-stack/tools/qbox-platform/` | Apollo QBox platform overlay |
 | `hsoc-stack/tools/qemu/` | QBox-local QEMU/libqemu |
-| `hsoc-stack/tools/buildroot/` | Local initramfs/rootfs source |
+| `hsoc-stack/tools/buildroot/` | Retained Buildroot source |
 | `layers/` | Pinned external Yocto layers |
 
 ## Generated Evidence
 
 - Yocto task and deploy state: `build/tmp_baremetal/`
 - QVP deploy images: `build/tmp_baremetal/deploy/images/apollo-qvp/`
-- local component build: `build/local-${MACHINE}/`
-- QBox full-system runtime: `build/qbox-apollo-qvp/full-<timestamp>/`
+- QBox full-system runtime: `build/qbox-apollo-qvp/yocto-<machine>-<timestamp>/`
 - explicit FVP-comparison QBox runtime: `build/qbox-apollo-fvp/`
-- explicit FVP runtime: `build/local-apollo-fvp/fvp-boot/`
+- explicit FVP runtime: `build/fvp-boot/`
 
 Generated evidence can be stale relative to source. Record the command and
 timestamp that produced it before using it as proof.

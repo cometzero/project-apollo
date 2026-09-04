@@ -79,8 +79,8 @@ def prepare_execute(
     monkeypatch: pytest.MonkeyPatch,
     audit_source: str,
 ) -> tuple[contract.RunConfig, contract.JsonObject]:
-    write_script(tmp_path / "local_build.sh", "#!/bin/sh\nexit 0\n")
-    (tmp_path / "local_build.sh").chmod(0o755)
+    write_script(tmp_path / "yocto_build.sh", "#!/bin/sh\nexit 0\n")
+    (tmp_path / "yocto_build.sh").chmod(0o755)
     write_script(
         tmp_path / "scripts/test/audit_qbox_apollo_ap_memory_map.py",
         audit_source,
@@ -89,7 +89,7 @@ def prepare_execute(
     write_script(task9, "raise SystemExit(23)\n")
     task10 = tmp_path / "scripts/test/run_gic720ae_pcie_irq_validation_task10.py"
     write_script(task10, "raise SystemExit(29)\n")
-    binary = tmp_path / "build/local-apollo-qvp/work/qbox-platform/platforms-vp"
+    binary = tmp_path / "build/qbox-provider/platforms-vp"
     write_script(binary, "qbox-binary\n")
     config = contract.RunConfig(GATE, PROFILE, tmp_path / "run", None, None, 10, binary)
     monkeypatch.setattr(contract, "ROOT", tmp_path)

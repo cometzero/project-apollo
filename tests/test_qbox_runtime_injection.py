@@ -87,8 +87,8 @@ def test_build_runner_command_enables_loopback_runtime_actions(tmp_path: Path) -
 
     # Then: monitor, retained child mode, and fail-closed runtime feature values are set.
     assert command[:2] == (
-        harness.sys.executable,
-        "/workspace/scripts/run/run_qbox_apollo_fvp_full.py",
+        "/workspace/run_qbox_yocto.sh",
+        "--headless",
     )
     assert "--monitor" in command
     assert command[command.index("--monitor-port") + 1] == "19081"

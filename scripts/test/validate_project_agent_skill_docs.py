@@ -27,23 +27,23 @@ EXPECTED_ROUTES = {
     "zephyr-expert": ("gpt-5.6-sol", "high", "workspace-write"),
 }
 EXPECTED_SKILLS = {
+    "apollo-platform-debug",
     "arm-auto-solutions",
     "github-push",
     "linux-kernel-review",
     "qbox-dev",
     "systemc-dev",
     "update-codebase-indexes",
-    "update-local-build-conf",
     "yocto-dev",
     "yocto-review",
 }
 DOC_REQUIREMENTS = {
     "AGENTS.md": ("Current machine: `apollo-qvp`", "nexios-image"),
-    "README.md": ("Apollo QVP", "build/local-${MACHINE}"),
-    "scripts/README.md": ("build/local-${MACHINE}", "apollo-qvp"),
+    "README.md": ("Apollo QVP", "./yocto_build.sh --bsp"),
+    "scripts/README.md": ("./yocto_build.sh --bsp", "apollo-qvp"),
     "hsoc-stack/components/system_mgmt/zephyrproject/README.md": ("Apollo QVP", "zephyr_hsoc_src"),
     "hsoc-stack/tools/qbox-platform/README.md": ("hsoc-stack/tools/qbox-platform", "qemu-components/rse_cpu_accel", "apollo-qvp"),
-    "hsoc-stack/tools/qbox-platform/platforms/apollo/README.md": ("build/local-${MACHINE}", "apollo-qvp"),
+    "hsoc-stack/tools/qbox-platform/platforms/apollo/README.md": ("./yocto_build.sh --bsp", "apollo-qvp"),
 }
 
 
@@ -195,8 +195,8 @@ def validate_skills(root: Path, violations: list[Violation]) -> list[str]:
         "arm-auto-solutions": ("hsoc-stack/tools/buildroot", "agent_type", "gpt-5.6-terra", "gpt-5.6-sol"),
         "github-push": ("top-level", "recursive submodules", "gpt-5.6-sol"),
         "linux-kernel-review": ("hsoc-stack/components/primary_compute/linux", "agent_type", "linux-kernel-expert", "gpt-5.6-sol"),
-        "qbox-dev": ("./local_build.sh qbox", "agent_type", "qbox_dev", "gpt-5.6-sol"),
-        "systemc-dev": ("build/local-${MACHINE}/work/qbox-platform", "agent_type", "systemc_dev", "gpt-5.6-sol"),
+        "qbox-dev": ("./yocto_build.sh --bsp", "agent_type", "qbox_dev", "gpt-5.6-sol"),
+        "systemc-dev": ("qbox-apollo-qvp-native", "agent_type", "systemc_dev", "gpt-5.6-sol"),
         "yocto-dev": ("build/tmp_baremetal", "agent_type", "yocto_dev", "gpt-5.6-sol"),
         "yocto-review": ("meta-hsoc-auto-solutions", "agent_type", "yocto-expert", "gpt-5.6-sol"),
     }

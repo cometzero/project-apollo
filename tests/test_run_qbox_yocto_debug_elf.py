@@ -136,7 +136,7 @@ def test_linux_debug_uses_packaged_vmlinux_when_build_output_is_absent(
     for name in (
         "DEPLOY_DIR",
         "YOCTO_WORK_DIR",
-        "LOCAL_BUILD_DIR",
+        "ARTIFACT_ROOT",
         "QBOX_TOOL_DIR",
         "QBOX_BUILD_DIR",
         "QBOX_CONF",

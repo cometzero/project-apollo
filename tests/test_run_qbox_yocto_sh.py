@@ -18,7 +18,7 @@ QBOX_YOCTO_ENV_OVERRIDES = (
     "YOCTO_BUILD_DIR",
     "DEPLOY_DIR",
     "YOCTO_WORK_DIR",
-    "LOCAL_BUILD_DIR",
+    "ARTIFACT_ROOT",
     "QBOX_TOOL_DIR",
     "QBOX_BUILD_DIR",
     "QBOX_PLATFORM_BUILD_DIR",
@@ -159,7 +159,7 @@ def run_dry_run(
     env.update(
         {
             "YOCTO_BUILD_DIR": str(yocto_build),
-            "LOCAL_BUILD_DIR": str(local_build),
+            "ARTIFACT_ROOT": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
             "MACHINE": "apollo-fvp",
@@ -1101,7 +1101,7 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     env.update(
         {
             "YOCTO_BUILD_DIR": str(yocto_build),
-            "LOCAL_BUILD_DIR": str(local_build),
+            "ARTIFACT_ROOT": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
             "MACHINE": "apollo-fvp",
@@ -1431,7 +1431,7 @@ def test_run_qbox_yocto_rejects_missing_rootfs(tmp_path: Path) -> None:
     env.update(
         {
             "YOCTO_BUILD_DIR": str(yocto_build),
-            "LOCAL_BUILD_DIR": str(local_build),
+            "ARTIFACT_ROOT": str(local_build),
             "QBOX_BUILD_DIR": str(local_build / "work/qbox-platform"),
             "QBOX_CONF": str(conf),
             "MACHINE": "apollo-fvp",

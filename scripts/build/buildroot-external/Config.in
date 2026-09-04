@@ -1,2 +1,0 @@
-source "$BR2_EXTERNAL_APOLLO_BSP_PATH/package/apollo-perf/Config.in"
-source "$BR2_EXTERNAL_APOLLO_BSP_PATH/package/apollo-pfdi-bsp/Config.in"

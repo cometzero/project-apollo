@@ -109,7 +109,7 @@ def run_script(
     for name in (
         "DEPLOY_DIR",
         "YOCTO_WORK_DIR",
-        "LOCAL_BUILD_DIR",
+        "ARTIFACT_ROOT",
         "QBOX_TOOL_DIR",
         "QBOX_BUILD_DIR",
         "QBOX_CONF",

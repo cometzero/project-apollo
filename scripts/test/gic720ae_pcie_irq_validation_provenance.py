@@ -22,7 +22,7 @@ except ModuleNotFoundError:
 SOURCE_PATHS = inventory.SOURCE_PATHS
 REPOSITORIES = inventory.REPOSITORIES
 COMMANDS: Final = (
-    "./local_build.sh qbox",
+    "./yocto_build.sh --bsp",
     "python3 scripts/test/audit_qbox_apollo_ap_memory_map.py --output ${RUN_ROOT}/ap-map-audit.json",
     "python3 scripts/test/run_gic720ae_pcie_irq_validation_task9.py --fvp-reference-gate ${FVP_GATE} --qbox-profile-manifest ${QBOX_PROFILE} --run-root ${RUN_ROOT}/task9 --ap-map-audit ${RUN_ROOT}/ap-map-audit.json --ap-map-audit-sha256 ${AP_MAP_SHA256} --ap-map-audit-size ${AP_MAP_SIZE}",
     "python3 scripts/test/run_gic720ae_pcie_irq_validation_task10.py --fvp-reference-gate ${FVP_GATE} --qbox-profile-manifest ${QBOX_PROFILE} --qbox-run-root ${RUN_ROOT}/task9 --output ${RUN_ROOT}/boundary-comparison.json",

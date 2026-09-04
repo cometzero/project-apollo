@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
@@ -9,6 +11,18 @@ from scripts.run.qbox_validation.registry import (
     resolve_profile,
 )
 from scripts.run.qbox_validation.types import ConsoleSnapshot
+
+
+def test_parse_args_does_not_mutate_qbox_build_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("QBOX_BUILD_DIR", raising=False)
+    monkeypatch.delenv("QBOX_PLATFORM_BUILD_DIR", raising=False)
+
+    full_runner.parse_args([])
+
+    assert "QBOX_BUILD_DIR" not in os.environ
+    assert "QBOX_PLATFORM_BUILD_DIR" not in os.environ
 
 
 @pytest.mark.parametrize(

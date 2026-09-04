@@ -57,14 +57,6 @@ Yocto QBox BSP probe:
   --out-dir build/agent-debug/qbox-yocto-tfa
 ```
 
-Local-build QBox probe:
-
-```bash
-./run_qbox_local.sh \
-  --debug tf-a --debug-mode probe --debug-timeout 600 \
-  --out-dir build/agent-debug/qbox-local-tfa
-```
-
 Use `--debug-result PATH` when the result must live outside the output
 directory. Use `--debug-mode server` only when another bounded automation step
 will attach to the published endpoint and later terminate the launcher.

@@ -26,7 +26,7 @@ def test_successful_build_without_qbox_binary_records_atomic_fail(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Given: a successful real build child that emits no QBox binary.
-    build = tmp_path / "local_build.sh"
+    build = tmp_path / "yocto_build.sh"
     build.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     build.chmod(0o755)
     binary = tmp_path / "missing-platforms-vp"

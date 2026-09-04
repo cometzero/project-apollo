@@ -44,8 +44,8 @@ package-scoped QA exceptions.
 
 Prove claims with final BitBake values rather than metadata text alone. Check
 whether a changed task is reachable for active `apollo-qvp`,
-`nexios-bsp-initramfs`, and/or `nexios-image`. The default wrapper builds both
-images; `./yocto_build.sh --bsp` selects only the BSP image.
+`nexios-bsp-initramfs`, and/or `nexios-image`. The default wrapper builds
+the product image; `./yocto_build.sh --bsp` selects only the BSP image.
 
 ## Validation
 

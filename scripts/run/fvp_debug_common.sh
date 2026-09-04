@@ -143,7 +143,7 @@ fvp_debug_prepare_manifest()
     fvp_debug_resolve_elf
     mkdir -p "${DEBUG_DIR}"
     python3 "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py" \
-        --local-build-dir "${YOCTO_BUILD_DIR}" \
+        --artifact-root "${YOCTO_BUILD_DIR}" \
         --out-dir "${DEBUG_DIR}" \
         --elf "${DEBUG_COMPONENT}=${DEBUG_ELF}"
     DEBUG_ENTRY_ADDRESS="$(fvp_debug_validate_manifest)"

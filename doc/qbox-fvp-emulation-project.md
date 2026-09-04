@@ -314,13 +314,12 @@ The temporary QBox initiator, QEMU CFI JSON, and Strata wall-time profiling
 code used to make that decision was removed after the final clean runtime
 check; the reusable repositories retain only the selected functional path.
 
-The current QBox RD-Aspen primary-compute platform has file-backed build and
-runtime helpers:
+The current QBox RD-Aspen primary-compute platform uses the Yocto-native QBox
+provider and runtime helpers:
 
-- `./local_build.sh qbox`
-- `scripts/test/validate_qbox_fvp_rd_aspen_map.py`
+- `./yocto_build.sh --bsp`
+- `./run_qbox_yocto.sh --headless --exit-after-pass`
 - `scripts/run/run_qbox_apollo_fvp_full.py --runtime-child`
-- `scripts/test/audit_qbox_fvp_rd_aspen_coverage.py`
 
 The latest local coverage evidence reports 19 tracked primary-compute blocks
 passing static or runtime checks, including CPU/PSCI, DRAM, timers, GICv3,
@@ -615,19 +614,21 @@ For each IP:
 
 Use these before claiming progress:
 
+Enable `QBOX_APOLLO_RUN_UNIT_TESTS:pn-qbox-apollo-qvp-native = "1"` in
+`build/conf/local.conf` before the `do_check` command.
+
 ```bash
 python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/qbox_apollo_runtime.py
 git -C hsoc-stack/tools/qbox-platform diff --check
 git -C hsoc-stack/tools/qbox diff --check
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
 python3 scripts/test/audit_qbox_core_boundary.py
-QBOX_PLATFORM_BUILD_DIR="${QBOX_PLATFORM_BUILD_DIR:-build/local-apollo-qvp/work/qbox-platform}"
-cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target <target> --parallel 8
-cmake --build "${QBOX_PLATFORM_BUILD_DIR}" --target platforms-vp --parallel 8
-./local_build.sh qbox --qbox-unit-tests --no-package --jobs 8
+./yocto_build.sh qbox-apollo-qvp-native -c compile
+source layers/poky/oe-init-build-env build
+bitbake qbox-apollo-qvp-native -c check -f
 make -C hsoc-stack/components/system_mgmt/scp-firmware -f Makefile.cmake \
   mod_test BUILD_PATH=<repo>/build/tests/scp-firmware-unit
-python3 scripts/run/run_qbox_apollo_fvp_full.py --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
+./run_qbox_yocto.sh --headless --exit-after-pass --timeout 600 --out-dir build/qbox-apollo-qvp/<run-id>
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/qbox-apollo-qvp/<run-id>/result.json --output build/qbox-apollo-qvp/<run-id>/full-coverage-audit.json
 ```
 

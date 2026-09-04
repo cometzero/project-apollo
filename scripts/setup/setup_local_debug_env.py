@@ -29,7 +29,6 @@ from local_debug_support import (  # noqa: E402
     elf_text_address,
     first_existing,
     install_build_id_debug_file,
-    match_source_substitution,
     resolve_elf,
     shared_library_paths,
     symbol_source_locations,
@@ -38,12 +37,12 @@ from local_debug_support import (  # noqa: E402
 )
 
 
-DESCRIPTION = "Prepare GDB symbols and command files for local Apollo builds."
+DESCRIPTION = "Prepare GDB symbols and command files for Apollo artifacts."
 
 
 class DebugManifest(TypedDict):
     workspace: str
-    local_build_dir: str
+    artifact_root: str
     out_dir: str
     iris_python: str
     components: dict[str, ComponentRecord]
@@ -142,7 +141,7 @@ def add_libqemu_debug_file(
 
 def generate_manifest(
     root: Path,
-    local_build: Path,
+    artifact_root: Path,
     out_dir: Path,
     *,
     selected_components: set[str] | None = None,
@@ -153,7 +152,7 @@ def generate_manifest(
     clean_generated_files(out_dir)
     components: dict[str, ComponentRecord] = {}
     missing: list[str] = []
-    specs = COMPONENTS + HOST_COMPONENTS + qbox_plugin_components(local_build)
+    specs = COMPONENTS + HOST_COMPONENTS + qbox_plugin_components(artifact_root)
     if selected_components is not None:
         specs = tuple(
             component
@@ -164,7 +163,7 @@ def generate_manifest(
     solib_paths = tuple(
         sorted(
             {
-                *shared_library_paths(root, local_build),
+                *shared_library_paths(root, artifact_root),
                 *(
                     path.resolve()
                     for path in extra_solib_paths
@@ -181,7 +180,7 @@ def generate_manifest(
             if not elf.is_file():
                 elf = None
         else:
-            elf = resolve_elf(root, local_build, component)
+            elf = resolve_elf(root, artifact_root, component)
         if elf is None:
             missing.append(component.name)
             continue
@@ -205,7 +204,7 @@ def generate_manifest(
 
     return {
         "workspace": str(root),
-        "local_build_dir": str(local_build),
+        "artifact_root": str(artifact_root),
         "out_dir": str(out_dir),
         "iris_python": str(
             root
@@ -233,9 +232,9 @@ def main() -> int:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
-        "--local-build-dir",
+        "--artifact-root",
         type=Path,
-        default=root / "build/local-apollo-qvp",
+        default=root / "build",
     )
     parser.add_argument("--out-dir", type=Path, default=None)
     parser.add_argument(
@@ -260,8 +259,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    local_build = args.local_build_dir.resolve()
-    out_dir = (args.out_dir or local_build / "debug").resolve()
+    artifact_root = args.artifact_root.resolve()
+    out_dir = (args.out_dir or artifact_root / "debug").resolve()
     try:
         elf_overrides = parse_elf_overrides(args.elf)
     except ValueError as error:
@@ -277,7 +276,7 @@ def main() -> int:
     selected = requested or set(elf_overrides) or None
     manifest = generate_manifest(
         root,
-        local_build,
+        artifact_root,
         out_dir,
         selected_components=selected,
         elf_overrides=elf_overrides,

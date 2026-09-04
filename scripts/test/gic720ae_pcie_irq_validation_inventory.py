@@ -40,8 +40,7 @@ REPOSITORIES: Final = {
     "superproject": (
         ".",
         (
-            "local_build.sh",
-            "run_qbox_local.sh",
+            "yocto_build.sh",
             "run_qbox_yocto.sh",
             "scripts/build",
             "scripts/run",

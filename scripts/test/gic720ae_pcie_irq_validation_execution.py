@@ -56,7 +56,7 @@ def execute(config: contract.RunConfig, closure: contract.JsonObject) -> int:
     provenance.atomic_write(closure_path, closure)
     try:
         build = workflow.run_child(
-            ("./local_build.sh", "qbox"),
+            ("./yocto_build.sh", "--bsp"),
             run_root / "qbox-build.log",
             config.timeout,
             run_root / "qbox-build-process.json",
@@ -181,7 +181,7 @@ def build_only(config: contract.RunConfig, closure: contract.JsonObject) -> int:
     log = config.provenance_output.with_suffix(".build.log")
     registry = config.provenance_output.with_suffix(".build-process.json")
     result = workflow.run_child(
-        ("./local_build.sh", "qbox"), log, config.timeout, registry
+        ("./yocto_build.sh", "--bsp"), log, config.timeout, registry
     )
     workflow.require_child(result, "qbox_build")
     if provenance.binary_identity(config.qbox_binary).get("status") != "PRESENT":

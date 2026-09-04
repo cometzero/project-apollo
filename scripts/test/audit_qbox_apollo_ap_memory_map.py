@@ -843,7 +843,7 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
             None if config_match is None else int(config_match.group(1), 0),
         ),
         {
-            "name": "local_build_linux_dts_high_memory_cells",
+            "name": "linux_dts_high_memory_cells",
             "path": dts_path,
             "line": None if dts_node is None or len(dts_cells) <= 1 else line_for_offset(dts, dts.find(dts_cells[1], dts_node.start("body"))),
             "passed": dts_fvp_compatible,

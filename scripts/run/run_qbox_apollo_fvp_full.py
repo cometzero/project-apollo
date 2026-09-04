@@ -697,15 +697,15 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
-    local_name = local_build_dir.name
+def default_artifacts(artifact_root: Path) -> dict[str, Path]:
+    root_name = artifact_root.name
     machine = (
-        local_name.removeprefix("local-")
-        if local_name.startswith("local-")
+        root_name.removeprefix("local-")
+        if root_name.startswith("local-")
         else "apollo-qvp"
     )
     machine_work = machine.replace("-", "_")
-    deploy = local_build_dir / "deploy"
+    deploy = artifact_root / "deploy"
     boot = deploy / "boot"
     firmware = deploy / "firmware"
     return {
@@ -714,19 +714,19 @@ def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
         "rse_otp": firmware / "rse-otp-image.img",
         "ap_flash": firmware / "ap-flash-image.img",
         "fip": firmware / "fip.bin",
-        "signed_ap_bl2": local_build_dir / "work/signing/deploy/signed_bl2.bin",
+        "signed_ap_bl2": artifact_root / "work/signing/deploy/signed_bl2.bin",
         "init_fwu_metadata": firmware / "init_fwu_metadata.bin",
         "ap_bl2_elf": (
-            local_build_dir
+            artifact_root
             / f"work/trusted-firmware-a/{machine_work}/debug/bl2/bl2.elf"
         ),
-        "rse_bl1_2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl1_2.elf",
-        "rse_bl2_elf": local_build_dir / "work/trusted-firmware-m/bin/bl2.elf",
+        "rse_bl1_2_elf": artifact_root / "work/trusted-firmware-m/bin/bl1_2.elf",
+        "rse_bl2_elf": artifact_root / "work/trusted-firmware-m/bin/bl2.elf",
         "rootfs": boot / f"{machine}-local-disk.img",
         "efi_capsule_disk": boot / "boot-fat.img",
         "provisioning_bundle": firmware / "combined_provisioning_message.bin",
         "ap_dtb": boot / f"{machine}.dtb",
-        "rse_symbols": local_build_dir / "debug/symbols.json",
+        "rse_symbols": artifact_root / "debug/symbols.json",
         "si_cl0_image": firmware / "si0_ramfw.bin",
         "si_cl1_image": firmware / "zephyr-demos-cl1.bin",
         "si_cl1_symbols": firmware / "zephyr-demos-cl1.elf",
@@ -734,7 +734,7 @@ def default_artifacts(local_build_dir: Path) -> dict[str, Path]:
 
 
 def resolved_artifacts(args: argparse.Namespace) -> dict[str, Path]:
-    artifacts = default_artifacts(args.local_build_dir)
+    artifacts = default_artifacts(args.artifact_root)
     overrides = {
         "rse_rom": args.rse_rom,
         "rse_flash": args.rse_flash,
@@ -830,7 +830,7 @@ def ensure_default_debug_manifest(
     symbol_path = artifacts["rse_symbols"]
     if symbol_path.exists():
         return None
-    default_symbol_path = default_artifacts(args.local_build_dir)["rse_symbols"].resolve()
+    default_symbol_path = default_artifacts(args.artifact_root)["rse_symbols"].resolve()
     if symbol_path != default_symbol_path:
         return None
 
@@ -843,8 +843,8 @@ def ensure_default_debug_manifest(
     cmd = [
         sys.executable,
         str(setup_script),
-        "--local-build-dir",
-        str(args.local_build_dir),
+        "--artifact-root",
+        str(args.artifact_root),
         "--out-dir",
         str(symbol_path.parent),
     ]
@@ -2274,16 +2274,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=qbox_platform_dir / "platforms/apollo/apollo-qvp.lua",
     )
     parser.add_argument(
-        "--local-build-dir",
+        "--artifact-root",
         type=Path,
-        default=root / "build/local-apollo-qvp",
+        default=root / "build",
     )
     parser.add_argument(
         "--qbox-build-dir",
         type=Path,
         help=(
             "QBox CMake build directory. Defaults to "
-            "<local-build-dir>/work/qbox-platform."
+            "<artifact-root>/work/qbox-platform when not supplied."
         ),
     )
     parser.add_argument(
@@ -2352,7 +2352,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="auto_provision_rse_otp",
         action="store_true",
         help=(
-            "Fallback for legacy or experimental local-build outputs: when "
+            "Fallback for legacy or experimental outputs: when "
             "the RSE OTP image is all zeroes, run a bounded CM-lifecycle QBox "
             "provisioning pass first and persist the resulting OTP before the "
             "requested full-system boot."
@@ -2723,7 +2723,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "--primary-operation-module-path must be used together"
         )
     args.conf = args.conf.resolve()
-    args.local_build_dir = args.local_build_dir.resolve()
+    args.artifact_root = args.artifact_root.resolve()
     if args.qbox_build_dir is None:
         qbox_build_dir_env = os.environ.get("QBOX_PLATFORM_BUILD_DIR") or os.environ.get(
             "QBOX_BUILD_DIR"
@@ -2731,10 +2731,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         if qbox_build_dir_env:
             args.qbox_build_dir = Path(qbox_build_dir_env)
         else:
-            args.qbox_build_dir = args.local_build_dir / "work/qbox-platform"
+            args.qbox_build_dir = args.artifact_root / "work/qbox-platform"
     args.qbox_build_dir = args.qbox_build_dir.resolve()
-    os.environ["QBOX_PLATFORM_BUILD_DIR"] = str(args.qbox_build_dir)
-    os.environ["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
     args.out_dir = args.out_dir.resolve()
     if args.uboot_only:
         args.post_login_probe = False

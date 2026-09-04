@@ -632,7 +632,7 @@ def workspace_root() -> Path:
 
 
 def qbox_build_dir(root: Path) -> Path:
-    default_dir = root / "build/local-apollo-fvp/work/qbox-platform"
+    default_dir = root / "build"
     return Path(
         os.environ.get(
             "QBOX_PLATFORM_BUILD_DIR",
@@ -741,26 +741,12 @@ def cmake_cache_values(cache: Path) -> dict[str, str]:
     return values
 
 
-def qbox_sdk_native_sysroot(root: Path, build_dir: Path) -> Path | None:
+def qbox_sdk_native_sysroot() -> Path | None:
     candidates: list[Path] = []
     for name in ("QBOX_NATIVE_SDK_SYSROOT", "SDK_NATIVE_SYSROOT"):
         value = os.environ.get(name)
         if value:
             candidates.append(Path(value).expanduser())
-
-    local_build_dir = build_dir.parent.parent
-    if local_build_dir.name.startswith("local-"):
-        sdk_name = "local-sdk-" + local_build_dir.name.removeprefix("local-")
-        candidates.extend(
-            sorted((local_build_dir.parent / sdk_name / "sysroots").glob(
-                "*-pokysdk-linux"
-            ))
-        )
-    candidates.extend(
-        path
-        for sdk_dir in sorted((root / "build").glob("local-sdk-*"))
-        for path in sorted((sdk_dir / "sysroots").glob("*-pokysdk-linux"))
-    )
 
     for candidate in candidates:
         native_bin = candidate / "usr/bin"
@@ -770,10 +756,10 @@ def qbox_sdk_native_sysroot(root: Path, build_dir: Path) -> Path | None:
 
 
 def qbox_sdk_native_build_env(
-    root: Path, build_dir: Path
+    build_dir: Path,
 ) -> tuple[dict[str, str], list[str]]:
     env = os.environ.copy()
-    native_sysroot = qbox_sdk_native_sysroot(root, build_dir)
+    native_sysroot = qbox_sdk_native_sysroot()
     if native_sysroot is None:
         return env, []
 
@@ -845,7 +831,7 @@ def ensure_qbox_targets(root: Path, jobs: int) -> None:
         "QBOX_APOLLO_BUILD_TARGET", "apollo_fvp_full_system"
     )
     install_prefix = str((build_dir / "install").resolve())
-    build_env, sdk_cmake_args = qbox_sdk_native_build_env(root, build_dir)
+    build_env, sdk_cmake_args = qbox_sdk_native_build_env(build_dir)
 
     configure_cmd = [
         "cmake",
@@ -5282,10 +5268,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--qbox-build-dir",
         type=Path,
-        help=(
-            "QBox CMake build directory. Defaults to "
-            "build/local-apollo-fvp/work/qbox-platform."
-        ),
+        help="QBox build/provider directory. Defaults to QBOX_BUILD_DIR or build.",
     )
     parser.add_argument(
         "--scp-strategy",

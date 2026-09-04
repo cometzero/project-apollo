@@ -94,7 +94,7 @@ def task10_command(config: contract.RunConfig) -> tuple[str, ...]:
 
 def display_plan(config: contract.RunConfig) -> tuple[str, ...]:
     commands = {
-        "qbox_build": "./local_build.sh qbox",
+        "qbox_build": "./yocto_build.sh --bsp",
         "ap_memory_map_audit": " ".join(ap_map_audit_command(config)),
         "task9_qualification": " ".join(task9_command(config)),
         "task10_comparison": " ".join(task10_command(config)),

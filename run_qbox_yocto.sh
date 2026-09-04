@@ -28,7 +28,7 @@ Options:
   --work-dir DIR              Yocto machine work directory
   --image-basename NAME       Yocto image recipe basename (default: nexios-image)
   --qboxconf FILE             Yocto-deployed QBox JSON configuration
-  --local-build-dir DIR       Local-build directory used for QBox build/debug files
+  --artifact-root DIR         Artifact/provider root override
   --qbox-tool-dir DIR         Yocto QBox provider executable directory
   --qbox-build-dir DIR        QBox platform build directory
   --conf FILE                 QBox Lua configuration
@@ -82,7 +82,7 @@ Artifact overrides:
 
 Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
-  QBOX_CONF_FILE, LOCAL_BUILD_DIR, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
+  QBOX_CONF_FILE, ARTIFACT_ROOT, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
   OUT_DIR, TMUX_SESSION, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
   RUN_QBOX_RECORD_INITIAL_STATE, QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
 EOF
@@ -675,7 +675,7 @@ IMAGE_BASENAME_FROM_ENV="${IMAGE_BASENAME:-}"
 IMAGE_BASENAME="${IMAGE_BASENAME_FROM_ENV:-nexios-image}"
 QBOX_CONF_FILE="${QBOX_CONF_FILE:-}"
 
-LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-}"
 QBOX_CORE_DIR="${QBOX_CORE_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox}"
 QBOX_PLATFORM_DIR="${QBOX_PLATFORM_DIR:-${ROOT_DIR}/hsoc-stack/tools/qbox-platform}"
 QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-}"
@@ -683,13 +683,13 @@ QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${QBOX_PLATFORM_BUILD_DIR:-}}"
 QBOX_CONF="${QBOX_CONF:-}"
 export QBOX_CORE_DIR QBOX_PLATFORM_DIR
 
-LOCAL_BUILD_DIR_EXPLICIT=0
+ARTIFACT_ROOT_EXPLICIT=0
 QBOX_TOOL_DIR_EXPLICIT=0
 QBOX_BUILD_DIR_EXPLICIT=0
 QBOX_CONF_EXPLICIT=0
 IMAGE_BASENAME_EXPLICIT=0
 RSE_SYMBOLS_EXPLICIT=0
-[[ -n "${LOCAL_BUILD_DIR}" ]] && LOCAL_BUILD_DIR_EXPLICIT=1
+[[ -n "${ARTIFACT_ROOT}" ]] && ARTIFACT_ROOT_EXPLICIT=1
 [[ -n "${QBOX_TOOL_DIR}" ]] && QBOX_TOOL_DIR_EXPLICIT=1
 [[ -n "${QBOX_BUILD_DIR}" ]] && QBOX_BUILD_DIR_EXPLICIT=1
 [[ -n "${QBOX_CONF}" ]] && QBOX_CONF_EXPLICIT=1
@@ -800,10 +800,10 @@ while (($#)); do
             QBOX_CONF_FILE="$2"
             shift 2
             ;;
-        --local-build-dir)
-            [[ $# -ge 2 ]] || die "--local-build-dir requires a value"
-            LOCAL_BUILD_DIR="$2"
-            LOCAL_BUILD_DIR_EXPLICIT=1
+        --artifact-root)
+            [[ $# -ge 2 ]] || die "--artifact-root requires a value"
+            ARTIFACT_ROOT="$2"
+            ARTIFACT_ROOT_EXPLICIT=1
             shift 2
             ;;
         --qbox-tool-dir)
@@ -1102,8 +1102,8 @@ if [[ "${MACHINE}" == "apollo-qvp" ]]; then
     if [[ "${QBOX_TOOL_DIR_EXPLICIT}" == "0" ]]; then
         QBOX_TOOL_DIR="${QBOXCONF_PROVIDER_BINDIR}"
     fi
-    if [[ "${LOCAL_BUILD_DIR_EXPLICIT}" == "0" ]]; then
-        LOCAL_BUILD_DIR="${QBOXCONF_RECIPE_SYSROOT_NATIVE}"
+    if [[ "${ARTIFACT_ROOT_EXPLICIT}" == "0" ]]; then
+        ARTIFACT_ROOT="${QBOXCONF_RECIPE_SYSROOT_NATIVE}"
     fi
     if [[ "${QBOX_BUILD_DIR_EXPLICIT}" == "0" ]]; then
         QBOX_BUILD_DIR="${QBOXCONF_PROVIDER_BINDIR}"
@@ -1117,8 +1117,9 @@ if [[ "${MACHINE}" == "apollo-qvp" ]]; then
     export LD_LIBRARY_PATH="${QBOXCONF_LD_LIBRARY_PATH}"
     OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-qvp/yocto-${MACHINE}-${RUN_STAMP}}"
 else
-    LOCAL_BUILD_DIR="${LOCAL_BUILD_DIR:-${ROOT_DIR}/build/local-apollo-fvp}"
-    QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${LOCAL_BUILD_DIR}/work/qbox-platform}"
+    [[ "${ARTIFACT_ROOT_EXPLICIT}" == "1" ]] ||
+        die "--machine apollo-fvp requires --artifact-root"
+    QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${ARTIFACT_ROOT}/work/qbox-platform}"
     QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
     OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
     QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-${QBOX_BUILD_DIR}}"
@@ -1127,9 +1128,9 @@ export QBOX_TOOL_DIR
 
 [[ -d "${DEPLOY_DIR}" ]] || die "Yocto deploy directory not found: ${DEPLOY_DIR}"
 [[ -d "${YOCTO_WORK_DIR}" ]] || die "Yocto work directory not found: ${YOCTO_WORK_DIR}"
-[[ -d "${LOCAL_BUILD_DIR}" ]] || die "local build directory not found: ${LOCAL_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --local-build-dir."
+[[ -d "${ARTIFACT_ROOT}" ]] || die "QBox artifact root not found: ${ARTIFACT_ROOT}. Run ./yocto_build.sh --bsp first."
 [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
-[[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox build directory not found: ${QBOX_BUILD_DIR}. Build QBox first with ./local_build.sh qbox or set --qbox-build-dir."
+[[ -d "${QBOX_BUILD_DIR}" ]] || die "QBox provider directory not found: ${QBOX_BUILD_DIR}. Run ./yocto_build.sh --bsp first."
 if [[ "${MACHINE}" == "apollo-qvp" ]]; then
     [[ -x "${QBOXCONF_EXE}" ]] || die "QBox executable not found or not executable: ${QBOXCONF_EXE}"
 fi
@@ -1273,9 +1274,9 @@ if [[ -n "${RSE_SYMBOLS_OVERRIDE:-}" ]]; then
 elif [[ "${MACHINE}" != "apollo-qvp" ]]; then
     RSE_SYMBOLS="$(resolve_file \
         "QBox RSE debug symbol manifest" \
-        "${LOCAL_BUILD_DIR}/debug/symbols.json")"
-elif [[ -f "${LOCAL_BUILD_DIR}/debug/symbols.json" ]]; then
-    RSE_SYMBOLS="${LOCAL_BUILD_DIR}/debug/symbols.json"
+        "${ARTIFACT_ROOT}/debug/symbols.json")"
+elif [[ -f "${ARTIFACT_ROOT}/debug/symbols.json" ]]; then
+    RSE_SYMBOLS="${ARTIFACT_ROOT}/debug/symbols.json"
 fi
 if [[ -n "${SI_CL0_IMAGE_OVERRIDE}" ]]; then
     SI_CL0_IMAGE="$(resolve_file "Safety Island CL0 SCP image" "${SI_CL0_IMAGE_OVERRIDE}")"
@@ -1312,7 +1313,7 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
         debug_setup=(
             python3
             "${ROOT_DIR}/scripts/setup/setup_local_debug_env.py"
-            --local-build-dir "${YOCTO_BUILD_DIR}"
+            --artifact-root "${YOCTO_BUILD_DIR}"
             --out-dir "${OUT_DIR}/debug"
             --component "${DEBUG_COMPONENT}"
             --elf "${DEBUG_COMPONENT}=${DEBUG_ARTIFACT_ELF}"
@@ -1413,7 +1414,7 @@ if [[ "${HEADLESS}" == "1" ]]; then
         "${PYTHON:-python3}"
         "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full.py"
         --conf "${QBOX_CONF}"
-        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --artifact-root "${ARTIFACT_ROOT}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
         --out-dir "${OUT_DIR}"
         --timeout "${TIMEOUT}"
@@ -1432,7 +1433,7 @@ else
         "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh"
         --session "${TMUX_SESSION}"
         --out-dir "${OUT_DIR}"
-        --local-build-dir "${LOCAL_BUILD_DIR}"
+        --artifact-root "${ARTIFACT_ROOT}"
         --qbox-build-dir "${QBOX_BUILD_DIR}"
         --conf "${QBOX_CONF}"
         --timeout "${TIMEOUT}"

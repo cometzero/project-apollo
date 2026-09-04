@@ -13,7 +13,7 @@ import sys
 import time
 
 
-DESCRIPTION = "Open a local Apollo build artifact with the configured GDB."
+DESCRIPTION = "Open an Apollo artifact with the configured GDB."
 
 
 @dataclass(frozen=True)
@@ -27,11 +27,6 @@ class DebugComponent:
     remote: str | None = None
     gdb_thread: int | None = None
     mpidr: str | None = None
-
-
-def workspace_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
 
 def load_components(manifest: Path) -> dict[str, DebugComponent]:
     decoded = json.loads(manifest.read_text(encoding="utf-8"))
@@ -177,13 +172,8 @@ def wait_for_log_marker(
 
 
 def parse_args() -> argparse.Namespace:
-    root = workspace_root()
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        default=root / "build/local-apollo-qvp/debug/symbols.json",
-    )
+    parser.add_argument("--manifest", type=Path)
     parser.add_argument("--list", action="store_true")
     parser.add_argument("--wait-remote-only", metavar="HOST:PORT")
     parser.add_argument(
@@ -242,6 +232,9 @@ def main() -> int:
             return 3
         print(f"GDB endpoint ready: {args.wait_remote_only}")
         return 0
+    if args.manifest is None:
+        print("error: --manifest is required", file=sys.stderr)
+        return 2
     try:
         components = load_components(args.manifest.resolve())
     except (OSError, ValueError, json.JSONDecodeError) as error:

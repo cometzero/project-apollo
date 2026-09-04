@@ -12,12 +12,11 @@ Updated: 2026-07-04
 | 경로 | 역할 |
 | --- | --- |
 | `AGENTS.md` | Codex/agent 작업 규칙과 현재 Apollo FVP 기준. |
-| `README.md` | 사용자용 clean checkout, Yocto/local build, QBox boot 가이드. |
+| `README.md` | 사용자용 clean checkout, Yocto build, QBox boot 가이드. |
 | `.gitmodules` | 루트 저장소가 고정하는 submodule 목록과 기본 branch. |
 | `yocto_build.sh` | 전통적인 Yocto `TEMPLATECONF` 기반 `nexios-image` 빌드 진입점. |
-| `local_build.sh` | QBox와 로컬 소스 기반 firmware/kernel/rootfs 빌드 진입점. |
 | `run_fvp.sh` | Yocto 빌드 산출물을 Apollo FVP tmux 세션에서 실행하는 사용자용 진입점. |
-| `run_qbox_local.sh` | 로컬 빌드 산출물을 QBox tmux 세션에서 실행하는 사용자용 진입점. |
+| `run_qbox_yocto.sh` | Yocto 빌드 산출물을 QBox에서 실행하는 사용자용 진입점. |
 
 ## Arm 제공 소스
 
@@ -128,9 +127,9 @@ components에 설치한다. 실행 deploy contract는 복사된 bundle이 아니
 새 Apollo hardware model이나 Lua wiring 변경은 대부분
 `hsoc-stack/tools/qbox-platform/`이 소유한다. 재사용 가능한 QBox core 변경은
 `hsoc-stack/tools/qbox/`가 소유하고, QEMU device/backend 변경은
-`hsoc-stack/tools/qemu/`가 소유한다. 기본 Apollo overlay build output은
-`build/local-apollo-fvp/work/qbox-platform/`이며, `QBOX_BUILD_DIR`는
-`QBOX_PLATFORM_BUILD_DIR`의 호환 alias로만 사용한다.
+`hsoc-stack/tools/qemu/`가 소유한다. Apollo overlay는
+`qbox-apollo-qvp-native` recipe가 build하고 Yocto native sysroot에
+설치한다.
 
 ## Scripts와 Tests
 
@@ -138,7 +137,7 @@ components에 설치한다. 실행 deploy contract는 복사된 bundle이 아니
 
 | 경로 | 역할 |
 | --- | --- |
-| `scripts/build/` | `local_build.sh`가 호출하는 stage별 build script. |
+| `scripts/build/` | 격리된 QBox/QEMU validation build helper. |
 | `scripts/run/` | FVP/QBox headless runner와 tmux runner. |
 | `scripts/setup/` | bootstrap, RSE OTP provisioning, debug manifest 생성. |
 | `scripts/debug/` | GDB/Iris/FVP debug helper. |
@@ -156,7 +155,6 @@ runner behavior를 바꾸면 `python3 -m py_compile`과 관련 pytest/validator�
 | --- | --- |
 | `build/conf/` | active Yocto local configuration. build/runtime claim 전에 반드시 확인한다. |
 | `build/tmp_baremetal/deploy/images/apollo-qvp/` | Apollo QVP Yocto deploy 산출물 위치. QBox 실행 설정인 `.qboxconf`도 여기에 생성된다. generated evidence이다. |
-| `build/local-apollo-fvp/` | local build 산출물과 debug manifest. generated evidence이다. |
 | `build/qbox-apollo-fvp/` | QBox runtime logs, result.json, summary, per-UART log. generated evidence이다. |
 | `build/qbox-apollo-qvp/` | Apollo QVP QBox runtime logs, result.json, summary, per-UART log의 목표 위치. runtime evidence가 생기기 전에는 runtime 성공 근거로 취급하지 않는다. |
 | `build/tmp_baremetal/` | BitBake task output, deploy, sysroot, logs, sstate 관련 산출물. generated evidence이다. |

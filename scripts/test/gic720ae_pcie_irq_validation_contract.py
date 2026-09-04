@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +21,12 @@ PROVENANCE_SCHEMA: Final = (
 RESULT_SCHEMA: Final = (
     ROOT / "tests/schemas/gic720ae-pcie-irq-validation-result.schema.json"
 )
-QBOX_BINARY: Final = ROOT / "build/local-apollo-qvp/work/qbox-platform/platforms-vp"
+QBOX_BINARY: Final = (
+    ROOT
+    / "build/tmp_baremetal/sysroots-components"
+    / platform.machine()
+    / "qbox-apollo-qvp-native/usr/bin/platforms-vp"
+)
 QBOX_CONFIG: Final = (
     ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua"
 )

@@ -4,7 +4,6 @@ import argparse
 from dataclasses import dataclass
 import os
 from pathlib import Path
-import sys
 from typing import Final
 
 if __package__:
@@ -108,8 +107,8 @@ def build_runner_command(
     config: RuntimeConfig,
 ) -> tuple[tuple[str, ...], dict[str, str]]:
     command = (
-        sys.executable,
-        str(config.workspace / "scripts/run/run_qbox_apollo_fvp_full.py"),
+        str(config.workspace / "run_qbox_yocto.sh"),
+        "--headless",
         "--out-dir",
         str(config.output_dir / "canonical"),
         "--timeout",
@@ -118,6 +117,7 @@ def build_runner_command(
         "--monitor-port",
         str(config.monitor_port),
         "--keep-running-after-pass",
+        "--",
         *config.runner_args,
     )
     environment = os.environ.copy()

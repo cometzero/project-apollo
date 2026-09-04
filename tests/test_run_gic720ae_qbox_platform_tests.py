@@ -259,7 +259,11 @@ def test_rejects_production_build_tree_and_stale_system_qemu_cache(
             str(WRAPPER),
             "--list",
             "--build-dir",
-            str(ROOT / "build/local-apollo-qvp/work/qbox-platform"),
+            str(
+                ROOT
+                / "build/tmp_baremetal/work/x86_64-linux/"
+                "qbox-apollo-qvp-native/1.0/build"
+            ),
         ],
         cwd=ROOT,
         text=True,

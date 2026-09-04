@@ -28,7 +28,6 @@ The active baseline is:
 - variant: `cfg2`
 - Primary Compute CPUs: `4`
 - BitBake TMPDIR: `build/tmp_baremetal`
-- local build root: `build/local-${MACHINE}`
 - QBox QVP runtime evidence: `build/qbox-apollo-qvp`
 - explicit FVP-comparison QBox evidence: `build/qbox-apollo-fvp`
 
@@ -93,7 +92,6 @@ Use the narrowest useful step first:
 ```bash
 python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
 python3 scripts/test/audit_qbox_core_boundary.py
-./local_build.sh qbox
 source layers/poky/oe-init-build-env build
 bitbake <recipe> -c compile
 bitbake nexios-bsp-initramfs -c rootfs
@@ -102,13 +100,11 @@ bitbake nexios-bsp-initramfs -c rootfs
 ```
 
 `./yocto_build.sh` builds only the full product image. `--bsp` builds only
-`nexios-bsp-initramfs`. The local flow uses a separate Buildroot CPIO while
-reusing `nexios-bsp-init` and the BSP self-test contract.
+`nexios-bsp-initramfs`.
 
 Interactive QBox login/BSP launch:
 
 ```bash
-./run_qbox_local.sh
 ./run_qbox_yocto.sh
 ./run_qbox_yocto.sh --bsp
 ```
@@ -118,23 +114,21 @@ These launchers replace only current-UID managed QBox sessions by default;
 shared post-login probe. QBox full-system qualification uses:
 
 ```bash
-python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --timeout 600
+./run_qbox_yocto.sh --headless --exit-after-pass --timeout 600
 ```
 
 QBox debug supports `qbox`, `rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and
-`linux` through `run_qbox_local.sh` or `run_qbox_yocto.sh`. Use
-`run_qbox_local_debug.sh` for the multi-domain fixed-port layout. FVP QVP
-debug uses `run_fvp.sh --machine apollo-qvp --debug <target>` with
-lite-cornea/Iris.
+`linux` through `run_qbox_yocto.sh`. FVP QVP debug uses
+`run_fvp.sh --machine apollo-qvp --debug <target>` with lite-cornea/Iris.
 
-Explicit FVP comparison runtime:
+Explicit FVP comparison runtime after
+`./yocto_build.sh --machine apollo-fvp`:
 
 ```bash
 python3 scripts/run/runfvp_log_boot.py \
   --machine apollo-fvp \
-  --fvpconf build/local-apollo-fvp/deploy/apollo-fvp-local.fvpconf \
-  --out-dir build/local-apollo-fvp/fvp-boot \
+  --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf \
+  --out-dir build/fvp-boot/apollo-fvp \
   --timeout 900 --require all --min-runtime 70 --no-login
 ```
 

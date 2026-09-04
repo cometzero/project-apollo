@@ -53,11 +53,8 @@ not replace or delete generated sysroots to force discovery.
 ## Build Ladder
 
 ```bash
-cmake --build build/local-${MACHINE}/work/qbox-platform \
-  --target <target> --parallel <jobs>
-ctest --test-dir build/local-${MACHINE}/work/qbox-platform \
-  -R <test-name> --output-on-failure
-./local_build.sh qbox
+./yocto_build.sh qbox-apollo-qvp-native -c compile
+./yocto_build.sh --bsp
 ```
 
 Use the concrete configured machine in a shell command if `${MACHINE}` is not
@@ -73,28 +70,22 @@ exported.
 6. Audit full-system coverage from the generated `result.json`.
 
 ```bash
-python3 scripts/run/run_qbox_apollo_fvp_full.py \
-  --timeout 600
-./run_qbox_boot_regression.sh --record-baseline
-./run_qbox_boot_regression.sh
+./run_qbox_yocto.sh --headless --exit-after-pass
 python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py \
   --result-json <runtime-result.json> \
   --output build/qbox-apollo-qvp/full-coverage-audit.json
 ```
 
 Use the lower-level RSE runner only for focused RSE compatibility evidence.
-The regression comparison requires its JSON baseline; create it with
-`--record-baseline` before the first plain invocation.
 
-`run_qbox_local.sh` and `run_qbox_yocto.sh` replace only managed sessions and
-processes owned by the current UID. Use `--multi-session` to preserve existing
-QBox sessions. The convenience launchers pass `--no-post-login-probe`; use the
-canonical Python runner for full post-login qualification.
+`run_qbox_yocto.sh` replaces only managed sessions and processes owned by the
+current UID. Use `--multi-session` to preserve existing QBox sessions. The
+interactive launcher passes `--no-post-login-probe`; use headless mode for
+full post-login qualification.
 
 For source-level debug, select one of `qbox`, `rse`, `si_cl0`, `si_cl1`,
 `tf-a`, `u-boot`, or `linux` with the root launcher. Yocto debug requires
-interactive tmux. `run_qbox_local_debug.sh` exposes the fixed host/RSE/SI0/SI1/AP
-endpoints for multi-domain work.
+interactive tmux.
 
 ## Evidence
 

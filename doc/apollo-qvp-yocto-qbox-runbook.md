@@ -180,10 +180,6 @@ runner 뒤에 다음 옵션을 전달한다.
 `result.json`의 `rse_flash_state.action`이 초기화를 나타내는지 확인하고, 다음
 reuse 실행에서 PS/ITS before/after hash가 같아야 한다.
 
-local 이미지의 대응 state는
-`build/qbox-apollo-fvp/state/local-apollo-qvp/`이며,
-`run_qbox_local.sh`도 같은 세 가지 state 옵션과 `--uboot-only`를 제공한다.
-
 The QVP runtime output root should use:
 
 ```text

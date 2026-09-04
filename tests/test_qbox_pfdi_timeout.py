@@ -7,7 +7,6 @@ from scripts.run import run_qbox_apollo_fvp_full as full_runner
 
 
 ROOT: Final = Path(__file__).resolve().parents[1]
-LOCAL_SCP_BUILD: Final = ROOT / "scripts/build/modules/build_scp.sh"
 REFERENCE_YOCTO_SCP_BUILD: Final = (
     ROOT
     / "arm-zena-css/yocto/meta-zena-css-bsp/recipes-bsp/scp-firmware"
@@ -26,7 +25,6 @@ QBOX_PFDI_POLICY: Final = (
     / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/include"
     / "apollo-qvp-qbox-timing.inc"
 )
-LOCAL_BUILD_CONFIG: Final = ROOT / "scripts/build/local_build.conf"
 FVP_PFDI_MONITOR: Final = (
     ROOT
     / "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd"
@@ -66,10 +64,9 @@ def source_macro_value(path: Path, name: str) -> int:
 
 
 def test_qbox_pfdi_timing_policy_is_centralized() -> None:
-    # Given: the Apollo QVP machine policy and its local-build mirror.
+    # Given: the Apollo QVP machine policy and its Yocto consumer.
     machine_source = QBOX_MACHINE_CONFIG.read_text(encoding="utf-8")
     policy_source = QBOX_PFDI_POLICY.read_text(encoding="utf-8")
-    local_source = LOCAL_BUILD_CONFIG.read_text(encoding="utf-8")
     expected = {
         "SCP_PFDI_OOR_PERIOD_US": 10_000_000,
         "SCP_PFDI_BOOT_TIMEOUT_US": 180_000_000,
@@ -82,15 +79,9 @@ def test_qbox_pfdi_timing_policy_is_centralized() -> None:
     # When: every timing value and consumer is resolved.
     for name, value in expected.items():
         policy_assignment = f'{name} ?= "{value}UL"'
-        local_assignment = f'{name}="${{{name}-{value}UL}}"'
-
-        # Then: one machine include owns policy and local builds stay aligned.
+        # Then: one machine include owns the policy consumed by the recipe.
         assert policy_assignment in policy_source
-        assert local_assignment in local_source
         assert f"-D {name}=${{{name}}}" in QBOX_YOCTO_SCP_BUILD.read_text(
-            encoding="utf-8"
-        )
-        assert f'-D{name}="${{{name}}}"' in LOCAL_SCP_BUILD.read_text(
             encoding="utf-8"
         )
     assert (
@@ -185,7 +176,7 @@ def test_full_system_gate_detects_si0_pfdi_watchdog_timeout(
 
 
 def test_qbox_ap_secondary_cores_have_time_to_report_out_of_reset() -> None:
-    # Given: the local and Yocto Apollo QVP SCP build configurations.
+    # Given: the Yocto Apollo QVP SCP build configuration.
     policy = qbox_pfdi_policy_value("SCP_PFDI_OOR_PERIOD_US")
 
     # When/Then: secondary cores retain the established ten-second deadline.

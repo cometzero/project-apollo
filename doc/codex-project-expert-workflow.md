@@ -154,7 +154,7 @@ Then choose the narrow source area:
   `sw-ref-stack/yocto/meta-arm-auto-solutions`,
   `sw-ref-stack/test_automation`
 - Generated evidence:
-  `build/local-apollo-fvp/`,
+  `build/fvp-boot/`,
   `build/qbox-apollo-fvp/`,
   `build/tmp_baremetal/deploy/images/apollo-fvp`,
   `build/tmp_baremetal/log/cooker/apollo-fvp`

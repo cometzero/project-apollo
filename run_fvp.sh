@@ -8,7 +8,6 @@ source "${ROOT_DIR}/scripts/run/fvp_debug_common.sh"
 MACHINE="${MACHINE:-apollo-fvp}"
 YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
 DEPLOY_DIR="${DEPLOY_DIR:-}"
-SDK_DIR="${SDK_DIR:-${ROOT_DIR}/build/local-sdk}"
 RUNFVP_BIN="${RUNFVP_BIN:-${ROOT_DIR}/layers/meta-arm/scripts/runfvp}"
 FVP_CONF="${FVP_CONF:-}"
 TMUX_BIN="${TMUX_BIN:-tmux}"
@@ -22,7 +21,6 @@ NO_ATTACH=0
 DRY_RUN=0
 HEADLESS=0
 TIMEOUT="${TIMEOUT:-900}"
-LOCAL_MODE=0
 BSP_MODE=0
 DEBUG_TARGET=""
 IRIS_PORT="${IRIS_PORT:-7100}"
@@ -50,7 +48,6 @@ file-backed logs.
 
 Options:
   --machine NAME       apollo-fvp or apollo-qvp (default: ${MACHINE})
-  --local              run the local Apollo FVP package (apollo-fvp only)
   --bsp                run the Yocto nexios-bsp-initramfs image
   --build-dir PATH     Yocto build directory (default: ${YOCTO_BUILD_DIR})
   --deploy-dir PATH    image deploy directory
@@ -76,17 +73,14 @@ Options:
 
 Environment overrides:
   MACHINE YOCTO_BUILD_DIR DEPLOY_DIR RUNFVP_BIN FVP_CONF TMUX_SESSION OUT_DIR
-  RUN_STAMP TMUX_BIN SDK_DIR CORNEA_BIN TIMEOUT
+  RUN_STAMP TMUX_BIN CORNEA_BIN TIMEOUT
 
 Examples:
   ./yocto_build.sh
-  ./local_build.sh --package
-  Missing local package recovery: ./local_build.sh --package first.
   ./run_fvp.sh
   ./run_fvp.sh --bsp
   ./run_fvp.sh --machine apollo-qvp
   ./run_fvp.sh --machine apollo-qvp --debug linux
-  ./run_fvp.sh --local
   ./run_fvp.sh --no-attach
   ./run_fvp.sh --dry-run
   ./run_fvp.sh --fvpconf build/tmp_baremetal/deploy/images/apollo-fvp/nexios-image-apollo-fvp.fvpconf
@@ -131,33 +125,6 @@ validate_tmux_name()
         die "tmux session name must contain only letters, numbers, dot, underscore, or dash: $1"
 }
 
-first_existing_glob()
-{
-    local pattern="$1"
-    local item
-    shopt -s nullglob
-    for item in ${pattern}; do
-        printf '%s\n' "${item}"
-        shopt -u nullglob
-        return 0
-    done
-    shopt -u nullglob
-    return 1
-}
-
-source_sdk_if_present()
-{
-    local env_file
-    env_file="$(first_existing_glob "${SDK_DIR}/environment-setup-*" || true)"
-    [[ -n "${env_file}" ]] || return 0
-
-    printf 'Sourcing SDK environment: %s\n' "${env_file}"
-    set +u
-    # shellcheck source=/dev/null
-    source "${env_file}"
-    set -u
-}
-
 resolve_deploy_dir()
 {
     if [[ -n "${DEPLOY_DIR}" ]]; then
@@ -165,11 +132,7 @@ resolve_deploy_dir()
         return 0
     fi
 
-    if ((LOCAL_MODE)); then
-        printf '%s/local-apollo-fvp/deploy\n' "${YOCTO_BUILD_DIR}"
-    else
-        printf '%s/tmp_baremetal/deploy/images/%s\n' "${YOCTO_BUILD_DIR}" "${MACHINE}"
-    fi
+    printf '%s/tmp_baremetal/deploy/images/%s\n' "${YOCTO_BUILD_DIR}" "${MACHINE}"
 }
 
 resolve_fvpconf()
@@ -184,13 +147,6 @@ resolve_fvpconf()
 
     if [[ -n "${FVP_CONF}" ]]; then
         printf '%s\n' "${FVP_CONF}"
-        return 0
-    fi
-
-    if ((LOCAL_MODE)); then
-        stable="${deploy_dir}/apollo-fvp-local.fvpconf"
-        [[ -f "${stable}" ]] || return 1
-        printf '%s\n' "${stable}"
         return 0
     fi
 
@@ -683,7 +639,6 @@ supervise_run()
         done
     fi
 
-    source_sdk_if_present
     require_command telnet
     require_command python3
 
@@ -834,7 +789,6 @@ start_tmux()
     FVP_CONF="$(abspath "${FVP_CONF}")"
     OUT_DIR="$(abspath "${OUT_DIR}")"
     RUNFVP_BIN="$(abspath "${RUNFVP_BIN}")"
-    SDK_DIR="$(abspath "${SDK_DIR}")"
     mkdir -p "${OUT_DIR}/uarts"
 
     if [[ -n "${DEBUG_TARGET}" ]]; then
@@ -886,8 +840,8 @@ start_tmux()
     FVP_START_FILE="${control_dir}/start"
     supervisor_body=$(
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
-        printf 'ROOT_DIR=%q MACHINE=%q YOCTO_BUILD_DIR=%q DEPLOY_DIR=%q SDK_DIR=%q ' \
-            "${ROOT_DIR}" "${MACHINE}" "${YOCTO_BUILD_DIR}" "${DEPLOY_DIR}" "${SDK_DIR}"
+        printf 'ROOT_DIR=%q MACHINE=%q YOCTO_BUILD_DIR=%q DEPLOY_DIR=%q ' \
+            "${ROOT_DIR}" "${MACHINE}" "${YOCTO_BUILD_DIR}" "${DEPLOY_DIR}"
         printf 'RUNFVP_BIN=%q FVP_CONF=%q OUT_DIR=%q EXTRA_ARGS_FILE=%q ' \
             "${RUNFVP_BIN}" "${FVP_CONF}" "${OUT_DIR}" "${EXTRA_ARGS_FILE}"
         printf 'UART_PORT_DIR=%q FVP_START_FILE=%q ' \
@@ -992,10 +946,6 @@ while (($# > 0)); do
             MACHINE="$2"
             shift 2
             ;;
-        --local)
-            LOCAL_MODE=1
-            shift
-            ;;
         --bsp)
             BSP_MODE=1
             shift
@@ -1098,7 +1048,6 @@ fi
 
 BOOT_PROFILE="product"
 if ((BSP_MODE)); then
-    ((LOCAL_MODE == 0)) || die "--bsp cannot be used with --local"
     BOOT_PROFILE="bsp-initramfs"
 fi
 
@@ -1152,29 +1101,16 @@ else
 fi
 RUNFVP_BIN="$(abspath "${RUNFVP_BIN}")"
 
-if ((LOCAL_MODE)); then
-    [[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
-        die "local deploy directory not found: ${DEPLOY_DIR}. Run ./local_build.sh --package first."
-    [[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
-        die "FVP config not found under ${DEPLOY_DIR}. Run ./local_build.sh --package first or pass --fvpconf."
-else
-    [[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
-        die "Yocto deploy directory not found: ${DEPLOY_DIR}. Run ./yocto_build.sh first."
-    [[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
-        die "FVP config not found under ${DEPLOY_DIR}. Run ./yocto_build.sh first or pass --fvpconf."
-fi
+[[ "${FVP_CONF_REQUESTED}" == 1 || -d "${DEPLOY_DIR}" ]] ||
+    die "Yocto deploy directory not found: ${DEPLOY_DIR}. Run ./yocto_build.sh first."
+[[ -n "${FVP_CONF}" && -f "${FVP_CONF}" ]] ||
+    die "FVP config not found under ${DEPLOY_DIR}. Run ./yocto_build.sh first or pass --fvpconf."
 
 if [[ -z "${TMUX_SESSION}" ]]; then
-    if ((LOCAL_MODE)); then
-        TMUX_SESSION="apollo-fvp-local-${RUN_STAMP}"
-    else
-        TMUX_SESSION="apollo-fvp-yocto-${RUN_STAMP}"
-    fi
+    TMUX_SESSION="apollo-fvp-yocto-${RUN_STAMP}"
 fi
 if [[ -z "${OUT_DIR}" ]]; then
-    if ((LOCAL_MODE)); then
-        OUT_DIR="${YOCTO_BUILD_DIR}/local-apollo-fvp/tmux-run/${RUN_STAMP}"
-    elif ((HEADLESS)); then
+    if ((HEADLESS)); then
         OUT_DIR="${YOCTO_BUILD_DIR}/fvp-headless/${MACHINE}-${RUN_STAMP}"
     else
         OUT_DIR="${YOCTO_BUILD_DIR}/fvp-tmux/${MACHINE}-${RUN_STAMP}"

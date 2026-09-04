@@ -144,9 +144,9 @@ def test_canonical_mode_command_preserves_requested_runner_contract(
     out_dir = tmp_path / "msix"
     command = task9.canonical_command("msix", rootfs, out_dir)
     assert command == [
-        sys.executable,
-        "scripts/run/run_qbox_apollo_fvp_full.py",
-        "--skip-build",
+        "./run_qbox_yocto.sh",
+        "--headless",
+        "--keep-running-after-pass",
         "--timeout",
         "900",
         "--rootfs",
