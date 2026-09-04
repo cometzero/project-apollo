@@ -94,8 +94,8 @@ def validate_topology(root: Path, violations: list[Violation]) -> list[str]:
         violations.append(Violation("stale-topology", str(template.relative_to(root)), "active template is not apollo-qvp"))
     if codex_config.exists():
         config = tomllib.loads(codex_config.read_text(encoding="utf-8"))
-        if (config.get("model"), config.get("model_reasoning_effort")) != ("gpt-5.6-sol", "high"):
-            violations.append(Violation("stale-model-default", ".codex/config.toml", "expected gpt-5.6-sol with high effort"))
+        if (config.get("model"), config.get("model_reasoning_effort")) != ("gpt-5.6-sol", "xhigh"):
+            violations.append(Violation("stale-model-default", ".codex/config.toml", "expected gpt-5.6-sol with xhigh effort"))
     if agents.exists():
         text = agents.read_text(encoding="utf-8")
         for token in DOC_REQUIREMENTS["AGENTS.md"]:
