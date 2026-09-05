@@ -29,6 +29,7 @@ EXPECTED_RANGES: Final = (
     0x20000000,
 )
 EXPECTED_MAP_SUFFIX: Final = (0, 0x10000)
+SMMU_PATH: Final = "/soc/iommu@1c0000000"
 
 
 def _run(*command: str) -> str:
@@ -102,6 +103,39 @@ def compiled_fvp_dtbs(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, P
         ),
     )
     return tfa_dtb, linux_dtb
+
+
+@pytest.fixture(scope="module")
+def compiled_qvp_dtb(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    out = tmp_path_factory.mktemp("apollo-qvp-smmu-dts")
+    return _compile(
+        LINUX / "arch/arm64/boot/dts/arm/apollo-qvp.dts",
+        out / "linux-apollo-qvp.dtb",
+        (
+            LINUX / "include",
+            LINUX / "scripts/dtc/include-prefixes",
+            LINUX / "arch/arm64/boot/dts/arm",
+        ),
+    )
+
+
+def test_qvp_smmu_matches_modeled_ap_contract(compiled_qvp_dtb: Path) -> None:
+    its_path = "/soc/interrupt-controller@20800000/msi-controller@20840000"
+    its_phandle = _cells(compiled_qvp_dtb, its_path, "phandle")
+    properties = set(_run("fdtget", "-p", str(compiled_qvp_dtb), SMMU_PATH).split())
+
+    assert _string(compiled_qvp_dtb, SMMU_PATH, "compatible") == "arm,smmu-v3"
+    assert _cells(compiled_qvp_dtb, SMMU_PATH, "reg") == (
+        1,
+        0xC0000000,
+        0,
+        0x08000000,
+    )
+    assert _cells(compiled_qvp_dtb, SMMU_PATH, "#iommu-cells") == (1,)
+    assert _cells(compiled_qvp_dtb, SMMU_PATH, "interrupts") == (0, 65, 1)
+    assert _string(compiled_qvp_dtb, SMMU_PATH, "interrupt-names") == "combined"
+    assert _cells(compiled_qvp_dtb, SMMU_PATH, "msi-parent") == (*its_phandle, 0x10000)
+    assert "dma-coherent" in properties
 
 
 def test_aligned_host_contract_when_fvp_dtbs_are_compiled(

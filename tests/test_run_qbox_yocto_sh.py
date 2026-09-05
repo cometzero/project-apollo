@@ -430,6 +430,15 @@ def test_run_qbox_yocto_forwards_pfdi_probe(tmp_path: Path) -> None:
     assert "--pfdi-probe" in dry_run_command_argv(result.stdout)
 
 
+def test_run_qbox_yocto_forwards_dwc_peripheral_probe(tmp_path: Path) -> None:
+    # Given: a headless QBox launch requesting DWC guest qualification.
+    result = run_qvp_dry_run(tmp_path, extra_args=["--dwc-peripheral-probe"])
+
+    # Then: the canonical Python runner receives the opt-in selector.
+    assert result.returncode == 0, result.stderr
+    assert "--dwc-peripheral-probe" in dry_run_command_argv(result.stdout)
+
+
 def test_run_qbox_yocto_forwards_si_cl1_pfdi_probe(tmp_path: Path) -> None:
     # Given: a headless QBox launch requesting the SI CL1 PFDI probe.
     result = run_qvp_dry_run(
@@ -1115,7 +1124,8 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     )
 
     result = subprocess.run(
-        [str(SCRIPT), "--no-attach"],
+        # Fake tmux does not isolate the launcher's host process cleanup.
+        [str(SCRIPT), "--multi-session", "--no-attach"],
         cwd=ROOT,
         env=env,
         check=False,
@@ -1207,9 +1217,11 @@ def test_run_qbox_yocto_qvp_tmux_preserves_machine_console_prompts(
     )
 
     # When: run_qbox_yocto.sh starts the tmux path for apollo-qvp.
+    # Preserve real QBox processes while the fake tmux records this test.
     result = subprocess.run(
         [
             str(SCRIPT),
+            "--multi-session",
             "--build-dir",
             str(yocto_build),
             "--no-attach",

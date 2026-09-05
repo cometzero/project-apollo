@@ -266,6 +266,8 @@ SERVICE_MODEL_GAPS = [
 ]
 
 PROBE_DONE_MARKER = "__QBOX_PROBE_DONE__"
+DWC_PROBE_START_MARKER = "__QBOX_DWC_PROBE_START__"
+DWC_PROBE_DONE_MARKER = "__QBOX_DWC_PROBE_DONE__"
 SECURE_SERVICE_PROBE_DONE_MARKER = "__QBOX_SECURE_SERVICE_PROBE_DONE__"
 FWU_PROBE_START_MARKER = "__QBOX_FWU_PROBE_START__"
 FWU_REBOOT_REQUESTED_MARKER = "__QBOX_FWU_REBOOT_REQUESTED__"
@@ -2234,6 +2236,159 @@ def secure_service_probe_commands(
     return commands
 
 
+def dwc_peripheral_probe_commands() -> list[str]:
+    """Return POSIX-shell commands for the opt-in DWC guest contract."""
+    commands = [f"echo {DWC_PROBE_START_MARKER}"]
+    for bus in range(6):
+        commands.append(
+            "dev=/sys/bus/i2c/devices/"
+            f"{bus}-0050; p=\"$dev/eeprom\"; tx=/tmp/dwc-i2c-{bus}.tx; rx=/tmp/dwc-i2c-{bus}.rx; "
+            f"printf '%s' 'DWC_I2C_{bus}_OK' > \"$tx\"; "
+            "d=$(readlink \"$dev/driver\" 2>/dev/null); case \"$d\" in */at24) v=0;; *) v=1;; esac; "
+            "if [ \"$v\" -eq 0 ] && [ -r \"$p\" ] && [ -w \"$p\" ]; then "
+            "cat \"$tx\" > \"$p\"; w=$?; "
+            "dd if=\"$p\" of=\"$rx\" bs=12 count=1 2>/dev/null; r=$?; "
+            "cmp -s \"$tx\" \"$rx\"; c=$?; "
+            "else w=127; r=127; c=127; fi; "
+            f"printf '__QBOX_DWC_I2C|bus={bus}|addr=0x50|driver_rc=%s|write_rc=%s|read_rc=%s|cmp_rc=%s\\n' \"$v\" \"$w\" \"$r\" \"$c\""
+        )
+    # PREEMPT_RT printk can split the shell prompt while draining iteration logs.
+    # Keep those messages in dmesg and restore the original console log level.
+    commands.append(
+        "read -r dwc_loglevel dwc_printk_rest < /proc/sys/kernel/printk; "
+        "dmesg -n 4; "
+        "dwc_timeout_path=/sys/module/spi/parameters/transfer_timeout_margin_ms; "
+        "dwc_margin=0; dwc_restore=127; dwc_unload=127; dwc_fresh=0; "
+        "if read -r dwc_saved_margin < \"$dwc_timeout_path\" && "
+        "echo 30000 > \"$dwc_timeout_path\"; then "
+        "read -r dwc_margin < \"$dwc_timeout_path\"; "
+        "modprobe -r spi-loopback-test >/dev/null 2>&1; dwc_unload=$?; "
+        "if [ ! -d /sys/module/spi_loopback_test ]; then dwc_fresh=1; "
+        "modprobe spi-loopback-test loopback=1 loop_req=1 delay_ms=0; m=$?; b=0; "
+        "else m=127; b=0; fi; "
+        "for d in /sys/bus/spi/drivers/spi-loopback-test/spi*; do "
+        "[ -d \"$d\" ] && b=$((b + 1)); done; "
+        "echo \"$dwc_saved_margin\" > \"$dwc_timeout_path\"; dwc_restore=$?; "
+        "else m=127; b=0; fi; "
+        "dmesg | grep -E 'spi-loopback-test.*(Finished|test failed)' || true; "
+        "dmesg -n \"$dwc_loglevel\"; "
+        "printf '__QBOX_DWC_SPI|module_rc=%s|bound=%s|timeout_margin_ms=%s|restore_rc=%s|unload_rc=%s|fresh_load=%s\\n' "
+        "\"$m\" \"$b\" \"$dwc_margin\" \"$dwc_restore\" \"$dwc_unload\" \"$dwc_fresh\""
+    )
+    commands.extend(
+        [
+            "dwc_uart_transfer() { tx=$1; rx=$2; tag=$3; f=/tmp/dwc-uart-$tag.tx; "
+            "g=/tmp/dwc-uart-$tag.rx; stty -F \"$tx\" raw -echo -ixon -ixoff -crtscts 115200; a=$?; "
+            "stty -F \"$rx\" raw -echo -ixon -ixoff -crtscts 115200; b=$?; "
+            "printf '%s' \"DWC_UART_$tag\" > \"$f\"; "
+            "if [ \"$a\" -eq 0 ] && [ \"$b\" -eq 0 ]; then "
+            "n=$(wc -c < \"$f\"); dd if=\"$rx\" of=\"$g\" bs=1 count=\"$n\" 2>/dev/null & p=$!; "
+            "sleep 1; cat \"$f\" > \"$tx\"; w=$?; i=0; "
+            "while kill -0 \"$p\" 2>/dev/null && [ \"$i\" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done; "
+            "if kill -0 \"$p\" 2>/dev/null; then kill \"$p\"; wait \"$p\"; r=124; "
+            "else wait \"$p\"; r=$?; fi; "
+            "cmp -s \"$f\" \"$g\"; c=$?; else w=127; r=127; c=127; fi; "
+            "printf '__QBOX_DWC_UART|direction=%s|stty_tx_rc=%s|stty_rx_rc=%s|write_rc=%s|read_rc=%s|cmp_rc=%s\\n' "
+            "\"$tag\" \"$a\" \"$b\" \"$w\" \"$r\" \"$c\"; }",
+            "dwc_uart_transfer /dev/ttyS0 /dev/ttyS1 0-to-1",
+            "dwc_uart_transfer /dev/ttyS1 /dev/ttyS0 1-to-0",
+            "dwc_uart_transfer /dev/ttyS2 /dev/ttyS3 2-to-3",
+            "dwc_uart_transfer /dev/ttyS3 /dev/ttyS2 3-to-2",
+            f"echo {DWC_PROBE_DONE_MARKER}",
+        ]
+    )
+    return commands
+
+
+def _dwc_marker_fields(line: str, marker: str) -> dict[str, str] | None:
+    if not line.startswith(marker + "|"):
+        return None
+    fields: dict[str, str] = {}
+    for item in line.split("|")[1:]:
+        key, separator, value = item.partition("=")
+        if not separator or not key:
+            return None
+        fields[key] = value
+    return fields
+
+
+def _dwc_int(fields: dict[str, str], key: str) -> int | None:
+    try:
+        return int(fields[key])
+    except (KeyError, ValueError):
+        return None
+
+
+def evaluate_dwc_peripheral_probe(
+    primary_console: str, requested: bool = False
+) -> dict[str, object]:
+    """Parse guest markers without treating missing tooling as a pass."""
+    i2c: dict[str, dict[str, object]] = {}
+    spi: dict[str, object] = {"module_rc": None, "bound": None, "passed": False}
+    uart: dict[str, dict[str, object]] = {}
+    clean_primary = clean_text(primary_console)
+    for line in clean_primary.splitlines():
+        fields = _dwc_marker_fields(line.strip(), "__QBOX_DWC_I2C")
+        if fields is not None:
+            bus = _dwc_int(fields, "bus")
+            if bus is not None:
+                record = {
+                    "address": fields.get("addr"),
+                    "driver_rc": _dwc_int(fields, "driver_rc"),
+                    "write_rc": _dwc_int(fields, "write_rc"),
+                    "read_rc": _dwc_int(fields, "read_rc"),
+                    "cmp_rc": _dwc_int(fields, "cmp_rc"),
+                }
+                record["passed"] = (
+                    record["address"] == "0x50"
+                    and all(
+                        record[key] == 0
+                        for key in ("driver_rc", "write_rc", "read_rc", "cmp_rc")
+                    )
+                )
+                i2c[str(bus)] = record
+            continue
+        fields = _dwc_marker_fields(line.strip(), "__QBOX_DWC_SPI")
+        if fields is not None:
+            spi["module_rc"] = _dwc_int(fields, "module_rc")
+            spi["bound"] = _dwc_int(fields, "bound")
+            spi["timeout_margin_ms"] = _dwc_int(fields, "timeout_margin_ms")
+            spi["restore_rc"] = _dwc_int(fields, "restore_rc")
+            spi["unload_rc"] = _dwc_int(fields, "unload_rc")
+            spi["fresh_load"] = _dwc_int(fields, "fresh_load")
+            spi["passed"] = (
+                spi["module_rc"] == 0 and spi["bound"] == 4
+                and spi["timeout_margin_ms"] == 30000 and spi["restore_rc"] == 0
+                and spi["fresh_load"] == 1
+            )
+            continue
+        fields = _dwc_marker_fields(line.strip(), "__QBOX_DWC_UART")
+        if fields is not None and fields.get("direction"):
+            record = {
+                key: _dwc_int(fields, key)
+                for key in ("stty_tx_rc", "stty_rx_rc", "write_rc", "read_rc", "cmp_rc")
+            }
+            record["passed"] = all(value == 0 for value in record.values())
+            uart[fields["direction"]] = record
+    i2c_passed = set(i2c) == {str(bus) for bus in range(6)} and all(
+        bool(record["passed"]) for record in i2c.values()
+    )
+    expected_directions = {"0-to-1", "1-to-0", "2-to-3", "3-to-2"}
+    uart_passed = set(uart) == expected_directions and all(
+        bool(record["passed"]) for record in uart.values()
+    )
+    complete = DWC_PROBE_DONE_MARKER in clean_primary
+    return {
+        "requested": requested,
+        "start_marker": DWC_PROBE_START_MARKER in clean_primary,
+        "complete": complete,
+        "passed": complete and i2c_passed and bool(spi["passed"]) and uart_passed,
+        "i2c": {"devices": i2c, "passed": i2c_passed},
+        "spi": spi,
+        "uart": {"directions": uart, "passed": uart_passed},
+    }
+
+
 def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
     commands: list[str] = []
     done_command = f"echo {PROBE_DONE_MARKER}"
@@ -2251,6 +2406,12 @@ def post_login_probe_commands(args: argparse.Namespace) -> list[str]:
         commands.append(command)
     if args.fwu_probe:
         commands.extend(fwu_probe_commands(args.fwu_system_running_timeout))
+    if args.dwc_peripheral_probe:
+        dwc_commands = dwc_peripheral_probe_commands()
+        if commands and commands[-1] == done_command:
+            commands = commands[:-1] + dwc_commands + [done_command]
+        else:
+            commands.extend(dwc_commands)
     return commands
 
 
@@ -2375,6 +2536,7 @@ def evaluate_post_login_probe(
     primary_console: str,
     secure_console: str = "",
     rse_console: str = "",
+    dwc_peripheral_requested: bool = False,
 ) -> dict[str, object]:
     clean_primary = clean_text(primary_console)
     clean_secure = clean_text(secure_console)
@@ -2408,6 +2570,9 @@ def evaluate_post_login_probe(
         "done_marker": PROBE_DONE_MARKER in clean_primary,
         "driver_patterns": driver_hits,
         "return_codes": rc_hits,
+        "dwc_peripheral_probe": evaluate_dwc_peripheral_probe(
+            clean_primary, requested=dwc_peripheral_requested
+        ),
         "secure_service_probe": {
             "done_marker": SECURE_SERVICE_PROBE_DONE_MARKER in clean_primary,
             "diag_done_marker": SECURE_SERVICE_DIAG_DONE_MARKER in clean_primary,
@@ -4064,6 +4229,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
     return {
         "requested": bool(
             args.post_login_probe
+            or args.dwc_peripheral_probe
             or operations
             or args.validation_profile is not None
         ),
@@ -4080,6 +4246,7 @@ def make_probe_state(args: argparse.Namespace) -> dict[str, object]:
         "pfdi_requested": bool(args.pfdi_probe),
         "pfdi_si_cl1_requested": bool(args.pfdi_si_cl1_probe),
         "ras_cpu_requested": bool(args.ras_cpu_probe),
+        "dwc_peripheral_requested": bool(args.dwc_peripheral_probe),
         "sent_login": False,
         "sent_probe": False,
         "complete": False,
@@ -4103,6 +4270,7 @@ def drive_post_login_probe(
     operation_mode = bool(state.get("operation_manifest_requested"))
     if not (
         args.post_login_probe
+        or args.dwc_peripheral_probe
         or operation_mode
         or args.validation_profile is not None
     ) or fifo_fd is None:
@@ -4243,6 +4411,7 @@ def drive_runtime_validation_profile(
 def probe_completion_required(args: argparse.Namespace) -> bool:
     return bool(
         args.post_login_probe
+        or args.dwc_peripheral_probe
         or args.primary_operation_manifest is not None
         or args.validation_profile is not None
     )
@@ -4541,6 +4710,7 @@ def run_platform(
             logs.get("primary_console", ""),
             logs.get("secure_console", ""),
             logs.get("rse", ""),
+            dwc_peripheral_requested=args.dwc_peripheral_probe,
         )
         post_login_probe.update(probe_eval)
         fwu_probe = object_dict(probe_eval.get("fwu_probe"))
@@ -4557,6 +4727,10 @@ def run_platform(
                     probe_eval.get("driver_patterns")
                 ).values()
             )
+            and (
+                not args.dwc_peripheral_probe
+                or bool(object_dict(probe_eval.get("dwc_peripheral_probe")).get("passed"))
+            )
         )
     if args.post_login_probe or args.primary_operation_manifest is not None:
         action_log = out_dir / "post-login-probe-actions.log"
@@ -4568,6 +4742,8 @@ def run_platform(
             "pfdi_si_cl1_requested: "
             f"{post_login_probe['pfdi_si_cl1_requested']}",
             f"ras_cpu_requested: {post_login_probe['ras_cpu_requested']}",
+            "dwc_peripheral_requested: "
+            f"{post_login_probe['dwc_peripheral_requested']}",
             f"input_path: {post_login_probe.get('input_path')}",
             f"sent_login: {post_login_probe['sent_login']}",
             f"sent_probe: {post_login_probe['sent_probe']}",
@@ -4959,12 +5135,14 @@ def write_result(
                 "secure_service_requested": bool(args.secure_service_probe),
                 "fwu_requested": bool(args.fwu_probe),
                 "pfdi_requested": bool(args.pfdi_probe),
+                "dwc_peripheral_requested": bool(args.dwc_peripheral_probe),
                 "complete": False,
                 "passed": False,
                 **evaluate_post_login_probe(
                     logs.get("primary_console", ""),
                     logs.get("secure_console", ""),
                     logs.get("rse", ""),
+                    dwc_peripheral_requested=args.dwc_peripheral_probe,
                 ),
             },
             "shared_memory_cleanup": shared_memory_cleanup or [],
@@ -5349,6 +5527,14 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Log in on the primary UART and run bounded Linux driver and "
             "service probes before accepting a full-system pass."
+        ),
+    )
+    parser.add_argument(
+        "--dwc-peripheral-probe",
+        action="store_true",
+        help=(
+            "Run the opt-in DWC I2C EEPROM, SPI loopback, and UART "
+            "cross-connect guest probe after login."
         ),
     )
     parser.add_argument("--primary-operation-manifest", type=Path)
@@ -6095,6 +6281,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         or args.pfdi_probe
         or args.pfdi_si_cl1_probe
         or args.ras_cpu_probe
+        or args.dwc_peripheral_probe
     ):
         args.post_login_probe = True
     if args.rse_sram_dmi_smoke:
@@ -6107,6 +6294,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                 ("--pfdi-probe", args.pfdi_probe),
                 ("--pfdi-si-cl1-probe", args.pfdi_si_cl1_probe),
                 ("--ras-cpu-probe", args.ras_cpu_probe),
+                ("--dwc-peripheral-probe", args.dwc_peripheral_probe),
             )
             if enabled
         ]

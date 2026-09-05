@@ -188,7 +188,7 @@ FAIL_IF_MISSING: Final[set[str]] = {
 PARTIAL_MODEL_ROWS: Final[dict[str, str]] = {
     "Shared SRAM": "QBox models the AP-used shared SRAM subwindow, not the full reserved programmer-model span.",
     "GIC": "QBox models AP GIC distributor, ITS, and active redistributors as subwindows.",
-    "AP Memory Expansion": "QBox models the current RoS virtio and RTC AP expansion subwindows.",
+    "AP Memory Expansion": "QBox models the current RoS virtio, RTC, and DesignWare peripheral subwindows.",
     "System Management Domain Access Region": "QBox models the AP ATU translation aperture used by the current full-system path.",
     "DRAM low": "QBox backs the current bootable low DRAM extent and leaves the top carveout unbacked.",
     "SMMU+NI-710AE GPV + PCIe CTRL+PHY": "QBox models the AP SMMU subwindow; NI-710AE GPV and PCIe CTRL/PHY remain deferred.",
@@ -237,6 +237,9 @@ REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
         ("ap_virtionet_0", "mem"),
         ("ap_virtiorng_0", "mem"),
         ("ap_rtc_0", "mem"),
+        *((f"ap_dw_i2c_{index}", "target_socket") for index in range(6)),
+        *((f"ap_dw_ssi_{index}", "target_socket") for index in range(4)),
+        *((f"ap_dw_uart_{index}", "target_socket") for index in range(4)),
     ),
     "System Management Domain Access Region": (("host_ap_atu", "translation_socket"),),
     "RGIC2LGIC_MESSREG": (("ap_rgic2lgic_messreg", "target_socket"),),
@@ -505,6 +508,17 @@ def parse_ros_bindings(ap_compute_text: str, ros_text: str) -> list[ApViewBindin
         clean_text,
     ):
         bindings.append(ApViewBinding("ros.lua", match.group(1), match.group(2), "ros_bind_target"))
+    if "visit_dwc_targets(platform, bind_ap_target)" in clean_text:
+        for prefix, count in (("ap_dw_i2c_", 6), ("ap_dw_ssi_", 4), ("ap_dw_uart_", 4)):
+            for index in range(count):
+                bindings.append(
+                    ApViewBinding(
+                        "ros.lua",
+                        f"{prefix}{index}",
+                        "target_socket",
+                        "ros_dwc_bind_target_loop",
+                    )
+                )
     return bindings
 
 
@@ -593,6 +607,45 @@ def add_smmu_factory_socket(
         sockets.append(LuaSocket(lua_file, "ap_smmu_0", current_module, "target_socket", address, size))
 
 
+def add_ros_dwc_sockets(
+    text: str,
+    sockets: list[LuaSocket],
+    constants: dict[str, int],
+    tables: dict[str, list[int]],
+    lua_file: str,
+) -> None:
+    size = constants.get("ROS_MMIO_SIZE")
+    if size is None:
+        return
+    groups = (
+        ("ROS_DW_I2C_BASES", "ap_dw_i2c_", "dw_apb_i2c", 6),
+        ("ROS_DW_SSI_BASES", "ap_dw_ssi_", "dw_apb_ssi", 4),
+        ("ROS_DW_UART_BASES", "ap_dw_uart_", "dw_apb_uart", 4),
+    )
+    for table_name, prefix, model, count in groups:
+        match = re.search(
+            rf"\blocal\s+{table_name}\s*=\s*\{{([^}}]*)\}}", text, re.S
+        )
+        addresses = (
+            [int(value, 0) for value in re.findall(r"0x[0-9a-fA-F]+|\d+", match.group(1))]
+            if match
+            else []
+        )
+        if len(addresses) != count or f'moduletype = "{model}"' not in text:
+            continue
+        for index, address in enumerate(addresses):
+            sockets.append(
+                LuaSocket(
+                    lua_file,
+                    f"{prefix}{index}",
+                    model,
+                    "target_socket",
+                    address,
+                    size,
+                )
+            )
+
+
 def current_coverage(root: Path) -> list[LuaSocket]:
     apollo = root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block"
     lua_files = [
@@ -616,6 +669,7 @@ def current_coverage(root: Path) -> list[LuaSocket]:
     add_smmu_factory_socket(
         texts["ap_compute.lua"], sockets, constants, tables, "ap_compute.lua"
     )
+    add_ros_dwc_sockets(texts["ros.lua"], sockets, constants, tables, "ros.lua")
     return sorted(sockets, key=lambda item: (item.address, item.object_name, item.socket_name))
 
 

@@ -47,6 +47,7 @@ Options:
   --reset-rse-state           Reset persistent state from the selected image
   --no-persistent-rse-state   Use a pristine per-run RSE flash copy
   --uboot-only                Validate only through U-Boot FWU Regular State
+  --dwc-peripheral-probe      Run opt-in DWC I2C/SPI/UART guest qualification
   --headless                  Run without tmux and write logs under --out-dir
   --monitor                   Enable the QBox web dashboard (default port: 18080)
   --monitor-port PORT         Enable the dashboard on the selected TCP port
@@ -712,6 +713,7 @@ MONITOR=0
 MONITOR_PORT=18080
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
+DWC_PERIPHERAL_PROBE=0
 NO_ATTACH="${NO_ATTACH:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 MULTI_SESSION="${MULTI_SESSION:-0}"
@@ -890,6 +892,10 @@ while (($#)); do
         --uboot-only)
             UBOOT_ONLY=1
             KEEP_RUNNING_AFTER_PASS=0
+            shift
+            ;;
+        --dwc-peripheral-probe)
+            DWC_PERIPHERAL_PROBE=1
             shift
             ;;
         --headless)
@@ -1526,6 +1532,9 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
 fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
+if [[ "${DWC_PERIPHERAL_PROBE}" == "1" ]]; then
+    RUNNER_CMD+=(--dwc-peripheral-probe)
+fi
 
 if [[ -z "${DEBUG_RESULT}" ]]; then
     DEBUG_RESULT="${OUT_DIR}/debug-result.json"

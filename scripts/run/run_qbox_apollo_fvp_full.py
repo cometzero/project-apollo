@@ -2160,6 +2160,8 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         cmd.append("--allow-blank-rse-otp")
     if args.post_login_probe and not args.uboot_only:
         cmd.append("--post-login-probe")
+    if args.dwc_peripheral_probe and not args.uboot_only:
+        cmd.append("--dwc-peripheral-probe")
     if (
         args.validation_profile is not None
         and not args.uboot_only
@@ -2399,6 +2401,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         dest="post_login_probe",
         action="store_false",
         help="Disable the root-shell gate for focused boot diagnostics.",
+    )
+    parser.add_argument(
+        "--dwc-peripheral-probe",
+        action="store_true",
+        help=(
+            "Run the opt-in DWC I2C EEPROM, SPI loopback, and UART "
+            "cross-connect guest probe after login."
+        ),
     )
     parser.add_argument(
         "--pfdi-probe",
@@ -2702,7 +2712,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             for step in validation_spec.steps
             if step.console == Console.SI0
         ]
-    if args.pfdi_probe or args.pfdi_si_cl1_probe or args.ras_cpu_probe:
+    if (
+        args.pfdi_probe
+        or args.pfdi_si_cl1_probe
+        or args.ras_cpu_probe
+        or args.dwc_peripheral_probe
+    ):
         args.post_login_probe = True
     if args.monitor_port is not None:
         if not 1 <= args.monitor_port <= 65535:
