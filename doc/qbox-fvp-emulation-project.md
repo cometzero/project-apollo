@@ -648,6 +648,11 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
+PCA9539 board integration passed focused Linux qualification: I2C0 shares its EEPROM with
+the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`.
+See [board wiring and qualification](board/pca9539.md) for the current evidence
+and functional/electrical modeling boundaries.
+
 1. Add one software-visible malformed/denied transaction followed by a normal
    recovery transaction without changing firmware or kernel sources.
 2. Ground and implement the next hardware safety source, with APU violation,
