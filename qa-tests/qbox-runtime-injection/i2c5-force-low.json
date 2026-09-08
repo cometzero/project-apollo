@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "target": "apollo.irq.i2c5",
+  "action": "force-low",
+  "reset_domain": "ap"
+}

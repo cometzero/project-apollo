@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "target": "platform.host_ap_si_cl1_mhu_pbx",
+  "action": "drop-next-doorbell",
+  "reset_domain": "ap",
+  "parameters": {"channel": 0}
+}

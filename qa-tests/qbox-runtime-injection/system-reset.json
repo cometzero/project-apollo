@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "target": "apollo.control.system-reset",
+  "action": "pulse",
+  "reset_domain": "system",
+  "parameters": {"duration_ns": 1000}
+}
