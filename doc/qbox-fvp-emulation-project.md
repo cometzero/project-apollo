@@ -648,6 +648,11 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
+Runtime event injection extends the existing Monitor with absolute-time
+requests, generation admission, an I2C5 IRQ proxy, HIPC doorbell drop and
+the existing full-system reset path. See [implementation and qualification
+details](qbox-event-injection.md), including the strict quantum boot limitation.
+
 HSOC PERI0/PERI1 pinctrl integration passed focused validation: PERI0 has
 14 banks/56 pins and PERI1 has 8 banks/36 pins. SPI2/3 and UART2/3 use PERI1;
 I2C0–5, SPI0/1 and UART0/1 remain on PERI0. Bank IRQs, per-pin mux/config,
