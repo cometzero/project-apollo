@@ -648,6 +648,12 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
+HSOC PERI0/PERI1 pinctrl integration passed focused validation: PERI0 has
+14 banks/56 pins and PERI1 has 8 banks/36 pins. SPI2/3 and UART2/3 use PERI1;
+I2C0–5, SPI0/1 and UART0/1 remain on PERI0. Bank IRQs, per-pin mux/config,
+GPIO loopback, short SPI transfers and UART pairs passed Linux tests.
+See [the register contract and validation results](board/hsoc-pinctrl.md).
+
 TPS6594-Q1 board integration passed focused qualification using the existing Linux MFD,
 regulator, pinctrl/GPIO, and RTC drivers. See [PMIC board validation](board/tps6594.md)
 for the wiring, commands, and verification scope.

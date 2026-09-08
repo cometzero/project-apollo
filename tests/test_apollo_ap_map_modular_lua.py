@@ -47,6 +47,8 @@ def test_current_modular_map_resolves_real_ap_components() -> None:
     }
     assert ("host_ap_shared_sram", "target_socket", 0x0, 0x100000) in identities
     assert ("ap_primary_uart", "target_socket", 0x1A400000, 0x10000) in identities
+    assert ("pinctrl_peri0", "target_socket", 0x301E0000, 0x10000) in identities
+    assert ("pinctrl_peri1", "target_socket", 0x301F0000, 0x10000) in identities
     assert ("host_ap_dram1", "target_socket", 0x80000000, 0x7F000000) in identities
     assert any(identity[0] == "ap_smmu_0" and identity[2] == 0x1C0000000 for identity in identities)
     assert any(identity[0] == "ap_cl0_ni710ae_fmu" for identity in identities)

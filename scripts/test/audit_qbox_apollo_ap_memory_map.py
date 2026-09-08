@@ -195,6 +195,8 @@ PARTIAL_MODEL_ROWS: Final[dict[str, str]] = {
     "DRAM high": "QBox backs the current FVP-compatible 2 GiB high DRAM bank at the multichip DRAM aperture base.",
 }
 WATCHED_OBJECTS: Final[set[str]] = {
+    "pinctrl_peri0",
+    "pinctrl_peri1",
     "host_ap_shared_sram",
     "host_ap_dram1", "host_ap_dram2", "ap_primary_uart", "ap_secure_uart",
     "ap_watchdog_0", "ap_secure_wdog",
@@ -230,6 +232,8 @@ REQUIRED_AP_VIEW_BINDINGS: Final[dict[str, tuple[tuple[str, str], ...]]] = {
     ),
     "GIC": (("ap_gic", "dist_iface"), ("ap_gic", "redist_iface_*"), ("ap_gic_its", "mem")),
     "AP Memory Expansion": (
+        ("pinctrl_peri0", "target_socket"),
+        ("pinctrl_peri1", "target_socket"),
         ("ap_virtioblk_0", "mem"),
         ("ap_virtioblk_1", "mem"),
         ("ap_virtioblk_2", "mem"),
@@ -653,6 +657,7 @@ def current_coverage(root: Path) -> list[LuaSocket]:
         "rse.lua",
         "ap_compute.lua",
         "ros.lua",
+        "pinctrl.lua",
         "system_mgmt.lua",
         "si_cl0.lua",
         "si_cl1.lua",
