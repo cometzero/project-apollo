@@ -648,6 +648,10 @@ than relying on tmux screen state.
 
 ## Near-Term Backlog
 
+TPS6594-Q1 board integration passed focused qualification using the existing Linux MFD,
+regulator, pinctrl/GPIO, and RTC drivers. See [PMIC board validation](board/tps6594.md)
+for the wiring, commands, and verification scope.
+
 PCA9539 board integration passed focused Linux qualification: I2C0 shares its EEPROM with
 the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`.
 See [board wiring and qualification](board/pca9539.md) for the current evidence

@@ -3,6 +3,7 @@
 작성일: 2026-09-08
 
 실제 board component 구현과 시험 명령은 [PCA9539 검증](pca9539.md)을 참조한다.
+PMIC 추가 구성은 [TPS6594-Q1 검증](tps6594.md)을 참조한다.
 
 이 문서는 Apollo QVP/QBox의 SoC port에 board-level component를 연결하고,
 Linux의 GPIO·I2C·SPI·UART 제어가 해당 component의 동작으로 전달되도록
