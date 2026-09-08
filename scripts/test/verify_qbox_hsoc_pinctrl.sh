@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 #
-# Guest-side HSOC PERI0 pinctrl qualification for Apollo QVP/QBox.
+# Guest-side HSOC PERI0/PERI1 pinctrl qualification for Apollo QVP/QBox.
 # Run after a BSP boot with:
 #   ./scripts/run/ssh_run.sh scripts/test/verify_qbox_hsoc_pinctrl.sh
 
@@ -45,6 +45,19 @@ die()
     shift
     emit "event=fail|code=$code|reason=$*"
     exit "$code"
+}
+
+check_contiguous_pins()
+{
+    pinctrl_instance=$1
+    pinctrl_expected=$2
+    pinctrl_debug_file=/sys/kernel/debug/pinctrl/$pinctrl_instance/pins
+    [ -r "$pinctrl_debug_file" ] || return 1
+    awk -v expected="$pinctrl_expected" '
+        /^pin [0-9]+ / { if ($2 != count) bad = 1; count++ }
+        END { exit bad || count != expected }
+    ' "$pinctrl_debug_file" || return 1
+    emit "event=logical-pin-ids|controller=$pinctrl_instance|first=0|last=$((pinctrl_expected - 1))|status=PASS"
 }
 
 stop_process()
@@ -390,6 +403,11 @@ done
 [ "$total_pins" = 56 ] || die 19 "unexpected-total-pins-$total_pins"
 
 # Default peripheral states from pinctrl.dtsi.
+if [ ! -d /sys/kernel/debug/pinctrl ]; then
+    mount -t debugfs debugfs /sys/kernel/debug || die 41 'debugfs-unavailable'
+fi
+check_contiguous_pins 301e0000.pinctrl-hsoc-peri0-pinctrl 56 || die 41 'peri0-pin-ids-not-contiguous'
+check_contiguous_pins 301f0000.pinctrl-hsoc-peri1-pinctrl 36 || die 41 'peri1-pin-ids-not-contiguous'
 check_group 0 0 8 4 0 || die 20 'i2c0-3-default-pinmux-mismatch'
 check_group 1 0 4 4 0 || die 21 'i2c4-5-default-pinmux-mismatch'
 check_group 2 0 8 8 1 || die 22 'spi0-1-default-pinmux-mismatch'

@@ -8,7 +8,10 @@ an assertion of an existing Arm FVP register interface.
 `pinctrl_peri0` uses AP MMIO `0x301e0000`, size `0x10000`. Banks 0–5 have
 eight pins each; banks 6–13 have one pin each: 56 pins and 14 bank IRQ
 outputs. Bank N uses GIC SPI `334 + N` (architectural INTID `366 + N`).
-Physical pin IDs are `bank * 8 + offset`; nonexistent offsets remain holes.
+SystemC socket indices and `HSOC_PINMUX` hardware selectors use
+`bank * 8 + offset`. Linux pinctrl IDs are contiguous instead: PERI0
+uses 0–55 and PERI1 uses 0–35. The driver translates these logical IDs
+to the original bank register pages.
 
 `pinctrl_peri1` uses AP MMIO `0x301f0000`, size `0x10000`. Banks 0–3 have
 eight pins each and banks 4–7 have one pin each: 36 pins and 8 bank IRQs.
@@ -80,8 +83,15 @@ Mux selection gates these functional paths; this interface does not serialize
 SDA/SCL or UART waveforms. SPI currently uses the SSI model's behavioral
 loopback. Function selection must affect traffic and cannot be readback-only.
 
-Linux enumerates the banks and peripheral states from `pinctrl.dtsi` using
-`hsoc,peri0-pinctrl` or `hsoc,peri1-pinctrl`. Child GPIO banks expose their own GPIO/IRQ domains.
+`apollo-qvp.dts` declares the two controller nodes, including compatible,
+MMIO ranges and interrupts. `pinctrl.dtsi` extends `&pinctrl_peri0` and
+`&pinctrl_peri1` with bank and pinmux definitions only. Child GPIO banks
+expose their own GPIO/IRQ domains.
+
+The pinctrl offset in `gpio-ranges` advances by the actual bank width.
+PERI0 banks 6–13 start at 48, 49, 50, 51, 52, 53, 54 and 55;
+PERI1 banks 4–7 start at 32, 33, 34 and 35. Each bank's GPIO-local offset
+remains zero. MMIO bank spacing remains `0x1000`.
 `pinmux` entries use `HSOC_PINMUX(bank, pin, function)`, encoded as
 `((bank * 8 + pin) << 8) | function`. Standard `drive-strength` and
 `slew-rate` properties configure pin electrical metadata.
@@ -212,3 +222,27 @@ PASS이며 PERI1 bank3/7 counter는 각각 3→5, pending은 0이었다.
 `ap_9_1_1_memory_map: not_available`, `G1: not_run`은 여전히 FAIL이다
 (`full-coverage-audit.json`). DT schema, 대용량 SPI stress 및 위의
 analog/bit-level/FVP 동등성 제한은 이번에도 검증 범위 밖이다.
+
+### 2026-09-09 DTS 분리 및 연속 pin ID 검증
+
+`apollo-qvp.dts`로 controller 자원을 옮기고 `pinctrl.dtsi`의 GPIO range를
+연속화했다. `pinctrl-hsoc.c`는 bank별 `pin_base`를 누적하여 Linux pin ID를
+등록하고 이를 기존 hardware bank/offset으로 변환한다. `HSOC_PINMUX`와
+SystemC socket 번호 및 `0x1000` bank stride는 유지한다.
+
+증거는 `build/qbox-apollo-qvp/pinctrl-layout-20260909/`에 있다.
+
+- `cpp`/`dtc` 및 `fdtget`: 22개 bank의 GPIO range, controller phandle,
+  기존 IRQ tuple 확인 (`apollo-qvp.dts`, `apollo-qvp.dtb`, `dtc.log`).
+- `./yocto_build.sh --keep-conf --bsp`: PASS (`bsp-build.log`,
+  `kernel-compile.log`).
+- `./scripts/run/ssh_run.sh scripts/test/verify_qbox_hsoc_pinctrl.sh`:
+  두 controller의 연속 pin ID, GPIO/IRQ/ACK, 6개 EEPROM 및 I2C mux 검사
+  PASS (`guest-pinctrl-final.log`, `pinctrl-debugfs.log`).
+- `./scripts/run/ssh_run.sh scripts/test/verify_qbox_hsoc_peripherals.sh`:
+  SPI 4개와 UART 두 pair 양방향 통신 PASS (`guest-peripherals.log`).
+
+단독 arm64 LLVM `W=1` driver object compile도 통과했다. 전체 DT schema
+검사는 host dtschema가 요구 버전보다 낮아 수행하지 못했다. 최초 guest
+검사의 debugfs 경로를 실제 device/driver 결합 이름으로 수정한 뒤
+재실행했으며 최초 로그(`guest-pinctrl.log`)도 보존했다.
