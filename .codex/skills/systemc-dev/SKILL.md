@@ -51,9 +51,12 @@ Build the provider first:
 ./yocto_build.sh qbox-apollo-qvp-native -c compile
 ```
 
-Enable `QBOX_APOLLO_RUN_UNIT_TESTS` for the recipe in
-`build/conf/local.conf`, then run `bitbake qbox-apollo-qvp-native -c check
--f` for component tests.
+Provider unit tests run by default before installation. Run
+`bitbake qbox-apollo-qvp-native -c check -f` to repeat them.
+Select core suites with `QBOX_CORE_TEST_DIRS` and individual CTest names
+with `QBOX_CORE_TEST_REGEX` in `build/conf/local.conf`.
+`QBOX_CPU_TEST_ARCHS` selects CPU architectures; the native recipe defaults
+to broad component/sync/utility coverage and AArch64 CPU tests only.
 
 Then run the project contract when the component is integrated:
 

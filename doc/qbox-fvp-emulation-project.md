@@ -615,8 +615,11 @@ For each IP:
 
 Use these before claiming progress:
 
-Enable `QBOX_APOLLO_RUN_UNIT_TESTS:pn-qbox-apollo-qvp-native = "1"` in
-`build/conf/local.conf` before the `do_check` command.
+The native provider runs platform unit tests and selected QBox core suites
+by default in `do_check`, between compilation and installation. Core suites
+are selected with the space-separated `QBOX_CORE_TEST_DIRS`; execution can
+be narrowed further with `QBOX_CORE_TEST_REGEX` in `build/conf/local.conf`.
+See the Apollo platform README for defaults and examples.
 
 ```bash
 python3 -m py_compile scripts/run/run_qbox_apollo_fvp_full.py scripts/run/qbox_apollo_runtime.py
@@ -636,7 +639,93 @@ python3 scripts/test/audit_qbox_apollo_fvp_full_coverage.py --result-json build/
 For Arm FVP comparison, use non-interactive, file-backed FVP logging rather
 than relying on tmux screen state.
 
+### Yocto unit-test verification (2026-09-09)
+
+The provider now enables tests by default and builds separate platform and
+selected-core aggregates. Platform UART target names have an `apollo-`
+prefix to avoid collisions with the corresponding core tests. Selection
+uses native CMake directories and CTest regex filtering, not a new runner.
+
+- Full native recipe: `./yocto_build.sh --keep-conf qbox-apollo-qvp-native`
+  passed configure, compile, check, install, and sysroot population.
+- Final default CTest results: platform **55/55 PASS** (46 model, 5 UART,
+  3 four-CPU timer, 1 selection-config regression); core **14/14 PASS**
+  across Monitor, signal injector, I2C, SPI, and UART suites.
+- Selection verification used `QBOX_CORE_TEST_DIRS = "components/i2c
+  components/spi"` and `QBOX_CORE_TEST_REGEX =
+  "^(dw-apb-i2c-tests|dw-apb-ssi-tests)$"` through a temporary BitBake `-R`
+  configuration. Only those core suites were configured, and only the two
+  matching tests ran: **2/2 PASS**, while platform tests remained **55/55
+  PASS**. `local.conf` was not modified; the final build restored defaults.
+- Invalid directory selections are covered by the CMake regression test.
+  A separate unmatched-regex check exited nonzero with `No tests were
+  found`, as required. Diff whitespace checks and the core boundary audit
+  passed.
+- Evidence: `build/qbox-unit-tests/20260909/`, including
+  `final-default-build.log`, `selected-build.log`, `no-match.log`, and
+  separate `final-default/` and `selected/` CTest logs, inventories, JUnit
+  XML, and CMake caches.
+
+This verifies native recipe/unit-test behavior, not a new guest boot or
+full-system FVP comparison. Unselected core suites were not run.
+
+### Expanded core coverage and five-second policy (2026-09-09)
+
+The subsequent default selection is `components sync utils qbox`, with
+`QBOX_CPU_TEST_ARCHS = "aarch64"`. CPU matrix cases use
+`multithread-freerunning`, CPU counts 1/2/4, and `quantum_keeper`; dedicated
+CPU regressions retain their own parameters. The native configuration
+registers 88 core cases, including 38 AArch64 CPU cases, and no
+Hexagon/RISC-V CPU cases. Python binder remains disabled; macOS-only tests
+and the unregistered synchronization checker are not runtime coverage.
+
+The selection helper now lives in QBox core and is shared by standalone
+QBox and the overlay. Enabling the larger suite exposed and corrected
+embedded-source include paths, an out-of-scope Keystone patch command,
+CPU tests silently omitted by an unset `keystone_FOUND`, malformed icount
+command arguments, and the missing FSS runtime-helper build dependency.
+
+An initial native execution passed the first 49 non-CPU cases, then timed
+out after `aarch64-simple-write-test` printed the SystemC stop message.
+The suite was interrupted to avoid repeating the shutdown hang. That hang
+was **not fixed**: the user's subsequent policy excludes tests taking five
+seconds or longer.
+
+A per-process-group five-second timing probe measured all 143 registered
+commands (55 platform + 88 core), keeping raw exit codes separate from
+CTest verdicts. It identified 26 slow core cases: the router cache benchmark
+and 25 CPU cases. The recipe exclusion regex matches exactly that set.
+The retained set is 55 platform + 62 core cases, including 13 AArch64 CPU
+cases. Exclusion is not a PASS for those 26 cases, and the timing policy
+requires remeasurement for different hosts or CPU matrices.
+
+Expanded evidence is under `build/qbox-unit-tests/20260909-expanded/`:
+`initial-configure-failure.log`, `first-runtime/`, `all-inventory.json`,
+`profile_5s.py`, `timing-5s.jsonl`, and the final recipe/test logs.
+
+Final stable-source command:
+`./yocto_build.sh --keep-conf qbox-apollo-qvp-native` — **PASS**, including
+compile, `do_check`, install, and sysroot population. See `stable-build.log`
+and `final/` in that evidence directory. CTest verified **55/55 platform**
+and **62/62 core** cases; the largest individual durations were **1.106s**
+and **3.602s**, respectively. `qbox-core-unit-tests.excluded.list` records
+the 26 excluded cases. Diff whitespace checks and the core boundary audit
+also passed. No guest boot/FVP comparison was performed in this change.
+
+### Unit-test stability follow-up (2026-09-09)
+
+The subsequent repeat investigation fixed the PL061 test's asynchronous
+reset-completion race and quarantined the UART closed-writer and managed
+timer-wake tests for intermittent post-simulation shutdown hangs. The
+native default now runs 55 platform and 60 core cases, with 26 slow and
+2 unstable cases excluded separately. Canonical provider build/check passed;
+final 120-second-bound repetitions passed PL061 100/100, platform 275/275,
+and selected core 300/300. See
+[the Korean stability report](qbox/unit-test-stability-2026-09-09.md) for
+failure evidence, source changes, exclusion policy, and remaining gaps.
+
 ## Research Rules
+
 
 - Browse or otherwise verify official Arm docs before citing specific TRM
   claims not already present in this checkout.
