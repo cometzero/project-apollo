@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 #
-# Guest-side HSOC PERI0/PERI1 pinctrl qualification for Apollo QVP/QBox.
+# Guest-side hsoc_gpio PERI0/PERI1 qualification for Apollo QVP/QBox.
 # Run after a BSP boot with:
 #   ./scripts/run/ssh_run.sh scripts/test/verify_qbox_hsoc_pinctrl.sh
 
@@ -12,13 +12,15 @@ export PATH
 
 prefix=APOLLO_HSOC_PINCTRL
 base=0x301e0000
-bank_base=0x1000
+bank_base=0
 bank_stride=0x1000
-pin_config_base=0x40
-irq_enable=0x14
-irq_pending=0x18
-irq_rising=0x1c
-irq_falling=0x20
+pin_sel=0x100
+pin_drive=0x110
+pin_input_enable=0x118
+irq_control=0x200
+irq_pending=0x204
+irq_mirror=0x208
+irq_mask=0x20c
 irq_chip=hsoc-peri0
 gic_base=366
 
@@ -93,11 +95,6 @@ bank_addr()
     printf '0x%x\n' "$((base + bank_base + $1 * bank_stride + $2))"
 }
 
-pin_addr()
-{
-    bank_addr "$1" "$((pin_config_base + $2 * 4))"
-}
-
 field()
 {
     value=$1
@@ -168,15 +165,17 @@ check_pin_config()
     pin=$2
     expected_mux=$3
     expected_drive=$4
-    expected_slew=$5
-    addr=$(pin_addr "$bank" "$pin")
+    expected_input=$5
+    addr=$(bank_addr "$bank" "$pin_sel")
     value=$(read32 "$addr") || return 1
-    mux=$(field "$value" 0 7)
-    drive=$(field "$value" 8 255)
-    slew=$(field "$value" 4 1)
-    emit "event=pin-config|bank=$bank|pin=$pin|address=$addr|mux=$mux|drive=$drive|slew=$slew"
+    mux=$(field "$value" "$((pin * 4))" 15)
+    value=$(read32 "$(bank_addr "$bank" "$pin_drive")") || return 1
+    drive=$(field "$value" "$((pin * 2))" 3)
+    value=$(read32 "$(bank_addr "$bank" "$pin_input_enable")") || return 1
+    input=$(field "$value" "$pin" 1)
+    emit "event=pin-config|bank=$bank|pin=$pin|address=$addr|mux=$mux|drive-code=$drive|input-enable=$input"
     [ "$mux" = "$expected_mux" ] && [ "$drive" = "$expected_drive" ] &&
-        [ "$slew" = "$expected_slew" ]
+        [ "$input" = "$expected_input" ]
 }
 
 check_group()
@@ -185,11 +184,11 @@ check_group()
     first=$2
     count=$3
     drive=$4
-    slew=$5
+    input_enable=$5
     pin=$first
     last=$((first + count))
     while [ "$pin" -lt "$last" ]; do
-        check_pin_config "$bank" "$pin" 2 "$drive" "$slew" || return 1
+        check_pin_config "$bank" "$pin" 2 "$drive" "$input_enable" || return 1
         pin=$((pin + 1))
     done
 }
@@ -197,6 +196,29 @@ check_group()
 eeprom_read()
 {
     od -An -tx1 -N 1 "/sys/bus/i2c/devices/$1-0050/eeprom"
+}
+
+test_bias()
+{
+    bias_chip=$(find_chip peri0_bank11)
+    [ -n "$bias_chip" ] || return 1
+    bias_high=$(gpioget -c "$bias_chip" -b pull-up --numeric 0) || return 1
+    bias_ps=$(read32 "$(bank_addr 11 0x108)") || return 1
+    bias_pe=$(read32 "$(bank_addr 11 0x10c)") || return 1
+    [ "$bias_high" = 1 ] && [ "$((bias_ps & 1))" = 1 ] &&
+        [ "$((bias_pe & 1))" = 0 ] || return 1
+    bias_pending=$(read32 "$(bank_addr 11 "$irq_pending")") || return 1
+    bias_mirror=$(read32 "$(bank_addr 11 "$irq_mirror")") || return 1
+    [ "$((bias_pending & 1))" = 1 ] && [ "$((bias_mirror & 1))" = 1 ] || return 1
+    bias_low=$(gpioget -c "$bias_chip" -b pull-down --numeric 0) || return 1
+    [ "$bias_low" = 0 ] || return 1
+    gpioget -c "$bias_chip" -b disabled --numeric 0 >/dev/null || return 1
+    bias_pe=$(read32 "$(bank_addr 11 0x10c)") || return 1
+    [ "$((bias_pe & 1))" = 1 ] || return 1
+    write32 "$(bank_addr 11 "$irq_pending")" 1 || return 1
+    bias_pending=$(read32 "$(bank_addr 11 "$irq_pending")") || return 1
+    [ "$((bias_pending & 1))" = 0 ] || return 1
+    emit "event=bias|bank=11|pin=0|pull-up=$bias_high|pull-down=$bias_low|disabled=1|status=PASS"
 }
 
 test_loopback()
@@ -239,15 +261,15 @@ test_loopback()
 
 test_mux_gate()
 {
-    addr=$(pin_addr 1 2)
+    addr=$(bank_addr 1 "$pin_sel")
     original=$(read32 "$addr") || return 1
     original_number=$((original))
-    [ "$(field "$original_number" 0 7)" = 2 ] || return 1
+    [ "$(field "$original_number" 8 15)" = 2 ] || return 1
     mux_restore_addr=$addr
     mux_restore_value=$original
 
     for mux in 0 3 4; do
-        modified=$(((original_number & ~7) | mux))
+        modified=$(((original_number & ~(15 << 8)) | (mux << 8)))
         write32 "$addr" "$(printf '0x%x' "$modified")" || return 1
         if eeprom_read 5 >/dev/null; then
             return 1
@@ -285,12 +307,10 @@ test_bank_irq()
     [ -n "$leaf_virq" ] || return 1
     before=$(irq_total "$leaf_virq")
     [ -n "$before" ] || return 1
-    enable=$(read32 "$(bank_addr "$bank" "$irq_enable")") || return 1
-    rising=$(read32 "$(bank_addr "$bank" "$irq_rising")") || return 1
-    falling=$(read32 "$(bank_addr "$bank" "$irq_falling")") || return 1
-    [ $((enable & bit)) = "$bit" ] || return 1
-    [ $((rising & bit)) = "$bit" ] || return 1
-    [ $((falling & bit)) = "$bit" ] || return 1
+    mask=$(read32 "$(bank_addr "$bank" "$irq_mask")") || return 1
+    control=$(read32 "$(bank_addr "$bank" "$irq_control")") || return 1
+    [ $((mask & bit)) = 0 ] || return 1
+    [ "$(field "$control" "$((input_line * 4))" 15)" = 4 ] || return 1
 
     gpioset -c "$output_chip" -C qbox-hsoc-pinctrl-toggle -t 100ms,100ms,0 \
         "$output_line=0" || return 1
@@ -320,7 +340,9 @@ test_bank_irq()
         return 1
     fi
     [ $((pending & bit)) = 0 ] || return 1
-    emit "event=irq-config|bank=$bank|pin=$input_line|gic_hwirq=$gic_hwirq|source=$irq_source|virq=$leaf_virq|enable=$enable|rising=$rising|falling=$falling"
+    mirror=$(read32 "$(bank_addr "$bank" "$irq_mirror")") || return 1
+    [ $((mirror & bit)) = 0 ] || return 1
+    emit "event=irq-config|bank=$bank|pin=$input_line|gic_hwirq=$gic_hwirq|source=$irq_source|virq=$leaf_virq|mask=$mask|control=$control|mirror=$mirror"
     emit "event=irq-ack|bank=$bank|pin=$input_line|source=$irq_source|virq=$leaf_virq|before=$before|after=$after|pending=$pending"
     sed "s/^/$prefix|v=1|event=gpiomon|/" "$monitor_log"
     rm -f "$monitor_log"
@@ -369,15 +391,7 @@ else
     die 10 'missing-devmem-or-devmem2'
 fi
 
-id=$(read32 "$base") || die 11 'missing-pinctrl-id'
-version=$(read32 "$((base + 4))") || die 12 'missing-pinctrl-version'
-banks=$(read32 "$((base + 8))") || die 13 'missing-bank-count'
-pins=$(read32 "$((base + 12))") || die 14 'missing-pin-count'
-[ "$((id))" = "$((0x48535043))" ] || die 11 'invalid-pinctrl-id'
-[ "$((version))" = "$((0x00010000))" ] || die 12 'invalid-pinctrl-version'
-[ "$((banks))" = 14 ] || die 13 'invalid-bank-count'
-[ "$((pins))" = 56 ] || die 14 'invalid-pin-count'
-
+# Topology is declared in DT/CCI, never discovered from MMIO registers.
 bank=0
 total_pins=0
 while [ "$bank" -lt 14 ]; do
@@ -387,10 +401,10 @@ while [ "$bank" -lt 14 ]; do
     actual=$(chip_lines "$chip")
     if [ "$bank" -lt 6 ]; then expected=8; else expected=1; fi
     [ "$actual" = "$expected" ] || die 16 "unexpected-lines-$label-$actual"
-    mmio_pins=$(read32 "$(bank_addr "$bank" 0)") || die 17 "missing-bank-mmio-$bank"
-    [ "$((mmio_pins))" = "$expected" ] || die 18 "unexpected-bank-mmio-pins-$bank"
+    prot=$(read32 "$(bank_addr "$bank" 0)") || die 17 "missing-bank-mmio-$bank"
+    [ "$((prot))" = 0 ] || die 18 "unexpected-prot-$bank"
     total_pins=$((total_pins + actual))
-    emit "event=bank-inventory|bank=$bank|chip=$chip|lines=$actual|mmio_pins=$mmio_pins|gic_hwirq=$((366 + bank))"
+    emit "event=bank-inventory|bank=$bank|chip=$chip|lines=$actual|prot=$prot|gic_hwirq=$((366 + bank))"
     case "$bank" in
         1) bank1_chip=$chip ;;
         6) bank6_chip=$chip ;;
@@ -406,18 +420,20 @@ done
 if [ ! -d /sys/kernel/debug/pinctrl ]; then
     mount -t debugfs debugfs /sys/kernel/debug || die 41 'debugfs-unavailable'
 fi
-check_contiguous_pins 301e0000.pinctrl-hsoc-peri0-pinctrl 56 || die 41 'peri0-pin-ids-not-contiguous'
-check_contiguous_pins 301f0000.pinctrl-hsoc-peri1-pinctrl 36 || die 41 'peri1-pin-ids-not-contiguous'
-check_group 0 0 8 4 0 || die 20 'i2c0-3-default-pinmux-mismatch'
-check_group 1 0 4 4 0 || die 21 'i2c4-5-default-pinmux-mismatch'
-check_group 2 0 8 8 1 || die 22 'spi0-1-default-pinmux-mismatch'
-check_group 4 0 4 4 0 || die 24 'uart0-1-default-pinmux-mismatch'
+check_contiguous_pins 301e0000.gpio-hsoc-peri0-pinctrl 56 || die 41 'peri0-pin-ids-not-contiguous'
+check_contiguous_pins 301f0000.gpio-hsoc-peri1-pinctrl 36 || die 41 'peri1-pin-ids-not-contiguous'
+check_group 0 0 8 1 1 || die 20 'i2c0-3-default-pinmux-mismatch'
+check_group 1 0 4 1 1 || die 21 'i2c4-5-default-pinmux-mismatch'
+check_group 2 0 8 3 1 || die 22 'spi0-1-default-pinmux-mismatch'
+check_group 4 0 4 1 1 || die 24 'uart0-1-default-pinmux-mismatch'
 for pin in 0 1 2 3 4 5 6 7; do
-    check_pin_config 3 "$pin" 0 4 0 || die 23 'peri0-old-spi-pins-not-released'
+    check_pin_config 3 "$pin" 0 0 0 || die 23 'peri0-old-spi-pins-not-released'
 done
 for pin in 4 5 6 7; do
-    check_pin_config 4 "$pin" 0 4 0 || die 24 'peri0-old-uart-pins-not-released'
+    check_pin_config 4 "$pin" 0 0 0 || die 24 'peri0-old-uart-pins-not-released'
 done
+
+test_bias || die 42 'bias-selection-failed'
 
 bus=0
 while [ "$bus" -lt 6 ]; do
@@ -452,21 +468,17 @@ test_bank_irq 13 "$bank13_chip" 0 "$bank12_chip" 0 ||
 base=0x301f0000
 irq_chip=hsoc-peri1
 gic_base=380
-count=$(read32 "$((base + 8))") || die 36 'missing-peri1'
-[ "$((count))" = 8 ] || die 36 'invalid-peri1-bank-count'
-count=$(read32 "$((base + 12))") || die 36 'missing-peri1-pin-count'
-[ "$((count))" = 36 ] || die 36 'invalid-peri1-pin-count'
 for bank in 0 1 2 3 4 5 6 7; do
     chip=$(find_chip "peri1_bank$bank")
     [ -n "$chip" ] || die 37 "missing-peri1-bank-$bank"
     if [ "$bank" -lt 4 ]; then expected=8; else expected=1; fi
     [ "$(chip_lines "$chip")" = "$expected" ] || die 37 'invalid-peri1-gpio-count'
-    count=$(read32 "$(bank_addr "$bank" 0)") || die 37 'missing-peri1-bank-mmio'
-    [ "$((count))" = "$expected" ] || die 37 'invalid-peri1-bank-mmio'
+    prot=$(read32 "$(bank_addr "$bank" 0)") || die 37 'missing-peri1-bank-mmio'
+    [ "$((prot))" = 0 ] || die 37 'invalid-peri1-prot'
     emit "event=bank-inventory|controller=peri1|bank=$bank|chip=$chip|lines=$expected|gic_hwirq=$((gic_base + bank))"
 done
-check_group 0 0 8 8 1 || die 38 'peri1-spi2-3-default-pinmux-mismatch'
-check_group 1 0 4 4 0 || die 38 'peri1-uart2-3-default-pinmux-mismatch'
+check_group 0 0 8 3 1 || die 38 'peri1-spi2-3-default-pinmux-mismatch'
+check_group 1 0 4 1 1 || die 38 'peri1-uart2-3-default-pinmux-mismatch'
 peri1_bank3=$(find_chip peri1_bank3)
 peri1_bank6=$(find_chip peri1_bank6)
 peri1_bank7=$(find_chip peri1_bank7)

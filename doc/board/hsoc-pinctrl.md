@@ -1,5 +1,9 @@
 # HSOC PERI0 / PERI1 pin controllers
 
+This document records the previous `hsoc_pinctrl` register ABI and its
+historical tests. The current model and register contract are documented in
+[hsoc-gpio.md](hsoc-gpio.md).
+
 Implementation contract for Apollo QVP. This is an HSOC QVP extension, not
 an assertion of an existing Arm FVP register interface.
 
@@ -100,7 +104,7 @@ remains zero. MMIO bank spacing remains `0x1000`.
 
 구현 파일:
 
-- [SystemC model](../../hsoc-stack/tools/qbox-platform/systemc-components/hsoc_pinctrl/include/hsoc_pinctrl.h)
+- [Current SystemC model](../../hsoc-stack/tools/qbox-platform/systemc-components/hsoc_gpio/include/hsoc_gpio.h)
 - [Linux driver](../../hsoc-stack/components/primary_compute/linux/drivers/pinctrl/pinctrl-hsoc.c)
 - [pinctrl.dtsi](../../hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/pinctrl.dtsi)
 - [DT pinmux constants](../../hsoc-stack/components/primary_compute/linux/include/dt-bindings/pinctrl/hsoc.h)
