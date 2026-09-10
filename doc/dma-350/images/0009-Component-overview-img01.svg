@@ -1,0 +1,344 @@
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:svg="http://www.w3.org/2000/svg" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns="http://www.w3.org/2000/svg" width="692" height="551" viewBox="0 0 692 551" version="1.1" id="svg596">
+  <metadata id="metadata600">
+
+  </metadata>
+
+  <defs id="defs2"/>
+  <g id="page1" transform="translate(5.5,5.5)">
+    <rect width="682" y="0" height="541" fill="#ffffff" x="0" id="rect4"/>
+    <g id="shape1" transform="translate(74.324000,85.724000)">
+      <path stroke="#000000" d="M.0,377.3L502.9,377.3L502.9,.0L.0,.0L.0,377.3z" fill-rule="evenodd" fill="#ffffff" stroke-width="0.6666669845581055" id="path6"/>
+      <text style="font-size:10.6667px;font-family:Lato;fill:#000000" xml:space="preserve" id="text10"><tspan y="15" x="2.9000001" id="tspan8">DMA-350 unit</tspan></text>
+    </g>
+    <g id="shape2" transform="translate(266.638000,201.603200)">
+      <path stroke="#000000" d="M.0,75.3L254.2,75.3L254.2,.0L.0,.0L.0,75.3z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path13"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text19"><tspan y="15.0" x="3.1" id="tspan15">DMA Channel </tspan><tspan style="font-style:italic" x="73.1" id="tspan17">N</tspan></text>
+    </g>
+    <g id="shape3" transform="translate(233.742000,225.747300)">
+      <path stroke="#000000" d="M.0,59.9L318.2,59.9L318.2,.0L.0,.0L.0,59.9z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path22"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text26"><tspan y="15.0" x="3.1" id="tspan24">DMA Channel 0 </tspan></text>
+    </g>
+    <g id="shape4" transform="matrix(0.000000,1.000000,-1.000000,0.000000,323.962000,432.283500)">
+      <path stroke="#000000" d="M4.6,.0L91.4,.0" fill="none" stroke-width="1.333330035209656" id="path29"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path31"/>
+      <path stroke="#000000" d="M91.4,-2.3L96.0,.0L91.4,2.3L91.4,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path33"/>
+      <rect width="33.0" transform="matrix(0.00,-1.00,1.00,0.00,48.0,48.0)" y="-6.5" height="13.0" fill="#ffffff" x="31.5" id="rect35"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,48.0,48.0)" xml:space="preserve" id="text39"><tspan y="4.5" x="31.5" id="tspan37">WRITE</tspan></text>
+    </g>
+    <g id="shape5" transform="translate(187.872000,365.769100)">
+      <path stroke="#000000" d="M.0,66.5L336.4,66.5L336.4,.0L.0,.0L.0,66.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path42"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text46"><tspan y="15.0" x="2.7" id="tspan44">BIU</tspan></text>
+    </g>
+    <g id="shape6" transform="matrix(0.002794,0.999996,-0.999996,0.002794,272.326993,432.283489)">
+      <path stroke="#000000" d="M4.6,.0L92.0,.0" fill="none" stroke-width="1.333330035209656" id="path49"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path51"/>
+      <path stroke="#000000" d="M92.0,-2.3L96.6,.0L92.0,2.3L92.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path53"/>
+      <rect width="28.0" transform="matrix(0.00,-1.00,1.00,0.00,48.2,48.3)" y="-6.5" height="13.0" fill="#ffffff" x="34.3" id="rect55"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,48.2,48.3)" xml:space="preserve" id="text59"><tspan y="4.5" x="34.3" id="tspan57">READ</tspan></text>
+    </g>
+    <g id="shape7" transform="translate(247.745300,365.769190)">
+      <path stroke="#000000" d="M.0,17.5L103.3,17.5L103.3,.0L.0,.0L.0,17.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path62"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text66"><tspan y="13.3" x="26.1" id="tspan64">READ ARB</tspan></text>
+    </g>
+    <g id="shape8" transform="translate(363.269100,365.769190)">
+      <path stroke="#000000" d="M.0,17.5L154.0,17.5L154.0,.0L.0,.0L.0,17.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path69"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text73"><tspan y="13.3" x="49.0" id="tspan71">WRITE ARB</tspan></text>
+    </g>
+    <g id="shape9" transform="translate(244.244800,99.721100)">
+      <path stroke="#000000" d="M.0,66.5L70.0,66.5L70.0,.0L.0,.0L.0,66.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path76"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text80"><tspan y="15.0" x="8.5" id="tspan78">CONTROL</tspan></text>
+    </g>
+    <g id="shape10" transform="matrix(0.000000,1.000000,-1.000000,0.000000,276.252000,12.203200)">
+      <path stroke="#000000" d="M4.6,.0L82.9,.0" fill="none" stroke-width="1.333330035209656" id="path83"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path85"/>
+      <path stroke="#000000" d="M82.9,-2.3L87.5,.0L82.9,2.3L82.9,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path87"/>
+      <rect width="27.0" transform="matrix(0.00,-1.00,1.00,0.00,43.8,43.8)" y="-6.5" height="13.0" fill="#ffffff" x="30.3" id="rect89"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,43.8,43.8)" xml:space="preserve" id="text93"><tspan y="4.5" x="30.3" id="tspan91">APB4</tspan></text>
+    </g>
+    <g id="shape11" transform="translate(411.917800,115.474400)">
+      <path stroke="#000000" d="M.0,35.0L70.0,35.0L70.0,.0L.0,.0L.0,35.0z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path96"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text100"><tspan y="22.0" x="17.0" id="tspan98">QCTRL</tspan></text>
+    </g>
+    <g id="shape12" transform="matrix(-0.003498,0.999994,-0.999994,-0.003498,429.782604,12.203016)">
+      <path stroke="#000000" d="M4.6,.0L98.7,.0" fill="none" stroke-width="1.333330035209656" id="path103"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path105"/>
+      <path stroke="#000000" d="M98.7,-2.3L103.3,.0L98.7,2.3L98.7,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path107"/>
+      <rect width="34.0" transform="matrix(-0.00,-1.00,1.00,-0.00,51.8,51.6)" y="-6.5" height="13.0" fill="#ffffff" x="34.6" id="rect109"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(-0.00,-1.00,1.00,-0.00,51.8,51.6)" xml:space="preserve" id="text113"><tspan y="4.5" x="34.6" id="tspan111">CLK-Q</tspan></text>
+    </g>
+    <g id="shape13" transform="matrix(-0.003498,0.999994,-0.999994,-0.003498,464.789604,12.203016)">
+      <path stroke="#000000" d="M4.6,.0L98.7,.0" fill="none" stroke-width="1.333330035209656" id="path116"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path118"/>
+      <path stroke="#000000" d="M98.7,-2.3L103.3,.0L98.7,2.3L98.7,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path120"/>
+      <rect width="36.0" transform="matrix(-0.00,-1.00,1.00,-0.00,51.8,51.6)" y="-6.5" height="13.0" fill="#ffffff" x="33.6" id="rect122"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(-0.00,-1.00,1.00,-0.00,51.8,51.6)" xml:space="preserve" id="text126"><tspan y="4.5" x="33.6" id="tspan124">PWR-P</tspan></text>
+    </g>
+    <g id="shape14" transform="matrix(1.000000,-0.000002,0.000002,1.000000,12.559000,225.293074)">
+      <path stroke="#000000" d="M4.6,.0L80.1,.0" fill="none" stroke-width="1.333330035209656" id="path129"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path131"/>
+      <path stroke="#000000" d="M80.1,-2.3L84.7,.0L80.1,2.3L80.1,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path133"/>
+      <rect width="39.0" y="-6.5" height="13.0" fill="#ffffff" x="10.3" id="rect135"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text139"><tspan y="4.5" x="10.3" id="tspan137">TRIG_IN</tspan></text>
+    </g>
+    <g id="shape15" transform="matrix(1.000000,-0.000002,0.000002,1.000000,12.559000,247.927101)">
+      <path stroke="#000000" d="M4.6,.0L80.1,.0" fill="none" stroke-width="1.333330035209656" id="path142"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path144"/>
+      <path stroke="#000000" d="M80.1,-2.3L84.7,.0L80.1,2.3L80.1,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path146"/>
+      <rect width="51.0" y="-6.5" height="13.0" fill="#ffffff" x="10.3" id="rect148"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text152"><tspan y="4.5" x="10.3" id="tspan150">TRIG_OUT</tspan></text>
+    </g>
+    <g id="shape16" transform="matrix(0.000000,-1.000000,1.000000,0.000000,251.385000,99.721100)">
+      <path stroke="#000000" d="M.0,.0L81.5,.0" fill="none" stroke-width="1.333330035209656" id="path155"/>
+      <path stroke="#000000" d="M81.5,-2.3L86.1,.0L81.5,2.3L81.5,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path157"/>
+      <rect width="19.0" transform="matrix(0.00,1.00,-1.00,0.00,42.8,-44.1)" y="-7.2" height="13.0" fill="#ffffff" x="34.0" id="rect159"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,42.8,-44.1)" xml:space="preserve" id="text163"><tspan y="3.8" x="34.0" id="tspan161">IRQ</tspan></text>
+    </g>
+    <g id="shape17" transform="translate(246.508300,397.275400)">
+      <path stroke="#000000" d="M.0,35.0L103.3,35.0L103.3,.0L.0,.0L.0,35.0z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path166"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text170"><tspan y="22.0" x="13.6" id="tspan168">MANAGER_IF_0</tspan></text>
+    </g>
+    <g id="shape18" transform="matrix(0.862956,0.505279,-0.505279,0.862956,314.258362,155.080605)">
+      <path stroke="#000000" d="M3.3,.0L87.5,.0" fill="none" stroke-width="1.333330035209656" id="path173"/>
+      <path stroke="#000000" d="M3.3,3.3L.0,.0L3.3,-3.3L3.3,3.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path175"/>
+      <path stroke="#000000" d="M87.5,-2.3L92.1,.0L87.5,2.3L87.5,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path177"/>
+      <rect width="27.0" transform="matrix(0.86,-0.51,0.51,0.86,5.8,21.4)" y="-6.5" height="13.0" fill="#ffffff" x="28.8" id="rect179"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.86,-0.51,0.51,0.86,5.8,21.4)" xml:space="preserve" id="text183"><tspan y="4.5" x="28.8" id="tspan181">APB4</tspan></text>
+    </g>
+    <g id="shape19" transform="matrix(0.797202,0.603713,-0.603713,0.797202,314.259129,166.234883)">
+      <path stroke="#000000" d="M3.3,.0L94.0,.0" fill="none" stroke-width="1.333330035209656" id="path186"/>
+      <path stroke="#000000" d="M3.3,3.3L.0,.0L3.3,-3.3L3.3,3.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path188"/>
+      <path stroke="#000000" d="M94.0,-2.3L98.6,.0L94.0,2.3L94.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path190"/>
+      <rect width="27.0" transform="matrix(0.80,-0.60,0.60,0.80,9.2,27.5)" y="-6.5" height="13.0" fill="#ffffff" x="32.0" id="rect192"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.80,-0.60,0.60,0.80,9.2,27.5)" xml:space="preserve" id="text196"><tspan y="4.5" x="32.0" id="tspan194">APB4</tspan></text>
+    </g>
+    <g id="shape20" transform="matrix(0.000000,1.000000,-1.000000,0.000000,254.385000,166.234900)">
+      <path stroke="#000000" d="M4.6,.0L54.9,.0" fill="none" stroke-width="1.333330035209656" id="path199"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path201"/>
+      <path stroke="#000000" d="M54.9,-2.3L59.5,.0L54.9,2.3L54.9,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path203"/>
+      <rect width="27.0" transform="matrix(0.00,-1.00,1.00,0.00,-25.4,52.0)" y="25.7" height="13.0" fill="#ffffff" x="-0.2" id="rect205"/>
+      <rect width="60.0" transform="matrix(0.00,-1.00,1.00,0.00,-25.4,52.0)" y="38.7" height="13.0" fill="#ffffff" x="-16.7" id="rect207"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,-25.4,52.0)" xml:space="preserve" id="text213"><tspan y="36.7" x="-0.2" id="tspan209">MISC</tspan><tspan y="49.7" x="-16.7" id="tspan211">IRQ/STATUS</tspan></text>
+    </g>
+    <g id="shape21" transform="matrix(0.000000,1.000000,-1.000000,0.000000,286.389000,166.234900)">
+      <path stroke="#000000" d="M4.6,.0L30.7,.0" fill="none" stroke-width="1.333330035209656" id="path216"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path218"/>
+      <path stroke="#000000" d="M30.7,-2.3L35.4,.0L30.7,2.3L30.7,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path220"/>
+    </g>
+    <g id="shape22" transform="matrix(-0.000009,-1.000000,1.000000,-0.000009,284.326351,365.769100)">
+      <path stroke="#000000" d="M5.7,.0L74.9,.0" fill="none" stroke-width="2" id="path223"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path225"/>
+      <path stroke="#000000" d="M74.9,-2.8L80.5,.0L74.9,2.8L74.9,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path227"/>
+      <rect width="14.0" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" y="-6.5" height="13.0" fill="#ffffff" x="33.3" id="rect229"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" xml:space="preserve" id="text233"><tspan y="4.5" x="33.3" id="tspan231">AR</tspan></text>
+    </g>
+    <g id="shape23" transform="matrix(0.000012,-1.000000,1.000000,0.000012,329.136508,365.769100)">
+      <path stroke="#000000" d="M5.7,.0L74.9,.0" fill="none" stroke-width="2" id="path236"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path238"/>
+      <path stroke="#000000" d="M74.9,-2.8L80.5,.0L74.9,2.8L74.9,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path240"/>
+      <rect width="7.0" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" y="-6.5" height="13.0" fill="#ffffff" x="36.8" id="rect242"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" xml:space="preserve" id="text246"><tspan y="4.5" x="36.8" id="tspan244">R</tspan></text>
+    </g>
+    <g id="shape24" transform="matrix(-0.000002,-1.000000,1.000000,-0.000002,401.777070,365.769100)">
+      <path stroke="#000000" d="M5.7,.0L74.9,.0" fill="none" stroke-width="2" id="path249"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path251"/>
+      <path stroke="#000000" d="M74.9,-2.8L80.5,.0L74.9,2.8L74.9,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path253"/>
+      <rect width="18.0" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" y="-6.5" height="13.0" fill="#ffffff" x="31.3" id="rect255"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" xml:space="preserve" id="text259"><tspan y="4.5" x="31.3" id="tspan257">AW</tspan></text>
+    </g>
+    <g id="shape25" transform="matrix(-0.000007,-1.000000,1.000000,-0.000007,447.724281,365.769100)">
+      <path stroke="#000000" d="M5.7,.0L74.9,.0" fill="none" stroke-width="2" id="path262"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path264"/>
+      <path stroke="#000000" d="M74.9,-2.8L80.5,.0L74.9,2.8L74.9,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path266"/>
+      <rect width="11.0" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" y="-6.5" height="13.0" fill="#ffffff" x="34.8" id="rect268"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,40.3,-40.3)" xml:space="preserve" id="text272"><tspan y="4.5" x="34.8" id="tspan270">W</tspan></text>
+    </g>
+    <g id="shape26" transform="matrix(0.000014,-1.000000,1.000000,0.000014,503.107440,365.769200)">
+      <path stroke="#000000" d="M5.7,.0L74.5,.0" fill="none" stroke-width="2" id="path275"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path277"/>
+      <path stroke="#000000" d="M74.5,-2.8L80.1,.0L74.5,2.8L74.5,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path279"/>
+      <rect width="7.0" transform="matrix(0.00,1.00,-1.00,0.00,40.1,-40.1)" y="-6.5" height="13.0" fill="#ffffff" x="36.6" id="rect281"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,40.1,-40.1)" xml:space="preserve" id="text285"><tspan y="4.5" x="36.6" id="tspan283">B</tspan></text>
+    </g>
+    <g id="shape27" transform="matrix(1.000000,0.000000,-0.000000,1.000000,314.258400,132.978000)">
+      <path stroke="#000000" d="M.0,.0L93.0,.0" fill="none" stroke-width="1.333330035209656" id="path288"/>
+      <path stroke="#000000" d="M93.0,-2.3L97.7,.0L93.0,2.3L93.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path290"/>
+      <rect width="37.0" y="-6.5" height="13.0" fill="#ffffff" x="26.5" id="rect292"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text296"><tspan y="4.5" x="26.5" id="tspan294">ACTIVE</tspan></text>
+    </g>
+    <g id="shape28" transform="translate(259.122800,117.224600)">
+      <path stroke="#000000" d="M.0,33.3L40.3,33.3L40.3,.0L.0,.0L.0,33.3z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path299"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text305"><tspan y="15.0" x="7.6" id="tspan301">UNIT </tspan><tspan y="28.0" x="6.6" id="tspan303">REGS</tspan></text>
+    </g>
+    <g id="shape29" transform="translate(322.534500,225.670700)">
+      <path stroke="#000000" d="M.0,27.1L112.5,27.1L112.5,.0L.0,.0L.0,27.1z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path308"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text312"><tspan y="15.0" x="3.2" id="tspan310">CHANNEL CONTROL</tspan></text>
+    </g>
+    <g id="shape30" transform="matrix(0.000000,1.000000,-1.000000,0.000000,404.479000,432.283500)">
+      <path stroke-dasharray="3.8,1.2" stroke="#000000" d="M4.6,.0L92.0,.0" fill="none" stroke-width="1.333330035209656" id="path315"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path317"/>
+      <path stroke="#000000" d="M92.0,-2.3L96.6,.0L92.0,2.3L92.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path319"/>
+      <rect width="28.0" transform="matrix(0.00,-1.00,1.00,0.00,48.3,48.3)" y="-6.5" height="13.0" fill="#ffffff" x="34.3" id="rect321"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,48.3,48.3)" xml:space="preserve" id="text325"><tspan y="4.5" x="34.3" id="tspan323">READ</tspan></text>
+    </g>
+    <g id="shape31" transform="translate(378.661300,397.636900)">
+      <path stroke-dasharray="11,5" stroke="#000000" d="M.0,34.6L103.3,34.6L103.3,.0L.0,.0L.0,34.6z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path328"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text332"><tspan y="21.8" x="13.6" id="tspan330">MANAGER_IF_1</tspan></text>
+    </g>
+    <g id="shape32" transform="matrix(0.000000,1.000000,-1.000000,0.000000,456.115000,432.283500)">
+      <path stroke-dasharray="3.8,1.2" stroke="#000000" d="M4.6,.0L92.0,.0" fill="none" stroke-width="1.333330035209656" id="path335"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path337"/>
+      <path stroke="#000000" d="M92.0,-2.3L96.6,.0L92.0,2.3L92.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path339"/>
+      <rect width="33.0" transform="matrix(0.00,-1.00,1.00,0.00,48.3,48.3)" y="-6.5" height="13.0" fill="#ffffff" x="31.8" id="rect341"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,-1.00,1.00,0.00,48.3,48.3)" xml:space="preserve" id="text345"><tspan y="4.5" x="31.8" id="tspan343">WRITE</tspan></text>
+    </g>
+    <g id="shape33" transform="translate(551.947000,249.684000)">
+      <path stroke="#000000" d="M4.6,.0L113.6,.0" fill="none" stroke-width="1.333330035209656" id="path348"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path350"/>
+      <path stroke="#000000" d="M113.6,-2.3L118.3,.0L113.6,2.3L113.6,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path352"/>
+      <rect width="57.0" y="-6.5" height="13.0" fill="#ffffff" x="50.6" id="rect354"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text358"><tspan y="4.5" x="50.6" id="tspan356">STREAM_IN</tspan></text>
+    </g>
+    <g id="shape34" transform="translate(551.947000,232.716000)">
+      <path stroke="#000000" d="M4.6,.0L113.6,.0" fill="none" stroke-width="1.333330035209656" id="path361"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path363"/>
+      <path stroke="#000000" d="M113.6,-2.3L118.3,.0L113.6,2.3L113.6,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path365"/>
+      <rect width="69.0" y="-6.5" height="13.0" fill="#ffffff" x="38.6" id="rect367"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text371"><tspan y="4.5" x="38.6" id="tspan369">STREAM_OUT</tspan></text>
+    </g>
+    <g id="shape35" transform="translate(97.228600,194.602100)">
+      <path stroke="#000000" d="M.0,66.5L56.9,66.5L56.9,.0L.0,.0L.0,66.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path374"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text378"><tspan y="15.0" x="2.9" id="tspan376">TRIG MTX </tspan></text>
+    </g>
+    <g id="shape36" transform="matrix(0.999997,-0.002536,0.002536,0.999997,153.406880,210.638904)">
+      <path stroke="#000000" d="M4.6,.0L107.3,.0" fill="none" stroke-width="1.333330035209656" id="path381"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path383"/>
+      <path stroke="#000000" d="M107.3,-2.3L111.9,.0L107.3,2.3L107.3,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path385"/>
+      <rect width="36.0" y="-6.5" height="13.0" fill="#ffffff" x="38.0" id="rect387"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text391"><tspan y="4.5" x="38.0" id="tspan389">TRIG_N</tspan></text>
+    </g>
+    <g id="shape37" transform="matrix(1.000000,-0.000001,0.000001,1.000000,154.115600,249.968052)">
+      <path stroke="#000000" d="M4.6,.0L75.0,.0" fill="none" stroke-width="1.333330035209656" id="path394"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path396"/>
+      <path stroke="#000000" d="M75.0,-2.3L79.6,.0L75.0,2.3L75.0,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path398"/>
+      <rect width="34.0" y="-6.5" height="13.0" fill="#ffffff" x="22.8" id="rect400"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text404"><tspan y="4.5" x="22.8" id="tspan402">TRIG_0</tspan></text>
+    </g>
+    <g id="shape38" transform="translate(551.947000,267.652000)">
+      <path stroke="#000000" d="M.0,.0L113.6,.0" fill="none" stroke-width="1.333330035209656" id="path407"/>
+      <path stroke="#000000" d="M113.6,-2.3L118.3,.0L113.6,2.3L113.6,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path409"/>
+      <rect width="24.0" y="-6.5" height="13.0" fill="#ffffff" x="83.8" id="rect411"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text415"><tspan y="4.5" x="83.8" id="tspan413">GPO</tspan></text>
+    </g>
+    <g id="shape39" transform="matrix(0.000000,1.000000,-1.000000,0.000000,262.637000,345.309500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path418"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path420"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path422"/>
+    </g>
+    <g id="shape40" transform="matrix(0.000000,1.000000,-1.000000,0.000000,273.389000,345.309500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path425"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path427"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path429"/>
+    </g>
+    <g id="shape41" transform="matrix(0.000000,1.000000,-1.000000,0.000000,322.148000,345.309500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path432"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path434"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path436"/>
+    </g>
+    <g id="shape42" transform="matrix(0.000000,1.000000,-1.000000,0.000000,313.396000,345.309500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path439"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path441"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path443"/>
+    </g>
+    <g id="shape43" transform="matrix(0.000000,1.000000,-1.000000,0.000000,389.538000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path446"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path448"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path450"/>
+    </g>
+    <g id="shape44" transform="matrix(0.000000,1.000000,-1.000000,0.000000,432.673000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path453"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path455"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path457"/>
+    </g>
+    <g id="shape45" transform="matrix(0.000000,1.000000,-1.000000,0.000000,439.922000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path460"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path462"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path464"/>
+    </g>
+    <g id="shape46" transform="matrix(0.000000,1.000000,-1.000000,0.000000,494.184000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path467"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path469"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path471"/>
+    </g>
+    <g id="shape47" transform="matrix(0.000000,1.000000,-1.000000,0.000000,485.432000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path474"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path476"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path478"/>
+    </g>
+    <g id="shape48" transform="translate(333.151800,259.365190)">
+      <path stroke="#000000" d="M.0,17.5L70.0,17.5L70.0,.0L.0,.0L.0,17.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path481"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text485"><tspan y="15.0" x="9.0" id="tspan483">DATA FIFO</tspan></text>
+    </g>
+    <g id="shape49" transform="translate(249.385800,259.365190)">
+      <path stroke="#000000" d="M.0,17.5L70.0,17.5L70.0,.0L.0,.0L.0,17.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path488"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text492"><tspan y="15.0" x="6.5" id="tspan490">READ CTRL</tspan></text>
+    </g>
+    <g id="shape50" transform="translate(420.669800,259.365200)">
+      <path stroke="#000000" d="M.0,17.5L70.0,17.5L70.0,.0L.0,.0L.0,17.5z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path495"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text499"><tspan y="15.0" x="4.0" id="tspan497">WRITE CTRL</tspan></text>
+    </g>
+    <g id="shape51" transform="translate(441.669300,225.670700)">
+      <path stroke="#000000" d="M.0,27.1L96.6,27.1L96.6,.0L.0,.0L.0,27.1z" fill-rule="evenodd" fill="#bfcee1" stroke-width="0.6666669845581055" id="path502"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text506"><tspan y="15.0" x="8.3" id="tspan504">CHANNEL REGS</tspan></text>
+    </g>
+    <g id="shape52" transform="translate(209.326000,326.541500)">
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt;font-style:italic" xml:space="preserve" id="text513"><tspan y="14.7" x="8.5" id="tspan509">N </tspan><tspan style="font-style:normal" x="18.5" id="tspan511">interfaces</tspan></text>
+    </g>
+    <g id="shape53" transform="translate(244.245000,132.978000)">
+      <path stroke="#333e48" d="M.0,.0L-73.2,.0L-73.2,266.0L-63.3,266.0" fill="none" stroke-width="1.333330035209656" id="path516"/>
+      <path stroke="#333e48" d="M-63.3,262.6L-56.4,266.0L-63.3,269.5L-63.3,262.6" fill="#333e48" stroke-linecap="round" stroke-width="1" id="path518"/>
+    </g>
+    <g id="shape54" transform="translate(183.500000,125.228000)">
+      <path d="M.0,.0L37.0,.0L37.0,15.5L.0,15.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path521"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text525"><tspan y="12.3" x="5.0" id="tspan523">CHID</tspan></text>
+    </g>
+    <g id="shape55" transform="matrix(0.000000,1.000000,-1.000000,0.000000,380.538000,344.197500)">
+      <path stroke="#000000" d="M5.7,.0L14.8,.0" fill="none" stroke-width="2" id="path528"/>
+      <path stroke="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path530"/>
+      <path stroke="#000000" d="M14.8,-2.8L20.5,.0L14.8,2.8L14.8,-2.8" fill="#000000" stroke-linecap="round" stroke-width="1" id="path532"/>
+    </g>
+    <g id="shape56" transform="translate(487.791000,295.494000)">
+      <path d="M.0,.0L33.0,.0L33.0,14.5L.0,14.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path535"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text539"><tspan y="11.8" x="5.0" id="tspan537">AXI5</tspan></text>
+    </g>
+    <g id="shape57" transform="translate(266.638000,295.494000)">
+      <path d="M.0,.0L33.0,.0L33.0,14.5L.0,14.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path542"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text546"><tspan y="11.8" x="5.0" id="tspan544">AXI5</tspan></text>
+    </g>
+    <g id="shape58" transform="translate(313.136000,295.494000)">
+      <path d="M.0,.0L33.0,.0L33.0,14.5L.0,14.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path549"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text553"><tspan y="11.8" x="5.0" id="tspan551">AXI5</tspan></text>
+    </g>
+    <g id="shape59" transform="translate(385.777000,295.494000)">
+      <path d="M.0,.0L33.0,.0L33.0,14.5L.0,14.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path556"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text560"><tspan y="11.8" x="5.0" id="tspan558">AXI5</tspan></text>
+    </g>
+    <g id="shape60" transform="translate(431.724000,295.494000)">
+      <path d="M.0,.0L33.0,.0L33.0,14.5L.0,14.5L.0,.0z" fill-rule="nonzero" fill="#ffffff" id="path563"/>
+      <text style="fill:#333e48;font-family:Lato;font-size:8.00pt" xml:space="preserve" id="text567"><tspan y="11.8" x="5.0" id="tspan565">AXI5</tspan></text>
+    </g>
+    <g id="shape61" transform="matrix(0.000000,-1.000000,1.000000,0.000000,303.385000,99.721100)">
+      <path stroke="#000000" d="M4.6,.0L81.5,.0" fill="none" stroke-width="1.333330035209656" id="path570"/>
+      <path stroke="#000000" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path572"/>
+      <path stroke="#000000" d="M81.5,-2.3L86.1,.0L81.5,2.3L81.5,-2.3" fill="#000000" stroke-linecap="round" stroke-width="1" id="path574"/>
+      <rect width="17.0" transform="matrix(0.00,1.00,-1.00,0.00,42.8,-44.1)" y="-7.2" height="13.0" fill="#ffffff" x="35.0" id="rect576"/>
+      <text style="fill:#000000;font-family:Lato;font-size:8.00pt" transform="matrix(0.00,1.00,-1.00,0.00,42.8,-44.1)" xml:space="preserve" id="text580"><tspan y="3.8" x="35.0" id="tspan578">CTI</tspan></text>
+    </g>
+    <g id="shape62" transform="translate(551.000000,280.000000)">
+      <path stroke="#333e48" d="M6.9,.0L68.0,.0L68.0,41.0" fill="none" stroke-width="1.333330035209656" id="path583"/>
+      <path stroke="#333e48" d="M6.9,3.5L.0,.0L6.9,-3.5L6.9,3.5" fill="#333e48" stroke-linecap="round" stroke-width="1" id="path585"/>
+    </g>
+    <g id="shape63" transform="translate(582.000000,321.500000)">
+      <text style="fill:#333e48;font-family:Lato;font-size:12.00pt" xml:space="preserve" id="text592"><tspan y="24.0" x="25.5" id="tspan588">Boot </tspan><tspan y="43.0" x="12.0" id="tspan590">interface</tspan></text>
+    </g>
+  </g>
+</svg>
