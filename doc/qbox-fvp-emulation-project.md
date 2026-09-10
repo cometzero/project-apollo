@@ -762,6 +762,8 @@ and functional/electrical modeling boundaries.
 AP DMA-350 now uses an asynchronous SystemC/TLM worker and FIFO request/ACK
 flow control. AP wiring now dedicates channels 0–3 to SPI0/1 TX/RX and
 channels 4–7 to UART0/1 TX/RX; I2C and the other ports use PIO.
+The follow-up configuration combines channel interrupts through
+`IRQ_COMB_NONSEC` to GIC SPI 279 (INTID 311), using Linux shared IRQ actions.
 The earlier shared-channel qualification is retained as historical evidence.
 The dedicated configuration passed BSP boot, fixed-channel DMA trace checks,
 SPI0/1 loopback, UART0/1 traffic and I2C/SPI2/3 PIO regression tests.

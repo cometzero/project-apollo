@@ -1,7 +1,12 @@
 # Apollo QVP DMA-350 구현 및 검증
 
+Linux SPI/DMAengine 설정부터 SystemC worker, RAM/FIFO TLM 접근, handshake,
+공유 IRQ 및 UART partial RX까지의 실제 경로는
+[SystemC DMA 동작과 PlantUML sequence](systemc-dma-sequence.md)에 정리했다.
+
 현재 구성은 **SPI0/1, UART0/1의 TX/RX 전용 8채널**이다.
 I2C 및 SPI2/3, UART2/3은 DMA에 연결하지 않는다.
+현재 후속 검증 구성은 `IRQ_COMB_NONSEC`를 GIC SPI 279(INTID 311) 하나에 연결한다.
 아래의 초기 공유형 변경 설명과 runtime-3 결과는 변경 이력으로 보존하며,
 현재 전용 구성의 검증 근거와 구분한다.
 
@@ -25,9 +30,11 @@ MMIO 전송 trace를 함께 검사한다.
 
 RoS AP memory map의 DMA 영역을 사용한다. 베이스는 `0x31000000`, 예약
 크기는 64 KiB이며 구현 레지스터 창은 8 KiB이다. 물리 채널은 8개,
-외부 trigger 입력은 8개다. 채널 IRQ는 GIC SPI 271–278
-(INTID 303–310)에 연결한다. 참조 플랫폼의 나머지 DMA IRQ
-INTID 311–313에 해당하는 집계/security 기능은 구현하지 않았다.
+외부 trigger 입력은 8개다. 현재는 채널별 IRQ 대신 `IRQ_COMB_NONSEC`를
+GIC SPI 279(INTID 311)에 연결한다. INTID 311은 DMA 예약 범위 303–313에서
+QVP용으로 선택한 번호이며, FVP의 개별 combined pin 번호를 확인한 결과는 아니다.
+기존 채널별 INTID 303–310 연결은 이번 구성에서 사용하지 않는다.
+Secure combined 및 security violation IRQ는 구현/검증 범위 밖이다.
 
 | 주변장치 | TX 채널/request | RX 채널/request | FIFO 주소 |
 |---|---|---|---|
@@ -159,7 +166,227 @@ descriptor 완료로 해석할 수 있기 때문이다. 이처럼 구조 단순�
 peripheral-flow LAST의 Linux 통합, 강제 STOP 실패, active hot-unbind다.
 STOP synchronize의 전체 재시도 상한이 없는 기존 한계도 그대로 남아 있다.
 
-## 단일 free 복원 및 pause/probe 재검토 (최신)
+## Upstream ANYCH 선적용과 동일 IRQ 배열 (최신)
+
+Upstream의 [643c1e1ae3eb](https://github.com/torvalds/linux/commit/643c1e1ae3eb3cd9be31e83c2240e41849a6cb56)
+(`dmaengine: arm-dma350: enable ANYCH interrupt for shared IRQ wiring`)를
+로컬 기능 변경보다 먼저 cherry-pick했다. 원본은 probe에서
+`DMANSECCTRL + NSEC_CTRL`의 `INTREN_ANYCHINTR_EN`을 RMW하는 9행 패치다.
+최신 kernel 전체나 allocator API 변경은 가져오지 않았다.
+
+로컬 cherry-pick ID는 `a78ef8fd26d3`이며 원본과 stable patch-id
+`dbacb0919f4d08d441164fba8ab28844cd373c4c`가 일치한다.
+Upstream author, 메시지, 기존 sign-off/review trailer 및 cherry-pick 출처를
+보존했다. Upstream의 긴 제목은 원문 그대로 두었고, 로컬 Conventional Commit
+8개의 메시지 규칙과 sign-off는 별도로 검증했다.
+
+정리 순서는 다음과 같다. 기존 7개 기능별 commit은 합치지 않고 유지했으며,
+미커밋 combined IRQ 변경만 하나로 보관한 후 재적용했다.
+
+```text
+6ff44c9184f5  기존 공개 기준
+a78ef8fd26d3  upstream ANYCH enable
+4235d92f5497  source trigger bit 수정
+acda1d110db7  memory length 검사
+d6f8d67a829f  coherency 저장
+ae2c275c1f6f  pause/resume poll
+aeccd14664a5  slave DMA/SG
+85de041e274a  I2C DMA client
+8385c3199cd4  Apollo DMA DT/config
+41b96d0832e8  DT의 동일 IRQ 8회 지정
+```
+
+최종 commit `41b96d0832e8`은 **DTS만 변경**한다. IRQ는 아래처럼 채널별
+항목을 유지하면서 모두 같은 GIC SPI 번호를 지정한다.
+
+```dts
+interrupts = <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>,
+             <GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>;
+```
+
+`interrupt-names`는 없다. `combined-irq` lookup/분기/별도 register 정의와
+조건부 ANYCH write는 제거했다. Driver와 binding은 최종 commit의 부모와
+동일하며, 기존 `platform_get_irq(pdev, i)`와 `IRQF_SHARED`가 같은 물리 IRQ를
+처리한다. 따라서 실제 GIC 선은 여전히 하나이고 DT resource 항목만 8개다.
+기존 `IRQ_COMB_NONSEC` SystemC 출력과 GIC INTID 311 연결은 유지한다.
+
+Linux의 원 branch `apollo-fvp-linux-6.18-rt`에 반영했고 push는 하지 않았다.
+다른 저장소의 커밋은 재작성하지 않았다. 다음 복구 참조도 남겨 두었다.
+
+- `backup/20260910-dma350-anych-old-series`: 기존 7개 commit의 HEAD.
+- `backup/20260910-dma350-anych-combined-wip`: 미커밋 변경 보관 snapshot.
+- `backup/20260910-dma350-anych-final-with-name`: 이름 기반 중간 구현.
+
+### Upstream-first 최종 검증
+
+최종 branch HEAD `41b96d0832e8`에서 `./yocto_build.sh --keep-conf --bsp`를
+실행했다. 5577 tasks 전체 성공(5495 reused, 기존 taint 경고 5개)이며
+`build/dma350/upstream-anych-shared-bsp-build.log`에 보존했다.
+Provider unit은 qbox-platform 58/58(5.42초), qbox 60/60(18.73초) PASS다.
+일반 도구 회귀는 pytest 13/13, shellcheck, Lua 문법 및 diff-check PASS다.
+
+런타임 증거는 `build/dma350/upstream-anych-shared-runtime-1/`에 있다.
+게스트는 DT `interrupts`의 크기가 96 byte인지 확인하고, 12-byte specifier
+8개를 각각 추출하여 모두 동일한지 비교한다. `interrupt-names` 부재도 확인한다.
+SPI/UART를 모두 연 뒤에는 `/proc/interrupts`에 DMA IRQ가 한 줄이며
+GIC hwirq 311과 8개 채널 이름이 모두 있는지 검사한다.
+
+| 항목 | 결과 |
+|---|---|
+| BSP 부팅 및 공유 IRQ topology | PASS, specifier 8개/물리 IRQ 1개 |
+| memcpy/memset | 각각 5회 PASS |
+| SPI0/1 | 64/4099-byte loopback PASS, 각 TX/RX DMA 66544 byte |
+| UART0↔1 | 양방향 17/128/512/4099-byte PASS, 각 TX DMA 4756 byte |
+| UART RX | DMA 1819/225 byte 관측, PIO 혼용 |
+| multi-entry SG | `sg_len=2` event 2개 관측 |
+| I2C0–5 및 SPI2/3 PIO | 데이터 비교 PASS, 제외 FIFO DMA 접근 없음 |
+| DMA trace | 328 operations 중 memory 10개, validator PASS |
+| 최종 register | NSEC_CTRL=1, NSEC_CHINTRSTATUS0=0, NSEC_STATUS=0 |
+| IRQ idle 확인 | 1초 간격 counter 140→140 |
+
+게스트 marker는 다음과 같다.
+
+```text
+APOLLO_DMA350|interrupt=shared|specifiers=8|lines=1|hwirq=311|status=PASS
+```
+
+`guest-validation.log`, `dma-trace.log`, `dma-validation.json`,
+`sg-kprobe.trace`, `combined-registers.log`, `irq-idle.log`,
+`guest-artifacts.tar.gz`에 원시 자료를 보존했다.
+Source hash는 `build/dma350/upstream-anych-shared-source.sha256`과 일치한다.
+EEPROM 복구와 probe 제거 후 테스트 VM을 종료했다.
+전체 플랫폼 coverage는 기존의 G1/AP memory-map 증거 미수집으로 FAIL이며,
+이번 DMA 경로 PASS와 구분한다. Linux는 clean이고, 최상위 gitlink 및 다른
+저장소의 미커밋 문서/모델/테스트 변경은 별도로 남겨 두었다.
+
+## Atomic commit 기준과 IRQ_COMB_NONSEC 후속 구성 (이력)
+
+기존 구현은 20개 atomic commit으로 저장했다. Linux 7개, QBox core 4개,
+QBox platform 4개, BSP layer 1개, 최상위 저장소 4개다. 모든 메시지와
+`Signed-off-by`를 검증했으며 push는 수행하지 않았다.
+
+| Linux commit | 분리한 변경 |
+|---|---|
+| 67a8b68fb7b6 | source trigger bit 25 수정 |
+| 3aa79ae70f75 | memory transfer 길이 검사 |
+| e3bf924458f4 | 채널별 coherency 저장 |
+| 89a4f4bfe239 | PAUSE/RESUME 상태 poll |
+| 489cfe9634cc | slave SG/전용 채널/OF 및 연결된 수명 처리 |
+| 30e645916066 | DesignWare I2C DMA client |
+| e6fe92b84025 | Apollo QVP DT/defconfig 활성화 |
+
+최상위 기준은 `cbeaea95ddb1`이다. 이 기준의 Linux 최종 tree는 커밋 전
+검증한 tree와 동일하며 기존 코드를 수정하여 커밋을 만든 것이 아니다.
+아래 combined IRQ 변경은 당시 별도 미커밋 검증 변경이었다.
+이후 Linux 변경은 위 upstream-first series로 정리했으며, 다른 저장소의
+후속 미커밋 변경은 별도로 유지했다.
+
+### IRQ 결합 방식
+
+TRM [interrupt operation](0102-Interrupt-operation.md),
+[NSEC_CHINTRSTATUS0](0154-NSEC_CHINTRSTATUS0.md),
+[NSEC_STATUS](0155-NSEC_STATUS.md), [NSEC_CTRL](0156-NSEC_CTRL.md)을 기준으로 한다.
+
+| Register/output | 현재 처리 |
+|---|---|
+| NSEC_CHINTRSTATUS0, offset 0x200 | Non-secure 채널의 interrupt flag를 bit별로 집계 |
+| NSEC_STATUS, offset 0x208, bit 0 | pending이 있고 global gate가 켜졌을 때 INTR_ANYCHINTR=1 |
+| NSEC_CTRL, offset 0x20c, bit 0 | INTREN_ANYCHINTR로 combined channel IRQ 허용 |
+| irq_comb_nonsec | 위 combined 상태를 level signal로 출력 |
+
+SystemC의 기존 per-channel IRQ는 유지하고 optional combined output을 추가했다.
+출력은 기존 단일 `SC_METHOD`에서만 갱신한다. 최신 Linux DT는
+`<GIC_SPI 279 IRQ_TYPE_LEVEL_HIGH>`를 채널 수에 맞춰 8회 나열한다.
+`interrupt-names`는 지정하지 않는다. 기존 `platform_get_irq(pdev, i)`가
+각 항목에서 동일 IRQ 번호를 얻으므로 이름 조회나 별도 분기가 필요 없다.
+NSEC_CTRL bit 0은 아래의 upstream ANYCH 패치가 probe에서 RMW로 활성화한다.
+
+기존 `request_irq(..., IRQF_SHARED, ..., dch)` 및 `d350_irq()`를 그대로 사용한다.
+GIC IRQ 선은 하나지만 Linux에는 채널별 action 8개가 등록된다.
+각 action은 자기 채널 상태만 검사/clear한다. 별도 controller ISR이나
+새로운 dispatcher 자료구조를 추가하지 않았다. 서로 다른 IRQ 번호를 지정하면
+기존 채널별 IRQ 방식으로 동작한다. 로컬 shared-IRQ driver 분기와 binding
+변경은 제거했으며, 공유 IRQ 활성화 코드는 upstream의 9행 패치만 사용한다.
+
+### 검증 범위와 제한
+
+SystemC unit은 두 채널 동시 pending, 초기 global gate 차단/활성화,
+한 채널만 clear했을 때 line 유지, 모두 clear 시 deassert,
+완료 전 channel mask, read-only summary/status, error 및 reset을 검사한다.
+Provider `do_check`는 qbox-platform 58/58(5.73초), core 60/60(23.48초) PASS다.
+`combined-provider-do-check.log`에 보존했다.
+
+최신 게스트 스크립트는 DT의 IRQ specifier 8개가 모두 동일하고 이름 속성이
+없는지 확인한 다음, SPI0/1과
+UART0/1을 모두 확보한 시점의 `/proc/interrupts`를 저장한다.
+DMA 관련 IRQ가 정확히 한 줄이며 GIC hwirq 311과 8개 채널 이름이 있는지
+검사하고, data/IRQ counter/DMA FIFO trace 검증을 수행한다.
+기존 `sg_len=2` kprobe 검증도 병행한다.
+
+현재 model은 모든 채널을 Non-secure로 취급한다. TrustZone attribution,
+global all-idle/stopped/paused IRQ 및 Secure violation IRQ는 범위 밖이다.
+NSEC_CTRL은 bit 0만 지원하며 NSEC_STATUS의 해당 bit는 read-only다.
+따라서 이번 검증은 채널 IRQ 결합 경로의 검증이지 모든 DMA unit IRQ의 구현을
+뜻하지 않는다. Binding YAML 구문 검사는 통과했지만 host의 `dtschema` 모듈
+부재로 당시 `dt-doc-validate`는 수행하지 못했다. 최신 구성은 해당 custom
+binding 변경을 원복하여 기존 binding을 그대로 사용한다.
+
+### 초기 이름 기반 단일 IRQ 런타임 결과 (이력)
+
+`./yocto_build.sh --keep-conf --bsp`는 5577 tasks 전체 성공
+(5495 reused, 기존 taint 경고 5개)했다. `build/dma350/combined-bsp-build.log`와
+`combined-provider-do-check.log`에 빌드 및 unit 결과를 보존했다.
+
+새 BSP를 [재현 방법](#재현-방법)의 trace 환경으로 실행하고,
+`build/dma350/combined-runtime-1/`에 검증 자료를 저장했다.
+`dma-validation.json`은 PASS이며 AP DMA operation 347개 중 memory
+operation은 10개다. Source hash는 `build/dma350/combined-source.sha256`에
+저장했고 실행 후 일치 여부를 확인했다.
+
+| 항목 | 관측 결과 |
+|---|---|
+| BSP boot | PASS |
+| IRQ 연결 | Linux IRQ 39 한 줄, GIC hwirq 311, 채널 action 8개 |
+| memory DMA | memcpy/memset 각 5회 PASS |
+| SPI0/1 | 64/4099-byte loopback PASS; 각 TX/RX DMA 66544 byte |
+| UART0↔1 | 양방향 17/128/512/4099-byte PASS; 각 TX DMA 4756 byte |
+| UART RX | DMA 196/175 byte, 나머지는 PIO 혼용 |
+| multi-entry SG | `sg_len=2` kprobe event 2개 관측 |
+| I2C0–5 및 SPI2/3 PIO | 데이터 비교 PASS; 해당 FIFO DMA 접근 없음 |
+| 전송 후 IRQ | pending/status 0, 1초 간격 IRQ counter 141→141 |
+| Python 판정기/주소 map 회귀 | 12/12 PASS, 채널별 IRQ를 combined 증거로 인정하지 않는 negative test 포함 |
+
+UART를 모두 연 상태의 실제 `/proc/interrupts` 기록은 다음과 같다.
+Linux IRQ 번호와 CPU별 counter는 실행마다 바뀔 수 있으며,
+고정 검증 대상은 hwirq 311과 단일 행 및 채널 이름이다.
+
+```text
+39: 128 0 0 0 GICv3 311 Level dma0chan1, dma0chan0, dma0chan3, dma0chan2, dma0chan5, dma0chan4, dma0chan7, dma0chan6
+```
+
+전송 종료 후 게스트에서 다음 read-only 확인도 수행했다.
+
+```sh
+devmem2 0x3100020c w  # NSEC_CTRL: 0x00000001
+devmem2 0x31000200 w  # NSEC_CHINTRSTATUS0: 0x00000000
+devmem2 0x31000208 w  # NSEC_STATUS: 0x00000000
+```
+
+원시 자료는 `guest-validation.log`, `dma-trace.log`, `sg-kprobe.trace`,
+`combined-registers.log`, `irq-idle.log`, `guest-artifacts.tar.gz`다.
+테스트 후 EEPROM을 복구하고 임시 probe와 테스트 VM을 정리했다.
+전체 플랫폼 coverage audit는 이전과 같이 G1 미실행과 AP memory-map
+증거 부재로 FAIL이다. 이는 단일 DMA IRQ 경로의 PASS와 구분한다.
+채널별 legacy Linux DT를 다시 부팅하는 별도 비교 실행은 하지 않았으며,
+기존 model 채널별 IRQ unit과 RSE/BSP 부팅 회귀는 통과했다.
+
+## 단일 free 복원 및 pause/probe 재검토 (이전 단계)
 
 명시적으로 요청한 변경은 다음과 같이 적용했다.
 
