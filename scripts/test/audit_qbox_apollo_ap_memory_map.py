@@ -513,7 +513,8 @@ def parse_ros_bindings(ap_compute_text: str, ros_text: str) -> list[ApViewBindin
     ):
         bindings.append(ApViewBinding("ros.lua", match.group(1), match.group(2), "ros_bind_target"))
     if "visit_dwc_targets(platform, bind_ap_target)" in clean_text:
-        for prefix, count in (("ap_dw_i2c_", 6), ("ap_dw_ssi_", 4), ("ap_dw_uart_", 4)):
+        for prefix, count in (("ap_dw_i2c_", 6), ("ap_dw_ssi_", 4),
+                              ("ap_dw_uart_", 4), ("ap_dw_i2s_", 2)):
             for index in range(count):
                 bindings.append(
                     ApViewBinding(
@@ -625,6 +626,7 @@ def add_ros_dwc_sockets(
         ("ROS_DW_I2C_BASES", "ap_dw_i2c_", "dw_apb_i2c", 6),
         ("ROS_DW_SSI_BASES", "ap_dw_ssi_", "dw_apb_ssi", 4),
         ("ROS_DW_UART_BASES", "ap_dw_uart_", "dw_apb_uart", 4),
+        ("ROS_DW_I2S_BASES", "ap_dw_i2s_", "dw_apb_i2s", 2),
     )
     for table_name, prefix, model, count in groups:
         match = re.search(
@@ -675,6 +677,11 @@ def current_coverage(root: Path) -> list[LuaSocket]:
         texts["ap_compute.lua"], sockets, constants, tables, "ap_compute.lua"
     )
     add_ros_dwc_sockets(texts["ros.lua"], sockets, constants, tables, "ros.lua")
+    for name, base in (("dma350_0", "ROS_DMA350_BASE"),
+                       ("dma350_1", "ROS_I2S_DMA_BASE")):
+        if base in constants and not any(s.object_name == name for s in sockets):
+            sockets.append(LuaSocket("ros.lua", name, "dma350", "target_socket",
+                                     constants[base], constants["ROS_MMIO_SIZE"]))
     return sorted(sockets, key=lambda item: (item.address, item.object_name, item.socket_name))
 
 
