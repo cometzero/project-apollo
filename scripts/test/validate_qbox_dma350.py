@@ -7,7 +7,7 @@ import re
 
 
 TRACE = re.compile(
-    r"ap_dma350 (copy|fill) channel=(0x[0-9a-f]+) "
+    r"(?:ap_dma350|dma350_0) (copy|fill) channel=(0x[0-9a-f]+) "
     r"source=(0x[0-9a-f]+) dest=(0x[0-9a-f]+) bytes=(0x[0-9a-f]+) "
     r"src_trigger=(-?\d+) dest_trigger=(-?\d+) status=(\w+)"
 )

@@ -38,6 +38,11 @@ def test_complete_evidence_passes():
     assert module.evaluate(*evidence())["status"] == "PASS"
 
 
+def test_renamed_primary_dma_instance_is_accepted():
+    guest, host = evidence()
+    assert module.evaluate(guest, host.replace("ap_dma350", "dma350_0"))["status"] == "PASS"
+
+
 def test_pio_only_data_is_not_dma_proof():
     guest, _ = evidence()
     assert module.evaluate(guest, "")["status"] == "FAIL"
