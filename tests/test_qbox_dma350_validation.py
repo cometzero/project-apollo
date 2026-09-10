@@ -11,6 +11,7 @@ spec.loader.exec_module(module)
 def evidence():
     guest = ["APOLLO_DMA350|result=0|artifacts=/tmp/test",
              "APOLLO_DMA350|topology=dedicated|channels=8|status=PASS",
+             "APOLLO_DMA350|interrupt=shared|specifiers=8|lines=1|hwirq=311|status=PASS",
              "APOLLO_DMA350|memory=dma0chan4|status=PASS"]
     host = ["ap_dma350 copy channel=0x0 source=0x80000000 dest=0x80001000 bytes=0x40 src_trigger=-1 dest_trigger=-1 status=done"]
     host.append("ap_dma350 fill channel=0x0 source=0x0 dest=0x80001000 bytes=0x40 src_trigger=-1 dest_trigger=-1 status=done")
@@ -80,3 +81,13 @@ def test_single_command_is_not_scatter_gather_evidence():
     guest, host = evidence()
     host = host.replace("bytes=0x1000", "bytes=0x1003")
     assert module.evaluate(guest, host)["status"] == "FAIL"
+
+
+def test_per_channel_irqs_are_not_combined_irq_proof():
+    guest, host = evidence()
+    assert module.evaluate(guest.replace("lines=1", "lines=8"), host)["status"] == "FAIL"
+
+
+def test_shared_irq_requires_all_channel_specifiers():
+    guest, host = evidence()
+    assert module.evaluate(guest.replace("specifiers=8", "specifiers=1"), host)["status"] == "FAIL"

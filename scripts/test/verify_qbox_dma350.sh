@@ -48,15 +48,27 @@ pattern()
     }'
 }
 
-irq_count()
+irq_lines()
 {
     awk -v channels="$dma_channels" 'BEGIN {
         n = split(channels, names, " ");
         for (i = 1; i <= n; i++) selected[names[i]] = 1;
     }
-    /31000000|dma350/ || ($NF in selected) {
+    /31000000|dma350/ { print; next; }
+    {
+        for (i = NF; i > 1; i--) {
+            name = $i;
+            gsub(/,/, "", name);
+            if (name in selected) { print; break; }
+        }
+    }' /proc/interrupts
+}
+
+irq_count()
+{
+    irq_lines | awk '{
         for (i = 2; i <= NF && $i ~ /^[0-9]+$/; i++) total += $i;
-    } END { print total + 0; }' /proc/interrupts
+    } END { print total + 0; }'
 }
 
 # Verify the dedicated topology before opening UARTs or borrowing a free
@@ -88,6 +100,13 @@ for channel in /sys/class/dma/dma*chan*; do
 done
 [ "$channel_count" = 8 ]
 echo "APOLLO_DMA350|topology=dedicated|channels=8|status=PASS"
+dma_node=/sys/bus/platform/devices/31000000.dma-controller/of_node
+[ "$(wc -c < "$dma_node/interrupts")" -eq 96 ]
+[ ! -e "$dma_node/interrupt-names" ]
+for channel in 0 1 2 3 4 5 6 7; do
+    dd if="$dma_node/interrupts" of="$work/irq-spec-$channel" bs=12 skip="$channel" count=1 2>/dev/null
+    cmp "$work/irq-spec-0" "$work/irq-spec-$channel"
+done
 [ -n "$memory_channel" ]
 [ ! -d /sys/module/dmatest ]
 for dma_kind in 0 1; do
@@ -205,6 +224,14 @@ uart_transfer()
 paired_tx=$(find_uart 301a0000)
 paired_rx=$(find_uart 301b0000)
 exec 5<>"/dev/$paired_tx" 6<>"/dev/$paired_rx"
+irq_lines > "$work/dma-irqs.txt"
+[ "$(wc -l < "$work/dma-irqs.txt")" -eq 1 ]
+grep -Eq 'GICv3[[:space:]]+311[[:space:]]' "$work/dma-irqs.txt"
+for channel in $dma_channels; do
+    grep -wq "$channel" "$work/dma-irqs.txt"
+done
+cat "$work/dma-irqs.txt"
+echo "APOLLO_DMA350|interrupt=shared|specifiers=8|lines=1|hwirq=311|status=PASS"
 for length in 17 128 512 4099; do
     uart_transfer 301a0000 301b0000 "$length"
     uart_transfer 301b0000 301a0000 "$length"

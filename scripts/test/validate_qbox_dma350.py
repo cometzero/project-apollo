@@ -26,6 +26,8 @@ def evaluate(guest_log: str, host_log: str) -> dict:
         errors.append("guest validation did not finish successfully")
     if "APOLLO_DMA350|topology=dedicated|channels=8|status=PASS" not in guest_log:
         errors.append("missing eight-channel dedicated topology evidence")
+    if "APOLLO_DMA350|interrupt=shared|specifiers=8|lines=1|hwirq=311|status=PASS" not in guest_log:
+        errors.append("missing single combined non-secure interrupt evidence")
     if any(op["status"] == "error" for op in operations):
         errors.append("AP DMA-350 reported a transfer error")
     dedicated = {0x30160060: (0, 1), 0x30170060: (2, 3),
