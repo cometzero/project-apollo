@@ -759,6 +759,15 @@ the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`
 See [board wiring and qualification](board/pca9539.md) for the current evidence
 and functional/electrical modeling boundaries.
 
+AP DMA-350 now uses an asynchronous SystemC/TLM worker and FIFO request/ACK
+flow control. AP wiring now dedicates channels 0–3 to SPI0/1 TX/RX and
+channels 4–7 to UART0/1 TX/RX; I2C and the other ports use PIO.
+The earlier shared-channel qualification is retained as historical evidence.
+The dedicated configuration passed BSP boot, fixed-channel DMA trace checks,
+SPI0/1 loopback, UART0/1 traffic and I2C/SPI2/3 PIO regression tests.
+UART RX remains mixed DMA/PIO by design; full TRM and
+FVP equivalence are not claimed. See [DMA-350 implementation and evidence](dma-350/apollo-qvp-implementation.md).
+
 1. Add one software-visible malformed/denied transaction followed by a normal
    recovery transaction without changing firmware or kernel sources.
 2. Ground and implement the next hardware safety source, with APU violation,
