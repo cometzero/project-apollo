@@ -1174,13 +1174,33 @@ runtime-2는 부팅 확인용이며, 최종 증거는 수집기 생존 중 시�
 플랫폼 증거를 수집하지 않았으며, DMA 전용 PASS를 전체 플랫폼 qualification
 PASS로 확대하지 않는다. 테스트 VM은 원시 자료를 회수한 뒤 종료했다.
 
+## I2S 추가에 따른 인스턴스 분리
+
+[TRM configurable options](0012-Configurable-options.md)의 `NUM_CHANNELS` 범위는
+1–8이다. I2S 초기 통합에서 10채널로 늘린 구성은 허용 범위를 벗어나므로 제거했다.
+모델은 최대 8채널을 강제하고 9채널 거부 테스트를 포함한다.
+
+AP의 두 인스턴스는 QBox 이름과 DT label 모두 `dma350_0`, `dma350_1`이다.
+
+| 인스턴스 | MMIO | SPI / INTID | 구성 |
+| --- | --- | --- | --- |
+| dma350_0 | 0x31000000 | 279 / 311 | 8채널, 기존 SPI0/1 및 UART0/1 전용 배선 유지 |
+| dma350_1 | 0x31010000 | 358 / 390 | 8채널, 0/1=I2S0 TX/RX, 2/3=I2S1 TX/RX, 4–7 미연결 |
+
+각 controller는 독립적인 shared non-secure IRQ를 사용한다.
+이전 로그의 `ap_dma350`은 현재 `dma350_0`에 해당하며, 기존 로그를 읽는 검증기는
+두 이름을 지원한다. 현재 I2S 구성과 양방향 검증은
+[DW_apb_i2s 문서](../dwc/dw-apb-i2s.md)에 기록한다.
+
 ## 구현 한계
 
 2D/template, 하드웨어 command-link fetch, autorestart, AXI-Stream,
 software/internal/output trigger, security attribution, 실시간 AXI arbitration과
 cache coherency 타이밍은 구현/검증 범위 밖이다. 기본 1D WRAP 지원은 모든
-2D WRAP 또는 template 조합 지원을 의미하지 않는다. `dma-coherent` 및
-TLM memory 접근은 QVP의 기능적 메모리 일관성 계약이며 실제 cache snoop
-모델의 증거가 아니다. UART sub-threshold RX tail은 의도적으로 PIO다.
+2D WRAP 또는 template 조합 지원을 의미하지 않는다. AP DMA 두 node의
+`dma-coherent;`는 hardware coherency 통합 근거가 없어 제거했고, 해당 binding
+허용 변경도 원복했다. 현재는 non-coherent DMA 구성이며, QVP의 TLM memory
+접근과 데이터 비교 결과는 실제 cache snoop 모델의 증거가 아니다.
+UART sub-threshold RX tail은 의도적으로 PIO다.
 강제 STOP timeout의 Linux 지연 정리 경로는 코드 리뷰 대상이지만 게스트
 fault injection으로 재현하지 않았다. FVP와의 동등성 시험은 수행하지 않았다.

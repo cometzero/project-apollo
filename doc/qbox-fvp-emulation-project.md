@@ -770,6 +770,15 @@ SPI0/1 loopback, UART0/1 traffic and I2C/SPI2/3 PIO regression tests.
 UART RX remains mixed DMA/PIO by design; full TRM and
 FVP equivalence are not claimed. See [DMA-350 implementation and evidence](dma-350/apollo-qvp-implementation.md).
 
+The AP expansion now also contains two DW_apb_i2s SystemC controllers,
+with bidirectional I2S0/I2S1 audio connections. Two eight-channel instances
+are named `dma350_0` (SPI/UART) and `dma350_1` (I2S); the latter dedicates
+channels 0/1 to I2S0 TX/RX and 2/3 to I2S1 TX/RX, leaving 4–7 unconnected.
+Apollo selects explicit transaction-level audio pacing; timed FIFO deadlines
+are not qualified under the default four-CPU freerunning scheduler.
+See [I2S implementation and validation](dwc/dw-apb-i2s.md) for the Linux
+ASoC PIO and cyclic DMA validation and the timing limitations.
+
 1. Add one software-visible malformed/denied transaction followed by a normal
    recovery transaction without changing firmware or kernel sources.
 2. Ground and implement the next hardware safety source, with APU violation,
