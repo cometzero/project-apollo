@@ -540,6 +540,13 @@ SHA256 is `ffcc45eaf34a271d4a4f4c6a22d7a12e2204bf045ea92109aebe64433bdcd3bd`.
 The FVP binary is prebuilt and source-unavailable; the v2.2 Arm Zena CSS
 release-note line `PCIe configuration is excluded.` is historical context only.
 
+The 2026-09-11 Apollo FVP boot reproduced an ECAM-time EL3 SError with
+`ELR_EL3=0xffff8000807d0c50` in `pci_bus_read_config_dword`. The FVP Linux
+DTS and TF-A cfg1/cfg2 HW_CONFIG now disable PCIe4 by default. This is a
+boot mitigation, not PCIe qualification; QVP PCIe wiring is unchanged.
+See [the recovery report](qbox/fvp-pcie-boot-recovery-2026-09-11.md) for
+firmware DT ownership, runtime evidence, and explicit PCIe opt-in steps.
+
 Known runtime risk: one r3 freerunning RSE/SCP readiness ordering failure
 exists. Quiet same-input r4 and current-source r5 pass, but no retry wrapper,
 fixed sleep, or source synchronization change was added; the supported cause
