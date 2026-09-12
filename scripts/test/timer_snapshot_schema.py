@@ -20,7 +20,7 @@ REPORTED_FREQUENCIES_HZ: Final = {
     "ap_cpu0": 125_000_000,
     "ap_refclk_ns": 125_000_000,
     "ap_refclk_s": 125_000_000,
-    "si1_cpu0": 100_000_000,
+    "si1_cpu0": 125_000_000,
 }
 RSE_IRQS: Final = {
     "rse_timer0": 3,
