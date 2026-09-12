@@ -210,6 +210,12 @@ The real final aggregate artifacts are pending Todo 23, including any final
 `.work/validation-plan/final-review-backlog.md` for the exact deferred and
 blocked profile list.
 
+The 2026-09-12 update reuses native QEMU SysTick devices for Cortex-M55,
+including secure/non-secure banks and reset handling. Opt-in TF-M tests
+passed for SysTick and TIMER0-3 in all four firmware stages (20 checks).
+SI CL1 now uses 125MHz in both the CPU and Zephyr, confirmed by a live
+CNTFRQ read. See [the implementation and evidence](timer/implementation-2026-09-12.md).
+
 The 2026-07-22 timer ownership refactor keeps Apollo policy out of QEMU and
 QBox core. QBox Platform now owns `arm_system_counter`, `host_gtimer`, the Arm
 MMIO/SSE wrappers, and `qemu_arm_generic_timer_counter_bridge`. Each AP/SI
