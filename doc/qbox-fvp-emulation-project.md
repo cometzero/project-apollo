@@ -512,7 +512,19 @@ It records a bounded PASS only after the immutable FVP reference gate, QBox
 build, Task9 runtime, Task10 boundary comparison, and cleanup passed; r5 did
 not start FVP.
 
-The positive PCIe IRQ evidence is QBox-only. The opt-in profile instantiates
+The 2026-09-12 QVP topology adds native QEMU GPEX root ports with Gen5
+maximum capabilities: x4 + x4 + x2 + x2, with only x2 group 2
+optionally split into x1 + x1 at boot. This user-selected generic model
+replaces the proposed Synopsys controller/PHY implementation; it is not
+physical Zena PHY parity. Per-requester PCI DMA follows the existing
+SystemC SMMUv3 path. See [configuration and validation](pcie/qemu-gen5.md)
+for the current results and endpoint link-speed limitations.
+An opt-in [RC–EP loopback](pcie/rc-ep-loopback.md) adds a virtual EPC
+for single-Linux endpoint-framework tests, separate from PHY fidelity.
+An optional [NVMe SSD](pcie/nvme.md) reuses the QEMU NVMe controller and a
+persistent raw image below fixed x2 group 3, through the same SMMU/ITS path.
+
+The historical positive PCIe IRQ evidence below is QBox-only. The opt-in profile instantiates
 one `virtio-net-pci` endpoint at `0000:00:01.0` with requester/ITS DeviceID
 `0x0008`, SMMU SID `0x0040`, ITS translator `0x20850040`, and Apollo
 collection-entry size 2. MSI-X selects virq 34 and shows a normalized

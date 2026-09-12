@@ -1287,6 +1287,8 @@ def write_result(
     input_artifacts.update(
         {name: artifact_record(path) for name, path in sorted(artifacts.items())}
     )
+    if os.environ.get("QBOX_APOLLO_NVME_IMAGE"):
+        input_artifacts["nvme"] = artifact_record(Path(os.environ["QBOX_APOLLO_NVME_IMAGE"]))
     marker_groups = build_marker_groups(args, child_status)
     si_errors = si_error_hits(args)
     platform_obs = platform_observations(args.out_dir)
@@ -1987,6 +1989,11 @@ def full_system_child_environment(
     args: argparse.Namespace,
 ) -> dict[str, str]:
     environment = {}
+    for name in ("QBOX_APOLLO_PCIE_BIFURCATION", "QBOX_APOLLO_PCIE_TEST_ENDPOINTS",
+                 "QBOX_APOLLO_PCIE_IRQ_TEST", "QBOX_APOLLO_PCIE_EP_LOOPBACK",
+                 "QBOX_APOLLO_NVME_IMAGE", "QBOX_APOLLO_NVME_SERIAL"):
+        if name in os.environ:
+            environment[name] = os.environ[name]
     if args.monitor:
         environment["QBOX_APOLLO_MONITOR"] = "true"
         environment["QBOX_APOLLO_MONITOR_PORT"] = str(args.monitor_port)
