@@ -1,0 +1,1194 @@
+<svg width="380" height="300" xmlns="http://www.w3.org/2000/svg">
+    <defs/>
+    <g >
+        <g  transform="matrix(1 0 0 1 120.5 0.5)">
+            <g >
+                <g>
+                    <path  fill="#000000" stroke="#888888" stroke-width="0.5" stroke-dasharray="1 3" d="M 0 0 L 0 300"/>
+                    <path  fill="#000000" stroke="#888888" stroke-width="0.5" stroke-dasharray="1 3" d="M 80 0 L 80 300"/>
+                    <path  fill="#000000" stroke="#888888" stroke-width="0.5" stroke-dasharray="1 3" d="M 160 0 L 160 300"/>
+                    <path  fill="#000000" stroke="#888888" stroke-width="0.5" stroke-dasharray="1 3" d="M 240 0 L 240 300"/>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 5)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 97.36491 14.427084 L 98.59668 14.620443 L 98.59668 15 L 94.75813 15 L 94.75813 14.620443 L 95.98991 14.427084 L 95.98991 5.9622393 L 94.75813 5.776041 L 94.75813 5.3964844 L 98.59668 5.3964844 L 98.59668 5.776041 L 97.36491 5.9622393 L 97.36491 14.427084 Z M 101.43262 8.8125 Q 101.984055 8.4973955 102.60709 8.293294 Q 103.23013 8.089192 103.645515 8.089192 Q 104.519196 8.089192 104.96322 8.597656 Q 105.40722 9.106119 105.40722 10.072916 L 105.40722 14.498698 L 106.22363 14.677734 L 106.22363 15 L 103.32324 15 L 103.32324 14.677734 L 104.21842 14.498698 L 104.21842 10.201822 Q 104.21842 9.607422 103.92838 9.267252 Q 103.63834 8.927083 103.029625 8.927083 Q 102.38509 8.927083 101.44693 9.134766 L 101.44693 14.498698 L 102.35645 14.677734 L 102.35645 15 L 99.44889 15 L 99.44889 14.677734 L 100.25814 14.498698 L 100.25814 8.769531 L 99.44889 8.590494 L 99.44889 8.268229 L 101.368164 8.268229 L 101.43262 8.8125 Z M 111.623375 13.109375 Q 111.623375 14.1119795 110.989586 14.6276045 Q 110.3558 15.1432295 109.11687 15.1432295 Q 108.61557 15.1432295 108.01042 15.039388 Q 107.40527 14.935547 107.06152 14.806641 L 107.06152 13.152345 L 107.38379 13.152345 L 107.7347 14.090495 Q 108.27181 14.577474 109.131195 14.577474 Q 110.52051 14.577474 110.52051 13.388672 Q 110.52051 12.514974 109.424805 12.142578 L 108.78744 11.9348955 Q 108.06413 11.698567 107.7347 11.455078 Q 107.40527 11.211588 107.22624 10.857096 Q 107.047195 10.502604 107.047195 10.001302 Q 107.047195 9.113281 107.65234 8.601236 Q 108.25749 8.089192 109.28874 8.089192 Q 110.02636 8.089192 111.1364 8.311197 L 111.1364 9.779297 L 110.7998 9.779297 L 110.49902 8.998697 Q 110.11947 8.662109 109.30306 8.662109 Q 108.722984 8.662109 108.418625 8.948567 Q 108.11426 9.235025 108.11426 9.722005 Q 108.11426 10.130208 108.38998 10.409505 Q 108.665695 10.688802 109.22428 10.875 Q 110.27703 11.233072 110.59929 11.397785 Q 110.921555 11.5625 111.14714 11.802407 Q 111.37273 12.042316 111.49805 12.350259 Q 111.623375 12.658203 111.623375 13.109375 Z M 114.54526 15.1432295 Q 113.85775 15.1432295 113.51758 14.735026 Q 113.17741 14.326823 113.17741 13.589193 L 113.17741 8.869791 L 112.29655 8.869791 L 112.29655 8.547525 L 113.191734 8.268229 L 113.91505 6.742838 L 114.36621 6.742838 L 114.36621 8.268229 L 115.90592 8.268229 L 115.90592 8.869791 L 114.36621 8.869791 L 114.36621 13.460287 Q 114.36621 13.925782 114.57748 14.162109 Q 114.788734 14.3984375 115.132484 14.3984375 Q 115.54785 14.3984375 116.14226 14.2838545 L 116.14226 14.74935 Q 115.8916 14.921224 115.41894 15.032227 Q 114.9463 15.1432295 114.54526 15.1432295 Z M 120.983406 8.089192 L 120.983406 9.908203 L 120.67546 9.908203 L 120.26009 9.120442 Q 119.90202 9.120442 119.41145 9.217122 Q 118.920906 9.313802 118.56283 9.471354 L 118.56283 14.498698 L 119.71583 14.677734 L 119.71583 15 L 116.52181 15 L 116.52181 14.677734 L 117.37403 14.498698 L 117.37403 8.769531 L 116.52181 8.590494 L 116.52181 8.268229 L 118.48405 8.268229 L 118.54851 9.106119 Q 118.97819 8.748047 119.71224 8.418619 Q 120.4463 8.089192 120.875984 8.089192 L 120.983406 8.089192 Z M 123.35384 13.0807295 Q 123.35384 14.312501 124.49967 14.312501 Q 125.387695 14.312501 126.16113 14.090495 L 126.16113 8.769531 L 125.14421 8.590494 L 125.14421 8.268229 L 127.34277 8.268229 L 127.34277 14.498698 L 128.19499 14.677734 L 128.19499 15 L 126.23275 15 L 126.17546 14.4557295 Q 125.66699 14.735026 125.000984 14.939128 Q 124.33496 15.1432295 123.88379 15.1432295 Q 122.16505 15.1432295 122.16505 13.166668 L 122.16505 8.769531 L 121.305664 8.590494 L 121.305664 8.268229 L 123.35384 8.268229 L 123.35384 13.0807295 Z M 134.50423 14.591797 Q 134.15332 14.849609 133.53743 14.996419 Q 132.92154 15.1432295 132.27701 15.1432295 Q 129.00423 15.1432295 129.00423 11.583984 Q 129.00423 9.901041 129.83853 8.995117 Q 130.67285 8.089192 132.22688 8.089192 Q 133.19368 8.089192 134.33951 8.311197 L 134.33951 10.1875 L 133.94563 10.1875 L 133.6377 8.998697 Q 133.04329 8.662109 132.21255 8.662109 Q 130.29329 8.662109 130.29329 11.583984 Q 130.29329 13.102215 130.87695 13.750326 Q 131.4606 14.3984375 132.68521 14.3984375 Q 133.73079 14.3984375 134.50423 14.162109 L 134.50423 14.591797 Z M 137.34732 15.1432295 Q 136.65982 15.1432295 136.31966 14.735026 Q 135.97949 14.326823 135.97949 13.589193 L 135.97949 8.869791 L 135.09863 8.869791 L 135.09863 8.547525 L 135.9938 8.268229 L 136.71712 6.742838 L 137.16829 6.742838 L 137.16829 8.268229 L 138.70801 8.268229 L 138.70801 8.869791 L 137.16829 8.869791 L 137.16829 13.460287 Q 137.16829 13.925782 137.37955 14.162109 Q 137.59082 14.3984375 137.93457 14.3984375 Q 138.34993 14.3984375 138.94434 14.2838545 L 138.94434 14.74935 Q 138.69368 14.921224 138.22102 15.032227 Q 137.74837 15.1432295 137.34732 15.1432295 Z M 141.74446 6.0696616 Q 141.74446 6.3847656 141.5153 6.6139317 Q 141.28613 6.843099 140.96387 6.843099 Q 140.64876 6.843099 140.4196 6.6139317 Q 140.19043 6.3847656 140.19043 6.0696616 Q 140.19043 5.747395 140.4196 5.5182285 Q 140.64876 5.2890625 140.96387 5.2890625 Q 141.28613 5.2890625 141.5153 5.5182285 Q 141.74446 5.747395 141.74446 6.0696616 Z M 141.67285 14.498698 L 142.82585 14.677734 L 142.82585 15 L 139.33821 15 L 139.33821 14.677734 L 140.48405 14.498698 L 140.48405 8.769531 L 139.53157 8.590494 L 139.53157 8.268229 L 141.67285 8.268229 L 141.67285 14.498698 Z M 149.87988 11.598307 Q 149.87988 15.1432295 146.72885 15.1432295 Q 145.21062 15.1432295 144.43718 14.233725 Q 143.66374 13.324219 143.66374 11.598307 Q 143.66374 9.89388 144.43718 8.991536 Q 145.21062 8.089192 146.78613 8.089192 Q 148.3187 8.089192 149.09929 8.973633 Q 149.87988 9.858072 149.87988 11.598307 Z M 148.59082 11.598307 Q 148.59082 10.051432 148.13965 9.3567705 Q 147.68848 8.662109 146.72885 8.662109 Q 145.7907 8.662109 145.37175 9.328125 Q 144.9528 9.994141 144.9528 11.598307 Q 144.9528 13.223958 145.3789 13.900716 Q 145.80502 14.577474 146.72885 14.577474 Q 147.67416 14.577474 148.13249 13.875652 Q 148.59082 13.173828 148.59082 11.598307 Z M 152.75879 8.8125 Q 153.31023 8.4973955 153.93327 8.293294 Q 154.55632 8.089192 154.97168 8.089192 Q 155.84538 8.089192 156.28938 8.597656 Q 156.7334 9.106119 156.7334 10.072916 L 156.7334 14.498698 L 157.5498 14.677734 L 157.5498 15 L 154.64941 15 L 154.64941 14.677734 L 155.5446 14.498698 L 155.5446 10.201822 Q 155.5446 9.607422 155.25456 9.267252 Q 154.96452 8.927083 154.35579 8.927083 Q 153.71126 8.927083 152.77312 9.134766 L 152.77312 14.498698 L 153.68262 14.677734 L 153.68262 15 L 150.77507 15 L 150.77507 14.677734 L 151.5843 14.498698 L 151.5843 8.769531 L 150.77507 8.590494 L 150.77507 8.268229 L 152.69434 8.268229 L 152.75879 8.8125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 35)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 97.36491 14.427084 L 98.59668 14.620443 L 98.59668 15 L 94.75813 15 L 94.75813 14.620443 L 95.98991 14.427084 L 95.98991 5.9622393 L 94.75813 5.776041 L 94.75813 5.3964844 L 98.59668 5.3964844 L 98.59668 5.776041 L 97.36491 5.9622393 L 97.36491 14.427084 Z M 101.43262 8.8125 Q 101.984055 8.4973955 102.60709 8.293294 Q 103.23013 8.089192 103.645515 8.089192 Q 104.519196 8.089192 104.96322 8.597656 Q 105.40722 9.106119 105.40722 10.072916 L 105.40722 14.498698 L 106.22363 14.677734 L 106.22363 15 L 103.32324 15 L 103.32324 14.677734 L 104.21842 14.498698 L 104.21842 10.201822 Q 104.21842 9.607422 103.92838 9.267252 Q 103.63834 8.927083 103.029625 8.927083 Q 102.38509 8.927083 101.44693 9.134766 L 101.44693 14.498698 L 102.35645 14.677734 L 102.35645 15 L 99.44889 15 L 99.44889 14.677734 L 100.25814 14.498698 L 100.25814 8.769531 L 99.44889 8.590494 L 99.44889 8.268229 L 101.368164 8.268229 L 101.43262 8.8125 Z M 111.623375 13.109375 Q 111.623375 14.1119795 110.989586 14.6276045 Q 110.3558 15.1432295 109.11687 15.1432295 Q 108.61557 15.1432295 108.01042 15.039388 Q 107.40527 14.935547 107.06152 14.806641 L 107.06152 13.152345 L 107.38379 13.152345 L 107.7347 14.090495 Q 108.27181 14.577474 109.131195 14.577474 Q 110.52051 14.577474 110.52051 13.388672 Q 110.52051 12.514974 109.424805 12.142578 L 108.78744 11.9348955 Q 108.06413 11.698567 107.7347 11.455078 Q 107.40527 11.211588 107.22624 10.857096 Q 107.047195 10.502604 107.047195 10.001302 Q 107.047195 9.113281 107.65234 8.601236 Q 108.25749 8.089192 109.28874 8.089192 Q 110.02636 8.089192 111.1364 8.311197 L 111.1364 9.779297 L 110.7998 9.779297 L 110.49902 8.998697 Q 110.11947 8.662109 109.30306 8.662109 Q 108.722984 8.662109 108.418625 8.948567 Q 108.11426 9.235025 108.11426 9.722005 Q 108.11426 10.130208 108.38998 10.409505 Q 108.665695 10.688802 109.22428 10.875 Q 110.27703 11.233072 110.59929 11.397785 Q 110.921555 11.5625 111.14714 11.802407 Q 111.37273 12.042316 111.49805 12.350259 Q 111.623375 12.658203 111.623375 13.109375 Z M 114.54526 15.1432295 Q 113.85775 15.1432295 113.51758 14.735026 Q 113.17741 14.326823 113.17741 13.589193 L 113.17741 8.869791 L 112.29655 8.869791 L 112.29655 8.547525 L 113.191734 8.268229 L 113.91505 6.742838 L 114.36621 6.742838 L 114.36621 8.268229 L 115.90592 8.268229 L 115.90592 8.869791 L 114.36621 8.869791 L 114.36621 13.460287 Q 114.36621 13.925782 114.57748 14.162109 Q 114.788734 14.3984375 115.132484 14.3984375 Q 115.54785 14.3984375 116.14226 14.2838545 L 116.14226 14.74935 Q 115.8916 14.921224 115.41894 15.032227 Q 114.9463 15.1432295 114.54526 15.1432295 Z M 120.983406 8.089192 L 120.983406 9.908203 L 120.67546 9.908203 L 120.26009 9.120442 Q 119.90202 9.120442 119.41145 9.217122 Q 118.920906 9.313802 118.56283 9.471354 L 118.56283 14.498698 L 119.71583 14.677734 L 119.71583 15 L 116.52181 15 L 116.52181 14.677734 L 117.37403 14.498698 L 117.37403 8.769531 L 116.52181 8.590494 L 116.52181 8.268229 L 118.48405 8.268229 L 118.54851 9.106119 Q 118.97819 8.748047 119.71224 8.418619 Q 120.4463 8.089192 120.875984 8.089192 L 120.983406 8.089192 Z M 123.35384 13.0807295 Q 123.35384 14.312501 124.49967 14.312501 Q 125.387695 14.312501 126.16113 14.090495 L 126.16113 8.769531 L 125.14421 8.590494 L 125.14421 8.268229 L 127.34277 8.268229 L 127.34277 14.498698 L 128.19499 14.677734 L 128.19499 15 L 126.23275 15 L 126.17546 14.4557295 Q 125.66699 14.735026 125.000984 14.939128 Q 124.33496 15.1432295 123.88379 15.1432295 Q 122.16505 15.1432295 122.16505 13.166668 L 122.16505 8.769531 L 121.305664 8.590494 L 121.305664 8.268229 L 123.35384 8.268229 L 123.35384 13.0807295 Z M 134.50423 14.591797 Q 134.15332 14.849609 133.53743 14.996419 Q 132.92154 15.1432295 132.27701 15.1432295 Q 129.00423 15.1432295 129.00423 11.583984 Q 129.00423 9.901041 129.83853 8.995117 Q 130.67285 8.089192 132.22688 8.089192 Q 133.19368 8.089192 134.33951 8.311197 L 134.33951 10.1875 L 133.94563 10.1875 L 133.6377 8.998697 Q 133.04329 8.662109 132.21255 8.662109 Q 130.29329 8.662109 130.29329 11.583984 Q 130.29329 13.102215 130.87695 13.750326 Q 131.4606 14.3984375 132.68521 14.3984375 Q 133.73079 14.3984375 134.50423 14.162109 L 134.50423 14.591797 Z M 137.34732 15.1432295 Q 136.65982 15.1432295 136.31966 14.735026 Q 135.97949 14.326823 135.97949 13.589193 L 135.97949 8.869791 L 135.09863 8.869791 L 135.09863 8.547525 L 135.9938 8.268229 L 136.71712 6.742838 L 137.16829 6.742838 L 137.16829 8.268229 L 138.70801 8.268229 L 138.70801 8.869791 L 137.16829 8.869791 L 137.16829 13.460287 Q 137.16829 13.925782 137.37955 14.162109 Q 137.59082 14.3984375 137.93457 14.3984375 Q 138.34993 14.3984375 138.94434 14.2838545 L 138.94434 14.74935 Q 138.69368 14.921224 138.22102 15.032227 Q 137.74837 15.1432295 137.34732 15.1432295 Z M 141.74446 6.0696616 Q 141.74446 6.3847656 141.5153 6.6139317 Q 141.28613 6.843099 140.96387 6.843099 Q 140.64876 6.843099 140.4196 6.6139317 Q 140.19043 6.3847656 140.19043 6.0696616 Q 140.19043 5.747395 140.4196 5.5182285 Q 140.64876 5.2890625 140.96387 5.2890625 Q 141.28613 5.2890625 141.5153 5.5182285 Q 141.74446 5.747395 141.74446 6.0696616 Z M 141.67285 14.498698 L 142.82585 14.677734 L 142.82585 15 L 139.33821 15 L 139.33821 14.677734 L 140.48405 14.498698 L 140.48405 8.769531 L 139.53157 8.590494 L 139.53157 8.268229 L 141.67285 8.268229 L 141.67285 14.498698 Z M 149.87988 11.598307 Q 149.87988 15.1432295 146.72885 15.1432295 Q 145.21062 15.1432295 144.43718 14.233725 Q 143.66374 13.324219 143.66374 11.598307 Q 143.66374 9.89388 144.43718 8.991536 Q 145.21062 8.089192 146.78613 8.089192 Q 148.3187 8.089192 149.09929 8.973633 Q 149.87988 9.858072 149.87988 11.598307 Z M 148.59082 11.598307 Q 148.59082 10.051432 148.13965 9.3567705 Q 147.68848 8.662109 146.72885 8.662109 Q 145.7907 8.662109 145.37175 9.328125 Q 144.9528 9.994141 144.9528 11.598307 Q 144.9528 13.223958 145.3789 13.900716 Q 145.80502 14.577474 146.72885 14.577474 Q 147.67416 14.577474 148.13249 13.875652 Q 148.59082 13.173828 148.59082 11.598307 Z M 152.75879 8.8125 Q 153.31023 8.4973955 153.93327 8.293294 Q 154.55632 8.089192 154.97168 8.089192 Q 155.84538 8.089192 156.28938 8.597656 Q 156.7334 9.106119 156.7334 10.072916 L 156.7334 14.498698 L 157.5498 14.677734 L 157.5498 15 L 154.64941 15 L 154.64941 14.677734 L 155.5446 14.498698 L 155.5446 10.201822 Q 155.5446 9.607422 155.25456 9.267252 Q 154.96452 8.927083 154.35579 8.927083 Q 153.71126 8.927083 152.77312 9.134766 L 152.77312 14.498698 L 153.68262 14.677734 L 153.68262 15 L 150.77507 15 L 150.77507 14.677734 L 151.5843 14.498698 L 151.5843 8.769531 L 150.77507 8.590494 L 150.77507 8.268229 L 152.69434 8.268229 L 152.75879 8.8125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 65)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 97.36491 14.427084 L 98.59668 14.620443 L 98.59668 15 L 94.75813 15 L 94.75813 14.620443 L 95.98991 14.427084 L 95.98991 5.9622393 L 94.75813 5.776041 L 94.75813 5.3964844 L 98.59668 5.3964844 L 98.59668 5.776041 L 97.36491 5.9622393 L 97.36491 14.427084 Z M 101.43262 8.8125 Q 101.984055 8.4973955 102.60709 8.293294 Q 103.23013 8.089192 103.645515 8.089192 Q 104.519196 8.089192 104.96322 8.597656 Q 105.40722 9.106119 105.40722 10.072916 L 105.40722 14.498698 L 106.22363 14.677734 L 106.22363 15 L 103.32324 15 L 103.32324 14.677734 L 104.21842 14.498698 L 104.21842 10.201822 Q 104.21842 9.607422 103.92838 9.267252 Q 103.63834 8.927083 103.029625 8.927083 Q 102.38509 8.927083 101.44693 9.134766 L 101.44693 14.498698 L 102.35645 14.677734 L 102.35645 15 L 99.44889 15 L 99.44889 14.677734 L 100.25814 14.498698 L 100.25814 8.769531 L 99.44889 8.590494 L 99.44889 8.268229 L 101.368164 8.268229 L 101.43262 8.8125 Z M 111.623375 13.109375 Q 111.623375 14.1119795 110.989586 14.6276045 Q 110.3558 15.1432295 109.11687 15.1432295 Q 108.61557 15.1432295 108.01042 15.039388 Q 107.40527 14.935547 107.06152 14.806641 L 107.06152 13.152345 L 107.38379 13.152345 L 107.7347 14.090495 Q 108.27181 14.577474 109.131195 14.577474 Q 110.52051 14.577474 110.52051 13.388672 Q 110.52051 12.514974 109.424805 12.142578 L 108.78744 11.9348955 Q 108.06413 11.698567 107.7347 11.455078 Q 107.40527 11.211588 107.22624 10.857096 Q 107.047195 10.502604 107.047195 10.001302 Q 107.047195 9.113281 107.65234 8.601236 Q 108.25749 8.089192 109.28874 8.089192 Q 110.02636 8.089192 111.1364 8.311197 L 111.1364 9.779297 L 110.7998 9.779297 L 110.49902 8.998697 Q 110.11947 8.662109 109.30306 8.662109 Q 108.722984 8.662109 108.418625 8.948567 Q 108.11426 9.235025 108.11426 9.722005 Q 108.11426 10.130208 108.38998 10.409505 Q 108.665695 10.688802 109.22428 10.875 Q 110.27703 11.233072 110.59929 11.397785 Q 110.921555 11.5625 111.14714 11.802407 Q 111.37273 12.042316 111.49805 12.350259 Q 111.623375 12.658203 111.623375 13.109375 Z M 114.54526 15.1432295 Q 113.85775 15.1432295 113.51758 14.735026 Q 113.17741 14.326823 113.17741 13.589193 L 113.17741 8.869791 L 112.29655 8.869791 L 112.29655 8.547525 L 113.191734 8.268229 L 113.91505 6.742838 L 114.36621 6.742838 L 114.36621 8.268229 L 115.90592 8.268229 L 115.90592 8.869791 L 114.36621 8.869791 L 114.36621 13.460287 Q 114.36621 13.925782 114.57748 14.162109 Q 114.788734 14.3984375 115.132484 14.3984375 Q 115.54785 14.3984375 116.14226 14.2838545 L 116.14226 14.74935 Q 115.8916 14.921224 115.41894 15.032227 Q 114.9463 15.1432295 114.54526 15.1432295 Z M 120.983406 8.089192 L 120.983406 9.908203 L 120.67546 9.908203 L 120.26009 9.120442 Q 119.90202 9.120442 119.41145 9.217122 Q 118.920906 9.313802 118.56283 9.471354 L 118.56283 14.498698 L 119.71583 14.677734 L 119.71583 15 L 116.52181 15 L 116.52181 14.677734 L 117.37403 14.498698 L 117.37403 8.769531 L 116.52181 8.590494 L 116.52181 8.268229 L 118.48405 8.268229 L 118.54851 9.106119 Q 118.97819 8.748047 119.71224 8.418619 Q 120.4463 8.089192 120.875984 8.089192 L 120.983406 8.089192 Z M 123.35384 13.0807295 Q 123.35384 14.312501 124.49967 14.312501 Q 125.387695 14.312501 126.16113 14.090495 L 126.16113 8.769531 L 125.14421 8.590494 L 125.14421 8.268229 L 127.34277 8.268229 L 127.34277 14.498698 L 128.19499 14.677734 L 128.19499 15 L 126.23275 15 L 126.17546 14.4557295 Q 125.66699 14.735026 125.000984 14.939128 Q 124.33496 15.1432295 123.88379 15.1432295 Q 122.16505 15.1432295 122.16505 13.166668 L 122.16505 8.769531 L 121.305664 8.590494 L 121.305664 8.268229 L 123.35384 8.268229 L 123.35384 13.0807295 Z M 134.50423 14.591797 Q 134.15332 14.849609 133.53743 14.996419 Q 132.92154 15.1432295 132.27701 15.1432295 Q 129.00423 15.1432295 129.00423 11.583984 Q 129.00423 9.901041 129.83853 8.995117 Q 130.67285 8.089192 132.22688 8.089192 Q 133.19368 8.089192 134.33951 8.311197 L 134.33951 10.1875 L 133.94563 10.1875 L 133.6377 8.998697 Q 133.04329 8.662109 132.21255 8.662109 Q 130.29329 8.662109 130.29329 11.583984 Q 130.29329 13.102215 130.87695 13.750326 Q 131.4606 14.3984375 132.68521 14.3984375 Q 133.73079 14.3984375 134.50423 14.162109 L 134.50423 14.591797 Z M 137.34732 15.1432295 Q 136.65982 15.1432295 136.31966 14.735026 Q 135.97949 14.326823 135.97949 13.589193 L 135.97949 8.869791 L 135.09863 8.869791 L 135.09863 8.547525 L 135.9938 8.268229 L 136.71712 6.742838 L 137.16829 6.742838 L 137.16829 8.268229 L 138.70801 8.268229 L 138.70801 8.869791 L 137.16829 8.869791 L 137.16829 13.460287 Q 137.16829 13.925782 137.37955 14.162109 Q 137.59082 14.3984375 137.93457 14.3984375 Q 138.34993 14.3984375 138.94434 14.2838545 L 138.94434 14.74935 Q 138.69368 14.921224 138.22102 15.032227 Q 137.74837 15.1432295 137.34732 15.1432295 Z M 141.74446 6.0696616 Q 141.74446 6.3847656 141.5153 6.6139317 Q 141.28613 6.843099 140.96387 6.843099 Q 140.64876 6.843099 140.4196 6.6139317 Q 140.19043 6.3847656 140.19043 6.0696616 Q 140.19043 5.747395 140.4196 5.5182285 Q 140.64876 5.2890625 140.96387 5.2890625 Q 141.28613 5.2890625 141.5153 5.5182285 Q 141.74446 5.747395 141.74446 6.0696616 Z M 141.67285 14.498698 L 142.82585 14.677734 L 142.82585 15 L 139.33821 15 L 139.33821 14.677734 L 140.48405 14.498698 L 140.48405 8.769531 L 139.53157 8.590494 L 139.53157 8.268229 L 141.67285 8.268229 L 141.67285 14.498698 Z M 149.87988 11.598307 Q 149.87988 15.1432295 146.72885 15.1432295 Q 145.21062 15.1432295 144.43718 14.233725 Q 143.66374 13.324219 143.66374 11.598307 Q 143.66374 9.89388 144.43718 8.991536 Q 145.21062 8.089192 146.78613 8.089192 Q 148.3187 8.089192 149.09929 8.973633 Q 149.87988 9.858072 149.87988 11.598307 Z M 148.59082 11.598307 Q 148.59082 10.051432 148.13965 9.3567705 Q 147.68848 8.662109 146.72885 8.662109 Q 145.7907 8.662109 145.37175 9.328125 Q 144.9528 9.994141 144.9528 11.598307 Q 144.9528 13.223958 145.3789 13.900716 Q 145.80502 14.577474 146.72885 14.577474 Q 147.67416 14.577474 148.13249 13.875652 Q 148.59082 13.173828 148.59082 11.598307 Z M 152.75879 8.8125 Q 153.31023 8.4973955 153.93327 8.293294 Q 154.55632 8.089192 154.97168 8.089192 Q 155.84538 8.089192 156.28938 8.597656 Q 156.7334 9.106119 156.7334 10.072916 L 156.7334 14.498698 L 157.5498 14.677734 L 157.5498 15 L 154.64941 15 L 154.64941 14.677734 L 155.5446 14.498698 L 155.5446 10.201822 Q 155.5446 9.607422 155.25456 9.267252 Q 154.96452 8.927083 154.35579 8.927083 Q 153.71126 8.927083 152.77312 9.134766 L 152.77312 14.498698 L 153.68262 14.677734 L 153.68262 15 L 150.77507 15 L 150.77507 14.677734 L 151.5843 14.498698 L 151.5843 8.769531 L 150.77507 8.590494 L 150.77507 8.268229 L 152.69434 8.268229 L 152.75879 8.8125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 95)">
+                <g>
+                    <path fill="#0041c4" stroke="none" d="M -52.46029 5.3964844 L -52.46029 5.776041 L -53.51302 5.9622393 L -57.373047 15.222005 L -57.73828 15.222005 L -61.641277 5.9622393 L -62.722656 5.776041 L -62.722656 5.3964844 L -58.84115 5.3964844 L -58.84115 5.776041 L -60.13021 5.9622393 L -57.222656 13.030599 L -54.32227 5.9622393 L -55.582684 5.776041 L -55.582684 5.3964844 L -52.46029 5.3964844 Z M -50.462242 6.0696616 Q -50.462242 6.3847656 -50.691406 6.6139317 Q -50.920574 6.843099 -51.24284 6.843099 Q -51.557945 6.843099 -51.78711 6.6139317 Q -52.016277 6.3847656 -52.016277 6.0696616 Q -52.016277 5.747395 -51.78711 5.5182285 Q -51.557945 5.2890625 -51.24284 5.2890625 Q -50.920574 5.2890625 -50.691406 5.5182285 Q -50.462242 5.747395 -50.462242 6.0696616 Z M -50.533855 14.498698 L -49.38086 14.677734 L -49.38086 15 L -52.868492 15 L -52.868492 14.677734 L -51.722656 14.498698 L -51.722656 8.769531 L -52.675133 8.590494 L -52.675133 8.268229 L -50.533855 8.268229 L -50.533855 14.498698 Z M -47.239582 11.61263 L -47.239582 11.741536 Q -47.239582 12.729817 -47.02116 13.277669 Q -46.802734 13.8255205 -46.34798 14.1119795 Q -45.893234 14.3984375 -45.155598 14.3984375 Q -44.76888 14.3984375 -44.238934 14.333984 Q -43.708984 14.269531 -43.365234 14.190755 L -43.365234 14.591797 Q -43.708984 14.813802 -44.29981 14.978516 Q -44.890625 15.1432295 -45.506516 15.1432295 Q -47.07487 15.1432295 -47.801758 14.298178 Q -48.528645 13.453125 -48.528645 11.583984 Q -48.528645 9.822266 -47.791016 8.955729 Q -47.05339 8.089192 -45.685543 8.089192 Q -43.10026 8.089192 -43.10026 11.02539 L -43.10026 11.61263 L -47.239582 11.61263 Z M -45.685543 8.662109 Q -46.43034 8.662109 -46.8278 9.263672 Q -47.22526 9.865234 -47.22526 11.039713 L -44.34636 11.039713 Q -44.34636 9.7578125 -44.675785 9.209961 Q -45.00521 8.662109 -45.685543 8.662109 Z M -35.065105 15.1432295 L -35.6237 15.1432295 L -37.285156 10.703125 L -38.92513 15.1432295 L -39.45508 15.1432295 L -41.78255 8.769531 L -42.577473 8.590494 L -42.577473 8.268229 L -39.3763 8.268229 L -39.3763 8.590494 L -40.49349 8.783854 L -38.896484 13.331381 L -37.270832 8.941406 L -36.66927 8.941406 L -35.05078 13.360027 L -33.52539 8.769531 L -34.628254 8.590494 L -34.628254 8.268229 L -32.064453 8.268229 L -32.064453 8.590494 L -32.809242 8.740885 L -35.065105 15.1432295 Z M -28.863281 14.427084 L -27.631512 14.620443 L -27.631512 15 L -31.470053 15 L -31.470053 14.620443 L -30.238283 14.427084 L -30.238283 5.9622393 L -31.470053 5.776041 L -31.470053 5.3964844 L -27.631512 5.3964844 L -27.631512 5.776041 L -28.863281 5.9622393 L -28.863281 14.427084 Z M -24.79557 8.8125 Q -24.244139 8.4973955 -23.621094 8.293294 Q -22.998047 8.089192 -22.582682 8.089192 Q -21.708984 8.089192 -21.264973 8.597656 Q -20.820963 9.106119 -20.820963 10.072916 L -20.820963 14.498698 L -20.004557 14.677734 L -20.004557 15 L -22.904947 15 L -22.904947 14.677734 L -22.009766 14.498698 L -22.009766 10.201822 Q -22.009766 9.607422 -22.299805 9.267252 Q -22.589844 8.927083 -23.198566 8.927083 Q -23.843098 8.927083 -24.78125 9.134766 L -24.78125 14.498698 L -23.871744 14.677734 L -23.871744 15 L -26.779297 15 L -26.779297 14.677734 L -25.97005 14.498698 L -25.97005 8.769531 L -26.779297 8.590494 L -26.779297 8.268229 L -24.860023 8.268229 L -24.79557 8.8125 Z M -14.604816 13.109375 Q -14.604816 14.1119795 -15.238606 14.6276045 Q -15.872395 15.1432295 -17.111326 15.1432295 Q -17.612629 15.1432295 -18.217772 15.039388 Q -18.822916 14.935547 -19.166666 14.806641 L -19.166666 13.152345 L -18.8444 13.152345 L -18.493488 14.090495 Q -17.956379 14.577474 -17.097004 14.577474 Q -15.707682 14.577474 -15.707682 13.388672 Q -15.707682 12.514974 -16.803385 12.142578 L -17.440754 11.9348955 Q -18.16406 11.698567 -18.493488 11.455078 Q -18.822916 11.211588 -19.001951 10.857096 Q -19.180988 10.502604 -19.180988 10.001302 Q -19.180988 9.113281 -18.575846 8.601236 Q -17.970701 8.089192 -16.939451 8.089192 Q -16.201822 8.089192 -15.091795 8.311197 L -15.091795 9.779297 L -15.428384 9.779297 L -15.729165 8.998697 Q -16.108723 8.662109 -16.925129 8.662109 Q -17.505207 8.662109 -17.809568 8.948567 Q -18.113932 9.235025 -18.113932 9.722005 Q -18.113932 10.130208 -17.838215 10.409505 Q -17.562498 10.688802 -17.003904 10.875 Q -15.951171 11.233072 -15.628905 11.397785 Q -15.306638 11.5625 -15.081052 11.802407 Q -14.855466 12.042316 -14.730142 12.350259 Q -14.604816 12.658203 -14.604816 13.109375 Z M -11.682941 15.1432295 Q -12.370441 15.1432295 -12.71061 14.735026 Q -13.050779 14.326823 -13.050779 13.589193 L -13.050779 8.869791 L -13.931639 8.869791 L -13.931639 8.547525 L -13.036457 8.268229 L -12.313149 6.742838 L -11.861978 6.742838 L -11.861978 8.268229 L -10.322264 8.268229 L -10.322264 8.869791 L -11.861978 8.869791 L -11.861978 13.460287 Q -11.861978 13.925782 -11.650715 14.162109 Q -11.439451 14.3984375 -11.095702 14.3984375 Q -10.680337 14.3984375 -10.085936 14.2838545 L -10.085936 14.74935 Q -10.336587 14.921224 -10.809243 15.032227 Q -11.281899 15.1432295 -11.682941 15.1432295 Z"/>
+                </g>
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 125)">
+                <g>
+                    <path fill="#0041c4" stroke="none" d="M -47.934242 15 L -47.934242 14.620443 L -46.40886 14.427084 L -46.40886 6.012369 L -46.774086 6.012369 Q -48.585938 6.012369 -49.251953 6.1555986 L -49.445316 7.6523438 L -49.92513 7.6523438 L -49.92513 5.3964844 L -41.47461 5.3964844 L -41.47461 7.6523438 L -41.96159 7.6523438 L -42.15495 6.1555986 Q -42.369793 6.1054688 -43.093098 6.06608 Q -43.816406 6.0266924 -44.675785 6.0266924 L -45.02669 6.0266924 L -45.02669 14.427084 L -43.50131 14.620443 L -43.50131 15 L -47.934242 15 Z M -36.99154 8.089192 L -36.99154 9.908203 L -37.29948 9.908203 L -37.714844 9.120442 Q -38.072918 9.120442 -38.563477 9.217122 Q -39.05404 9.313802 -39.41211 9.471354 L -39.41211 14.498698 L -38.259117 14.677734 L -38.259117 15 L -41.453125 15 L -41.453125 14.677734 L -40.600914 14.498698 L -40.600914 8.769531 L -41.453125 8.590494 L -41.453125 8.268229 L -39.490887 8.268229 L -39.426434 9.106119 Q -38.996746 8.748047 -38.262695 8.418619 Q -37.52865 8.089192 -37.09896 8.089192 L -36.99154 8.089192 Z M -33.532555 8.117838 Q -32.42969 8.117838 -31.910484 8.56901 Q -31.391277 9.020182 -31.391277 9.951172 L -31.391277 14.498698 L -30.553387 14.677734 L -30.553387 15 L -32.401043 15 L -32.537113 14.326823 Q -33.35352 15.1432295 -34.621098 15.1432295 Q -36.347008 15.1432295 -36.347008 13.138021 Q -36.347008 12.464844 -36.085613 12.024413 Q -35.824223 11.583984 -35.251305 11.351235 Q -34.678387 11.118489 -33.589848 11.097005 L -32.580082 11.068359 L -32.580082 10.015625 Q -32.580082 9.320963 -32.834312 8.991536 Q -33.088543 8.662109 -33.618492 8.662109 Q -34.334637 8.662109 -34.92904 8.998697 L -35.172527 9.836588 L -35.57357 9.836588 L -35.57357 8.368489 Q -34.413414 8.117838 -33.532555 8.117838 Z M -32.580082 11.569661 L -33.51823 11.598307 Q -34.477867 11.634114 -34.818035 11.970703 Q -35.158207 12.307291 -35.158207 13.095052 Q -35.158207 14.355469 -34.134117 14.355469 Q -33.647137 14.355469 -33.292645 14.244466 Q -32.938152 14.133464 -32.580082 13.961589 L -32.580082 11.569661 Z M -24.294271 14.591797 Q -24.645184 14.849609 -25.261068 14.996419 Q -25.876953 15.1432295 -26.521484 15.1432295 Q -29.794271 15.1432295 -29.794271 11.583984 Q -29.794271 9.901041 -28.95996 8.995117 Q -28.125652 8.089192 -26.571615 8.089192 Q -25.604818 8.089192 -24.458984 8.311197 L -24.458984 10.1875 L -24.852863 10.1875 L -25.160809 8.998697 Q -25.75521 8.662109 -26.585938 8.662109 Q -28.505209 8.662109 -28.505209 11.583984 Q -28.505209 13.102215 -27.92155 13.750326 Q -27.337893 14.3984375 -26.11328 14.3984375 Q -25.067709 14.3984375 -24.294271 14.162109 L -24.294271 14.591797 Z M -21.98112 11.61263 L -21.98112 11.741536 Q -21.98112 12.729817 -21.762695 13.277669 Q -21.544271 13.8255205 -21.08952 14.1119795 Q -20.634766 14.3984375 -19.897137 14.3984375 Q -19.510418 14.3984375 -18.980469 14.333984 Q -18.450521 14.269531 -18.106771 14.190755 L -18.106771 14.591797 Q -18.450521 14.813802 -19.041342 14.978516 Q -19.632162 15.1432295 -20.248047 15.1432295 Q -21.816406 15.1432295 -22.543297 14.298178 Q -23.270182 13.453125 -23.270182 11.583984 Q -23.270182 9.822266 -22.53255 8.955729 Q -21.794922 8.089192 -20.427084 8.089192 Q -17.841797 8.089192 -17.841797 11.02539 L -17.841797 11.61263 L -21.98112 11.61263 Z M -20.427084 8.662109 Q -21.171875 8.662109 -21.569336 9.263672 Q -21.966797 9.865234 -21.966797 11.039713 L -19.08789 11.039713 Q -19.08789 9.7578125 -19.417318 9.209961 Q -19.746746 8.662109 -20.427084 8.662109 Z M -12.1556 14.498698 Q -12.964844 15.1432295 -14.046225 15.1432295 Q -16.803387 15.1432295 -16.803387 11.698567 Q -16.803387 9.9296875 -16.022787 9.009439 Q -15.2421875 8.089192 -13.723959 8.089192 Q -12.950521 8.089192 -12.1556 8.253906 Q -12.198569 8.017578 -12.198569 7.065104 L -12.198569 5.317708 L -13.330079 5.145833 L -13.330079 4.8235674 L -11.009765 4.8235674 L -11.009765 14.498698 L -10.179037 14.677734 L -10.179037 15 L -12.069663 15 L -12.1556 14.498698 Z M -15.514323 11.698567 Q -15.514323 13.059245 -15.05599 13.728841 Q -14.597656 14.3984375 -13.652345 14.3984375 Q -12.843101 14.3984375 -12.198569 14.119142 L -12.198569 8.798177 Q -12.8359375 8.676432 -13.652345 8.676432 Q -15.514323 8.676432 -15.514323 11.698567 Z"/>
+                </g>
+                <g  transform="matrix(1 0 0 1 4 0)">
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 155)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 97.36491 14.427084 L 98.59668 14.620443 L 98.59668 15 L 94.75813 15 L 94.75813 14.620443 L 95.98991 14.427084 L 95.98991 5.9622393 L 94.75813 5.776041 L 94.75813 5.3964844 L 98.59668 5.3964844 L 98.59668 5.776041 L 97.36491 5.9622393 L 97.36491 14.427084 Z M 101.43262 8.8125 Q 101.984055 8.4973955 102.60709 8.293294 Q 103.23013 8.089192 103.645515 8.089192 Q 104.519196 8.089192 104.96322 8.597656 Q 105.40722 9.106119 105.40722 10.072916 L 105.40722 14.498698 L 106.22363 14.677734 L 106.22363 15 L 103.32324 15 L 103.32324 14.677734 L 104.21842 14.498698 L 104.21842 10.201822 Q 104.21842 9.607422 103.92838 9.267252 Q 103.63834 8.927083 103.029625 8.927083 Q 102.38509 8.927083 101.44693 9.134766 L 101.44693 14.498698 L 102.35645 14.677734 L 102.35645 15 L 99.44889 15 L 99.44889 14.677734 L 100.25814 14.498698 L 100.25814 8.769531 L 99.44889 8.590494 L 99.44889 8.268229 L 101.368164 8.268229 L 101.43262 8.8125 Z M 111.623375 13.109375 Q 111.623375 14.1119795 110.989586 14.6276045 Q 110.3558 15.1432295 109.11687 15.1432295 Q 108.61557 15.1432295 108.01042 15.039388 Q 107.40527 14.935547 107.06152 14.806641 L 107.06152 13.152345 L 107.38379 13.152345 L 107.7347 14.090495 Q 108.27181 14.577474 109.131195 14.577474 Q 110.52051 14.577474 110.52051 13.388672 Q 110.52051 12.514974 109.424805 12.142578 L 108.78744 11.9348955 Q 108.06413 11.698567 107.7347 11.455078 Q 107.40527 11.211588 107.22624 10.857096 Q 107.047195 10.502604 107.047195 10.001302 Q 107.047195 9.113281 107.65234 8.601236 Q 108.25749 8.089192 109.28874 8.089192 Q 110.02636 8.089192 111.1364 8.311197 L 111.1364 9.779297 L 110.7998 9.779297 L 110.49902 8.998697 Q 110.11947 8.662109 109.30306 8.662109 Q 108.722984 8.662109 108.418625 8.948567 Q 108.11426 9.235025 108.11426 9.722005 Q 108.11426 10.130208 108.38998 10.409505 Q 108.665695 10.688802 109.22428 10.875 Q 110.27703 11.233072 110.59929 11.397785 Q 110.921555 11.5625 111.14714 11.802407 Q 111.37273 12.042316 111.49805 12.350259 Q 111.623375 12.658203 111.623375 13.109375 Z M 114.54526 15.1432295 Q 113.85775 15.1432295 113.51758 14.735026 Q 113.17741 14.326823 113.17741 13.589193 L 113.17741 8.869791 L 112.29655 8.869791 L 112.29655 8.547525 L 113.191734 8.268229 L 113.91505 6.742838 L 114.36621 6.742838 L 114.36621 8.268229 L 115.90592 8.268229 L 115.90592 8.869791 L 114.36621 8.869791 L 114.36621 13.460287 Q 114.36621 13.925782 114.57748 14.162109 Q 114.788734 14.3984375 115.132484 14.3984375 Q 115.54785 14.3984375 116.14226 14.2838545 L 116.14226 14.74935 Q 115.8916 14.921224 115.41894 15.032227 Q 114.9463 15.1432295 114.54526 15.1432295 Z M 120.983406 8.089192 L 120.983406 9.908203 L 120.67546 9.908203 L 120.26009 9.120442 Q 119.90202 9.120442 119.41145 9.217122 Q 118.920906 9.313802 118.56283 9.471354 L 118.56283 14.498698 L 119.71583 14.677734 L 119.71583 15 L 116.52181 15 L 116.52181 14.677734 L 117.37403 14.498698 L 117.37403 8.769531 L 116.52181 8.590494 L 116.52181 8.268229 L 118.48405 8.268229 L 118.54851 9.106119 Q 118.97819 8.748047 119.71224 8.418619 Q 120.4463 8.089192 120.875984 8.089192 L 120.983406 8.089192 Z M 123.35384 13.0807295 Q 123.35384 14.312501 124.49967 14.312501 Q 125.387695 14.312501 126.16113 14.090495 L 126.16113 8.769531 L 125.14421 8.590494 L 125.14421 8.268229 L 127.34277 8.268229 L 127.34277 14.498698 L 128.19499 14.677734 L 128.19499 15 L 126.23275 15 L 126.17546 14.4557295 Q 125.66699 14.735026 125.000984 14.939128 Q 124.33496 15.1432295 123.88379 15.1432295 Q 122.16505 15.1432295 122.16505 13.166668 L 122.16505 8.769531 L 121.305664 8.590494 L 121.305664 8.268229 L 123.35384 8.268229 L 123.35384 13.0807295 Z M 134.50423 14.591797 Q 134.15332 14.849609 133.53743 14.996419 Q 132.92154 15.1432295 132.27701 15.1432295 Q 129.00423 15.1432295 129.00423 11.583984 Q 129.00423 9.901041 129.83853 8.995117 Q 130.67285 8.089192 132.22688 8.089192 Q 133.19368 8.089192 134.33951 8.311197 L 134.33951 10.1875 L 133.94563 10.1875 L 133.6377 8.998697 Q 133.04329 8.662109 132.21255 8.662109 Q 130.29329 8.662109 130.29329 11.583984 Q 130.29329 13.102215 130.87695 13.750326 Q 131.4606 14.3984375 132.68521 14.3984375 Q 133.73079 14.3984375 134.50423 14.162109 L 134.50423 14.591797 Z M 137.34732 15.1432295 Q 136.65982 15.1432295 136.31966 14.735026 Q 135.97949 14.326823 135.97949 13.589193 L 135.97949 8.869791 L 135.09863 8.869791 L 135.09863 8.547525 L 135.9938 8.268229 L 136.71712 6.742838 L 137.16829 6.742838 L 137.16829 8.268229 L 138.70801 8.268229 L 138.70801 8.869791 L 137.16829 8.869791 L 137.16829 13.460287 Q 137.16829 13.925782 137.37955 14.162109 Q 137.59082 14.3984375 137.93457 14.3984375 Q 138.34993 14.3984375 138.94434 14.2838545 L 138.94434 14.74935 Q 138.69368 14.921224 138.22102 15.032227 Q 137.74837 15.1432295 137.34732 15.1432295 Z M 141.74446 6.0696616 Q 141.74446 6.3847656 141.5153 6.6139317 Q 141.28613 6.843099 140.96387 6.843099 Q 140.64876 6.843099 140.4196 6.6139317 Q 140.19043 6.3847656 140.19043 6.0696616 Q 140.19043 5.747395 140.4196 5.5182285 Q 140.64876 5.2890625 140.96387 5.2890625 Q 141.28613 5.2890625 141.5153 5.5182285 Q 141.74446 5.747395 141.74446 6.0696616 Z M 141.67285 14.498698 L 142.82585 14.677734 L 142.82585 15 L 139.33821 15 L 139.33821 14.677734 L 140.48405 14.498698 L 140.48405 8.769531 L 139.53157 8.590494 L 139.53157 8.268229 L 141.67285 8.268229 L 141.67285 14.498698 Z M 149.87988 11.598307 Q 149.87988 15.1432295 146.72885 15.1432295 Q 145.21062 15.1432295 144.43718 14.233725 Q 143.66374 13.324219 143.66374 11.598307 Q 143.66374 9.89388 144.43718 8.991536 Q 145.21062 8.089192 146.78613 8.089192 Q 148.3187 8.089192 149.09929 8.973633 Q 149.87988 9.858072 149.87988 11.598307 Z M 148.59082 11.598307 Q 148.59082 10.051432 148.13965 9.3567705 Q 147.68848 8.662109 146.72885 8.662109 Q 145.7907 8.662109 145.37175 9.328125 Q 144.9528 9.994141 144.9528 11.598307 Q 144.9528 13.223958 145.3789 13.900716 Q 145.80502 14.577474 146.72885 14.577474 Q 147.67416 14.577474 148.13249 13.875652 Q 148.59082 13.173828 148.59082 11.598307 Z M 152.75879 8.8125 Q 153.31023 8.4973955 153.93327 8.293294 Q 154.55632 8.089192 154.97168 8.089192 Q 155.84538 8.089192 156.28938 8.597656 Q 156.7334 9.106119 156.7334 10.072916 L 156.7334 14.498698 L 157.5498 14.677734 L 157.5498 15 L 154.64941 15 L 154.64941 14.677734 L 155.5446 14.498698 L 155.5446 10.201822 Q 155.5446 9.607422 155.25456 9.267252 Q 154.96452 8.927083 154.35579 8.927083 Q 153.71126 8.927083 152.77312 9.134766 L 152.77312 14.498698 L 153.68262 14.677734 L 153.68262 15 L 150.77507 15 L 150.77507 14.677734 L 151.5843 14.498698 L 151.5843 8.769531 L 150.77507 8.590494 L 150.77507 8.268229 L 152.69434 8.268229 L 152.75879 8.8125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 185)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 97.36491 14.427084 L 98.59668 14.620443 L 98.59668 15 L 94.75813 15 L 94.75813 14.620443 L 95.98991 14.427084 L 95.98991 5.9622393 L 94.75813 5.776041 L 94.75813 5.3964844 L 98.59668 5.3964844 L 98.59668 5.776041 L 97.36491 5.9622393 L 97.36491 14.427084 Z M 101.43262 8.8125 Q 101.984055 8.4973955 102.60709 8.293294 Q 103.23013 8.089192 103.645515 8.089192 Q 104.519196 8.089192 104.96322 8.597656 Q 105.40722 9.106119 105.40722 10.072916 L 105.40722 14.498698 L 106.22363 14.677734 L 106.22363 15 L 103.32324 15 L 103.32324 14.677734 L 104.21842 14.498698 L 104.21842 10.201822 Q 104.21842 9.607422 103.92838 9.267252 Q 103.63834 8.927083 103.029625 8.927083 Q 102.38509 8.927083 101.44693 9.134766 L 101.44693 14.498698 L 102.35645 14.677734 L 102.35645 15 L 99.44889 15 L 99.44889 14.677734 L 100.25814 14.498698 L 100.25814 8.769531 L 99.44889 8.590494 L 99.44889 8.268229 L 101.368164 8.268229 L 101.43262 8.8125 Z M 111.623375 13.109375 Q 111.623375 14.1119795 110.989586 14.6276045 Q 110.3558 15.1432295 109.11687 15.1432295 Q 108.61557 15.1432295 108.01042 15.039388 Q 107.40527 14.935547 107.06152 14.806641 L 107.06152 13.152345 L 107.38379 13.152345 L 107.7347 14.090495 Q 108.27181 14.577474 109.131195 14.577474 Q 110.52051 14.577474 110.52051 13.388672 Q 110.52051 12.514974 109.424805 12.142578 L 108.78744 11.9348955 Q 108.06413 11.698567 107.7347 11.455078 Q 107.40527 11.211588 107.22624 10.857096 Q 107.047195 10.502604 107.047195 10.001302 Q 107.047195 9.113281 107.65234 8.601236 Q 108.25749 8.089192 109.28874 8.089192 Q 110.02636 8.089192 111.1364 8.311197 L 111.1364 9.779297 L 110.7998 9.779297 L 110.49902 8.998697 Q 110.11947 8.662109 109.30306 8.662109 Q 108.722984 8.662109 108.418625 8.948567 Q 108.11426 9.235025 108.11426 9.722005 Q 108.11426 10.130208 108.38998 10.409505 Q 108.665695 10.688802 109.22428 10.875 Q 110.27703 11.233072 110.59929 11.397785 Q 110.921555 11.5625 111.14714 11.802407 Q 111.37273 12.042316 111.49805 12.350259 Q 111.623375 12.658203 111.623375 13.109375 Z M 114.54526 15.1432295 Q 113.85775 15.1432295 113.51758 14.735026 Q 113.17741 14.326823 113.17741 13.589193 L 113.17741 8.869791 L 112.29655 8.869791 L 112.29655 8.547525 L 113.191734 8.268229 L 113.91505 6.742838 L 114.36621 6.742838 L 114.36621 8.268229 L 115.90592 8.268229 L 115.90592 8.869791 L 114.36621 8.869791 L 114.36621 13.460287 Q 114.36621 13.925782 114.57748 14.162109 Q 114.788734 14.3984375 115.132484 14.3984375 Q 115.54785 14.3984375 116.14226 14.2838545 L 116.14226 14.74935 Q 115.8916 14.921224 115.41894 15.032227 Q 114.9463 15.1432295 114.54526 15.1432295 Z M 120.983406 8.089192 L 120.983406 9.908203 L 120.67546 9.908203 L 120.26009 9.120442 Q 119.90202 9.120442 119.41145 9.217122 Q 118.920906 9.313802 118.56283 9.471354 L 118.56283 14.498698 L 119.71583 14.677734 L 119.71583 15 L 116.52181 15 L 116.52181 14.677734 L 117.37403 14.498698 L 117.37403 8.769531 L 116.52181 8.590494 L 116.52181 8.268229 L 118.48405 8.268229 L 118.54851 9.106119 Q 118.97819 8.748047 119.71224 8.418619 Q 120.4463 8.089192 120.875984 8.089192 L 120.983406 8.089192 Z M 123.35384 13.0807295 Q 123.35384 14.312501 124.49967 14.312501 Q 125.387695 14.312501 126.16113 14.090495 L 126.16113 8.769531 L 125.14421 8.590494 L 125.14421 8.268229 L 127.34277 8.268229 L 127.34277 14.498698 L 128.19499 14.677734 L 128.19499 15 L 126.23275 15 L 126.17546 14.4557295 Q 125.66699 14.735026 125.000984 14.939128 Q 124.33496 15.1432295 123.88379 15.1432295 Q 122.16505 15.1432295 122.16505 13.166668 L 122.16505 8.769531 L 121.305664 8.590494 L 121.305664 8.268229 L 123.35384 8.268229 L 123.35384 13.0807295 Z M 134.50423 14.591797 Q 134.15332 14.849609 133.53743 14.996419 Q 132.92154 15.1432295 132.27701 15.1432295 Q 129.00423 15.1432295 129.00423 11.583984 Q 129.00423 9.901041 129.83853 8.995117 Q 130.67285 8.089192 132.22688 8.089192 Q 133.19368 8.089192 134.33951 8.311197 L 134.33951 10.1875 L 133.94563 10.1875 L 133.6377 8.998697 Q 133.04329 8.662109 132.21255 8.662109 Q 130.29329 8.662109 130.29329 11.583984 Q 130.29329 13.102215 130.87695 13.750326 Q 131.4606 14.3984375 132.68521 14.3984375 Q 133.73079 14.3984375 134.50423 14.162109 L 134.50423 14.591797 Z M 137.34732 15.1432295 Q 136.65982 15.1432295 136.31966 14.735026 Q 135.97949 14.326823 135.97949 13.589193 L 135.97949 8.869791 L 135.09863 8.869791 L 135.09863 8.547525 L 135.9938 8.268229 L 136.71712 6.742838 L 137.16829 6.742838 L 137.16829 8.268229 L 138.70801 8.268229 L 138.70801 8.869791 L 137.16829 8.869791 L 137.16829 13.460287 Q 137.16829 13.925782 137.37955 14.162109 Q 137.59082 14.3984375 137.93457 14.3984375 Q 138.34993 14.3984375 138.94434 14.2838545 L 138.94434 14.74935 Q 138.69368 14.921224 138.22102 15.032227 Q 137.74837 15.1432295 137.34732 15.1432295 Z M 141.74446 6.0696616 Q 141.74446 6.3847656 141.5153 6.6139317 Q 141.28613 6.843099 140.96387 6.843099 Q 140.64876 6.843099 140.4196 6.6139317 Q 140.19043 6.3847656 140.19043 6.0696616 Q 140.19043 5.747395 140.4196 5.5182285 Q 140.64876 5.2890625 140.96387 5.2890625 Q 141.28613 5.2890625 141.5153 5.5182285 Q 141.74446 5.747395 141.74446 6.0696616 Z M 141.67285 14.498698 L 142.82585 14.677734 L 142.82585 15 L 139.33821 15 L 139.33821 14.677734 L 140.48405 14.498698 L 140.48405 8.769531 L 139.53157 8.590494 L 139.53157 8.268229 L 141.67285 8.268229 L 141.67285 14.498698 Z M 149.87988 11.598307 Q 149.87988 15.1432295 146.72885 15.1432295 Q 145.21062 15.1432295 144.43718 14.233725 Q 143.66374 13.324219 143.66374 11.598307 Q 143.66374 9.89388 144.43718 8.991536 Q 145.21062 8.089192 146.78613 8.089192 Q 148.3187 8.089192 149.09929 8.973633 Q 149.87988 9.858072 149.87988 11.598307 Z M 148.59082 11.598307 Q 148.59082 10.051432 148.13965 9.3567705 Q 147.68848 8.662109 146.72885 8.662109 Q 145.7907 8.662109 145.37175 9.328125 Q 144.9528 9.994141 144.9528 11.598307 Q 144.9528 13.223958 145.3789 13.900716 Q 145.80502 14.577474 146.72885 14.577474 Q 147.67416 14.577474 148.13249 13.875652 Q 148.59082 13.173828 148.59082 11.598307 Z M 152.75879 8.8125 Q 153.31023 8.4973955 153.93327 8.293294 Q 154.55632 8.089192 154.97168 8.089192 Q 155.84538 8.089192 156.28938 8.597656 Q 156.7334 9.106119 156.7334 10.072916 L 156.7334 14.498698 L 157.5498 14.677734 L 157.5498 15 L 154.64941 15 L 154.64941 14.677734 L 155.5446 14.498698 L 155.5446 10.201822 Q 155.5446 9.607422 155.25456 9.267252 Q 154.96452 8.927083 154.35579 8.927083 Q 153.71126 8.927083 152.77312 9.134766 L 152.77312 14.498698 L 153.68262 14.677734 L 153.68262 15 L 150.77507 15 L 150.77507 14.677734 L 151.5843 14.498698 L 151.5843 8.769531 L 150.77507 8.590494 L 150.77507 8.268229 L 152.69434 8.268229 L 152.75879 8.8125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 215)">
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 9 0 L 20 0 L 20 20 L 9 20 L 6 10 Z"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 3.5 1.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 4.5 5.5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 6 9"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 4 16"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 20 20 L 0 20 L 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="#ffffff" stroke="none" d="M 0 0 L 0 20 L 3 20 L 6 10 L 3 0"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 15 L 15 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 10 L 10 20"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 5 L 8 17"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 20 0 L 7 13"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 0 L 7 8"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 0 L 9 1"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 5 L 5 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 10 L 10 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 15 L 15 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 0 20 L 20 0"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 5 20 L 20 5"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 10 20 L 20 10"/>
+                            <path fill="none" stroke="#000000" stroke-width="0.5" stroke-linecap="round" d="M 15 20 L 20 15"/>
+                        </g>
+                    </g>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 110.13737 8.239583 Q 110.13737 7.0579424 109.58594 6.5494785 Q 109.03449 6.0410156 107.73112 6.0410156 L 107.0293 6.0410156 L 107.0293 10.588541 L 107.774086 10.588541 Q 108.984375 10.588541 109.56086 10.037109 Q 110.13737 9.485677 110.13737 8.239583 Z M 107.0293 11.233072 L 107.0293 14.427084 L 108.55469 14.620443 L 108.55469 15 L 104.50845 15 L 104.50845 14.620443 L 105.64713 14.427084 L 105.64713 5.9622393 L 104.41535 5.776041 L 104.41535 5.3964844 L 108.03906 5.3964844 Q 111.56249 5.3964844 111.56249 8.22526 Q 111.56249 9.7005205 110.6709 10.466797 Q 109.77929 11.233072 108.11067 11.233072 L 107.0293 11.233072 Z M 118.924484 10.158854 Q 118.924484 15.1432295 115.77344 15.1432295 Q 114.2552 15.1432295 113.481766 13.868489 Q 112.70833 12.59375 112.70833 10.158854 Q 112.70833 7.7740884 113.481766 6.510091 Q 114.2552 5.2460938 115.830734 5.2460938 Q 117.34895 5.2460938 118.13672 6.4957676 Q 118.924484 7.7454424 118.924484 10.158854 Z M 117.606766 10.158854 Q 117.606766 7.852864 117.16992 6.8359375 Q 116.73308 5.81901 115.77344 5.81901 Q 114.84245 5.81901 114.43425 6.778646 Q 114.02605 7.738281 114.02605 10.158854 Q 114.02605 12.59375 114.441414 13.585613 Q 114.85677 14.577474 115.77344 14.577474 Q 116.71874 14.577474 117.162766 13.535481 Q 117.606766 12.493488 117.606766 10.158854 Z M 125.86394 6.0696616 Q 125.86394 6.3847656 125.634766 6.6139317 Q 125.4056 6.843099 125.08334 6.843099 Q 124.768234 6.843099 124.53906 6.6139317 Q 124.309906 6.3847656 124.309906 6.0696616 Q 124.309906 5.747395 124.53906 5.5182285 Q 124.768234 5.2890625 125.08334 5.2890625 Q 125.4056 5.2890625 125.634766 5.5182285 Q 125.86394 5.747395 125.86394 6.0696616 Z M 125.79232 14.498698 L 126.94531 14.677734 L 126.94531 15 L 123.45769 15 L 123.45769 14.677734 L 124.603516 14.498698 L 124.603516 8.769531 L 123.651054 8.590494 L 123.651054 8.268229 L 125.79232 8.268229 L 125.79232 14.498698 Z M 129.54492 8.8125 Q 130.09636 8.4973955 130.7194 8.293294 Q 131.34245 8.089192 131.75781 8.089192 Q 132.63152 8.089192 133.07552 8.597656 Q 133.51953 9.106119 133.51953 10.072916 L 133.51953 14.498698 L 134.33594 14.677734 L 134.33594 15 L 131.43555 15 L 131.43555 14.677734 L 132.33073 14.498698 L 132.33073 10.201822 Q 132.33073 9.607422 132.0407 9.267252 Q 131.75066 8.927083 131.14192 8.927083 Q 130.49739 8.927083 129.55925 9.134766 L 129.55925 14.498698 L 130.46875 14.677734 L 130.46875 15 L 127.561195 15 L 127.561195 14.677734 L 128.37044 14.498698 L 128.37044 8.769531 L 127.561195 8.590494 L 127.561195 8.268229 L 129.48047 8.268229 L 129.54492 8.8125 Z M 139.73567 13.109375 Q 139.73567 14.1119795 139.10188 14.6276045 Q 138.4681 15.1432295 137.22916 15.1432295 Q 136.72786 15.1432295 136.12271 15.039388 Q 135.51758 14.935547 135.17383 14.806641 L 135.17383 13.152345 L 135.4961 13.152345 L 135.847 14.090495 Q 136.38411 14.577474 137.24348 14.577474 Q 138.63281 14.577474 138.63281 13.388672 Q 138.63281 12.514974 137.53711 12.142578 L 136.89973 11.9348955 Q 136.17642 11.698567 135.847 11.455078 Q 135.51758 11.211588 135.33853 10.857096 Q 135.1595 10.502604 135.1595 10.001302 Q 135.1595 9.113281 135.76465 8.601236 Q 136.36978 8.089192 137.40103 8.089192 Q 138.13867 8.089192 139.24869 8.311197 L 139.24869 9.779297 L 138.91211 9.779297 L 138.61133 8.998697 Q 138.23177 8.662109 137.41536 8.662109 Q 136.83528 8.662109 136.53091 8.948567 Q 136.22656 9.235025 136.22656 9.722005 Q 136.22656 10.130208 136.50227 10.409505 Q 136.77798 10.688802 137.33658 10.875 Q 138.38931 11.233072 138.71158 11.397785 Q 139.03384 11.5625 139.25943 11.802407 Q 139.48502 12.042316 139.61035 12.350259 Q 139.73567 12.658203 139.73567 13.109375 Z M 142.65755 15.1432295 Q 141.97005 15.1432295 141.62988 14.735026 Q 141.28972 14.326823 141.28972 13.589193 L 141.28972 8.869791 L 140.40886 8.869791 L 140.40886 8.547525 L 141.30403 8.268229 L 142.02734 6.742838 L 142.47852 6.742838 L 142.47852 8.268229 L 144.01823 8.268229 L 144.01823 8.869791 L 142.47852 8.869791 L 142.47852 13.460287 Q 142.47852 13.925782 142.68977 14.162109 Q 142.90105 14.3984375 143.2448 14.3984375 Q 143.66016 14.3984375 144.25456 14.2838545 L 144.25456 14.74935 Q 144.0039 14.921224 143.53125 15.032227 Q 143.0586 15.1432295 142.65755 15.1432295 Z M 147.04037 14.3411455 Q 147.04037 14.692058 146.7933 14.94987 Q 146.54623 15.207683 146.17383 15.207683 Q 145.80144 15.207683 145.55437 14.94987 Q 145.3073 14.692058 145.3073 14.3411455 Q 145.3073 13.975912 145.55795 13.725261 Q 145.8086 13.47461 146.17383 13.47461 Q 146.53906 13.47461 146.78972 13.725261 Q 147.04037 13.975912 147.04037 14.3411455 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 245)">
+                <g>
+                    <path fill="#0041c4" stroke="none" d="M -52.46029 5.3964844 L -52.46029 5.776041 L -53.51302 5.9622393 L -57.373047 15.222005 L -57.73828 15.222005 L -61.641277 5.9622393 L -62.722656 5.776041 L -62.722656 5.3964844 L -58.84115 5.3964844 L -58.84115 5.776041 L -60.13021 5.9622393 L -57.222656 13.030599 L -54.32227 5.9622393 L -55.582684 5.776041 L -55.582684 5.3964844 L -52.46029 5.3964844 Z M -50.462242 6.0696616 Q -50.462242 6.3847656 -50.691406 6.6139317 Q -50.920574 6.843099 -51.24284 6.843099 Q -51.557945 6.843099 -51.78711 6.6139317 Q -52.016277 6.3847656 -52.016277 6.0696616 Q -52.016277 5.747395 -51.78711 5.5182285 Q -51.557945 5.2890625 -51.24284 5.2890625 Q -50.920574 5.2890625 -50.691406 5.5182285 Q -50.462242 5.747395 -50.462242 6.0696616 Z M -50.533855 14.498698 L -49.38086 14.677734 L -49.38086 15 L -52.868492 15 L -52.868492 14.677734 L -51.722656 14.498698 L -51.722656 8.769531 L -52.675133 8.590494 L -52.675133 8.268229 L -50.533855 8.268229 L -50.533855 14.498698 Z M -47.239582 11.61263 L -47.239582 11.741536 Q -47.239582 12.729817 -47.02116 13.277669 Q -46.802734 13.8255205 -46.34798 14.1119795 Q -45.893234 14.3984375 -45.155598 14.3984375 Q -44.76888 14.3984375 -44.238934 14.333984 Q -43.708984 14.269531 -43.365234 14.190755 L -43.365234 14.591797 Q -43.708984 14.813802 -44.29981 14.978516 Q -44.890625 15.1432295 -45.506516 15.1432295 Q -47.07487 15.1432295 -47.801758 14.298178 Q -48.528645 13.453125 -48.528645 11.583984 Q -48.528645 9.822266 -47.791016 8.955729 Q -47.05339 8.089192 -45.685543 8.089192 Q -43.10026 8.089192 -43.10026 11.02539 L -43.10026 11.61263 L -47.239582 11.61263 Z M -45.685543 8.662109 Q -46.43034 8.662109 -46.8278 9.263672 Q -47.22526 9.865234 -47.22526 11.039713 L -44.34636 11.039713 Q -44.34636 9.7578125 -44.675785 9.209961 Q -45.00521 8.662109 -45.685543 8.662109 Z M -35.065105 15.1432295 L -35.6237 15.1432295 L -37.285156 10.703125 L -38.92513 15.1432295 L -39.45508 15.1432295 L -41.78255 8.769531 L -42.577473 8.590494 L -42.577473 8.268229 L -39.3763 8.268229 L -39.3763 8.590494 L -40.49349 8.783854 L -38.896484 13.331381 L -37.270832 8.941406 L -36.66927 8.941406 L -35.05078 13.360027 L -33.52539 8.769531 L -34.628254 8.590494 L -34.628254 8.268229 L -32.064453 8.268229 L -32.064453 8.590494 L -32.809242 8.740885 L -35.065105 15.1432295 Z M -28.863281 14.427084 L -27.631512 14.620443 L -27.631512 15 L -31.470053 15 L -31.470053 14.620443 L -30.238283 14.427084 L -30.238283 5.9622393 L -31.470053 5.776041 L -31.470053 5.3964844 L -27.631512 5.3964844 L -27.631512 5.776041 L -28.863281 5.9622393 L -28.863281 14.427084 Z M -24.79557 8.8125 Q -24.244139 8.4973955 -23.621094 8.293294 Q -22.998047 8.089192 -22.582682 8.089192 Q -21.708984 8.089192 -21.264973 8.597656 Q -20.820963 9.106119 -20.820963 10.072916 L -20.820963 14.498698 L -20.004557 14.677734 L -20.004557 15 L -22.904947 15 L -22.904947 14.677734 L -22.009766 14.498698 L -22.009766 10.201822 Q -22.009766 9.607422 -22.299805 9.267252 Q -22.589844 8.927083 -23.198566 8.927083 Q -23.843098 8.927083 -24.78125 9.134766 L -24.78125 14.498698 L -23.871744 14.677734 L -23.871744 15 L -26.779297 15 L -26.779297 14.677734 L -25.97005 14.498698 L -25.97005 8.769531 L -26.779297 8.590494 L -26.779297 8.268229 L -24.860023 8.268229 L -24.79557 8.8125 Z M -14.604816 13.109375 Q -14.604816 14.1119795 -15.238606 14.6276045 Q -15.872395 15.1432295 -17.111326 15.1432295 Q -17.612629 15.1432295 -18.217772 15.039388 Q -18.822916 14.935547 -19.166666 14.806641 L -19.166666 13.152345 L -18.8444 13.152345 L -18.493488 14.090495 Q -17.956379 14.577474 -17.097004 14.577474 Q -15.707682 14.577474 -15.707682 13.388672 Q -15.707682 12.514974 -16.803385 12.142578 L -17.440754 11.9348955 Q -18.16406 11.698567 -18.493488 11.455078 Q -18.822916 11.211588 -19.001951 10.857096 Q -19.180988 10.502604 -19.180988 10.001302 Q -19.180988 9.113281 -18.575846 8.601236 Q -17.970701 8.089192 -16.939451 8.089192 Q -16.201822 8.089192 -15.091795 8.311197 L -15.091795 9.779297 L -15.428384 9.779297 L -15.729165 8.998697 Q -16.108723 8.662109 -16.925129 8.662109 Q -17.505207 8.662109 -17.809568 8.948567 Q -18.113932 9.235025 -18.113932 9.722005 Q -18.113932 10.130208 -17.838215 10.409505 Q -17.562498 10.688802 -17.003904 10.875 Q -15.951171 11.233072 -15.628905 11.397785 Q -15.306638 11.5625 -15.081052 11.802407 Q -14.855466 12.042316 -14.730142 12.350259 Q -14.604816 12.658203 -14.604816 13.109375 Z M -11.682941 15.1432295 Q -12.370441 15.1432295 -12.71061 14.735026 Q -13.050779 14.326823 -13.050779 13.589193 L -13.050779 8.869791 L -13.931639 8.869791 L -13.931639 8.547525 L -13.036457 8.268229 L -12.313149 6.742838 L -11.861978 6.742838 L -11.861978 8.268229 L -10.322264 8.268229 L -10.322264 8.869791 L -11.861978 8.869791 L -11.861978 13.460287 Q -11.861978 13.925782 -11.650715 14.162109 Q -11.439451 14.3984375 -11.095702 14.3984375 Q -10.680337 14.3984375 -10.085936 14.2838545 L -10.085936 14.74935 Q -10.336587 14.921224 -10.809243 15.032227 Q -11.281899 15.1432295 -11.682941 15.1432295 Z"/>
+                </g>
+                <g >
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 0 275)">
+                <g>
+                    <path fill="#0041c4" stroke="none" d="M -47.934242 15 L -47.934242 14.620443 L -46.40886 14.427084 L -46.40886 6.012369 L -46.774086 6.012369 Q -48.585938 6.012369 -49.251953 6.1555986 L -49.445316 7.6523438 L -49.92513 7.6523438 L -49.92513 5.3964844 L -41.47461 5.3964844 L -41.47461 7.6523438 L -41.96159 7.6523438 L -42.15495 6.1555986 Q -42.369793 6.1054688 -43.093098 6.06608 Q -43.816406 6.0266924 -44.675785 6.0266924 L -45.02669 6.0266924 L -45.02669 14.427084 L -43.50131 14.620443 L -43.50131 15 L -47.934242 15 Z M -36.99154 8.089192 L -36.99154 9.908203 L -37.29948 9.908203 L -37.714844 9.120442 Q -38.072918 9.120442 -38.563477 9.217122 Q -39.05404 9.313802 -39.41211 9.471354 L -39.41211 14.498698 L -38.259117 14.677734 L -38.259117 15 L -41.453125 15 L -41.453125 14.677734 L -40.600914 14.498698 L -40.600914 8.769531 L -41.453125 8.590494 L -41.453125 8.268229 L -39.490887 8.268229 L -39.426434 9.106119 Q -38.996746 8.748047 -38.262695 8.418619 Q -37.52865 8.089192 -37.09896 8.089192 L -36.99154 8.089192 Z M -33.532555 8.117838 Q -32.42969 8.117838 -31.910484 8.56901 Q -31.391277 9.020182 -31.391277 9.951172 L -31.391277 14.498698 L -30.553387 14.677734 L -30.553387 15 L -32.401043 15 L -32.537113 14.326823 Q -33.35352 15.1432295 -34.621098 15.1432295 Q -36.347008 15.1432295 -36.347008 13.138021 Q -36.347008 12.464844 -36.085613 12.024413 Q -35.824223 11.583984 -35.251305 11.351235 Q -34.678387 11.118489 -33.589848 11.097005 L -32.580082 11.068359 L -32.580082 10.015625 Q -32.580082 9.320963 -32.834312 8.991536 Q -33.088543 8.662109 -33.618492 8.662109 Q -34.334637 8.662109 -34.92904 8.998697 L -35.172527 9.836588 L -35.57357 9.836588 L -35.57357 8.368489 Q -34.413414 8.117838 -33.532555 8.117838 Z M -32.580082 11.569661 L -33.51823 11.598307 Q -34.477867 11.634114 -34.818035 11.970703 Q -35.158207 12.307291 -35.158207 13.095052 Q -35.158207 14.355469 -34.134117 14.355469 Q -33.647137 14.355469 -33.292645 14.244466 Q -32.938152 14.133464 -32.580082 13.961589 L -32.580082 11.569661 Z M -24.294271 14.591797 Q -24.645184 14.849609 -25.261068 14.996419 Q -25.876953 15.1432295 -26.521484 15.1432295 Q -29.794271 15.1432295 -29.794271 11.583984 Q -29.794271 9.901041 -28.95996 8.995117 Q -28.125652 8.089192 -26.571615 8.089192 Q -25.604818 8.089192 -24.458984 8.311197 L -24.458984 10.1875 L -24.852863 10.1875 L -25.160809 8.998697 Q -25.75521 8.662109 -26.585938 8.662109 Q -28.505209 8.662109 -28.505209 11.583984 Q -28.505209 13.102215 -27.92155 13.750326 Q -27.337893 14.3984375 -26.11328 14.3984375 Q -25.067709 14.3984375 -24.294271 14.162109 L -24.294271 14.591797 Z M -21.98112 11.61263 L -21.98112 11.741536 Q -21.98112 12.729817 -21.762695 13.277669 Q -21.544271 13.8255205 -21.08952 14.1119795 Q -20.634766 14.3984375 -19.897137 14.3984375 Q -19.510418 14.3984375 -18.980469 14.333984 Q -18.450521 14.269531 -18.106771 14.190755 L -18.106771 14.591797 Q -18.450521 14.813802 -19.041342 14.978516 Q -19.632162 15.1432295 -20.248047 15.1432295 Q -21.816406 15.1432295 -22.543297 14.298178 Q -23.270182 13.453125 -23.270182 11.583984 Q -23.270182 9.822266 -22.53255 8.955729 Q -21.794922 8.089192 -20.427084 8.089192 Q -17.841797 8.089192 -17.841797 11.02539 L -17.841797 11.61263 L -21.98112 11.61263 Z M -20.427084 8.662109 Q -21.171875 8.662109 -21.569336 9.263672 Q -21.966797 9.865234 -21.966797 11.039713 L -19.08789 11.039713 Q -19.08789 9.7578125 -19.417318 9.209961 Q -19.746746 8.662109 -20.427084 8.662109 Z M -12.1556 14.498698 Q -12.964844 15.1432295 -14.046225 15.1432295 Q -16.803387 15.1432295 -16.803387 11.698567 Q -16.803387 9.9296875 -16.022787 9.009439 Q -15.2421875 8.089192 -13.723959 8.089192 Q -12.950521 8.089192 -12.1556 8.253906 Q -12.198569 8.017578 -12.198569 7.065104 L -12.198569 5.317708 L -13.330079 5.145833 L -13.330079 4.8235674 L -11.009765 4.8235674 L -11.009765 14.498698 L -10.179037 14.677734 L -10.179037 15 L -12.069663 15 L -12.1556 14.498698 Z M -15.514323 11.698567 Q -15.514323 13.059245 -15.05599 13.728841 Q -14.597656 14.3984375 -13.652345 14.3984375 Q -12.843101 14.3984375 -12.198569 14.119142 L -12.198569 8.798177 Q -12.8359375 8.676432 -13.652345 8.676432 Q -15.514323 8.676432 -15.514323 11.698567 Z"/>
+                </g>
+                <g  transform="matrix(1 0 0 1 4 0)">
+                    <g>
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 20 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 40 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 60 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 80 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 3 20 L 9 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 100 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 120 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 140 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 20 0"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 160 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 0 L 3 0 L 9 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 180 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 200 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                    <g transform="matrix(1 0 0 1 220 0)">
+                        <g>
+                            <path fill="none" stroke="#000000" stroke-linecap="round" d="M 0 20 L 20 20"/>
+                        </g>
+                    </g>
+                </g>
+            </g>
+            <g >
+                <g transform="matrix(1 0 0 1 90 135)">
+                    <path fill="#ffffff" stroke="none" d="M -3 -5 L 4.36 -5 L 4.36 5 L -3 5 Z"/>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 1.5292968 2.7773438 Q 1.3378906 2.9179688 1.0019531 2.9980466 Q 0.6660156 3.0781252 0.31445313 3.0781252 Q -1.4707032 3.0781252 -1.4707032 1.1367188 Q -1.4707032 0.21875 -1.015625 -0.27539063 Q -0.5605469 -0.7695313 0.28710938 -0.7695313 Q 0.8144531 -0.7695313 1.4394531 -0.6484375 L 1.4394531 0.375 L 1.2246094 0.375 L 1.0566406 -0.2734375 Q 0.7324218 -0.45703125 0.27929688 -0.45703125 Q -0.7675782 -0.45703125 -0.7675782 1.1367188 Q -0.7675782 1.9648436 -0.44921875 2.3183594 Q -0.13085938 2.671875 0.5371094 2.671875 Q 1.1074219 2.671875 1.5292968 2.5429688 L 1.5292968 2.7773438 Z"/>
+                    </g>
+                </g>
+                <g transform="matrix(1 0 0 1 86 255)">
+                    <path fill="#ffffff" stroke="none" d="M -3 -5 L 4.92 -5 L 4.92 5 L -3 5 Z"/>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 0.04101563 -0.75390625 Q 0.6425781 -0.75390625 0.9257813 -0.5078125 Q 1.2089844 -0.26171875 1.2089844 0.24609376 L 1.2089844 2.7265625 L 1.6660156 2.824219 L 1.6660156 3 L 0.6582031 3 L 0.5839844 2.6328125 Q 0.13867188 3.0781252 -0.5527344 3.0781252 Q -1.4941406 3.0781252 -1.4941406 1.984375 Q -1.4941406 1.6171875 -1.3515626 1.3769531 Q -1.2089844 1.1367188 -0.8964844 1.0097656 Q -0.5839844 0.8828125 0.00976563 0.87109375 L 0.5605469 0.8554687 L 0.5605469 0.28125 Q 0.5605469 -0.09765625 0.421875 -0.27734375 Q 0.28320313 -0.45703125 -0.00585938 -0.45703125 Q -0.39648435 -0.45703125 -0.7207031 -0.2734375 L -0.8535156 0.18359376 L -1.0722656 0.18359376 L -1.0722656 -0.6171875 Q -0.43945313 -0.75390625 0.04101563 -0.75390625 Z M 0.5605469 1.1289063 L 0.04882813 1.1445313 Q -0.47460935 1.1640625 -0.66015625 1.3476564 Q -0.8457031 1.5312499 -0.8457031 1.9609374 Q -0.8457031 2.6484375 -0.28710938 2.6484375 Q -0.02148438 2.6484375 0.171875 2.5878906 Q 0.36523435 2.5273438 0.5605469 2.4335938 L 0.5605469 1.1289063 Z"/>
+                    </g>
+                </g>
+                <g transform="matrix(1 0 0 1 90 285)">
+                    <path fill="#ffffff" stroke="none" d="M -3 -5 L 4.92 -5 L 4.92 5 L -3 5 Z"/>
+                    <g>
+                        <path fill="#000000" stroke="none" d="M 0.9921875 1.0625 Q 0.9921875 0.34375 0.7421875 -0.0078125 Q 0.49218753 -0.359375 -0.03125 -0.359375 Q -0.26171875 -0.359375 -0.48828125 -0.31835938 Q -0.71484375 -0.27734375 -0.81640625 -0.23046876 L -0.81640625 2.6796875 Q -0.48828125 2.7421875 -0.03125 2.7421875 Q 0.5078125 2.7421875 0.75 2.3203125 Q 0.9921875 1.8984374 0.9921875 1.0625 Z M -1.4648436 -2.28125 L -2 -2.375 L -2 -2.5507813 L -0.81640625 -2.5507813 L -0.81640625 -1.2382813 Q -0.81640625 -1.0273438 -0.83984375 -0.46484375 Q -0.44921875 -0.7695313 0.14453125 -0.7695313 Q 0.8945313 -0.7695313 1.2949219 -0.31445313 Q 1.6953125 0.140625 1.6953125 1.0625 Q 1.6953125 2.0507813 1.2558594 2.5644531 Q 0.81640625 3.0781252 -0.015625 3.0781252 Q -0.35156247 3.0781252 -0.7558594 3.0039063 Q -1.1601563 2.9296873 -1.4648436 2.8085935 L -1.4648436 -2.28125 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g >
+                <g  transform="matrix(1 0 0 1 0 5)"/>
+                <g  transform="matrix(1 0 0 1 0 35)"/>
+                <g  transform="matrix(1 0 0 1 0 65)"/>
+                <g  transform="matrix(1 0 0 1 0 95)"/>
+                <g  transform="matrix(1 0 0 1 0 125)"/>
+                <g  transform="matrix(1 0 0 1 0 155)"/>
+                <g  transform="matrix(1 0 0 1 0 185)"/>
+                <g  transform="matrix(1 0 0 1 0 215)"/>
+                <g  transform="matrix(1 0 0 1 0 245)"/>
+                <g  transform="matrix(1 0 0 1 0 275)"/>
+            </g>
+            <g/>
+        </g>
+        <g >
+            <g>
+                <path  fill="none" stroke="#0041c4" d="M 35.5 3.5 C 32.5 3.5 30.499998 5.5 30.499998 8.5 L 30.499998 142.5 C 30.499998 145.5 32.5 147.5 35.5 147.5"/>
+                <g transform="matrix(1 0 0 1 25 75)">
+                    <g transform="matrix(-0 -1 1 -0 0 0)">
+                        <g>
+                            <path fill="#0041c4" stroke="none" d="M -16.15625 -7.2760425 Q -16.15625 -8.156901 -16.707684 -8.557943 Q -17.259115 -8.958984 -18.498047 -8.958984 L -19.980469 -8.958984 L -19.980469 -5.328125 L -18.41211 -5.328125 Q -17.251953 -5.328125 -16.704102 -5.786458 Q -16.15625 -6.2447915 -16.15625 -7.2760425 Z M -15.432943 -2.735677 Q -15.432943 -3.7454429 -16.106121 -4.2145185 Q -16.779297 -4.6835938 -18.261719 -4.6835938 L -19.980469 -4.6835938 L -19.980469 -0.64453125 Q -18.992188 -0.6015625 -17.875 -0.6015625 Q -16.65039 -0.6015625 -16.041668 -1.1207683 Q -15.432943 -1.6399739 -15.432943 -2.735677 Z M -22.5944 0 L -22.5944 -0.3795573 L -21.36263 -0.5729167 L -21.36263 -9.037761 L -22.5944 -9.223959 L -22.5944 -9.603516 L -18.204428 -9.603516 Q -16.378256 -9.603516 -15.533203 -9.062826 Q -14.688151 -8.522136 -14.688151 -7.3476563 Q -14.688151 -6.502605 -15.207357 -5.9082026 Q -15.7265625 -5.3138022 -16.664715 -5.1132813 Q -15.36849 -4.977214 -14.659506 -4.3577476 Q -13.950521 -3.7382813 -13.950521 -2.764323 Q -13.950521 -1.3821615 -14.906577 -0.6695964 Q -15.862631 0.04296875 -17.695965 0.04296875 L -20.761068 0 L -22.5944 0 Z M -10.606119 -0.5013021 L -9.453125 -0.32226563 L -9.453125 0 L -12.940755 0 L -12.940755 -0.32226563 L -11.794922 -0.5013021 L -11.794922 -9.682292 L -12.940755 -9.854167 L -12.940755 -10.176433 L -10.606119 -10.176433 L -10.606119 -0.5013021 Z M -2.3847651 -3.4016929 Q -2.3847651 0.14322917 -5.5358067 0.14322917 Q -7.0540357 0.14322917 -7.827474 -0.76627606 Q -8.600911 -1.6757813 -8.600911 -3.4016929 Q -8.600911 -5.10612 -7.827474 -6.008464 Q -7.0540357 -6.9108076 -5.478515 -6.9108076 Q -3.945963 -6.9108076 -3.1653643 -6.026367 Q -2.3847651 -5.1419272 -2.3847651 -3.4016929 Z M -3.6738274 -3.4016929 Q -3.6738274 -4.948568 -4.1249995 -5.6432295 Q -4.5761714 -6.3378906 -5.5358067 -6.3378906 Q -6.4739575 -6.3378906 -6.892903 -5.671875 Q -7.311849 -5.0058594 -7.311849 -3.4016929 Q -7.311849 -1.7760417 -6.885741 -1.0992839 Q -6.459635 -0.4225261 -5.5358067 -0.4225261 Q -4.590494 -0.4225261 -4.132161 -1.124349 Q -3.6738274 -1.8261719 -3.6738274 -3.4016929 Z M 4.2324224 -0.40820313 Q 3.8815114 -0.15039063 3.2656257 -0.00358073 Q 2.6497402 0.14322917 2.005209 0.14322917 Q -1.2675776 0.14322917 -1.2675776 -3.4160156 Q -1.2675776 -5.0989585 -0.4332677 -6.0048823 Q 0.40104225 -6.9108076 1.9550786 -6.9108076 Q 2.9218755 -6.9108076 4.067709 -6.6888027 L 4.067709 -4.8125 L 3.6738284 -4.8125 L 3.365886 -6.0013022 Q 2.7714849 -6.3378906 1.9407558 -6.3378906 Q 0.02148485 -6.3378906 0.02148485 -3.4160156 Q 0.02148485 -1.8977866 0.6051438 -1.2496746 Q 1.1888027 -0.6015625 2.413412 -0.6015625 Q 3.4589849 -0.6015625 4.2324224 -0.8378906 L 4.2324224 -0.40820313 Z M 7.147136 -3.2441404 L 9.904297 -6.216146 L 9.202475 -6.4095054 L 9.202475 -6.731771 L 11.580078 -6.731771 L 11.580078 -6.4095054 L 10.7421875 -6.2447915 L 8.822918 -4.2825522 L 11.286459 -0.4869792 L 12.016928 -0.32226563 L 12.016928 0 L 9.259766 0 L 9.259766 -0.32226563 L 9.875652 -0.5013021 L 8.027995 -3.4016929 L 7.147136 -2.434896 L 7.147136 -0.5013021 L 7.8632817 -0.32226563 L 7.8632817 0 L 5.10612 0 L 5.10612 -0.32226563 L 5.958334 -0.5013021 L 5.958334 -9.682292 L 4.962891 -9.854167 L 4.962891 -10.176433 L 7.147136 -10.176433 L 7.147136 -3.2441404 Z M 20.173828 -0.5729167 L 22.136068 -0.3795573 L 22.136068 0 L 16.972656 0 L 16.972656 -0.3795573 L 18.942059 -0.5729167 L 18.942059 -8.407553 L 17.001303 -7.712891 L 17.001303 -8.092448 L 19.801434 -9.682292 L 20.173828 -9.682292 L 20.173828 -0.5729167 Z"/>
+                        </g>
+                    </g>
+                </g>
+                <path  fill="none" stroke="#0041c4" d="M 35.5 153.5 C 32.5 153.5 30.499998 155.5 30.499998 158.5 L 30.499998 292.5 C 30.499998 295.5 32.5 297.5 35.5 297.5"/>
+                <g transform="matrix(1 0 0 1 25 225)">
+                    <g transform="matrix(-0 -1 1 -0 0 0)">
+                        <g>
+                            <path fill="#0041c4" stroke="none" d="M -16.15625 -7.2760425 Q -16.15625 -8.156901 -16.707684 -8.557943 Q -17.259115 -8.958984 -18.498047 -8.958984 L -19.980469 -8.958984 L -19.980469 -5.328125 L -18.41211 -5.328125 Q -17.251953 -5.328125 -16.704102 -5.786458 Q -16.15625 -6.2447915 -16.15625 -7.2760425 Z M -15.432943 -2.735677 Q -15.432943 -3.7454429 -16.106121 -4.2145185 Q -16.779297 -4.6835938 -18.261719 -4.6835938 L -19.980469 -4.6835938 L -19.980469 -0.64453125 Q -18.992188 -0.6015625 -17.875 -0.6015625 Q -16.65039 -0.6015625 -16.041668 -1.1207683 Q -15.432943 -1.6399739 -15.432943 -2.735677 Z M -22.5944 0 L -22.5944 -0.3795573 L -21.36263 -0.5729167 L -21.36263 -9.037761 L -22.5944 -9.223959 L -22.5944 -9.603516 L -18.204428 -9.603516 Q -16.378256 -9.603516 -15.533203 -9.062826 Q -14.688151 -8.522136 -14.688151 -7.3476563 Q -14.688151 -6.502605 -15.207357 -5.9082026 Q -15.7265625 -5.3138022 -16.664715 -5.1132813 Q -15.36849 -4.977214 -14.659506 -4.3577476 Q -13.950521 -3.7382813 -13.950521 -2.764323 Q -13.950521 -1.3821615 -14.906577 -0.6695964 Q -15.862631 0.04296875 -17.695965 0.04296875 L -20.761068 0 L -22.5944 0 Z M -10.606119 -0.5013021 L -9.453125 -0.32226563 L -9.453125 0 L -12.940755 0 L -12.940755 -0.32226563 L -11.794922 -0.5013021 L -11.794922 -9.682292 L -12.940755 -9.854167 L -12.940755 -10.176433 L -10.606119 -10.176433 L -10.606119 -0.5013021 Z M -2.3847651 -3.4016929 Q -2.3847651 0.14322917 -5.5358067 0.14322917 Q -7.0540357 0.14322917 -7.827474 -0.76627606 Q -8.600911 -1.6757813 -8.600911 -3.4016929 Q -8.600911 -5.10612 -7.827474 -6.008464 Q -7.0540357 -6.9108076 -5.478515 -6.9108076 Q -3.945963 -6.9108076 -3.1653643 -6.026367 Q -2.3847651 -5.1419272 -2.3847651 -3.4016929 Z M -3.6738274 -3.4016929 Q -3.6738274 -4.948568 -4.1249995 -5.6432295 Q -4.5761714 -6.3378906 -5.5358067 -6.3378906 Q -6.4739575 -6.3378906 -6.892903 -5.671875 Q -7.311849 -5.0058594 -7.311849 -3.4016929 Q -7.311849 -1.7760417 -6.885741 -1.0992839 Q -6.459635 -0.4225261 -5.5358067 -0.4225261 Q -4.590494 -0.4225261 -4.132161 -1.124349 Q -3.6738274 -1.8261719 -3.6738274 -3.4016929 Z M 4.2324224 -0.40820313 Q 3.8815114 -0.15039063 3.2656257 -0.00358073 Q 2.6497402 0.14322917 2.005209 0.14322917 Q -1.2675776 0.14322917 -1.2675776 -3.4160156 Q -1.2675776 -5.0989585 -0.4332677 -6.0048823 Q 0.40104225 -6.9108076 1.9550786 -6.9108076 Q 2.9218755 -6.9108076 4.067709 -6.6888027 L 4.067709 -4.8125 L 3.6738284 -4.8125 L 3.365886 -6.0013022 Q 2.7714849 -6.3378906 1.9407558 -6.3378906 Q 0.02148485 -6.3378906 0.02148485 -3.4160156 Q 0.02148485 -1.8977866 0.6051438 -1.2496746 Q 1.1888027 -0.6015625 2.413412 -0.6015625 Q 3.4589849 -0.6015625 4.2324224 -0.8378906 L 4.2324224 -0.40820313 Z M 7.147136 -3.2441404 L 9.904297 -6.216146 L 9.202475 -6.4095054 L 9.202475 -6.731771 L 11.580078 -6.731771 L 11.580078 -6.4095054 L 10.7421875 -6.2447915 L 8.822918 -4.2825522 L 11.286459 -0.4869792 L 12.016928 -0.32226563 L 12.016928 0 L 9.259766 0 L 9.259766 -0.32226563 L 9.875652 -0.5013021 L 8.027995 -3.4016929 L 7.147136 -2.434896 L 7.147136 -0.5013021 L 7.8632817 -0.32226563 L 7.8632817 0 L 5.10612 0 L 5.10612 -0.32226563 L 5.958334 -0.5013021 L 5.958334 -9.682292 L 4.962891 -9.854167 L 4.962891 -10.176433 L 7.147136 -10.176433 L 7.147136 -3.2441404 Z M 22.207682 0 L 16.328125 0 L 16.328125 -1.0527344 L 17.660156 -2.263021 Q 18.942059 -3.3873699 19.543621 -4.0820313 Q 20.145184 -4.776693 20.406576 -5.514323 Q 20.667969 -6.251953 20.667969 -7.2044277 Q 20.667969 -8.135417 20.245443 -8.622396 Q 19.822918 -9.109375 18.863281 -9.109375 Q 18.483725 -9.109375 18.082684 -9.005534 Q 17.68164 -8.901693 17.3737 -8.729818 L 17.123047 -7.555339 L 16.65039 -7.555339 L 16.65039 -9.402995 Q 17.953777 -9.7109375 18.863281 -9.7109375 Q 20.438803 -9.7109375 21.230145 -9.055664 Q 22.021484 -8.400391 22.021484 -7.2044277 Q 22.021484 -6.4023438 21.709959 -5.6897783 Q 21.398438 -4.977214 20.753906 -4.27181 Q 20.109375 -3.5664065 18.619793 -2.2988281 Q 17.982422 -1.7545575 17.266277 -1.1028646 L 22.207682 -1.1028646 L 22.207682 0 Z"/>
+                        </g>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

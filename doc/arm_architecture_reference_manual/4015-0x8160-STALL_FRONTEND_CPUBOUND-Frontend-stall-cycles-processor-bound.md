@@ -1,0 +1,15 @@
+# ​0x8160, STALL_FRONTEND_CPUBOUND, Frontend stall cycles, processor bound
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8160--STALL-FRONTEND-CPUBOUND--Frontend-stall-cycles--processor-bound>
+
+##### `0x8160`, STALL\_FRONTEND\_CPUBOUND, Frontend stall cycles, processor bound
+
+The counter counts each cycle counted by [STALL\_FRONTEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0023--STALL-FRONTEND--No-operation-sent-for-execution-due-to-the-frontend?lang=en#event_stall_frontend) when the frontend is stalled on a frontend processor resource, not including memory.
+
+The counter counts each stall that occurs when a frontend processor resource is busy.
+
+This includes the stalls counted by [STALL\_FRONTEND\_FLOW](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8161--STALL-FRONTEND-FLOW--Frontend-stall-cycles--flow-control?lang=en#event_stall_frontend_flow), [STALL\_FRONTEND\_FLUSH](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8162--STALL-FRONTEND-FLUSH--Frontend-stall-cycles--flush-recovery?lang=en#event_stall_frontend_flush), and [STALL\_FRONTEND\_RENAME](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8163--STALL-FRONTEND-RENAME--Frontend-stall-cycles--rename-full?lang=en#event_stall_frontend_rename), and any other IMPLEMENTATION DEFINED processor resource stalls.
+
+It does not include stalls that are counted by [STALL\_FRONTEND\_MEMBOUND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8158--STALL-FRONTEND-MEMBOUND--Frontend-stall-cycles--memory-bound?lang=en#event_stall_frontend_membound). However both events will count the same cycle counted by [STALL\_FRONTEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0023--STALL-FRONTEND--No-operation-sent-for-execution-due-to-the-frontend?lang=en#event_stall_frontend) if there are both memory and processor-resource stall conditions active.
+
+For a multithreaded processor implementation, if the Effective value of [PMEVTYPER<n>\_EL0](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D24-AArch64-System-Register-Descriptions/-D24-5-Performance-Monitors-registers/-D24-5-12-PMEVTYPER-n--EL0--Performance-Monitors-Event-Type-Registers--n---0---30?lang=en#reg_aarch64_pmevtypern_el0).MT is 1, then the counter counts when the frontend is stalled on a frontend processor resource, not including memory for any PE in the multithreaded processor.

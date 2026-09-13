@@ -1,0 +1,11 @@
+# ​0x836B, SE_FP_SP_SPEC, Operation speculatively executed, Advanced SIMD, SVE, or SME SIMD single-precision floating-point, data-processing
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x836B--SE-FP-SP-SPEC--Operation-speculatively-executed--Advanced-SIMD--SVE--or-SME-SIMD-single-precision-floating-point--data-processing>
+
+##### `0x836B`, SE\_FP\_SP\_SPEC, Operation speculatively executed, Advanced SIMD, SVE, or SME SIMD single-precision floating-point, data-processing
+
+The counter counts each [speculatively executed](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#cacijece) single-precision floating-point data-processing operation counted by [SE\_FP\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8353--SE-FP-SPEC--Operation-speculatively-executed--Advanced-SIMD--SVE--or-SME-SIMD-floating-point--data-processing?lang=en#event_se_fp_spec) due to an A64 Advanced SIMD, SVE, or SME operation.
+
+That is, each operation counted by [ASE\_FP\_SP\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8019--ASE-FP-SP-SPEC--Floating-point-operation-speculatively-executed--Advanced-SIMD-single-precision--data-processing?lang=en#event_ase_fp_sp_spec), [SVE\_FP\_SP\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x801A--SVE-FP-SP-SPEC--Floating-point-operation-speculatively-executed--SVE-single-precision--data-processing?lang=en#event_sve_fp_sp_spec), or [SME\_FP\_SP\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x836A--SME-FP-SP-SPEC--Operation-speculatively-executed--SME-single-precision-floating-point--data-processing?lang=en#event_sme_fp_sp_spec).
+
+It is IMPLEMENTATION DEFINED which single-precision floating-point data-processing operations are counted in AArch32 state.

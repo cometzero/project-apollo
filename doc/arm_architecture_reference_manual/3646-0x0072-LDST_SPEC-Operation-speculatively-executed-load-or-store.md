@@ -1,0 +1,13 @@
+# ​0x0072, LDST_SPEC, Operation speculatively executed, load or store
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0072--LDST-SPEC--Operation-speculatively-executed--load-or-store>
+
+##### `0x0072`, LDST\_SPEC, Operation speculatively executed, load or store
+
+The counter counts each operation counted by [INST\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x001B--INST-SPEC--Operation-speculatively-executed?lang=en#event_inst_spec) that is a load operation or a store operation.
+
+See [LD\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0070--LD-SPEC--Operation-speculatively-executed--load?lang=en#event_ld_spec) and [ST\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0071--ST-SPEC--Operation-speculatively-executed--store?lang=en#event_st_spec) for these classifications.
+
+If the [PRF\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8087--PRF-SPEC--Operation-speculatively-executed--prefetch?lang=en#event_prf_spec) event is implemented and operations due to the prefetch instructions counted by [PRF\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8087--PRF-SPEC--Operation-speculatively-executed--prefetch?lang=en#event_prf_spec) are not counted as load operations by [LD\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0070--LD-SPEC--Operation-speculatively-executed--load?lang=en#event_ld_spec), then it is IMPLEMENTATION DEFINED whether these operations are counted by [LDST\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0072--LDST-SPEC--Operation-speculatively-executed--load-or-store?lang=en#event_ldst_spec). Arm recommends that these operations are counted by [LDST\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0072--LDST-SPEC--Operation-speculatively-executed--load-or-store?lang=en#event_ldst_spec).
+
+When FEAT\_PMUv3p8 is not implemented, this is an IMPLEMENTATION DEFINED event.

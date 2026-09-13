@@ -1,0 +1,11 @@
+# ​0x00AB, L2D_CACHE_HIT_RW_FEXT_PROP, Level 2 data cache demand access first hit, fetched by external propagating transaction
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x00AB--L2D-CACHE-HIT-RW-FEXT-PROP--Level-2-data-cache-demand-access-first-hit--fetched-by-external-propagating-transaction>
+
+##### `0x00AB`, L2D\_CACHE\_HIT\_RW\_FEXT\_PROP, Level 2 data cache demand access first hit, fetched by external propagating transaction
+
+The counter counts each demand access first hit counted by [L2D\_CACHE\_HIT\_RW](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x81CD--L2D-CACHE-HIT-RW--Level-2-data-cache-demand-access-hit?lang=en#event_l2d_cache_hit_rw) where the cache line was fetched in response to an external propagating transaction.
+
+That is, the [L2D\_CACHE\_EXT\_PROP](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x00BE--L2D-CACHE-EXT-PROP--Level-2-data-cache-allocation-due-to-external-propagating-transaction?lang=en#event_l2d_cache_ext_prop) event was generated when the cache line was fetched into the cache.
+
+Only the first hit by a demand access is counted. After this event is generated for a cache line, the event is not generated again for the same cache line while it remains in the cache.

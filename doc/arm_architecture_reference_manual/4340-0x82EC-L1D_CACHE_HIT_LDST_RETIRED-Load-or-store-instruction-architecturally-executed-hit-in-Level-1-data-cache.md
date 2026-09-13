@@ -1,0 +1,7 @@
+# ​0x82EC, L1D_CACHE_HIT_LDST_RETIRED, Load or store instruction architecturally executed, hit in Level 1 data cache
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x82EC--L1D-CACHE-HIT-LDST-RETIRED--Load-or-store-instruction-architecturally-executed--hit-in-Level-1-data-cache>
+
+##### `0x82EC`, L1D\_CACHE\_HIT\_LDST\_RETIRED, Load or store instruction architecturally executed, hit in Level 1 data cache
+
+The counter counts each [architecturally executed](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#cacciiig) [Memory-reading instruction](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#pmudef_memory_reading_instructions) or [Memory-writing instruction](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#pmudef_memory_writing_instructions) counted by [LDST\_ANY\_RETIRED](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x82AA--LDST-ANY-RETIRED--Instruction-architecturally-executed--load-or-store?lang=en#event_ldst_any_retired) that hit in Level 1 data or unified cache.

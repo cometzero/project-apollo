@@ -1,0 +1,9 @@
+# ​0x8238, REMOTE_MEM, Access to memory attached to a remote device
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8238--REMOTE-MEM--Access-to-memory-attached-to-a-remote-device>
+
+##### `0x8238`, REMOTE\_MEM, Access to memory attached to a remote device
+
+The counter counts each [Memory-read operation](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#caceiega) or [Memory-write operation](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#caccfcjj) access counted by [REMOTE\_ACCESS](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0031--REMOTE-ACCESS--Access-to-a-remote-device?lang=en#event_remote_access) to external memory attached to a remote device.
+
+The counter also counts any accesses to external memory that are not counted by [LOCAL\_MEM](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8230--LOCAL-MEM--Access-to-memory-attached-to-this-device?lang=en#event_local_mem) because the implementation classifies them as remote accesses. For example, accesses to expansion memory connected to the device that has significantly higher latency than the main system memory might be classified as remote accesses. For more information, see [LOCAL\_MEM](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8230--LOCAL-MEM--Access-to-memory-attached-to-this-device?lang=en#event_local_mem).

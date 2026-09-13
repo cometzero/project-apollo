@@ -1,0 +1,15 @@
+# ​0x003E, STALL_SLOT_FRONTEND, No operation sent for execution on a Slot due to the frontend
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003E--STALL-SLOT-FRONTEND--No-operation-sent-for-execution-on-a-Slot-due-to-the-frontend>
+
+##### `0x003E`, STALL\_SLOT\_FRONTEND, No operation sent for execution on a Slot due to the frontend
+
+The counter counts each Slot counted by [STALL\_SLOT](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003F--STALL-SLOT--No-operation-sent-for-execution-on-a-Slot?lang=en#event_stall_slot) where no Attributable instruction or operation was sent for execution and there was no Attributable instruction or operation available to dispatch for the PE from the frontend for the Slot.
+
+The division between frontend and backend is IMPLEMENTATION DEFINED. For more information, see [STALL\_FRONTEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x0023--STALL-FRONTEND--No-operation-sent-for-execution-due-to-the-frontend?lang=en#event_stall_frontend). All [STALL](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003C--STALL--No-operation-sent-for-execution?lang=en#event_stall) events are counted at the same point in the pipeline. The maximum value by which [STALL\_SLOT\_FRONTEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003E--STALL-SLOT-FRONTEND--No-operation-sent-for-execution-on-a-Slot-due-to-the-frontend?lang=en#event_stall_slot_frontend) can count in a single cycle is an IMPLEMENTATION DEFINED fixed value, `slots`. For more information, see [STALL\_SLOT](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003F--STALL-SLOT--No-operation-sent-for-execution-on-a-Slot?lang=en#event_stall_slot).
+
+> #### Note
+>
+> In a single cycle, the sum of values counted by [STALL\_SLOT\_BACKEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003D--STALL-SLOT-BACKEND--No-operation-sent-for-execution-on-a-Slot-due-to-the-backend?lang=en#event_stall_slot_backend) and [STALL\_SLOT\_FRONTEND](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x003E--STALL-SLOT-FRONTEND--No-operation-sent-for-execution-on-a-Slot-due-to-the-frontend?lang=en#event_stall_slot_frontend) might be greater-than `slots`, if both the backend is unable to accept some operations and there are fewer-than `slots` operations available to dispatch from the frontend.
+
+PMCEID1\_EL0[30] reads as 1 if this event is implemented and 0 otherwise.

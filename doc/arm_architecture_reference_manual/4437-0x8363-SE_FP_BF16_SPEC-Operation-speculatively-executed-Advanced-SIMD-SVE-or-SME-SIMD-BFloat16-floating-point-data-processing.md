@@ -1,0 +1,9 @@
+# ​0x8363, SE_FP_BF16_SPEC, Operation speculatively executed, Advanced SIMD, SVE, or SME SIMD BFloat16 floating-point, data-processing
+
+Source: <https://developer.arm.com/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8363--SE-FP-BF16-SPEC--Operation-speculatively-executed--Advanced-SIMD--SVE--or-SME-SIMD-BFloat16-floating-point--data-processing>
+
+##### `0x8363`, SE\_FP\_BF16\_SPEC, Operation speculatively executed, Advanced SIMD, SVE, or SME SIMD BFloat16 floating-point, data-processing
+
+The counter counts each [speculatively executed](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-1-Definitions/-D14-1-1-Definition-of-terms?lang=en#cacijece) BFloat16 floating-point data-processing operation counted by [SE\_FP\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8353--SE-FP-SPEC--Operation-speculatively-executed--Advanced-SIMD--SVE--or-SME-SIMD-floating-point--data-processing?lang=en#event_se_fp_spec) due to an A64 Advanced SIMD, SVE, or SME operation.
+
+That is, each operation counted by [SVE\_FP\_BF16\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8052--SVE-FP-BF16-SPEC--Floating-point-operation-speculatively-executed--SVE-BFloat16--data-processing?lang=en#event_sve_fp_bf16_spec), or [SME\_FP\_BF16\_SPEC](/documentation/ddi0487/mc/-Part-D-The-AArch64-System-Level-Architecture/-Chapter-D14-PMU-Event-Descriptions/-D14-3-Common-event-numbers/-0x8362--SME-FP-BF16-SPEC--Operation-speculatively-executed--SME-BFloat16-floating-point--data-processing?lang=en#event_sme_fp_bf16_spec).

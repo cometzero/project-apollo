@@ -1,0 +1,564 @@
+<svg width="532.73474" height="430.80957" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <defs>
+        <pattern id="mfid10" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <pattern id="mfid11" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <pattern id="mfid12" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <pattern id="mfid13" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <pattern id="mfid14" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <pattern id="mfid15" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
+            <g>
+                <image width="16" height="16" xlink:href="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAHYcAAB2HAY/l8WUAAAA1SURBVDhPY2DY8OE/RRirICkYxph0IQArJig/agAVDSAbYxUkBcMY2JwHwgTlRw2g1ICA/wA1/Kk/xLTqTAAAAABJRU5ErkJggg=="/>
+            </g>
+        </pattern>
+        <clipPath id="clipPath1">
+            <path fill="#000000" stroke="none" d="M 0 95.11659 L 268.129 95.11659 L 268.129 323.1076 L 0 323.1076 Z"/>
+        </clipPath>
+        <clipPath id="mfid1">
+            <path  fill="#000000" stroke="none" d="M 0 0 L 715.0101 0 L 715.0101 608.98 L 0 608.98 Z"/>
+        </clipPath>
+        <mask id="mfid9" maskUnits="userSpaceOnUse" x="-71.5" y="-60.9" width="858.00006" height="730.80005">
+            <g>
+                <path fill="#ffffff" fill-rule="evenodd" stroke="none" d="M 1 1 L 715 1 L 715 609 L 1 609 Z"/>
+            </g>
+        </mask>
+        <mask id="mfid16" maskUnits="userSpaceOnUse" x="-71.6" y="-61" width="859.2" height="732">
+            <g>
+                <path fill="#ffffff" fill-rule="evenodd" stroke="none" d="M 0 0 L 715 0 L 715 609 L 0 609 Z"/>
+            </g>
+        </mask>
+    </defs>
+    <g transform="matrix(1.3333335 0 0 1.3333335 0 0.00009155)">
+        <g>
+            <g  transform="matrix(1 0 0 1 74.8629 -11.838599)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 95.11659 L 268.129 95.11659 L 268.129 323.1076 L 0 323.1076 Z"/>
+                <g clip-path="url(#clipPath1)">
+                    <g transform="matrix(0.37500033 0 0 0.37438175 0 95.11659)">
+                        <g clip-path="url(#mfid1)">
+                            <g mask="url(#mfid9)">
+                                <g>
+                                    <path fill="url(#mfid10)" fill-rule="evenodd" stroke="none" d="M 0 0 L 45 0 L 45 39 L 0 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#92d050" fill-rule="evenodd" stroke="none" d="M 44 0 L 323 0 L 323 39 L 44 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="url(#mfid11)" fill-rule="evenodd" stroke="none" d="M 322 0 L 365 0 L 365 39 L 322 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#92d050" fill-rule="evenodd" stroke="none" d="M 364 0 L 669 0 L 669 39 L 364 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="url(#mfid12)" fill-rule="evenodd" stroke="none" d="M 668 0 L 715 0 L 715 39 L 668 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#00b0f0" fill-rule="evenodd" stroke="none" d="M 0 38 L 45 38 L 45 571 L 0 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#a6a6a6" fill-rule="evenodd" stroke="none" d="M 44 38 L 323 38 L 323 571 L 44 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#00b0f0" fill-rule="evenodd" stroke="none" d="M 322 38 L 365 38 L 365 571 L 322 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#a6a6a6" fill-rule="evenodd" stroke="none" d="M 364 38 L 669 38 L 669 571 L 364 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#00b0f0" fill-rule="evenodd" stroke="none" d="M 668 38 L 715 38 L 715 571 L 668 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="url(#mfid13)" fill-rule="evenodd" stroke="none" d="M 0 570 L 45 570 L 45 609 L 0 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#92d050" fill-rule="evenodd" stroke="none" d="M 44 570 L 323 570 L 323 609 L 44 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="url(#mfid14)" fill-rule="evenodd" stroke="none" d="M 322 570 L 365 570 L 365 609 L 322 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="#92d050" fill-rule="evenodd" stroke="none" d="M 364 570 L 669 570 L 669 609 L 364 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="url(#mfid15)" fill-rule="evenodd" stroke="none" d="M 668 570 L 715 570 L 715 609 L 668 609 Z"/>
+                                </g>
+                            </g>
+                            <g mask="url(#mfid16)">
+                                <g/>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 0 L 715 0"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 0 L 715 0 L 715 1 L 1 1 Z"/>
+                                </g>
+                                <g/>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 38 L 715 38"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 38 L 715 38 L 715 39 L 1 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 76 L 715 76"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 76 L 715 76 L 715 77 L 1 77 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 114 L 715 114"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 114 L 715 114 L 715 115 L 1 115 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 152 L 715 152"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 152 L 715 152 L 715 153 L 1 153 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 190 L 715 190"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 190 L 715 190 L 715 191 L 1 191 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 228 L 715 228"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 228 L 715 228 L 715 229 L 1 229 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 266 L 715 266"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 266 L 715 266 L 715 267 L 1 267 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 304 L 715 304"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 304 L 715 304 L 715 305 L 1 305 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 342 L 715 342"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 342 L 715 342 L 715 343 L 1 343 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 380 L 715 380"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 380 L 715 380 L 715 381 L 1 381 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 418 L 715 418"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 418 L 715 418 L 715 419 L 1 419 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 456 L 715 456"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 456 L 715 456 L 715 457 L 1 457 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 494 L 715 494"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 494 L 715 494 L 715 495 L 1 495 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 532 L 715 532"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 532 L 715 532 L 715 533 L 1 533 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 570 L 715 570"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 570 L 715 570 L 715 571 L 1 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 0 0 L 0 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 0 0 L 1 0 L 1 609 L 0 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 44 1 L 44 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 44 1 L 45 1 L 45 609 L 44 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 88 1 L 88 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 88 1 L 89 1 L 89 609 L 88 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 132 1 L 132 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 132 1 L 133 1 L 133 609 L 132 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 178 1 L 178 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 178 1 L 179 1 L 179 609 L 178 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 226 1 L 226 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 226 1 L 227 1 L 227 609 L 226 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 276 1 L 276 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 276 1 L 277 1 L 277 609 L 276 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 322 1 L 322 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 322 1 L 323 1 L 323 609 L 322 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 364 1 L 364 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 364 1 L 365 1 L 365 609 L 364 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 408 1 L 408 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 408 1 L 409 1 L 409 609 L 408 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 448 1 L 448 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 448 1 L 449 1 L 449 609 L 448 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 486 1 L 486 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 486 1 L 487 1 L 487 609 L 486 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 524 1 L 524 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 524 1 L 525 1 L 525 609 L 524 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 572 1 L 572 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 572 1 L 573 1 L 573 609 L 572 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 622 1 L 622 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 622 1 L 623 1 L 623 609 L 622 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 668 1 L 668 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 668 1 L 669 1 L 669 609 L 668 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 1 608 L 715 608"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 1 608 L 715 608 L 715 609 L 1 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#000000" stroke-miterlimit="10" stroke-linecap="square" d="M 714 1 L 714 609"/>
+                                </g>
+                                <g>
+                                    <path fill="#000000" fill-rule="evenodd" stroke="none" d="M 714 1 L 715 1 L 715 609 L 714 609 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 0 609 L 0 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 0 609 L 1 609 L 1 610 L 0 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 44 609 L 44 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 44 609 L 45 609 L 45 610 L 44 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 88 609 L 88 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 88 609 L 89 609 L 89 610 L 88 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 132 609 L 132 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 132 609 L 133 609 L 133 610 L 132 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 178 609 L 178 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 178 609 L 179 609 L 179 610 L 178 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 226 609 L 226 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 226 609 L 227 609 L 227 610 L 226 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 276 609 L 276 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 276 609 L 277 609 L 277 610 L 276 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 322 609 L 322 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 322 609 L 323 609 L 323 610 L 322 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 364 609 L 364 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 364 609 L 365 609 L 365 610 L 364 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 408 609 L 408 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 408 609 L 409 609 L 409 610 L 408 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 448 609 L 448 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 448 609 L 449 609 L 449 610 L 448 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 486 609 L 486 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 486 609 L 487 609 L 487 610 L 486 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 524 609 L 524 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 524 609 L 525 609 L 525 610 L 524 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 572 609 L 572 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 572 609 L 573 609 L 573 610 L 572 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 622 609 L 622 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 622 609 L 623 609 L 623 610 L 622 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 668 609 L 668 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 668 609 L 669 609 L 669 610 L 668 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 714 609 L 714 610"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 714 609 L 715 609 L 715 610 L 714 610 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 0 L 716 0"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 0 L 716 0 L 716 1 L 715 1 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 38 L 716 38"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 38 L 716 38 L 716 39 L 715 39 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 76 L 716 76"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 76 L 716 76 L 716 77 L 715 77 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 114 L 716 114"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 114 L 716 114 L 716 115 L 715 115 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 152 L 716 152"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 152 L 716 152 L 716 153 L 715 153 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 190 L 716 190"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 190 L 716 190 L 716 191 L 715 191 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 228 L 716 228"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 228 L 716 228 L 716 229 L 715 229 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 266 L 716 266"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 266 L 716 266 L 716 267 L 715 267 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 304 L 716 304"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 304 L 716 304 L 716 305 L 715 305 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 342 L 716 342"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 342 L 716 342 L 716 343 L 715 343 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 380 L 716 380"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 380 L 716 380 L 716 381 L 715 381 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 418 L 716 418"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 418 L 716 418 L 716 419 L 715 419 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 456 L 716 456"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 456 L 716 456 L 716 457 L 715 457 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 494 L 716 494"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 494 L 716 494 L 716 495 L 715 495 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 532 L 716 532"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 532 L 716 532 L 716 533 L 715 533 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 570 L 716 570"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 570 L 716 570 L 716 571 L 715 571 Z"/>
+                                </g>
+                                <g>
+                                    <path fill="none" stroke="#e0e0e0" stroke-miterlimit="10" stroke-linecap="square" d="M 715 608 L 716 608"/>
+                                </g>
+                                <g>
+                                    <path fill="#e0e0e0" fill-rule="evenodd" stroke="none" d="M 715 608 L 716 608 L 716 609 L 715 609 Z"/>
+                                </g>
+                            </g>
+                        </g>
+                    </g>
+                </g>
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 95.11659 L 268.129 95.11659 L 268.129 323.1076 L 0 323.1076 Z"/>
+            </g>
+            <g  transform="matrix(1 0 0 1 24.878 -226.95)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 313.107 L 44.7874 313.107 L 44.7874 323.107 L 0 323.107 Z"/>
+                <g>
+                    <path fill="#000000" stroke="none" d="M 10.936546 320.51 L 6.5537505 320.51 L 6.659219 319.95142 L 10.77639 315.6155 L 7.7881207 315.6155 L 7.9053073 315.00613 L 11.819355 315.00613 L 11.713886 315.5491 L 7.5967155 319.90063 L 11.053733 319.90063 L 10.936546 320.51 Z M 15.741214 320.51 L 15.448246 318.90063 L 12.952161 318.90063 L 12.014667 320.51 L 11.202169 320.51 L 14.514656 315.00613 L 15.362309 315.00613 L 16.50293 320.51 L 15.741214 320.51 Z M 14.838872 315.56863 Q 14.788093 315.6702 14.694343 315.83817 Q 14.600594 316.00613 13.280286 318.3186 L 15.338871 318.3186 L 14.940435 316.15848 L 14.838872 315.56863 Z M 18.00683 320.58813 Q 17.674799 320.58813 17.485348 320.38892 Q 17.295895 320.1897 17.295895 319.86157 Q 17.295895 319.64673 17.354488 319.35376 L 17.846674 316.79517 L 17.358395 316.79517 L 17.459957 316.28348 L 17.956049 316.28348 L 18.366203 315.33817 L 18.834951 315.33817 L 18.651358 316.28348 L 19.432606 316.28348 L 19.331043 316.79517 L 18.549797 316.79517 L 18.061518 319.3147 Q 18.014643 319.54907 18.014643 319.6858 Q 18.014643 320.02954 18.366203 320.02954 Q 18.530266 320.02954 18.756826 319.97485 L 18.682608 320.4944 Q 18.29589 320.58813 18.00683 320.58813 Z"/>
+                    <path fill="#000000" stroke="none" d="M 23.534151 320.51 L 23.534151 317.95923 L 20.5576 317.95923 L 20.5576 320.51 L 19.81151 320.51 L 19.81151 315.00613 L 20.5576 315.00613 L 20.5576 317.33423 L 23.534151 317.33423 L 23.534151 315.00613 L 24.280241 315.00613 L 24.280241 320.51 L 23.534151 320.51 Z M 25.663048 320.51 L 25.663048 319.65454 L 26.424765 319.65454 L 26.424765 320.51 L 25.663048 320.51 Z M 32.069275 318.95923 Q 32.069275 319.6936 31.53412 320.1018 Q 30.998966 320.51 30.045845 320.51 L 27.81148 320.51 L 27.81148 315.00613 L 29.811468 315.00613 Q 31.74896 315.00613 31.74896 316.34207 Q 31.74896 316.83032 31.475527 317.16235 Q 31.202091 317.4944 30.702093 317.60767 Q 31.35834 317.6858 31.713808 318.04712 Q 32.069275 318.40845 32.069275 318.95923 Z M 30.998966 316.43192 Q 30.998966 315.9866 30.69428 315.7952 Q 30.389593 315.6038 29.811468 315.6038 L 28.557571 315.6038 L 28.557571 317.34595 L 29.811468 317.34595 Q 30.409124 317.34595 30.704046 317.12134 Q 30.998966 316.89673 30.998966 316.43192 Z M 31.315372 318.90063 Q 31.315372 317.92798 29.948189 317.92798 L 28.557571 317.92798 L 28.557571 319.91235 L 30.00678 319.91235 Q 30.690372 319.91235 31.002872 319.65845 Q 31.315372 319.40454 31.315372 318.90063 Z M 33.061455 322.17017 L 33.061455 314.71317 L 34.651295 314.71317 L 34.651295 315.21707 L 33.741142 315.21707 L 33.741142 321.66626 L 34.651295 321.66626 L 34.651295 322.17017 L 33.061455 322.17017 Z M 38.8505 317.7561 Q 38.8505 319.135 38.36417 319.86157 Q 37.877846 320.58813 36.92863 320.58813 Q 35.979416 320.58813 35.502853 319.86548 Q 35.026295 319.14282 35.026295 317.7561 Q 35.026295 316.33817 35.48918 315.63113 Q 35.952072 314.9241 36.95207 314.9241 Q 37.92472 314.9241 38.387608 315.63895 Q 38.8505 316.3538 38.8505 317.7561 Z M 38.135654 317.7561 Q 38.135654 316.56473 37.860268 316.02957 Q 37.584877 315.49442 36.95207 315.49442 Q 36.30363 315.49442 36.02043 316.02176 Q 35.73723 316.5491 35.73723 317.7561 Q 35.73723 318.92798 36.024338 319.47095 Q 36.311443 320.01392 36.936443 320.01392 Q 37.557533 320.01392 37.846596 319.45923 Q 38.135654 318.90454 38.135654 317.7561 Z M 39.225494 322.17017 L 39.225494 321.66626 L 40.135647 321.66626 L 40.135647 315.21707 L 39.225494 315.21707 L 39.225494 314.71317 L 40.81533 314.71317 L 40.81533 322.17017 L 39.225494 322.17017 Z"/>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 11.838599 -11.838599)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 309.823 L 62.0394 309.823 L 62.0394 323.1074 L 0 323.1074 Z"/>
+                <g>
+                    <path fill="#000000" stroke="none" d="M 17.536547 318.93 L 13.153751 318.93 L 13.259219 318.3714 L 17.37639 314.0355 L 14.388121 314.0355 L 14.505308 313.42612 L 18.419355 313.42612 L 18.313887 313.9691 L 14.196715 318.32062 L 17.653732 318.32062 L 17.536547 318.93 Z M 22.341211 318.93 L 22.048246 317.32062 L 19.552162 317.32062 L 18.614666 318.93 L 17.80217 318.93 L 21.114656 313.42612 L 21.962309 313.42612 L 23.10293 318.93 L 22.341211 318.93 Z M 21.438873 313.98862 Q 21.388092 314.09018 21.294342 314.25815 Q 21.200594 314.42612 19.880287 316.7386 L 21.938871 316.7386 L 21.540436 314.57846 L 21.438873 313.98862 Z M 24.60683 319.00812 Q 24.274797 319.00812 24.085348 318.8089 Q 23.895895 318.60968 23.895895 318.28156 Q 23.895895 318.0667 23.954489 317.77374 L 24.446674 315.21515 L 23.958395 315.21515 L 24.059958 314.70346 L 24.55605 314.70346 L 24.966204 313.75815 L 25.434952 313.75815 L 25.251358 314.70346 L 26.032606 314.70346 L 25.931044 315.21515 L 25.1498 315.21515 L 24.66152 317.73468 Q 24.614643 317.96906 24.614643 318.10577 Q 24.614643 318.44952 24.966204 318.44952 Q 25.130266 318.44952 25.356825 318.39484 L 25.282608 318.91437 Q 24.89589 319.00812 24.60683 319.00812 Z"/>
+                    <path fill="#000000" stroke="none" d="M 30.134153 318.93 L 30.134153 316.3792 L 27.1576 316.3792 L 27.1576 318.93 L 26.411512 318.93 L 26.411512 313.42612 L 27.1576 313.42612 L 27.1576 315.7542 L 30.134153 315.7542 L 30.134153 313.42612 L 30.880243 313.42612 L 30.880243 318.93 L 30.134153 318.93 Z M 32.26305 318.93 L 32.26305 318.07452 L 33.024765 318.07452 L 33.024765 318.93 L 32.26305 318.93 Z M 38.669273 317.3792 Q 38.669273 318.1136 38.134117 318.5218 Q 37.598965 318.93 36.645844 318.93 L 34.411476 318.93 L 34.411476 313.42612 L 36.41147 313.42612 Q 38.34896 313.42612 38.34896 314.76205 Q 38.34896 315.2503 38.075523 315.58234 Q 37.80209 315.91437 37.30209 316.02765 Q 37.95834 316.10577 38.313805 316.4671 Q 38.669273 316.82843 38.669273 317.3792 Z M 37.598965 314.8519 Q 37.598965 314.4066 37.294277 314.21518 Q 36.989594 314.02377 36.41147 314.02377 L 35.15757 314.02377 L 35.15757 315.76593 L 36.41147 315.76593 Q 37.009125 315.76593 37.304043 315.54132 Q 37.598965 315.3167 37.598965 314.8519 Z M 37.91537 317.32062 Q 37.91537 316.34796 36.548187 316.34796 L 35.15757 316.34796 L 35.15757 318.33234 L 36.60678 318.33234 Q 37.29037 318.33234 37.60287 318.07843 Q 37.91537 317.82452 37.91537 317.32062 Z M 39.661457 320.59015 L 39.661457 313.13315 L 41.251297 313.13315 L 41.251297 313.63705 L 40.341145 313.63705 L 40.341145 320.08624 L 41.251297 320.08624 L 41.251297 320.59015 L 39.661457 320.59015 Z M 41.923164 318.93 L 41.923164 318.33234 L 43.32551 318.33234 L 43.32551 314.098 L 42.08332 314.9847 L 42.08332 314.32065 L 43.384098 313.42612 L 44.03253 313.42612 L 44.03253 318.33234 L 45.37237 318.33234 L 45.37237 318.93 L 41.923164 318.93 Z M 49.876266 317.13702 Q 49.876266 318.00812 49.358685 318.50812 Q 48.84111 319.00812 47.923145 319.00812 Q 47.153618 319.00812 46.68096 318.67218 Q 46.208305 318.33624 46.08331 317.69952 L 46.794247 317.6175 Q 47.0169 318.4339 47.93877 318.4339 Q 48.505177 318.4339 48.82549 318.0921 Q 49.145794 317.7503 49.145794 317.15265 Q 49.145794 316.63312 48.823532 316.3128 Q 48.50127 315.9925 47.954395 315.9925 Q 47.66924 315.9925 47.423145 316.08234 Q 47.17706 316.17218 46.930958 316.38702 L 46.24346 316.38702 L 46.427055 313.42612 L 49.555954 313.42612 L 49.555954 314.02377 L 47.06768 314.02377 L 46.96221 315.76984 Q 47.41924 315.41827 48.09893 315.41827 Q 48.911423 315.41827 49.393845 315.89484 Q 49.876266 316.3714 49.876266 317.13702 Z M 50.274696 320.59015 L 50.274696 320.08624 L 51.18485 320.08624 L 51.18485 313.63705 L 50.274696 313.63705 L 50.274696 313.13315 L 51.86453 313.13315 L 51.86453 320.59015 L 50.274696 320.59015 Z"/>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 56.868996 -257.769)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 313.107 L 57.2598 313.107 L 57.2598 323.107 L 0 323.107 Z"/>
+                <g transform="matrix(0 -1 1 0 0 0)">
+                    <g>
+                        <path fill="#000000" stroke="none" d="M -331.37347 31.03 L -335.75626 31.03 L -335.6508 30.471409 L -331.53363 26.135489 L -334.52188 26.135489 L -334.4047 25.526115 L -330.49066 25.526115 L -330.59613 26.069084 L -334.7133 30.420628 L -331.2563 30.420628 L -331.37347 31.03 Z M -326.56882 31.03 L -326.8618 29.420631 L -329.35785 29.420631 L -330.29535 31.03 L -331.10785 31.03 L -327.79535 25.526115 L -326.9477 25.526115 L -325.8071 31.03 L -326.56882 31.03 Z M -327.47113 26.088614 Q -327.5219 26.190178 -327.61566 26.358145 Q -327.7094 26.526112 -329.02972 28.838604 L -326.97113 28.838604 L -327.36957 26.678457 L -327.47113 26.088614 Z M -324.30316 31.108128 Q -324.6352 31.108128 -324.82465 30.908907 Q -325.0141 30.70969 -325.0141 30.381565 Q -325.0141 30.166723 -324.9555 29.873755 L -324.46332 27.315172 L -324.9516 27.315172 L -324.85004 26.803455 L -324.35394 26.803455 L -323.9438 25.858149 L -323.47504 25.858149 L -323.65863 26.803455 L -322.87738 26.803455 L -322.97894 27.315172 L -323.7602 27.315172 L -324.24847 29.834694 Q -324.29535 30.069067 -324.29535 30.205786 Q -324.29535 30.549534 -323.9438 30.549534 Q -323.77972 30.549534 -323.55316 30.494846 L -323.62738 31.014378 Q -324.0141 31.108128 -324.30316 31.108128 Z M -320.51022 31.03 L -321.28366 31.03 L -322.46335 25.526115 L -321.70554 25.526115 L -320.9321 29.4011 L -320.79538 30.373753 L -320.27585 29.4011 L -318.01025 25.526115 L -317.19775 25.526115 L -320.51022 31.03 Z"/>
+                        <path fill="#000000" stroke="none" d="M -317.6821 31.03 L -317.6821 30.174536 L -316.92038 30.174536 L -316.92038 31.03 L -317.6821 31.03 Z M -311.2759 29.479225 Q -311.2759 30.213598 -311.81107 30.621798 Q -312.3462 31.03 -313.29932 31.03 L -315.5337 31.03 L -315.5337 25.526115 L -313.5337 25.526115 Q -311.59622 25.526115 -311.59622 26.86205 Q -311.59622 27.350328 -311.86966 27.682358 Q -312.1431 28.014387 -312.64307 28.127666 Q -311.98685 28.205793 -311.63138 28.56712 Q -311.2759 28.928446 -311.2759 29.479225 Z M -312.3462 26.951893 Q -312.3462 26.50658 -312.65088 26.315176 Q -312.95557 26.123772 -313.5337 26.123772 L -314.7876 26.123772 L -314.7876 27.865952 L -313.5337 27.865952 Q -312.93604 27.865952 -312.6411 27.641342 Q -312.3462 27.416735 -312.3462 26.951893 Z M -312.02982 29.420631 Q -312.02982 28.447979 -313.39697 28.447979 L -314.7876 28.447979 L -314.7876 30.432346 L -313.33838 30.432346 Q -312.6548 30.432346 -312.3423 30.178442 Q -312.02982 29.924536 -312.02982 29.420631 Z M -310.2837 32.69015 L -310.2837 25.233149 L -308.69385 25.233149 L -308.69385 25.737053 L -309.604 25.737053 L -309.604 32.186245 L -308.69385 32.186245 L -308.69385 32.69015 L -310.2837 32.69015 Z M -308.022 31.03 L -308.022 30.432346 L -306.61966 30.432346 L -306.61966 26.197989 L -307.86185 27.084703 L -307.86185 26.420645 L -306.56107 25.526115 L -305.91263 25.526115 L -305.91263 30.432346 L -304.5728 30.432346 L -304.5728 31.03 L -308.022 31.03 Z M -300.0689 29.237041 Q -300.0689 30.10813 -300.58646 30.608128 Q -301.10403 31.108128 -302.022 31.108128 Q -302.79153 31.108128 -303.2642 30.77219 Q -303.73685 30.436253 -303.86185 29.799536 L -303.1509 29.717506 Q -302.92825 30.533909 -302.00638 30.533909 Q -301.43997 30.533909 -301.11966 30.192112 Q -300.79935 29.850319 -300.79935 29.252665 Q -300.79935 28.733135 -301.1216 28.412823 Q -301.44388 28.092514 -301.99075 28.092514 Q -302.2759 28.092514 -302.522 28.182356 Q -302.7681 28.2722 -303.0142 28.487043 L -303.7017 28.487043 L -303.5181 25.526115 L -300.38922 25.526115 L -300.38922 26.123772 L -302.87747 26.123772 L -302.98294 27.869858 Q -302.5259 27.518295 -301.84622 27.518295 Q -301.03372 27.518295 -300.5513 27.994858 Q -300.0689 28.471416 -300.0689 29.237041 Z M -299.67047 32.69015 L -299.67047 32.186245 L -298.7603 32.186245 L -298.7603 25.737053 L -299.67047 25.737053 L -299.67047 25.233149 L -298.08063 25.233149 L -298.08063 32.69015 L -299.67047 32.69015 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 313.512 -254.484)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 309.823 L 41.1024 309.823 L 41.1024 323.1074 L 0 323.1074 Z"/>
+                <g transform="matrix(0 -1 1 0 0 0)">
+                    <g>
+                        <path fill="#000000" stroke="none" d="M -327.70346 23.01 L -332.08624 23.01 L -331.98077 22.451406 L -327.86362 18.115488 L -330.85187 18.115488 L -330.73468 17.506115 L -326.82065 17.506115 L -326.92612 18.049084 L -331.04327 22.400627 L -327.58627 22.400627 L -327.70346 23.01 Z M -322.8988 23.01 L -323.19177 21.40063 L -325.68784 21.40063 L -326.62534 23.01 L -327.43784 23.01 L -324.12534 17.506115 L -323.27768 17.506115 L -322.1371 23.01 L -322.8988 23.01 Z M -323.80112 18.068613 Q -323.8519 18.170176 -323.94565 18.338144 Q -324.0394 18.506111 -325.3597 20.818604 L -323.30112 20.818604 L -323.69955 18.658455 L -323.80112 18.068613 Z M -320.63315 23.088125 Q -320.96518 23.088125 -321.15463 22.888906 Q -321.3441 22.68969 -321.3441 22.361565 Q -321.3441 22.146725 -321.2855 21.853754 L -320.7933 19.295172 L -321.2816 19.295172 L -321.18002 18.783455 L -320.68393 18.783455 L -320.27377 17.838146 L -319.80502 17.838146 L -319.98862 18.783455 L -319.20737 18.783455 L -319.30893 19.295172 L -320.09018 19.295172 L -320.57846 21.814693 Q -320.62534 22.049068 -320.62534 22.185783 Q -320.62534 22.529533 -320.27377 22.529533 Q -320.1097 22.529533 -319.88315 22.474846 L -319.95737 22.994375 Q -320.3441 23.088125 -320.63315 23.088125 Z M -316.8402 23.01 L -317.61365 23.01 L -318.79333 17.506115 L -318.03552 17.506115 L -317.2621 21.3811 L -317.12537 22.35375 L -316.60583 21.3811 L -314.34024 17.506115 L -313.52774 17.506115 L -316.8402 23.01 Z"/>
+                        <path fill="#000000" stroke="none" d="M -314.0121 23.01 L -314.0121 22.154535 L -313.25037 22.154535 L -313.25037 23.01 L -314.0121 23.01 Z M -307.6059 21.459225 Q -307.6059 22.193598 -308.14105 22.601799 Q -308.6762 23.01 -309.6293 23.01 L -311.86368 23.01 L -311.86368 17.506115 L -309.86368 17.506115 Q -307.9262 17.506115 -307.9262 18.842049 Q -307.9262 19.330328 -308.19965 19.662357 Q -308.47308 19.994387 -308.97305 20.107668 Q -308.31683 20.185793 -307.96136 20.54712 Q -307.6059 20.908445 -307.6059 21.459225 Z M -308.6762 18.931892 Q -308.6762 18.48658 -308.98087 18.295176 Q -309.28555 18.10377 -309.86368 18.10377 L -311.11758 18.10377 L -311.11758 19.845951 L -309.86368 19.845951 Q -309.26602 19.845951 -308.9711 19.621342 Q -308.6762 19.396734 -308.6762 18.931892 Z M -308.3598 21.40063 Q -308.3598 20.427979 -309.72696 20.427979 L -311.11758 20.427979 L -311.11758 22.412348 L -309.66837 22.412348 Q -308.98477 22.412348 -308.6723 22.158442 Q -308.3598 21.904535 -308.3598 21.40063 Z M -306.61368 24.67015 L -306.61368 17.213148 L -305.02383 17.213148 L -305.02383 17.717052 L -305.934 17.717052 L -305.934 24.166246 L -305.02383 24.166246 L -305.02383 24.67015 L -306.61368 24.67015 Z M -300.82468 20.256105 Q -300.82468 21.635006 -301.31097 22.361565 Q -301.7973 23.088125 -302.74652 23.088125 Q -303.69574 23.088125 -304.1723 22.36547 Q -304.64886 21.642818 -304.64886 20.256105 Q -304.64886 18.838142 -304.18597 18.131113 Q -303.72308 17.424086 -302.72308 17.424086 Q -301.75043 17.424086 -301.28754 18.138926 Q -300.82468 18.853767 -300.82468 20.256105 Z M -301.5395 20.256105 Q -301.5395 19.064703 -301.81488 18.529549 Q -302.09027 17.994396 -302.72308 17.994396 Q -303.37152 17.994396 -303.65472 18.521736 Q -303.93793 19.049078 -303.93793 20.256105 Q -303.93793 21.427975 -303.65082 21.970942 Q -303.3637 22.513906 -302.7387 22.513906 Q -302.1176 22.513906 -301.82855 21.95922 Q -301.5395 21.404537 -301.5395 20.256105 Z M -300.44965 24.67015 L -300.44965 24.166246 L -299.5395 24.166246 L -299.5395 17.717052 L -300.44965 17.717052 L -300.44965 17.213148 L -298.8598 17.213148 L -298.8598 24.67015 L -300.44965 24.67015 Z"/>
+                    </g>
+                </g>
+            </g>
+            <g  transform="matrix(1 0 0 1 174.655 -250.583)">
+                <path fill="none" stroke="none" visibility="hidden" d="M 0 302.233 L 57.2598 302.233 L 57.2598 323.107 L 0 323.107 Z"/>
+                <g transform="matrix(0 -1 1 0 0 0)">
+                    <g>
+                        <path fill="#000000" stroke="none" d="M -323.90347 31.03 L -328.28625 31.03 L -328.1808 30.471409 L -324.06363 26.135489 L -327.05188 26.135489 L -326.9347 25.526115 L -323.02066 25.526115 L -323.12613 26.069084 L -327.2433 30.420628 L -323.7863 30.420628 L -323.90347 31.03 Z M -319.09882 31.03 L -319.39178 29.420631 L -321.88785 29.420631 L -322.82535 31.03 L -323.63785 31.03 L -320.32535 25.526115 L -319.4777 25.526115 L -318.3371 31.03 L -319.09882 31.03 Z M -320.00113 26.088614 Q -320.0519 26.190178 -320.14566 26.358145 Q -320.2394 26.526112 -321.55972 28.838604 L -319.50113 28.838604 L -319.89957 26.678457 L -320.00113 26.088614 Z M -316.83316 31.108128 Q -317.1652 31.108128 -317.35464 30.908907 Q -317.5441 30.70969 -317.5441 30.381565 Q -317.5441 30.166723 -317.4855 29.873755 L -316.99332 27.315172 L -317.4816 27.315172 L -317.38004 26.803455 L -316.88394 26.803455 L -316.4738 25.858149 L -316.00504 25.858149 L -316.18863 26.803455 L -315.40738 26.803455 L -315.50894 27.315172 L -316.2902 27.315172 L -316.77847 29.834694 Q -316.82535 30.069067 -316.82535 30.205786 Q -316.82535 30.549534 -316.4738 30.549534 Q -316.30972 30.549534 -316.08316 30.494846 L -316.15738 31.014378 Q -316.5441 31.108128 -316.83316 31.108128 Z M -313.04022 31.03 L -313.81366 31.03 L -314.99335 25.526115 L -314.23553 25.526115 L -313.4621 29.4011 L -313.32538 30.373753 L -312.80585 29.4011 L -310.54025 25.526115 L -309.72775 25.526115 L -313.04022 31.03 Z"/>
+                        <path fill="#000000" stroke="none" d="M -310.2121 31.03 L -310.2121 30.174536 L -309.45038 30.174536 L -309.45038 31.03 L -310.2121 31.03 Z M -303.8059 29.479225 Q -303.8059 30.213598 -304.34106 30.621798 Q -304.87622 31.03 -305.8293 31.03 L -308.0637 31.03 L -308.0637 25.526115 L -306.0637 25.526115 Q -304.12622 25.526115 -304.12622 26.86205 Q -304.12622 27.350328 -304.39966 27.682358 Q -304.6731 28.014387 -305.17307 28.127666 Q -304.51685 28.205793 -304.16138 28.56712 Q -303.8059 28.928446 -303.8059 29.479225 Z M -304.87622 26.951893 Q -304.87622 26.50658 -305.18088 26.315176 Q -305.48557 26.123772 -306.0637 26.123772 L -307.3176 26.123772 L -307.3176 27.865952 L -306.0637 27.865952 Q -305.46603 27.865952 -305.1711 27.641342 Q -304.87622 27.416735 -304.87622 26.951893 Z M -304.5598 29.420631 Q -304.5598 28.447979 -305.92697 28.447979 L -307.3176 28.447979 L -307.3176 30.432346 L -305.86838 30.432346 Q -305.18478 30.432346 -304.8723 30.178442 Q -304.5598 29.924536 -304.5598 29.420631 Z M -302.8137 32.69015 L -302.8137 25.233149 L -301.22385 25.233149 L -301.22385 25.737053 L -302.134 25.737053 L -302.134 32.186245 L -301.22385 32.186245 L -301.22385 32.69015 L -302.8137 32.69015 Z M -297.05984 29.49485 Q -297.05984 30.256565 -297.5442 30.682348 Q -298.02856 31.108128 -298.9348 31.108128 Q -299.81763 31.108128 -300.31567 30.690159 Q -300.81372 30.272192 -300.81372 29.502665 Q -300.81372 28.963602 -300.50513 28.596416 Q -300.19653 28.22923 -299.71606 28.151106 L -299.71606 28.13548 Q -300.16528 28.03001 -300.42505 27.678452 Q -300.6848 27.32689 -300.6848 26.854237 Q -300.6848 26.22533 -300.2141 25.83471 Q -299.7434 25.444086 -298.95044 25.444086 Q -298.13794 25.444086 -297.66724 25.826899 Q -297.19656 26.209707 -297.19656 26.86205 Q -297.19656 27.334705 -297.45825 27.686264 Q -297.71997 28.037825 -298.1731 28.127666 L -298.1731 28.143293 Q -297.64575 28.22923 -297.35278 28.590557 Q -297.05984 28.951881 -297.05984 29.49485 Z M -297.927 26.901112 Q -297.927 25.967522 -298.95044 25.967522 Q -299.44653 25.967522 -299.7063 26.201895 Q -299.96606 26.436268 -299.96606 26.901112 Q -299.96606 27.373766 -299.6985 27.62181 Q -299.4309 27.869858 -298.94263 27.869858 Q -298.44653 27.869858 -298.18677 27.641342 Q -297.927 27.412828 -297.927 26.901112 Z M -297.79028 29.428444 Q -297.79028 28.916729 -298.09497 28.656963 Q -298.39966 28.397198 -298.95044 28.397198 Q -299.4856 28.397198 -299.78638 28.676495 Q -300.08716 28.95579 -300.08716 29.444067 Q -300.08716 30.580784 -298.927 30.580784 Q -298.35278 30.580784 -298.07153 30.305395 Q -297.79028 30.030006 -297.79028 29.428444 Z M -296.64966 32.69015 L -296.64966 32.186245 L -295.7395 32.186245 L -295.7395 25.737053 L -296.64966 25.737053 L -296.64966 25.233149 L -295.0598 25.233149 L -295.0598 32.69015 L -296.64966 32.69015 Z"/>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
