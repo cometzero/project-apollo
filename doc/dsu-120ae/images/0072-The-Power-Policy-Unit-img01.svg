@@ -1,0 +1,102 @@
+<svg xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" height="427" viewBox="0 0 865 427" width="865">
+  <defs/>
+  <g id="page1" transform="translate(5.5,5.5)">
+    <rect fill="#ffffff" y="0" height="417" width="855" x="0"/>
+    <g id="shape1" transform="translate(172.000000,9.000000)">
+      <path stroke="#323232" fill="#ffffff" fill-rule="nonzero" stroke-width="1.333330035209656" d="M.0,.0L501.0,.0L501.0,312.9L.0,312.9L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="13.3" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="2.7">DynamiQ cluster</tspan>
+      </text>
+    </g>
+    <g id="shape2" transform="translate(512.000000,169.000000)">
+      <path stroke="#323232" fill="#ffffff" fill-rule="nonzero" stroke-width="1.333330035209656" d="M.0,.0L127.5,.0L127.5,128.0L.0,128.0L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="66.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="30.4">Power domain</tspan>
+      </text>
+    </g>
+    <g id="shape3" transform="translate(331.000000,212.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L175.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M175.4,-2.3L180.0,.0L175.4,2.3L175.4,-2.3"/>
+      <rect fill="#ffffff" y="-16.8" height="12.7" width="130.7" x="25.7"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-6.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="25.7">Internal P-Channel interface</tspan>
+      </text>
+    </g>
+    <g id="shape4" transform="translate(331.000000,257.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L175.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M175.4,-2.3L180.0,.0L175.4,2.3L175.4,-2.3"/>
+      <rect fill="#ffffff" y="-14.8" height="12.7" width="64.7" x="58.7"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-4.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="58.7">Domain Reset</tspan>
+      </text>
+    </g>
+    <g id="shape5" transform="translate(266.000000,155.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L558.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M558.4,-2.3L563.0,.0L558.4,2.3L558.4,-2.3"/>
+      <rect fill="#ffffff" y="-20.8" height="12.7" width="96.0" x="424.7"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-10.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="424.7">Clock enable request</tspan>
+      </text>
+    </g>
+    <g id="shape6" transform="translate(266.000000,109.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L558.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M558.4,-2.3L563.0,.0L558.4,2.3L558.4,-2.3"/>
+      <rect fill="#ffffff" y="-22.8" height="12.7" width="78.0" x="435.2"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-12.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="435.2">Isolation request</tspan>
+      </text>
+    </g>
+    <g id="shape7" transform="translate(266.000000,66.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L558.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M558.4,-2.3L563.0,.0L558.4,2.3L558.4,-2.3"/>
+      <rect fill="#ffffff" y="-21.8" height="12.7" width="123.3" x="414.2"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-11.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="414.2">PCSM P-Channel interface</tspan>
+      </text>
+    </g>
+    <g id="shape8" transform="matrix(0.000000,1.000000,-1.000000,0.000000,421.000000,258.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L142.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M142.4,-2.3L147.0,.0L142.4,2.3L142.4,-2.3"/>
+    </g>
+    <g id="shape9" transform="translate(193.000000,42.000000)">
+      <path stroke="#323232" fill="#ffffff" fill-rule="nonzero" stroke-width="1.333330035209656" d="M.0,.0L137.0,.0L137.0,255.0L.0,255.0L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="123.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="27.2">Power Policy Unit</tspan>
+        <tspan y="136.5" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="54.5">(PPU)</tspan>
+      </text>
+    </g>
+    <g id="shape10" transform="translate(12.000000,156.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M4.6,.0L180.0,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3"/>
+      <rect fill="#ffffff" y="-16.8" height="12.7" width="66.0" x="58.0"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-6.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="58.0">PPU Interrupt</tspan>
+      </text>
+    </g>
+    <g id="shape11" transform="translate(12.000000,194.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M4.6,.0L175.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M4.6,2.3L.0,.0L4.6,-2.3L4.6,2.3"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M175.4,-2.3L180.0,.0L175.4,2.3L175.4,-2.3"/>
+      <rect fill="#ffffff" y="-16.8" height="12.7" width="68.0" x="57.0"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-6.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="57.0">AXI Utility Bus</tspan>
+      </text>
+    </g>
+    <g id="shape12" transform="translate(12.000000,234.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L175.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M175.4,-2.3L180.0,.0L175.4,2.3L175.4,-2.3"/>
+      <rect fill="#ffffff" y="-14.8" height="12.7" width="41.3" x="70.3"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-4.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="70.3">PPUCLK</tspan>
+      </text>
+    </g>
+    <g id="shape13" transform="translate(12.000000,271.000000)">
+      <path stroke="#333e48" fill="none" stroke-width="1.333330035209656" d="M.0,.0L175.4,.0"/>
+      <path stroke="#333e48" stroke-linecap="round" fill="#333e48" stroke-width="1" d="M175.4,-2.3L180.0,.0L175.4,2.3L175.4,-2.3"/>
+      <rect fill="#ffffff" y="-16.8" height="12.7" width="36.0" x="73.0"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="-6.2" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="73.0">nRESET</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

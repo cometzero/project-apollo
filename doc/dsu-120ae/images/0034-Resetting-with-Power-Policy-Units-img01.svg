@@ -1,0 +1,286 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns="http://www.w3.org/2000/svg" height="392" viewBox="0 0 699 392" width="699">
+  <defs/>
+  <g transform="translate(5.5,5.5)" id="page1">
+    <rect height="382" y="0" fill="#ffffff" x="0" width="689"/>
+    <path fill="#0091bd" d="M.0,102.0L173.9,102.0L173.9,.0L.0,.0L.0,102.0z" transform="translate(324.200000,200.570000)" id="shape1" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#0091bd" d="M.0,75.6L158.7,75.6L158.7,.0L.0,.0L.0,75.6z" transform="translate(331.760000,219.470000)" id="shape2" fill-rule="nonzero" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <path fill="#7d868c" d="M.0,102.0L64.3,102.0L64.3,.0L.0,.0L.0,102.0z" transform="translate(606.770000,200.570000)" id="shape3" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(620.770000,243.350000)" id="shape4">
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-6.3">DebugBlock</tspan>
+      </text>
+    </g>
+    <path fill="#00c1de" d="M.0,110.7L120.9,110.7L120.9,.0L.0,.0L.0,110.7z" transform="translate(31.070000,61.500000)" id="shape5" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#00c1de" d="M.0,79.4L98.3,79.4L98.3,.0L.0,.0L.0,79.4z" transform="translate(42.410000,81.530000)" id="shape6" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(77.410000,79.530000)" id="shape7">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">Core 0</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(95.330000,100.420000)" id="shape8" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(103.330000,101.420000)" id="shape9">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="1.2">ETE</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(95.330000,130.660000)" id="shape10" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(100.330000,131.660000)" id="shape11">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">Debug</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(49.970000,130.660000)" id="shape12" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(57.970000,131.660000)" id="shape13">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.3">RAS</tspan>
+      </text>
+    </g>
+    <path fill="none" d="M.0,303.4L582.9,303.4L582.9,.0L.0,.0L.0,303.4z" transform="translate(9.090000,8.570000)" id="shape14" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(295.840000,12.950000)" id="shape15">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-3.3">Cluster</tspan>
+      </text>
+    </g>
+    <g transform="translate(50.070000,61.410000)" id="shape16">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-12.3">CORECLK[0] domain</tspan>
+      </text>
+    </g>
+    <path fill="#00c1de" d="M.0,110.7L120.9,110.7L120.9,.0L.0,.0L.0,110.7z" transform="translate(159.580000,61.500000)" id="shape17" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#00c1de" d="M.0,79.4L98.3,79.4L98.3,.0L.0,.0L.0,79.4z" transform="translate(170.920000,81.530000)" id="shape18" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(205.920000,79.530000)" id="shape19">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">Core 1</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(223.830000,100.420000)" id="shape20" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(231.830000,101.420000)" id="shape21">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="1.2">ETE</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(223.830000,130.660000)" id="shape22" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(228.830000,131.660000)" id="shape23">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">Debug</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(178.480000,130.660000)" id="shape24" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(186.480000,131.660000)" id="shape25">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.3">RAS</tspan>
+      </text>
+    </g>
+    <g transform="translate(178.580000,61.410000)" id="shape26">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-12.3">CORECLK[1] domain</tspan>
+      </text>
+    </g>
+    <path fill="#00c1de" d="M.0,110.7L120.9,110.7L120.9,.0L.0,.0L.0,110.7z" transform="translate(320.080000,61.500000)" id="shape27" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#00c1de" d="M.0,79.4L98.3,79.4L98.3,.0L.0,.0L.0,79.4z" transform="translate(331.420000,81.530000)" id="shape28" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(366.420000,79.530000)" id="shape29">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">Core 2</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(384.330000,100.420000)" id="shape30" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(392.330000,101.420000)" id="shape31">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="1.2">ETE</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(384.330000,130.660000)" id="shape32" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(389.330000,131.660000)" id="shape33">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">Debug</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(338.980000,130.660000)" id="shape34" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(346.980000,131.660000)" id="shape35">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.3">RAS</tspan>
+      </text>
+    </g>
+    <g transform="translate(339.080000,61.410000)" id="shape36">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-12.3">CORECLK[2] domain</tspan>
+      </text>
+    </g>
+    <path fill="#00c1de" d="M.0,110.7L120.9,110.7L120.9,.0L.0,.0L.0,110.7z" transform="translate(448.590000,61.500000)" id="shape37" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#00c1de" d="M.0,79.4L98.3,79.4L98.3,.0L.0,.0L.0,79.4z" transform="translate(459.930000,81.530000)" id="shape38" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(494.930000,79.530000)" id="shape39">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">Core 3</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(512.840000,100.420000)" id="shape40" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(520.840000,101.420000)" id="shape41">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="1.2">ETE</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(512.840000,130.660000)" id="shape42" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(517.840000,131.660000)" id="shape43">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">Debug</tspan>
+      </text>
+    </g>
+    <path fill="#e5eceb" d="M.0,22.7L37.8,22.7L37.8,.0L.0,.0L.0,22.7z" transform="translate(467.480000,130.660000)" id="shape44" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(475.480000,131.660000)" id="shape45">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.3">RAS</tspan>
+      </text>
+    </g>
+    <g transform="translate(467.590000,61.410000)" id="shape46">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-12.3">CORECLK[3] domain</tspan>
+      </text>
+    </g>
+    <path fill="#7d868c" d="M.0,102.0L64.3,102.0L64.3,.0L.0,.0L.0,102.0z" transform="translate(252.390000,200.570000)" id="shape47" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#7d868c" d="M.0,26.5L57.3,26.5L57.3,.0L.0,.0L.0,26.5z" transform="translate(255.550000,202.460000)" id="shape48" fill-rule="evenodd"/>
+    <g transform="translate(256.550000,198.460000)" id="shape49">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">ATCLK</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.8">domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(271.390000,234.570000)" id="shape50">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="0.2">Trace</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">funnel</tspan>
+      </text>
+    </g>
+    <path fill="#7d868c" d="M.0,102.0L56.0,102.0L56.0,.0L.0,.0L.0,102.0z" transform="translate(505.620000,200.570000)" id="shape51" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(508.780000,198.460000)" id="shape52">
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">PCLK</tspan>
+      </text>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="0.2">domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(513.620000,240.570000)" id="shape53">
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-3.3">APB mux</tspan>
+      </text>
+    </g>
+    <path fill="#0091bd" d="M.0,102.0L64.3,102.0L64.3,.0L.0,.0L.0,102.0z" transform="translate(180.580000,200.570000)" id="shape54" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#0091bd" d="M.0,26.5L57.3,26.5L57.3,.0L.0,.0L.0,26.5z" transform="translate(183.740000,202.460000)" id="shape55" fill-rule="evenodd"/>
+    <g transform="translate(186.740000,198.460000)" id="shape56">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-3.8">GICCLK</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.8">domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(195.580000,240.570000)" id="shape57">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-3.3">GIC mux</tspan>
+      </text>
+    </g>
+    <path fill="#7d868c" d="M.0,102.0L66.1,102.0L66.1,.0L.0,.0L.0,102.0z" transform="translate(106.880000,200.570000)" id="shape58" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <g transform="translate(110.000000,198.570000)" id="shape60">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.8">PERIPHCLK</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.8">domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(125.880000,234.570000)" id="shape61">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.8">Power</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">control</tspan>
+      </text>
+    </g>
+    <path fill="#7d868c" d="M.0,102.0L64.3,102.0L64.3,.0L.0,.0L.0,102.0z" transform="translate(35.070000,200.570000)" id="shape62" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+    <path fill="#7d868c" d="M.0,26.5L57.3,26.5L57.3,.0L.0,.0L.0,26.5z" transform="translate(38.230000,202.460000)" id="shape63" fill-rule="evenodd"/>
+    <g transform="translate(41.230000,198.460000)" id="shape64">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-3.8">PPUCLK</tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="24.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.8">domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(54.070000,240.570000)" id="shape65">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.3">PPUs</tspan>
+      </text>
+    </g>
+    <g transform="translate(332.200000,198.570000)" id="shape66">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-7.3">SCLK domain</tspan>
+      </text>
+    </g>
+    <path fill="#0091bd" d="M.0,37.8L64.3,37.8L64.3,.0L.0,.0L.0,37.8z" transform="translate(339.320000,225.140000)" id="shape67" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(345.320000,229.140000)" id="shape68">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-0.2">Snoop filter </tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="23.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-1.3">RAM arrays</tspan>
+      </text>
+    </g>
+    <path fill="#0091bd" d="M.0,37.8L63.7,37.8L63.7,.0L.0,.0L.0,37.8z" transform="translate(419.190000,225.140000)" id="shape69" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#ffffff"/>
+    <g transform="translate(432.190000,229.140000)" id="shape70">
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="11.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-2.3">L3 RAM </tspan>
+      </text>
+      <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="23.8" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="1.7">arrays</tspan>
+      </text>
+    </g>
+    <g transform="translate(392.150000,267.000000)" id="shape71">
+      <path fill="#7d868c" d="M.0,.0L42.0,.0L42.0,24.0L.0,24.0L.0,.0z" fill-rule="nonzero" stroke-width="1" stroke="#ffffff"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="14.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="11.3">RAS</tspan>
+      </text>
+    </g>
+    <path fill="none" d="M.0,.0L274.0,.0L274.0,142.0L.0,142.0L.0,.0z" transform="translate(19.550000,41.670000)" stroke-dasharray="11,5" id="shape72" stroke-width="1" stroke="#323232"/>
+    <g transform="translate(17.550000,37.170000)" id="shape73">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="17.3" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="7.2">Core pair</tspan>
+      </text>
+    </g>
+    <path fill="none" d="M.0,.0L274.0,.0L274.0,142.0L.0,142.0L.0,.0z" transform="translate(309.000000,41.670000)" stroke-dasharray="11,5" id="shape74" stroke-width="1" stroke="#323232"/>
+    <g transform="translate(307.000000,37.170000)" id="shape75">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+        <tspan y="17.3" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="7.2">Core pair</tspan>
+      </text>
+    </g>
+    <g transform="translate(9.840000,326.530000)" id="group76">
+      <path fill="#00c1de" d="M.0,15.4L11.3,15.4L11.3,.0L.0,.0L.0,15.4z" transform="translate(0.000000,2.990000)" id="shape77" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+      <g transform="translate(28.010000,0.000000)" id="shape78">
+        <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+          <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-14.8">Core Warm or Cold reset</tspan>
+        </text>
+      </g>
+      <path fill="#e5eceb" d="M.0,17.2L11.3,17.2L11.3,.0L.0,.0L.0,17.2z" transform="translate(0.000000,29.060000)" id="shape79" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+      <g transform="translate(26.010000,26.970000)" id="shape80">
+        <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+          <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-9.3">Core Cold reset</tspan>
+        </text>
+      </g>
+      <path fill="#0091bd" d="M.0,15.4L11.3,15.4L11.3,.0L.0,.0L.0,15.4z" transform="translate(151.320000,2.990000)" id="shape81" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+      <g transform="translate(182.080000,0.000000)" id="shape82">
+        <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+          <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-16.8">Cluster Warm or Cold reset</tspan>
+        </text>
+      </g>
+      <path fill="#7d868c" d="M.0,17.2L11.3,17.2L11.3,.0L.0,.0L.0,17.2z" transform="translate(151.320000,29.060000)" id="shape83" fill-rule="evenodd" stroke-width="0.6666669845581055" stroke="#000000"/>
+      <g transform="translate(180.080000,26.970000)" id="shape84">
+        <text xml:space="preserve" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial;font-size:8.00pt">
+          <tspan y="11.8" style="font-family:Lato,PingFang SC,Mircrosoft YaHei,Arial" x="-11.3">Cluster Cold reset</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

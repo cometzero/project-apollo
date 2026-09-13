@@ -1,0 +1,128 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 807 390" width="807" height="390">
+  <defs/>
+  <g transform="translate(5.5,5.5)" id="page1">
+    <rect fill="none" y="0" x="0" width="797" height="380"/>
+    <path fill="#ebebeb" stroke-width="1" transform="translate(9.320000,9.000000)" id="shape1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L778.7,.0L778.7,321.0L.0,321.0L.0,.0z"/>
+    <g transform="translate(13.560800,15.000000)" id="shape2">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+        <tspan y="17.5" x="2.7">DynamIQ cluster</tspan>
+      </text>
+    </g>
+    <path fill="#ffffff" stroke-width="1" stroke-dasharray="11,5" transform="translate(34.000000,56.000000)" id="shape3" fill-rule="nonzero" stroke="#323232" d="M.0,.0L305.0,.0L305.0,180.0L.0,180.0L.0,.0z"/>
+    <g transform="translate(36.000000,52.000000)" id="shape4">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+        <tspan y="23.0" x="2.7">Complex pair</tspan>
+      </text>
+    </g>
+    <g transform="translate(45.999900,89.000000)" id="group5">
+      <path fill="#ffffff" stroke-width="1" transform="translate(0.000000,4.319800)" id="shape6" fill-rule="nonzero" stroke="#323232" d="M.0,.0L133.1,.0L133.1,122.7L.0,122.7L.0,.0z"/>
+      <g transform="translate(32.316200,33.000000)" id="shape7">
+        <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="26.5" x="12.2">Core 0</tspan>
+        </text>
+      </g>
+      <g transform="translate(16.000100,86.999900)" id="shape8">
+        <path fill="#ffffff" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L101.0,.0L101.0,28.5L.0,28.5L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="18.3" x="6.5">Dedicated logic</tspan>
+        </text>
+      </g>
+      <g transform="translate(3.735300,0.000000)" id="shape9">
+        <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+          <tspan y="20.4" x="3.1">Complex 0</tspan>
+        </text>
+      </g>
+    </g>
+    <g transform="translate(183.000000,255.000000)" id="shape10">
+      <path fill="#ffffff" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L397.0,.0L397.0,52.0L.0,52.0L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+        <tspan y="30.0" x="112.5">DynamIQ cluster shared logic </tspan>
+      </text>
+    </g>
+    <g transform="translate(193.955900,89.000000)" id="group11">
+      <path fill="#ffffff" stroke-width="1" transform="translate(0.000000,4.319800)" id="shape12" fill-rule="nonzero" stroke="#323232" d="M.0,.0L133.1,.0L133.1,122.7L.0,122.7L.0,.0z"/>
+      <g transform="translate(32.316200,33.000000)" id="shape13">
+        <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="26.5" x="12.2">Core 1</tspan>
+        </text>
+      </g>
+      <g transform="translate(16.000000,86.999900)" id="shape14">
+        <path fill="#ffffff" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L102.0,.0L102.0,28.5L.0,28.5L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="18.3" x="7.0">Dedicated logic</tspan>
+        </text>
+      </g>
+      <g transform="translate(3.735300,0.000000)" id="shape15">
+        <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+          <tspan y="20.5" x="3.1">Complex 1</tspan>
+        </text>
+      </g>
+    </g>
+    <path fill="#ffffff" stroke-width="1" stroke-dasharray="11,5" transform="translate(389.500000,56.000000)" id="shape16" fill-rule="nonzero" stroke="#323232" d="M.0,.0L379.5,.0L379.5,180.0L.0,180.0L.0,.0z"/>
+    <g transform="translate(391.500000,53.000000)" id="shape17">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+        <tspan y="23.0" x="2.7">Complex pair</tspan>
+      </text>
+    </g>
+    <g transform="translate(401.495900,89.000000)" id="group18">
+      <path fill="#ffffff" stroke-width="1" transform="translate(0.000000,4.319800)" id="shape19" fill-rule="nonzero" stroke="#323232" d="M.0,.0L159.5,.0L159.5,122.7L.0,122.7L.0,.0z"/>
+      <g transform="translate(8.504100,34.537400)" id="shape20">
+        <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="26.5" x="12.2">Core 2</tspan>
+        </text>
+      </g>
+      <g transform="translate(27.752000,87.999900)" id="shape21">
+        <path fill="#ffffff" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L107.5,.0L107.5,28.5L.0,28.5L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="18.3" x="18.8">Shared logic</tspan>
+        </text>
+      </g>
+      <g transform="translate(3.735300,0.000000)" id="shape22">
+        <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+          <tspan y="20.5" x="3.1">Complex 2</tspan>
+        </text>
+      </g>
+    </g>
+    <g transform="translate(485.000100,123.537400)" id="shape23">
+      <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+        <tspan y="26.5" x="12.2">Core 3</tspan>
+      </text>
+    </g>
+    <g transform="translate(588.583900,89.000000)" id="group24">
+      <path fill="#ffffff" stroke-width="1" transform="translate(0.000000,4.319800)" id="shape25" fill-rule="nonzero" stroke="#323232" d="M.0,.0L159.5,.0L159.5,122.7L.0,122.7L.0,.0z"/>
+      <g transform="translate(8.504100,34.537400)" id="shape26">
+        <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="26.5" x="12.2">Core 4</tspan>
+        </text>
+      </g>
+      <g transform="translate(27.752000,87.999900)" id="shape27">
+        <path fill="#ffffff" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L107.5,.0L107.5,28.5L.0,28.5L.0,.0z"/>
+        <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+          <tspan y="18.5" x="18.8">Shared logic</tspan>
+        </text>
+      </g>
+      <g transform="translate(3.735300,0.000000)" id="shape28">
+        <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+          <tspan y="20.5" x="3.1">Complex 3</tspan>
+        </text>
+      </g>
+    </g>
+    <g transform="translate(672.086100,123.537400)" id="shape29">
+      <path fill="#00c1de" stroke-width="1" fill-rule="nonzero" stroke="#323232" d="M.0,.0L63.7,.0L63.7,44.9L.0,44.9L.0,.0z"/>
+      <text xml:space="preserve" style="fill:#191919;font-family:Lato;font-size:10.00pt">
+        <tspan y="26.5" x="12.2">Core 5</tspan>
+      </text>
+    </g>
+    <path fill="#00c1de" stroke-width="1" transform="translate(25.000000,350.000000)" id="shape30" fill-rule="nonzero" stroke="#323232" d="M.0,.0L19.0,.0L19.0,19.0L.0,19.0L.0,.0z"/>
+    <g transform="translate(52.500000,348.000000)" id="shape31">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:10.00pt">
+        <tspan y="16.0" x="2.7">Supported core in complex</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

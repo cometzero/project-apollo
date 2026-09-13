@@ -1,0 +1,92 @@
+<svg xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" height="178" width="520" viewBox="0 0 520 178">
+  <defs/>
+  <g transform="translate(5.5,5.5)" id="page1">
+    <rect height="168" width="510" fill="none" x="0" y="0"/>
+    <g transform="translate(382.070866,11.451444)" id="shape1">
+      <path d="M.0,147.4L117.2,147.4L117.2,.0L.0,.0L.0,147.4z" fill="#ffffff" stroke-dasharray="11,5" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="0.2" y="10.7">Core power domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(121.000000,10.784777)" id="shape2">
+      <path d="M.0,147.4L181.7,147.4L181.7,.0L.0,.0L.0,147.4z" fill="#ffffff" stroke-dasharray="11,5" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="0.0" y="10.7">Debug power domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(144.000000,78.149606)" id="shape3">
+      <path d="M.0,60.5L136.0,60.5L136.0,.0L.0,.0L.0,60.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="1.7" y="12.0">DebugBlock</tspan>
+      </text>
+    </g>
+    <g transform="translate(414.586731,33.461942)" id="shape4">
+      <path d="M.0,120.9L75.6,120.9L75.6,.0L.0,.0L.0,120.9z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="1.5" y="12.0">Cluster</tspan>
+      </text>
+    </g>
+    <g transform="matrix(0.999988,0.004954,-0.004954,0.999988,280.023622,93.267717)" id="shape5">
+      <path d="M8.5,.0L126.1,-0.0" fill="none" stroke-width="2" stroke="#000000"/>
+      <path d="M8.5,4.2L.0,.0L8.5,-4.2L8.5,4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <path d="M126.1,-4.2L134.6,-0.0L126.1,4.2L126.1,-4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <rect height="12.7" width="101.3" fill="#ffffff" x="16.6" y="-9.2"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="16.6" y="1.5">DebugBlock to cluster</tspan>
+      </text>
+    </g>
+    <g transform="matrix(0.999988,0.004954,-0.004954,0.999988,280.023622,123.503937)" id="shape6">
+      <path d="M8.5,.0L126.1,.0" fill="none" stroke-width="2" stroke="#000000"/>
+      <path d="M8.5,4.2L.0,.0L8.5,-4.2L8.5,4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <path d="M126.1,-4.2L134.6,.0L126.1,4.2L126.1,-4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <rect height="12.7" width="104.0" fill="#ffffff" x="15.3" y="-9.2"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="15.3" y="1.5">Cluster to DebugBlock</tspan>
+      </text>
+    </g>
+    <g transform="translate(217.110236,81.929134)" id="shape7">
+      <path d="M.0,26.5L59.9,26.5L59.9,.0L.0,.0L.0,26.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="11.0" y="9.6">DC APB </tspan>
+        <tspan x="7.6" y="22.2">requester</tspan>
+      </text>
+    </g>
+    <g transform="translate(217.110236,110.275591)" id="shape8">
+      <path d="M.0,26.5L59.9,26.5L59.9,.0L.0,.0L.0,26.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="11.0" y="9.6">CD APB </tspan>
+        <tspan x="6.6" y="22.2">completer</tspan>
+      </text>
+    </g>
+    <g transform="translate(417.586731,110.942257)" id="shape9">
+      <path d="M.0,26.5L69.4,26.5L69.4,.0L.0,.0L.0,26.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="24.4" y="9.6">APB </tspan>
+        <tspan x="12.4" y="22.2">requester</tspan>
+      </text>
+    </g>
+    <g transform="translate(417.586731,82.595801)" id="shape10">
+      <path d="M.0,26.5L69.4,26.5L69.4,.0L.0,.0L.0,26.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="24.4" y="9.6">APB </tspan>
+        <tspan x="11.4" y="22.2">completer</tspan>
+      </text>
+    </g>
+    <g transform="matrix(1.000000,0.000000,-0.000000,1.000000,13.956809,108.385827)" id="shape11">
+      <path d="M8.5,-0.0L121.6,.0" fill="none" stroke-width="2" stroke="#000000"/>
+      <path d="M8.5,4.2L.0,-0.0L8.5,-4.2L8.5,4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <path d="M121.6,-4.2L130.0,.0L121.6,4.2L121.6,-4.2" fill="#000000" stroke-width="1" stroke-linecap="round" stroke="#000000"/>
+      <rect height="12.7" width="94.0" fill="#ffffff" x="18.0" y="-9.2"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="18.0" y="1.5">External Debug APB</tspan>
+      </text>
+    </g>
+    <g transform="translate(148.086614,110.019685)" id="shape12">
+      <path d="M.0,26.5L59.9,26.5L59.9,.0L.0,.0L.0,26.5z" fill="#ffffff" stroke-width="0.6666666865348816" fill-rule="evenodd" stroke="#000000"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="7.6" y="9.6">DAP APB </tspan>
+        <tspan x="6.6" y="22.2">completer</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

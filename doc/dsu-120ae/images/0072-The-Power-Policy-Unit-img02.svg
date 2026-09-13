@@ -1,0 +1,173 @@
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns="http://www.w3.org/2000/svg" width="652" height="417" viewBox="0 0 652 417">
+  <defs/>
+  <g transform="translate(5.5,5.5)" id="page1">
+    <rect y="0" width="642" fill="#ffffff" height="407" x="0"/>
+    <g transform="translate(91.05,89.83)" id="shape1">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" stroke-dasharray="11,5" d="M.0,257.0L472.4,257.0L472.4,.0L.0,.0L.0,257.0z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="16.2" x="195.8">DynamIQ cluster</tspan>
+      </text>
+    </g>
+    <g transform="translate(11.68,188.09)" id="shape2">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,45.4L68.0,45.4L68.0,.0L.0,.0L.0,45.4z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="14.3" x="16.0">System </tspan>
+        <tspan y="27.2" x="17.0">Control </tspan>
+        <tspan y="40.1" x="9.0">Processor</tspan>
+      </text>
+    </g>
+    <g transform="translate(359.39,138.96)" id="shape3">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,120.9L124.7,120.9L124.7,.0L.0,.0L.0,120.9z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="65.0" x="27.9">Power domain</tspan>
+      </text>
+    </g>
+    <g transform="translate(344.28,33.13)" id="shape4">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,37.8L68.0,37.8L68.0,.0L.0,.0L.0,37.8z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="17.0" x="5.0">Clock gating </tspan>
+        <tspan y="29.9" x="17.5">control</tspan>
+      </text>
+    </g>
+    <g transform="translate(159.08,104.94)" id="shape5">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,226.8L90.7,226.8L90.7,.0L.0,.0L.0,226.8z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="117.9" x="35.9">PPU</tspan>
+      </text>
+    </g>
+    <g transform="translate(45.69,138.96)" id="shape6">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L107.7,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M107.7,-2.8L113.4,.0L107.7,2.8L107.7,-2.8"/>
+      <rect y="-11.0" width="33.0" fill="#ffffff" height="14.0" x="60.7"/>
+      <rect y="1.9" width="21.0" fill="#ffffff" height="14.0" x="65.2"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="-0.0" x="60.7">Utility </tspan>
+        <tspan y="12.9" x="65.2">bus</tspan>
+      </text>
+    </g>
+    <path transform="matrix(0.00,1.00,-1.00,0.00,45.7,139.0)" id="shape7" fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L49.1,.0"/>
+    <g transform="translate(45.69,272.19)" id="shape8">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L113.4,.0"/>
+      <rect y="-13.9" width="24.0" fill="#ffffff" height="14.0" x="63.2"/>
+      <rect y="-0.9" width="49.0" fill="#ffffff" height="14.0" x="50.7"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="-2.9" x="63.2">PPU </tspan>
+        <tspan y="10.1" x="50.7">interrupt</tspan>
+      </text>
+    </g>
+    <g transform="matrix(-0.00,-1.00,1.00,-0.00,45.7,272.2)" id="shape9">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L34.7,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M34.7,-2.0L38.7,.0L34.7,2.0L34.7,-2.0"/>
+    </g>
+    <g transform="translate(249.79,225.89)" id="shape10">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L103.9,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M103.9,-2.8L109.6,.0L103.9,2.8L103.9,-2.8"/>
+      <rect y="-12.9" width="45.0" fill="#ffffff" height="14.0" x="30.0"/>
+      <rect y="0.0" width="56.0" fill="#ffffff" height="14.0" x="23.0"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="-1.9" x="30.0">Internal </tspan>
+        <tspan y="11.0" x="23.0">P-Channel</tspan>
+      </text>
+    </g>
+    <g transform="matrix(1.00,-0.00,0.00,1.00,249.8,161.6)" id="shape11">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L105.6,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M105.6,-2.0L109.6,.0L105.6,2.0L105.6,-2.0"/>
+      <rect y="-6.5" width="74.0" fill="#ffffff" height="14.0" x="14.0"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="4.5" x="14.0">Domain reset</tspan>
+      </text>
+    </g>
+    <g transform="matrix(-0.00,1.00,-1.00,-0.00,378.3,70.9)" id="shape12">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L64.0,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M64.0,-2.0L68.0,.0L64.0,2.0L64.0,-2.0"/>
+    </g>
+    <g transform="translate(227.11,104.94)" id="shape13">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L.0,-52.9L113.2,-52.9"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M113.2,-54.9L117.2,-52.9L113.2,-50.9L113.2,-54.9"/>
+      <rect y="-65.8" width="61.0" fill="#ffffff" height="14.0" x="33.3"/>
+      <rect y="-52.9" width="37.0" fill="#ffffff" height="14.0" x="43.8"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="-54.8" x="33.3">Clock gating </tspan>
+        <tspan y="-41.9" x="43.8">request</tspan>
+      </text>
+    </g>
+    <g transform="translate(431.20,33.13)" id="shape14">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,37.8L68.0,37.8L68.0,.0L.0,.0L.0,37.8z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="17.0" x="5.0">Isolation cell </tspan>
+        <tspan y="29.9" x="17.5">control</tspan>
+      </text>
+    </g>
+    <g transform="translate(578.61,210.77)" id="shape15">
+      <path fill-rule="evenodd" fill-opacity="0.00" fill="#bfcee1" stroke="#000000" d="M.0,86.9L52.9,86.9L52.9,.0L.0,.0L.0,86.9z" stroke-width="0.6666666865348816"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="48.0" x="12.5">PCSM</tspan>
+      </text>
+    </g>
+    <g transform="matrix(1.00,0.00,-0.00,1.00,249.8,282.6)" id="shape16">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L322.4,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M322.4,-2.8L328.1,.0L322.4,2.8L322.4,-2.8"/>
+      <rect y="-6.5" width="138.0" fill="#ffffff" height="14.0" x="91.3"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="4.5" x="91.3">External PCSM P-Channel</tspan>
+      </text>
+    </g>
+    <g transform="matrix(-0.00,1.00,-1.00,-0.00,465.2,70.9)" id="shape17">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L64.0,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M64.0,-2.0L68.0,.0L64.0,2.0L64.0,-2.0"/>
+    </g>
+    <g transform="translate(181.76,104.94)" id="shape18">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L.0,-86.9L283.5,-86.9L283.5,-75.8"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M285.5,-75.8L283.5,-71.8L281.5,-75.8L285.5,-75.8"/>
+      <rect y="-93.4" width="79.0" fill="#ffffff" height="14.0" x="104.9"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt">
+        <tspan y="-82.4" x="104.9">Isolation request</tspan>
+      </text>
+    </g>
+    <g transform="translate(484.12,225.89)" id="shape19">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M5.7,.0L94.5,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8"/>
+      <rect y="-12.9" width="56.0" fill="#ffffff" height="14.0" x="15.5"/>
+      <rect y="0.0" width="39.0" fill="#ffffff" height="14.0" x="24.0"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="-1.9" x="15.5">Power rail</tspan>
+        <tspan y="11.0" x="24.0">control</tspan>
+      </text>
+    </g>
+    <g transform="translate(11.68,373.29)" id="shape20">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L170.1,.0L170.1,-37.6"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M168.1,-37.6L170.1,-41.6L172.1,-37.6L168.1,-37.6"/>
+      <rect y="-6.5" width="43.0" fill="#ffffff" height="14.0" x="63.9"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="4.5" x="63.9">PPUCLK</tspan>
+      </text>
+    </g>
+    <g transform="translate(11.68,388.41)" id="shape21">
+      <path fill="none" stroke="#000000" stroke-width="0.6666666865348816" d="M.0,.0L215.4,.0L215.4,-52.7"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M213.4,-52.7L215.4,-56.7L217.4,-52.7L213.4,-52.7"/>
+      <rect y="-6.5" width="40.0" fill="#ffffff" height="14.0" x="100.9"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="4.5" x="100.9">nRESET</tspan>
+      </text>
+    </g>
+    <g transform="translate(249.79,316.60)" id="shape22">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L308.0,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M308.0,-2.8L313.7,.0L308.0,2.8L308.0,-2.8"/>
+      <rect y="-6.5" width="78.0" fill="#ffffff" height="14.0" x="132.1"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="4.5" x="132.1">Reset outputs</tspan>
+      </text>
+    </g>
+    <path transform="translate(85.38,123.84)" fill-rule="evenodd" fill-opacity="0.00" id="shape23" fill="#bfcee1" stroke="#000000" d="M.0,30.2L11.3,30.2L11.3,.0L.0,.0L.0,30.2z" stroke-width="0.6666666865348816"/>
+    <g transform="translate(484.12,161.64)" id="shape24">
+      <path fill="none" stroke="#000000" stroke-width="2" d="M.0,.0L62.4,.0"/>
+      <path fill="#000000" stroke="#000000" stroke-linecap="round" stroke-width="1" d="M62.4,-2.8L68.0,.0L62.4,2.8L62.4,-2.8"/>
+      <rect y="-12.9" width="41.0" fill="#ffffff" height="14.0" x="9.7"/>
+      <rect y="0.0" width="43.0" fill="#ffffff" height="14.0" x="8.7"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Arial;font-size:8.00pt;font-weight:bold">
+        <tspan y="-1.9" x="9.7">Domain</tspan>
+        <tspan y="11.0" x="8.7">outputs</tspan>
+      </text>
+    </g>
+  </g>
+</svg>

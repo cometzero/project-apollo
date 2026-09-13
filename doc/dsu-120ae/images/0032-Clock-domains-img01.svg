@@ -1,0 +1,208 @@
+<svg xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 637 364" width="637" height="364">
+  <defs/>
+  <g transform="translate(5.5,5.5)" id="page1">
+    <rect fill="none" x="0" y="0" width="627" height="354"/>
+    <path stroke-width="0.6666669845581055" fill="#ffffff" d="M.0,264.7L608.1,264.7L608.1,.0L.0,.0L.0,264.7z" stroke="#000000" fill-rule="evenodd" transform="translate(9.546000,9.000000)" id="shape1"/>
+    <g transform="translate(565.135800,152.719100)" id="shape2">
+      <path stroke-width="0.6666669845581055" fill="#ff6b00" d="M.0,98.3L45.4,98.3L45.4,.0L.0,.0L.0,98.3z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="7.3" y="45.5">Debug</tspan>
+        <tspan x="10.0" y="58.1">Block</tspan>
+      </text>
+    </g>
+    <g transform="translate(17.104200,201.853100)" id="shape3">
+      <path stroke-width="0.6666669845581055" fill="#002b49" d="M.0,49.1L45.4,49.1L45.4,.0L.0,.0L.0,49.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato;font-size:8.00pt">
+        <tspan x="9.7" y="27.4">PPUs</tspan>
+      </text>
+    </g>
+    <g transform="translate(504.662800,216.971000)" id="shape4">
+      <path stroke-width="2" fill="none" d="M.0,.0L54.8,.0" stroke="#000000"/>
+      <path stroke-width="1" fill="#000000" d="M54.8,-2.8L60.5,.0L54.8,2.8L54.8,-2.8" stroke="#000000" stroke-linecap="round"/>
+      <rect fill="#ffffff" x="25.5" y="-7.8" width="20.7" height="12.7"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold">
+        <tspan x="25.5" y="2.8">APB</tspan>
+      </text>
+    </g>
+    <g transform="translate(504.662800,235.869000)" id="shape5">
+      <path stroke-width="2" fill="none" d="M5.7,.0L60.5,.0" stroke="#000000"/>
+      <path stroke-width="1" fill="#000000" d="M5.7,2.8L.0,.0L5.7,-2.8L5.7,2.8" stroke="#000000" stroke-linecap="round"/>
+      <rect fill="#ffffff" x="24.9" y="-7.8" width="20.7" height="12.7"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt;font-weight:bold">
+        <tspan x="24.9" y="2.8">APB</tspan>
+      </text>
+    </g>
+    <g transform="translate(9.928250,13.223120)" id="shape6">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="7.6" y="12.3">DynamIQ Shared Unit</tspan>
+      </text>
+    </g>
+    <g transform="translate(70.017000,37.000000)" id="shape7">
+      <path stroke-width="0.6666669845581055" fill="#ffffff" fill-opacity="0.28" d="M.0,225.3L449.8,225.3L449.8,.0L.0,.0L.0,225.3z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="9.8" y="16.6">DynamIQ Cluster</tspan>
+      </text>
+    </g>
+    <g transform="translate(130.489800,201.853100)" id="shape8">
+      <path stroke-width="0.6666669845581055" fill="#7d868c" d="M.0,49.1L45.4,49.1L45.4,.0L.0,.0L.0,49.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="13.3" y="20.9">GIC </tspan>
+        <tspan x="12.7" y="33.6">mux</tspan>
+      </text>
+    </g>
+    <g transform="translate(183.403800,201.853100)" id="shape9">
+      <path stroke-width="0.6666669845581055" fill="#95d600" d="M.0,49.1L45.4,49.1L45.4,.0L.0,.0L.0,49.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="10.3" y="20.9">Trace </tspan>
+        <tspan x="8.0" y="33.6">funnel</tspan>
+      </text>
+    </g>
+    <g transform="translate(77.576800,201.853100)" id="shape10">
+      <path stroke-width="0.6666669845581055" fill="#00c1de" d="M.0,49.1L45.4,49.1L45.4,.0L.0,.0L.0,49.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="7.7" y="20.9">Power </tspan>
+        <tspan x="6.0" y="33.6">control</tspan>
+      </text>
+    </g>
+    <g transform="translate(236.316000,167.837200)" id="shape11">
+      <path stroke-width="0.6666669845581055" fill="#e5eceb" fill-opacity="0.60" d="M.0,83.1L215.4,83.1L215.4,.0L.0,.0L.0,83.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="64.1" y="10.8">L3 memory system</tspan>
+      </text>
+    </g>
+    <g transform="translate(352.019700,198.073400)" id="shape12">
+      <path stroke-width="0.6666669845581055" fill="#e5eceb" d="M.0,37.8L75.6,37.8L75.6,.0L.0,.0L.0,37.8z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="3.8" y="21.7">L3 RAM arrays</tspan>
+      </text>
+    </g>
+    <g transform="translate(261.310700,198.073400)" id="shape13">
+      <path stroke-width="0.6666669845581055" fill="#e5eceb" d="M.0,37.8L75.6,37.8L75.6,.0L.0,.0L.0,37.8z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="11.1" y="15.2">Snoop filter </tspan>
+        <tspan x="10.5" y="27.9">RAM arrays</tspan>
+      </text>
+    </g>
+    <g transform="translate(249.971800,182.955800)" id="shape14">
+      <path stroke-width="0.6666669845581055" fill="#ccc2d9" fill-opacity="0.00" d="M.0,60.5L189.0,60.5L189.0,.0L.0,.0L.0,60.5z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="54.8" y="9.9">SCU and L3 cache</tspan>
+      </text>
+    </g>
+    <g transform="translate(459.308800,201.853100)" id="shape15">
+      <path stroke-width="0.6666669845581055" fill="#ff6b00" d="M.0,49.1L45.4,49.1L45.4,.0L.0,.0L.0,49.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="12.3" y="20.9">APB</tspan>
+        <tspan x="12.7" y="33.6">mux</tspan>
+      </text>
+    </g>
+    <g transform="translate(85.135700,91.805700)" id="shape16">
+      <path stroke-width="0.6666669845581055" fill="#0091bd" d="M.0,45.4L90.7,45.4L90.7,.0L.0,.0L.0,45.4z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato;font-size:8.00pt">
+        <tspan x="30.0" y="25.5">Core 0</tspan>
+      </text>
+    </g>
+    <g transform="translate(182.962200,91.805700)" id="shape17">
+      <path stroke-width="0.6666669845581055" fill="#0091bd" d="M.0,45.4L90.3,45.4L90.3,.0L.0,.0L.0,45.4z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato;font-size:8.00pt">
+        <tspan x="29.8" y="25.5">Core 1</tspan>
+      </text>
+    </g>
+    <g transform="translate(306.362700,91.805700)" id="shape18">
+      <path stroke-width="0.6666669845581055" fill="#0091bd" d="M.0,45.4L90.7,45.4L90.7,.0L.0,.0L.0,45.4z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato;font-size:8.00pt">
+        <tspan x="30.0" y="25.5">Core 2</tspan>
+      </text>
+    </g>
+    <g transform="translate(402.615700,91.805700)" id="shape19">
+      <path stroke-width="0.6666669845581055" fill="#0091bd" d="M.0,45.4L90.7,45.4L90.7,.0L.0,.0L.0,45.4z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#ffffff;font-family:Lato;font-size:8.00pt">
+        <tspan x="30.0" y="25.5">Core 3</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#ff6b00" d="M.0,11.8L11.1,11.8L11.1,.0L.0,.0L.0,11.8z" stroke="#000000" fill-rule="evenodd" transform="translate(114.944690,329.416490)" id="shape20"/>
+    <g transform="translate(126.323700,329.415710)" id="shape21">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.3" y="8.5">PCLK</tspan>
+      </text>
+    </g>
+    <g transform="translate(198.094400,284.061710)" id="shape22">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.7" y="8.5">CORE0CLK to CORE3CLK</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#002b49" d="M.0,11.3L11.1,11.3L11.1,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(24.236190,284.061710)" id="shape23"/>
+    <g transform="translate(35.304800,284.061710)" id="shape24">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.5" y="8.5">PPUCLK</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#00c1de" d="M.0,11.3L11.1,11.3L11.1,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(24.236190,307.211710)" id="shape25"/>
+    <g transform="translate(35.304900,305.738710)" id="shape26">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.5" y="8.5">PERIPHCLK</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#7d868c" d="M.0,11.3L11.1,11.3L11.1,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(24.236190,329.415710)" id="shape27"/>
+    <g transform="translate(35.304900,329.415710)" id="shape28">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.4" y="8.5">GICCLK</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#95d600" d="M.0,11.3L11.1,11.3L11.1,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(114.944690,284.061710)" id="shape29"/>
+    <g transform="translate(126.013700,284.061710)" id="shape30">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="5.5" y="8.5">ATCLK</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#e5eceb" d="M.0,11.8L11.1,11.8L11.1,.0L.0,.0L.0,11.8z" stroke="#000000" fill-rule="evenodd" transform="translate(114.944690,306.738490)" id="shape31"/>
+    <g transform="translate(126.769100,307.211710)" id="shape32">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="4.5" y="8.5">SCLK</tspan>
+      </text>
+    </g>
+    <g transform="translate(84.709200,137.159940)" id="shape33">
+      <path stroke-width="0.6666669845581055" fill="#ffc700" d="M.0,15.1L91.1,15.1L91.1,.0L.0,.0L.0,15.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="14.9" y="10.4">CPU 0 bridge</tspan>
+      </text>
+    </g>
+    <g transform="translate(182.535700,137.159940)" id="shape34">
+      <path stroke-width="0.6666669845581055" fill="#ffc700" d="M.0,15.1L90.7,15.1L90.7,.0L.0,.0L.0,15.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="14.7" y="10.4">CPU 1 bridge</tspan>
+      </text>
+    </g>
+    <g transform="translate(306.362700,137.159940)" id="shape35">
+      <path stroke-width="0.6666669845581055" fill="#ffc700" d="M.0,15.1L90.7,15.1L90.7,.0L.0,.0L.0,15.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="14.7" y="10.4">CPU 2 bridge</tspan>
+      </text>
+    </g>
+    <g transform="translate(402.188700,137.159940)" id="shape36">
+      <path stroke-width="0.6666669845581055" fill="#ffc700" d="M.0,15.1L90.7,15.1L90.7,.0L.0,.0L.0,15.1z" stroke="#000000" fill-rule="evenodd"/>
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="14.7" y="10.4">CPU 3 bridge</tspan>
+      </text>
+    </g>
+    <g transform="translate(198.095000,305.738710)" id="shape37">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="0.5" y="8.5">Includes COREyCLK, PERIPHCLK, ATCLK, and SCLK domains</tspan>
+      </text>
+    </g>
+    <path stroke-width="0.6666669845581055" fill="#0091bd" d="M.0,11.3L11.3,11.3L11.3,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(182.976710,284.061710)" id="shape38"/>
+    <path stroke-width="0.6666669845581055" fill="#ffc700" d="M.0,11.3L11.3,11.3L11.3,.0L.0,.0L.0,11.3z" stroke="#000000" fill-rule="evenodd" transform="translate(182.976710,306.738710)" id="shape39"/>
+    <path stroke-width="1" fill="none" d="M.0,.0L203.0,.0L203.0,89.0L.0,89.0L.0,.0z" stroke-dasharray="11,5" stroke="#323232" transform="translate(79.000000,66.929835)" id="shape40"/>
+    <g transform="translate(79.000000,65.070165)" id="shape41">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="2.7" y="16.3">Core pair</tspan>
+      </text>
+    </g>
+    <path stroke-width="1" fill="none" d="M.0,.0L203.0,.0L203.0,89.0L.0,89.0L.0,.0z" stroke-dasharray="11,5" stroke="#323232" transform="translate(301.663100,67.859700)" id="shape42"/>
+    <g transform="translate(301.663100,66.000000)" id="shape43">
+      <text xml:space="preserve" style="fill:#000000;font-family:Lato;font-size:8.00pt">
+        <tspan x="2.7" y="16.3">Core pair</tspan>
+      </text>
+    </g>
+  </g>
+</svg>
