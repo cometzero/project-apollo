@@ -75,22 +75,21 @@ CONFIG_RD_GZIP=y
 
 Do not recreate `rd-gzip-initrd.cfg`.
 
-## Validate Both Machines
+## Validate Affected Machines
 
-Inspect the effective task and require no fragment merge commands:
+For a shared configuration change check both machines; otherwise select the
+affected machine only. Inspect the effective task for fragment merge commands.
+Example for a shared change:
 
 ```bash
 source layers/poky/oe-init-build-env build
 for machine in apollo-qvp apollo-fvp; do
   MACHINE="$machine" bitbake -e virtual/kernel |
     sed -n '/^do_kernel_configme()/,/^}/p'
-  MACHINE="$machine" bitbake virtual/kernel -c kernel_configme -f
-  MACHINE="$machine" bitbake virtual/kernel -c defconfig -f
-  MACHINE="$machine" bitbake virtual/kernel -c configure -f
-  MACHINE="$machine" bitbake virtual/kernel -c compile -f
+  MACHINE="$machine" bitbake virtual/kernel -c compile
 done
 ```
 
-Check `${B}/.config` for every migrated symbol and report forced-task taint
-warnings separately from failures. Build a BSP image and boot it only when the
+Check `${B}/.config` for every migrated symbol. Force a task only when normal
+signature-based execution cannot verify the change. Build and boot a BSP when the
 changed symbols require image or runtime qualification.

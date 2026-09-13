@@ -14,12 +14,6 @@ The helper resolves the top-level superproject even when invoked from inside a
 recursive submodule. It pushes recursive submodules before the top-level
 repository and stops on the first failed push.
 
-## Model Routing
-
-Run this external-write workflow with the project default `gpt-5.6-sol` at
-high reasoning effort. Do not delegate the final push decision to a lightweight
-read-only or QA agent.
-
 ## Workflow
 
 1. Inspect the top-level repository and recursive submodules:

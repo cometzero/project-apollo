@@ -1,114 +1,26 @@
 ---
 name: yocto-dev
-description: Yocto/OpenEmbedded/BitBake development workflow for Apollo. Use for layers, recipes, bbappend, bbclass, MACHINE/BSP/distro/image configuration, PACKAGECONFIG, fetch/patch/build/package/rootfs tasks, systemd integration, kernel/U-Boot metadata, kernel defconfig and Kconfig dependency changes, SDK, QA, licenses, sstate, mirrors, or build debugging.
+description: Change Apollo Yocto metadata or diagnose its BitBake, packaging and image failures.
 ---
 
-# Yocto Development
+# Apollo Yocto
 
-## Active Project Contract
+Confirm effective machine, template and layers from build/conf for the requested
+build. Product/distro policy belongs in meta-hsoc-auto-solutions; BSP, firmware,
+kernel and signing metadata in meta-hsoc-bsp. Keep external layers unchanged
+unless explicitly in scope, and permanent product policy out of local.conf.
 
-Read these inputs before any edit or build claim:
+Inspect final provider/override values and the first failing log.do_*/run.do_*.
+Use a targeted task before image builds. Preserve QA, licensing, package
+ownership and patch Upstream-Status; do not clean downloads/sstate/TMPDIR as
+routine troubleshooting. Serialize shared builds.
 
-```text
-build/conf/local.conf
-build/conf/bblayers.conf
-build/conf/templateconf.cfg
-yocto_build.sh
-```
+Apollo kernel configuration sources are apollo_qvp_defconfig and
+apollo_fvp_defconfig; do not add Apollo configuration .scc/.cfg fragments.
+For those changes read [kernel defconfig](references/kernel-defconfig.md).
+For task-specific packaging/fetch/systemd guidance read only the relevant
+section of [workflows](references/workflows.md).
 
-Current baseline:
-
-- Poky/Yocto: 5.2.4
-- machine: `apollo-qvp`
-- template: `hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp`
-- default image: `nexios-image`
-- BSP-only selection: `./yocto_build.sh --bsp`
-- TMPDIR: `build/tmp_baremetal`
-- variant: cfg2
-
-The active environment is initialized with:
-
-```bash
-source layers/poky/oe-init-build-env build
-```
-
-## Layer Ownership
-
-- product, distro, BSP/product image recipes, template, and dynamic-layer
-  policy:
-  `hsoc-stack/yocto/meta-hsoc-auto-solutions`
-- machine, WIC, firmware, kernel, module signing, OP-TEE, and BSP integration:
-  `hsoc-stack/yocto/meta-hsoc-bsp`
-- shared automotive metadata: `sw-ref-stack/yocto/meta-arm-auto-solutions`
-- reference Zena metadata: `arm-zena-css/yocto`
-- pinned external layers: `layers`
-
-Avoid editing `layers/*` unless the user explicitly requests an external-layer
-change. Keep permanent product policy out of `build/conf/local.conf`.
-
-## Core Rules
-
-1. Inspect the final provider and variable values before editing metadata.
-2. Start with the first failing task and its `log.do_*` / `run.do_*` under
-   `build/tmp_baremetal/work`.
-3. Use the narrowest task that can prove the change.
-4. Do not run `cleanall`, delete downloads/sstate/TMPDIR, disable QA, or run a
-   full image without a demonstrated need or explicit request.
-5. Preserve license checks, package ownership, patch `Upstream-Status`, layer
-   compatibility, and source repository boundaries.
-6. Distinguish parse, task, image, deploy, and runtime evidence.
-7. Treat `apollo_qvp_defconfig` and `apollo_fvp_defconfig` as the only Apollo
-   kernel configuration sources; do not add Apollo-specific configuration
-   `.scc` or `.cfg` fragments.
-
-Read `references/workflows.md` for task-specific fetch, patch, packaging,
-systemd, rootfs, and layer workflows. Read
-`references/kernel-defconfig.md` for Apollo externalsrc kernel configuration,
-fragment migration, and dependency-aware defconfig updates.
-
-## Inspection Commands
-
-```bash
-bitbake-layers show-layers
-bitbake-layers show-appends
-bitbake-layers show-recipes <recipe>
-bitbake <recipe> -c listtasks
-bitbake -e <recipe>
-```
-
-## Validation Ladder
-
-Select only applicable stages:
-
-```bash
-bitbake <recipe> -c fetch
-bitbake <recipe> -c unpack
-bitbake <recipe> -c patch
-bitbake <recipe> -c configure
-bitbake <recipe> -c compile
-bitbake <recipe> -c install
-bitbake <recipe> -c package
-bitbake <recipe> -c package_qa
-bitbake <recipe> -c populate_lic
-bitbake nexios-bsp-initramfs -c rootfs
-bitbake nexios-bsp-initramfs -c image_complete
-bitbake nexios-image -c rootfs
-./yocto_build.sh --bsp
-./yocto_build.sh
-```
-
-For BSP initramfs, UKI, WIC, qboxconf/fvpconf, boot-state, kernel-module, or
-PFDI changes, validate the narrow owning recipe first and then
-`nexios-bsp-initramfs`. A successful rootfs task does not prove the UKI/WIC or
-runtime boot contract. Require the deployed artifacts and, when requested, the
-`NEXIOS_BSP_INITRAMFS_READY` plus `nexios-bsp#` runtime markers.
-
-Use `$yocto-review` for review-only work. Route read-only diagnosis with
-`agent_type = "yocto-expert"` (`gpt-5.6-sol`, high) and metadata
-implementation with `agent_type = "yocto_dev"` (`gpt-5.6-sol`, high). If
-`agent_type` is unavailable, use the project leader and do not claim
-specialist selection.
-
-Report environment detected, owning layer, files inspected/changed, exact
-commands, task summary, produced artifacts, pre-existing failures, and runtime
-checks not performed.
+Root yocto_build.sh builds the product; --bsp selects nexios-bsp-initramfs.
+For artifact-format/deploy changes verify the produced UKI/WIC/configuration,
+not merely rootfs success. Runtime claims require matching runtime artifacts.

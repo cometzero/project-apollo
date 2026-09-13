@@ -1,109 +1,25 @@
 ---
 name: qbox-dev
-description: QBox/SystemC/QEMU co-simulation workflow for Apollo. Use for QBox C++ components, QEMU/libqemu integration, Lua platforms, CCI parameters, TLM sockets, memory maps, IRQs, UART backends, monitor/debugging, build/test failures, runtime boot, or FVP-equivalence analysis.
+description: Integrate Apollo QBox components, Lua wiring and libqemu; debug provider builds or platform runtime.
 ---
 
-# QBox Development
+# Apollo QBox
 
-## Ownership
+Own reusable components in `hsoc-stack/tools/qbox`, platform wiring in
+`hsoc-stack/tools/qbox-platform`, and QEMU devices in `hsoc-stack/tools/qemu`.
+Archived `patch-qbox/` files are not automatically applied.
 
-- reusable QBox core: `hsoc-stack/tools/qbox`
-- Apollo/RD-Aspen overlay: `hsoc-stack/tools/qbox-platform`
-- Apollo platform entrypoints: `hsoc-stack/tools/qbox-platform/platforms/apollo`
-- local QEMU/libqemu: `hsoc-stack/tools/qemu`
-- Yocto QBox provider: `qbox-apollo-qvp-native`
-- QVP full-system evidence: `build/qbox-apollo-qvp`
-- explicit FVP-comparison evidence: `build/qbox-apollo-fvp`
+Preserve C++14, CCI/Lua contracts, socket direction, QemuInstance ownership,
+address decode, reset and IRQ behavior. Use actual SystemC/TLM or libqemu
+behavior, and document remaining fidelity limits.
 
-Archived candidates in `hsoc-stack/tools/qbox-platform/patch-qbox` are not
-applied by normal builds. Change the owning repository directly unless the user
-explicitly requests an archived patch.
+For the relevant operation, consult [workflows](references/qbox-workflows.md).
+Compile narrowly with `./yocto_build.sh qbox-apollo-qvp-native -c compile`.
+Run affected recipe `do_check` suites and guest traffic for driver-visible changes.
+The root launcher disables post-login probing even in headless mode; its login
+PASS is not full qualification.
 
-Read `build/conf/local.conf`, `build/conf/bblayers.conf`,
-`build/conf/templateconf.cfg`, relevant QBox READMEs, CMake files, Lua
-entrypoints, and existing tests before editing. Delegate deep implementation
-with `agent_type = "qbox_dev"` (`gpt-5.6-sol`, high); use
-`agent_type = "systemc_dev"` (`gpt-5.6-sol`, high) for reusable
-timing/component work. If `agent_type` is unavailable, use the project leader
-and do not claim specialist selection.
-
-## Fidelity Rules
-
-- Prefer a real SystemC/TLM or libqemu-backed model over a register-only stub.
-- Preserve C++14, QBox component patterns, CCI keys, Lua names, socket
-  direction, address decode, IRQ topology, reset, simulation time, and QEMU
-  ownership.
-- Keep CPU-internal generic timers in QEMU CPU models. Model AP REFCLK through
-  the Arm MMIO generic timer path and preserve secure/non-secure frame IRQs.
-- Compare memory maps, interrupts, DT expectations, firmware handoffs, and
-  driver probe evidence with the reference platform.
-- Record temporary fidelity debt and a replacement plan.
-
-## Inspection
-
-```bash
-git -C hsoc-stack/tools/qbox status --short --branch
-git -C hsoc-stack/tools/qbox-platform status --short --branch
-git -C hsoc-stack/tools/qemu status --short --branch
-rg -n "QemuInstance|moduletype|dylib_path|target_socket|initiator_socket|backend_socket|biflow_socket" \
-  hsoc-stack/tools/qbox hsoc-stack/tools/qbox-platform
-rg -n "SC_MODULE|SC_THREAD|SC_METHOD|b_transport|sc_time" \
-  hsoc-stack/tools/qbox hsoc-stack/tools/qbox-platform
-```
-
-Read `references/qbox-workflows.md` for focused component, Lua, QEMU, and
-runtime checklists.
-
-## Build And Static Validation
-
-Use the project entrypoint first:
-
-```bash
-./yocto_build.sh --bsp
-```
-
-For a narrow provider build:
-
-```bash
-./yocto_build.sh qbox-apollo-qvp-native -c compile
-```
-
-Provider unit tests run by default before installation. Run
-`bitbake qbox-apollo-qvp-native -c check -f` to repeat them.
-Select core suites with `QBOX_CORE_TEST_DIRS` and individual CTest names
-with `QBOX_CORE_TEST_REGEX` in `build/conf/local.conf`.
-`QBOX_CPU_TEST_ARCHS` selects CPU architectures; the native recipe defaults
-to broad component/sync/utility coverage and AArch64 CPU tests only.
-
-Run applicable map and ownership checks:
-
-```bash
-git -C hsoc-stack/tools/qbox diff --check
-python3 scripts/test/validate_qbox_apollo_fvp_full_map.py
-python3 scripts/test/audit_qbox_core_boundary.py
-```
-
-## Runtime
-
-Interactive boot/login launchers:
-
-```bash
-./run_qbox_yocto.sh
-./run_qbox_yocto.sh --bsp
-```
-
-They use the fixed full Safety Island topology, disable the shared post-login
-probe, and replace only current-UID managed QBox sessions unless
-`--multi-session` is set. Do not use their tmux/login marker alone as a full
-qualification claim.
-
-```bash
-./run_qbox_yocto.sh --headless --exit-after-pass
-```
-
-Inspect the generated `result.json`, per-domain UART logs, and coverage audit.
-QBox GDB targets are `qbox`,
-`rse`, `si_cl0`, `si_cl1`, `tf-a`, `u-boot`, and `linux`; Yocto debug is
-interactive and cannot be combined with `--headless`. Do not use tmux screen
-contents alone as proof. Report files changed, owning repositories, commands,
-build/runtime results, and unresolved fidelity gaps.
+Timer changes must retain CPU generic timers as per-core QEMU PPIs.
+AP REFCLK uses the Arm MMIO generic timer at 125 MHz: non-secure frame 0 SPI 49,
+secure frame 1 SPI 48, never a Hexagon/qct-qtimer alias.
+SI0/CSS/RSE counter windows use host_gtimer control/read/sync behavior, not inert RAM.

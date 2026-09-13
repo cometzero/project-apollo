@@ -80,8 +80,8 @@ Use the lower-level RSE runner only for focused RSE compatibility evidence.
 
 `run_qbox_yocto.sh` replaces only managed sessions and processes owned by the
 current UID. Use `--multi-session` to preserve existing QBox sessions. The
-interactive launcher passes `--no-post-login-probe`; use headless mode for
-full post-login qualification.
+launcher passes `--no-post-login-probe` even in headless mode. Use the
+canonical Python runner with post-login probes for full qualification.
 
 For source-level debug, select one of `qbox`, `rse`, `si_cl0`, `si_cl1`,
 `tf-a`, `u-boot`, or `linux` with the root launcher. Yocto debug requires

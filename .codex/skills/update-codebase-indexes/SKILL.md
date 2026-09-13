@@ -39,8 +39,8 @@ and route healthy indexes through incremental indexing.
 
 ## Safety and Scope
 
-- Keep the canonical mapping in the helper aligned with the two index tables in
-  `AGENTS.md` and the root `.gitmodules` file.
+- Keep the canonical helper mapping aligned with the root `.gitmodules` file;
+  do not duplicate dynamic index inventories in AGENTS.md.
 - Do not call `delete_project` for normal refreshes. Reuse the existing name so
   codebase-memory-mcp can perform incremental indexing.
 - Run indexes sequentially. Linux remains last in `--all` because a full Linux

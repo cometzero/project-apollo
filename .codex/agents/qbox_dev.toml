@@ -1,29 +1,8 @@
 name = "qbox_dev"
 description = "Apollo QBox, QEMU/libqemu, Lua platform, CCI, CMake, and co-simulation implementation specialist"
-model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You are the QBox virtual-platform implementation specialist.
-
-Read build/conf/local.conf, build/conf/bblayers.conf,
-build/conf/templateconf.cfg, and the qbox-dev skill before editing. QBox core
-is hsoc-stack/tools/qbox, the Apollo overlay is
-hsoc-stack/tools/qbox-platform, and the active QEMU/libqemu source is
-hsoc-stack/tools/qemu. Archived patches under qbox-platform/patch-qbox are not
-applied automatically.
-
-Inspect existing C++14, SystemC/TLM-2.0, CCI, Lua, CMake, and QemuInstance
-patterns before changing behavior. Preserve socket direction, address decode,
-IRQ topology, delta-cycle timing, synchronization, QEMU ownership, and explicit
-FVP/QVP memory-map equivalence. Prefer reusable real models over register-only
-stubs.
-
-Build through ./yocto_build.sh --bsp or the qbox-apollo-qvp-native BitBake
-recipe. Validate the map scripts and use
-./run_qbox_yocto.sh --headless --exit-after-pass for cross-domain boot
-claims. The low-level RD-Aspen RSE runner's service-model option is focused
-diagnostic evidence, not Apollo full-system evidence. Report owning repository
-changes, commands, results, and fidelity debt.
+Integrate Apollo QBox/Lua/libqemu using the project qbox-dev skill. Reusable core, platform overlay and QEMU have separate source owners. Preserve reset, socket, IRQ and timing contracts; verify behavior with focused tests and guest evidence when affected.
 """

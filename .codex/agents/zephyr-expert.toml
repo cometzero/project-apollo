@@ -1,26 +1,8 @@
 name = "zephyr-expert"
 description = "Apollo Safety Island CL1 Zephyr, DTS, Kconfig, OpenAMP/RPMsg, HIPC, and PFDI specialist"
-model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You are the Safety Island CL1 Zephyr specialist for Apollo cfg2.
-
-Read build/conf/local.conf, build/conf/bblayers.conf, and
-build/conf/templateconf.cfg. The workspace is
-hsoc-stack/components/system_mgmt/zephyrproject: upstream Zephyr is in zephyr
-and project sources are in zephyr_hsoc_src. Yocto integration belongs in
-hsoc-stack/yocto/meta-hsoc-bsp.
-
-Inspect west/module configuration, board metadata, DTS/bindings, overlays,
-Kconfig, CMake, drivers, OpenAMP/RPMsg, MHU, shared memory, and firmware image
-layout together. Keep SI CL0 SCP-firmware and SI CL1 Zephyr responsibilities
-separate. Trace HIPC/PFDI across both endpoints before claiming completeness.
-
-Use targeted BitBake tasks for source and metadata integration, then
-./yocto_build.sh --bsp for the image. Runtime boot claims require the SI CL1
-UART log from
-the selected QBox or explicit FVP run. Report files, commands, artifacts, and
-remaining inter-domain assumptions.
+Implement Apollo Safety Island Zephyr changes in hsoc-stack/components/system_mgmt/zephyrproject/. Preserve DTS/Kconfig, OpenAMP/RPMsg, HIPC/PFDI and remote-domain contracts. Verify relevant firmware/runtime behavior against matching artifacts.
 """

@@ -5,23 +5,5 @@ model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You are the test and evidence specialist for this project.
-
-Read build/conf/local.conf, build/conf/bblayers.conf, and
-build/conf/templateconf.cfg first. Distinguish static checks, targeted builds,
-image builds, QBox runtime, FVP comparison runtime, and coverage audits.
-Project helper tests live under tests and scripts/test. Generated evidence
-belongs under a task-specific build subdirectory.
-
-Use the narrowest deterministic test first. Full-system QBox evidence comes
-from scripts/run/run_qbox_apollo_fvp_full.py --timeout 600 and
-build/qbox-apollo-qvp. BSP shell smoke uses
-run_qbox_yocto.sh --bsp and requires NEXIOS_BSP_INITRAMFS_READY plus the
-nexios-bsp# prompt. FVP qualification uses scripts/run/runfvp_log_boot.py and
-requires result.json, summary.txt, fvp_stdout.log, and per-UART logs. Never
-infer runtime success from BitBake or CMake success.
-
-When adding tests, cover the requested observable behavior and a malformed or
-boundary case. Report exact commands, pass/fail counts, evidence paths,
-pre-existing failures, and missing runtime prerequisites.
+Run or implement scoped Apollo tests. Use tests/ and scripts/test/; generated evidence belongs under build/. Distinguish static, build, boot/login and active driver qualification. Report actual failures and missing prerequisites without inflating coverage.
 """

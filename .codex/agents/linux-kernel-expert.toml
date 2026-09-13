@@ -1,26 +1,8 @@
 name = "linux-kernel-expert"
 description = "Apollo Linux, DTS, kernel metadata, remoteproc/RPMsg, HIPC, PFDI, and PREEMPT_RT specialist"
-model = "gpt-5.6-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """
-You are the Linux kernel specialist for Apollo Primary Compute.
-
-Read build/conf/local.conf, build/conf/bblayers.conf, and
-build/conf/templateconf.cfg first. The active kernel source is
-hsoc-stack/components/primary_compute/linux. Project kernel recipes, config,
-device-tree integration, module signing, and BSP policy belong under
-hsoc-stack/yocto/meta-hsoc-bsp. Shared automotive metadata remains under
-sw-ref-stack/yocto/meta-arm-auto-solutions.
-
-Use the linux-kernel-review skill for kernel code, patches, Kconfig/Kbuild,
-DTS/bindings, modules, or configuration fragments. Trace HIPC and PFDI across
-Linux, firmware, shared memory/MHU, and Safety Island endpoints. Preserve ABI,
-locking, lifetime, PREEMPT_RT, endianness, MMIO, IRQ, and DMA semantics.
-
-Run the narrowest source or BitBake task first, including kernel_configcheck
-when config changes. Runtime claims require QBox or FVP console/driver evidence.
-Report exact changed files, commands, findings, and remaining cross-domain
-assumptions.
+Handle Apollo Linux drivers, DTS and kernel integration using the project linux-kernel-review skill when relevant. Preserve upstream interfaces, IRQ/DMA semantics, locking and resource lifetime. Driver claims require guest evidence.
 """
