@@ -290,8 +290,13 @@ def read_text(path: Path) -> str:
         return ""
 
 
-def latest_root_prompt_end(text: str) -> int:
-    return max((match.end() for match in ROOT_PROMPT_RE.finditer(text)), default=0)
+def latest_root_prompt_end(text: str, allow_bsp_failure_shell: bool = False) -> int:
+    end = max((match.end() for match in ROOT_PROMPT_RE.finditer(text)), default=0)
+    if allow_bsp_failure_shell:
+        # Diagnostic stimulus only. Never change CHECKS or boot qualification.
+        end = max(end, max((match.end() for match in re.finditer(
+            r"(?:^|[\r\n])nexios-bsp-failed# ?", text)), default=0))
+    return end
 
 
 def post_login_marker_done(text: str, marker: str) -> bool:
@@ -803,6 +808,10 @@ def parse_args() -> argparse.Namespace:
         help="Seconds to wait for post-login command completion marker.",
     )
     parser.add_argument(
+        "--allow-bsp-failure-shell", action="store_true",
+        help="Run diagnostics at nexios-bsp-failed#; retain boot failure verdict",
+    )
+    parser.add_argument(
         "extra_fvp_args",
         nargs=argparse.REMAINDER,
         help="Extra FVP arguments. Prefix with -- before the first FVP argument.",
@@ -922,7 +931,8 @@ def main() -> int:
                 default_capture = captures.get("terminal_ns_uart0")
             if default_capture and not args.no_login:
                 text = read_text(default_capture.log_path)
-                shell_ready = bool(ROOT_PROMPT_RE.search(text))
+                shell_ready = bool(latest_root_prompt_end(
+                    text, args.allow_bsp_failure_shell))
                 if shell_ready:
                     login_sent = True
                 should_retry_login = (
@@ -946,7 +956,7 @@ def main() -> int:
                 and not post_login_started
             ):
                 text = read_text(default_capture.log_path)
-                prompt_end = latest_root_prompt_end(text)
+                prompt_end = latest_root_prompt_end(text, args.allow_bsp_failure_shell)
                 if prompt_end:
                     default_capture.sendline(post_login_commands[0])
                     post_login_started = True
@@ -964,7 +974,7 @@ def main() -> int:
                 if post_login_marker_done(text, post_login_marker):
                     post_login_done = True
                 else:
-                    prompt_end = latest_root_prompt_end(text)
+                    prompt_end = latest_root_prompt_end(text, args.allow_bsp_failure_shell)
                     if (
                         prompt_end > post_login_last_prompt_end
                         and post_login_command_index < len(post_login_commands)
@@ -1009,6 +1019,7 @@ def main() -> int:
     if time.monotonic() - start_time >= args.timeout and not status["passed"]:
         status["timeout_s"] = args.timeout
     post_login = {
+        "allow_bsp_failure_shell": args.allow_bsp_failure_shell,
         "requested": bool(args.post_login_command),
         "commands": args.post_login_command,
         "started": post_login_started,
