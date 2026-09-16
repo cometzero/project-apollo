@@ -2264,7 +2264,12 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
         env["QBOX_RDASPEN_SUMMARY_PATH"] = str(
             (args.out_dir / "rd-aspen-summary.txt").resolve()
         )
-        proc = subprocess.Popen(cmd, cwd=workspace_root(), env=env)
+        # This child owns the runtime log readers after launcher PASS. Keep it
+        # outside the launcher's process group, just like its QBox subprocess,
+        # so caller cleanup cannot strand a live VM without its log readers.
+        proc = subprocess.Popen(
+            cmd, cwd=workspace_root(), env=env, start_new_session=True
+        )
         return wait_for_keep_running_child_pass(args, proc, cmd), cmd
 
     proc = subprocess.run(cmd, cwd=workspace_root(), env=env, check=False)
