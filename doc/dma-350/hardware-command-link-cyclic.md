@@ -2,6 +2,16 @@
 
 ## 상태와 목적
 
+현재는 DMA controller 노드의 boolean `cyclic_done_pause` DT 속성으로
+DONEPAUSE callback pacing을 선택한다. Apollo QVP의 두 controller에 선언했다.
+`cyclic_done_pause` module parameter는 제거했다. 적용 범위는 command-link
+지원 채널의 `DMA_PREP_INTERRUPT` cyclic 전송이며, 속성이 없는 controller와 일반
+memcpy/memset/slave SG 전송은 기존 동작을 유지한다.
+아래의 선택적 활성화와 autonomous 실패 기록은 기본 적용 전 이력이다.
+이전 machine quirk 적용 후 Linux I2S 양방향 8/8 WAV와 SPI/UART/memory DMA 회귀가
+통과했다. 자세한 입력/로그는
+[QVP quirk 검증](../dwc/i2s-freerunning-validation.md)의 마지막 절을 참조한다.
+
 2026-09-16 현재 **autonomous cyclic은 기본 freerunning에서 FAIL**이다.
 선택적 DONEPAUSE와 명시적 wait/affinity를 적용한 hardware-linked cyclic은
 실제 Linux 양방향 긴 WAV/반복/odd tail에서 조건부 PASS다. 수동 pause에서
@@ -23,8 +33,8 @@ hardware command-link 첫 실제 DMA 검사 절을 참조한다.
 기존 cyclic 경로는 period 완료 IRQ마다 CPU가 다음 DMA command의 레지스터를
 다시 설정했다. MMIO 지연이 크면 다음 period의 시작까지 지연된다.
 이번 변경은 DMA-350의 실제 command-link 기능으로 다음 command를 메모리에서
-직접 읽도록 한다. 기본 autonomous 경로에는 추가 정지가 없으며, 선택적
-callback pacing은 아래에 설명한 실제 DONEPAUSE 기능을 사용한다.
+직접 읽도록 한다. 속성이 없는 controller의 autonomous 경로에는 추가 정지가 없으며,
+QVP callback pacing은 아래에 설명한 실제 DONEPAUSE 기능을 사용한다.
 QBox 전용 완료 횟수 레지스터를 만들지 않는다.
 
 근거는 [Command linking](0086-Command-linking.md),
@@ -121,12 +131,14 @@ DONE interrupt는 sticky bit이지 완료 횟수 counter가 아니다. IRQ마다
 ## Pause, terminate와 descriptor 수명
 
 기존 PAUSE/RESUME 경로를 유지한다. TRM에 따라 현재 command를 pause하고 resume하면
-해당 command와 이후 link 처리가 계속된다. 정상 cyclic operation에서는 CPU callback을
-기다리기 위한 DONEPAUSE를 추가하지 않는다.
+해당 command와 이후 link 처리가 계속된다. DT 속성이 없는 controller에서는
+CPU callback을 기다리기 위한 DONEPAUSE를 추가하지 않는다.
 
-기본값과 별도로 `cyclic_done_pause` module parameter를 추가했다. 기본 false이며,
+probe에서 `of_property_read_bool(dev->of_node, "cyclic_done_pause")`를 읽어
+각 채널에 저장한다. 플랫폼 compatible 검사는 없다. 속성은
+`Documentation/devicetree/bindings/dma/arm,dma-350.yaml`에 boolean으로 정의했다.
 hardware command-link와 `DMA_PREP_INTERRUPT`를 사용하는 cyclic descriptor를
-준비할 때만 값을 고정한다. true이면 각 command의 CTRL bit24 DONEPAUSEEN을
+준비할 때만 적용하며 각 command의 CTRL bit24 DONEPAUSEEN을
 설정한다. 이는 TRM의 실제 pause 기능이며 가상의 완료 counter나 FIFO 확대가
 아니다. IRQ에서 PAUSED/RESUMEWAIT를 bounded 확인하고 DONE을 acknowledge한 뒤,
 기존 virt-dma tasklet이 원래 client callback을 실행한다. callback이 돌아온 후
@@ -140,7 +152,7 @@ descriptor reuse 시 callback을 중복 포장하지 않는다. pause-ready time
 아직 접근할 수 있는 ring을 조기에 해제하지 않는다. 기존 client의
 terminate/synchronize 계약을 유지한다.
 
-이 옵션은 **callback 처리 완료까지의 기능적 pacing**이다. 사용자 프로세스의
+이 quirk는 **callback 처리 완료까지의 기능적 pacing**이다. 사용자 프로세스의
 PCM refill 완료까지 보장하지 않으며, pause 중 기존 I2S functional pacing에
 의존하므로 물리적 연속 48 kHz 타이밍을 검증한 것으로 간주하면 안 된다.
 2026-09-16 관련 SystemC TX/RX pause/ack/resume 검사 5개가 PASS다.

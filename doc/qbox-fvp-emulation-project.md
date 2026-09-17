@@ -848,10 +848,18 @@ I2S MMIO now consumes initiator-annotated delay before register side effects,
 preserving the ordering of CPU drain waits and serializer STOP. Linux DMA
 playback drains the FIFO separately from DMA completion. A host WAV runner
 compares actual guest `aplay`/`arecord` payloads, including the final period.
-Optional DMA350 DONEPAUSE callback pacing now passes bidirectional long,
+ALSA core drain semantics are unchanged: the QVP alsa-utils patch provides
+opt-in `aplay --drain-timeout=5000` for bounded nonblocking drain. Driver
+`wait_time` settings only affect the existing PCM read/write wait path.
+DMA350 DONEPAUSE callback pacing now passes bidirectional long,
 repeated and odd-tail WAV tests under default freerunning with explicit
-wait/CPU-affinity settings. Autonomous cyclic still fails in that profile;
-manual pause FIFO preservation and paused STOP now pass bidirectionally.
+wait/CPU-affinity settings. Autonomous cyclic still fails in that profile.
+The driver selects this pacing using the controller's boolean DT property
+`cyclic_done_pause`, declared on both Apollo QVP controllers, for interrupt-enabled
+command-linked cyclic transfers. There is no machine-compatible check or module
+parameter. Controllers without the property and non-cyclic transfers retain
+their existing policy.
+Manual pause FIFO preservation and paused STOP now pass bidirectionally.
 PIO's optional lowest-threshold/polled-drain path also passes 30 short
 odd-tail runs and bidirectional long WAV tests; the original fixed-delay
 drain has intermittent tail failures and is not covered by that PASS.

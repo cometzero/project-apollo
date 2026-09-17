@@ -1,5 +1,15 @@
 # Apollo QVP DW_apb_i2s 구현과 검증
 
+현재 코드는 ALSA core의 drain timeout 변경을 제거하고, Apollo QVP용
+`aplay --drain-timeout=5000`으로 bounded nonblocking drain을 수행한다.
+드라이버의 `wait_time`은 기존 ALSA R/W 대기 설정으로만 유지한다.
+DMA350 DONEPAUSE는 controller의 boolean DT 속성 `cyclic_done_pause`로 선택하며,
+Apollo QVP의 두 controller에 선언했다. 플랫폼 compatible 검사는 없다.
+`cyclic_done_pause` module parameter는 제거했다. 아래의 선택적 활성화는
+이전 검증 단계의 이력이다.
+아래 기록의 kernel drain timeout 변경은 이전 검증 단계의 이력이다.
+core 원복 후 결과는 [최신 검증](i2s-freerunning-validation.md)을 참조한다.
+
 기본 시간 모드를 유지하는 해결 방향과 최신 실패 재현은
 [기본 QK 소형 링 조사](i2s-default-qk-investigation-20260916.md)에 기록한다.
 2026-09-16 초기 PIO 대조 검사는 기본 QK에서 양방향 실패했다. 후속 QK 수정과
