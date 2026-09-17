@@ -47,7 +47,7 @@ def pcm_errors(log):
     """Do not accept a recovered XRUN just because the eventual WAV matches."""
     return [line for line in log.splitlines()
             if re.search(r'(?:overrun!!!|underrun!!!|state\s*:\s*XRUN|'
-                         r'(?:read|write) error:)', line)]
+                         r'(?:read|write|playback drain) error:)', line)]
 
 
 def pcm_setup(log, period, buffer, avail_min=0):
@@ -85,6 +85,8 @@ def main():
     parser.add_argument('--frames', type=int, default=196608)
     parser.add_argument('--period', type=int, default=1024)
     parser.add_argument('--buffer', type=int, default=2048)
+    parser.add_argument('--drain-timeout-ms', type=int, default=5000,
+                        help='aplay nonblocking drain deadline (0 uses legacy drain)')
     parser.add_argument('--avail-min-frames', type=int, default=0,
                         help='requested poll threshold; verify actual ALSA value (0 uses period)')
     io_mode = parser.add_mutually_exclusive_group()
@@ -114,6 +116,8 @@ def main():
         parser.error('host-timeout must be positive')
     if args.guest_timeout <= 0:
         parser.error('guest-timeout must be positive')
+    if not 0 <= args.drain_timeout_ms <= 2147483647:
+        parser.error('drain-timeout-ms must be between 0 and 2147483647')
     if not 0 <= args.rt_priority <= 99:
         parser.error('rt-priority must be between 0 and 99')
     if args.cpu is not None and args.cpu < 0:
@@ -151,6 +155,8 @@ def main():
                                          direction, started, 'setup', error)
             io_mode = '-N' if args.nonblock else ''
             playback_mode = '' if args.blocking_playback else io_mode
+            if args.drain_timeout_ms:
+                playback_mode += f' --drain-timeout={args.drain_timeout_ms}'
             scheduler = f'chrt -f {args.rt_priority}' if args.rt_priority else ''
             if args.cpu is not None:
                 scheduler = f'taskset -c {args.cpu} {scheduler}'
@@ -227,6 +233,7 @@ test "$play_rc" -eq 0 && test "$capture_rc" -eq 0
             except (OSError, EOFError, wave.Error) as error:
                 result = dict(passed=False, error=str(error))
             result.update(iteration=iteration, direction=direction, command_exit=run.returncode,
+                          drain_timeout_ms=args.drain_timeout_ms,
                           elapsed_seconds=time.monotonic() - started,
                           copy_exit=copy.returncode, period_frames=args.period,
                           buffer_frames=args.buffer, nonblock=args.nonblock,
