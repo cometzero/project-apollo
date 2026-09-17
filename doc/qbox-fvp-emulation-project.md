@@ -775,9 +775,12 @@ The `hsoc_gpio` model uses packed per-bank GPIO and interrupt registers;
 topology comes from CCI and DT rather than hardware count registers.
 See [the register contract and validation results](board/hsoc-gpio.md).
 
-TPS6594-Q1 board integration passed focused qualification using the existing Linux MFD,
-regulator, pinctrl/GPIO, and RTC drivers. See [PMIC board validation](board/tps6594.md)
-for the wiring, commands, and verification scope.
+TPS6594-Q1 board integration uses the existing Linux MFD, regulator,
+pinctrl/GPIO, and RTC drivers. I2C0 now has four PMIC models, 36 configured
+regulators with userspace consumers, and three AT24C02-profile EEPROMs.
+See [PMIC board validation](board/tps6594.md) and
+[I2C byte/event implementation evidence](board/i2c-byte-events.md) for
+current wiring, commands, test results, and unsupported behavior.
 
 PCA9539 board integration passed focused Linux qualification: I2C0 shares its EEPROM with
 the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`.

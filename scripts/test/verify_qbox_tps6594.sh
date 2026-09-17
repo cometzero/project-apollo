@@ -16,15 +16,12 @@ client=0-0048
 smd_label=40750000.gpio
 smd_hwirq=2
 
-buck_output=/sys/bus/platform/devices/tps6594-buck1-output
-ldo_output=/sys/bus/platform/devices/tps6594-ldo1-output
+work=
 rtc_sys=
 tps_chip=
 parent_virq=
 alarm_virq=
 pmic_irq_chip=
-buck_initial=
-ldo_initial=
 loopback_pid=
 
 emit()
@@ -101,6 +98,10 @@ find_pinctrl()
     for candidate in /sys/bus/platform/devices/tps6594-pinctrl*; do
         [ -d "$candidate" ] || continue
         [ "$(driver_name "$candidate")" = tps6594-pinctrl ] || continue
+        case "$(readlink -f "$candidate")" in
+            */"$client"/*) ;;
+            *) continue ;;
+        esac
         printf '%s\n' "$candidate"
         return 0
     done
@@ -113,6 +114,10 @@ find_rtc()
         [ -d "$candidate" ] || continue
         [ "$(driver_name "$candidate/device" 2>/dev/null)" = tps6594-rtc ] ||
             continue
+        case "$(readlink -f "$candidate")" in
+            */"$client"/*) ;;
+            *) continue ;;
+        esac
         printf '%s\n' "$candidate"
         return 0
     done
@@ -133,14 +138,18 @@ find_regulator()
 
 require_regulators()
 {
-    required='tps6594-buck1 BUCK2 BUCK3 BUCK4 BUCK5 tps6594-ldo1 LDO2 LDO3 LDO4'
     names=
-    for name in $required; do
+    for rail in buck1 buck2 buck3 buck4 buck5 ldo1 ldo2 ldo3 ldo4; do
+        name=$pmic-$rail
         path=$(find_regulator "$name") || return 1
+        case "$(readlink -f "$path")" in
+            */"$client"/*) ;;
+            *) return 1 ;;
+        esac
         names="${names}${names:+,}$name"
         [ -r "$path/state" ] && [ -r "$path/microvolts" ] || return 1
     done
-    emit "event=regulator-inventory|count=9|names=$names"
+    emit "event=regulator-inventory|client=$client|count=9|names=$names"
 }
 
 set_output_state()
@@ -220,8 +229,12 @@ cleanup()
     rc=0
     stop_loopback
     [ -z "$rtc_sys" ] || clear_alarm || rc=1
-    [ -z "$buck_initial" ] || set_output_state "$buck_output" "$buck_initial" || rc=1
-    [ -z "$ldo_initial" ] || set_output_state "$ldo_output" "$ldo_initial" || rc=1
+    if [ -n "$work" ]; then
+        while read -r saved_output saved_state; do
+            set_output_state "$saved_output" "$saved_state" || rc=1
+        done < "$work/states"
+        rm -rf "$work" || rc=1
+    fi
     emit "event=cleanup|rc=$rc"
     return "$rc"
 }
@@ -245,7 +258,7 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-for tool in awk basename cat date find gpiodetect gpioget gpioset grep hwclock readlink sleep; do
+for tool in awk basename cat date find gpiodetect gpioget gpioset grep hwclock readlink sleep dirname mktemp rm; do
     command -v "$tool" >/dev/null 2>&1 || die 10 "missing-$tool"
 done
 
@@ -254,25 +267,50 @@ done
 adapter_path=$(readlink -f "/sys/bus/i2c/devices/i2c-$bus")
 adapter_driver=$(driver_name "$(dirname "$adapter_path")")
 [ "$adapter_driver" = i2c_designware ] || die 13 "unexpected-i2c-driver-$adapter_driver"
-[ "$(driver_name "/sys/bus/i2c/devices/$client")" = tps6594 ] ||
-    die 14 "tps6594-not-bound"
+work=$(mktemp -d /tmp/qbox-tps6594.XXXXXX) || die 10 "mktemp-failed"
+: > "$work/states"
 
+for spec in 0-0048:tps6594 0-0058:tps6594-1 0-0060:tps6594-2 0-0068:tps6594-3; do
+    client=${spec%%:*}
+    pmic=${spec#*:}
+    [ "$(driver_name "/sys/bus/i2c/devices/$client")" = tps6594 ] ||
+        die 14 "tps6594-not-bound-$client"
+    tps_chip=$(find_gpiochip)
+    [ -n "$tps_chip" ] || die 15 "missing-tps6594-gpiochip-$client"
+    tps_lines=$(gpiodetect | awk -v chip="$tps_chip" '$1 == chip { value = $3; sub(/^\(/, "", value); print value; exit }')
+    [ "$tps_lines" = 11 ] || die 16 "unexpected-tps6594-gpio-lines-$client-$tps_lines"
+    pinctrl_device=$(find_pinctrl) || die 17 "missing-tps6594-pinctrl-$client"
+    require_regulators || die 20 "missing-tps6594-regulators-$client"
+    emit "event=pmic-inventory|client=$client|gpiochip=$tps_chip|gpio_lines=$tps_lines|pinctrl=$(basename "$pinctrl_device")"
+
+    for rail in buck1 buck2 buck3 buck4 buck5 ldo1 ldo2 ldo3 ldo4; do
+        output=/sys/bus/platform/devices/$pmic-$rail-output
+        [ -r "$output/state" ] || die 18 "missing-output-$pmic-$rail"
+        initial=$(cat "$output/state") || die 19 "output-state-read-$pmic-$rail"
+        printf '%s %s\n' "$output" "$initial" >> "$work/states"
+        case "$rail" in buck*) uv=900000 ;; ldo*) uv=1800000 ;; esac
+        test_output "$output" "$pmic-$rail" "$uv" ||
+            die 25 "regulator-output-failed-$pmic-$rail"
+    done
+
+    for value in 1 0; do
+        gpioset -c "$tps_chip" -C qbox-tps6594-loopback -t 0 -p 500ms "0=$value" "8=$value" &
+        loopback_pid=$!
+        sleep 0.1
+        loopback_value=$(gpioget -c "$tps_chip" --numeric 1 9 2>&1) ||
+            die 26 "gpio-loopback-read-failed-$client"
+        wait "$loopback_pid" 2>/dev/null || die 27 "gpio-loopback-write-failed-$client"
+        loopback_pid=
+        [ "$loopback_value" = "$value $value" ] ||
+            die 28 "gpio-loopback-mismatch-$client-$loopback_value"
+        emit "event=gpio-loopback|client=$client|outputs=0,8|inputs=1,9|value=$loopback_value"
+    done
+done
+
+# Retain the primary PMIC RTC tick and repeated parent/child IRQ qualification.
+client=0-0048
 tps_chip=$(find_gpiochip)
-[ -n "$tps_chip" ] || die 15 "missing-tps6594-gpiochip"
-tps_lines=$(gpiodetect | awk -v chip="$tps_chip" '$1 == chip { value = $3; sub(/^\(/, "", value); print value; exit }')
-[ "$tps_lines" = 11 ] || die 16 "unexpected-tps6594-gpio-lines-$tps_lines"
-pinctrl_device=$(find_pinctrl) || die 17 "missing-tps6594-pinctrl"
-
-if ! [ -d "$buck_output" ] || ! [ -r "$buck_output/state" ]; then
-    die 18 "missing-buck1-output"
-fi
-if ! [ -d "$ldo_output" ] || ! [ -r "$ldo_output/state" ]; then
-    die 19 "missing-ldo1-output"
-fi
-require_regulators || die 20 "missing-tps6594-regulators"
-buck_initial=$(cat "$buck_output/state")
-ldo_initial=$(cat "$ldo_output/state")
-
+pinctrl_device=$(find_pinctrl) || die 17 "missing-primary-pinctrl"
 rtc_sys=$(find_rtc) || die 21 "missing-tps6594-rtc"
 if ! [ -r "$rtc_sys/since_epoch" ] || ! [ -w "$rtc_sys/wakealarm" ]; then
     die 22 "missing-rtc-sysfs"
@@ -285,31 +323,6 @@ alarm_virq=$(find_alarm_virq "$pmic_irq_chip")
 [ -n "$alarm_virq" ] || die 24 "missing-tps6594-alarm-irq"
 
 emit "event=inventory|adapter=i2c-$bus|adapter_driver=$adapter_driver|client=$client|driver=tps6594|gpiochip=$tps_chip|gpio_lines=$tps_lines|pinctrl=$(basename "$pinctrl_device")|pl061_chip=$smd_label|pl061_hwirq=$smd_hwirq|pl061_virq=$parent_virq|pmic_irq_chip=$pmic_irq_chip|rtc=$(basename "$rtc_sys")|rtc_driver=tps6594-rtc|alarm_virq=$alarm_virq"
-
-test_output "$buck_output" tps6594-buck1 900000 ||
-    die 24 "buck1-regulator-output-failed"
-test_output "$ldo_output" tps6594-ldo1 1800000 ||
-    die 25 "ldo1-regulator-output-failed"
-
-gpioset -c "$tps_chip" -C qbox-tps6594-loopback -t 0 -p 500ms 0=1 8=1 &
-loopback_pid=$!
-sleep 0.1
-loopback_value=$(gpioget -c "$tps_chip" --numeric 1 9 2>&1) ||
-    die 26 "gpio-loopback-read-failed"
-wait "$loopback_pid" 2>/dev/null || die 27 "gpio-loopback-write-failed"
-loopback_pid=
-[ "$loopback_value" = '1 1' ] || die 28 "gpio-loopback-high-mismatch-$loopback_value"
-emit "event=gpio-loopback|outputs=0,8|inputs=1,9|value=$loopback_value"
-
-gpioset -c "$tps_chip" -C qbox-tps6594-loopback -t 0 -p 500ms 0=0 8=0 &
-loopback_pid=$!
-sleep 0.1
-loopback_value=$(gpioget -c "$tps_chip" --numeric 1 9 2>&1) ||
-    die 29 "gpio-loopback-low-read-failed"
-wait "$loopback_pid" 2>/dev/null || die 30 "gpio-loopback-low-write-failed"
-loopback_pid=
-[ "$loopback_value" = '0 0' ] || die 31 "gpio-loopback-low-mismatch-$loopback_value"
-emit "event=gpio-loopback-low|outputs=0,8|inputs=1,9|value=$loopback_value"
 
 hwclock -w -u -f "/dev/$(basename "$rtc_sys")" || die 32 "rtc-write-failed"
 rtc_before=$(cat "$rtc_sys/since_epoch") || die 33 "rtc-read-before-failed"
