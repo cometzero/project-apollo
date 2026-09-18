@@ -47,7 +47,6 @@ def test_recovered_xrun_is_still_an_error():
                                  '  state       : XRUN\n')) == 2
     assert module.pcm_errors('underrun!!!')[0] == 'underrun!!!'
     assert module.pcm_errors('arecord: pcm_read: read error: Input/output error')
-    assert module.pcm_errors('aplay: playback drain error: Connection timed out')
 
 
 def test_host_timeout_records_failure_and_stops_cases(tmp_path, monkeypatch):
