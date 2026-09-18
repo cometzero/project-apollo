@@ -788,50 +788,7 @@ See [board wiring and qualification](board/pca9539.md) for the current evidence
 and functional/electrical modeling boundaries.
 
 AP DMA-350 now uses an asynchronous SystemC/TLM worker and FIFO request/ACK
-flow control. Its MMIO path consumes initiator-annotated delay before channel
-commands or status snapshots; debug transport remains nonblocking.
-The QBox MMIO bridge also refreshes relative time in its SystemC dispatch
-callback and applies returned delay before leaving that callback, avoiding
-stale relative offsets across the thread handoff. Regular MMIO dispatch now
-respects SystemC suspension barriers while a target consumes annotated delay;
-control/debug jobs retain the legacy policy.
-The MCIPS path accounts for synchronous I/O-lock and target waits, and reserves
-the completion window before the CPU thread resumes; this avoids treating a
-blocked CPU as an executing instruction-clock source. The vCPU end-of-loop
-hook reconciles a hardware halt that outlives the plugin's scheduler pause,
-and participates in the plugin shutdown drain. An idle CPU's native kick now
-reserves a pending-wake time window before host-thread scheduling, with
-actual instruction-quota acknowledgment when QEMU resumes without sleeping,
-and a dedicated BQL-owned libqemu execution-entry callback for queued-work
-resumes omitted by paired idle/resume notifications,
-explicit no-work acknowledgment and per-CPU initialization guards. IRQ
-delivery cannot leave the instance unconstrained until the eventual resume
-callback. Clock-source handoff retains in-flight instructions. AP core PPUs now wait for the
-CPU's architectural standby before acknowledging OFF and asserting reset,
-allowing TF-A's post-SCMI PSCI cleanup to complete; cold reset remains immediate.
-Native scheduler pause/resume requests use the same BQL-owned CPU work queue
-to avoid losing resume during stop acknowledgment. A per-CPU reset epoch
-rejects stale requests across architectural reset boundaries; the reset
-export serializes both assertion and release under BQL. Standby publication
-uses a delta notification so a synchronous PPU reset feedback cannot lose
-the falling edge through immediate self-notification.
-MCIPS excludes reset-held CPUs from clock selection and reserves a wake
-window before queuing native reset release. This also covers initially held
-secondary CPUs. Native scheduler resume respects VM pause; guest GDB control
-is not represented as an architectural reset latch.
-The libqemu Cortex-M path also distinguishes WFI interrupt wakeup from WFE
-events and executes the M-profile WFE helper under MTTCG. Actual Cortex-M55
-tests reproduce the earlier event-only WFI wake and verify the corrected
-halt/IRQ behavior; migration and full WFE event-consumption parity remain
-outside this qualification. TF-M idle firmware is unchanged.
-See
-[I2S period-service investigation](dwc/i2s-xrun-followup-20260915.md) for tests
-and the distinction between transport ordering and real-time PCM guarantees.
-The explicit all-domain MCIPS/100-us profile passed 20 sequential bidirectional
-blocking WAV comparisons and two odd-tail cases in Linux, plus SPI/UART/memory
-DMA regressions. The default QK configuration is unchanged; the nonblocking
-two-period ALSA-utils stress case remains a separately recorded failure.
-AP wiring now dedicates channels 0–3 to SPI0/1 TX/RX and
+flow control. AP wiring now dedicates channels 0–3 to SPI0/1 TX/RX and
 channels 4–7 to UART0/1 TX/RX; I2C and the other ports use PIO.
 The follow-up configuration combines channel interrupts through
 `IRQ_COMB_NONSEC` to GIC SPI 279 (INTID 311), using Linux shared IRQ actions.
@@ -847,19 +804,6 @@ are named `dma350_0` (SPI/UART) and `dma350_1` (I2S); the latter dedicates
 channels 0/1 to I2S0 TX/RX and 2/3 to I2S1 TX/RX, leaving 4–7 unconnected.
 Apollo selects explicit transaction-level audio pacing; timed FIFO deadlines
 are not qualified under the default four-CPU freerunning scheduler.
-I2S MMIO now consumes initiator-annotated delay before register side effects,
-preserving the ordering of CPU drain waits and serializer STOP. Linux DMA
-playback drains the FIFO separately from DMA completion. A host WAV runner
-compares actual guest `aplay`/`arecord` payloads, including the final period.
-Optional DMA350 DONEPAUSE callback pacing now passes bidirectional long,
-repeated and odd-tail WAV tests under default freerunning with explicit
-wait/CPU-affinity settings. Autonomous cyclic still fails in that profile;
-manual pause FIFO preservation and paused STOP now pass bidirectionally.
-PIO's optional lowest-threshold/polled-drain path also passes 30 short
-odd-tail runs and bidirectional long WAV tests; the original fixed-delay
-drain has intermittent tail failures and is not covered by that PASS.
-These conditional
-results do not qualify continuous physical 48 kHz audio timing.
 See [I2S implementation and validation](dwc/dw-apb-i2s.md) for the Linux
 ASoC PIO and cyclic DMA validation and the timing limitations.
 
