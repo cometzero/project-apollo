@@ -787,6 +787,41 @@ the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`
 See [board wiring and qualification](board/pca9539.md) for the current evidence
 and functional/electrical modeling boundaries.
 
+The QBox MMIO bridge also refreshes relative time in its SystemC dispatch
+callback and applies returned delay before leaving that callback, avoiding
+stale relative offsets across the thread handoff. Regular MMIO dispatch now
+respects SystemC suspension barriers while a target consumes annotated delay;
+control/debug jobs retain the legacy policy.
+The MCIPS path accounts for synchronous I/O-lock and target waits, and reserves
+the completion window before the CPU thread resumes; this avoids treating a
+blocked CPU as an executing instruction-clock source. The vCPU end-of-loop
+hook reconciles a hardware halt that outlives the plugin's scheduler pause,
+and participates in the plugin shutdown drain. An idle CPU's native kick now
+reserves a pending-wake time window before host-thread scheduling, with
+actual instruction-quota acknowledgment when QEMU resumes without sleeping,
+and a dedicated BQL-owned libqemu execution-entry callback for queued-work
+resumes omitted by paired idle/resume notifications,
+explicit no-work acknowledgment and per-CPU initialization guards. IRQ
+delivery cannot leave the instance unconstrained until the eventual resume
+callback. Clock-source handoff retains in-flight instructions. AP core PPUs now wait for the
+CPU's architectural standby before acknowledging OFF and asserting reset,
+allowing TF-A's post-SCMI PSCI cleanup to complete; cold reset remains immediate.
+Native scheduler pause/resume requests use the same BQL-owned CPU work queue
+to avoid losing resume during stop acknowledgment. A per-CPU reset epoch
+rejects stale requests across architectural reset boundaries; the reset
+export serializes both assertion and release under BQL. Standby publication
+uses a delta notification so a synchronous PPU reset feedback cannot lose
+the falling edge through immediate self-notification.
+MCIPS excludes reset-held CPUs from clock selection and reserves a wake
+window before queuing native reset release. This also covers initially held
+secondary CPUs. Native scheduler resume respects VM pause; guest GDB control
+is not represented as an architectural reset latch.
+The libqemu Cortex-M path also distinguishes WFI interrupt wakeup from WFE
+events and executes the M-profile WFE helper under MTTCG. Actual Cortex-M55
+tests reproduce the earlier event-only WFI wake and verify the corrected
+halt/IRQ behavior; migration and full WFE event-consumption parity remain
+outside this qualification. TF-M idle firmware is unchanged.
+
 AP DMA-350 now uses an asynchronous SystemC/TLM worker and FIFO request/ACK
 flow control. AP wiring now dedicates channels 0–3 to SPI0/1 TX/RX and
 channels 4–7 to UART0/1 TX/RX; I2C and the other ports use PIO.
