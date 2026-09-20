@@ -1,7 +1,9 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 #
-# Guest-side TPS6594 board-component qualification for Apollo QVP/QBox.
+# Historical Linux-owned TPS6594 board qualification for Apollo QVP/QBox.
+# Current SI CL0-owned PMICs use verify_qbox_si_pmic_guest.sh plus the SCP
+# boot log parser verify_qbox_si_pmic.py. This test cannot qualify SCP PMICs.
 # Run as root after the QBox BSP has booted:
 #   ./scripts/run/ssh_run.sh scripts/test/verify_qbox_tps6594.sh
 
@@ -252,6 +254,13 @@ on_exit()
     fi
     exit "$status"
 }
+
+# Check ownership before installing the PASS/FAIL cleanup trap. Absence on
+# Linux is expected after migration, but does not prove SCP qualification.
+if [ ! -d /sys/bus/i2c/devices/0-0048 ]; then
+    emit "event=final|status=UNSUPPORTED|reason=requires-linux-owned-pmic|replacement=verify_qbox_si_pmic_guest.sh+verify_qbox_si_pmic.py"
+    exit 77
+fi
 
 trap on_exit EXIT
 trap 'exit 129' HUP

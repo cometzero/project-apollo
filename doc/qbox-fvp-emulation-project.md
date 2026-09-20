@@ -775,12 +775,16 @@ The `hsoc_gpio` model uses packed per-bank GPIO and interrupt registers;
 topology comes from CCI and DT rather than hardware count registers.
 See [the register contract and validation results](board/hsoc-gpio.md).
 
-TPS6594-Q1 board integration uses the existing Linux MFD, regulator,
-pinctrl/GPIO, and RTC drivers. I2C0 now has four PMIC models, 36 configured
-regulators with userspace consumers, and three AT24C02-profile EEPROMs.
-See [PMIC board validation](board/tps6594.md) and
-[I2C byte/event implementation evidence](board/i2c-byte-events.md) for
-current wiring, commands, test results, and unsupported behavior.
+TPS6594-Q1 ownership moves to SI CL0 SCP firmware on a dedicated QVP I2C
+bus. One PMIC at `0x48` provides nine regulator channels and GPIO. Boot
+performs only a presence read, preserving default/retained rail and GPIO
+settings; voltage programming and GPIO self-tests are skipped. TPS6594 RTC is
+unused and Linux keeps PL031. AP I2C0 retains three AT24C02-profile
+EEPROMs and PCA9539. See [SI CL0 PMIC integration](board/tps6594-si-cl0.md)
+for startup ordering, the QVP-only address map, and validation boundaries.
+The [Linux PMIC validation](board/tps6594.md) and
+[I2C byte/event evidence](board/i2c-byte-events.md) describe the earlier
+AP-owned configuration.
 
 PCA9539 board integration passed focused Linux qualification: I2C0 shares its EEPROM with
 the expander, PL061 GPIO0/1 carry reset/interrupt, and Linux uses `gpio-pca953x`.
