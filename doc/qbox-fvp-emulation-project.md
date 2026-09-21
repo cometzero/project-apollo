@@ -19,6 +19,30 @@ QBox configuration carries that value into the full-system runtime.
 
 ## Non-Goals
 
+An explicitly separate development profile, `run_qbox_linux.sh` /
+`apollo-qvp-linux.lua`, boots Linux directly using SystemC domain mocks.
+`--bsp` selects the BSP initramfs plus its boot/misc WIC disk (initramfs root,
+not a disk-backed root filesystem); the default selects the Yocto
+root filesystem. Shared AP/RoS hardware construction lives in
+`apollo-qvp-common.lua`. RSE/SI firmware and TF-A/U-Boot do not run in this
+profile. SCMI/MHU responses and the optional SMC bridge are mock behavior,
+not evidence for the full-system fidelity goal. Its results must be reported
+as AP Linux smoke evidence, separately from domain or FVP qualification.
+The BSP launcher uses the unmodified initramfs and its original `/init`, without
+an init overlay. Failed selftests remain visible and enter the original
+`nexios-bsp-failed#` shell; boot smoke and `bsp_selftest` are reported separately.
+SI remoteproc/RPMsg is enabled in the generated Linux-only DT for the
+`apollo_si_stub` SystemC service: resource-table attach, two virtqueues,
+RPMsg `ethsi1` enumeration, and a bounded Ethernet ARP/IPv4 ICMP peer.
+This replaces the SI firmware's communication role only; no SI CPU or Zephyr
+code executes, and other SI/PFDI services remain unsupported. RSE PSA `-134`
+responses remain transport stubs. SCMI advertises BASE only; performance, power and other
+service protocols return `NOT_SUPPORTED` instead of simulating DVFS or power
+transitions.
+The standard product's `pfdi_misc` autoload fails with `Operation not permitted`
+in this profile; the resulting modules-load failure remains visible and is not
+included in the boot/login PASS claim.
+
 - Do not claim 99% equivalence from Linux boot alone.
 - Do not treat register-only stubs as final hardware models.
 - Do not edit generated `build/` output as source.

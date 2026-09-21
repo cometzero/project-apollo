@@ -21,7 +21,7 @@ CHECKS = {
         ("map:si-cl0", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL0 \|"),
         ("map:si-cl1", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL1 \|"),
         ("platform:apollo-qvp-lua", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/rse\.lua"),
-        ("platform:apollo-qvp-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/config\.lua"),
+        ("platform:apollo-qvp-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp-common.lua", r"hw-block/config\.lua"),
         ("platform:apollo-qvp-fabric", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/fabric\.lua"),
         ("platform:config-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua", r"Apollo QVP shared config running"),
         (
@@ -104,7 +104,7 @@ CHECKS = {
             "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
             r"NOT:address\s*=\s*0x40750000",
         ),
-        ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"config\.create\(apollo_dir\)"),
+        ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp-common.lua", r"config\.create\(apollo_dir\)"),
         ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
         ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"function ap_compute\.enable_ap_router"),
         ("platform:ap-atu-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_router\.initiator_socket\""),
