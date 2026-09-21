@@ -19,6 +19,12 @@ QBox configuration carries that value into the full-system runtime.
 
 ## Non-Goals
 
+The separate `run_qemu_linux.sh [--bsp]` profile boots Apollo Linux on the
+standalone QEMU `apollo-qvp` machine. Its CPU/GIC/UART/virtio/RTC subset and
+generated device tree support AP boot without SystemC or firmware execution.
+See [the QEMU Linux contract](qemu-apollo-linux.md); this profile does not
+qualify the full QBox hardware map or cross-domain firmware behavior.
+
 An explicitly separate development profile, `run_qbox_linux.sh` /
 `apollo-qvp-linux.lua`, boots Linux directly using SystemC domain mocks.
 `--bsp` selects the BSP initramfs plus its boot/misc WIC disk (initramfs root,

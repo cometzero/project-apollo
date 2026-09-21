@@ -62,6 +62,10 @@ def parser() -> argparse.ArgumentParser:
         help="resolve inputs and print launch plan without writing files",
     )
     p.add_argument("--platform-param", action="append", default=[])
+    p.add_argument("--log-level", type=int, choices=range(10), default=4,
+                   help="QBox global logging level (4: INFO; module overrides still apply)")
+    p.add_argument("--domain-trace", action=argparse.BooleanOptionalAction, default=False,
+                   help="log Linux mock MHU/SCMI/SI activity (default: disabled)")
     return p
 
 
@@ -93,14 +97,14 @@ def required(path: Path, label: str) -> Path:
     return path
 
 
-def console(out: Path) -> int:
+def console(out: Path, log_name: str = "linux-uart.log", input_name: str = "linux-uart.in") -> int:
     """Poll the existing char_backend_file output; append raw UART input."""
     original = termios.tcgetattr(sys.stdin.fileno())
     try:
         tty.setraw(sys.stdin.fileno())
         with (
-            (out / "linux-uart.log").open("rb") as reader,
-            (out / "linux-uart.in").open("ab", buffering=0) as writer,
+            (out / log_name).open("rb") as reader,
+            (out / input_name).open("ab", buffering=0) as writer,
         ):
             while True:
                 data = reader.read(65536)
@@ -116,7 +120,7 @@ def console(out: Path) -> int:
         termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, original)
 
 
-def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
+def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bool = False) -> int:
     plan = json.loads((out / "launch.json").read_text())
     started = time.monotonic()
     passed = False
@@ -126,12 +130,17 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
     status = "FAIL"
     rc = 1
     with (out / "qbox.log").open("ab", buffering=0) as log:
+        def report(message: str) -> None:
+            log.write(f"[runner {time.monotonic() - started:.1f}s] {message}\n".encode())
+
+        report("Starting QBox: " + shlex.join(plan["command"]))
         child = subprocess.Popen(
             plan["command"],
             env={**os.environ, **plan["environment"]},
             cwd=ROOT,
             stdout=log,
             stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
             start_new_session=True,
         )
 
@@ -146,12 +155,19 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
             with (out / "linux-uart.log").open("rb") as uart:
                 observed = b""
                 while child.poll() is None:
-                    observed = (observed + uart.read())[-65536:]
+                    chunk = uart.read()
+                    if echo_uart and chunk:
+                        sys.stdout.buffer.write(chunk)
+                        sys.stdout.buffer.flush()
+                    observed = (observed + chunk)[-65536:]
                     if plan["bsp"]:
+                        previous_selftest = bsp_selftest
                         if b"NEXIOS_BSP_INITRAMFS_FAILED" in observed:
                             bsp_selftest = "FAIL"
                         elif b"NEXIOS_BSP_INITRAMFS_READY" in observed and bsp_selftest != "FAIL":
                             bsp_selftest = "PASS"
+                        if bsp_selftest != previous_selftest:
+                            report(f"BSP selftest: {bsp_selftest}")
                     if exit_after_pass and b"Kernel panic - not syncing:" in observed:
                         break
                     ready = (
@@ -159,6 +175,8 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
                         if plan["bsp"] else plan["pass_marker"].encode() in observed
                     )
                     if ready:
+                        if not passed and not login_sent:
+                            report("Linux console ready; UART saved to linux-uart.log")
                         if not exit_after_pass:
                             passed = True
                         elif not login_sent:
@@ -189,9 +207,11 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
                             )
                         probe_sent = True
                     if probe_sent and b"QBOX_LINUX_SMOKE_DONE" in observed:
+                        report("CPU and disk smoke check: PASS")
                         passed, status, rc = True, "PASS", 0
                         break
                     if timeout and time.monotonic() - started >= timeout:
+                        report(f"Timeout reached ({timeout:g}s); stopping QBox")
                         status, rc = ("PASS", 0) if passed else ("TIMEOUT", 124)
                         break
                     time.sleep(0.1)
@@ -224,10 +244,15 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
                 )
                 + "\n"
             )
+            report(f"Stopped: status={status} returncode={rc} bsp_selftest={bsp_selftest}")
     return rc
 
 
-def start_tmux(args: argparse.Namespace, out: Path) -> None:
+def start_tmux(
+    args: argparse.Namespace, out: Path, *, script: Path | None = None,
+    program: str = "QBox", log_name: str = "qbox.log", key_prefix: str = "qbox-linux-",
+    bottom_command: list[str] | None = None,
+) -> None:
     def tmux(*values: str) -> str:
         return subprocess.check_output(["tmux", *values], text=True).strip()
 
@@ -242,7 +267,7 @@ def start_tmux(args: argparse.Namespace, out: Path) -> None:
         raise ValueError(
             f"tmux session {args.session!r} already exists; attach or choose --session NAME"
         )
-    script = Path(__file__).resolve()
+    script = script or Path(__file__).resolve()
     top = tmux(
         "new-session",
         "-d",
@@ -262,7 +287,7 @@ def start_tmux(args: argparse.Namespace, out: Path) -> None:
     try:
         # Key bindings are server-wide; copy root into a session-private table
         # so F12 does not replace bindings belonging to other tmux sessions.
-        key_table = "qbox-linux-" + top.removeprefix("%")
+        key_table = key_prefix + top.removeprefix("%")
         bindings = tmux("list-keys", "-T", "root")
         bindings = re.sub(
             r"(?m)^(bind-key\b[^\n]*?) -T root(?=\s)",
@@ -287,7 +312,7 @@ def start_tmux(args: argparse.Namespace, out: Path) -> None:
             top,
             "-c",
             str(ROOT),
-            shlex.join(["tail", "-n", "+1", "-F", str(out / "qbox.log")]),
+            shlex.join(bottom_command or ["tail", "-n", "+1", "-F", str(out / log_name)]),
         )
         tmux("split-window", "-h", "-l", "50%", "-t", bottom, "-c", str(ROOT))
         tmux("select-pane", "-t", top)
@@ -313,7 +338,7 @@ def start_tmux(args: argparse.Namespace, out: Path) -> None:
         )
         raise
     print(f"tmux attach-session -t {shlex.quote(args.session)}", flush=True)
-    print("F12: stop QBox and close this session; mouse: select panes.", flush=True)
+    print(f"F12: stop {program} and close this session; mouse: select panes.", flush=True)
     if not args.no_attach:
         subprocess.run(["tmux", "attach-session", "-t", args.session], check=True)
 
@@ -374,8 +399,14 @@ def main() -> int:
         "QBOX_RDASPEN_ROOTFS": str(out / "rootfs.wic") if rootfs else "",
         "QBOX_RDASPEN_PRIMARY_CONSOLE_LOG": str(out / "linux-uart.log"),
         "QBOX_RDASPEN_PRIMARY_UART_READ_FILE": str(out / "linux-uart.in"),
+        "QBOX_RDASPEN_MHU_TRACE": "true" if args.domain_trace else "false",
+        "QBOX_RDASPEN_MHU_TRACE_FILE": str(out / "qbox.log"),
+        "QBOX_RDASPEN_MHU_TRACE_LIMIT": os.environ.get("QBOX_RDASPEN_MHU_TRACE_LIMIT", "256"),
     }
-    command = [str(executable), "-l", str(conf)]
+    command = [str(executable), "-l", str(conf), "-p", f"log_level={args.log_level}"]
+    # Like the full-system tmux runner, flush output promptly to its log pane.
+    if shutil.which("stdbuf"):
+        command = [shutil.which("stdbuf"), "-oL", "-eL", *command]
     for value in args.platform_param:
         command.extend(["-p", value])
     plan = {
@@ -435,7 +466,7 @@ def main() -> int:
     launch_env["QBOX_LINUX_INITRD"] = payload["initrd"] or ""
     (out / "launch.json").write_text(json.dumps(plan, indent=2) + "\n")
     if args.headless:
-        return supervise(out, args.timeout, args.exit_after_pass)
+        return supervise(out, args.timeout, args.exit_after_pass, echo_uart=True)
     start_tmux(args, out)
     return 0
 

@@ -58,12 +58,32 @@ The root entrypoints are the stable user interface:
 | `./yocto_build.sh --bsp` | Build only the minimal Yocto BSP initramfs image. |
 | `./run_qbox_yocto.sh` | Boot the Yocto full product image on QBox. |
 | `./run_qbox_yocto.sh --bsp` | Boot the Yocto BSP initramfs WIC on QBox. |
+| `./run_qemu_linux.sh` | Boot the Apollo Yocto Linux image on standalone QEMU. |
+| `./run_qemu_linux.sh --bsp` | Boot the BSP initramfs with its WIC on standalone QEMU. |
 | `./run_fvp.sh` | Run the Yocto `apollo-fvp` product image in an interactive FVP tmux session. |
 | `./run_fvp.sh --machine apollo-qvp --bsp` | Run the QVP BSP initramfs artifacts on FVP. |
 | `./run_test.sh` | Run the categorized FVP validation wrapper and preserve structured evidence. |
 
 Run `COMMAND --help` for the complete option set. The sections below describe
 the default contracts and the options that materially change behavior.
+
+### Standalone QEMU Linux
+
+Build the local `hsoc-stack/tools/qemu` standalone emulator using the current
+Apollo Yocto configuration, then select the deployed image:
+
+```bash
+./yocto_build.sh --keep-conf qemu-apollo-native
+./run_qemu_linux.sh
+./run_qemu_linux.sh --bsp
+```
+
+The `apollo-qvp` QEMU machine supplies Cortex-A720AE CPUs, GICv3, PL011,
+PL031 and virtio MMIO block/network/RNG at Apollo addresses. It generates
+the device tree for these devices. QEMU loads the deployed kernel and
+initramfs directly; QBox and SystemC are not runtime dependencies.
+See [the standalone QEMU contract](doc/qemu-apollo-linux.md) for the map,
+validation commands and unsupported peripherals.
 
 ## Yocto Build
 
