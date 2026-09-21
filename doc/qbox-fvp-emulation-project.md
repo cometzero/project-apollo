@@ -777,8 +777,27 @@ See [the register contract and validation results](board/hsoc-gpio.md).
 
 TPS6594-Q1 ownership moves to SI CL0 SCP firmware on a dedicated QVP I2C
 bus. One PMIC at `0x48` provides nine regulator channels and GPIO. Boot
-performs only a presence read, preserving default/retained rail and GPIO
-settings; voltage programming and GPIO self-tests are skipped. TPS6594 RTC is
+performs a presence read and read-only BUCK/LDO/GPIO status snapshots,
+preserving default/retained settings; voltage programming and GPIO self-tests
+are skipped. SCP uses the GPIO HAL and I2C HAL backed by `dw_apb_i2c`, with
+timer HAL deadlines. PMIC probing precedes deferred SYS0 power-on in start.
+RAMFW also binds the PMIC HAL to the TPS6594 provider and reads programmed
+voltage/enable for all nine rails without changing them. I2C queued request
+descriptors are owned by the I2C module; framework event payload stays 16 bytes.
+The QBox power-on profile enables all nine rails: BUCK1–5 at 300 mV,
+LDO1–3 at 600 mV and LDO4 at 1.2 V. A new process applies this model profile;
+SoC reset retains PMIC state. This is not a physical-board NVM profile.
+The enabled profile passed all six TPS6594 model tests; a fresh QBox BSP boot
+confirmed all nine enabled rails and their default voltages in SCP PMIC HAL
+logs (`build/qbox-apollo-qvp/tps6594/default-enabled/validation.md`).
+The QVP diagnostic additionally passed 18 PMIC HAL voltage/enable comparisons
+over all nine rails, restored their original settings, and booted successfully.
+An opt-in QVP diagnostic passed 242 GPIO output/readback comparisons and eight
+input comparisons over the GPIO1→2 and GPIO9→10 loopbacks through the SCP GPIO
+HAL, with configuration/latch/interrupt restoration and subsequent BSP boot.
+The diagnostic is disabled by default; physical pin timing and PMIC IRQ service
+are not qualified by these results.
+TPS6594 RTC is
 unused and Linux keeps PL031. AP I2C0 retains three AT24C02-profile
 EEPROMs and PCA9539. See [SI CL0 PMIC integration](board/tps6594-si-cl0.md)
 for startup ordering, the QVP-only address map, and validation boundaries.

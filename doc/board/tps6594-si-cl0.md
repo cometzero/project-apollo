@@ -1,6 +1,91 @@
 # TPS6594: SI CL0 SCP ownership
 
-## 현재 구성: PMIC 1개, 기본값 보존
+## 현재 구성: timer/I2C/GPIO HAL 및 상태 출력
+
+QBox power-on profile은 BUCK1–5 300 mV, LDO1–3 600 mV, LDO4 1.2 V로
+모두 enable한다. 기존 기본 selector는 유지하고 enable bit만 기본 활성화한다.
+새 QBox process에서 적용되며 SoC reset에서는 PMIC 상태가 유지된다.
+이는 모델 기본값이며 물리 보드의 NVM/전원 시퀀스 사양을 뜻하지 않는다.
+아래 과거 검증에서 rail disabled로 기록한 값은 변경 전 실행 결과다.
+
+새 기본값은 `default-enabled/validation.md` 및 같은 디렉터리의
+`runtime/qbox-safety-island-cl0.log`로 검증했다
+(`build/qbox-apollo-qvp/tps6594/` 아래). 모델 테스트 6개, 플랫폼 테스트 60개,
+기존 PMIC parser 테스트 32개가 PASS이다. 실제 SCP의 raw probe와 PMIC HAL
+로그에서 9개 rail 모두 enable=1 및 위 전압을 확인했고 BSP boot/login도 PASS이다.
+SCP는 기본값을 쓰지 않고 읽었으며, 물리 아날로그 출력의 실측 검증은 아니다.
+
+2026-09-21 변경: TPS6594는 `time_us` 콜백과 직접 controller MMIO 대신
+timer API와 `i2c` HAL → `dw_apb_i2c` 경로를 사용한다. Controller의
+polled 전송 timeout은 timer API로 처리하며 기존 비동기 IRQ 경로는 유지한다.
+`module/gpio` HAL의 element 0..10은 PMIC 0의 GPIO1..11을 제공한다.
+
+probe는 `start` 단계에서 DEV_REV와 8개 status block을 읽는다. BUCK/LDO의
+enable, raw VOUT, live fault register 및 GPIO mux/direction/output/input을
+출력한다. 총 9 read transaction이며 PMIC register write는 없다. Raw VOUT는
+실측 전압이 아니다. RTC/latched INT는 읽거나 지우지 않는다.
+
+시작 순서는 timer → dw_apb_i2c → i2c → TPS6594 → gpio → pmic → ppu_v1이다.
+PMIC 옵션에서 SYS0 default power-on을 PPU init에서 start로 지연한다.
+`power-ready`는 PMIC 검사가 끝나 다음 PPU start를 허용한다는 표시다.
+실제 SYS0 ON이나 물리 전원 시퀀스 검증 결과를 의미하지 않는다.
+
+`module/pmic`은 rail별 set/get voltage와 set/get enabled API를 제공한다.
+RAMFW `config_pmic.c`가 TPS6594 PMIC element를 HAL element 0에 연결하고,
+`si0_platform`은 설정된 PMIC HAL ID로 9개 rail을 읽어
+`PMIC rail=... enabled=... programmed_uv=...`를 출력한다. BUCK VSEL bank와
+LDO selector를 decode한 설정값이며 실측 전압은 아니다. 기본 부팅에서
+이 조회는 23 read transaction을 추가하며 rail register write는 없다.
+
+`fwk_event.h` payload는 원래 16 byte 그대로다. I2C 비동기 요청 descriptor는
+`mod_i2c`가 할당/해제하고 event에는 pointer만 저장한다. 동기 PMIC/GPIO
+전송에는 이 할당이 없다. Native 검사에 async 대기 순서·allocation 실패·
+enqueue 실패·descriptor 해제와 PMIC HAL/provider 검사를 추가했다.
+
+PMIC HAL 연동 재검증은 `build/qbox-apollo-qvp/tps6594/pmic-validation.md`에
+기록했다. Native 7종, 원래 event 크기의 framework CTest 25개, PMIC ON/OFF
+빌드, 일반/진단 QBox boot가 PASS이다. 진단 실행에서 GPIO 250회와 PMIC
+9개 rail의 전압/enable 변경-readback 18회 및 원래 설정 복원을 확인했다.
+RAMFW의 후속 HAL 조회에서도 복원된 기본값을 확인했다. 사용한 binary hash는
+`pmic-images.sha256`, 실제 로그는 `pmic-runtime/` 및 `pmic-diag-runtime/`이다.
+
+검증 산출물: `build/qbox-apollo-qvp/tps6594/`. SI CL0 cross build와
+새 firmware를 `--si-cl0-image`로 지정한 QBox BSP boot/login이 PASS이다.
+실행 로그에서 BUCK 5개/LDO 4개/GPIO 11개 상태 출력을 확인했다.
+이는 loader override 검증이며 새 Yocto 배포·서명 flash image 검증은 아니다.
+기본 runtime GPIO self-test는 SKIP이다. 별도 진단 빌드의 실제 HAL 구동
+결과는 다음 절에 기록한다. 아래 이전 실행의 성능 수치는 새 경로에 적용하지 않는다.
+
+- Native policy/GPIO/TPS module/DW/I2C 테스트 5종 PASS (`native-tests.log`).
+- Framework CTest 25개 PASS (`framework-tests.log`), PMIC parser 32개 PASS.
+- 주소를 `0x70`으로 옮긴 NACK 주입: probe `FWK_E_DEVICE(-11)`, complete와
+  power-ready 없음 (`nack/qbox-safety-island-cl0.log`).
+- Controller byte latency `1 s` 주입: probe `FWK_E_TIMEOUT(-7)`, complete와
+  power-ready 없음 (`timeout/qbox-safety-island-cl0.log`). 두 fault 실행의
+  launcher boot 판정은 예상대로 FAIL이며 정상 boot PASS로 취급하지 않는다.
+- 사용한 SI CL0 binary SHA-256: `firmware.sha256`.
+
+### GPIO HAL 실제 QBox 구동 검증
+
+`SCP_APOLLO_QVP_PMIC_GPIO_TEST=ON`으로 별도 진단 firmware를 만들고
+`--si-cl0-image`로 실행했다. 기본 `configure_registers` 및 `gpio_self_test`
+옵션은 false를 유지했다. 진단 모듈은 GPIO HAL을 bind하고 TPS6594 → I2C HAL
+→ DW APB I2C → QBox PMIC 경로로 실제 전송한다.
+
+- 핀 11개 각각 high/low 구동 후 11개 입력 readback 비교: 242회 PASS.
+- GPIO1→2, GPIO9→10 실제 모델 연결에서 `0101` 입력 비교: 8회 PASS.
+- GPIO 설정 11 byte, output latch 2 byte, GPIO interrupt leaf 복원/readback PASS.
+- `final=PASS checks=250 status=0` 이후 BSP boot/login PASS.
+- 전체 핀의 output-mode 입력은 모델 내부 출력 상태 readback이다. 외부
+  signal 연결 전파 검증은 위 두 loopback이며 물리 핀·전기 timing 검증은 아니다.
+
+로그: `build/qbox-apollo-qvp/tps6594/gpio-runtime/qbox-safety-island-cl0.log`.
+Boot 결과: 같은 디렉터리의 `result.json`. 실행 명령은 `gpio-launcher.log`,
+binary는 `gpio-diagnostic.bin`, SHA-256은 `gpio-diagnostic.sha256`에 보관했다.
+검증 후 CMake 옵션을 OFF로 복원하고 일반 펌웨어를 다시 빌드했다.
+Yocto 배포/서명 flash는 변경하지 않았다.
+
+## 이전 구성 기록: PMIC 1개, 최소 presence read
 
 SI CL0 전용 I2C에 `0x48` PMIC 하나만 연결한다. `0x58`, `0x60`,
 `0x68` 모델은 생성하지 않는다. PL061 fault 입력도 GPIO 0 하나만 사용한다.
