@@ -15,6 +15,40 @@ runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
 
 
+def test_autosd_and_bsp_are_mutually_exclusive():
+    with pytest.raises(SystemExit):
+        runner.parser().parse_args(["--bsp", "--autosd", "manifest.json"])
+
+
+@pytest.mark.parametrize("changes", [{"mode": "invalid"}, {"rootfs": "relative.raw"},
+                                     {"initrd": None}, {"bootargs": ""}])
+def test_autosd_manifest_rejects_invalid_fields(tmp_path, changes):
+    manifest = {"mode": "regular", "rootfs": "/disk.raw", "initrd": "/initrd",
+                "bootargs": "console=ttyAMA0"}
+    manifest.update(changes)
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError):
+        runner.autosd_manifest(path)
+
+
+def test_autosd_console_does_not_repeat_credentials_or_probe():
+    console = runner.AutoSDConsole("ostree", 4, "QBOX_LINUX")
+    for prompt, reply in [(b"localhost login: ", b"root\n"),
+                          (b"Password: ", b"password\n")]:
+        assert console.respond(prompt, True) == reply
+        assert console.respond(prompt, True) == b""
+    probe = console.respond(b"[root@localhost ~]# ", True)
+    assert b"ostree admin status" in probe
+    assert b"rpm-ostree" not in probe
+    assert b"erofs" not in probe
+    assert b'test "$(findmnt -n -o FSTYPE -T /)" = overlay &&' in probe
+    assert b"losetup -a;" in probe
+    assert b"findmnt -T" in probe and b"getenforce; systemctl --failed --no-pager;" in probe
+    assert b"QBOX_LINUX_SMOKE_DONE" not in probe
+    assert console.respond(b"[root@localhost ~]# ", True) == b""
+
+
 def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path):
     helper = SCRIPT.parents[2] / "hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py"
     spec = importlib.util.spec_from_file_location("linux_boot_prepare", helper)
@@ -46,6 +80,87 @@ def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path):
         assert any(call[-3:] == (node, "status", "okay") for call in commands)
 
 
+def test_prepare_firmware_entry_and_no_external_initrd(monkeypatch, tmp_path):
+    import struct
+    helper = SCRIPT.parents[2] / "hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py"
+    spec = importlib.util.spec_from_file_location("efi_boot_prepare", helper)
+    prepare = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(prepare)
+    commands = []
+    monkeypatch.setattr(prepare, "command", lambda *args: commands.append(args) or "")
+    firmware = tmp_path / "u-boot.bin"
+    header = bytearray(64)
+    header[56:60] = b"ARM\x64"
+    struct.pack_into("<Q", header, 8, 0x80000)
+    firmware.write_bytes(header)
+    dtb = tmp_path / "source.dtb"
+    dtb.write_bytes(b"test dtb")
+    args = argparse.Namespace(kernel=firmware, dtb=dtb, initrd=None, output_dir=tmp_path / "boot",
+                              bootargs="", cpus=4, disk=True, firmware=True)
+    result = prepare.prepare(args)
+    assert result["addresses"]["kernel"] == 0x80080000
+    assert any("BOOT_ENTRY=2148007936" in call for call in commands)
+    assert result["initrd"] is None
+    args.initrd = dtb
+    with pytest.raises(ValueError, match="embeds initrd"):
+        prepare.prepare(args)
+
+
+@pytest.mark.parametrize("efi,slot,success", [(True, True, True), (False, True, True),
+                                            (True, False, True), (True, True, False)])
+def test_efi_supervisor_requires_firmware_and_slot_evidence(tmp_path, monkeypatch, efi, slot, success):
+    from types import SimpleNamespace
+    monkeypatch.setitem(sys.modules, "autosd_disk", SimpleNamespace(inspect_disk=lambda path: {
+        "bootctl": {"valid": True, "slots": [{"successful_boot": int(success), "tries_remaining": 0}]}}))
+    make_plan(tmp_path, f"""
+import pathlib, sys, time
+p = pathlib.Path(sys.argv[1])
+def output(text):
+    with (p/'linux-uart.log').open('a') as stream: stream.write(text)
+def wait_for(text):
+    while text not in (p/'linux-uart.in').read_text(): time.sleep(.01)
+output('U-Boot 2025.10\\n=> ')
+wait_for('bootefi test\\n')
+output('\\n[root@localhost ~]# ')
+wait_for('SMOKE_DONE')
+assert 'ukibootctl get-booted' in (p/'linux-uart.in').read_text()
+if {efi}: output('\\nAPOLLO_EFI_BOOTED\\n')
+if {slot}: output('\\nAPOLLO_UKIBOOT_SLOT=0\\n')
+output('\\nQBOX_LINUX_SMOKE_DONE\\n')
+time.sleep(30)
+""")
+    path = tmp_path / "launch.json"
+    plan = json.loads(path.read_text())
+    plan.update(bsp=False, autosd_mode="regular", uki={"boot_command": "bootefi test\n"})
+    path.write_text(json.dumps(plan))
+    expected = (0 if success else 1) if efi and slot else 124
+    assert runner.supervise(tmp_path, 1, True) == expected
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert result["efi_reboot_support"] == "NOT_IMPLEMENTED"
+
+
+def test_efi_reboot_is_explicitly_unsupported(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setitem(sys.modules, "autosd_disk", SimpleNamespace(inspect_disk=lambda path: {
+        "bootctl": {"valid": True}}))
+    make_plan(tmp_path, """
+import pathlib, sys, time
+p = pathlib.Path(sys.argv[1])
+with (p/'linux-uart.log').open('a') as stream:
+    stream.write('U-Boot 2025.10\\n=> ')
+while 'bootefi test' not in (p/'linux-uart.in').read_text(): time.sleep(.01)
+with (p/'linux-uart.log').open('a') as stream:
+    stream.write('\\nU-Boot 2025.10\\n=> ')
+time.sleep(30)
+""")
+    path = tmp_path / "launch.json"
+    plan = json.loads(path.read_text())
+    plan.update(bsp=False, autosd_mode="regular", uki={"boot_command": "bootefi test\n"})
+    path.write_text(json.dumps(plan))
+    assert runner.supervise(tmp_path, 3, False) == 1
+    assert json.loads((tmp_path / "result.json").read_text())["status"] == "UNSUPPORTED_REBOOT"
+
+
 def make_plan(tmp_path, program):
     for name in ("linux-uart.log", "linux-uart.in"):
         (tmp_path / name).touch()
@@ -59,6 +174,39 @@ def make_plan(tmp_path, program):
             }
         )
     )
+
+
+def test_autosd_supervisor_password_and_ostree_probe(tmp_path):
+    make_plan(tmp_path, """
+import pathlib, sys, time
+p = pathlib.Path(sys.argv[1])
+def wait_for(value):
+    while value not in (p/'linux-uart.in').read_text():
+        time.sleep(.01)
+def output(value):
+    with (p/'linux-uart.log').open('a') as stream:
+        stream.write(value)
+output('localhost login: ')
+wait_for('root\\n')
+output('\\nPassword: ')
+wait_for('password\\n')
+output('\\n[root@localhost ~]# ')
+wait_for('SMOKE_DONE')
+command = (p/'linux-uart.in').read_text()
+assert 'ostree admin status' in command and '/run/ostree-booted' in command
+assert 'dd if=/dev/vda' in command and '-eq 4' in command
+output('\\nQBOX_LINUX_SMOKE_DONE\\n')
+time.sleep(30)
+""")
+    path = tmp_path / "launch.json"
+    plan = json.loads(path.read_text())
+    plan.update(bsp=False, autosd_mode="ostree", environment={"QBOX_APOLLO_NUM_CPUS": "4"})
+    path.write_text(json.dumps(plan))
+    assert runner.supervise(tmp_path, 5, True) == 0
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert result["status"] == "PASS"
+    assert result["autosd_mode"] == "ostree"
+    assert "no OTA or secure boot qualification" in result["qualification"]
 
 
 @pytest.mark.parametrize("failed", [False, True])

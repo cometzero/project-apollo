@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,13 +24,18 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument(
+    images = p.add_mutually_exclusive_group()
+    images.add_argument(
         "--bsp", action="store_true", help="boot the BSP initramfs with its BSP WIC disk"
     )
+    images.add_argument("--autosd", type=Path, help="prepared AutoSD image JSON manifest")
     p.add_argument("--build-dir", type=Path, default=ROOT / "build")
     p.add_argument("--deploy-dir", type=Path)
     p.add_argument("--qboxconf", type=Path)
     p.add_argument("--kernel", type=Path)
+    p.add_argument("--uki", type=Path, help="first-boot-only AutoSD UKIBoot/EFI using a Yocto UKI")
+    p.add_argument("--uboot", type=Path, help="Apollo standalone U-Boot firmware for --uki")
+    p.add_argument("--ukiboot-dir", type=Path, help="deployed UKIBoot loader and slot addons")
     p.add_argument("--dtb", type=Path)
     p.add_argument("--initrd", type=Path)
     p.add_argument("--rootfs", type=Path)
@@ -97,6 +103,57 @@ def required(path: Path, label: str) -> Path:
     return path
 
 
+def autosd_manifest(path: Path | None) -> dict:
+    if path is None:
+        return {}
+    manifest = json.loads(required(path, "AutoSD manifest").read_text())
+    if not isinstance(manifest, dict) or manifest.get("mode") not in ("regular", "ostree"):
+        raise ValueError("AutoSD manifest mode must be regular or ostree")
+    for name in ("rootfs", "initrd"):
+        value = manifest.get(name)
+        if not isinstance(value, str) or not Path(value).is_absolute():
+            raise ValueError(f"AutoSD manifest {name} must be an absolute path")
+    if not isinstance(manifest.get("bootargs"), str) or not manifest["bootargs"].strip():
+        raise ValueError("AutoSD manifest requires bootargs")
+    return manifest
+
+
+class AutoSDConsole:
+    """Respond once per login stage; never accept an echoed probe as success."""
+
+    def __init__(self, mode: str, cpus: int, marker: str):
+        self.mode, self.cpus, self.marker = mode, cpus, marker
+        self.login_sent = self.password_sent = self.probe_sent = False
+        self.ready = False
+
+    def respond(self, observed: bytes, probe: bool) -> bytes:
+        prompt = re.search(rb"(?:\[root@[^\r\n]*\]#|root@[^\r\n]*#)\s*$", observed)
+        self.ready = bool(prompt)
+        if prompt and probe and not self.probe_sent:
+            self.probe_sent = True
+            # Composefs detaches its EROFS backing mount after creating the
+            # overlay; /proc/mounts need not expose that backing filesystem.
+            ostree = ("test -e /run/ostree-booted && ostree admin status && "
+                      "test \"$(findmnt -n -o FSTYPE -T /)\" = overlay && "
+                      if self.mode == "ostree" else "")
+            return (
+                "for path in / /usr /sysroot; do findmnt -T \"$path\"; done; "
+                "losetup -a; getenforce; systemctl --failed --no-pager; "
+                "uname -a && cat /etc/os-release && "
+                "(. /etc/os-release; test \"$ID\" = autosd) && "
+                f"test \"$(grep -c '^processor' /proc/cpuinfo)\" -eq {self.cpus} && "
+                "test -b /dev/vda && dd if=/dev/vda of=/dev/null bs=512 count=8 && "
+                f"{ostree}printf '{self.marker}_%s\\n' SMOKE_DONE\n"
+            ).encode()
+        if not self.login_sent and re.search(rb"[^\r\n]+ login:\s*$", observed):
+            self.login_sent = True
+            return b"root\n"
+        if self.login_sent and not self.password_sent and re.search(rb"Password:\s*$", observed):
+            self.password_sent = True
+            return b"password\n"
+        return b""
+
+
 def console(out: Path, log_name: str = "linux-uart.log", input_name: str = "linux-uart.in") -> int:
     """Poll the existing char_backend_file output; append raw UART input."""
     original = termios.tcgetattr(sys.stdin.fileno())
@@ -122,10 +179,16 @@ def console(out: Path, log_name: str = "linux-uart.log", input_name: str = "linu
 
 def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bool = False) -> int:
     plan = json.loads((out / "launch.json").read_text())
+    autosd = (AutoSDConsole(plan["autosd_mode"], int(plan["environment"].get("QBOX_APOLLO_NUM_CPUS", "1")),
+                           "QBOX_LINUX") if plan.get("autosd_mode") else None)
     started = time.monotonic()
     passed = False
     login_sent = False
     probe_sent = False
+    firmware_started = efi_observed = False
+    booted_slot = None
+    firmware_boots = 0
+    banner_tail = b""
     bsp_selftest = "NOT_OBSERVED" if plan["bsp"] else "NOT_APPLICABLE"
     status = "FAIL"
     rc = 1
@@ -160,6 +223,19 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                         sys.stdout.buffer.write(chunk)
                         sys.stdout.buffer.flush()
                     observed = (observed + chunk)[-65536:]
+                    if plan.get("uki"):
+                        banners = banner_tail + chunk
+                        matches = list(re.finditer(rb"(?:^|\n)U-Boot(?: |\r?\n)", banners))
+                        banner_tail = (banners[matches[-1].end():] if matches else banners)[-7:]
+                        firmware_boots += len(matches)
+                        if firmware_boots > 1:
+                            report("EFI restart is unsupported: SystemC whole-platform reset is not wired")
+                            passed, status, rc = False, "UNSUPPORTED_REBOOT", 1
+                            break
+                        if not firmware_started and re.search(rb"(?:^|\n)=>\s*$", observed):
+                            with (out / "linux-uart.in").open("ab") as uart_in:
+                                uart_in.write(plan["uki"]["boot_command"].encode())
+                            firmware_started = True
                     if plan["bsp"]:
                         previous_selftest = bsp_selftest
                         if b"NEXIOS_BSP_INITRAMFS_FAILED" in observed:
@@ -170,7 +246,25 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                             report(f"BSP selftest: {bsp_selftest}")
                     if exit_after_pass and b"Kernel panic - not syncing:" in observed:
                         break
-                    ready = (
+                    if autosd:
+                        response = autosd.respond(observed, exit_after_pass)
+                        if response:
+                            if plan.get("uki") and autosd.probe_sent:
+                                response = (b"for attempt in $(seq 1 60); do "
+                                    b"systemctl is-active --quiet ukiboot-set-success.service && break; "
+                                    b"systemctl is-failed --quiet ukiboot-set-success.service && break; sleep 1; done; "
+                                    b"journalctl -b -u ukiboot-set-success.service --no-pager; "
+                                    b"test -d /sys/firmware/efi && printf 'APOLLO_%s\\n' EFI_BOOTED && "
+                                    b"systemctl is-active --quiet ukiboot-set-success.service && "
+                                    b"ukibootctl dump && slot=$(ukibootctl get-booted) && "
+                                    b"test \"$slot\" = \"$(ukibootctl get-active)\" && "
+                                    b"printf 'APOLLO_UKIBOOT_%s=%s\\n' SLOT \"$slot\" && " + response)
+                            with (out / "linux-uart.in").open("ab") as uart_in:
+                                uart_in.write(response)
+                        login_sent, probe_sent = autosd.login_sent, autosd.probe_sent
+                        if autosd.ready and not exit_after_pass:
+                            passed = True
+                    ready = not autosd and (
                         re.search(rb"nexios-bsp(?:-failed)?#\s*$", observed)
                         if plan["bsp"] else plan["pass_marker"].encode() in observed
                     )
@@ -185,6 +279,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                             login_sent = True
                     if (
                         exit_after_pass
+                        and not autosd
                         and login_sent
                         and not probe_sent
                         and re.search(
@@ -206,7 +301,13 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                                 ).encode()
                             )
                         probe_sent = True
-                    if probe_sent and b"QBOX_LINUX_SMOKE_DONE" in observed:
+                    if re.search(rb"(?:^|\n)APOLLO_EFI_BOOTED\r?\n", observed):
+                        efi_observed = True
+                    slot_match = re.search(rb"(?:^|\n)APOLLO_UKIBOOT_SLOT=([01])\r?\n", observed)
+                    if slot_match:
+                        booted_slot = int(slot_match[1])
+                    if (probe_sent and b"QBOX_LINUX_SMOKE_DONE" in observed
+                            and (not plan.get("uki") or (efi_observed and booted_slot is not None))):
                         report("CPU and disk smoke check: PASS")
                         passed, status, rc = True, "PASS", 0
                         break
@@ -230,15 +331,35 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                 except subprocess.TimeoutExpired:
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait()
+            bootctl = None
+            if plan.get("uki"):
+                from autosd_disk import inspect_disk
+                try:
+                    bootctl = inspect_disk(out / "rootfs.wic")["bootctl"]
+                    if exit_after_pass and passed:
+                        slot = bootctl["slots"][booted_slot] if booted_slot is not None else {}
+                        if not (bootctl["valid"] and slot.get("successful_boot") == 1
+                                and slot.get("tries_remaining") == 0):
+                            passed, status, rc = False, "FAIL", 1
+                except (OSError, ValueError) as error:
+                    bootctl = {"error": str(error)}
+                    passed, status, rc = False, "FAIL", 1
             (out / "result.json").write_text(
                 json.dumps(
                     {
                         "status": status,
                         "login_observed": passed,
                         "bsp_selftest": bsp_selftest,
+                        "autosd_mode": plan.get("autosd_mode"),
+                        "boot_method": "ukiboot-efi" if plan.get("uki") else "direct-linux",
+                        "efi_boot_observed": efi_observed,
+                        "ukiboot_slot": booted_slot,
+                        "bootctl": bootctl,
+                        "efi_reboot_support": "NOT_IMPLEMENTED" if plan.get("uki") else "NOT_APPLICABLE",
                         "returncode": rc,
                         "elapsed_seconds": time.monotonic() - started,
-                        "qualification": "AP Linux boot only; other domains are mocks",
+                        "qualification": ("AutoSD AP boot only; no OTA or secure boot qualification; other domains are mocks"
+                                          if autosd else "AP Linux boot only; other domains are mocks"),
                     },
                     indent=2,
                 )
@@ -349,6 +470,11 @@ def main() -> int:
     if len(sys.argv) > 2 and sys.argv[1] == "supervise":
         return supervise(Path(sys.argv[2]), float(sys.argv[3]), bool(int(sys.argv[4])))
     args = parser().parse_args()
+    autosd = autosd_manifest(args.autosd)
+    if args.uki and (not autosd or args.kernel or args.initrd):
+        raise ValueError("--uki requires --autosd without --kernel or --initrd")
+    if (args.uboot or args.ukiboot_dir) and not args.uki:
+        raise ValueError("--uboot and --ukiboot-dir require --uki")
     if args.timeout < 0:
         raise ValueError("--timeout must be non-negative")
     deploy = (
@@ -361,18 +487,19 @@ def main() -> int:
         default_qboxconf = provider_fallback
     qboxconf = required(args.qboxconf or default_qboxconf, "qboxconf")
     env = provider_environment(qboxconf, args.build_dir.absolute())
-    kernel = required(args.kernel or deploy / "Image", "Linux Image")
+    kernel = required((args.uboot or deploy / "u-boot-apollo-qemu.bin") if args.uki
+                      else (args.kernel or deploy / "Image"), "Apollo U-Boot" if args.uki else "Linux Image")
     dtb = required(
         args.dtb or Path(env.get("QBOXCONF_IMAGE_AP_DTB") or deploy / "apollo-qvp.dtb"),
         "Linux DTB",
     )
     initrd_image = "nexios-bsp-initramfs" if args.bsp else "nexios-initramfs-image"
     initrd = required(
-        args.initrd or deploy / f"{initrd_image}-apollo-qvp.cpio.gz",
+        args.initrd or (Path(autosd["initrd"]) if autosd else deploy / f"{initrd_image}-apollo-qvp.cpio.gz"),
         "BSP initramfs" if args.bsp else "Yocto dm-verity initramfs",
     )
     rootfs = required(
-        args.rootfs or deploy / f"{image}-apollo-qvp.wic",
+        args.rootfs or (Path(autosd["rootfs"]) if autosd else deploy / f"{image}-apollo-qvp.wic"),
         "BSP WIC disk" if args.bsp else "Yocto rootfs disk",
     )
     conf = required(args.conf, "Linux platform Lua")
@@ -383,9 +510,35 @@ def main() -> int:
         / "build/qbox-apollo-qvp"
         / ("linux-" + time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}")
     ).absolute()
-    bootargs = args.bootargs or "console=ttyAMA0 earlycon=pl011,0x1a400000 " + (
+    bootargs = args.bootargs or autosd.get("bootargs") or "console=ttyAMA0 earlycon=pl011,0x1a400000 " + (
         "rdinit=/init" if args.bsp else "rootwait root=PARTLABEL=rootro_a ro"
     )
+    uki = None
+    if args.uki:
+        from autosd_uki import inspect_uki
+        from autosd_disk import inspect_disk
+        source = required(args.uki, "UKI")
+        source_metadata = inspect_uki(source)
+        virtual_end = max(section["rva"] + max(section["size"], section["raw_size"])
+                          for section in source_metadata["sections"].values())
+        if max(source.stat().st_size, virtual_end) + initrd.stat().st_size + 65536 > 256 * 1024**2:
+            raise ValueError("UKI plus initrd exceeds the 256 MiB loader safety limit")
+        if any(word.startswith("androidboot.slot_suffix=") for word in bootargs.split()):
+            raise ValueError("UKIBoot must select the slot, not bootargs")
+        if not any(word.startswith("efi=") for word in bootargs.split()):
+            bootargs += " efi=runtime"
+        loader_dir = args.ukiboot_dir or deploy
+        loader_files = {key: str(required(loader_dir / name, "UKIBoot artifact"))
+                        for key, name in (("loader", "ukibootaa64.efi"), ("addon_a", "slot_a.addon.efi"),
+                                          ("addon_b", "slot_b.addon.efi"))}
+        disk_info = inspect_disk(rootfs)
+        uki = {"source": str(source), "source_metadata": source_metadata,
+               "output": str(out / "autosd.efi"), "bootargs": bootargs,
+               "firmware": str(kernel), "firmware_sha256": hashlib.sha256(kernel.read_bytes()).hexdigest(),
+               "loader_files": loader_files, "source_disk": disk_info,
+               "boot_command": "setenv bootargs; "
+                   f"fatload virtio 0:{disk_info['partitions']['efi']['index']} 0x90000000 /EFI/BOOT/BOOTAA64.EFI "
+                   "&& bootefi 0x90000000 ${fdtcontroladdr}\n"}
     launch_env = {
         "QBOX_RDASPEN_ENABLE_AP_CPUS": "true",
         "QBOX_RDASPEN_HOST_MEMORY_DMI": "true",
@@ -393,7 +546,8 @@ def main() -> int:
         "QBOX_APOLLO_NUM_CPUS": str(args.cpus),
         "QBOX_LINUX_KERNEL": str(kernel),
         "QBOX_LINUX_DTB": str(out / "linux-boot/linux.dtb"),
-        "QBOX_LINUX_INITRD": str(initrd) if initrd else "",
+        "QBOX_LINUX_INITRD": str(initrd) if initrd and not uki else "",
+        "QBOX_LINUX_FIRMWARE": "true" if uki else "false",
         "QBOX_LINUX_BOOT_STUB": str(out / "linux-boot/boot.bin"),
         "QBOX_LINUX_BOOTARGS": bootargs,
         "QBOX_RDASPEN_ROOTFS": str(out / "rootfs.wic") if rootfs else "",
@@ -416,6 +570,8 @@ def main() -> int:
         "source_dtb": str(dtb),
         "source_rootfs": str(rootfs) if rootfs else None,
         "bsp": args.bsp,
+        "autosd_mode": autosd.get("mode"),
+        "uki": uki,
         "pass_marker": "nexios-bsp(?:-failed)?#" if args.bsp else "apollo-qvp login:",
         "layout": "Linux UART 70%; QBox log and interactive shell 15% each",
     }
@@ -438,6 +594,13 @@ def main() -> int:
             ],
             check=True,
         )
+    if uki:
+        from autosd_uki import prepare_uki
+        from autosd_disk import prepare_disk
+        uki["prepared_metadata"] = prepare_uki(Path(uki["source"]), initrd,
+                                                bootargs, Path(uki["output"]))
+        uki["prepared_disk"] = prepare_disk(out / "rootfs.wic", Path(uki["output"]),
+                                            **{key: Path(value) for key, value in uki["loader_files"].items()})
     # Boot payload helper is shared with the platform's direct-boot tests.
     helper = (
         ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py"
@@ -456,7 +619,9 @@ def main() -> int:
         "--cpus",
         str(args.cpus),
     ]
-    if initrd:
+    if uki:
+        prepare.append("--firmware")
+    elif initrd:
         prepare.extend(["--initrd", str(initrd)])
     if rootfs:
         prepare.append("--disk")
