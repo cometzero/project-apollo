@@ -5,6 +5,15 @@ dm-verity initramfs with a private copy of `nexios-image-apollo-qvp.wic`.
 `--bsp` selects the original `nexios-bsp-initramfs` cpio and boot/misc WIC;
 the BSP root remains in RAM. Neither mode modifies the deployed images.
 
+`--autosd build/autosd/regular.json` or `--autosd build/autosd/ostree.json`
+selects a prepared AutoSD nightly disk and its original dracut initramfs,
+using the deployed Apollo kernel. See [AutoSD preparation and qualification](autosd-apollo-linux.md).
+Add `--uki PATH` to install an adapted unsigned Yocto UKI into both raw
+AutoSD boot slots of a private disk copy. Dedicated `u-boot-apollo-qemu.bin`
+firmware executes the Yocto-built UKIBoot loader from the ESP, which selects
+the slot and maintains boot-control metadata. Kernel and EFI stub are preserved.
+`./yocto_build.sh --keep-conf --bsp` deploys these prerequisites.
+
 Build the host emulator with:
 
 ```bash
@@ -65,7 +74,9 @@ owns and terminates its child when the session closes.
 
 RSE, SI CL0/CL1, SCMI, remoteproc/RPMsg, PFDI, DSU, watchdog, DMA, PCIe,
 I2C, SPI and audio are not implemented by this Linux boot machine.
-Firmware is not executed. The generated DT omits unavailable devices;
+Direct-kernel modes do not execute firmware; `--uki` executes standalone
+U-Boot and the EFI stub, not TF-A, OP-TEE, RSE or Safety Island firmware.
+The generated DT omits unavailable devices;
 the original BSP checks still report their failures and enter the
 `nexios-bsp-failed#` shell. Boot smoke PASS is not full BSP qualification
 or evidence of FVP timing, power/reset or safety fidelity.
