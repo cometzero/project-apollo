@@ -114,3 +114,15 @@
 	path = hsoc-stack/tools/qemu
 	url = git@github.com:cometzero/qemu.git
 	branch = feature/qbox-rebase
+[submodule "autosd/sig-docs"]
+	path = autosd/sig-docs
+	url = https://gitlab.com/CentOS/automotive/sig-docs.git
+[submodule "autosd/composefs"]
+	path = autosd/composefs
+	url = https://github.com/containers/composefs.git
+[submodule "autosd/ukiboot"]
+	path = autosd/ukiboot
+	url = https://gitlab.com/CentOS/automotive/src/ukiboot.git
+[submodule "autosd/automotive-image-builder"]
+	path = autosd/automotive-image-builder
+	url = git@github.com:cometzero/automotive-image-builder.git
