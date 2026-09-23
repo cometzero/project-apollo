@@ -126,3 +126,6 @@
 [submodule "autosd/automotive-image-builder"]
 	path = autosd/automotive-image-builder
 	url = git@github.com:cometzero/automotive-image-builder.git
+[submodule "autosd/iceoryx2"]
+	path = autosd/iceoryx2
+	url = https://github.com/eclipse-iceoryx/iceoryx2.git
