@@ -1,0 +1,9 @@
+# Timestamp-based Watchdogs registers
+
+Source: <https://developer.arm.com/documentation/102803/latest/Programmers-model/Peripheral-Region/Timestamp-based-Watchdogs-registers>
+
+### Timestamp-based Watchdogs registers
+
+CRSAS Ma1 implements two timestamp-based watchdogs in the system. All reside in the PD\_SYS power domain and are reset by nWARMRESETSYS. One watchdog timer is Secure access only, while another is Non-secure. Each Watchdog Timer implements two register frames, a Control Frame and a Refresh Frame. The Control Frame is always fixed privileged while the Refresh Frame accessibility to unprivileged access is configurable and controlled by PPC0. See [PERIPHSPPPC0](/documentation/102803/0000/Programmers-model/Peripheral-Region/Secure-Access-Configuration-Register-Block/PERIPHSPPPC0?lang=en "Secure Unprivileged Access Peripheral Interconnect Subordinate Peripheral Protection Controller Register allows software to configure if each Peripheral Interconnect peripheral that it controls through a PPC is only allowed Secure privileged access or is allowed Secure unprivileged access as well. Each field defines this for an associated peripheral, by the following settings:") and [PERIPHNSPPPC0](/documentation/102803/0000/Programmers-model/Peripheral-Region/Non-secure-Access-Configuration-Register-Block/PERIPHNSPPPC0?lang=en "Non-secure Unprivileged Access Peripheral Interconnect Subordinate Peripheral Protection Controller Register allows software to configure if each Peripheral Interconnect peripheral that it controls through a PPC is only Non-secure privileged access or is allowed Non-secure unprivileged access as well.").
+
+For more information, see [System Watchdog overview](/documentation/102803/0000/System-timer-components/System-Watchdog-overview?lang=en "The following figure shows a block diagram of the System Watchdog.") appendix.
