@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AutoSD · Automotive Lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 이동</a>
+  <aside class="rail" aria-label="대시보드 탐색">
+    <a class="brand" href="#main" aria-label="AutoSD Automotive Lab 홈">A<span>↗</span></a>
+    <span class="rail-caption">APOLLO / AUTOSD</span>
+    <nav><a href="#control" title="실행 제어">01</a><a href="#monitor" title="실시간 모니터링">02</a><a href="#results" title="실험 결과">03</a><a href="#logs" title="실행 로그">04</a></nav>
+    <span class="rail-bottom">ENGINEERING LAB</span>
+  </aside>
+  <main id="main">
+    <header class="topbar"><span class="eyebrow">AUTOMOTIVE SOFTWARE DEFINED · APOLLO QVP</span><div class="connection"><span class="dot" id="connection-dot"></span><span id="connection-status">연결 중</span><button class="icon-button" id="refresh" aria-label="상태 새로고침" title="상태 새로고침">↻</button></div></header>
+    <section class="hero">
+      <div><p class="eyebrow">WORKSPACE / EXPERIMENT CONTROL</p><h1>AutoSD <span>Automotive Lab.</span></h1><p class="intro">실행부터 관찰까지, 하나의 작업 공간.<br>자동차 워크로드와 실시간 지연을 실제 실행 증거로 확인합니다.</p></div>
+      <div class="hero-status"><span class="eyebrow">SIMULATION STATUS</span><strong id="simulation-status">확인 중</strong><span id="simulation-detail">상태를 불러오고 있습니다.</span><span class="host-stamp" id="updated-at">—</span></div>
+    </section>
+    <div class="notice" id="notice" role="status" hidden></div>
+    <section class="panel system-panel" aria-labelledby="system-title">
+      <div class="section-heading"><div><p class="eyebrow">SYSTEM / LIFECYCLE CONTROL</p><h2 id="system-title">System control</h2></div><span id="system-state" class="badge">UNKNOWN</span></div>
+      <p id="system-description" class="section-description">대시보드가 소유한 AutoSD VM 제어 · 호스트 전원 제어가 아닙니다.</p>
+      <label class="backend-picker">실행 대상<select id="backend-select" aria-label="시뮬레이션 실행 대상" disabled><option>백엔드 확인 중</option></select><span id="backend-note" class="footnote">VM 정상 종료 후 변경할 수 있습니다.</span></label>
+      <div id="system-controls" class="system-controls"><p class="empty">시스템 제어 상태를 확인하고 있습니다.</p></div>
+      <div id="system-progress" aria-live="polite"></div>
+      <div id="domain-boot" class="domain-boot" aria-label="Full system domain 부팅 상태" hidden></div>
+    </section>
+    <section class="summary-grid" aria-label="실행 요약"><article><span class="eyebrow">ACTIVE JOBS</span><strong id="active-count">—</strong><span>현재 실행 작업</span></article><article><span class="eyebrow">GUEST CPU</span><strong id="cpu-count">—</strong><span>관측된 CPU instance</span></article><article><span class="eyebrow">EVIDENCE</span><strong id="evidence-count">—</strong><span>보존된 결과 묶음</span></article><article class="scope-note"><span class="eyebrow">VALIDATION BOUNDARY</span><strong>Functional, not physical.</strong><span>가상 플랫폼의 지연은 물리 보드의 WCET·FTTI 또는 ASIL 보증이 아닙니다.</span></article></section>
+    <div class="workspace-grid">
+      <section class="panel controls" id="control"><div class="section-heading"><div><p class="eyebrow">01 / EXECUTION</p><h2>Feature & demo</h2></div><span class="tag">LOCAL ONLY</span></div><p class="section-description">허용된 시나리오만 실행합니다. 부하·지연 실험은 실행 중인 guest에 영향을 줍니다.</p><div id="actions" class="actions"><p class="empty">실행 카탈로그를 불러오고 있습니다.</p></div><details class="manual-features"><summary>추가 feature · 수동 실행 범위</summary><div id="manual-features"></div></details></section>
+      <section class="panel cpu-panel" id="monitor"><div class="section-heading"><div><p class="eyebrow">02 / LIVE TELEMETRY</p><h2>CPU instances</h2></div><span class="badge" id="monitor-status">WAITING</span></div><div class="chart-key"><span><i class="key-dot"></i> Guest utilization</span><span>0–100% · 실제 표본 간 차분</span></div><div id="cpu-charts" class="cpu-charts"><p class="empty">CPU 표본이 아직 없습니다.<br>guest 연결 후 측정값을 표시합니다.</p></div><p class="footnote" id="monitor-note">호스트 CPU 사용률과 guest CPU 사용률은 서로 다른 지표입니다.</p></section>
+    </div>
+    <section class="panel subsystem-panel"><div class="section-heading"><div><p class="eyebrow">SYSTEM OBSERVABILITY</p><h2>Subsystems & partitions</h2></div><span class="small-note">보고된 상태만 표시</span></div><div id="subsystems" class="subsystems"><p class="empty">서브시스템 상태를 기다리고 있습니다.</p></div></section>
+    <section class="panel results-panel" id="results">
+      <div class="section-heading"><div><p class="eyebrow">03 / MEASUREMENT EVIDENCE</p><h2>실험 결과</h2></div><label class="select-label">결과 묶음<select id="evidence-select" aria-label="결과 묶음 선택"><option value="">결과 없음</option></select></label></div>
+      <div id="evidence-meta" class="evidence-meta">수집된 실행 결과가 없습니다.</div>
+      <p class="footnote">RT·Mixed criticality·Watchdog 완료 시 현재 세션의 새 결과를 자동 선택합니다. 기능 검증과 지연 기준 판정은 별개입니다. 공유 커널의 자원 분리 관측은 ASIL 인증이나 FTTI 보장이 아닙니다. RTLA 각 행은 관측 최대값과 실행 기준의 비교입니다. — 는 미수집 값이며 0이 아닙니다.</p>
+      <div id="functional-results" class="table-scroll" hidden></div>
+      <div class="results-grid"><div class="table-scroll"><table><caption class="sr-only">선택한 실험 결과와 지연 통계. 지연 단위는 마이크로초입니다.</caption><thead><tr><th scope="col">시나리오</th><th scope="col">측정</th><th scope="col">지연 판정</th><th scope="col">최소 µs</th><th scope="col">평균 µs</th><th scope="col">최대 µs</th><th scope="col">P99 µs</th><th scope="col">표본</th><th scope="col">기준 µs</th><th scope="col">기준 초과 횟수</th></tr></thead><tbody id="result-rows"><tr><td colspan="10" class="empty">결과를 선택하면 측정값을 표시합니다.</td></tr></tbody></table></div><div class="latency-panel"><div class="chart-label"><span id="chart-title">MAX LATENCY</span><span id="chart-unit">µs / 시나리오별</span></div><div id="latency-chart" class="latency-chart"><p class="empty">유효한 지연 측정값이 없습니다.</p></div><p class="footnote">흰 점선: 실행 당시 기준. RT 비교의 주황 막대는 검출용 지연 주입(성능 비교 제외). Timerlat은 분포, OS noise는 시간별 실제 이벤트를 표시합니다. Histogram의 over는 범위 밖 표본이며 기준 초과 횟수가 아닙니다. RTLA P99·기준 초과 횟수는 제공되지 않으면 — 로 표시합니다.</p></div></div>
+    </section>
+    <section class="panel logs-panel" id="logs">
+      <div class="section-heading"><div><p class="eyebrow">04 / EXECUTION JOURNAL</p><h2>Host log · 작업 실행</h2></div><span id="running-tab-count" aria-live="polite"></span></div>
+      <div id="job-log-panel">
+        <label class="host-log-select">작업 선택 · 이전 세션은 실행 이력에서 조회<select id="job-select" aria-label="Host 작업 로그 선택"><option value="">현재 세션 작업 없음</option></select></label>
+        <div id="job-meta" class="evidence-meta">실행한 작업이 없습니다.</div>
+        <pre id="log-output" tabindex="0" aria-label="선택한 작업의 실행 로그">작업 실행 후 로그가 여기에 표시됩니다.</pre>
+      </div>
+    </section>
+    <section class="panel logs-panel" id="guest-logs" aria-labelledby="guest-log-title">
+      <div class="section-heading"><div><p class="eyebrow">GUEST / BOOT & APPLICATION JOURNALS</p><h2 id="guest-log-title">Guest log</h2></div><a href="/?view=guest" target="_blank" rel="noopener" class="feature-log-button">새 창에서 보기 ↗</a></div>
+      <p class="section-description">기본 부팅: Root의 Safety monitor·BlueChi, ADAS 앱, QM 컨테이너와 QM native/container 앱. 장애 주입·RT 측정 시나리오는 명시적으로 실행합니다.</p>
+      <label class="host-log-select">Guest 로그 대상<select id="guest-source" aria-label="Guest 로그 대상"><option value="uart">Boot UART</option></select></label>
+      <div id="guest-log-panel">
+        <div id="guest-log-meta" class="evidence-meta">현재 부팅의 Guest UART 출력 · 작업 선택과 무관하게 고정</div>
+        <pre id="guest-log-output" tabindex="0" aria-label="현재 Guest UART 출력">Guest 부팅을 기다리고 있습니다.</pre>
+      </div>
+    </section>
+    <footer><span>APOLLO QVP / AUTOSD</span><span>원본 로그 기반 · 관측되지 않은 항목은 PASS로 추정하지 않습니다.</span><a href="#main">맨 위로 ↑</a></footer>
+  </main>
+</body>
+</html>
