@@ -20,6 +20,7 @@ import time
 import tty
 
 ROOT = Path(__file__).resolve().parents[2]
+from qbox_monitor_manifest import monitor_plan, monitor_environment, preflight as monitor_preflight, update_runtime, prepare_qmp
 
 
 def parser() -> argparse.ArgumentParser:
@@ -42,6 +43,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--ssh-port", type=int,
                    help="forward loopback TCP port to guest SSH through user networking")
     p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
+    p.add_argument("--monitor", action="store_true", help="enable read-only loopback monitor")
+    p.add_argument("--monitor-port", type=int, help="monitor TCP port (implies --monitor)")
+    p.add_argument("--qmp", action="store_true", help="opt in to AP QMP biflow (implies monitor)")
     p.add_argument(
         "--conf",
         type=Path,
@@ -221,6 +225,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
             with (out / "linux-uart.log").open("rb") as uart:
                 observed = b""
                 while child.poll() is None:
+                    update_runtime(plan.get("monitor", {}), child.pid, plan.get("run_id", out.name))
                     chunk = uart.read()
                     if echo_uart and chunk:
                         sys.stdout.buffer.write(chunk)
@@ -566,7 +571,9 @@ def main() -> int:
                "boot_command": "setenv bootargs; "
                    f"fatload virtio 0:{disk_info['partitions']['efi']['index']} 0x90000000 /EFI/BOOT/BOOTAA64.EFI "
                    "&& bootefi 0x90000000 ${fdtcontroladdr}\n"}
+    monitor = monitor_plan(args.monitor or args.qmp, args.monitor_port, out, cpus=args.cpus)
     launch_env = {
+        **monitor_environment(monitor),
         "QBOX_RDASPEN_ENABLE_AP_CPUS": "true",
         "QBOX_RDASPEN_HOST_MEMORY_DMI": "true",
         "LD_LIBRARY_PATH": env["QBOXCONF_LD_LIBRARY_PATH"],
@@ -594,6 +601,8 @@ def main() -> int:
     for value in args.platform_param:
         command.extend(["-p", value])
     plan = {
+        "schema_version": 1, "run_id": out.name, "backend": "qbox", "monitor": monitor,
+        "qmp_enabled": args.qmp,
         "command": command,
         "environment": launch_env,
         "qboxconf": str(qboxconf),
@@ -608,6 +617,8 @@ def main() -> int:
     print(json.dumps(plan, indent=2), flush=True)
     if args.dry_run:
         return 0
+    monitor_preflight(monitor)
+    prepare_qmp(plan)
     if not args.headless and not shutil.which("tmux"):
         raise ValueError("tmux is required; use --headless otherwise")
     out.mkdir(parents=True, exist_ok=False)

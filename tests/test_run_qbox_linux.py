@@ -10,6 +10,7 @@ import pytest
 
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts/run/run_qbox_linux.py"
+sys.path.insert(0, str(SCRIPT.parent))
 SPEC = importlib.util.spec_from_file_location("qbox_linux_runner", SCRIPT)
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
