@@ -37,6 +37,14 @@ bootctl CRC and successful slot A. This is still an AP-only mock profile:
 whole-platform guest reset is not implemented, and QBox OTA/rollback and
 Secure Boot remain unqualified. See [QBox EFI evidence](autosd-qbox-efi-followup-ko.md).
 
+`run_qbox_autosd.sh` and dashboard backend `qbox-full` integrate the AutoSD
+private disk with the canonical full-system firmware chain instead. The dashboard
+requires RSE, SI CL0, SI CL1 (including RPMsg attach), AP UKIBoot/login and SSH
+readiness separately; an AP login is not whole-platform qualification. See the
+[full-system AutoSD guide](autosd-fullsystem-dashboard-ko.md) for prerequisites,
+per-domain evidence and runtime limitations. QEMU and QBox AP-only remain separate
+selectable backends; switching requires all owned VM operations to stop first.
+
 An explicitly separate development profile, `run_qbox_linux.sh` /
 `apollo-qvp-linux.lua`, boots Linux directly using SystemC domain mocks.
 `--bsp` selects the BSP initramfs plus its boot/misc WIC disk (initramfs root,
@@ -887,3 +895,51 @@ ASoC PIO and cyclic DMA validation and the timing limitations.
    services.
 7. Drive A720AE DSU event counters from modeled cache/memory activity and route
    overflow interrupts to cluster SPIs 216 through 219.
+
+## AutoSD boot and reset integration (2026-09-28)
+
+The full-system AutoSD profile now uses normal RT boot defaults, conditional
+trace-cmd udev reloads, restrictive ESP mount permissions, and matched BTF/YAMA
+kernel support. U-Boot OS handoff no longer aborts sibling device removal on an
+EFI handle teardown error, allowing FF-A RX/TX unmapping before Linux starts.
+See [the boot report](autosd-boot-performance-ko.md) for measured boot times,
+guest service checks, and warnings that remain intentionally visible.
+
+A native SCMI/RSE full-system reboot was observed with unchanged QBox PIDs,
+new RSE/SCP/Zephyr/AP boot markers, and a changed AutoSD boot ID. This is not
+watchdog expiry qualification. The launcher now tracks per-domain boot epochs
+and repeats provisioning for a new AP boot rather than reusing historical PASS.
+SI PPUs now establish external CPU holds before the QEMU instance reset;
+managed start-in-reset CPUs retain that hold across QEMU's global resume.
+The 2026-09-28 held-reset run restored SI1 deferred PFDI/network/RPMsg logs
+after native reboot, with all domain markers and AP provisioning passing.
+After two watchdog recoveries, a further native reboot reproduced the missing
+SI1 deferred logs. That run remained partial. A subsequent live snapshot
+identified a Zephyr shell/logger backend-ID initialization race, not a stopped
+SI timer. Backend IDs now initialize synchronously before threads run.
+The final non-debug `autosd-watchdog-entry-fixed-20260928` sequence passed
+two native reboots interleaved with two WS1 recoveries, all new SI boot logs,
+AP four-CPU/application/HIPC checks, and normal shutdown. The root full runner
+also derives all four SI1 RVBAR defaults from the matching ELF entry, validates
+binary sections/post-build CRC, and records `si-cl1-boot.json`; it no longer
+relies on the Lua fallback address after a Zephyr relink. This bounded result
+does not qualify reset stress, physical timing, or the earlier isolated cold
+boot core2 OFF boundary failure.
+The isolated held-CPU diagnostic reached seven functional checkpoints with
+both old and new headers but timed out during teardown; it is not a clean
+process-level PASS or a deterministic negative control.
+
+Reset work drains consumed common signal events, reconciles watchdog WS1 with
+reset release, and advances the watchdog compare value at first expiry.
+`--reset-trace` enables bounded WS0/WS1/reset evidence. Current watchdog reset
+scope is a QVP integration policy, not inferred silicon reset fidelity.
+AP non-secure WS1 now reaches SI0 INTID321 for coordinated AP-off, RSE BL2
+reload acknowledgment, AP context/mailbox reset, and CPU0 restart. Two
+consecutive expiries in the 2026-09-28 sequence-retry run recovered four AP
+CPUs, application health, PFDI startup and HIPC ICMP (3/3 each), without
+restarting QBox host processes. The Zephyr reattach path restores its owned
+resource table and rings before acknowledging AP reattachment.
+This does not qualify secure/SI watchdog injection or physical reset timing.
+A separate cold-boot core2-OFF/core3-entry stall remains an explicit limitation.
+See [power and watchdog qualification](autosd-power-watchdog-validation-ko.md)
+for the runtime evidence and remaining boundaries.
