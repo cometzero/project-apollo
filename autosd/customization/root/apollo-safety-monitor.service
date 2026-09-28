@@ -1,0 +1,17 @@
+[Unit]
+Description=Apollo development safety monitor
+After=apollo-adas.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /usr/libexec/apollo/safety-monitor.py
+RuntimeDirectory=apollo-safety
+RuntimeDirectoryPreserve=yes
+CPUAffinity=0
+# Emulated Podman exec may exceed 2s under concurrent TCG load.
+Environment=APOLLO_PROBE_TIMEOUT=10
+TimeoutStopSec=65
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

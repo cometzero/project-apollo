@@ -1,0 +1,17 @@
+[Unit]
+Description=Apollo QM native application demo
+
+[Service]
+ExecStart=/usr/libexec/apollo/workload run /run/apollo-qm/heartbeat
+RuntimeDirectory=apollo-qm
+Restart=on-failure
+RestartSec=2
+MemoryMax=64M
+TasksMax=16
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

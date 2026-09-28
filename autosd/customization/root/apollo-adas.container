@@ -1,0 +1,23 @@
+[Unit]
+Description=Apollo ADAS control development workload
+
+[Container]
+Image=localhost/apollo-workload:1
+Pull=never
+ContainerName=apollo-adas
+Exec=/workload run /run/heartbeat
+Network=none
+ReadOnly=true
+Tmpfs=/run:rw,nosuid,nodev,noexec,size=1m
+DropCapability=all
+NoNewPrivileges=true
+PodmanArgs=--cpuset-cpus=1 --memory=384m --pids-limit=64
+
+[Service]
+Slice=apollo-asil-b.slice
+Restart=no
+TimeoutStartSec=60
+TimeoutStopSec=45
+
+[Install]
+WantedBy=multi-user.target

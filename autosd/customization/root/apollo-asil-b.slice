@@ -1,0 +1,9 @@
+[Unit]
+Description=ADAS development execution domain (not ASIL certified)
+
+[Slice]
+AllowedCPUs=1
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=128
+CPUWeight=200

@@ -1,0 +1,16 @@
+diff --git a/src/libcrun/linux.c b/src/libcrun/linux.c
+--- a/src/libcrun/linux.c
++++ b/src/libcrun/linux.c
+@@ -2651,6 +2651,12 @@ get_mount_label_how (const char *type, bool is_sysfs_or_proc)
+   if (is_sysfs_or_proc)
+     return LABEL_NONE;
+ 
++  /* The cgroup superblock is shared, not a per-container filesystem.
++     Match do_mount_cgroup_v2: preserve its existing SELinux labels even
++     when pre-creating mounts with fsopen instead of mount(2). */
++  if (strcmp (type, "cgroup") == 0 || strcmp (type, "cgroup2") == 0)
++    return LABEL_NONE;
++
+   if (strcmp (type, "mqueue") == 0)
+     return LABEL_XATTR;
+ 

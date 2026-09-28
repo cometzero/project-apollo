@@ -1,0 +1,21 @@
+[Unit]
+Description=Apollo nested QM container demo
+
+[Container]
+Image=localhost/apollo-workload:1
+Pull=never
+ContainerName=apollo-qm-container
+Exec=/workload run /run/heartbeat
+Network=none
+ReadOnly=true
+Tmpfs=/run:rw,nosuid,nodev,noexec,size=1m
+DropCapability=all
+NoNewPrivileges=true
+PodmanArgs=--memory=64m --pids-limit=32
+
+[Service]
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
