@@ -350,6 +350,65 @@ def test_product_uses_verity_initramfs_and_readonly_slot(monkeypatch, tmp_path, 
     assert plan["source_rootfs"] == str(tmp_path / "nexios-image-apollo-qvp.wic")
 
 
+def test_dashboard_ssh_is_pinned_to_loopback(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) + ["--ssh-port", "2245"])
+    assert runner.main() == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["environment"]["QBOX_APOLLO_NETDEV"] == "type=user,hostfwd=tcp:127.0.0.1:2245-:22"
+
+
+@pytest.mark.parametrize("override", ["", " systemd.default_device_timeout_sec=90s"])
+def test_autosd_device_timeout_is_bounded_and_respects_explicit_value(monkeypatch, tmp_path, capsys, override):
+    argv = make_deploy(monkeypatch, tmp_path)
+    manifest = tmp_path / "regular.json"
+    manifest.write_text(json.dumps({"mode": "regular", "rootfs": str(tmp_path / "nexios-image-apollo-qvp.wic"),
+                                   "initrd": str(tmp_path / "nexios-initramfs-image-apollo-qvp.cpio.gz"),
+                                   "bootargs": "console=ttyAMA0" + override}))
+    monkeypatch.setattr(sys, "argv", argv + ["--autosd", str(manifest)])
+    assert runner.main() == 0
+    bootargs = json.loads(capsys.readouterr().out)["environment"]["QBOX_LINUX_BOOTARGS"]
+    assert bootargs.count("systemd.default_device_timeout_sec=") == 1
+    assert bootargs.endswith(override.strip() or "systemd.default_device_timeout_sec=180s")
+
+
+@pytest.mark.parametrize("port", ["22", "65536", "-1"])
+def test_invalid_ssh_port_rejected(monkeypatch, tmp_path, port):
+    monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) + ["--ssh-port", port])
+    with pytest.raises(ValueError, match="ssh-port"):
+        runner.main()
+
+
+def test_guest_poweroff_releases_owned_simulator(tmp_path):
+    make_plan(tmp_path, """
+import pathlib, sys, time
+p = pathlib.Path(sys.argv[1])
+with (p/'linux-uart.log').open('a') as stream:
+    stream.write('reboot: Power down\\n')
+time.sleep(30)
+""")
+    assert runner.supervise(tmp_path, 2, False) == 0
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert result["status"] == "POWERED_OFF"
+    assert result["poweroff_observed"] is True
+    assert result["login_observed"] is False
+
+
+def test_autosd_native_restart_fails_closed(tmp_path):
+    make_plan(tmp_path, """
+import pathlib, sys, time
+p = pathlib.Path(sys.argv[1])
+with (p/'linux-uart.log').open('a') as stream:
+    stream.write('reboot: Restarting system\\n')
+time.sleep(30)
+""")
+    path = tmp_path / "launch.json"
+    plan = json.loads(path.read_text())
+    plan["autosd_mode"] = "regular"
+    path.write_text(json.dumps(plan))
+    assert runner.supervise(tmp_path, 2, False) == 1
+    assert json.loads((tmp_path / "result.json").read_text())["status"] == "UNSUPPORTED_REBOOT"
+
+
 def test_bsp_keeps_its_original_initramfs_and_init(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) + ["--bsp"])
     assert runner.main() == 0

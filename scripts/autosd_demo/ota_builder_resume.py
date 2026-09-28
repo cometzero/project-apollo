@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Restart the existing private AIB builder without copying its large disks."""
 import json
+import argparse
 import os
 from pathlib import Path
 import socket
@@ -12,8 +13,13 @@ BUILDER = ROOT / "build/autosd/demo-builder-fullsystem"
 
 
 def main():
-    WORK.mkdir(exist_ok=True)
-    for directory in (BUILDER, WORK):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--out", type=Path, default=WORK,
+                        help="Evidence directory; builder-uart.log must not already exist")
+    args = parser.parse_args()
+    work = args.out.resolve()
+    work.mkdir(parents=True, exist_ok=True)
+    for directory in (BUILDER, WORK, work):
         pidfile = directory / "qemu.pid"
         if pidfile.exists():
             cmdline = Path("/proc") / pidfile.read_text().strip() / "cmdline"
@@ -23,10 +29,10 @@ def main():
         probe.bind(("127.0.0.1", 2226))
     launch = json.loads((BUILDER / "launch.json").read_text())
     environment = json.loads((ROOT / "build/autosd/demo-regular-session/launch.json").read_text())["environment"]
-    with (WORK / "builder-uart.log").open("xb") as log:
+    with (work / "builder-uart.log").open("xb") as log:
         child = subprocess.Popen(launch["command"], env=os.environ | environment,
                                  stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
-        (WORK / "qemu.pid").write_text(str(child.pid) + "\n")
+        (work / "qemu.pid").write_text(str(child.pid) + "\n")
         return child.wait()
 
 

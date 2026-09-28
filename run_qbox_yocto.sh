@@ -1392,7 +1392,7 @@ if [[ -z "${RSE_OTP_OVERRIDE}" && ! -s "${RSE_OTP}" ]]; then
 fi
 
 SSH_PORT_VALUE="${SSH_PORT:-$(default_ssh_port_range)}"
-NETDEV="type=user,hostfwd=tcp::${SSH_PORT_VALUE}-:22"
+NETDEV="${QBOX_APOLLO_NETDEV:-type=user,hostfwd=tcp::${SSH_PORT_VALUE}-:22}"
 if [[ -n "${VALIDATION_HTTP_PORT}" ]]; then
     NETDEV+=",guestfwd=tcp:10.0.2.100:18080-tcp:127.0.0.1:${VALIDATION_HTTP_PORT}"
 fi

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import binascii
 from dataclasses import dataclass
 import datetime as _dt
 import errno
@@ -16,6 +17,7 @@ import re
 import signal
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -370,12 +372,19 @@ def timestamp() -> str:
 
 def run_full_system_dry_run(args: argparse.Namespace) -> int:
     artifacts = resolved_artifacts(args)
+    blocker = None
+    if artifacts["si_cl1_symbols"].is_file() and artifacts["si_cl1_image"].is_file():
+        blocker = prepare_si_cl1_boot(args, artifacts)
+    else:
+        args.si_cl1_boot = {"status": "NOT_EVALUATED", "reason": "dry-run inputs absent"}
     command = child_command(args, artifacts)
     platform_params = full_system_platform_params(args)
     status = {
         "schema_version": 1,
-        "passed": True,
-        "verdict": "dry-run",
+        "passed": blocker is None,
+        "verdict": "blocked" if blocker else "dry-run",
+        "blocker": blocker,
+        "si_cl1_boot": args.si_cl1_boot,
         "dry_run": True,
         "boot_mode": "apollo-full-system",
         "safety_island_topology": "full-system",
@@ -402,7 +411,7 @@ def run_full_system_dry_run(args: argparse.Namespace) -> int:
     (args.out_dir / "summary.txt").write_text(
         "\n".join(
             [
-                "passed: True",
+                f"passed: {blocker is None}",
                 "verdict: dry-run",
                 "monitor: "
                 + (
@@ -416,7 +425,7 @@ def run_full_system_dry_run(args: argparse.Namespace) -> int:
         encoding="utf-8",
     )
     print(args.out_dir)
-    return 0
+    return 1 if blocker else 0
 
 
 def artifact_record(path: Path) -> dict[str, Any]:
@@ -756,6 +765,111 @@ def resolved_artifacts(args: argparse.Namespace) -> dict[str, Path]:
         if value is not None:
             artifacts[name] = value
     return {name: path.resolve() for name, path in artifacts.items()}
+
+
+def si_cl1_boot_config(args: argparse.Namespace, artifacts: dict[str, Path]) -> dict[str, Any]:
+    """Resolve RVBAR from the exact ELF whose load bytes form the SI1 image."""
+    elf_path, image_path = artifacts["si_cl1_symbols"], artifacts["si_cl1_image"]
+    elf, image = elf_path.read_bytes(), image_path.read_bytes()
+    base, limit = 0x140000000, 0x140800000
+    if len(elf) < 64 or elf[:7] != b"\x7fELF\x02\x01\x01":
+        raise ValueError("SI1 requires an ELF64 little-endian ELF")
+    header = struct.unpack_from("<HHIQQQIHHHHHH", elf, 16)
+    kind, machine, version, entry, phoff = header[:5]
+    ehsize, phentsize, phnum = header[7:10]
+    if (kind, machine, version, ehsize, phentsize) != (2, 183, 1, 64, 56):
+        raise ValueError("SI1 requires an AArch64 executable with ELF64 program headers")
+    if not phnum or phnum == 0xffff or phoff < 64 or phoff + phnum * phentsize > len(elf):
+        raise ValueError("invalid SI1 ELF program-header bounds")
+    if not base <= entry < limit or entry % 4:
+        raise ValueError("SI1 ELF entry is not aligned inside SI1 SRAM")
+    if not image or len(image) > limit - base:
+        raise ValueError("SI1 binary is empty or exceeds SI1 SRAM")
+    entry_executable = False
+    load_count = 0
+    for index in range(phnum):
+        ptype, flags, offset, vaddr, paddr, filesz, memsz, _ = struct.unpack_from(
+            "<IIQQQQQQ", elf, phoff + index * phentsize)
+        if ptype != 1:
+            continue
+        load_count += 1
+        if (filesz > memsz or offset > len(elf) or filesz > len(elf) - offset
+                or paddr < base or paddr > limit or memsz > limit - paddr
+                or vaddr != paddr):
+            raise ValueError("invalid SI1 ELF PT_LOAD bounds or non-identity address")
+        relative = paddr - base
+        if filesz and (relative > len(image) or filesz > len(image) - relative):
+            raise ValueError("SI1 ELF PT_LOAD exceeds the supplied binary")
+        if flags & 1 and paddr <= entry < paddr + filesz:
+            entry_executable = True
+    if not load_count or not entry_executable:
+        raise ValueError("SI1 ELF entry is not in a file-backed executable PT_LOAD")
+    # objcopy may fill inter-section gaps differently from ELF segment padding.
+    # Compare every allocated file-backed section, not those unowned gap bytes.
+    shoff, shentsize, shnum = header[5], header[10], header[11]
+    if not shnum or shentsize != 64 or shoff < 64 or shoff + shnum * shentsize > len(elf):
+        raise ValueError("invalid SI1 ELF section-header bounds")
+    if header[12] >= shnum:
+        raise ValueError("invalid SI1 ELF section-name table index")
+    names = struct.unpack_from("<IIQQQQIIQQ", elf, shoff + header[12] * shentsize)
+    if names[4] > len(elf) or names[5] > len(elf) - names[4]:
+        raise ValueError("invalid SI1 ELF section-name table bounds")
+    names_data = elf[names[4]:names[4] + names[5]]
+    section_count, entry_section = 0, False
+    crc_verified = False
+    for index in range(shnum):
+        name, stype, flags, addr, offset, size, _, _, _, _ = struct.unpack_from(
+            "<IIQQQQIIQQ", elf, shoff + index * shentsize)
+        if not flags & 2 or stype == 8 or not size:
+            continue
+        relative = addr - base
+        if (relative < 0 or relative > len(image) or size > len(image) - relative
+                or offset > len(elf) or size > len(elf) - offset):
+            raise ValueError("invalid SI1 ELF allocated-section bounds")
+        if name >= len(names_data):
+            raise ValueError("invalid SI1 ELF section-name offset")
+        section_name = names_data[name:].split(b"\0", 1)[0]
+        if section_name == b".image_crc":
+            # Zephyr's image_crc_patcher.py updates only the binary after
+            # objcopy, excluding the final 48-byte boot params and CRC field.
+            if (size != 4 or relative != len(image) - 4 or len(image) < 52
+                    or int.from_bytes(image[-4:], "little") != binascii.crc32(image[:-52])):
+                raise ValueError("invalid SI1 binary post-build image CRC")
+            crc_verified = True
+        elif image[relative:relative + size] != elf[offset:offset + size]:
+            raise ValueError("SI1 ELF and binary allocated-section bytes do not match")
+        section_count += 1
+        if flags & 4 and addr <= entry < addr + size:
+            entry_section = True
+    if not entry_section:
+        raise ValueError("SI1 ELF entry has no matching executable binary section")
+    cpus = {}
+    for cpu in range(4):
+        key = f"platform.si_cl1_cpu_{cpu}.rvbar"
+        explicit = next((p.partition("=")[2] for p in reversed(args.platform_param)
+                         if p.partition("=")[0] == key), None)
+        value = entry if explicit is None else int(explicit, 0)
+        if not base <= value < limit or value % 4:
+            raise ValueError(f"{key} must be aligned inside SI1 SRAM")
+        cpus[key] = {"value": hex(value), "source": "ELF e_entry" if explicit is None else "explicit"}
+    return {"status": "PASS", "elf": str(elf_path), "binary": str(image_path),
+            "elf_sha256": hashlib.sha256(elf).hexdigest(),
+            "binary_sha256": hashlib.sha256(image).hexdigest(),
+            "entry": hex(entry), "load_segments_verified": load_count,
+            "load_sections_verified": section_count, "image_crc_verified": crc_verified,
+            "cpus": cpus}
+
+
+def prepare_si_cl1_boot(args: argparse.Namespace, artifacts: dict[str, Path]) -> str | None:
+    if args.build_only:
+        args.si_cl1_boot = {"status": "SKIP", "reason": "build-only"}
+        return None
+    try:
+        args.si_cl1_boot = si_cl1_boot_config(args, artifacts)
+    except (OSError, ValueError, struct.error) as error:
+        args.si_cl1_boot = {"status": "BLOCKED", "reason": str(error)}
+        return f"si_cl1_boot_invalid:{error}"
+    return None
 
 
 def missing_required(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[str]:
@@ -1362,6 +1476,7 @@ def write_result(
         "validation_scope": "uboot-only" if args.uboot_only else "full-system",
         "safety_island_topology": "full-system",
         "qemu_platform_params": full_system_platform_params(args),
+        "si_cl1_boot": getattr(args, "si_cl1_boot", {"status": "NOT_EVALUATED"}),
         "ap_tcg_mode": effective_platform_param(
             args,
             "platform.ap_qemu_inst.tcg_mode",
@@ -2008,6 +2123,9 @@ def full_system_platform_params(args: argparse.Namespace) -> list[str]:
     params = list(args.platform_param)
     explicit_keys = {param.partition("=")[0] for param in params}
     defaults = []
+    for key, selection in getattr(args, "si_cl1_boot", {}).get("cpus", {}).items():
+        if key not in explicit_keys:
+            defaults.append(f"{key}={selection['value']}")
     for key, env_name, default in (
         *FULL_SYSTEM_AP_QEMU_DEFAULTS,
         *FULL_SYSTEM_RSE_QEMU_DEFAULTS,
@@ -2210,6 +2328,10 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
 def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int, list[str]]:
     cmd = child_command(args, artifacts)
     clear_run_outputs(args.out_dir)
+    (args.out_dir / "si-cl1-boot.json").write_text(
+        json.dumps(getattr(args, "si_cl1_boot", {}), indent=2) + "\n", encoding="utf-8")
+    print("Resolved SI1 boot: " + json.dumps(getattr(args, "si_cl1_boot", {}), sort_keys=True),
+          flush=True)
     print("+ " + " ".join(cmd), flush=True)
     env = os.environ.copy()
     env["QBOX_BUILD_DIR"] = str(args.qbox_build_dir)
@@ -2270,6 +2392,22 @@ def run_child(args: argparse.Namespace, artifacts: dict[str, Path]) -> tuple[int
         proc = subprocess.Popen(
             cmd, cwd=workspace_root(), env=env, start_new_session=True
         )
+        if getattr(args, "foreground_runtime", False):
+            # A service supervisor must own the runtime for its entire life,
+            # including its log readers. SIGINT lets runtime finally stop its
+            # separately-sessioned QBox process before this parent exits.
+            previous_sigterm = signal.getsignal(signal.SIGTERM)
+            def interrupt_runtime(signum, frame):
+                if proc.poll() is None:
+                    proc.send_signal(signal.SIGINT)
+            signal.signal(signal.SIGTERM, interrupt_runtime)
+            try:
+                return proc.wait(), cmd
+            except KeyboardInterrupt:
+                interrupt_runtime(signal.SIGINT, None)
+                return proc.wait(), cmd
+            finally:
+                signal.signal(signal.SIGTERM, previous_sigterm)
         return wait_for_keep_running_child_pass(args, proc, cmd), cmd
 
     proc = subprocess.run(cmd, cwd=workspace_root(), env=env, check=False)
@@ -2386,6 +2524,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Forward to the RSE-oriented runner so QBox remains alive after "
             "the pass condition."
         ),
+    )
+    parser.add_argument(
+        "--foreground-runtime",
+        action="store_true",
+        help="Wait for the keep-running runtime lifetime (for service supervisors).",
     )
     parser.add_argument(
         "--monitor",
@@ -2856,6 +2999,8 @@ def main(argv: list[str] | None = None) -> int:
     debug_manifest_blocker = ensure_default_debug_manifest(args, artifacts)
     missing = missing_required(args, artifacts)
     blocker = debug_manifest_blocker or ("; ".join(missing) if missing else None)
+    if not blocker:
+        blocker = prepare_si_cl1_boot(args, artifacts)
     if args.check_only or blocker:
         return write_result(
             args,

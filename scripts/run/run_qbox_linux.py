@@ -39,6 +39,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--dtb", type=Path)
     p.add_argument("--initrd", type=Path)
     p.add_argument("--rootfs", type=Path)
+    p.add_argument("--ssh-port", type=int,
+                   help="forward loopback TCP port to guest SSH through user networking")
     p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
     p.add_argument(
         "--conf",
@@ -191,6 +193,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
     banner_tail = b""
     bsp_selftest = "NOT_OBSERVED" if plan["bsp"] else "NOT_APPLICABLE"
     status = "FAIL"
+    poweroff_observed = False
     rc = 1
     with (out / "qbox.log").open("ab", buffering=0) as log:
         def report(message: str) -> None:
@@ -223,6 +226,21 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                         sys.stdout.buffer.write(chunk)
                         sys.stdout.buffer.flush()
                     observed = (observed + chunk)[-65536:]
+                    if re.search(rb"(?:^|\n)(?:\[[^\]\r\n]+\]\s*)?reboot: Power down\r?\n", observed):
+                        # Linux completed its normal shutdown; release this
+                        # owned simulator rather than waiting for its deadline.
+                        poweroff_observed = True
+                        status, rc = "POWERED_OFF", 0
+                        report("Guest poweroff observed; stopping owned QBox process")
+                        break
+                    if plan.get("autosd_mode") and not plan.get("uki") and re.search(
+                            rb"(?:^|\n)(?:\[[^\]\r\n]+\]\s*)?reboot: Restarting system\r?\n", observed):
+                        # This AP-only profile has no whole-platform reset
+                        # fanout. Preserve the failure instead of hanging or
+                        # mistaking the old login for a successful reboot.
+                        passed, status, rc = False, "UNSUPPORTED_REBOOT", 1
+                        report("Guest requested restart; AP direct reset is unsupported")
+                        break
                     if plan.get("uki"):
                         banners = banner_tail + chunk
                         matches = list(re.finditer(rb"(?:^|\n)U-Boot(?: |\r?\n)", banners))
@@ -349,6 +367,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                     {
                         "status": status,
                         "login_observed": passed,
+                        "poweroff_observed": poweroff_observed,
                         "bsp_selftest": bsp_selftest,
                         "autosd_mode": plan.get("autosd_mode"),
                         "boot_method": "ukiboot-efi" if plan.get("uki") else "direct-linux",
@@ -477,6 +496,8 @@ def main() -> int:
         raise ValueError("--uboot and --ukiboot-dir require --uki")
     if args.timeout < 0:
         raise ValueError("--timeout must be non-negative")
+    if args.ssh_port is not None and not 1024 <= args.ssh_port <= 65535:
+        raise ValueError("--ssh-port must be 1024..65535")
     deploy = (
         args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp"
     ).absolute()
@@ -513,6 +534,12 @@ def main() -> int:
     bootargs = args.bootargs or autosd.get("bootargs") or "console=ttyAMA0 earlycon=pl011,0x1a400000 " + (
         "rdinit=/init" if args.bsp else "rootwait root=PARTLABEL=rootro_a ro"
     )
+    if autosd and not args.uki and not any(
+            word.startswith("systemd.default_device_timeout_sec=") for word in bootargs.split()):
+        # AutoSD's normal 30s device timeout can expire during QBox
+        # coldplug. Match its bounded debug-image allowance, without
+        # skipping the ESP mount or changing other service deadlines.
+        bootargs += " systemd.default_device_timeout_sec=180s"
     uki = None
     if args.uki:
         from autosd_uki import inspect_uki
@@ -551,6 +578,9 @@ def main() -> int:
         "QBOX_LINUX_BOOT_STUB": str(out / "linux-boot/boot.bin"),
         "QBOX_LINUX_BOOTARGS": bootargs,
         "QBOX_RDASPEN_ROOTFS": str(out / "rootfs.wic") if rootfs else "",
+        "QBOX_APOLLO_NETDEV": (f"type=user,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22"
+                              if args.ssh_port is not None else os.environ.get("QBOX_APOLLO_NETDEV",
+                                  os.environ.get("QBOX_RDASPEN_NETDEV", "type=user,hostfwd=tcp::2222-:22"))),
         "QBOX_RDASPEN_PRIMARY_CONSOLE_LOG": str(out / "linux-uart.log"),
         "QBOX_RDASPEN_PRIMARY_UART_READ_FILE": str(out / "linux-uart.in"),
         "QBOX_RDASPEN_MHU_TRACE": "true" if args.domain_trace else "false",
