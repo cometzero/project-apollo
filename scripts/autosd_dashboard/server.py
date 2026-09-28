@@ -34,6 +34,8 @@ CATALOG = [
     ("osnoise", "OS noise", "CPU 1 histogram · TCG sample 중지 기준 5000 µs", False),
     ("mixed-criticality", "Mixed criticality MC01–MC03", "자원 분리 · QM 부하 · 장애 격리 기능 데모 (안전 인증 아님)", True),
     ("watchdog", "Watchdog WD01–WD03", "장치 검사 · keepalive · 서비스 watchdog; 하드웨어 reset 제외", True),
+    ("monitor-mhu", "MHU doorbell 장애 및 전체 reset 복구", "QBox full opt-in 전용; HIPC 손실 주입 후 RSE/SI/AP 전체 reset · 앱/통신 복구 검사", True),
+    ("monitor-qualify", "QBox Pause/Resume 실증 검증", "QBox full 전용; 10회 정지/재개 · HIPC/health · watchdog AP reset 복구 검증 후 현재 VM 제어 활성화", True),
     ("shutdown", "시뮬레이션 종료", "이 서버가 시작한 guest만 정상 종료", False),
 ]
 SCENARIOS = {
@@ -74,11 +76,11 @@ SYSTEM_CONTROLS = [
     ("boot", "Power on", "AutoSD VM 부팅", False),
     ("shutdown", "Power off", "guest 정상 종료 (강제 종료 아님)", True),
     ("reboot", "Reboot", "현재 디스크를 유지하고 guest OS 재부팅", True),
-    ("pause", "Pause", "QEMU CPU 실행 일시정지; 먼저 진행 중 작업을 완료하세요", True),
-    ("resume", "Resume", "일시정지한 QEMU CPU 실행 재개", False),
+    ("pause", "Pause", "가상 시스템 실행 일시정지; 먼저 진행 중 작업을 완료하세요", True),
+    ("resume", "Resume", "일시정지한 가상 시스템 실행 재개", False),
 ]
 ACTION_METADATA.update({a: (t, d, c) for a, t, d, c in SYSTEM_CONTROLS if a != "shutdown"})
-CONTROL_BARRIERS = {"pause", "resume", "reboot", "shutdown"}
+CONTROL_BARRIERS = {"pause", "resume", "reboot", "shutdown", "monitor-mhu", "monitor-qualify"}
 MEASUREMENT_ACTIONS = {"rt", "timerlat", "osnoise"} | {
     action for action, row in CHILD_ACTIONS.items() if row[0] in ("rt", "watchdog", "mixed-criticality")} | {"watchdog", "mixed-criticality"}
 BACKENDS = {"qemu": "QEMU TCG", "qbox": "QBox AP only", "qbox-full": "QBox full system"}
@@ -94,7 +96,7 @@ def guest_timeout(action):
     return 1500 if action == "automotive" else 360 if action_family(action) == "automotive" else 240
 
 
-ARTIFACTS = {"evidence.tar.gz", "results.json", "scenarios.json", "trace-result.json",
+ARTIFACTS = {"evidence.tar.gz", "results.json", "scenarios.json", "trace-result.json", "qualification.json",
              "rtla.log", "job.json", "console.log"}
 
 
@@ -164,10 +166,15 @@ def telemetry_history(base):
 
 
 class Dashboard:
-    def __init__(self, base, manifest=None, rootfs=None, ssh_port=2244, allow=False, backend="qemu"):
+    def __init__(self, base, manifest=None, rootfs=None, ssh_port=2244, allow=False, backend="qemu",
+                 runtime_injection=False, qbox_diagnostics=False):
         if backend not in BACKENDS:
             raise ValueError("Unsupported backend: choose qemu, qbox or qbox-full")
         self.backend = backend
+        self.runtime_injection = runtime_injection
+        self.qbox_diagnostics = qbox_diagnostics
+        self.qbox_pause_run = None
+        self.qbox_pause_unknown_run = None
         self.boot_timeout = {"qemu": 240, "qbox": 600, "qbox-full": 900}[backend]
         self.base = Path(base)
         self.manifest, self.rootfs = manifest, rootfs
@@ -198,6 +205,10 @@ class Dashboard:
             self.monitoring = dict(real, status="OFFLINE", historical=True)
         self.sample_count = 0
         self.session = None
+        from simulator import Simulator
+        self.simulator_barriers = MEASUREMENT_ACTIONS | CONTROL_BARRIERS
+        self.simulator = Simulator(self)
+        self.monitor_port = None
         for path in sorted((self.base / "dashboard").glob("*/*/job.json"))[-200:]:
             if path.is_symlink() or (self.base / "dashboard").resolve() not in path.resolve().parents:
                 continue
@@ -216,6 +227,12 @@ class Dashboard:
         return self.vm_process is not None and self.vm_process.poll() is None
 
     def unsupported_control(self, action):
+        if (self.backend == "qbox-full" and action == "resume" and self.vm_job is not None
+                and self.qbox_pause_unknown_run == self.vm_job):
+            return None
+        if (self.backend == "qbox-full" and action in ("pause", "resume") and self.vm_job is not None
+                and self.qbox_pause_run == self.vm_job):
+            return None
         if ((self.backend != "qemu" and action in ("pause", "resume"))
                 or (self.backend == "qbox" and action == "reboot")):
             return (BACKENDS[self.backend] + ": " + action + " control is not qualified; "
@@ -289,8 +306,16 @@ class Dashboard:
                 "--autosd", str(self.manifest), "--rootfs", str(self.rootfs),
                 "--headless", "--timeout", "7200", "--out-dir", str(directory / "vm")]
         if self.backend != "qemu":
+            with socket.socket() as probe:
+                probe.bind(('127.0.0.1', 0))
+                self.monitor_port = probe.getsockname()[1]
+            argv += ["--monitor-port", str(self.monitor_port)]
+            if self.qbox_diagnostics:
+                argv += ["--qmp"]
             if self.backend == "qbox-full":
                 argv += ["--reset-trace"]
+                if self.runtime_injection:
+                    argv += ["--runtime-injection"]
             return argv + ["--ssh-port", str(self.ssh_port)]
         return argv + ["--netdev", "user,id=net0,hostfwd=tcp:127.0.0.1:" + str(self.ssh_port) + "-:22"]
 
@@ -327,6 +352,15 @@ class Dashboard:
                          and not self.auto_health_pending and (domains_ready or action == "shutdown"))}
                        for action, title, desc, disruptive in CATALOG]
             for item in catalog:
+                if item["action"] == "monitor-qualify" and self.backend != "qbox-full":
+                    item["enabled"] = False
+                    item["unsupported_reason"] = "QBox full system only"
+                if item["action"] == "monitor-mhu":
+                    reason = ("QBox full system only" if self.backend != "qbox-full" else
+                              "Requires server --runtime-injection and a fresh opted-in boot"
+                              if not self.runtime_injection else None)
+                    item["enabled"] = item["enabled"] and reason is None
+                    item["unsupported_reason"] = reason
                 if self.backend != "qemu":
                     item["description"] = ("전용 복사본으로 Apollo " + ("QBox AP direct" if self.backend == "qbox" else BACKENDS[self.backend]) + " 실행" if item["action"] == "boot"
                                            else item["description"].replace("TCG", "QBox 기능 관찰용 잠정"))
@@ -352,17 +386,20 @@ class Dashboard:
                                              for name in DOMAIN_LOGS] if self.backend == "qbox-full" else []), *SERVICE_LOG_SOURCES],
                     "domain_boot": domain_boot,
                     "monitoring": self.monitoring, "monitoring_history": list(self.history),
+                    "simulator": self.simulator.snapshot(),
+                    "simulator_capabilities": self.simulator.capabilities(),
                     "evidence": evidence(self.base),
                     "vm": {"running": running, "owned": self.vm_process is not None,
                            "backend": self.backend,
                            "paused": running and self.vm_paused,
+                           "pause_state_unknown": running and self.vm_job is not None and self.qbox_pause_unknown_run == self.vm_job,
                            "log_session": self.log_session,
                            "guest_log_url": "/api/guest/log",
                            "ssh_port": self.ssh_port, "boot_job": self.vm_job},
                     "capabilities": {"execution_enabled": enabled, "platform": "QBox AP direct" if self.backend == "qbox" else BACKENDS[self.backend],
                         "qualification": "FUNCTIONAL_ONLY_NOT_HARDWARE_TIMING",
                         "unsupported": (["QBox Pause/Resume/Reboot"] if self.backend == "qbox" else
-                                        ["QBox Pause/Resume"] if self.backend == "qbox-full" else []) + ["RSE/Safety Island physical counters",
+                                        ["QBox Pause/Resume"] if self.backend == "qbox-full" and (not self.vm_job or self.qbox_pause_run != self.vm_job) else []) + ["RSE/Safety Island physical counters",
                                         "key-only SSH" if self.backend == "qbox-full" else "native UKI/key-only SSH", "remote hosts"],
                         "manual_features": [
                             {"id": "ota", "title": "OTA / UKIBoot A/B", "status": "MANUAL_ONLY", "reason": "Native UKI/OSTree guest and signed update payload required"},
@@ -375,6 +412,10 @@ class Dashboard:
                 raise ValueError("Unknown action")
             if action == "watchdog-wd04" and self.backend != "qbox-full":
                 raise ValueError("WD04 is supported only on QBox full system")
+            if action == "monitor-mhu" and (self.backend != "qbox-full" or not self.runtime_injection):
+                raise ValueError("MHU reset scenario requires QBox full and server --runtime-injection")
+            if action == "monitor-qualify" and self.backend != "qbox-full":
+                raise ValueError("Pause/Resume qualification requires QBox full")
             if self.unsupported_control(action):
                 raise ValueError(self.unsupported_control(action))
             if not self.allow or not self.manifest or not self.rootfs:
@@ -385,7 +426,7 @@ class Dashboard:
                 raise ValueError("Another demo operation is running")
             if self.auto_health_pending and not automatic and action not in CONTROL_BARRIERS:
                 raise ValueError("Automatic boot health verification is pending")
-            if self.backend == "qbox-full" and action not in ("boot", "shutdown") and self.domain_boot()["status"] != "PASS":
+            if self.backend == "qbox-full" and action not in ("boot", "shutdown", "resume") and self.domain_boot()["status"] != "PASS":
                 raise ValueError("Full-system domain boot verification is not complete")
             if (action == "boot") == self.running():
                 raise ValueError("VM already running" if action == "boot" else "No owned running VM")
@@ -404,12 +445,15 @@ class Dashboard:
                    "backend": self.backend,
                    "started_at": now(), "finished_at": None, "returncode": None, "result": None}
             if action == "boot":
+                self.qbox_pause_run = None
+                self.qbox_pause_unknown_run = None
                 self.log_session = job["id"]
                 self.guest_log_offset = 0
             job["log_session"] = self.log_session
+            job["vm_run_id"] = job["id"] if action == "boot" else self.vm_job
             job["log_url"] = "/api/jobs/" + job["id"] + "/log"
             job["artifacts_url"] = "/api/jobs/" + job["id"] + "/artifacts/"
-            if action in ("boot", "reboot", "shutdown", "watchdog-wd04"):
+            if action in ("boot", "reboot", "shutdown", "watchdog-wd04", "monitor-mhu", "monitor-qualify"):
                 self.feature_session = job["id"]
                 self.auto_health_pending = action != "shutdown"
                 self.boot_deadline = time.monotonic() + self.boot_timeout if action == "boot" else None
@@ -509,6 +553,23 @@ class Dashboard:
             raise ValueError(self.unsupported_control(action))
         if action not in ("pause", "resume") or not self.running():
             raise ValueError("No owned VM or invalid monitor control")
+        if self.backend == "qbox-full":
+            collector = self.simulator.collector
+            if collector is None or collector.run_id != self.vm_job:
+                raise ValueError("Current owned QBox collector unavailable")
+            from qbox_control import control
+            result = control(collector, action)
+            if result.get("status") == "PASS":
+                self.vm_paused = action == "pause"
+                self.qbox_pause_unknown_run = None
+            else:
+                # An uncertain pause OR resume may have left simulation stopped.
+                # Block guest jobs and expose only explicit current-run Resume.
+                self.vm_paused = True
+                self.qbox_pause_unknown_run = self.vm_job
+                self.qbox_pause_run = None
+            log.write(("[qbox] " + action + " " + result.get("status", "UNKNOWN") + "\n").encode())
+            return result
         boot = next(j for j in self.jobs if j["id"] == self.vm_job)
         directory = Path(boot["evidence_path"]) / "vm"
         output = directory / "qemu-monitor.log"
@@ -538,7 +599,7 @@ class Dashboard:
         action = job["action"]
         code = 1
         try:
-            with (self.telemetry_lock if action in MEASUREMENT_ACTIONS | CONTROL_BARRIERS else nullcontext()), (directory / "console.log").open("wb", buffering=0) as log:
+            with (self.simulator.io_lock if action in MEASUREMENT_ACTIONS | CONTROL_BARRIERS else nullcontext()), (self.telemetry_lock if action in MEASUREMENT_ACTIONS | CONTROL_BARRIERS else nullcontext()), (directory / "console.log").open("wb", buffering=0) as log:
                 if action == "boot":
                     argv = self.boot_command(directory)
                     process = subprocess.Popen(argv, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
@@ -550,12 +611,24 @@ class Dashboard:
                     code = process.wait()
                 elif action in ("pause", "resume"):
                     job["result"] = self.control_monitor(action, log)
-                    code = 0
+                    code = 0 if job["result"].get("status") != "UNKNOWN" else 1
                     self.monitoring = dict(self.monitoring, status="PAUSED" if self.vm_paused else "STALE")
                 elif action_family(action) == "watchdog":
                     from watchdog_scenarios import run
                     job["result"] = run(self, job, log)
                     code = 0 if job["result"]["status"] == "PASS" else 1
+                elif action == "monitor-mhu":
+                    from monitor_scenarios import run
+                    job["result"] = run(self, job, log)
+                    code = 0 if job["result"]["status"] == "PASS" else 1
+                elif action == "monitor-qualify":
+                    from qbox_control import run
+                    job["result"] = run(self, job, log)
+                    code = 0 if job["result"]["status"] == "PASS" else 1
+                    if job["result"].get("pause_state_unknown"):
+                        self.qbox_pause_unknown_run = self.vm_job
+                        self.qbox_pause_run = None
+                        self.vm_paused = True
                 else:
                     if action == "reboot":
                         from telemetry import collect
@@ -634,13 +707,18 @@ class Dashboard:
                            and job["result"][-1].get("status") == "BLOCKED" else
                            "UNSUPPORTED" if code == 77 or (isinstance(job.get("result"), dict)
                                                            and job["result"].get("status") == "UNSUPPORTED") else
+                           job["result"]["status"] if action in ("monitor-mhu", "monitor-qualify", "pause", "resume") and
+                           isinstance(job.get("result"), dict) and
+                           job["result"].get("status") in ("UNKNOWN", "UNCONFIRMED") else
                            "EXCEEDED" if action_family(action) == "rt" and code == 2 else
                            "PASS" if code == 0 else "TIMEOUT" if code == 124 else "FAIL")
                 if self.active == job["id"]:
                     self.active = None
                 if job.get("feature_session") and job["feature_session"] == self.feature_session:
-                    if action in ("reboot", "watchdog-wd04"):
-                        if code == 0:
+                    if action in ("reboot", "watchdog-wd04", "monitor-mhu", "monitor-qualify"):
+                        if code == 0 or (action == "monitor-mhu" and isinstance(job.get("result"), dict)
+                                        and job["result"].get("after_boot_id")
+                                        and not job["result"].get("recovery_required", True)):
                             self.boot_ready(job["feature_session"], job["result"]["after_boot_id"])
                         else:
                             self.boot_failed(job["status"], job.get("error", "Reboot verification failed"))
@@ -650,6 +728,13 @@ class Dashboard:
                         self.feature_health.update(status="BLOCKED", phase="VM 종료: 자동 검사 미실행")
                         self.auto_health_pending = False
                 self.persist(job)
+
+            if action != 'boot':
+                try:
+                    evidence = self.simulator.finish_evidence(job)
+                    (directory / 'simulator-result.json').write_text(json.dumps(evidence) + '\n')
+                except OSError:
+                    pass
 
     def boot_failed(self, status, reason):
         """Caller holds lock; historical jobs remain unchanged."""
@@ -678,7 +763,7 @@ class Dashboard:
         with self.lock:
             if session != self.feature_session or not self.auto_health_pending:
                 return
-            if any(j.get("id") == self.active and j.get("action") in ("reboot", "watchdog-wd04") for j in self.jobs):
+            if any(j.get("id") == self.active and j.get("action") in ("reboot", "watchdog-wd04", "monitor-mhu", "monitor-qualify") for j in self.jobs):
                 # Only the reboot worker can validate the pre/post boot ID
                 # and firmware epoch; background telemetry cannot bypass it.
                 return
@@ -816,8 +901,8 @@ class Dashboard:
         if job is None or name not in ARTIFACTS:
             raise KeyError(name)
         directory = Path(job["evidence_path"]).resolve()
-        path = directory / name if name in ("job.json", "console.log") or (
-            action_family(job.get("action", "")) == "watchdog" and name == "scenarios.json") else directory / "guest" / name
+        path = directory / name if name in ("job.json", "console.log", "qualification.json") or (
+            action_family(job.get("action", "")) in ("watchdog", "monitor-mhu", "monitor-qualify") and name == "scenarios.json") else directory / "guest" / name
         if path.is_symlink() or directory not in path.resolve().parents or not path.is_file():
             raise KeyError(name)
         if path.stat().st_size > 256 * 1024 * 1024:
@@ -869,6 +954,38 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/state":
             self.send(200, self.server.app.state())
+        elif path == "/api/simulator/snapshot":
+            self.send(200, self.server.app.simulator.snapshot())
+        elif path == "/api/simulator/capabilities":
+            self.send(200, self.server.app.simulator.capabilities())
+        elif path == "/api/simulator/objects":
+            try:
+                parent = parse_qs(urlsplit(self.path).query).get('parent', [''])[0]
+                self.send(200, self.server.app.simulator.objects(parent))
+            except (ValueError, RuntimeError) as error:
+                self.send(503, {'error': str(error)})
+        elif path == "/api/simulator/qmp":
+            try:
+                if not self.server.app.qbox_diagnostics:
+                    raise RuntimeError("QMP diagnostics require server --qbox-diagnostics and a new opted-in boot")
+                query = parse_qs(urlsplit(self.path).query)
+                domain = query.get('domain', ['ap'])[0]
+                command = query.get('command', ['query-status'])[0]
+                self.send(200, self.server.app.simulator.diagnostics(domain, command))
+            except (ValueError, RuntimeError) as error:
+                self.send(503, {'error': str(error)})
+        elif path == "/api/simulator/events":
+            try:
+                after = int(parse_qs(urlsplit(self.path).query).get('after', ['0'])[0])
+                if after < 0:
+                    raise ValueError('after must be nonnegative')
+                snapshot = self.server.app.simulator.snapshot()
+                events = snapshot.get('events', [])
+                self.send(200, {'run_id': snapshot.get('run_id'),
+                                'gap': bool(events and after and after < events[0]['seq'] - 1),
+                                'events': [event for event in events if event['seq'] > after][:100]})
+            except ValueError as error:
+                self.send(400, {'error': str(error)})
         elif len(path.split("/")) == 6 and path.startswith("/api/jobs/") and path.split("/")[4] == "artifacts":
             try:
                 file = self.server.app.artifact(path.split("/")[3], path.split("/")[5])
@@ -967,8 +1084,14 @@ def main():
     parser.add_argument("--backend", choices=tuple(BACKENDS), default="qemu",
                         help="Initial managed backend (default qemu); selectable while powered off")
     parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--base-dir", type=Path, default=ROOT / "build/autosd",
+                        help="Dashboard evidence and private run disks directory")
     parser.add_argument("--rootfs", type=Path)
     parser.add_argument("--allow-private-guest", action="store_true")
+    parser.add_argument("--runtime-injection", action="store_true",
+                        help="opt in to QBox full MHU fault and whole-system reset scenario")
+    parser.add_argument("--qbox-diagnostics", action="store_true",
+                        help="enable per-domain QMP on new QBox boots")
     args = parser.parse_args()
     try:
         addresses = list(dict.fromkeys(str(ipaddress.IPv4Address(value)) for value in (args.listen or ["127.0.0.1"])))
@@ -991,7 +1114,8 @@ def main():
         manifest = read_json(args.manifest)
         if not isinstance(manifest, dict) or manifest.get("mode") != "regular":
             parser.error("Managed demos require a prepared regular AutoSD manifest")
-    app = Dashboard(ROOT / "build/autosd", args.manifest, args.rootfs, args.ssh_port, args.allow_private_guest, args.backend)
+    app = Dashboard(args.base_dir, args.manifest, args.rootfs, args.ssh_port, args.allow_private_guest, args.backend,
+                    args.runtime_injection, args.qbox_diagnostics)
     servers = []
     hosts = {ip + ":" + str(args.port) for ip in addresses}
     if "127.0.0.1" in addresses:
@@ -1008,6 +1132,7 @@ def main():
             server.server_close()
         raise
     threading.Thread(target=app.monitor, daemon=True).start()
+    threading.Thread(target=app.simulator.run, daemon=True).start()
     for server in servers:
         threading.Thread(target=server.serve_forever, daemon=True).start()
         print("AutoSD dashboard: http://" + server.server_address[0] + ":" + str(args.port), flush=True)
