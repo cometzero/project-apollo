@@ -37,6 +37,23 @@
       <section class="panel cpu-panel" id="monitor"><div class="section-heading"><div><p class="eyebrow">02 / LIVE TELEMETRY</p><h2>CPU instances</h2></div><span class="badge" id="monitor-status">WAITING</span></div><div class="chart-key"><span><i class="key-dot"></i> Guest utilization</span><span>0–100% · 실제 표본 간 차분</span></div><div id="cpu-charts" class="cpu-charts"><p class="empty">CPU 표본이 아직 없습니다.<br>guest 연결 후 측정값을 표시합니다.</p></div><p class="footnote" id="monitor-note">호스트 CPU 사용률과 guest CPU 사용률은 서로 다른 지표입니다.</p></section>
     </div>
     <section class="panel subsystem-panel"><div class="section-heading"><div><p class="eyebrow">SYSTEM OBSERVABILITY</p><h2>Subsystems & partitions</h2></div><span class="small-note">보고된 상태만 표시</span></div><div id="subsystems" class="subsystems"><p class="empty">서브시스템 상태를 기다리고 있습니다.</p></div></section>
+    <section class="panel simulator-panel" id="simulator" aria-labelledby="simulator-title">
+      <div class="section-heading"><div><p class="eyebrow">SIMULATOR / FIRMWARE OBSERVABILITY</p><h2 id="simulator-title">QBox domains & clocks</h2></div><span id="simulator-status" class="badge">WAITING</span></div>
+      <p id="simulator-note" class="section-description">Guest SSH와 독립적으로 시뮬레이터를 관측합니다.</p>
+      <div class="simulator-summary"><div><span>SIMULATION TIME</span><strong id="simulator-time">—</strong></div><div><span>SIM / HOST TIME</span><strong id="simulator-speed">—</strong></div><div><span>SAMPLE AGE</span><strong id="simulator-age">—</strong></div></div>
+      <div id="simulator-chart" aria-label="시뮬레이션 진행 속도"></div>
+      <div id="simulator-domains" class="simulator-domains"></div>
+      <details><summary>MCIPS 모델 시간 · 설정값 (물리 성능 아님)</summary><pre id="simulator-mcips">표본 대기</pre></details>
+      <details><summary>부팅·복구 관측 타임라인</summary><div id="simulator-events" class="table-scroll"></div></details>
+      <details class="simulator-inspector"><summary>읽기 전용 Inspector · QMP 진단</summary>
+        <p class="section-description">명시적으로 조회할 때만 접근합니다. 객체 조회는 MMIO를 읽지 않으며 QMP는 상태·CPU 목록·버전만 허용합니다.</p>
+        <div class="inspector-controls"><label>객체 경로 <input id="object-parent" placeholder="platform (빈 값: 최상위)"></label><button id="object-query" type="button">객체 조회</button>
+          <label>QMP 도메인 <select id="qmp-domain"><option value="ap">AP</option><option value="rse">RSE</option><option value="si-cl0">SI CL0</option><option value="si-cl1">SI CL1</option></select></label>
+          <label>진단 <select id="qmp-command"><option>query-status</option><option>query-cpus-fast</option><option>query-version</option></select></label><button id="qmp-query" type="button">QMP 조회</button></div>
+        <pre id="inspector-output" aria-live="polite">조회 대기</pre>
+      </details>
+      <p class="footnote">QK 상태와 시간 차이는 Guest CPU 사용률이 아닙니다. 미관측 값은 — 로 표시합니다. 도메인 epoch는 firmware 로그 기반 관측이며, 물리 전력·온도는 제공하지 않습니다.</p>
+    </section>
     <section class="panel results-panel" id="results">
       <div class="section-heading"><div><p class="eyebrow">03 / MEASUREMENT EVIDENCE</p><h2>실험 결과</h2></div><label class="select-label">결과 묶음<select id="evidence-select" aria-label="결과 묶음 선택"><option value="">결과 없음</option></select></label></div>
       <div id="evidence-meta" class="evidence-meta">수집된 실행 결과가 없습니다.</div>

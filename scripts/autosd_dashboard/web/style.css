@@ -58,4 +58,10 @@
 .latency-chart .distribution-plot{max-height:none;min-width:460px}
 .latency-chart{overflow-x:auto}
 .feature-log-button + .feature-log-button{margin-left:8px}
+.simulator-panel{margin-top:24px}.simulator-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:22px 0}.simulator-summary span{display:block;font-size:11px;letter-spacing:.1em;color:var(--muted,#a3afa8)}.simulator-summary strong{display:block;font:500 26px monospace;margin-top:8px}.simulator-domains{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}.simulator-cpu{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid #2c3932;padding:10px 0}.simulator-cpu>span:first-child{font:12px monospace;overflow-wrap:anywhere}.simulator-cpu .sample-note{width:100%}.simulator-event{font:12px monospace;overflow-wrap:anywhere;border-bottom:1px solid #2c3932;padding:8px 0}#simulator-chart svg{width:100%;height:90px}.simulator-panel details>summary{cursor:pointer;padding:12px 0}
+@media(max-width:700px){.simulator-domains{grid-template-columns:1fr}.simulator-summary{gap:8px}.simulator-summary strong{font-size:18px}}
 @media(max-width:520px){.log-tab{flex:1;padding:12px}.feature-progress{padding-left:12px}}
+.simulator-inspector { margin-top: 18px; }
+.inspector-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 14px 0; }
+.inspector-controls label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+#inspector-output, #simulator-mcips { max-height: 340px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }

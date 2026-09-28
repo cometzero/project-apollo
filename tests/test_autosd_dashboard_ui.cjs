@@ -5,12 +5,52 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../scripts/autosd_dashboard/web/app.js'), 'utf8');
+test('Inspector ignores old epoch and out-of-order replies in the same run', async () => {
+  const output = {textContent: ''};
+  const pending = [];
+  const scope = {state: {simulator: {run_id: 'same'}, feature_session: 'one'}, inspectorRequest: 0,
+    $: (id) => id === 'inspector-output' ? output : {value: 'ap'},
+    api: () => new Promise(resolve => pending.push(resolve)), encodeURIComponent};
+  vm.createContext(scope);
+  vm.runInContext(source.slice(source.indexOf('async function inspectSimulator('), source.indexOf('function renderMonitoring(')), scope);
+  const first = scope.inspectSimulator(true);
+  const second = scope.inspectSimulator(true);
+  pending[1]({value: 'new'}); await second;
+  pending[0]({value: 'old'}); await first;
+  assert.match(output.textContent, /new/);
+  const third = scope.inspectSimulator(true);
+  scope.state.feature_session = 'two'; output.textContent = 'new epoch';
+  pending[2]({value: 'previous epoch'}); await third;
+  assert.equal(output.textContent, 'new epoch');
+});
+test('simulator chart excludes previous runs and leaves stale gaps', () => {
+  const scope = {finite: Number.isFinite};
+  vm.createContext(scope);
+  vm.runInContext(source.slice(source.indexOf('function simulatorSeries('), source.indexOf('function renderSimulator(')), scope);
+  const points = scope.simulatorSeries({run_id: 'new', history: [
+    {run_id: 'old', status: 'ONLINE', speed_ratio: 9},
+    {run_id: 'new', status: 'ONLINE', speed_ratio: 0.5},
+    {run_id: 'new', status: 'STALE', speed_ratio: 2},
+    {run_id: 'new', status: 'ONLINE', speed_ratio: null},
+  ]});
+  assert.equal(JSON.stringify(points), '[0.5,null,null]');
+});
 function context() {
   const scope = {runningStatuses: ['RUNNING', 'QUEUED', 'STARTING'], state: {monitoring: {status: 'OFFLINE'}}, progressLog: new Map(), Date};
   vm.createContext(scope);
   vm.runInContext(source.slice(source.indexOf('function elapsed('), source.indexOf('function renderActionProgress(')), scope);
   return scope;
 }
+test('monitor qualification presents observed cycles and UNKNOWN rather than latency', () => {
+  const scope = {};
+  vm.createContext(scope);
+  vm.runInContext(source.slice(source.indexOf('function functionalRows('), source.indexOf('function renderFunctionalResult(')), scope);
+  const rows = scope.functionalRows({kind: 'monitor-qualification', status: 'UNKNOWN',
+    cycles: [{cycle: 1, pause: {status: 'PASS'}, resume: {status: 'UNKNOWN'}}]});
+  assert.equal(rows[0].status, 'UNKNOWN');
+  assert.ok(rows.some(row => row.id === 'PAUSE-1' && row.status === 'UNCONFIRMED'));
+  assert.ok(source.includes("qualification ? 'qualification.json'"));
+});
 test('boot process existence is not guest readiness', () => {
   const scope = context();
   const job = {action: 'boot', status: 'RUNNING'};

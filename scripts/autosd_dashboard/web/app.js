@@ -39,6 +39,8 @@ let displayedJob = '';
 let logSession;
 let guestLogRequest = 0;
 let guestSource = 'uart';
+let inspectorRun;
+let inspectorRequest = 0;
 
 function logGroups(jobs, session) {
   const sorted = [...jobs].sort((a, b) => Date.parse(b.started_at) - Date.parse(a.started_at));
@@ -273,7 +275,7 @@ function renderSystemControls() {
   }
   const vm = state.vm || {};
   $('system-description').textContent = `${state.capabilities?.platform || 'AutoSD'} · 호스트 전원 제어가 아닙니다. ` +
-    (vm.backend === 'qbox-full' ? 'RSE · SI CL0 · SI CL1 · AP firmware 부팅. Reboot는 native 재부팅 후 새 boot ID와 도메인 상태를 확인합니다. Pause/Resume은 미지원입니다.' :
+    (vm.backend === 'qbox-full' ? 'RSE · SI CL0 · SI CL1 · AP firmware 부팅. Reboot는 새 boot ID와 도메인 상태를 확인합니다. Pause/Resume은 현재 실행의 10회 반복·HIPC·watchdog 실증 검증 후 활성화됩니다.' :
       vm.backend === 'qbox' ? 'AP 직접 부팅 · 다른 도메인은 mock. 재시작은 Power off → Power on을 사용하세요. Reboot/Pause/Resume은 미지원입니다.' :
       'Pause 상태에서는 Resume 후 종료·재부팅하세요.');
   $('system-state').textContent = vm.paused ? 'PAUSED' : vm.running ? 'POWERED ON' : 'POWERED OFF';
@@ -323,6 +325,82 @@ function cpuChart(samples, id) {
     } else svg.append(svgEl('polyline', {points: points.join(' '), fill: 'none', stroke: '#94d6b9', 'stroke-width': 1.8, 'stroke-linejoin': 'round'}));
   });
   return svg;
+}
+
+function simulatorSeries(snapshot) {
+  return (snapshot.history || []).filter(sample => sample.run_id === snapshot.run_id)
+    .filter(sample => !snapshot.feature_session || sample.feature_session === snapshot.feature_session)
+    .slice(-60).map(sample => sample.status === 'ONLINE' && finite(sample.speed_ratio) ? sample.speed_ratio : null);
+}
+
+function renderSimulator() {
+  if (!$('simulator-status')) return;
+  const sim = state.simulator || {};
+  $('simulator-status').replaceWith(Object.assign(badge(sim.status || 'OFFLINE'), {id: 'simulator-status'}));
+  $('simulator-time').textContent = finite(sim.sim_time_ns) ? `${fmt(sim.sim_time_ns / 1e9, 3)} s` : '—';
+  $('simulator-speed').textContent = sim.status === 'ONLINE' && finite(sim.speed_ratio) ? `${fmt(sim.speed_ratio, 3)} ×` : '—';
+  $('simulator-age').textContent = finite(sim.age_ms) ? `${fmt(sim.age_ms / 1000, 1)} s` : '—';
+  $('simulator-note').textContent = sim.error || sim.reason || `세션 ${sim.run_id || '—'} · ${finite(sim.last_success_at) ? new Date(sim.last_success_at * 1000).toLocaleTimeString('ko-KR') : '표본 대기'} · 읽기 전용 관측`;
+  const inspectorEpoch = JSON.stringify([sim.run_id, state.feature_session]);
+  if ($('inspector-output') && inspectorRun !== inspectorEpoch) {
+    inspectorRun = inspectorEpoch;
+    inspectorRequest++;
+    $('inspector-output').textContent = '새 세션 · 조회 대기';
+  }
+  for (const id of ['object-query', 'qmp-query']) if ($(id)) $(id).disabled = sim.status !== 'ONLINE';
+  if ($('qmp-query')) {
+    const capability = state.simulator_capabilities?.features?.qmp;
+    $('qmp-query').disabled = sim.status !== 'ONLINE' || !capability?.available;
+    $('qmp-query').title = capability?.reason || 'QMP 시작 옵션이 필요합니다.';
+  }
+  if ($('simulator-mcips')) $('simulator-mcips').textContent = sim.mcips_error || (sim.mcips ? JSON.stringify(sim.mcips, null, 2) : '활성 plugin 표본 없음');
+  const chart = $('simulator-chart'); chart.replaceChildren();
+  const samples = simulatorSeries(sim), maximum = Math.max(1, ...samples.filter(finite));
+  if (samples.some(finite)) {
+    const svg = cpuChart(samples.map(value => finite(value) ? value * 100 / maximum : null), 'Simulation speed');
+    svg.setAttribute('aria-label', `시뮬레이션 진행 속도 최근 ${samples.length}개 표본, 세로축 0~${fmt(maximum, 3)} 배`);
+    chart.append(el('span', `SIM/HOST RATIO · 0–${fmt(maximum, 3)} ×`, 'sample-note'), svg);
+  }
+  $('simulator-domains').replaceChildren();
+  for (const domain of sim.domains || []) {
+    const card = el('article', null, 'subsystem');
+    const heading = el('div', null, 'subsystem-head');
+    const boot = ((state.domain_boot || {}).domains || []).find(row => row.id === domain.domain_id);
+    heading.append(el('h3', domain.domain_id.toUpperCase()), badge(boot ? boot.status : sim.status));
+    card.append(heading, el('p', domain.qemu_instance_path || '인스턴스 미관측', 'sample-note'));
+    if (boot) card.append(el('p', `BOOT EPOCH ${boot.boot_epoch || '—'} · firmware log`));
+    for (const cpu of domain.cpus || []) {
+      const row = el('div', null, 'simulator-cpu');
+      row.append(el('span', cpu.name), badge(sim.status === 'ONLINE' ? cpu.state : sim.status),
+        el('span', `local ${fmt(cpu.local_time_ns, 0)} ns · offset ${fmt(cpu.quantum_offset_ns, 0)} ns`, 'sample-note'));
+      card.append(row);
+    }
+    if (!(domain.cpus || []).length) card.append(el('p', 'CPU 표본 미관측', 'empty'));
+    $('simulator-domains').append(card);
+  }
+  if (!(sim.domains || []).length) $('simulator-domains').append(el('p', sim.status === 'UNSUPPORTED' ? 'QEMU는 기존 Guest CPU telemetry를 사용합니다.' : '소유한 QBox monitor와의 연결을 기다리고 있습니다.', 'empty'));
+  const events = $('simulator-events'); events.replaceChildren();
+  for (const event of (sim.events || []).slice(-30).reverse()) {
+    events.append(el('p', `${event.observed_at} · ${event.source || 'observation'} · ${event.sim_time_ns === undefined ? '시뮬레이션 시각 미제공' : event.sim_time_ns + ' ns'} · ${event.kind} · ${JSON.stringify(event.details)}`, 'simulator-event'));
+  }
+}
+
+async function inspectSimulator(qmp) {
+  const run = state?.simulator?.run_id;
+  const epoch = state?.feature_session;
+  const request = ++inspectorRequest;
+  const current = () => request === inspectorRequest && run === state?.simulator?.run_id && epoch === state?.feature_session;
+  const output = $('inspector-output');
+  output.textContent = '조회 중…';
+  const query = qmp ? `/api/simulator/qmp?domain=${encodeURIComponent($('qmp-domain').value)}&command=${encodeURIComponent($('qmp-command').value)}`
+    : `/api/simulator/objects?parent=${encodeURIComponent($('object-parent').value)}`;
+  try {
+    const result = await api(query);
+    if (!current()) return;
+    output.textContent = JSON.stringify(result, null, 2);
+  } catch (error) {
+    if (current()) output.textContent = `조회 불가: ${error.message}`;
+  }
 }
 
 function renderMonitoring() {
@@ -409,7 +487,7 @@ function resultCases(result) {
 }
 
 function measurementJob(job) {
-  return ['rt', 'timerlat', 'osnoise', 'watchdog'].includes((job.action || '').split('-')[0]) || (job.action || '').startsWith('mixed-criticality');
+  return ['rt', 'timerlat', 'osnoise', 'watchdog', 'monitor'].includes((job.action || '').split('-')[0]) || (job.action || '').startsWith('mixed-criticality');
 }
 
 function chooseEvidence(evidence, selected, session, seen, initialized) {
@@ -542,15 +620,21 @@ function renderOsnoiseTimeline(result, target) {
 }
 
 function functionalRows(result) {
-  return (result.scenarios || []).flatMap((item) => {
+  const scenarios = result.scenarios || (result.kind === 'monitor-qualification' ? [
+    {id: 'QUALIFICATION', status: result.status, error: result.error,
+      observations: {before_boot_id: result.before_boot_id, after_boot_id: result.after_boot_id,
+        health_hipc_returncode: result.health_hipc_returncode, watchdog: result.watchdog}},
+    ...(result.cycles || []).map(row => ({id: `PAUSE-${row.cycle}`, status: row.pause?.status === 'PASS' && row.resume?.status === 'PASS' ? 'PASS' : 'UNCONFIRMED', observations: row})),
+  ] : []);
+  return scenarios.flatMap((item) => {
     const rows = [{id: item.id, status: item.status, name: '판정', value: item.reason || item.error || item.status}];
     for (const metric of (item.metrics || [])) {
       const value = typeof metric.value === 'number' ? (Number.isFinite(metric.value) ? Number(metric.value.toFixed(6)) : null) : metric.value;
       rows.push({id: item.id, status: item.status,
         name: metric.name, value: value == null ? '—' : `${value}${metric.unit ? ' ' + metric.unit : ''}`});
     }
-    for (const key of ['observations', 'snapshot', 'before', 'after']) {
-      if (item[key]) rows.push({id: item.id, status: item.status, name: key, value: JSON.stringify(item[key], null, 2)});
+    for (const key of ['accepted', 'reset_accepted', 'recovery_required', 'observations', 'snapshot', 'before', 'after']) {
+      if (Object.hasOwn(item, key)) rows.push({id: item.id, status: item.status, name: key, value: JSON.stringify(item[key], null, 2)});
     }
     return rows;
   });
@@ -608,7 +692,7 @@ function renderEvidence() {
   $('evidence-count').textContent = evidence.length;
   $('result-rows').replaceChildren();
   $('latency-chart').replaceChildren();
-  const functional = ['mixed-criticality', 'watchdog'].includes(entry?.result?.kind);
+  const functional = ['mixed-criticality', 'watchdog', 'monitor', 'monitor-qualification'].includes(entry?.result?.kind);
   $('functional-results').hidden = !functional;
   document.querySelector('.results-grid').hidden = functional;
   if (!entry) {
@@ -623,9 +707,10 @@ function renderEvidence() {
   $('evidence-meta').textContent = [entry.path || entry.id, entry.modified_at, result.qualification, result.platform || result.settings?.platform, finite(result.settings?.threshold_us) && `실행 기준 ${fmt(result.settings.threshold_us)} µs`, result.measurement_status && `측정 ${result.measurement_status}`, result.latency_status && `지연 ${result.latency_status}`, result.threshold_stop_confirmed && '임계 초과로 trace 중지 확인'].filter(Boolean).join(' · ');
   if (entry.job) {
     const archived = ['automotive', 'rt', 'timerlat', 'osnoise'].includes(entry.job.action.split('-')[0]) || result.kind === 'mixed-criticality';
-    const structured = result.kind === 'watchdog';
-    const link = el('a', archived ? '원본 evidence 다운로드' : structured ? '원본 결과 JSON' : '원본 실행 로그', 'artifact-link');
-    link.href = `/api/jobs/${encodeURIComponent(entry.job.id)}/artifacts/${archived ? 'evidence.tar.gz' : structured ? 'scenarios.json' : 'console.log'}`;
+    const structured = ['watchdog', 'monitor'].includes(result.kind);
+    const qualification = result.kind === 'monitor-qualification';
+    const link = el('a', archived ? '원본 evidence 다운로드' : structured || qualification ? '원본 결과 JSON' : '원본 실행 로그', 'artifact-link');
+    link.href = `/api/jobs/${encodeURIComponent(entry.job.id)}/artifacts/${archived ? 'evidence.tar.gz' : qualification ? 'qualification.json' : structured ? 'scenarios.json' : 'console.log'}`;
     $('evidence-meta').append(document.createTextNode(' · '), link);
   }
   if (functional) { renderFunctionalResult(result); return; }
@@ -753,10 +838,10 @@ async function refresh() {
     $('connection-status').textContent = '로컬 연결됨';
     $('connection-dot').className = 'dot live';
     const vm = state.vm || {};
-    $('simulation-status').textContent = vm.paused ? 'SIMULATION PAUSED' : vm.running ? 'SIMULATION LIVE' : 'OFFLINE';
+    $('simulation-status').textContent = vm.pause_state_unknown ? 'PAUSE STATE UNKNOWN' : vm.paused ? 'SIMULATION PAUSED' : vm.running ? 'SIMULATION LIVE' : 'OFFLINE';
     $('simulation-detail').textContent = vm.running ? `${vm.owned ? '대시보드 관리 guest' : '외부 guest'} · SSH ${vm.ssh_port || '—'}` : '시뮬레이션은 정지 상태입니다. 이전 결과는 계속 확인할 수 있습니다.';
     $('updated-at').textContent = `UPDATED ${new Date().toLocaleTimeString('ko-KR', {hour12: false})}`;
-    renderSystemControls(); renderActions(); renderActionProgress(); renderMonitoring(); renderEvidence(); await Promise.all([renderJobs(), renderGuestLog()]);
+    renderSystemControls(); renderActions(); renderActionProgress(); renderMonitoring(); renderSimulator(); renderEvidence(); await Promise.all([renderJobs(), renderGuestLog()]);
     // Follow the active non-boot demo even when another job's log is selected.
     const active = state.jobs.find((job) => job.action !== 'boot' && runningStatuses.includes(job.status));
     if (active && active.id !== selectedJob) {
@@ -772,6 +857,7 @@ async function refresh() {
     $('simulation-status').textContent = 'UNKNOWN';
     $('simulation-detail').textContent = '백엔드 연결이 끊겨 현재 실행 상태를 확인할 수 없습니다.';
     $('monitor-status').replaceWith(Object.assign(badge('STALE'), {id: 'monitor-status'}));
+    if ($('simulator-status')) $('simulator-status').textContent = 'STALE';
     notice(`상태 조회 실패: ${error.message}. 표시된 이전 값은 현재 상태가 아닐 수 있습니다.`);
   } finally { refreshing = false; }
 }
@@ -786,5 +872,7 @@ $('guest-source').addEventListener('change', (event) => {
 });
 if (new URLSearchParams(location.search).get('view') === 'guest') document.body.classList.add('guest-only');
 $('refresh').addEventListener('click', refresh);
+if ($('object-query')) $('object-query').addEventListener('click', () => inspectSimulator(false));
+if ($('qmp-query')) $('qmp-query').addEventListener('click', () => inspectSimulator(true));
 refresh();
 setInterval(refresh, 3000);
