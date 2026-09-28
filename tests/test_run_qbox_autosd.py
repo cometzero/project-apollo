@@ -49,6 +49,21 @@ def test_plan_full_chain_loopback_and_no_writes(inputs):
     assert Path(plan["rootfs"]) != Path(plan["source_rootfs"])
 
 
+def test_monitor_plan_and_injection_are_explicit(inputs, monkeypatch):
+    monkeypatch.setenv("QBOX_APOLLO_MONITOR_BIND_ADDRESS", "0.0.0.0")
+    monkeypatch.setenv("QBOX_APOLLO_RUNTIME_INJECTION", "true")
+    plan = runner.make_plan(inputs)
+    assert plan["environment"]["QBOX_APOLLO_RUNTIME_INJECTION"] == "false"
+    assert not plan["monitor"]["enabled"]
+    inputs.monitor_port = 18123
+    inputs.runtime_injection = True
+    plan = runner.make_plan(inputs)
+    assert plan["environment"]["QBOX_APOLLO_MONITOR_BIND_ADDRESS"] == "127.0.0.1"
+    assert plan["environment"]["QBOX_APOLLO_RUNTIME_INJECTION"] == "true"
+    assert plan["command"][1:4] == ["--monitor", "--monitor-port", "18123"]
+    assert [len(d["cpu_object_paths"]) for d in plan["monitor"]["domains"]] == [1, 1, 4, 4]
+
+
 def test_no_arguments_use_prepared_manifest(inputs):
     build = inputs.autosd.parent / "build"
     manifest = build / "autosd/demo-minimal-qm-prepared/regular.json"

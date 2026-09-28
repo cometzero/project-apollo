@@ -23,6 +23,7 @@ from run_qbox_linux import autosd_manifest, required
 from autosd_uki import inspect_uki, prepare_uki
 from autosd_disk import inspect_disk, prepare_disk
 from autosd_esp import check_private_esp
+from qbox_monitor_manifest import monitor_plan, monitor_environment, preflight as monitor_preflight, update_runtime, prepare_qmp
 
 ROOT = Path(__file__).resolve().parents[2]
 LOGS = {
@@ -71,6 +72,10 @@ def parser():
     p.add_argument("--session", help="tmux session name (default: unique autosd-full-*)")
     p.add_argument("--no-attach", action="store_true", help="start the canonical tmux UI without attaching")
     p.add_argument("--ssh-port", type=int, default=2244)
+    p.add_argument("--monitor", action="store_true", help="enable loopback QBox monitor")
+    p.add_argument("--monitor-port", type=int, help="monitor TCP port (implies --monitor)")
+    p.add_argument("--runtime-injection", action="store_true", help="opt in to full-system runtime injection")
+    p.add_argument("--qmp", action="store_true", help="opt in to per-domain QMP biflows (implies monitor)")
     p.add_argument("--timeout", type=float, default=7200)
     p.add_argument("--headless", action="store_true", help="foreground file-backed runtime without tmux (dashboard mode)")
     p.add_argument("--diagnostic-boot", action="store_true",
@@ -171,7 +176,13 @@ def make_plan(args):
                "--out-dir", str(out / "full-system"), "--timeout", str(int(args.timeout)),
                *(["--headless"] if args.headless else ["--session", session, "--no-attach"]),
                "--", "--foreground-runtime"]
+    monitor = monitor_plan(args.monitor or args.runtime_injection or args.qmp, args.monitor_port, out, full=True)
+    if monitor["enabled"]:
+        command[1:1] = ["--monitor", "--monitor-port", str(monitor["port"])]
+    monitor_env = monitor_environment(monitor)
+    monitor_env["QBOX_APOLLO_RUNTIME_INJECTION"] = "true" if args.runtime_injection else "false"
     return {"backend": "qbox-full", "boot_method": "full-system-ukiboot-efi",
+            "schema_version": 1, "run_id": out.name, "monitor": monitor, "qmp_enabled": args.qmp,
             "autosd": str(manifest_path.absolute()), "mode": manifest["mode"],
             "input_selection": selection,
             "boot_profile": "diagnostic" if args.diagnostic_boot else "normal-rt",
@@ -184,7 +195,7 @@ def make_plan(args):
             "command": command, "out_dir": str(out), "timeout": args.timeout,
             "headless": args.headless, "session": session, "no_attach": args.no_attach,
             "build_dir": str(build), "ssh_port": args.ssh_port,
-            "environment": {"QBOX_APOLLO_NETDEV": f"type=user,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22",
+            "environment": {**monitor_env, "QBOX_APOLLO_NETDEV": f"type=user,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22",
                             "SSH_PORT": str(args.ssh_port), "PRIMARY_LOGIN_PROMPT": "login:",
                             "PRIMARY_SHELL_MARKER": "[root@", "QBOX_APOLLO_NUM_CPUS": "4",
                             "QBOX_APOLLO_RESET_TRACE": "1" if args.reset_trace else os.environ.get("QBOX_APOLLO_RESET_TRACE", "0")},
@@ -388,6 +399,7 @@ def supervise(plan, owned_runtime=None):
                 write_json(out / "supervisor.json", {"status": "RUNNING", "pid": os.getpid(),
                            "runtime_pid": proc.pid, "session": plan["session"]})
             while True:
+                update_runtime(plan.get("monitor", {}), proc.pid, plan.get("run_id", out.name))
                 domains = domain_status(out)
                 uart = out / "linux-uart.log"
                 text = uart.read_text(errors="replace") if uart.exists() else ""
@@ -547,6 +559,8 @@ def main():
         if not hasattr(os, "pidfd_open") or not hasattr(signal, "pidfd_send_signal"):
             raise ValueError("tmux supervision requires Linux pidfd support")
     runtime_preflight(plan)
+    monitor_preflight(plan["monitor"])
+    prepare_qmp(plan)
     out = Path(plan["out_dir"])
     out.mkdir(parents=True, exist_ok=True)
     for source, destination in ((plan["source_rootfs"], out / "rootfs.wic"),

@@ -2112,6 +2112,7 @@ def full_system_child_environment(
     if args.monitor:
         environment["QBOX_APOLLO_MONITOR"] = "true"
         environment["QBOX_APOLLO_MONITOR_PORT"] = str(args.monitor_port)
+        environment["QBOX_APOLLO_MONITOR_BIND_ADDRESS"] = "127.0.0.1"
     if args.si_cl0_command:
         environment["QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE"] = str(
             si_cl0_uart_fifo_path(args)
