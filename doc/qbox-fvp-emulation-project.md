@@ -2,6 +2,16 @@
 
 Initialized: 2026-05-20
 
+## AutoSD monitor integration
+
+The dashboard now has a separate owned-loopback QBox collector, domain QK/MCIPS
+observation, metadata-only inspector, opt-in read-only per-domain QMP and bounded
+model-log timelines. MHU fault/reset and per-run Pause qualification are explicit
+disruptive jobs; available endpoints alone do not qualify system control.
+See the [implementation and qualification report](dashboard/qbox-monitor-implementation-ko.md)
+for actual evidence and remaining gaps. Simulation clocks and MCIPS configuration
+are not physical CPU performance, WCET/FTTI, or FVP timing-equivalence evidence.
+
 ## Goal
 
 Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox using
