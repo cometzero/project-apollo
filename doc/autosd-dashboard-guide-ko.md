@@ -9,6 +9,8 @@
 Mixed criticality MC01–MC03와 Watchdog WD01–WD04의 실행 순서·판정·안전 제한은
 [Mixed criticality / Watchdog Quick Guide](autosd-mixed-watchdog-demo-ko.md)를 따른다.
 임의 shell 명령을 받는 웹 terminal이 아니며 허용된 작업만 실행한다.
+Lua 기반 전체/Subsystem 연결도와 컴포넌트 Inspector는
+[QBox 연결도 Quick Guide](dashboard/qbox-topology-guide-ko.md)를 따른다.
 
 | 기능 | 데이터/실행 경로 | 제한 |
 | --- | --- | --- |
