@@ -162,6 +162,10 @@ def test_rt_profile_is_explicit_and_preserves_qm_restrictions(tmp_path):
     module = load("customization_rt_prepare", LAYER / "prepare.py")
     output = tmp_path / "rt-bundle"
     manifest = module.prepare(output, compiler, rt_tools=True)
+    provenance = json.loads((output / "provenance.json").read_text())
+    import hashlib
+    assert provenance["latency_probe_sha256"] == hashlib.sha256(
+        (output / "payload/latency-probe").read_bytes()).hexdigest()
     assert "realtime-tests" in manifest["content"]["rpms"]
     assert "rtla" in manifest["content"]["rpms"]
     assert manifest["qm"]["content"]["rpms"] == ["podman", "bluechi-agent", "stress-ng"]
