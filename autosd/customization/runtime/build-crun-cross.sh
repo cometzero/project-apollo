@@ -17,10 +17,23 @@ docker exec "$builder" tar -C /usr/lib64 -cf - . |
 docker cp -L "$builder:/lib/ld-linux-aarch64.so.1" "$work/sysroot/lib/ld-linux-aarch64.so.1"
 ln -s usr/lib64 "$work/sysroot/lib64"
 docker exec "$builder" rpm -qa | sort > "$work/builder-packages.txt"
-cp -a "$source" "$work/source"
+mkdir "$work/source"
+# A workspace submodule has a relative .git file, not a standalone repository.
+# Export tracked sources; never depend on copied .git links or old configure output.
+git -C "$source" archive HEAD | tar -C "$work/source" -xf -
+for submodule in libocispec libocispec/image-spec libocispec/runtime-spec; do
+    git -C "$source/$submodule" archive HEAD | tar -C "$work/source/$submodule" -xf -
+done
+git -C "$source" rev-parse HEAD > "$work/source-commit.txt"
+git -C "$source/libocispec" rev-parse HEAD > "$work/libocispec-commit.txt"
+sha256sum "$fix/crun-cgroup-mount-label.patch" > "$work/patch.sha256"
+git -C "$source" describe --tags --match '[0-9]*' > "$work/source/.tarball-version"
+printf '#define GIT_VERSION "%s"\n' "$(git -C "$source" rev-parse HEAD)" \
+    > "$work/source/.tarball-git-version.h"
 cd "$work/source"
 patch -p1 < "$fix/crun-cgroup-mount-label.patch"
-./autogen.sh > "$work/autogen.log" 2>&1
+mkdir -p m4
+autoreconf -fi > "$work/autogen.log" 2>&1
 export PKG_CONFIG_SYSROOT_DIR="$work/sysroot"
 export PKG_CONFIG_LIBDIR="$work/sysroot/usr/lib64/pkgconfig"
 export CC="aarch64-linux-gnu-gcc --sysroot=$work/sysroot -B$work/sysroot/usr/lib64/"

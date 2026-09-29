@@ -12,6 +12,38 @@ process label, 다른 filesystem label, cgroup namespace 및 자원 제한은 �
 
 ## 빌드
 
+### 처음부터 다시 생성 (권장)
+
+`build/autosd`는 입력 설정을 보관하는 곳이 아니라 삭제 가능한 출력 경로이다.
+아래 진입점은 `autosd/crun`의 고정 Git 소스와 이 디렉터리의 패치만 사용한다.
+이전 `crun-cgroup-fix`, 실행 중인 dependency container 또는 sysroot는 필요 없다.
+
+```bash
+bash autosd/customization/runtime/build-crun.sh \
+  --output build/autosd/crun-cgroup-fix
+```
+
+Docker, AArch64 binfmt, host `aarch64-linux-gnu-gcc`, autotools, pkg-config,
+Python 3, make, patch가 필요하다. 스크립트는 digest로 고정된 CentOS ARM64
+이미지를 공식 `stream10` tag에서 ARM64 digest로 resolve하여 매번 registry pull로
+가용성을 검증하고 별도 unprivileged container에 EL10 개발 RPM을
+설치한다. 해당 sysroot를 복사하여 host에서 cross compile한 뒤 자신이 만든
+container만 제거한다. 기존 출력 디렉터리는 덮어쓰지 않는다.
+RPM 저장소와 base image 다운로드를 위한 네트워크가 필요하다.
+
+`--dry-run`은 생성 없이 경로를 확인한다. `--base-image`로 다른 공식 CentOS
+digest를 지정할 수 있지만 EL10/AArch64 ABI 호환성은 별도로 확인해야 한다.
+명시한 digest를 가져오지 못하면 실패하며 다른 버전으로 자동 대체하지 않는다.
+기본 tag는 변경될 수 있으므로 실제 사용 digest는 출력에 기록한다.
+출력에는 `crun`, sysroot/source copy, source commit, 패치 checksum, RPM 목록,
+compiler/version 및 빌드 로그가 포함된다. target guest에서 `crun --version`과
+`ldd`를 확인해야 하며 compile 성공만으로 guest 기능 검증을 대체하지 않는다.
+Base image는 출력의 `base-image.docker.tar`에도 보관하며 기존 Docker cache는
+필수 입력이 아니다. `provenance.json`에는 소스 commit, 패치·binary·archive와
+빌드 스크립트 SHA256을 기록하므로 cache 재사용 시 입력 일치 여부를 검사한다.
+
+아래의 container/cross 진입점은 수동 작업용 저수준 인터페이스이다.
+
 Docker와 기존 AArch64 binfmt가 필요하다. privileged 실행이나 Docker socket
 mount는 사용하지 않는다. clone은 `autosd/` 아래에만 생성한다.
 
@@ -19,15 +51,17 @@ mount는 사용하지 않는다. clone은 `autosd/` 아래에만 생성한다.
 git clone --depth 1 --branch 1.29.1 --recurse-submodules --shallow-submodules \
   https://github.com/containers/crun.git autosd/crun
 mkdir -p build/autosd/crun-cgroup-fix
+CRUN_BASE_IMAGE=$(python3 autosd/customization/runtime/resolve-centos-image.py)
+docker pull --platform linux/arm64 "$CRUN_BASE_IMAGE"
 docker run --rm --platform linux/arm64 \
   -v "$PWD/autosd/crun:/src:ro" \
   -v "$PWD/autosd/customization/runtime:/fix:ro" \
   -v "$PWD/build/autosd/crun-cgroup-fix:/out" \
-  quay.io/centos/centos@sha256:fd6b1e14d330489aac4624aeb6269428163b6fd557cfb572fd1098c73109e84b \
+  "$CRUN_BASE_IMAGE" \
   bash /fix/build-crun-container.sh
 ```
 
-입력 소스와 base image는 고정했지만 dnf repository는 움직이므로 bit-for-bit
+입력 소스는 고정하고 base image는 실행 시 digest를 기록하지만 dnf repository는 움직이므로 bit-for-bit
 재현 빌드는 아니다. 배포 시 실제 binary SHA256 및 build log를 보관한다.
 빌드 산출물은 EL10 AArch64용이며 다른 distro/ABI에 사용하지 않는다.
 
