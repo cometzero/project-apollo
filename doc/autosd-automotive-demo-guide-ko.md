@@ -7,6 +7,9 @@
 브라우저 실행·로그·결과 그래프·CPU/subsystem 관측은
 [웹 콘솔 Quick Guide](autosd-dashboard-guide-ko.md)를 참고한다.
 
+기존 `minimal_qm` 디스크가 없는 환경의 재생성은
+[minimal_qm 이미지 생성 Quick Guide](autosd-minimal-qm-build-ko.md)를 참고한다.
+
 ## 1. 목적과 적용 범위
 
 root의 safety monitor·Podman·BlueChi, ADAS 전용 실행 영역, QM native 앱과

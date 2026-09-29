@@ -19,6 +19,12 @@ Secure Boot 인증서 정책, OTA/rollback 검증을 의미하지 않는다.
 
 ## Quick Guide
 
+`demo-minimal-qm-prepared` 또는 과거 private 디스크가 없으면 먼저
+[minimal_qm 재생성 Quick Guide](autosd-minimal-qm-build-ko.md)를 사용한다.
+`./build_autosd_minimal_qm.sh`는 필요한 nightly/빌더 다운로드와 crun 소스 빌드부터
+Automotive 정상 상태 및 QBox full-system 부팅 검사까지 연결한다.
+설정 원본은 `autosd/config/minimal-qm.json`이며 `build/autosd`는 재생성 가능한 출력이다.
+
 1. `./yocto_build.sh --bsp`로 `apollo-qvp` BSP를 준비한다. 기존 정상 빌드가 있으면
    동일 deploy의 firmware/UKI/DTB/modules를 사용할 수 있다.
 2. [Automotive Quick Guide](autosd-automotive-demo-guide-ko.md)에 따라 AutoSD regular
