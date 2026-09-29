@@ -129,3 +129,6 @@
 [submodule "autosd/iceoryx2"]
 	path = autosd/iceoryx2
 	url = https://github.com/eclipse-iceoryx/iceoryx2.git
+[submodule "autosd/crun"]
+	path = autosd/crun
+	url = https://github.com/containers/crun.git
