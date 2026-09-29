@@ -117,6 +117,8 @@ def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=F
         sources.append(watchdog_source)
     provenance = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}
     provenance["workload_sha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
+    if rt_tools:
+        provenance["latency_probe_sha256"] = hashlib.sha256(probe.read_bytes()).hexdigest()
     if crun_binary is not None:
         provenance["crun_sha256"] = hashlib.sha256(patched_runtime).hexdigest()
     (output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
