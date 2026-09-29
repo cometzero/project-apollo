@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "aib_manifest": "autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml",
+  "nightly_build_id": null,
+  "builder_reference": "quay.io/centos-sig-automotive/automotive-image-builder:latest",
+  "customize": true
+}
