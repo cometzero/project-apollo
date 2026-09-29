@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # Run only in builder_launch.py's private full-system AArch64 guest.
 set -euo pipefail
+# The host downloader resolves the configured reference to an ARM64 digest.
+# No required image identity or configuration lives in a previous build directory.
+image=${1:?Usage: builder_guest.sh OFFICIAL_IMAGE@sha256:DIGEST [OCI_ARCHIVE]}
+[[ "$image" =~ ^quay\.io/centos-sig-automotive/automotive-image-builder@sha256:[0-9a-f]{64}$ ]] || {
+    echo 'Expected a digest-pinned official AIB image' >&2; exit 2;
+}
+archive=${2:-}
+if [[ -n "$archive" ]]; then
+    test -f "$archive"
+fi
 test "$(uname -m)" = aarch64
 # The copied developer image has QM RPMs but not its built rootfs.
 # Do not spend builder CPU on the known unavailable system service.
@@ -24,8 +34,23 @@ uname -a
 getenforce
 unshare --mount --pid --fork /bin/true
 df -h / /srv/aib
-image=quay.io/centos-sig-automotive/automotive-image-builder@sha256:179a58db45306498791d2011b7cbd4d5e20ace29d7e9d51e95bb987c98027c36
-timeout 900 podman --root /srv/aib/outer --runroot /run/apollo-aib pull "$image"
+printf 'AIB_BUILDER_IMAGE=%s\n' "$image"
+if [[ -n "$archive" ]]; then
+    timeout 900 podman --root /srv/aib/outer --runroot /run/apollo-aib load -i "$archive"
+    podman --root /srv/aib/outer --runroot /run/apollo-aib image exists "$image" || {
+        echo 'Builder archive does not contain the requested digest' >&2; exit 1;
+    }
+elif ! podman --root /srv/aib/outer --runroot /run/apollo-aib image exists "$image"; then
+    timeout 900 podman --root /srv/aib/outer --runroot /run/apollo-aib pull "$image"
+fi
+# An older builder policy cannot validate new image-only types (notably QM).
+# Permit offline labeling only in this disposable guest, then restore enforcement.
+# This does not change the generated image's enforcing SELinux configuration.
+builder_selinux=$(getenforce)
+if [[ "$builder_selinux" = Enforcing ]]; then
+    trap 'setenforce 1' EXIT
+    setenforce 0
+fi
 # The privileged container has guest-only authority. No host paths or socket are exposed.
 timeout 5400 podman --root /srv/aib/outer --runroot /run/apollo-aib run --rm --name apollo-aib-minimal-qm \
     --privileged --network host --security-opt label=disable \
