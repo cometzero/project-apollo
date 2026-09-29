@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WEB = Path(__file__).resolve().parent / "web"
 sys.path.insert(0, str(WEB.parent))
 from service_logs import SOURCES as SERVICE_LOG_SOURCES, collect as collect_service_logs
+from topology import get_topology, topology_drawio
 CATALOG = [
     ("boot", "AutoSD 시뮬레이션 부팅", "전용 복사본으로 Apollo QEMU TCG 실행", False),
     ("health", "Automotive 상태 검사", "Safety monitor · ADAS · QM · BlueChi 검사", False),
@@ -958,6 +959,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send(200, self.server.app.simulator.snapshot())
         elif path == "/api/simulator/capabilities":
             self.send(200, self.server.app.simulator.capabilities())
+        elif path in ("/api/topology", "/api/topology/drawio"):
+            try:
+                graph = get_topology(ROOT)
+                if path.endswith("/drawio"):
+                    self.send(200, topology_drawio(graph).encode(), "application/xml", {
+                        "Content-Disposition": 'attachment; filename="apollo-qvp.drawio"'})
+                else:
+                    self.send(200, graph)
+            except (OSError, ValueError, RuntimeError) as error:
+                self.send(503, {"error": str(error), "status": "UNAVAILABLE"})
         elif path == "/api/simulator/objects":
             try:
                 parent = parse_qs(urlsplit(self.path).query).get('parent', [''])[0]
@@ -1013,7 +1024,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(200, self.server.app.log(path.split("/")[3]))
             except KeyError:
                 self.send(404, {"error": "Unknown job"})
-        elif path in ("/", "/index.html", "/style.css", "/app.js"):
+        elif path in ("/", "/index.html", "/style.css", "/app.js", "/topology.js", "/topology.css"):
             file = WEB / ("index.html" if path == "/" else path[1:])
             try:
                 self.send(200, file.read_bytes(), mimetypes.guess_type(str(file))[0] or "application/octet-stream")

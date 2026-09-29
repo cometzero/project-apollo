@@ -556,6 +556,40 @@ def test_api_state(http):
         assert response.headers["X-Content-Type-Options"] == "nosniff"
 
 
+def test_topology_api_is_read_only_and_fixed_root(http, monkeypatch):
+    calls = []
+    graph = {"schema_version": 1, "nodes": [], "edges": [], "groups": []}
+    monkeypatch.setattr(server, "get_topology", lambda root: calls.append(root) or graph)
+    with request(http, "/api/topology?entrypoint=/etc/passwd") as response:
+        assert json.load(response) == graph
+    assert calls == [server.ROOT]
+    with pytest.raises(urllib.error.HTTPError) as error:
+        request(http, "/api/topology", body={}, headers={"Content-Type": "application/json", "X-CSRF-Token": http.app.token})
+    assert error.value.code == 404
+
+
+def test_topology_api_error_does_not_return_stale_graph(http, monkeypatch):
+    def failed(_):
+        raise RuntimeError("Lua evaluation unavailable")
+    monkeypatch.setattr(server, "get_topology", failed)
+    with pytest.raises(urllib.error.HTTPError) as error:
+        request(http, "/api/topology")
+    assert error.value.code == 503
+    assert json.load(error.value)["status"] == "UNAVAILABLE"
+
+
+def test_topology_download_and_assets(http, monkeypatch):
+    monkeypatch.setattr(server, "get_topology", lambda _: {})
+    monkeypatch.setattr(server, "topology_drawio", lambda _: '<mxGraphModel><root/></mxGraphModel>')
+    with request(http, "/api/topology/drawio") as response:
+        assert response.headers["Content-Disposition"].endswith('"apollo-qvp.drawio"')
+        assert response.headers["Content-Type"] == "application/xml"
+        assert b"mxGraphModel" in response.read()
+    for asset in ("topology.js", "topology.css"):
+        with request(http, "/" + asset) as response:
+            assert response.status == 200
+
+
 def test_guest_log_api(http):
     with request(http, "/api/guest/log") as response:
         payload = json.load(response)
