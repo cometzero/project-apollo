@@ -1,6 +1,6 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const {diagram, filteredNodes} = require('../scripts/autosd_dashboard/web/topology.js');
+const {diagram, filteredNodes, memoryRegions, hexAddress} = require('../scripts/autosd_dashboard/web/topology.js');
 const graph = {
   groups: [{id: 'ap', label: 'AP'}, {id: 'fabric', label: 'Fabric'}],
   nodes: [
@@ -45,4 +45,32 @@ test('layout has unique cells even with many components', () => {
 test('unknown group and empty source graph are represented without fabricated nodes', () => {
   assert.equal(diagram(graph, 'missing').nodes.length, 0);
   assert.equal(diagram({nodes: [], edges: [], groups: []}).edges.length, 0);
+});
+test('memory windows preserve zero address, false translation and port identity', () => {
+  const windows = memoryRegions({parameters: {mapped_base_addr: 0x8000,
+    target_socket: {address: 0, size: 4096, bind: '&router.initiator_socket', relative_addresses: false, priority: 0},
+    alias: {address: 0x10000, size: 256}}});
+  assert.equal(windows.length, 2);
+  assert.equal(windows[0].address, '0x00000000');
+  assert.equal(windows[0].end, '0x00000FFF');
+  assert.equal(windows[0].size, '0x00001000 (4096 bytes)');
+  assert.equal(windows[0].relative, 'false');
+  assert.equal(windows[0].priority, '0');
+  assert.equal(windows[0].mapped, '0x00008000');
+  assert.equal(windows[1].port, 'alias');
+  assert.equal(windows[1].end, '0x000100FF');
+});
+test('missing or zero size does not fabricate a valid end address', () => {
+  assert.equal(memoryRegions({parameters: {target: {address: 16}}})[0].end, '—');
+  assert.equal(memoryRegions({parameters: {target: {address: 16, size: 0}}})[0].end, '—');
+  assert.equal(memoryRegions({parameters: {irq: {bind: '&gic.irq'}}}).length, 0);
+});
+test('64-bit strings and inclusive range arithmetic remain precise', () => {
+  assert.equal(hexAddress('0xffffffffffffffff'), '0xFFFFFFFFFFFFFFFF');
+  assert.equal(memoryRegions({parameters: {mem: {address: Number.MAX_SAFE_INTEGER, size: 4}}})[0].end, '0x20000000000002');
+  assert.equal(hexAddress(2 ** 64), '미확인 / 정밀도 범위 밖');
+  assert.equal(hexAddress(null), '미확인 / 정밀도 범위 밖');
+});
+test('hex address search finds numeric Lua windows', () => {
+  assert.equal(filteredNodes(graph, '', '0x0000ff00')[0].id, 'uart');
 });

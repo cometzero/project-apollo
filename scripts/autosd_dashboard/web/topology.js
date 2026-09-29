@@ -2,10 +2,38 @@
 (function (root) {
   'use strict';
   const lane = node => node.kind === 'router' ? 1 : ['cpu', 'instance'].includes(node.kind) ? 0 : 2;
+  function addressInteger(value) {
+    if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return BigInt(value);
+    if (typeof value === 'string' && /^(?:0x[0-9a-f]+|[0-9]+)$/i.test(value)) return BigInt(value);
+    return null;
+  }
+  function hexAddress(value) {
+    const integer = addressInteger(value);
+    return integer === null ? '미확인 / 정밀도 범위 밖' : `0x${integer.toString(16).toUpperCase().padStart(8, '0')}`;
+  }
+  function memoryRegions(node) {
+    const regions = [];
+    function visit(value, port) {
+      if (!value || typeof value !== 'object' || value.moduletype) return;
+      if (Object.hasOwn(value, 'address')) {
+        const start = addressInteger(value.address), size = addressInteger(value.size);
+        regions.push({port: port || '(component)', address: hexAddress(value.address),
+          size: size === null ? '미지정 / 미확인' : `${hexAddress(value.size)} (${size} bytes)`,
+          end: start !== null && size !== null && size > 0n ? hexAddress(String(start + size - 1n)) : '—',
+          bind: value.bind || '미지정',
+          relative: Object.hasOwn(value, 'relative_addresses') ? String(value.relative_addresses) : '미지정 (모델 기본값)',
+          priority: Object.hasOwn(value, 'priority') ? String(value.priority) : '미지정',
+          mapped: Object.hasOwn(value, 'mapped_base_addr') ? hexAddress(value.mapped_base_addr) :
+            Object.hasOwn(node.parameters || {}, 'mapped_base_addr') ? hexAddress(node.parameters.mapped_base_addr) : null});
+      }
+      for (const [key, child] of Object.entries(value)) visit(child, port ? `${port}.${key}` : key);
+    }
+    visit(node.parameters, ''); return regions;
+  }
   function filteredNodes(graph, group, query = '') {
     const term = query.toLowerCase().trim();
     return graph.nodes.filter(n => (!group || n.group === group) &&
-      (!term || [n.id, n.moduletype, JSON.stringify(n.parameters)].join(' ').toLowerCase().includes(term)));
+      (!term || [n.id, n.moduletype, JSON.stringify(n.parameters), JSON.stringify(memoryRegions(n))].join(' ').toLowerCase().includes(term)));
   }
   function diagram(graph, group = '', signals = false) {
     const selected = filteredNodes(graph, group);
@@ -31,7 +59,7 @@
           items.forEach((node, i) => {
             mapping.set(node.id, node.id);
             nodes.push({...node, x: x + 20 + (column + (column === 2 ? i % 2 : 0)) * 260,
-              y: y + 65 + (column === 2 ? Math.floor(i / 2) : i) * 76, width: 235, height: 56});
+              y: y + 65 + (column === 2 ? Math.floor(i / 2) : i) * 76, width: 235, height: 66});
           });
         }
       });
@@ -49,7 +77,7 @@
     }
     return {nodes, edges, groups, width: overview ? 1500 : 1100, height: Math.max(height, 240), overview};
   }
-  const model = {lane, filteredNodes, diagram};
+  const model = {lane, filteredNodes, diagram, memoryRegions, hexAddress};
   if (typeof module !== 'undefined' && module.exports) module.exports = model;
   if (typeof document === 'undefined') return;
   root.QBoxTopology = model;
@@ -90,6 +118,19 @@
       dl.append(make('dt', key), make('dd', value));
     }
     panel.append(dl);
+    const memory = make('section', undefined, 'topology-memory');
+    memory.append(make('h4', 'MEMORY ADDRESS'), make('p', '포트별 Lua decode 주소 · 상위 주소 변환 전이며 guest PA와 다를 수 있습니다.'));
+    const regions = memoryRegions(n);
+    if (!regions.length) memory.append(make('p', 'Lua에 명시된 주소 창 없음 (주소 0을 의미하지 않음).'));
+    for (const region of regions) {
+      const item = make('div', undefined, 'topology-memory-region'); item.append(make('strong', region.port));
+      const entries = make('dl');
+      for (const [key, value] of [['시작 주소', region.address], ['끝 주소 (포함)', region.end], ['크기', region.size],
+        ['연결 / 주소 공간', region.bind], ['relative_addresses', region.relative], ['priority', region.priority],
+        ...(region.mapped === null ? [] : [['mapped_base_addr', region.mapped]])]) entries.append(make('dt', key), make('dd', value));
+      item.append(entries); memory.append(item);
+    }
+    panel.append(memory);
     const params = make('details'); params.append(make('summary', 'CCI / Lua 설정값'), make('pre', JSON.stringify(n.parameters || {}, null, 2))); panel.append(params);
     const edges = graph.edges.filter(e => e.source === selected || e.target === selected);
     const links = make('details'); links.open = true; links.append(make('summary', `연결 포트 · ${edges.length}개 (외부 Subsystem 포함)`));
@@ -148,7 +189,10 @@
       const label = n.label.replace(/^platform\./, '');
       g.append(svgEl('text', {x: n.x + 10, y: n.y + 22}, label.length > 28 ? label.slice(0, 26) + '…' : label));
       g.append(svgEl('text', {x: n.x + 10, y: n.y + 41, class: 'topo-small'}, n.moduletype.length > 32 ? n.moduletype.slice(0, 30) + '…' : n.moduletype));
-      g.append(svgEl('title', {}, `${n.label}\n${n.moduletype}`));
+      const regions = memoryRegions(n);
+      if (regions.length) g.append(svgEl('text', {x: n.x + 10, y: n.y + 56, class: 'topo-address'},
+        regions[0].address + (regions.length > 1 ? ` +${regions.length - 1} windows` : '')));
+      g.append(svgEl('title', {}, `${n.label}\n${n.moduletype}\n${regions.map(r => `${r.port}: ${r.address}–${r.end} / ${r.size}`).join('\n')}`));
       const activate = () => n.aggregate ? changeGroup(n.group) : selectNode(n.id);
       g.addEventListener('click', activate); g.addEventListener('keydown', e => { if (['Enter', ' '].includes(e.key)) { e.preventDefault(); activate(); } });
       svg.append(g);

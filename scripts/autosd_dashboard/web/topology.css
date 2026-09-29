@@ -16,6 +16,8 @@
 .topology-canvas text{font:12px var(--mono);fill:var(--ink);pointer-events:none}
 .topology-canvas .topo-group-title{font-size:15px;fill:var(--accent)}
 .topology-canvas .topo-small{font-size:10px;fill:var(--muted)}
+.topology-canvas .topo-address{font-size:10px;fill:var(--accent)}
+.topology-memory{border-top:1px solid var(--line);margin:18px 0;padding-top:12px}.topology-memory h4{font:11px var(--mono);letter-spacing:1px;color:var(--accent);margin:0 0 10px}.topology-memory-region{padding:10px;border:1px solid var(--line);margin-top:10px}.topology-memory-region strong{font:11px var(--mono);overflow-wrap:anywhere}.topology-memory-region dd{color:var(--accent)}
 .topology-canvas .topo-overview text{font-size:16px}.topology-canvas .topo-overview .topo-small{font-size:13px}.topology-canvas .topo-overview .topo-group-title{font-size:20px}
 .topology-canvas .topo-node{cursor:pointer;outline:none}
 .topology-canvas .topo-node rect{fill:#23322c;stroke:#608674;stroke-width:1.3}
