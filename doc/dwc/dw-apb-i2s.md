@@ -270,3 +270,339 @@ modprobe dmatest channel=dma0chan6 iterations=2 timeout=5000 run=1 wait=1
 
 `memcpy-regression.log`는 `summary 2 tests, 0 failures`를 기록한다.
 이 검사는 memcpy 회귀 확인이며 모든 SPI/UART DMA 조합 재검증을 뜻하지 않는다.
+
+
+## Standalone system QEMU 검증 (2026-09-30)
+
+`run_qemu_linux.sh --bsp`의 `apollo-qvp`에도 DMA-350 두 개와
+DW_apb_i2s 두 개를 등록했다. QBox SystemC의 register/FIFO/trigger 동작을
+QEMU SysBus 모델로 포팅했으며, 기존 Linux driver와 현재 `apollo-qvp.dts`의
+주소·IRQ·DMA request ID·ASoC link를 그대로 사용한다. SystemC library를
+system QEMU에 로드하는 방식은 아니다. 모델 소유 파일은 QEMU repository의
+`hw/dma/arm-dma350.c`, `hw/audio/dw-apb-i2s.c`, `hw/arm/apollo-qvp.c`이다.
+
+```sh
+./yocto_build.sh --keep-conf qemu-apollo-native
+./run_qemu_linux.sh --bsp                 # 기본 DMA
+./run_qemu_linux.sh --bsp --i2s-mode pio   # Linux PIO
+python3 scripts/test/verify_qemu_i2s.py   # 두 모드 자동 검증
+```
+
+PIO 옵션은 QEMU가 생성하는 DT의 `dmas`와 `dma-names`만 제외한다.
+두 DMA controller와 I2S register map은 유지된다. 외부 `--dtb`와 PIO 옵션을
+함께 지정하면 실패시켜, 모드 선택이 무시되는 일을 방지한다. 직접 Image/initrd
+부팅이므로 QBox UKI의 embedded DT override 제한은 이 경로에 적용되지 않는다.
+
+최종 evidence:
+`build/qbox-apollo-qvp/qemu-i2s-peer-fixed-20260930/`.
+각 mode의 `live.dtb`, `live.dts`, `linux-uart.log`, `launch.json`,
+`dma-result.json`/`pio-result.json` 및 aggregate `result.json`을 보존한다.
+검증기는 기존 `scripts/test/verify_qbox_i2s.sh`와 BSP의 `i2s-loopback`을 사용했다.
+Linux source/DT/image 수정이나 loopback payload 변경은 하지 않았다.
+
+| 검사 | 결과 | 관측 |
+| --- | --- | --- |
+| DMA 0→1 / 1→0 / 동시 양방향 | PASS 4/4 | 각 65,536 frames / 262,144 bytes 전체 비교 |
+| PIO 0→1 / 1→0 / 동시 양방향 | PASS 4/4 | 각 65,536 frames / 262,144 bytes 전체 비교 |
+| DMA IRQ | PASS | INTID 390 +195 |
+| PIO IRQ | PASS | INTID 388 +25,762, INTID 389 +25,705 |
+| live DT DMA/PIO 선택 | PASS | 두 I2S node의 dmas 유무 확인 |
+| 장치 register/traffic | PASS 28/28 | FIFO overflow/flush/read-clear, 양방향 frame 전달, DMA copy/hash/error/STOP/GIC IRQ/self-target bus error |
+| launcher/검증기 focused pytest | PASS 49 | 잘못된 PCM/IRQ/echo 결과의 PASS 방지 포함 |
+| 전체 BSP selftest | FAIL | DSU cache/PMU, watchdog, remoteproc, RPMsg, PFDI 미구현 범위 유지 |
+
+장치 검사는 `scripts/test/verify_qemu_audio_models.py`로 실행하며, 배포된 QEMU에
+provider manifest의 `library_path`를 적용한 최종 결과는
+`build/qbox-apollo-qvp/qemu-i2s-models-provider-20260930/result.json`이다.
+ALSA와 장치 검사가 사용한 배포 binary의 SHA256은
+`04a3ebe225f2c3d0c633cd3da9565a23dbfcc3ae204e2b70d6af9550572ed179`이다.
+
+최초 실행 `qemu-i2s-20260930/`의 DMA/PIO FAIL도 유지한다. 원인은
+두 번째 I2S의 QOM parenting 전에 첫 peer link를 설정해 NULL link가 된 것이다.
+두 장치를 먼저 parenting한 뒤 연결하도록 수정했으며, 양방향 실제 FIFO frame
+검사가 이 오류를 회귀 검출한다. DMA의 active CH_INTREN 쓰기도 지원해 STOP IRQ를
+검증했고, DMA가 자기 MMIO를 쓰는 경우 QEMU reentrancy guard로 bus error를 낸다.
+
+이 결과는 S16_LE stereo 48 kHz 기능 검증이다. QBox처럼 functional pacing으로
+빈 TX를 기다리고 full RX에 backpressure를 적용한다. 물리 I2S clock/underrun
+정확도, analog codec, hardware command-link, security attribution, migration,
+FVP/RTL parity는 검증하지 않았다. standalone machine의 DMA0에는 SPI/UART
+request가 연결되지 않으며 pinmux는 고정 audio route이다.
+
+
+### 실제 aplay / arecord WAV 비교 (2026-09-30)
+
+`i2s-loopback` 외에 BSP에 설치된 `aplay`와 `arecord`를 실행했다.
+48,000 Hz, S16_LE stereo, 96,000 frames(2초)의 서로 다른 좌우 채널 tone을
+`source.wav`로 생성했다. DMA와 PIO 각각 I2S0→I2S1 및 I2S1→I2S0를
+순차 실행했으며 **4/4 PASS**이다. 네 녹음 모두 PCM뿐 아니라 WAV header를
+포함한 전체 **384,044 bytes가 원본과 완전히 동일**했다.
+원본 변경, 녹음 offset 정렬, 앞뒤 sample 제거는 하지 않았다.
+
+```sh
+python3 scripts/test/verify_qemu_i2s_wav.py \
+  --out-dir build/qbox-apollo-qvp/qemu-i2s-wav-new
+```
+
+각 방향에서 실제로 실행한 ALSA 명령은 다음과 같다. `$tx`와 `$rx`는
+`aplay -l`/`arecord -l`에서 MMIO 주소로 찾은 서로 반대편 hw PCM이다.
+
+```sh
+arecord -N -D "$rx" -t wav -f S16_LE -r 48000 -c 2 \
+  --period-size=1024 --buffer-size=16384 -s 96000 capture.wav &
+sleep 0.2
+aplay -D "$tx" --period-size=4096 --buffer-size=16384 source.wav
+wait
+```
+
+자동화에서는 두 명령 각각 `timeout 60`으로 제한하며, exit code 0,
+live DT의 DMA/PIO 선택, 실제 IRQ 증가와 전체 PCM 일치를 함께 검사한다.
+QEMU user network의 guest 주소를 설정하고, 임시 localhost HTTP server에서
+원본 WAV를 가져온 뒤 녹음은 UART base64로 회수한다. Model, kernel 및 BSP
+image는 앞선 loopback 검증과 동일하며 변경하지 않았다.
+
+증거: `build/qbox-apollo-qvp/qemu-i2s-wav-period-20260930/` 아래
+`source.wav`, `{dma,pio}/{forward,reverse}.wav`, mode별 guest script/UART 로그,
+`result.json`. 원본과 네 녹음의 공통 WAV SHA256:
+`b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8`.
+DMA INTID 390은 +194, PIO INTID 388/389는 각각 +61,351/+24,913이었다.
+
+재현 시 다음 조건에 주의한다. 초기 실패 결과도 `qemu-i2s-wav-*`에 보존했다.
+
+- 현재 배포된 `aplay`에는 `--drain-timeout` 확장 옵션이 없어 사용하지 않는다.
+- 송신 전에 clock이 없는 동안 blocking capture는 PCM wait timeout이 발생했다.
+  `arecord -N`으로 수신을 먼저 대기시킨다.
+- 2,048-frame ALSA buffer에서는 capture overrun이 발생했다. PASS 설정은
+  16,384-frame buffer이다. 이는 작은 버퍼의 실시간 처리 능력을 검증하지 않는다.
+- PIO의 최소 capture period는 1,024 frames이다. playback/capture period를
+  모두 1,024로 설정하면 `arecord`가 마지막 전체 chunk를 채우지 못해
+  95,232 frames를 저장한 뒤 timeout했다. 저장된 prefix는 원본과 동일했다.
+  `arecord`는 최종 요청이 768 frames여도 1,024 frames를 읽는다.
+  playback period 4,096은 `aplay`의 표준 EOF 무음 채움으로 마지막 capture
+  chunk까지 공급한다. 녹음 파일은 `-s 96000`에 따라 원본 길이 그대로이며,
+  이 결과로 EOF의 물리 FIFO drain 동등성을 주장하지 않는다.
+
+### QBox direct Linux BSP 검사 (2026-09-30)
+
+`./run_qbox_linux.sh --bsp`의 기본 4-CPU `apollo-qvp-linux.lua`에서
+SystemC DMA-350/DW_apb_i2s를 검사했다. DMA는 배포 DT를 사용하고, PIO는
+두 I2S node의 `dmas`/`dma-names`만 제거한 DT 복사본으로 부팅했다.
+QBox 실행 파일, 두 model library, kernel 및 initramfs의 hash는 모든
+검사 실행에서 동일했다. 이번 검사에서 모델이나 Linux는 수정하지 않았다.
+
+| 검사 | 결과 | 관측 |
+| --- | --- | --- |
+| DMA-350 두 controller memcpy/memset | PASS | DMA/PIO DT 각각 20회, 64 KiB test buffer, 데이터 검증 및 IRQ 증가 |
+| I2S DMA 단독 0→1 / 1→0 | PASS 2/2 | 각 65,536 frames 전체 비교 |
+| I2S DMA 동시 양방향 | **FAIL** | 두 프로세스 모두 7,741/65,536 frames에서 timeout |
+| I2S PIO 단독 및 동시 양방향 | PASS 4/4 | 각 65,536 frames 전체 비교 및 IRQ 증가 |
+| aplay/arecord WAV, DMA/PIO 순차 양방향 | PASS 4/4 | 48 kHz S16_LE stereo, 96,000 frames, WAV 전체 384,044 bytes 동일 |
+| 전체 BSP selftest | FAIL | AP-only profile의 PFDI misc 실패; audio 검사와 별도 |
+
+DMA 동시 양방향 timeout 당시 capture/playback 상태는 모두 RUNNING이었다.
+원인은 아직 확정하지 않았으며, 전체 audio qualification은 **FAIL**로 유지한다.
+단독 방향 WAV 성공이 동시 양방향 DMA 성공을 의미하지 않는다.
+
+재현 자동화는 실제 launcher를 실행하고 UART 로그, 실행 명령, DT,
+artifact hash, 원본 및 녹음 WAV를 보존한다.
+
+```sh
+python3 scripts/test/verify_qbox_linux_audio.py \
+  --out-dir build/qbox-apollo-qvp/qbox-linux-audio-new
+```
+
+`scripts/test/verify_dma350_memory.sh`는 각 controller의 사용하지 않는
+channel에서 dmatest memcpy/memset을 각각 5회 실행한다. PIO DT에서는
+channel 할당 전 IRQ action이 없을 수 있어 초기 IRQ count를 0으로 허용하고,
+검사 후에는 실제 IRQ 등록과 증가를 요구한다. 최초 helper의 이 조건 오류를
+수정한 뒤 PIO memory 검사를 재실행해 통과했다.
+
+PIO WAV의 최초 blocking `aplay` 실행은 EIO로 실패했다. `aplay -N`으로
+재실행한 두 방향은 모두 정상 종료하고 전체 파일 비교를 통과했다.
+최종 자동화는 `aplay -N`/`arecord -N`, playback/capture period
+4,096/1,024 frames 및 buffer 16,384 frames를 사용한다. DMA WAV의 기록된
+PASS는 blocking `aplay` 실행 결과이다. WAV 원본 및 녹음의 공통 SHA256은
+위 standalone QEMU 검사와 동일하다. 녹음 정렬이나 sample 제거는 하지 않았다.
+
+통합 결과: `build/qbox-apollo-qvp/qbox-linux-audio-summary-20260930.json`.
+원본 실패 로그도 다음 evidence directory에 보존한다.
+
+- `qbox-linux-audio-20260930/`: 최초 DMA/PIO 전체 검사.
+- `qbox-linux-memory-pio-20260930/`: 수정한 helper로 PIO memory 재검사.
+- `qbox-linux-wav-pio-nonblock-20260930/`: nonblocking PIO WAV 재검사.
+
+위 경로는 모두 `build/qbox-apollo-qvp/` 아래이다. 이는 functional pacing
+검사이며 물리 I2S timing이나 FVP/RTL 동등성 검증은 아니다.
+
+### QBox qemu-components 전환 및 재검사 (2026-09-30)
+
+`apollo-qvp-linux.lua`의 두 DMA/I2S를 `qemu_dma350` 및
+`qemu_dw_apb_i2s`로 교체했다. standalone QEMU에서 검증한 동일한
+`arm-dma350`/`dw-apb-i2s` 구현을 AP libqemu instance에서 사용한다.
+전체 firmware profile은 기존 SystemC 모델을 유지한다.
+
+I2S peer 및 DMA1 request/ack는 QEMU 내부에서 직접 연결한다. DMA0의
+SystemC SPI/UART 연결은 정수 GPIO bridge로 유지한다. request의 ACTIVE와
+type 비트가 boolean 변환으로 손실되지 않도록 libqemu-cxx에 정수 GPIO API를
+추가했고, 기존 boolean API 동작도 회귀 검사했다. DMA 메모리 접근은 기존
+AP global peripheral initiator와 router를 사용한다. MMIO/IRQ 및 guest
+kernel/initramfs는 유지했다. Native I2S는 고정 경로이며 pinmux gating은
+지원하지 않아 Linux profile의 해당 두 pinmux output 연결을 제거했다.
+
+```sh
+./yocto_build.sh qbox-apollo-qvp-native -c populate_sysroot
+python3 scripts/test/verify_qbox_linux_audio.py \
+  --out-dir build/qbox-apollo-qvp/qbox-qemu-components-audio-new
+```
+
+| 검사 | 결과 | 관측 |
+| --- | --- | --- |
+| DMA350 두 controller memcpy/memset | PASS | DMA/PIO DT 각각 20회, 64 KiB test buffer 및 IRQ 증가 |
+| DMA 단독 및 동시 양방향 PCM | PASS 4/4 | 각 65,536 frames / 262,144 bytes 전체 비교, INTID 390 +215 |
+| PIO 단독 및 동시 양방향 PCM | PASS 4/4 | 동일 크기 비교, INTID 388/389 +43,175/+25,288 |
+| aplay/arecord WAV, DMA/PIO 순차 양방향 | PASS 4/4 | 48 kHz stereo S16_LE 2초, header 포함 384,044 bytes 원본과 동일 |
+| provider do_check | PASS | platform 64개, core 61개; 정수 GPIO 및 boolean 호환성 검사 포함 |
+| Python focused 검사 및 full-map 검사 | PASS | Python 42개, static map 검사 통과 |
+| 전체 BSP selftest | FAIL | 기존 AP-only PFDI misc 실패 유지 |
+
+앞선 SystemC 구성의 DMA 동시 양방향 timeout은 이번 native QEMU 구성에서
+발생하지 않았다. 이것만으로 기존 SystemC 실패의 원인이 확정된 것은 아니다.
+이번 WAV 검사는 `aplay -N`/`arecord -N`을 사용했으며, 앞 절과 같은 period와
+buffer 조건이다. 녹음 파일의 offset 조정이나 sample 제거는 하지 않았다.
+
+증거는 `build/qbox-apollo-qvp/qbox-qemu-components-audio-20260930/`의
+`result.json`, mode별 UART/launcher 로그, 원본·녹음 WAV 및 artifact hash이다.
+`loaded-audio-libraries.txt`에는 실행 중 `/proc/PID/maps`에서 확인한
+두 native wrapper 및 libqemu 경로를 보존했다. audio 결과는 **PASS**이며,
+물리 timing, FVP/RTL 동등성, pinmux gating 및 SPI/UART DMA traffic의
+추가 qualification을 의미하지 않는다.
+
+최종 Lua 배포 재검사 중 기존 `uart-biflow-backend-socket-test`에서
+segfault가 한 차례 발생했다. 독립 5회 반복은 모두 통과했으며, 실패 로그는
+`build/qbox-apollo-qvp/qemu-components-qbox-final-deploy.log`, 재검사는
+`qemu-components-uart-recheck.log`에 보존했다. 오디오 guest 검사와 별도의
+간헐적 core-test 실패이며 원인은 확정하지 않았다.
+전체 recipe 재실행은 64/61 검사와 최종 배포까지 통과했다
+(`qemu-components-qbox-final-retry.log`). 배포 후 모든 runtime artifact hash가
+검사 시점과 동일하고 설치된 Lua가 검증한 source와 일치함을 확인했다.
+
+### QEMU DMA + SystemC I2S 혼합 검사 (2026-09-30)
+
+현재 `apollo-qvp-linux.lua`는 두 DMA350만 `qemu_dma350`로 교체하고,
+I2S는 공통 profile의 SystemC `dw_apb_i2s`, audio socket 및 pinmux 연결을
+유지한다. DMA1 request/ack도 DMA0과 동일한 정수 GPIO bridge를 통과한다.
+모델 C/C++ 구현, kernel 및 initramfs는 앞선 검사에서 변경하지 않았다.
+
+| 검사 | 결과 | 관측 |
+| --- | --- | --- |
+| 두 DMA350 memcpy/memset | PASS | DMA/PIO DT 각각 20회 및 IRQ 증가 |
+| I2S DMA loopback | FAIL | 첫 방향 실행 중 `d350_get_residue()`에서 kernel panic; 나머지 방향 미실행 |
+| I2S PIO 단독·동시 양방향 | PASS 4/4 | 각 65,536 frames 전체 비교 |
+| DMA WAV 별도 부팅 검사 | FAIL | 첫 방향에서 동일 kernel panic 재현; reverse 미실행 |
+| PIO WAV 양방향 | FAIL 2/2 | playback=0, capture=124(timeout); 93,184 / 94,192 frames만 저장 |
+
+PIO 녹음의 저장된 PCM prefix는 원본과 동일하지만, 요청한 96,000 frames에
+미달하므로 완전한 WAV 일치로 판정하지 않는다. `aplay -N`/`arecord -N`,
+period 4,096/1,024, buffer 16,384 및 60초 command timeout은 이전과 동일하다.
+
+DMA loopback에서는 QEMU가 `arm-dma350` offset `0x1020`의 reentrant IO를
+차단한 뒤 Linux에 synchronous external abort가 발생했다. WAV 별도 부팅에서도
+offset `0x1324` 경고와 같은 residue 함수의 panic을 관측했다. 소스상
+`dma350_tick()`은 service 동안 `mem_reentrancy_guard`를 유지하며, QBox의
+SystemC 전송은 QEMU iothread lock을 풀고 대기한다. 이 구간에 CPU residue
+읽기가 겹치는 것으로 추정하지만, guard 제거 등 모델 수정은 이번 비교 검사에
+적용하지 않았다. 현재 혼합 구성의 전체 판정은 **FAIL**이다.
+
+재현:
+
+```sh
+python3 scripts/test/verify_qbox_linux_audio.py \
+  --out-dir build/qbox-apollo-qvp/qbox-mixed-audio-new
+python3 scripts/test/verify_qbox_linux_audio.py --mode dma --tests wav \
+  --out-dir build/qbox-apollo-qvp/qbox-mixed-wav-dma-new
+```
+
+증거는 `build/qbox-apollo-qvp/qbox-mixed-audio-20260930/`와
+`qbox-mixed-wav-dma-20260930/`의 result JSON, UART/QBox 로그 및 녹음 WAV이다.
+첫 실행의 DMA panic은 수동으로 launcher를 중단했고, 검증기에 panic 감지를
+추가한 뒤 별도 WAV 실행은 즉시 종료했다. Launcher login PASS와 audio 판정은
+별개이며, 미실행 WAV 방향은 비교 자료가 없는 상태이다. 실제 로드된
+`qemu_dma350.so`와 `dw-apb-i2s.so` 경로도 보존했다.
+
+### Native QEMU DMA/I2S full-system 검사 (2026-09-30)
+
+현재 두 entrypoint는 `common.use_qemu_audio()`로 AP의 두 DMA350과 두 I2S를
+모두 QEMU component로 구성한다. Full-system은 `enable_ap_router()` 이후
+교체하므로 기존 MMIO address-view/IRQ/reset 연결을 유지한다. RSE boot DMA는
+별도 모델이며 변경하지 않았다. DMA0의 SPI/UART 정수 GPIO bridge와 native
+I2S/DMA1 내부 request/ack 연결은 앞선 AP-only native 구성과 같다.
+Native I2S의 고정 audio route에는 pinmux gating이 없다.
+
+이번 검사는 실제 `run_qbox_yocto.sh --bsp --headless`를 호출하며
+RSE/SCP/Safety Island CL1/TF-A/U-Boot를 거쳐 BSP UKI를 부팅했다.
+AP-only Linux loader나 domain mock을 사용하지 않았다. 기본 4 AP CPU,
+multithread-freerunning/quantum_keeper 및 10 ms quantum을 유지했다.
+
+```sh
+./yocto_build.sh qbox-apollo-qvp-native -c populate_sysroot
+python3 scripts/test/verify_qbox_full_audio.py \
+  --out-dir build/qbox-apollo-qvp/qbox-full-native-audio-new
+```
+
+PIO는 private WIC의 unsigned A/B UKI `.dtb`에서 두 I2S의 `dmas` 및
+`dma-names`만 제거한다. 배포 원본 WIC를 보존하고, 나머지 UKI section hash가
+그대로인지 검사한다. kernel/initramfs는 앞선 AP-only PASS 이미지와 같으며,
+guest live DT에서 DMA/PIO 선택을 다시 확인한다.
+
+| full-system 검사 | 결과 | 관측 |
+| --- | --- | --- |
+| BSP 자체 검사 | PASS 22/22, 두 부팅 모두 | PFDI, remoteproc, RPMsg 항목 포함 |
+| 두 DMA350 memcpy/memset | PASS | DMA/PIO DT 각각 20회; data 및 IRQ 증가 확인 |
+| DMA PCM 단독·동시 양방향 | FAIL 0/4 | capture/playback `Broken pipe`, DMA INTID 390 +100 |
+| PIO PCM 단독 양방향 | PASS 2/2 | 각 65,536 frames 전체 비교 |
+| PIO PCM 동시 양방향 | FAIL 1/2 | 0→1 playback `Broken pipe`; 1→0 PASS |
+| DMA WAV 순차 양방향 | FAIL 2/2 | playback=0, capture=124; 74,596 / 48,216 frames, 저장된 내용도 원본과 불일치 |
+| PIO WAV 순차 양방향 | PASS 2/2 | 48 kHz S16_LE stereo, 96,000 frames, WAV 전체 384,044 bytes 원본과 동일 |
+| 빌드·단위·정적 검사 | PASS | provider platform/core 64/61개, Lua 9개, full-map 검사 |
+
+전체 audio 판정은 **FAIL**이다. 이번 full-system에서는 혼합 구성의 kernel
+panic 대신 ALSA XRUN 및 capture timeout을 관측했다. AP-only native PASS를
+full-system PASS로 확대하지 않는다. 추가 firmware domain 및 interrupt 경로는
+AP-only와 다르지만 XRUN 원인은 아직 확정하지 않았다. BSP 자체 검사의 PASS도
+post-login 전체 platform qualification이나 FVP/RTL timing 동등성을 뜻하지 않는다.
+
+증거: `build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/`의
+`result.json`, mode별 domain/UART 로그, `disk-preparation.json`, WAV 및 설치된
+provider/model/Lua hash. PIO 녹음의 SHA256은
+`b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8`이다.
+
+최초 `qbox-full-native-audio-20260930/` 실행은 launcher가 boot PASS 후 runtime을
+분리하면서 검증기 감독이 먼저 종료됐고 PIO는 HTTP 전송에도 실패했다.
+이 실행은 최종 qualification으로 사용하지 않는다. 하네스에
+`--foreground-runtime`, bounded download retry 및 종료 처리를 적용한 위
+재실행을 최종 결과로 사용한다. PCM 검사는 첫 실패 뒤에도 나머지 방향을 실행한다.
+
+### Full-system 검사 후 AP-only 재검사 (2026-09-30)
+
+모델이나 설정을 추가 변경하지 않고 현재 all-native 구성을
+`run_qbox_linux.sh --bsp`로 재검사했다. 결과는 **audio PASS**이다.
+
+| 검사 | 결과 |
+| --- | --- |
+| 두 DMA350 memcpy/memset | DMA/PIO DT 각각 20회 PASS |
+| DMA PCM 단독·동시 양방향 | 4/4 PASS, 각 65,536 frames 전체 비교 |
+| PIO PCM 단독·동시 양방향 | 4/4 PASS, 각 65,536 frames 전체 비교 |
+| 48 kHz WAV DMA/PIO 양방향 | 4/4 PASS, 각 384,044 bytes 전체 원본 일치 |
+
+직전 full-system 실행과 QBox 실행 파일, 두 wrapper, libqemu, kernel 및
+initramfs의 SHA256이 모두 같음을 확인했다. 이 재검사는 AP-only PASS와
+full-system FAIL 차이를 재확인하며, 그 원인을 확정하지는 않는다.
+AP-only의 별도 BSP PFDI 실패는 유지된다.
+
+```sh
+python3 scripts/test/verify_qbox_linux_audio.py \
+  --out-dir build/qbox-apollo-qvp/qbox-ap-only-native-retest-new
+```
+
+증거: `build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/result.json`,
+`full-system-comparison.json`, mode별 UART 로그와 원본·녹음 WAV.

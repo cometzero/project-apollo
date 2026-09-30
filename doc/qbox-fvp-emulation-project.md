@@ -881,7 +881,7 @@ SPI0/1 loopback, UART0/1 traffic and I2C/SPI2/3 PIO regression tests.
 UART RX remains mixed DMA/PIO by design; full TRM and
 FVP equivalence are not claimed. See [DMA-350 implementation and evidence](dma-350/apollo-qvp-implementation.md).
 
-The AP expansion now also contains two DW_apb_i2s SystemC controllers,
+The AP expansion contains two DW_apb_i2s controllers,
 with bidirectional I2S0/I2S1 audio connections. Two eight-channel instances
 are named `dma350_0` (SPI/UART) and `dma350_1` (I2S); the latter dedicates
 channels 0/1 to I2S0 TX/RX and 2/3 to I2S1 TX/RX, leaving 4–7 unconnected.
@@ -889,6 +889,45 @@ Apollo selects explicit transaction-level audio pacing; timed FIFO deadlines
 are not qualified under the default four-CPU freerunning scheduler.
 See [I2S implementation and validation](dwc/dw-apb-i2s.md) for the Linux
 ASoC PIO and cyclic DMA validation and the timing limitations.
+
+The 2026-09-30 direct `run_qbox_linux.sh --bsp` qualification passed both
+DMA-350 controllers' memcpy/memset tests, individual DMA audio directions,
+all four PIO PCM comparisons, and four DMA/PIO WAV file comparisons.
+DMA simultaneous duplex remains FAIL: both processes timed out at
+7,741/65,536 frames; the cause is not established. This AP-only profile also
+retains the separate PFDI BSP selftest failure. Commands and retained evidence
+are recorded in the I2S document above.
+
+A subsequent direct-Linux profile change replaces these four audio/DMA
+devices with qemu-components wrappers around the same native QEMU hardware
+models used by standalone apollo-qvp. Requalification passed both controllers'
+memcpy/memset tests, all four PCM cases in each DMA/PIO mode (including DMA
+simultaneous duplex), and all four complete WAV comparisons. Full firmware
+profiles still use SystemC models; the earlier failure evidence remains valid
+for that earlier direct-Linux SystemC configuration. Native I2S has fixed
+routing without pinmux gating. See the I2S document for hashes and logs.
+
+The earlier follow-up experiment kept QEMU DMA but restored SystemC I2S
+and its pinmux/audio wiring in the direct-Linux profile. Both DMA controllers'
+memory tests and all four PIO PCM cases pass. DMA audio and a separate DMA
+WAV boot panic in Linux `d350_get_residue` after QEMU rejects reentrant DMA
+MMIO. PIO WAV capture times out with matching but incomplete prefixes in
+both directions. The mixed configuration is FAIL; the earlier all-native
+PASS remains historical evidence. See the I2S document for exact logs.
+
+The standalone `run_qemu_linux.sh --bsp` path now registers native QEMU
+DMA-350 and DW_apb_i2s counterparts in `apollo-qvp`. Addresses, IRQs,
+request IDs and audio-card DT links follow the current Linux DTS and QBox
+Lua. `--i2s-mode pio` omits I2S DMA properties from the generated DT; DMA is
+the default. `scripts/test/verify_qemu_i2s.py` runs the existing PCM comparison
+workload in both modes and records IRQ progress, live DT and artifact hashes.
+Controller 0 has no SPI/UART peripheral requests connected in this reduced
+machine. Hardware command links, migration, pinmux and physical audio timing
+remain outside this standalone functional model's contract. The 2026-09-30
+standalone run passed four PCM comparisons in each DMA/PIO mode, IRQ progress
+and 28 device register/traffic checks; full BSP selftests retain FAIL for the
+unimplemented platform domains. See the standalone evidence section in the
+[I2S document](dwc/dw-apb-i2s.md).
 
 1. Add one software-visible malformed/denied transaction followed by a normal
    recovery transaction without changing firmware or kernel sources.
@@ -953,3 +992,24 @@ This does not qualify secure/SI watchdog injection or physical reset timing.
 A separate cold-boot core2-OFF/core3-entry stall remains an explicit limitation.
 See [power and watchdog qualification](autosd-power-watchdog-validation-ko.md)
 for the runtime evidence and remaining boundaries.
+
+
+### Native QEMU audio in the full-system profile (2026-09-30)
+
+Both Apollo entrypoints now use `common.use_qemu_audio`: two AP DMA350
+controllers and two I2S devices are QEMU components. Full-system replacement
+occurs after AP address-view routing, preserving target maps, IRQs and reset
+connections. DMA0 retains integer SPI/UART handshake bridges; I2S/DMA1
+handshakes remain native. RSE boot DMA is unchanged. Native audio routes
+are fixed and pinmux gating is unsupported.
+
+The full-system verifier launches the actual `run_qbox_yocto.sh --bsp`
+foreground path with RSE/SCP/Zephyr/TF-A/U-Boot and a private BSP WIC. PIO
+changes only unsigned UKI DT sections in both A/B slots. See the I2S
+implementation document for runtime outcomes and retained failure evidence.
+
+The final foreground full-system run passed BSP selftests 22/22 in both
+boots and both DMA controllers' memory tests. Audio qualification is FAIL:
+DMA PCM 0/4, PIO PCM 3/4, DMA WAV 0/2 (capture timeout), PIO WAV 2/2 with
+whole-file equality. ALSA XRUN root cause remains unresolved. Evidence:
+`build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/result.json`.
