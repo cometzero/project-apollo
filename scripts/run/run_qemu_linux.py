@@ -45,6 +45,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--reuse-autosd-disk", type=Path, metavar="PREVIOUS_OUT_DIR",
                    help="boot a completed UKIBoot run's private disk in place without rewriting slots")
     p.add_argument("--dtb", type=Path, help="override the machine-generated device tree")
+    p.add_argument("--i2s-mode", choices=("dma", "pio"), default="dma",
+                   help="I2S transfer mode in the generated device tree (default: dma)")
     p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
     p.add_argument("--memory", default="4080M", help="Apollo DRAM size, default 4080M")
     p.add_argument("--bootargs", help="replace the default Linux command line")
@@ -107,7 +109,10 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
         # PREEMPT_RT disables runtime services by default. UKI userspace needs
         # EFI variables; enabling these services does not qualify RT latency.
         bootargs += " efi=runtime"
-    command = [str(executable), "-machine", "apollo-qvp", "-accel", "tcg",
+    machine = "apollo-qvp" + (",i2s-dma=off" if args.i2s_mode == "pio" else "")
+    if args.dtb and args.i2s_mode == "pio":
+        raise ValueError("--i2s-mode pio requires the machine-generated DT; omit --dtb")
+    command = [str(executable), "-machine", machine, "-accel", "tcg",
                "-smp", str(args.cpus), "-m", args.memory, "-display", "none",
                "-chardev", "socket,id=hmp,fd=@MONITOR_FD@",
                "-mon", "chardev=hmp,mode=readline",

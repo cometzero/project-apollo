@@ -456,3 +456,21 @@ time.sleep(20)
     path.write_text(json.dumps(plan))
     assert runner.supervise(tmp_path, .5, False) == 124
     assert not json.loads((tmp_path / "result.json").read_text())["login_observed"]
+
+
+@pytest.mark.parametrize("mode", ["dma", "pio"])
+def test_i2s_mode_selects_machine_dt(tmp_path, mode):
+    for name in ("Image", "qemu", "nexios-bsp-initramfs-apollo-qvp.cpio.gz",
+                 "nexios-bsp-initramfs-apollo-qvp.wic"):
+        (tmp_path / name).touch()
+    args = runner.parser().parse_args([
+        "--bsp", "--qemu", str(tmp_path / "qemu"),
+        "--deploy-dir", str(tmp_path), "--i2s-mode", mode,
+    ])
+    plan = runner.make_plan(args, tmp_path / "private")
+    machine = plan["command"][plan["command"].index("-machine") + 1]
+    assert machine == ("apollo-qvp,i2s-dma=off" if mode == "pio" else "apollo-qvp")
+    if mode == "pio":
+        args.dtb = tmp_path / "external.dtb"
+        with pytest.raises(ValueError, match="machine-generated DT"):
+            runner.make_plan(args, tmp_path / "private")
