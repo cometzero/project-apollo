@@ -225,7 +225,7 @@ def main():
     deploy = ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp'
     parser.add_argument('--rootfs', type=Path, default=deploy / 'nexios-bsp-initramfs-apollo-qvp.wic')
     parser.add_argument('--qboxconf', type=Path, default=deploy / 'nexios-bsp-initramfs-apollo-qvp.qboxconf')
-    parser.add_argument('--timeout', type=float, default=1800)
+    parser.add_argument('--timeout', type=int, default=1800)
     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
     parser.add_argument('--tests', choices=('all', 'memory', 'wav'), default='all')
     args = parser.parse_args()
