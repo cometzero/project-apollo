@@ -54,27 +54,80 @@ test -n "$tx0" && test -n "$rx0" && test -n "$tx1" && test -n "$rx1"
 echo WAV_IRQ_BEFORE
 cat /proc/interrupts
 echo WAV_IRQ_END
+recorder=
+player=
+cleanup_audio() {{
+    for audio_pid in "$player" "$recorder"; do
+        test -z "$audio_pid" || kill "$audio_pid" 2>/dev/null || :
+    done
+    for audio_pid in "$player" "$recorder"; do
+        test -z "$audio_pid" || wait "$audio_pid" 2>/dev/null || :
+    done
+    player=
+    recorder=
+}}
+trap cleanup_audio 0
+trap 'exit 130' INT
+trap 'exit 143' TERM
 run_case() {{
     name=$1 tx=$2 rx=$3
+    capture_card=${{rx#hw:}}
+    capture_device=${{capture_card#*,}}
+    capture_card=${{capture_card%%,*}}
+    capture_status=/proc/asound/card$capture_card/pcm${{capture_device}}c/sub0/status
+    played=125 recorded=125 ready=125
     echo "WAV_CASE=$name playback=$tx capture=$rx"
-    timeout 60 arecord -N -D "$rx" -t wav -f S16_LE -r 48000 -c 2 \\
+    rm -f /tmp/$name.wav
+    : > /tmp/$name-play.log
+    timeout -k 2 60 arecord -N --fatal-errors -D "$rx" -t wav -f S16_LE -r 48000 -c 2 \\
         --period-size=1024 --buffer-size=16384 -s {frames} \\
         /tmp/$name.wav > /tmp/$name-record.log 2>&1 &
     recorder=$!
-    sleep 0.2
-    set +e
-    timeout 60 aplay -D "$tx" --period-size=4096 --buffer-size=16384 \\
-        /tmp/source.wav > /tmp/$name-play.log 2>&1
-    played=$?
-    wait "$recorder"
-    recorded=$?
-    set -e
+    if timeout -k 2 5 sh -c '
+        while kill -0 "$2" 2>/dev/null; do
+            if grep -q "^state:[[:space:]]*RUNNING$" "$1" 2>/dev/null; then
+                exit 0
+            fi
+            sleep 0.05
+        done
+        exit 1
+    ' sh "$capture_status" "$recorder"; then ready=0; else ready=$?; fi
+    echo "WAV_READY=$name rc=$ready status=$capture_status"
+    if test "$ready" -eq 0; then
+        timeout -k 2 60 aplay -D "$tx" --fatal-errors --period-size=4096 --buffer-size=16384 \\
+            /tmp/source.wav > /tmp/$name-play.log 2>&1 &
+        player=$!
+        while kill -0 "$player" 2>/dev/null; do
+            if test -n "$recorder" && ! kill -0 "$recorder" 2>/dev/null; then
+                if wait "$recorder"; then recorded=0; else recorded=$?; fi
+                recorder=
+                if test "$recorded" -ne 0; then
+                    echo "WAV_PLAYBACK_CANCELLED=$name reason=capture-failed"
+                    kill "$player" 2>/dev/null || :
+                    break
+                fi
+            fi
+            sleep 0.05
+        done
+        if wait "$player"; then played=0; else played=$?; fi
+        player=
+    else
+        echo "WAV_PLAYBACK_SKIPPED=$name reason=capture-not-ready"
+    fi
+    if test -n "$recorder"; then
+        if test "$played" -ne 0; then
+            echo "WAV_CAPTURE_CANCELLED=$name reason=playback-not-successful"
+            kill "$recorder" 2>/dev/null || :
+        fi
+        if wait "$recorder"; then recorded=0; else recorded=$?; fi
+        recorder=
+    fi
     cat /tmp/$name-play.log /tmp/$name-record.log
     echo "WAV_EXIT=$name playback=$played capture=$recorded"
     echo WAV_DATA_BEGIN=$name
-    base64 /tmp/$name.wav
+    if test -f /tmp/$name.wav; then base64 /tmp/$name.wav; fi
     echo WAV_DATA_END=$name
-    test "$played" -eq 0 && test "$recorded" -eq 0
+    test "$ready" -eq 0 && test "$played" -eq 0 && test "$recorded" -eq 0
 }}
 run_case forward "$tx0" "$rx1"
 run_case reverse "$tx1" "$rx0"
@@ -84,13 +137,22 @@ echo WAV_IRQ_END
 '''
 
 
+def guest_injection(script):
+    """Keep every UART input line below the Linux canonical input limit."""
+    encoded = base64.b64encode(script.encode()).decode()
+    lines = [': > /tmp/wav-test.b64']
+    lines.extend(f"printf '%s' '{encoded[offset:offset + 768]}' >> /tmp/wav-test.b64"
+                 for offset in range(0, len(encoded), 768))
+    lines.append("base64 -d /tmp/wav-test.b64 > /tmp/wav-test.sh && "
+                 "sh /tmp/wav-test.sh; rc=$?; printf 'WAV_%s=%s\\n' DONE \"$rc\"")
+    return '\n'.join(lines) + '\n'
+
+
 def run_mode(args, output, mode, port):
     out = output / mode
     script = guest_script(port, args.frames)
     (output / f'{mode}-guest.sh').write_text(script)
-    encoded = base64.b64encode(script.encode()).decode()
-    injection = (f"printf '%s' '{encoded}' | base64 -d > /tmp/wav-test.sh; "
-                 "sh /tmp/wav-test.sh; rc=$?; printf 'WAV_%s=%s\\n' DONE \"$rc\"\n")
+    injection = guest_injection(script)
     command = [str(ROOT / 'run_qemu_linux.sh'), '--bsp', '--headless',
                '--i2s-mode', mode, '--netdev', 'user,id=net0',
                '--timeout', str(args.timeout), '--out-dir', str(out)]
