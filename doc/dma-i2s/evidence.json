@@ -1,0 +1,306 @@
+{
+  "schema_version": 1,
+  "analysis_date": "2026-10-01",
+  "scope": "Read-only analysis of preserved 2026-09-30 QBox runs; no new runtime qualification",
+  "source_heads_note": "Analysis checkout HEADs, not proof of binary build provenance",
+  "source_heads": {
+    "workspace": "6c476bc0b5dd3cb370350bdd4d6aae649a25462d",
+    "qbox": "f8087c406a7b27c61f64edcbe819b2dae5358804",
+    "qbox_platform": "3f7be96f32b5ed641113e34530fed30f93a3be26",
+    "qemu": "b06c5ec3e54086b3f0fcea15bd0e02deb8971c0c",
+    "linux": "71dda144e299257a79d26b6df3d470531a679bc7"
+  },
+  "profiles": {
+    "ap_only": {
+      "directory": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930",
+      "status": "PASS",
+      "source_wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "rate_hz": 48000,
+        "frames": 96000,
+        "size_bytes": 384044,
+        "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+      },
+      "modes": {
+        "dma": {
+          "status": "PASS",
+          "memory_status": "PASS",
+          "memory_pass_iterations_from_log": 20,
+          "pcm_pass_count": 4,
+          "pcm_case_count": 4,
+          "audio_intid_deltas": {
+            "388": 0,
+            "389": 0,
+            "390": 218
+          },
+          "bsp_selftests": {
+            "pass_count": 21,
+            "failures": [
+              "pfdi_misc"
+            ]
+          },
+          "wav": [
+            {
+              "direction": "forward",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma/forward.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            },
+            {
+              "direction": "reverse",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma/reverse.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            }
+          ]
+        },
+        "pio": {
+          "status": "PASS",
+          "memory_status": "PASS",
+          "memory_pass_iterations_from_log": 20,
+          "pcm_pass_count": 4,
+          "pcm_case_count": 4,
+          "audio_intid_deltas": {
+            "388": 24618,
+            "389": 40883,
+            "390": 0
+          },
+          "bsp_selftests": {
+            "pass_count": 21,
+            "failures": [
+              "pfdi_misc"
+            ]
+          },
+          "wav": [
+            {
+              "direction": "forward",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/pio/forward.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            },
+            {
+              "direction": "reverse",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/pio/reverse.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            }
+          ]
+        }
+      }
+    },
+    "full": {
+      "directory": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930",
+      "status": "FAIL",
+      "source_wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "rate_hz": 48000,
+        "frames": 96000,
+        "size_bytes": 384044,
+        "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+      },
+      "modes": {
+        "dma": {
+          "status": "FAIL",
+          "memory_status": "PASS",
+          "memory_pass_iterations_from_log": 20,
+          "pcm_pass_count": 0,
+          "pcm_case_count": 4,
+          "audio_intid_deltas": {
+            "388": 0,
+            "389": 0,
+            "390": 100
+          },
+          "bsp_selftests": {
+            "pass_count": 22,
+            "failures": []
+          },
+          "wav": [
+            {
+              "direction": "forward",
+              "status": "FAIL",
+              "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/forward.wav",
+              "frames": 74596,
+              "size_bytes": 298428,
+              "first_different_common_frame_zero_based": 0,
+              "exact_pcm_match": false,
+              "exact_wav_match": false,
+              "command_exit_success": false,
+              "sha256": "3c0c6b5855b6428009411d2cbf787e429dae2ca0ab951cc1ff4b785eab2976ae"
+            },
+            {
+              "direction": "reverse",
+              "status": "FAIL",
+              "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/reverse.wav",
+              "frames": 48216,
+              "size_bytes": 192908,
+              "first_different_common_frame_zero_based": 11264,
+              "exact_pcm_match": false,
+              "exact_wav_match": false,
+              "command_exit_success": false,
+              "sha256": "d5bca9de12de9602331279d7a7d5c260259d3d2a5daa4749a0ef24bdaa20f6d3"
+            }
+          ]
+        },
+        "pio": {
+          "status": "FAIL",
+          "memory_status": "PASS",
+          "memory_pass_iterations_from_log": 20,
+          "pcm_pass_count": 3,
+          "pcm_case_count": 4,
+          "audio_intid_deltas": {
+            "388": 37842,
+            "389": 24604,
+            "390": 0
+          },
+          "bsp_selftests": {
+            "pass_count": 22,
+            "failures": []
+          },
+          "wav": [
+            {
+              "direction": "forward",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/pio/forward.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            },
+            {
+              "direction": "reverse",
+              "status": "PASS",
+              "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/pio/reverse.wav",
+              "frames": 96000,
+              "size_bytes": 384044,
+              "first_different_common_frame_zero_based": null,
+              "exact_pcm_match": true,
+              "exact_wav_match": true,
+              "command_exit_success": true,
+              "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "recorded_runtime_binary_sha256": {
+    "qbox": "5e70bbd9c8fa9d15d85d075ab09ea4d694ebb1c4650220b232043e747062bb41",
+    "qemu_dma350": "7579d8eca22af11a0fac2289c1ae105e70e2f815c1411753f925eb65ff9c5e24",
+    "qemu_dw_apb_i2s": "c479b5c15cbd04fdf2379d45c8d20e27c9e28268aa9b31176dceef0469b951c6",
+    "libqemu": "b4c38e7fa446b193db8c8dfb827c5986b06d8c3f416e32274c74548ce7eb5acb",
+    "kernel": "cd5cf9c0a3e7ac193bd6b3776fc3a231cd081f052db141732c7535af08f5ec58",
+    "initrd": "ea97dc8473957ac5735f887b1b95b9075576eeb72a7acbc60f5efb7822f77a95"
+  },
+  "byte_comparison_method": "Python wave PCM parse plus full-file bytes equality; first mismatch uses zero-based stereo frames",
+  "evidence_files": [
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma/linux-uart.log",
+      "sha256": "7198c5204e927fb4faa310440f638e6d9cb22178e62bfad7f0fbb25cd017d837"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma-result.json",
+      "sha256": "353d15de331afba53d9c23812dd861ad32d396b47c1326cf0bb0a6eade520ea5"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/pio/linux-uart.log",
+      "sha256": "0e671416187bc9a1bddcd0cb3f3663cc111993d35ceea2f1927bf42a2fbfd873"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/pio-result.json",
+      "sha256": "127d6cc343926ee3dc740a54a0e75fcfb3fcfbed5a8238a9f5390daac4d2ec82"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/result.json",
+      "sha256": "fef5993c79148b7d7ceea9f853e270eb348ed3c9534a6c847fd4953d43b4fd51"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/source.wav",
+      "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/qbox-primary-console.log",
+      "sha256": "0156cede6ed39836bc14ce6c03e6646c4115886df110eaa49d24bac85e8964c1"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma-result.json",
+      "sha256": "b819cff7191cf41dc73c596729d8ff4fa7f97d1cf116fa5c5e1adf4348bc4a40"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/pio/qbox-primary-console.log",
+      "sha256": "0c419c8b913069dce04f4044028d2aa60a6d4a94e99bfb26a9203629b18ddf7f"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/pio-result.json",
+      "sha256": "9eda482d7fed32ce0dd97dea9b8da292eb81d1bff5b58e8eb7728b1862005aca"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/result.json",
+      "sha256": "1bd244e160abd3205c88aa6d5bcf1929caa6e65b105be53ff89692c03924b5c1"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/source.wav",
+      "sha256": "b682b891ba07d1c7e594992780a7b2268d0b23d67ad3e0df0d7086af238cc7d8"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/full-system-comparison.json",
+      "sha256": "27c5284fa77d4fd660e2664f87f3d40ea8a3bf7cf50146ebfdcbb38ccdc9150a"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma/launch.json",
+      "sha256": "9940903fb9e92254e37ff80704e8f1f73ab0d1232ec5a0a946082bf9e9e48de3"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-ap-only-native-retest-20260930/dma/linux-boot/linux.dtb",
+      "sha256": "bfc5477aa9421e7ae3d7faa6cdfc6d7cdd9ca1b22628705da6feff8aa50c6487"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/rd-aspen-result.json",
+      "sha256": "fd65069078b0279d1a184471b8e244b384b25fcfc0d4c55b40c935ab49cc9599"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/a.dtb",
+      "sha256": "36eb376a62cc49a4eda084584874ce1ceaf9cb3a25d468c4af4fded4727ad99d"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/disk-preparation.json",
+      "sha256": "055f039fe0fc37d14f340b74d5f25a291ef6a70680bbc7e5eb3a7a445c61b9f2"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/pio/disk-preparation.json",
+      "sha256": "72f45acd27f9cda2a16fdb8613ab027bfe977983b22b969d2d6070d96839633e"
+    },
+    {
+      "path": "build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/dma/loaded-audio-libraries.txt",
+      "sha256": "45d767766c7d00ad26e4a3736aea9306a5ee61d1017e7e6fd6a57b154ef9b3f7"
+    }
+  ]
+}

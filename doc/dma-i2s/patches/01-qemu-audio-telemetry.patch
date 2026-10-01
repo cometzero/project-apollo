@@ -1,0 +1,399 @@
+diff --git a/hw/audio/dw-apb-i2s.c b/hw/audio/dw-apb-i2s.c
+index 1d2cebf98922f021a7b8bb6b49bebb1d2c0d4b7a..aee898ff84813067602289e20b88342a8be82f12 100644
+--- a/hw/audio/dw-apb-i2s.c
++++ b/hw/audio/dw-apb-i2s.c
+@@ -22,6 +22,15 @@
+ #define COMPONENT_VERSION 0x3131312a
+ #define COMPONENT_TYPE 0x445701a0
+ #define DMA_ACTIVE 4
++#define TELEMETRY_LOG_LIMIT 2048
++
++typedef struct I2STelemetry {
++    uint64_t ticks, tx_frames, rx_frames, rx_full_ticks, tx_empty_events;
++    uint64_t late_sum_ns, late_max_ns;
++    int64_t scheduled_ns, deadline_ns, callback_ns, late_ns;
++    unsigned tx_high_water, rx_high_water, rows;
++    bool tx_empty;
++} I2STelemetry;
+ 
+ enum {
+     IER = 0x000,
+@@ -91,8 +100,47 @@ struct DWAPBI2SState {
+     bool global_enabled, rx_block_enabled, tx_block_enabled;
+     bool clock_enabled, rx_channel_enabled, tx_channel_enabled;
+     bool dma_tx_force_idle, dma_rx_force_idle;
++    bool telemetry;
++    char *telemetry_path;
++    I2STelemetry stats;
+ };
+ 
++/* Bounded opt-in diagnostics; no timer, FIFO or handshake policy changes. */
++static void i2s_telemetry_log(DWAPBI2SState *s, const char *event)
++{
++    I2STelemetry *t = &s->stats;
++
++    if (!s->telemetry || t->rows > TELEMETRY_LOG_LIMIT) {
++        return;
++    }
++    if (t->rows++ == TELEMETRY_LOG_LIMIT) {
++        fprintf(stderr, "QEMU_AUDIO_LIMIT model=i2s dev=%s object=%p "
++                "limit=%u\n", s->telemetry_path, (void *)s,
++                TELEMETRY_LOG_LIMIT);
++        return;
++    }
++    fprintf(stderr, "QEMU_AUDIO_I2S dev=%s object=%p event=%s "
++            "host_ns=%" PRId64 " virtual_ns=%" PRId64
++            " ticks=%" PRIu64 " tx_frames=%" PRIu64 " rx_frames=%" PRIu64
++            " rx_full_ticks=%" PRIu64 " tx_empty_events=%" PRIu64
++            " callback_ns=%" PRId64 " deadline_ns=%" PRId64
++            " late_ns=%" PRId64 " late_sum_ns=%" PRIu64
++            " late_max_ns=%" PRIu64 " tx_fifo=%u rx_fifo=%u "
++            "tx_high_water=%u rx_high_water=%u dmacr=0x%x "
++            "tx_req=%d tx_ack=%u rx_req=%d rx_ack=%u\n",
++            s->telemetry_path, (void *)s, event,
++            qemu_clock_get_ns(QEMU_CLOCK_REALTIME),
++            qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
++            t->ticks, t->tx_frames, t->rx_frames,
++            t->rx_full_ticks, t->tx_empty_events,
++            t->callback_ns, t->deadline_ns, t->late_ns,
++            t->late_sum_ns, t->late_max_ns,
++            s->tx_fifo.count, s->rx_fifo.count,
++            t->tx_high_water, t->rx_high_water, s->dmacr,
++            s->dma_tx.asserted, s->dma_tx.ack,
++            s->dma_rx.asserted, s->dma_rx.ack);
++}
++
+ static void fifo_clear(I2SFifo *f)
+ {
+     f->head = f->count = 0;
+@@ -130,11 +178,24 @@ static bool rx_active(DWAPBI2SState *s)
+ 
+ static void state_changed(DWAPBI2SState *s)
+ {
++    if (s->telemetry) {
++        bool empty = tx_active(s) && !s->tx_fifo.count;
++
++        s->stats.tx_high_water = MAX(s->stats.tx_high_water, s->tx_fifo.count);
++        s->stats.rx_high_water = MAX(s->stats.rx_high_water, s->rx_fifo.count);
++        s->stats.tx_empty_events += empty && !s->stats.tx_empty;
++        s->stats.tx_empty = empty;
++    }
+     qemu_bh_schedule(s->bh);
+     if (tx_active(s) && (!s->functional_pacing || s->tx_fifo.count)) {
+         if (!timer_pending(s->timer)) {
+-            timer_mod(s->timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) +
+-                      MAX(1, s->frame_period_ns));
++            int64_t deadline = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) +
++                               MAX(1, s->frame_period_ns);
++
++            timer_mod(s->timer, deadline);
++            if (s->telemetry) {
++                s->stats.scheduled_ns = deadline;
++            }
+         }
+     } else {
+         timer_del(s->timer);
+@@ -279,6 +340,13 @@ static uint32_t read_rx_sample(DWAPBI2SState *s, bool dma)
+ 
+ static void write_register(DWAPBI2SState *s, uint32_t offset, uint32_t value)
+ {
++    /* Capture the final FIFO state before a guest disable can clear it. */
++    if (s->telemetry && !(value & 1) &&
++        ((offset == IER && s->global_enabled) ||
++         (offset == ITER && s->tx_block_enabled) ||
++         (offset == IRER && s->rx_block_enabled))) {
++        i2s_telemetry_log(s, "disable");
++    }
+     switch (offset) {
+     case IER:
+         s->global_enabled = value & 1;
+@@ -522,6 +590,16 @@ static void frame_tick(void *opaque)
+     if (!tx_active(s)) {
+         return;
+     }
++    if (s->telemetry) {
++        I2STelemetry *t = &s->stats;
++
++        t->ticks++;
++        t->deadline_ns = t->scheduled_ns;
++        t->callback_ns = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
++        t->late_ns = MAX(0, t->callback_ns - t->deadline_ns);
++        t->late_sum_ns += t->late_ns;
++        t->late_max_ns = MAX(t->late_max_ns, (uint64_t)t->late_ns);
++    }
+     if (s->tx_fifo.count) {
+         frame = *fifo_front(&s->tx_fifo);
+     }
+@@ -529,16 +607,29 @@ static void frame_tick(void *opaque)
+         if (p->rx_fifo.count == FIFO_DEPTH) {
+             if (p->functional_pacing) {
+                 accepted = false;
++                if (s->telemetry) {
++                    s->stats.rx_full_ticks++;
++                }
+             } else {
+                 p->rx_overrun = true;
+             }
+         } else {
+             fifo_push(&p->rx_fifo, frame.left, frame.right);
++            if (p->telemetry) {
++                p->stats.rx_frames++;
++            }
+         }
+         state_changed(p);
+     }
+     if (accepted && s->tx_fifo.count) {
+         fifo_pop(&s->tx_fifo);
++        if (s->telemetry) {
++            s->stats.tx_frames++;
++        }
++    }
++    /* Frame summaries retain the deadline of the completed callback. */
++    if (s->telemetry && (s->stats.ticks <= 4 || !(s->stats.ticks % 1024))) {
++        i2s_telemetry_log(s, "frame-summary");
+     }
+     state_changed(s);
+ }
+@@ -590,6 +681,9 @@ static void i2s_reset(DeviceState *dev)
+ {
+     DWAPBI2SState *s = DW_APB_I2S(dev);
+ 
++    if (s->telemetry && (s->stats.ticks || s->stats.rx_frames)) {
++        i2s_telemetry_log(s, "reset");
++    }
+     timer_del(s->timer);
+     qemu_bh_cancel(s->bh);
+     s->dma_tx.ack = s->dma_rx.ack = 0;
+@@ -632,6 +726,17 @@ static void i2s_finalize(Object *obj)
+     DWAPBI2SState *s = DW_APB_I2S(obj);
+     timer_free(s->timer);
+     qemu_bh_delete(s->bh);
++    g_free(s->telemetry_path);
++}
++
++static void i2s_realize(DeviceState *dev, Error **errp)
++{
++    DWAPBI2SState *s = DW_APB_I2S(dev);
++
++    s->telemetry |= !g_strcmp0(g_getenv("QEMU_AUDIO_TELEMETRY"), "1");
++    if (s->telemetry) {
++        s->telemetry_path = object_get_canonical_path(OBJECT(dev));
++    }
+ }
+ 
+ static const Property i2s_properties[] = {
+@@ -644,6 +749,7 @@ static const Property i2s_properties[] = {
+                      functional_pacing, true),
+     DEFINE_PROP_UINT64("frame-period-ns", DWAPBI2SState,
+                        frame_period_ns, 20833),
++    DEFINE_PROP_BOOL("telemetry", DWAPBI2SState, telemetry, false),
+     DEFINE_PROP_LINK("peer", DWAPBI2SState, peer, TYPE_DW_APB_I2S,
+                      DWAPBI2SState *),
+ };
+@@ -656,6 +762,7 @@ static const VMStateDescription i2s_vmstate = {
+ static void i2s_class_init(ObjectClass *klass, const void *data)
+ {
+     DeviceClass *dc = DEVICE_CLASS(klass);
++    dc->realize = i2s_realize;
+     device_class_set_legacy_reset(dc, i2s_reset);
+     device_class_set_props(dc, i2s_properties);
+     dc->vmsd = &i2s_vmstate;
+diff --git a/hw/dma/arm-dma350.c b/hw/dma/arm-dma350.c
+index 3a5615b4efbbbc2b67b845fe88ec297fc920fef0..aa5ec6b29738762890ff8ddbaeb50148fad1fe56 100644
+--- a/hw/dma/arm-dma350.c
++++ b/hw/dma/arm-dma350.c
+@@ -20,6 +20,16 @@
+ #define BASE(c) (0x1000 + (c) * 0x100)
+ #define REG(s, c, r) ((s)->regs[(BASE(c) + (r)) / 4])
+ #define ACTIVE 4
++#define TELEMETRY_LOG_LIMIT 2048
++
++/* Diagnostic counters are separate from guest-visible channel reset state. */
++typedef struct DMA350Telemetry {
++    uint64_t commands, done, beats, read_bytes, write_bytes;
++    uint64_t rearms, rearm_sum_ns, rearm_max_ns;
++    int64_t done_host_ns, done_virtual_ns;
++    int64_t rearm_host_ns, rearm_virtual_ns;
++    bool done_pending;
++} DMA350Telemetry;
+ 
+ typedef struct DMA350Trigger {
+     bool used, command, peripheral, ack;
+@@ -46,8 +56,70 @@ struct ARMDMA350State {
+     uint32_t regs[0x2000 / 4];
+     uint32_t channels, triggers;
+     DMA350Channel channel[CHANNELS];
++    bool telemetry;
++    char *telemetry_path;
++    unsigned telemetry_rows;
++    DMA350Telemetry stats[CHANNELS];
+ };
+ 
++/*
++ * Opt-in period summaries, not per-beat logging. Host timestamps use QEMU's
++ * monotonic clock, not QEMU_CLOCK_HOST (which is the wall clock). The cap is
++ * per device lifetime and a cap marker makes truncated evidence explicit.
++ */
++static void dma350_telemetry_log(ARMDMA350State *s, unsigned c,
++                               const char *event)
++{
++    DMA350Telemetry *t = &s->stats[c];
++
++    if (!s->telemetry || s->telemetry_rows > TELEMETRY_LOG_LIMIT) {
++        return;
++    }
++    if (s->telemetry_rows++ == TELEMETRY_LOG_LIMIT) {
++        fprintf(stderr, "QEMU_AUDIO_LIMIT model=dma350 dev=%s object=%p "
++                "limit=%u\n", s->telemetry_path, (void *)s,
++                TELEMETRY_LOG_LIMIT);
++        return;
++    }
++    fprintf(stderr, "QEMU_AUDIO_DMA dev=%s object=%p event=%s channel=%u "
++            "host_ns=%" PRId64 " virtual_ns=%" PRId64
++            " commands=%" PRIu64 " done=%" PRIu64 " beats=%" PRIu64
++            " read_bytes=%" PRIu64 " write_bytes=%" PRIu64
++            " rearms=%" PRIu64 " rearm_host_ns=%" PRId64
++            " rearm_virtual_ns=%" PRId64 " rearm_sum_ns=%" PRIu64
++            " rearm_max_ns=%" PRIu64 " done_host_ns=%" PRId64
++            " done_virtual_ns=%" PRId64 " done_pending=%d"
++            " cmd=0x%x status=0x%x xsize=0x%x xsizehi=0x%x\n",
++            s->telemetry_path, (void *)s, event, c,
++            qemu_clock_get_ns(QEMU_CLOCK_REALTIME),
++            qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL),
++            t->commands, t->done, t->beats, t->read_bytes, t->write_bytes,
++            t->rearms, t->rearm_host_ns, t->rearm_virtual_ns,
++            t->rearm_sum_ns, t->rearm_max_ns,
++            t->done_host_ns, t->done_virtual_ns, t->done_pending,
++            REG(s, c, 0), REG(s, c, 4), REG(s, c, 0x20), REG(s, c, 0x24));
++}
++
++static void dma350_telemetry_start(ARMDMA350State *s, unsigned c)
++{
++    DMA350Telemetry *t = &s->stats[c];
++
++    if (!s->telemetry) {
++        return;
++    }
++    t->commands++;
++    if (t->done_pending) {
++        t->rearm_host_ns = qemu_clock_get_ns(QEMU_CLOCK_REALTIME) -
++                           t->done_host_ns;
++        t->rearm_virtual_ns = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) -
++                              t->done_virtual_ns;
++        t->rearms++;
++        t->rearm_sum_ns += t->rearm_host_ns;
++        t->rearm_max_ns = MAX(t->rearm_max_ns, (uint64_t)t->rearm_host_ns);
++        t->done_pending = false;
++    }
++}
++
+ static void dma350_schedule(ARMDMA350State *s)
+ {
+     if (!timer_pending(s->timer)) {
+@@ -101,6 +173,10 @@ static void dma350_release(ARMDMA350State *s, unsigned c)
+ 
+ static void dma350_reset_channel(ARMDMA350State *s, unsigned c)
+ {
++    if (s->telemetry && s->stats[c].commands) {
++        dma350_telemetry_log(s, c, "clear");
++        s->stats[c].done_pending = false;
++    }
+     dma350_release(s, c);
+     memset(&s->channel[c], 0, sizeof(s->channel[c]));
+     memset(&REG(s, c, 0), 0, 0x100);
+@@ -118,7 +194,21 @@ static void dma350_finish(ARMDMA350State *s, unsigned c, unsigned bit)
+     s->channel[c].enabled = false;
+     s->channel[c].paused = false;
+     REG(s, c, 0) = 0;
++    if (s->telemetry) {
++        DMA350Telemetry *t = &s->stats[c];
++
++        t->done_pending = bit == 0;
++        if (t->done_pending) {
++            t->done++;
++            t->done_host_ns = qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
++            t->done_virtual_ns = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
++        }
++    }
+     dma350_event(s, c, bit);
++    if (s->telemetry && (bit || s->stats[c].done <= 4 ||
++                        !(s->stats[c].done % 16))) {
++        dma350_telemetry_log(s, c, bit ? "stop-error" : "done");
++    }
+     if (clear) {
+         dma350_reset_channel(s, c);
+         dma350_irq(s);
+@@ -152,6 +242,7 @@ static void dma350_start(ARMDMA350State *s, unsigned c)
+     DMA350Channel *ch = &s->channel[c];
+     uint32_t ctrl = REG(s, c, 0x0c);
+     unsigned i;
++    dma350_telemetry_start(s, c);
+     dma350_release(s, c);
+     memset(ch, 0, sizeof(*ch));
+     ch->width = 1u << (ctrl & 7);
+@@ -207,6 +298,10 @@ static void dma350_start(ARMDMA350State *s, unsigned c)
+     dma350_progress(s, c);
+     dma350_irq(s);
+     dma350_schedule(s);
++    if (s->telemetry && (s->stats[c].commands <= 4 ||
++                        !(s->stats[c].commands % 16))) {
++        dma350_telemetry_log(s, c, "enable");
++    }
+ }
+ 
+ static bool dma350_service(ARMDMA350State *s, unsigned c)
+@@ -286,6 +381,9 @@ static bool dma350_service(ARMDMA350State *s, unsigned c)
+             }
+             ch->src += (int64_t)ch->src_inc * ch->width;
+             ch->src_left--;
++            if (s->telemetry) {
++                s->stats[c].read_bytes += ch->width;
++            }
+         }
+         if (ch->dst_left) {
+             if (address_space_write(&address_space_memory, ch->dst,
+@@ -296,6 +394,12 @@ static bool dma350_service(ARMDMA350State *s, unsigned c)
+             }
+             ch->dst += (int64_t)ch->dst_inc * ch->width;
+             ch->dst_left--;
++            if (s->telemetry) {
++                s->stats[c].write_bytes += ch->width;
++            }
++        }
++        if (s->telemetry) {
++            s->stats[c].beats++;
+         }
+         if (ch->xtype == 2) {
+             ch->wrap_left--;
+@@ -472,6 +576,11 @@ static void dma350_reset(DeviceState *dev)
+ static void dma350_realize(DeviceState *dev, Error **errp)
+ {
+     ARMDMA350State *s = ARM_DMA350(dev);
++
++    s->telemetry |= !g_strcmp0(g_getenv("QEMU_AUDIO_TELEMETRY"), "1");
++    if (s->telemetry) {
++        s->telemetry_path = object_get_canonical_path(OBJECT(dev));
++    }
+     if (!s->channels || s->channels > CHANNELS || s->triggers > TRIGGERS) {
+         error_setg(errp, "DMA350 needs 1..8 channels and at most 256 triggers");
+     }
+@@ -495,7 +604,10 @@ static void dma350_init(Object *obj)
+ 
+ static void dma350_finalize(Object *obj)
+ {
+-    timer_free(ARM_DMA350(obj)->timer);
++    ARMDMA350State *s = ARM_DMA350(obj);
++
++    timer_free(s->timer);
++    g_free(s->telemetry_path);
+ }
+ 
+ static const VMStateDescription dma350_vmstate = {
+@@ -506,6 +618,7 @@ static const VMStateDescription dma350_vmstate = {
+ static const Property dma350_properties[] = {
+     DEFINE_PROP_UINT32("channel-count", ARMDMA350State, channels, 8),
+     DEFINE_PROP_UINT32("trigger-count", ARMDMA350State, triggers, 8),
++    DEFINE_PROP_BOOL("telemetry", ARMDMA350State, telemetry, false),
+ };
+ 
+ static void dma350_class_init(ObjectClass *klass, const void *data)

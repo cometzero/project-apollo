@@ -1,0 +1,2612 @@
+{
+  "schema_version": 1,
+  "full_audio_qualification": "FAIL",
+  "runs": [
+    {
+      "name": "affinity-fifo40-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/affinity-fifo40-full-dma-1/result.json",
+      "result_sha256": "bfc3bf86f0dea34d6d81c82a0afadc430cd3869ddd85d0f4638579d22c152597",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 89.51043742799811,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 28688,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 24580,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/affinity-fifo40-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "affinity-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/affinity-full-dma-1/result.json",
+      "result_sha256": "df7f7d21d646daf9a17de20fe4e05cfe3bb1da2ec6c8caf9665a76d85bf03353",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 82.19426742999349,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 6144,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 16400,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/affinity-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "baseline-ap-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/baseline-ap-1/result.json",
+      "result_sha256": "25a6da8b848145110e547d076429e63e6fce535a8c23adddf2c3f4c977c4c2b2",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 60.178411280001455,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        },
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 210.7326897009989,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL"
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL"
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/baseline-ap-1/guest-health-review.json"
+    },
+    {
+      "name": "baseline-full-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/baseline-full-1/result.json",
+      "result_sha256": "da43b9f2e4683b65af1c516cae89f7263b2bc2b1b6ae8d40da552f28862a18c8",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 0.6019813200036879,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "FAIL",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL"
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 0.6013417560025118,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "FAIL",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL"
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "baseline-full-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/baseline-full-2/result.json",
+      "result_sha256": "76fb43525585a44979d33a84b335ef62eb164bf0645e4a9566e2b12757953b38",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 215.92307766500016,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 34542,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 53248,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        },
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 129.6083706310019,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/baseline-full-2/guest-health-review.json"
+    },
+    {
+      "name": "health-ap-pcm-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/health-ap-pcm-1/result.json",
+      "result_sha256": "8901aaf91042ad5e2ac9435cece7e489621cc44ec371dd6ab372fb0c5f3b4b03",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 25.129949772002874,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "SKIP",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        },
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 27.503450456999417,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "SKIP",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "PASS",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/health-ap-pcm-1/guest-health-review.json"
+    },
+    {
+      "name": "irq-other-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-full-dma-1/result.json",
+      "result_sha256": "490f1fdc61011f67c91bddaa46db94a8b76a17ec700f5cf704051c77d26b5eab",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 32.42515520199959,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "FAIL",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL"
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL"
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {},
+          "bsp_pass_count": 0
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-full-dma-1/guest-health-review.json",
+      "boot_failure": {
+        "stage": "RSE BL2",
+        "evidence": "qbox-rse.log: SCP is not ready. Abort; Pre-load step for image 2 failed",
+        "audio_status": "NOT_RUN",
+        "external_signal_sent": false,
+        "note": "IRQ policy setup was never reached; original result retained."
+      }
+    },
+    {
+      "name": "irq-other-full-dma-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-full-dma-2/result.json",
+      "result_sha256": "4097e12c2178175596fe04c415b0dd0eb33e37679662215b2c40fe1fb9d6e7e6",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 129.72592005500337,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 59392,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-full-dma-2/guest-health-review.json"
+    },
+    {
+      "name": "irq-other-nice10-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-nice10-full-dma-1/result.json",
+      "result_sha256": "1e8cf130a12dacd09a6a4d71abf99cc9c2767bf6d3ce5e1a5fc2ae3cd9cb7d9f",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 148.8167215909998,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "PASS",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-nice10-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "irq-other-nice10-full-dma-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-nice10-full-dma-warm3/result.json",
+      "result_sha256": "d5e8829c466aa57d83c90146c6c1e2bcfe48302d3b1c4bfc715ba3a556ca008c",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 294.0114190439999,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "PASS",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-nice10-full-dma-warm3/guest-health-review.json"
+    },
+    {
+      "name": "models-telemetry-off",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/models-telemetry-off/result.json",
+      "result_sha256": "2c55af106efc290420624b6929f2f4dd8b670fb21413a9f326351a28c98a7157",
+      "status": "FAIL",
+      "modes": [],
+      "model_checks": 0,
+      "error": "QEMU monitor failed to start"
+    },
+    {
+      "name": "models-telemetry-off-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/models-telemetry-off-2/result.json",
+      "result_sha256": "09adf6db810e19b4a8e3263575473516c7c600532dde60d94b39dcbe409b33c6",
+      "status": "PASS",
+      "modes": [],
+      "model_checks": 28,
+      "error": null
+    },
+    {
+      "name": "models-telemetry-on",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/models-telemetry-on/result.json",
+      "result_sha256": "379f308be1ba83b83c8feef22118cb723366c462a9c74190343c06132a31621e",
+      "status": "PASS",
+      "modes": [],
+      "model_checks": 28,
+      "error": null
+    },
+    {
+      "name": "p3-ap-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-ap-warm3/result.json",
+      "result_sha256": "35697b3f0e93690c7ba6182ccf2369854a053c0fd3770d8acfe80d0d12ba2703",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 153.1549174949978,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        },
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 162.74706478299777,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-ap-warm3/guest-health-review.json"
+    },
+    {
+      "name": "p3-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-dma-1/result.json",
+      "result_sha256": "75f163881ec2173e9b6dc200e6fc03d87c5905a84f757893e81cfb27ff54fc9d",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 71.85793525500048,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 0,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 0,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "p3-full-pio-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-pio-warm3/result.json",
+      "result_sha256": "f89a524e0f6e7f3e80d4092323eb96b558759f17f6856ddd2a3611338c1d018b",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 24.321320283001114,
+          "iterations": [],
+          "bsp_cases": {},
+          "bsp_pass_count": 0
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-pio-warm3/guest-health-review.json",
+      "boot_failure": {
+        "stage": "RSE BL2",
+        "evidence": "qbox-rse.log: BL2: Fatal, Read back AP state failed; Post-load step for image 0 failed",
+        "audio_status": "NOT_RUN",
+        "external_signal_sent": false,
+        "note": "Runner exited before proposed bounded process stop. Original result retained."
+      }
+    },
+    {
+      "name": "p3-full-pio-warm3-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-pio-warm3-2/result.json",
+      "result_sha256": "0ff11ccf1035676f5e84b2d82d95f57b0f7d7bce5f0676d1d09bad654de85c30",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 290.6229412850007,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "PASS",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-full-pio-warm3-2/guest-health-review.json"
+    },
+    {
+      "name": "p3-models-off",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-models-off/result.json",
+      "result_sha256": "9b5f6fa46121a10318bbc79cc3b555591cbca1776b895a63d1b1ca4ea2d069d0",
+      "status": "PASS",
+      "modes": [],
+      "model_checks": 44,
+      "error": null
+    },
+    {
+      "name": "p3-models-on",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-models-on/result.json",
+      "result_sha256": "ac665d47dad3c9952f83afc2422964e61ae4d9a60a8a6fba04fb24a938bafa37",
+      "status": "PASS",
+      "modes": [],
+      "model_checks": 44,
+      "error": null
+    },
+    {
+      "name": "p3-trace-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-trace-full-dma-1/result.json",
+      "result_sha256": "8c6db7c91e8507a9ed1b5fa1e8c6bcecac12d398469ed8b654dd83436a1934f5",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 132.95846035000432,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 1,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/p3-trace-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "pfdi-other-affinity-rr40-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-other-affinity-rr40-full-dma-1/result.json",
+      "result_sha256": "cf791c253f255b088bdddf5d6415581ee0ee81b088cff838cbf49cc2096ed657",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 96.11126940700342,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 1,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 20480,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 20496,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-other-affinity-rr40-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "pfdi-other-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-other-full-dma-1/result.json",
+      "result_sha256": "b55f6486225c1840a0abf94ed91e0ad7e4b678de25cf3f3b5f30bf130e072273",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": true,
+          "elapsed_seconds": 159.8812281540013,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 2,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 1024,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 7168,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-other-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "pfdi-smc-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-smc-full-dma-1/result.json",
+      "result_sha256": "25af9f25d3584ae58618efff6ce81c5dbef288a4bf5cbd111051aae91ec24819",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 135.11869288900198,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 2,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pfdi-smc-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "pio-lock-ap-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-ap-1/result.json",
+      "result_sha256": "8bdb09ab07191541fce5da8f83e3429488c3f4587caddb69af21486cb1734294",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 67.02996543699555,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "PASS",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-ap-1/guest-health-review.json"
+    },
+    {
+      "name": "pio-lock-ap-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-ap-warm3/result.json",
+      "result_sha256": "d9fe5a5a0406363a14cb28e7b62c96918cb3f3a345a69c214af255e125a1e378",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 138.94707671200013,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 2048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        },
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 165.23311767900304,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-ap-warm3/guest-health-review.json"
+    },
+    {
+      "name": "pio-lock-full-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-full-1/result.json",
+      "result_sha256": "0af7cfd22cf3e39cbb4ef4315221bccba03566251597f7443311f0702f54b0d7",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 137.337189742997,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-full-1/guest-health-review.json"
+    },
+    {
+      "name": "pio-lock-full-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-full-warm3/result.json",
+      "result_sha256": "edfbe386e0caa41828cd4be08577b1a40706bfd5f3255052f312a962080410ce",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 115.09312666799815,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 2048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 2048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            },
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 2048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 5120,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            },
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 16400,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 2048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        },
+        {
+          "mode": "pio",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": false,
+          "elapsed_seconds": 290.31214499299676,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 3,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/pio-lock-full-warm3/guest-health-review.json"
+    },
+    {
+      "name": "qsp-ap-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/qsp-ap-dma-1/result.json",
+      "result_sha256": "953d5af517c6284da32e7d612a578e32344ec12d6d63f7c857cc25514cf2fb66",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 47.71867897699849,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "FAIL",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 21
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/qsp-ap-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "qsp-full-dma-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/qsp-full-dma-2/result.json",
+      "result_sha256": "24865998ae5e8a85d991cda0141873e9c746f280d8b8cdfa22a12dc33cef9456",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 137.7791426479962,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/qsp-full-dma-2/guest-health-review.json"
+    },
+    {
+      "name": "rr60-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/rr60-full-dma-1/result.json",
+      "result_sha256": "56ec891178348175a9471ffc61e3fd51417fa47f9d6c30a5eea595ea9604bd77",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 127.98442667599738,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/rr60-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "rr60-full-warm3",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/rr60-full-warm3/result.json",
+      "result_sha256": "c2d400575b51e24444c04f38294634e93e68b63de7744954f1f757a057d2cb7f",
+      "status": "PASS",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "PASS",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 255.79886203599744,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        },
+        {
+          "mode": "pio",
+          "status": "PASS",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": false,
+          "elapsed_seconds": 281.2442914300045,
+          "iterations": [
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            },
+            {
+              "status": "PASS",
+              "memory": "PASS",
+              "pcm_status": "PASS",
+              "pcm_pass_count": 4,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                },
+                {
+                  "direction": "reverse",
+                  "status": "PASS",
+                  "frames": 96000,
+                  "exact_pcm_match": true,
+                  "exact_wav_match": true
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/rr60-full-warm3/guest-health-review.json"
+    },
+    {
+      "name": "smc-allsched-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/smc-allsched-full-dma-1/result.json",
+      "result_sha256": "e22acb274c0d7593e98ff0e91f439679a5d59e2b9a97b3d7b269e650e0039b47",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "DIAGNOSTIC",
+          "diagnostics": true,
+          "elapsed_seconds": 136.31122704400332,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 1,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/smc-allsched-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "trace-full-dma-1",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/trace-full-dma-1/result.json",
+      "result_sha256": "e9fb30368dfcf5d6f15da83ae0c12c87219a6a0b0547be37f8d1d35894fb0e86",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 282.62637240299955,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "PASS",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 0,
+              "wav": [
+                {
+                  "direction": "forward",
+                  "status": "FAIL",
+                  "frames": 63504,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                },
+                {
+                  "direction": "reverse",
+                  "status": "FAIL",
+                  "frames": 44048,
+                  "exact_pcm_match": false,
+                  "exact_wav_match": false
+                }
+              ]
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/trace-full-dma-1/guest-health-review.json"
+    },
+    {
+      "name": "trace-full-dma-2",
+      "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/trace-full-dma-2/result.json",
+      "result_sha256": "0d5f66ce6f01aba0f6b9f5a0fe5541f3547b5c742027622ea5f69bc2f50c189b",
+      "status": "FAIL",
+      "modes": [
+        {
+          "mode": "dma",
+          "status": "FAIL",
+          "qualification": "baseline-settings",
+          "diagnostics": true,
+          "elapsed_seconds": 128.80999744199653,
+          "iterations": [
+            {
+              "status": "FAIL",
+              "memory": "SKIP",
+              "pcm_status": "FAIL",
+              "pcm_pass_count": 1,
+              "wav": []
+            }
+          ],
+          "bsp_cases": {
+            "proc": "PASS",
+            "clocksource": "PASS",
+            "dsu_cache": "PASS",
+            "rtc": "PASS",
+            "watchdog": "PASS",
+            "hwrng": "PASS",
+            "virtio_block": "PASS",
+            "wic_boot": "PASS",
+            "wic_misc": "PASS",
+            "wic_partition_count": "PASS",
+            "remoteproc": "PASS",
+            "rpmsg_bus": "PASS",
+            "pfdi_misc": "PASS",
+            "pfdi_app": "PASS",
+            "pfdi_config": "PASS",
+            "pfdi_service": "PASS",
+            "pl011_console": "PASS",
+            "arch_timer": "PASS",
+            "initramfs_cmdline": "PASS",
+            "cpu_count": "PASS",
+            "network": "PASS",
+            "dsu_pmu": "PASS"
+          },
+          "bsp_pass_count": 22
+        }
+      ],
+      "reviewed_status": "FAIL",
+      "guest_health_review": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/trace-full-dma-2/guest-health-review.json"
+    }
+  ],
+  "conditional_full_dma_cfs": {
+    "status": "PASS",
+    "qualification": "DIAGNOSTIC",
+    "default_policy": false,
+    "repeat": 3,
+    "result": "build/qbox-apollo-qvp/dma-i2s-implementation-20261001/irq-other-nice10-full-dma-warm3/result.json",
+    "script": "scripts/test/qbox_audio_dma_cfs.sh",
+    "guest_health": "NO_FAILURE_OBSERVED",
+    "cold_warm_10_gate": "NOT_RUN"
+  }
+}

@@ -1,0 +1,185 @@
+diff --git a/hw/audio/dw-apb-i2s.c b/hw/audio/dw-apb-i2s.c
+index aee898ff84813067602289e20b88342a8be82f12..1c14eda378f409ab3660fd9da903401621f94bf0 100644
+--- a/hw/audio/dw-apb-i2s.c
++++ b/hw/audio/dw-apb-i2s.c
+@@ -27,6 +27,7 @@
+ typedef struct I2STelemetry {
+     uint64_t ticks, tx_frames, rx_frames, rx_full_ticks, tx_empty_events;
+     uint64_t late_sum_ns, late_max_ns;
++    uint64_t irq_evaluations, irq_writes, irq_skipped;
+     int64_t scheduled_ns, deadline_ns, callback_ns, late_ns;
+     unsigned tx_high_water, rx_high_water, rows;
+     bool tx_empty;
+@@ -84,6 +85,7 @@ struct DWAPBI2SState {
+     SysBusDevice parent_obj;
+     MemoryRegion iomem;
+     qemu_irq irq;
++    int irq_level;
+     QEMUTimer *timer;
+     QEMUBH *bh;
+     DWAPBI2SState *peer;
+@@ -127,6 +129,8 @@ static void i2s_telemetry_log(DWAPBI2SState *s, const char *event)
+             " late_ns=%" PRId64 " late_sum_ns=%" PRIu64
+             " late_max_ns=%" PRIu64 " tx_fifo=%u rx_fifo=%u "
+             "tx_high_water=%u rx_high_water=%u dmacr=0x%x "
++            "irq_evaluations=%" PRIu64 " irq_writes=%" PRIu64
++            " irq_skipped=%" PRIu64 " "
+             "tx_req=%d tx_ack=%u rx_req=%d rx_ack=%u\n",
+             s->telemetry_path, (void *)s, event,
+             qemu_clock_get_ns(QEMU_CLOCK_REALTIME),
+@@ -137,6 +141,7 @@ static void i2s_telemetry_log(DWAPBI2SState *s, const char *event)
+             t->late_sum_ns, t->late_max_ns,
+             s->tx_fifo.count, s->rx_fifo.count,
+             t->tx_high_water, t->rx_high_water, s->dmacr,
++            t->irq_evaluations, t->irq_writes, t->irq_skipped,
+             s->dma_tx.asserted, s->dma_tx.ack,
+             s->dma_rx.asserted, s->dma_rx.ack);
+ }
+@@ -552,6 +557,24 @@ static uint32_t read_register(DWAPBI2SState *s, uint32_t offset)
+     }
+ }
+ 
++static void i2s_drive_irq(DWAPBI2SState *s, bool level)
++{
++    if (s->telemetry) {
++        s->stats.irq_evaluations++;
++    }
++    if (s->irq_level == level) {
++        if (s->telemetry) {
++            s->stats.irq_skipped++;
++        }
++        return;
++    }
++    s->irq_level = level;
++    if (s->telemetry) {
++        s->stats.irq_writes++;
++    }
++    qemu_set_irq(s->irq, level);
++}
++
+ static void drive_outputs(void *opaque)
+ {
+     DWAPBI2SState *s = opaque;
+@@ -566,7 +589,7 @@ static void drive_outputs(void *opaque)
+     if (s->global_enabled && s->tx_block_enabled && s->tx_channel_enabled) {
+         enabled |= ISR_TXFE | ISR_TXFO;
+     }
+-    qemu_set_irq(s->irq, !!(interrupt_status(s) & enabled & ~s->imr));
++    i2s_drive_irq(s, !!(interrupt_status(s) & enabled & ~s->imr));
+     request_update(&s->dma_tx, tx_active(s) &&
+                    (s->dmacr & DMACR_TXBLOCK) && s->tx_fifo.count < FIFO_DEPTH,
+                    force_tx);
+@@ -689,7 +712,9 @@ static void i2s_reset(DeviceState *dev)
+     s->dma_tx.ack = s->dma_rx.ack = 0;
+     s->dma_tx.asserted = s->dma_rx.asserted = false;
+     s->dma_tx.wait_ack_low = s->dma_rx.wait_ack_low = false;
+-    qemu_set_irq(s->irq, 0);
++    /* Force a low output on reset, even if the cached level was already low. */
++    s->irq_level = -1;
++    i2s_drive_irq(s, false);
+     qemu_set_irq(s->dma_tx.irq, 0);
+     qemu_set_irq(s->dma_rx.irq, 0);
+     s->ccr = s->rfcr = s->tfcr = s->dmacr = 0;
+@@ -708,6 +733,7 @@ static void i2s_init(Object *obj)
+     SysBusDevice *sbd = SYS_BUS_DEVICE(obj);
+     DeviceState *dev = DEVICE(obj);
+ 
++    s->irq_level = -1;
+     s->bh = aio_bh_new_guarded(qemu_get_aio_context(), drive_outputs, s,
+                                &dev->mem_reentrancy_guard);
+     s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, frame_tick, s);
+diff --git a/hw/dma/arm-dma350.c b/hw/dma/arm-dma350.c
+index aa5ec6b29738762890ff8ddbaeb50148fad1fe56..1ef1c102f995459c5a76ba00af0596c10dcd1bcb 100644
+--- a/hw/dma/arm-dma350.c
++++ b/hw/dma/arm-dma350.c
+@@ -50,6 +50,7 @@ struct ARMDMA350State {
+     MemoryRegion iomem;
+     QEMUTimer *timer;
+     qemu_irq irq[CHANNELS + 1];
++    int irq_level[CHANNELS + 1];
+     qemu_irq ack[TRIGGERS];
+     uint32_t request[TRIGGERS];
+     int owner[TRIGGERS];
+@@ -59,6 +60,7 @@ struct ARMDMA350State {
+     bool telemetry;
+     char *telemetry_path;
+     unsigned telemetry_rows;
++    uint64_t irq_evaluations, irq_writes, irq_skipped;
+     DMA350Telemetry stats[CHANNELS];
+ };
+ 
+@@ -89,6 +91,8 @@ static void dma350_telemetry_log(ARMDMA350State *s, unsigned c,
+             " rearm_virtual_ns=%" PRId64 " rearm_sum_ns=%" PRIu64
+             " rearm_max_ns=%" PRIu64 " done_host_ns=%" PRId64
+             " done_virtual_ns=%" PRId64 " done_pending=%d"
++            " irq_evaluations=%" PRIu64 " irq_writes=%" PRIu64
++            " irq_skipped=%" PRIu64
+             " cmd=0x%x status=0x%x xsize=0x%x xsizehi=0x%x\n",
+             s->telemetry_path, (void *)s, event, c,
+             qemu_clock_get_ns(QEMU_CLOCK_REALTIME),
+@@ -97,6 +101,7 @@ static void dma350_telemetry_log(ARMDMA350State *s, unsigned c,
+             t->rearms, t->rearm_host_ns, t->rearm_virtual_ns,
+             t->rearm_sum_ns, t->rearm_max_ns,
+             t->done_host_ns, t->done_virtual_ns, t->done_pending,
++            s->irq_evaluations, s->irq_writes, s->irq_skipped,
+             REG(s, c, 0), REG(s, c, 4), REG(s, c, 0x20), REG(s, c, 0x24));
+ }
+ 
+@@ -127,18 +132,36 @@ static void dma350_schedule(ARMDMA350State *s)
+     }
+ }
+ 
++static void dma350_drive_irq(ARMDMA350State *s, unsigned output, bool level)
++{
++    if (s->telemetry) {
++        s->irq_evaluations++;
++    }
++    if (s->irq_level[output] == level) {
++        if (s->telemetry) {
++            s->irq_skipped++;
++        }
++        return;
++    }
++    s->irq_level[output] = level;
++    if (s->telemetry) {
++        s->irq_writes++;
++    }
++    qemu_set_irq(s->irq[output], level);
++}
++
+ static void dma350_irq(ARMDMA350State *s)
+ {
+     uint32_t pending = 0;
+     unsigned c;
+     for (c = 0; c < s->channels; c++) {
+         bool level = (REG(s, c, 4) & 0x7ff) != 0;
+-        qemu_set_irq(s->irq[c], level);
++        dma350_drive_irq(s, c, level);
+         pending |= level << c;
+     }
+     s->regs[0x200 / 4] = pending;
+     s->regs[0x208 / 4] = !!(pending && (s->regs[0x20c / 4] & 1));
+-    qemu_set_irq(s->irq[CHANNELS], s->regs[0x208 / 4]);
++    dma350_drive_irq(s, CHANNELS, s->regs[0x208 / 4]);
+ }
+ 
+ static void dma350_event(ARMDMA350State *s, unsigned c, unsigned bit)
+@@ -570,6 +593,10 @@ static void dma350_reset(DeviceState *dev)
+     s->regs[0xfb0 / 4] = (4 << 16) | (47 << 10) | ((s->channels - 1) << 4);
+     s->regs[0xfb4 / 4] = BIT(16) | s->triggers;
+     s->regs[0xfc8 / 4] = 0x3a00043b;
++    /* Reset must drive every implemented IRQ low, including its first reset. */
++    for (c = 0; c < ARRAY_SIZE(s->irq_level); c++) {
++        s->irq_level[c] = -1;
++    }
+     dma350_irq(s);
+ }
+ 
+@@ -595,6 +622,7 @@ static void dma350_init(Object *obj)
+                           TYPE_ARM_DMA350, 0x2000);
+     sysbus_init_mmio(sbd, &s->iomem);
+     for (i = 0; i < ARRAY_SIZE(s->irq); i++) {
++        s->irq_level[i] = -1;
+         sysbus_init_irq(sbd, &s->irq[i]);
+     }
+     qdev_init_gpio_in_named(DEVICE(obj), dma350_req, "dma-req", TRIGGERS);

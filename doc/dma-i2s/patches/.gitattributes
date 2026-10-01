@@ -1,0 +1,2 @@
+# Unified diff context markers and archived bytes must remain unchanged.
+*.patch -whitespace

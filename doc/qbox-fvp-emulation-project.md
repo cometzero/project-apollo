@@ -1013,3 +1013,16 @@ boots and both DMA controllers' memory tests. Audio qualification is FAIL:
 DMA PCM 0/4, PIO PCM 3/4, DMA WAV 0/2 (capture timeout), PIO WAV 2/2 with
 whole-file equality. ALSA XRUN root cause remains unresolved. Evidence:
 `build/qbox-apollo-qvp/qbox-full-native-audio-foreground-20260930/result.json`.
+
+The 2026-10-01 follow-up retains the Linux DesignWare PIO stream-lock fix
+and stricter audio validation (capture readiness, fatal XRUN handling,
+whole-file comparison and observed PFDI/RCU failure rejection). Native and
+bridge measurement code, the unproven IRQ cache, and scheduling/UKI/repeat
+experiment tools were removed from active sources and preserved as
+re-applicable patches. Freerunning, quantum and audio pacing are unchanged.
+Historical full DMA warm3 success required explicit guest IRQ SCHED_OTHER
+and audio nice -10; it does not qualify the default full-system policy or
+the cleaned source tree. See [code cleanup](dma-i2s/05-code-cleanup.md)
+for retained code and patch instructions, and
+[experiment results](dma-i2s/04-implementation-results.md) for per-run
+outcomes and original artifact provenance.

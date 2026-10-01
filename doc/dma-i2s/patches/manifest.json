@@ -1,0 +1,223 @@
+[
+  {
+    "patch": "01-qemu-audio-telemetry.patch",
+    "repository": "hsoc-stack/tools/qemu",
+    "head": "b06c5ec3e54086b3f0fcea15bd0e02deb8971c0c",
+    "description": "Optional native DMA/I2S telemetry; no IRQ cache",
+    "sha256": "66b1c1a9ebc59e953b123b3e10a167cb2f40bffe2eaadcc68dd6d48398cd4c61",
+    "base": {
+      "hw/audio/dw-apb-i2s.c": {
+        "sha256": "4f44a028a9aadbf112897675b7eb2672f89bb3e66f006909c28e4a33e55c4790",
+        "mode": "0o664"
+      },
+      "hw/dma/arm-dma350.c": {
+        "sha256": "95e9020e3a9e67580aef94ce20f9ad8ad53fd52a54afa0920396b97ed5a4eadf",
+        "mode": "0o664"
+      }
+    },
+    "archived": {
+      "hw/audio/dw-apb-i2s.c": {
+        "sha256": "63212289eceb2020cf6c9f1751f802047f3135626ee5e81bb632bfae97dd328d",
+        "mode": "0o664"
+      },
+      "hw/dma/arm-dma350.c": {
+        "sha256": "9460f312345b54cdf5e37c01448ff71cd6ea11b0e9785a3429f16eeb434c5ccf",
+        "mode": "0o664"
+      }
+    },
+    "verification": "PASS: reverse/apply/reverse, exact bytes and modes"
+  },
+  {
+    "patch": "02-qemu-irq-cache-experiment.patch",
+    "repository": "hsoc-stack/tools/qemu",
+    "head": "b06c5ec3e54086b3f0fcea15bd0e02deb8971c0c",
+    "description": "Unproven IRQ cache candidate; requires 01",
+    "sha256": "87ec6c13f466929fc5f7d7641c478cf5fa1225a98e4c44d794d36f3cc3b9fa4b",
+    "base": {
+      "hw/audio/dw-apb-i2s.c": {
+        "sha256": "63212289eceb2020cf6c9f1751f802047f3135626ee5e81bb632bfae97dd328d",
+        "mode": "0o664"
+      },
+      "hw/dma/arm-dma350.c": {
+        "sha256": "9460f312345b54cdf5e37c01448ff71cd6ea11b0e9785a3429f16eeb434c5ccf",
+        "mode": "0o664"
+      }
+    },
+    "archived": {
+      "hw/audio/dw-apb-i2s.c": {
+        "sha256": "9506d8b51ff68ec798301222a94c8eca5bedddf937f97641d527399d02276dfa",
+        "mode": "0o664"
+      },
+      "hw/dma/arm-dma350.c": {
+        "sha256": "feaccd289956f23a12b0564d920a0c067752d78bd7be2ce4d83b1b3141e70bcd",
+        "mode": "0o664"
+      }
+    },
+    "verification": "PASS: reverse/apply/reverse, exact bytes and modes"
+  },
+  {
+    "patch": "03-qbox-initiator-telemetry.patch",
+    "repository": "hsoc-stack/tools/qbox",
+    "head": "f8087c406a7b27c61f64edcbe819b2dae5358804",
+    "description": "DMI/alias/transport/BQL measurement and tests",
+    "sha256": "92cb9c7dc2b2fcc5ef0c92deeb0db4e559eb9ae18a290523071f5664c011d9ac",
+    "base": {
+      "qemu-components/common/include/ports/initiator.h": {
+        "sha256": "c292a4a5ea217e1460c74dbe2b24d1869ea895cf6d1389885bb60183d64cbd8f",
+        "mode": "0o664"
+      },
+      "qemu-components/common/include/ports/initiator-telemetry.h": null,
+      "tests/qbox/test_initiator_telemetry.py": null
+    },
+    "archived": {
+      "qemu-components/common/include/ports/initiator.h": {
+        "sha256": "aeb7faa8302e09888f1e670e84564b446e63e9f079515f5aa08170df499e7466",
+        "mode": "0o664"
+      },
+      "qemu-components/common/include/ports/initiator-telemetry.h": {
+        "sha256": "2e91171fe864b80ee654a37c87519068bfc7d0c08a78e863fbe36b0724b4508c",
+        "mode": "0o664"
+      },
+      "tests/qbox/test_initiator_telemetry.py": {
+        "sha256": "1103bf9e64a7a7d396a7decfc9276074eadb25b66660a0447a30e4d63bb32abf",
+        "mode": "0o664"
+      }
+    },
+    "verification": "PASS: reverse/apply/reverse, exact bytes and modes"
+  },
+  {
+    "patch": "04-i2s-loopback-diagnostics.patch",
+    "repository": "hsoc-stack/yocto/meta-hsoc-auto-solutions",
+    "head": "c96e9e7662bc857a970b4ef5e68d2837f499d9df",
+    "description": "Optional ALSA error status dump",
+    "sha256": "211cb5a5d1229db56e706846622d32b28a6891b167794f44010aa2f2ef001fed",
+    "base": {
+      "recipes-test/i2s-loopback/files/i2s_loopback.c": {
+        "sha256": "ef231e4633a1a6e2bd4d316062befa519d4b2136b4c18b0111d7b469380f9bf2",
+        "mode": "0o664"
+      }
+    },
+    "archived": {
+      "recipes-test/i2s-loopback/files/i2s_loopback.c": {
+        "sha256": "6c6c9771908660cc720cd17d2dd5c13ff97de38f79ace4cb5acaa338b683ee21",
+        "mode": "0o664"
+      }
+    },
+    "verification": "PASS: reverse/apply/reverse, exact bytes and modes"
+  },
+  {
+    "patch": "05-audio-experiment-tools.patch",
+    "repository": ".",
+    "head": "6c476bc0b5dd3cb370350bdd4d6aae649a25462d",
+    "description": "Tracing, scheduling controls, repeats, private UKI replacement, analysis and experiment tests",
+    "sha256": "78e491fb8394852da1ea5d435cc72edc2d4b2f7227f529a3e3154d9bb878e6bd",
+    "base": {
+      "scripts/test/qbox_audio_uki.py": null,
+      "scripts/test/qbox_audio_repeat.py": null,
+      "scripts/test/qbox_audio_health.py": {
+        "sha256": "d0e8a4c9113c3e0aa2b0da8c0bfc2adc6ac024da2aba849430d5fd926b2c5775",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_rr60.sh": null,
+      "scripts/test/qbox_audio_diagnostics.sh": null,
+      "scripts/test/qbox_audio_dma_cfs.sh": null,
+      "scripts/test/qbox_audio_experiment.py": null,
+      "tests/test_qbox_audio_uki.py": null,
+      "tests/test_qbox_audio_experiment.py": null,
+      "tests/test_qbox_audio_repeat.py": null,
+      "tests/test_qbox_audio_health.py": {
+        "sha256": "c066697bdf198efa90c69b3c106a94054a89ea991a04302bbe837b7ed5e2e154",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_diagnostics.py": null,
+      "scripts/test/summarize_qbox_audio_trace.py": null,
+      "scripts/test/verify_qbox_full_audio.py": {
+        "sha256": "62739b17c6c99b0bbf59a6d45dce9e1a4194ead8734f01694ce83e26f2ad4037",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qbox_linux_audio.py": {
+        "sha256": "271038663cdc5eb1c5323de6c845354d8d2d50d29c35f59a050bc41929dd9de7",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qemu_audio_models.py": {
+        "sha256": "0d96c8e49f186fbb2fe24c1cbf418a6cb22da53032b7b2ab53b52439a2e19f9e",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qemu_i2s_wav.py": {
+        "sha256": "39179ff700c06bacb90454cce65a437e65951a5f2c2685705161cb04761cc0cb",
+        "mode": "0o664"
+      }
+    },
+    "archived": {
+      "scripts/test/qbox_audio_uki.py": {
+        "sha256": "b83134aca05e7be66f654b45d35ccfd083c435436af0e5f1e320e4db8408646c",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_repeat.py": {
+        "sha256": "324787101ddf834df3073370ce780ca49041884dd14e8f67e9bbf4b817681cf8",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_health.py": {
+        "sha256": "3b36e787aba4c4bf65213b343b72c0355cf9d246443f4d0a194f11c39da2019f",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_rr60.sh": {
+        "sha256": "0ecddeda01db78ab43341e1ee5ba7a7c498d96c8ae725f7ce403d775ae9d316a",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_diagnostics.sh": {
+        "sha256": "a456ea3e9e1d449c5a3e33597aa1bf8ce5b5ccf66831572f9ee5d20b9b4e9cab",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_dma_cfs.sh": {
+        "sha256": "8b70484e302ede914073c5d47f758d7617e8f84df486c17678a9247ec23bf4d8",
+        "mode": "0o664"
+      },
+      "scripts/test/qbox_audio_experiment.py": {
+        "sha256": "85f144f271d15872d962ca12ab15cf04ddd8021ba7da0a52818b3bfe54e76e54",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_uki.py": {
+        "sha256": "cbf8d52d8da1a362a40932edac560207796bc887eb0acb43ed61f846ccc8aeef",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_experiment.py": {
+        "sha256": "f5235292eceff1f075051b8415790a5fa4df940e5611112f87562c41df682dbb",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_repeat.py": {
+        "sha256": "7e55da589421e4979d4a65c30add7a290ea95713205ee6bd4097fdbc32ef15a0",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_health.py": {
+        "sha256": "cfa055ce671637d456d8895c2a1b3220b5304e4247bf29eac00371e5f8a40aea",
+        "mode": "0o664"
+      },
+      "tests/test_qbox_audio_diagnostics.py": {
+        "sha256": "4d8405e1b40d06a6be0ec03e94d5402f5f3a2d3f0f837d657cc32db41dc053ab",
+        "mode": "0o664"
+      },
+      "scripts/test/summarize_qbox_audio_trace.py": {
+        "sha256": "bbaf276b196ca40702b9cc441c7a283cbcae8ada23451f1b4101b9fc216d835e",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qbox_full_audio.py": {
+        "sha256": "7254f6733cea7afc631ea1ca05023f034ed9fd44ce6e963d531eed97719ba728",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qbox_linux_audio.py": {
+        "sha256": "70179d438eed56a7a44c39a4cc386f31f7c9d86316e9ded51da0ce094690aaab",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qemu_audio_models.py": {
+        "sha256": "d96aab1de10a862d4a46034263b3e1b823f16b5bdfc0cc161852f0874b2bc929",
+        "mode": "0o664"
+      },
+      "scripts/test/verify_qemu_i2s_wav.py": {
+        "sha256": "bedb80cd79cfe203c4f709b60842b29ab780e811486928fbeea5f1421adb5cdc",
+        "mode": "0o664"
+      }
+    },
+    "verification": "PASS: reverse/apply/reverse, exact bytes and modes"
+  }
+]

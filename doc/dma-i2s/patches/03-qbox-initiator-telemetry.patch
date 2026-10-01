@@ -1,0 +1,485 @@
+diff --git a/qemu-components/common/include/ports/initiator-telemetry.h b/qemu-components/common/include/ports/initiator-telemetry.h
+new file mode 100644
+index 0000000000000000000000000000000000000000..b8ed76066306ed6c2aac9d83b611c816cbe91687
+--- /dev/null
++++ b/qemu-components/common/include/ports/initiator-telemetry.h
+@@ -0,0 +1,222 @@
++/* SPDX-License-Identifier: BSD-3-Clause */
++#ifndef QBOX_INITIATOR_TELEMETRY_H
++#define QBOX_INITIATOR_TELEMETRY_H
++
++#include <array>
++#include <chrono>
++#include <cstdio>
++#include <cstdlib>
++#include <cstdint>
++#include <cstring>
++#include <mutex>
++#include <string>
++
++/* Optional observations of bridge misses, not a measurement of DMI hit rate.
++ * No SystemC/QEMU calls are made here. All times use the host steady clock.
++ * Storage is bounded; JSONL checkpoints survive a later process termination.
++ */
++class QemuInitiatorTelemetry
++{
++public:
++    enum Hint { UNHINTED, DMI_HINT, QEMU_MR_HINT, HINT_COUNT };
++    enum Event { DMI_GRANT, DMI_DENY, RAM_ALIAS_INSTALL, RAM_ALIAS_REMOVE,
++                 MMIO_ALIAS_INSTALL, INVALIDATE_REQUEST, EVENT_COUNT };
++    enum Path { DEBUG, REENTRANT, EXCLUSIVE, PATH_COUNT };
++
++private:
++    struct Histogram {
++        uint64_t count = 0, sum_ns = 0, max_ns = 0;
++        // <= 1us, 2us, ... 262144us, then overflow.
++        std::array<uint64_t, 20> buckets{};
++        void add(uint64_t ns)
++        {
++            ++count;
++            sum_ns += ns;
++            if (ns > max_ns) max_ns = ns;
++            unsigned bucket = 0;
++            while (bucket < buckets.size() - 1 && ns > (uint64_t(1000) << bucket)) ++bucket;
++            ++buckets[bucket];
++        }
++    };
++    struct Count { uint64_t count = 0, bytes = 0; };
++    struct Page {
++        uint64_t base = 0;
++        std::array<Count, HINT_COUNT> hints{};
++    };
++
++    FILE* m_file = nullptr;
++    std::mutex m_lock;
++    std::array<Count, HINT_COUNT> m_hints{};
++    std::array<uint64_t, EVENT_COUNT> m_events{};
++    std::array<uint64_t, PATH_COUNT> m_paths{};
++    std::array<Page, 128> m_pages{};
++    unsigned m_page_count = 0;
++    uint64_t m_page_overflow = 0, m_event_records = 0, m_reads = 0, m_writes = 0;
++    uint64_t m_next_checkpoint = 0;
++    Histogram m_transport, m_bql, m_total, m_recursive_wait;
++
++    static const char* hint_name(unsigned i)
++    {
++        static const char* names[] = {"unhinted", "dmi_hint", "qemu_mr_hint"};
++        return names[i];
++    }
++    static const char* event_name(unsigned i)
++    {
++        static const char* names[] = {"dmi_grant", "dmi_deny", "ram_alias_install",
++            "ram_alias_remove", "mmio_alias_install", "invalidate_request"};
++        return names[i];
++    }
++    static std::string json_string(const char* input)
++    {
++        std::string out = "\"";
++        for (const unsigned char* p = reinterpret_cast<const unsigned char*>(input); *p; ++p) {
++            if (*p == '"' || *p == '\\') out += '\\';
++            if (*p < 32) {
++                char escape[7];
++                std::snprintf(escape, sizeof(escape), "\\u%04x", *p);
++                out += escape;
++            } else {
++                out += static_cast<char>(*p);
++            }
++        }
++        return out + "\"";
++    }
++    void histogram(const char* name, const Histogram& h)
++    {
++        std::fprintf(m_file, ",\"%s\":{\"count\":%llu,\"sum_ns\":%llu,\"max_ns\":%llu,\"buckets\":[",
++            name, (unsigned long long)h.count, (unsigned long long)h.sum_ns, (unsigned long long)h.max_ns);
++        for (unsigned i = 0; i < h.buckets.size(); ++i)
++            std::fprintf(m_file, "%s%llu", i ? "," : "", (unsigned long long)h.buckets[i]);
++        std::fputs("]}", m_file);
++    }
++    void checkpoint_locked(const char* reason, uint64_t now)
++    {
++        std::fprintf(m_file, "{\"type\":\"checkpoint\",\"reason\":\"%s\",\"host_ns\":%llu,\"regular_reads\":%llu,\"regular_writes\":%llu,\"fallback\":{",
++            reason, (unsigned long long)now, (unsigned long long)m_reads, (unsigned long long)m_writes);
++        for (unsigned i = 0; i < HINT_COUNT; ++i)
++            std::fprintf(m_file, "%s\"%s\":{\"count\":%llu,\"bytes\":%llu}", i ? "," : "",
++                hint_name(i), (unsigned long long)m_hints[i].count, (unsigned long long)m_hints[i].bytes);
++        std::fputs("},\"events\":{", m_file);
++        for (unsigned i = 0; i < EVENT_COUNT; ++i)
++            std::fprintf(m_file, "%s\"%s\":%llu", i ? "," : "", event_name(i), (unsigned long long)m_events[i]);
++        std::fprintf(m_file, "},\"other_paths\":{\"debug\":%llu,\"reentrant\":%llu,\"exclusive\":%llu},\"event_records\":%llu,\"page_overflow_accesses\":%llu",
++            (unsigned long long)m_paths[DEBUG], (unsigned long long)m_paths[REENTRANT],
++            (unsigned long long)m_paths[EXCLUSIVE], (unsigned long long)m_event_records,
++            (unsigned long long)m_page_overflow);
++        histogram("transport", m_transport);
++        histogram("bql_reacquire", m_bql);
++        histogram("regular_total", m_total);
++        histogram("recursive_wait", m_recursive_wait);
++        std::fputs(",\"pages\":[", m_file);
++        for (unsigned p = 0; p < m_page_count; ++p) {
++            std::fprintf(m_file, "%s{\"base\":\"0x%llx\",\"hints\":{", p ? "," : "", (unsigned long long)m_pages[p].base);
++            for (unsigned i = 0; i < HINT_COUNT; ++i)
++                std::fprintf(m_file, "%s\"%s\":{\"count\":%llu,\"bytes\":%llu}", i ? "," : "", hint_name(i),
++                    (unsigned long long)m_pages[p].hints[i].count, (unsigned long long)m_pages[p].hints[i].bytes);
++            std::fputs("}}", m_file);
++        }
++        std::fputs("]}\n", m_file);
++        std::fflush(m_file);
++        m_next_checkpoint = now + 1000000000ULL;
++    }
++    void maybe_checkpoint_locked(uint64_t now)
++    {
++        if (now >= m_next_checkpoint) checkpoint_locked("interval", now);
++    }
++
++public:
++    QemuInitiatorTelemetry() = default;
++    QemuInitiatorTelemetry(const QemuInitiatorTelemetry&) = delete;
++    QemuInitiatorTelemetry& operator=(const QemuInitiatorTelemetry&) = delete;
++    ~QemuInitiatorTelemetry()
++    {
++        if (m_file) {
++            checkpoint("destructor");
++            std::fclose(m_file);
++        }
++    }
++    bool enabled() const { return m_file != nullptr; }
++    static uint64_t now_ns()
++    {
++        return std::chrono::duration_cast<std::chrono::nanoseconds>(
++            std::chrono::steady_clock::now().time_since_epoch()).count();
++    }
++    void init(const char* socket, const char* instance, const char* root_kind)
++    {
++        const char* directory = std::getenv("QBOX_INITIATOR_TELEMETRY_DIR");
++        const char* filter = std::getenv("QBOX_INITIATOR_TELEMETRY_FILTER");
++        if (!directory || !*directory || (filter && *filter && !std::strstr(socket, filter))) return;
++        std::string filename(socket);
++        for (char& c : filename)
++            if (!(c == '.' || c == '_' || c == '-' || (c >= '0' && c <= '9') ||
++                  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) c = '_';
++        filename = std::string(directory) + "/" + filename + ".jsonl";
++        m_file = std::fopen(filename.c_str(), "w");
++        if (!m_file) {
++            std::fprintf(stderr, "QBox initiator telemetry: cannot open %s\n", filename.c_str());
++            return;
++        }
++        std::fprintf(m_file, "{\"type\":\"metadata\",\"schema\":1,\"socket\":%s,\"instance\":%s,\"root_kind\":%s,\"clock\":\"host_steady_ns\",\"histogram_first_upper_ns\":1000,\"histogram_multiplier\":2,\"histogram_last_bucket\":\"overflow\",\"page_bytes\":65536,\"page_limit\":128,\"event_record_limit\":256,\"note\":\"fallback and alias observations; not DMI hit rate\"}\n",
++            json_string(socket).c_str(), json_string(instance).c_str(), json_string(root_kind).c_str());
++        checkpoint_locked("init", now_ns());
++    }
++    void regular(uint64_t address, uint64_t bytes, bool write, Hint hint,
++                 uint64_t transport_ns, uint64_t bql_ns, uint64_t total_ns)
++    {
++        if (!enabled()) return;
++        std::lock_guard<std::mutex> lock(m_lock);
++        ++(write ? m_writes : m_reads);
++        ++m_hints[hint].count;
++        m_hints[hint].bytes += bytes;
++        const uint64_t page = address & ~uint64_t(0xffff);
++        unsigned p = 0;
++        for (; p < m_page_count && m_pages[p].base != page; ++p) {}
++        if (p == m_page_count && p < m_pages.size()) {
++            m_pages[p].base = page;
++            ++m_page_count;
++        }
++        if (p < m_pages.size()) {
++            ++m_pages[p].hints[hint].count;
++            m_pages[p].hints[hint].bytes += bytes;
++        } else ++m_page_overflow;
++        m_transport.add(transport_ns);
++        m_bql.add(bql_ns);
++        m_total.add(total_ns);
++        maybe_checkpoint_locked(now_ns());
++    }
++    void event(Event event, uint64_t start, uint64_t end, unsigned permissions = 0)
++    {
++        if (!enabled()) return;
++        std::lock_guard<std::mutex> lock(m_lock);
++        ++m_events[event];
++        const auto now = now_ns();
++        if (m_event_records < 256) {
++            ++m_event_records;
++            std::fprintf(m_file, "{\"type\":\"mapping\",\"event\":\"%s\",\"host_ns\":%llu,\"start\":\"0x%llx\",\"end\":\"0x%llx\",\"permissions\":%u}\n",
++                event_name(event), (unsigned long long)now, (unsigned long long)start, (unsigned long long)end, permissions);
++            std::fflush(m_file);
++        }
++        maybe_checkpoint_locked(now);
++    }
++    void other_path(Path path)
++    {
++        if (!enabled()) return;
++        std::lock_guard<std::mutex> lock(m_lock);
++        ++m_paths[path];
++        maybe_checkpoint_locked(now_ns());
++    }
++    void recursive_wait(uint64_t duration_ns)
++    {
++        if (!enabled()) return;
++        std::lock_guard<std::mutex> lock(m_lock);
++        m_recursive_wait.add(duration_ns);
++    }
++    void checkpoint(const char* reason)
++    {
++        if (!enabled()) return;
++        std::lock_guard<std::mutex> lock(m_lock);
++        checkpoint_locked(reason, now_ns());
++    }
++};
++
++#endif
+diff --git a/qemu-components/common/include/ports/initiator.h b/qemu-components/common/include/ports/initiator.h
+index e02144948db38afdc44d35a32848ccd8d4cdd825..fe7c23afd87e28ac0eac709206c4a3e74e669342 100644
+--- a/qemu-components/common/include/ports/initiator.h
++++ b/qemu-components/common/include/ports/initiator.h
+@@ -35,6 +35,7 @@
+ #include <tlm-extensions/shmem_extension.h>
+ #include <tlm-extensions/underlying-dmi.h>
+ #include <tlm_sockets_buswidth.h>
++#include <ports/initiator-telemetry.h>
+ 
+ class QemuInitiatorIface
+ {
+@@ -89,6 +90,7 @@ protected:
+     bool m_requester_id_from_qemu = false;
+     qemu::Device m_dev;
+     gs::runonsysc m_on_sysc;
++    QemuInitiatorTelemetry m_telemetry;
+     int reentrancy = 0;
+ 
+     std::atomic<bool> m_finished = false;
+@@ -186,6 +188,7 @@ protected:
+         alias_mr.set_priority(1);
+         m_r->m_root->add_subregion_overlap(alias_mr, alias->get_start());
+         alias->set_installed();
++        m_telemetry.event(QemuInitiatorTelemetry::RAM_ALIAS_INSTALL, alias->get_start(), alias->get_end());
+     }
+ 
+     void del_dmi_mr_alias(const DmiRegionAlias::Ptr alias)
+@@ -196,6 +199,7 @@ protected:
+         SCP_INFO(()) << "Removing " << *alias;
+         m_r->m_root->del_subregion(alias->get_alias_mr());
+         alias->clear_installed();
++        m_telemetry.event(QemuInitiatorTelemetry::RAM_ALIAS_REMOVE, alias->get_start(), alias->get_end());
+     }
+ 
+     void clear_retired_aliases_locked()
+@@ -488,6 +492,7 @@ protected:
+         bool dmi_valid = (*this)->get_direct_mem_ptr(trans, dmi_data);
+         trans.clear_extension(&u_dmi);
+         if (!dmi_valid) {
++            m_telemetry.event(QemuInitiatorTelemetry::DMI_DENY, addr, addr);
+             SCP_INFO(())("No DMI available for {:x}", trans.get_address());
+             /* this is used by the map function below
+              * - a better plan may be to tag memories to be mapped so we dont need this
+@@ -503,6 +508,10 @@ protected:
+             return dmi_data;
+         }
+ 
++        m_telemetry.event(QemuInitiatorTelemetry::DMI_GRANT,
++                         dmi_data.get_start_address(), dmi_data.get_end_address(),
++                         static_cast<unsigned>(dmi_data.get_granted_access()));
++
+         /*
+          * This is the 'special' case of IOMMU's which require an IOMMU memory region setup
+          * The IOMMU will be constructed here, but not populated - that will happen in the callback
+@@ -655,6 +664,8 @@ protected:
+ 
+         mr.init_alias(m_dev, "mr-alias", target_mr, 0, target_mr.get_size());
+         m_r->m_root->add_subregion(mr, mapping_addr);
++        m_telemetry.event(QemuInitiatorTelemetry::MMIO_ALIAS_INSTALL,
++                         mapping_addr, mapping_addr + target_mr.get_size() - 1);
+     }
+ 
+     void do_regular_access(TlmPayload& trans)
+@@ -663,10 +674,13 @@ protected:
+ 
+         uint64_t addr = trans.get_address();
+         sc_time now = m_initiator.initiator_get_local_time();
++        const auto begin = m_telemetry.enabled() ? QemuInitiatorTelemetry::now_ns() : 0;
+ 
+         m_inst.get().unlock_iothread();
+         m_on_sysc.run_on_sysc([this, &trans, &now] { (*this)->b_transport(trans, now); });
++        const auto transported = m_telemetry.enabled() ? QemuInitiatorTelemetry::now_ns() : 0;
+         m_inst.get().lock_iothread();
++        const auto relocked = m_telemetry.enabled() ? QemuInitiatorTelemetry::now_ns() : 0;
+         /*
+          * Reset transaction address before dmi check (could be altered by
+          * b_transport).
+@@ -690,6 +704,15 @@ protected:
+         }
+ 
+         m_initiator.initiator_set_local_time(now);
++        if (m_telemetry.enabled()) {
++            QemuMrHintTlmExtension* hint = nullptr;
++            trans.get_extension(hint);
++            const auto classification = hint ? QemuInitiatorTelemetry::QEMU_MR_HINT :
++                (trans.is_dmi_allowed() ? QemuInitiatorTelemetry::DMI_HINT : QemuInitiatorTelemetry::UNHINTED);
++            m_telemetry.regular(addr, trans.get_data_length(), trans.is_write(), classification,
++                                transported - begin, relocked - transported,
++                                QemuInitiatorTelemetry::now_ns() - begin);
++        }
+     }
+ 
+     void do_debug_access(TlmPayload& trans)
+@@ -730,6 +753,7 @@ protected:
+              * clearly dangerous, but exclusives are not guaranteed to work on IO space anyway
+              */
+             context_ext.set_access_path(RequestAccessPath::DIRECT);
++            m_telemetry.other_path(QemuInitiatorTelemetry::EXCLUSIVE);
+             do_direct_access(trans);
+         } else {
+             bool qemu_io_locked = m_inst.g_rec_qemu_io_lock.try_lock();
+@@ -740,7 +764,10 @@ protected:
+                  * creation of memory regions (due to DMI) in some models]
+                  */
+                 m_inst.get().unlock_iothread();
++                const auto waiting = m_telemetry.enabled() ? QemuInitiatorTelemetry::now_ns() : 0;
+                 m_inst.g_rec_qemu_io_lock.lock();
++                if (m_telemetry.enabled())
++                    m_telemetry.recursive_wait(QemuInitiatorTelemetry::now_ns() - waiting);
+                 qemu_io_locked = true;
+                 m_inst.get().lock_iothread();
+             }
+@@ -749,9 +776,11 @@ protected:
+             /* Force re-entrant code to use a direct access (safe for reentrancy with no side effects) */
+             if (reentrancy > 1) {
+                 context_ext.set_access_path(RequestAccessPath::REENTRANT);
++                m_telemetry.other_path(QemuInitiatorTelemetry::REENTRANT);
+                 do_direct_access(trans);
+             } else if (attrs.debug) {
+                 context_ext.set_access_path(RequestAccessPath::DEBUG);
++                m_telemetry.other_path(QemuInitiatorTelemetry::DEBUG);
+                 do_debug_access(trans);
+             } else {
+                 context_ext.set_access_path(RequestAccessPath::REGULAR);
+@@ -816,6 +845,8 @@ public:
+     void init(qemu::Device& dev, const char* prop)
+     {
+         using namespace std::placeholders;
++        m_telemetry.init(TlmInitiatorSocket::name(), m_inst.name(),
++                         std::strcmp(prop, "memory") == 0 ? "cpu_memory" : "device_memory");
+ 
+         qemu::LibQemu& inst = m_inst.get();
+         qemu::MemoryRegionOpsPtr ops;
+@@ -844,6 +875,7 @@ public:
+     void end_of_simulation()
+     {
+         m_finished = true;
++        m_telemetry.checkpoint("end_of_simulation");
+     }
+ 
+     ~QemuInitiatorSocket()
+@@ -903,6 +935,7 @@ public:
+     void init_global(qemu::Device& dev)
+     {
+         using namespace std::placeholders;
++        m_telemetry.init(TlmInitiatorSocket::name(), m_inst.name(), "global_memory");
+ 
+         qemu::LibQemu& inst = m_inst.get();
+         qemu::MemoryRegionOpsPtr ops;
+@@ -1043,6 +1076,7 @@ public:
+     virtual void invalidate_direct_mem_ptr(sc_dt::uint64 start_range, sc_dt::uint64 end_range)
+     {
+         if (m_finished) return;
++        m_telemetry.event(QemuInitiatorTelemetry::INVALIDATE_REQUEST, start_range, end_range);
+         SCP_DEBUG(()) << "DMI invalidate [0x" << std::hex << start_range << ", 0x" << std::hex << end_range << "]";
+ 
+         std::lock_guard<std::mutex> lock(m_mutex);
+diff --git a/tests/qbox/test_initiator_telemetry.py b/tests/qbox/test_initiator_telemetry.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..e4c79d809a86d34e8363d26c1bf1b8ce6d85bd14
+--- /dev/null
++++ b/tests/qbox/test_initiator_telemetry.py
+@@ -0,0 +1,93 @@
++#!/usr/bin/env python3
++"""Standalone C++14 checks for opt-in bridge telemetry (no simulator build)."""
++import json
++import os
++from pathlib import Path
++import subprocess
++import tempfile
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[2]
++HARNESS = r'''
++#include "ports/initiator-telemetry.h"
++#include <thread>
++#include <vector>
++int main() {
++    QemuInitiatorTelemetry t;
++    t.init("platform.ap_cpu_0.mem", "platform.ap_qemu_inst", "cpu_memory");
++    std::vector<std::thread> threads;
++    for (int n = 0; n < 4; ++n) threads.emplace_back([&t, n] {
++        for (int i = 0; i < 1000; ++i)
++            t.regular(0x80000000 + n * 65536, 4, n & 1,
++                      QemuInitiatorTelemetry::DMI_HINT, 1000, 2000, 4000);
++    });
++    for (auto& thread : threads) thread.join();
++    for (int i = 0; i < 300; ++i)
++        t.event(QemuInitiatorTelemetry::RAM_ALIAS_INSTALL, i * 65536, i * 65536 + 65535);
++    for (int i = 0; i < 200; ++i)
++        t.regular(uint64_t(i) * 65536, 2, true,
++                  QemuInitiatorTelemetry::QEMU_MR_HINT, 1500, 3000, 6000);
++    t.other_path(QemuInitiatorTelemetry::DEBUG);
++    t.recursive_wait(10000);
++    t.checkpoint("test");
++}
++'''
++
++
++class InitiatorTelemetryTests(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.directory = tempfile.TemporaryDirectory(prefix="qbox-initiator-telemetry-")
++        cls.base = Path(cls.directory.name)
++        source = cls.base / "telemetry.cc"
++        source.write_text(HARNESS)
++        cls.binary = cls.base / "telemetry"
++        subprocess.run(["g++", "-std=c++14", "-Wall", "-Wextra", "-Werror", "-pthread",
++                        "-I", str(ROOT / "qemu-components/common/include"),
++                        str(source), "-o", str(cls.binary)], check=True)
++
++    @classmethod
++    def tearDownClass(cls):
++        cls.directory.cleanup()
++
++    def run_harness(self, name, enabled=True, filter_value=None):
++        output = self.base / name
++        output.mkdir()
++        env = {k: v for k, v in os.environ.items() if not k.startswith("QBOX_INITIATOR_TELEMETRY_")}
++        if enabled:
++            env["QBOX_INITIATOR_TELEMETRY_DIR"] = str(output)
++        if filter_value:
++            env["QBOX_INITIATOR_TELEMETRY_FILTER"] = filter_value
++        subprocess.run([str(self.binary)], env=env, check=True, timeout=20)
++        return list(output.glob("*.jsonl"))
++
++    def test_disabled_and_filtered_leave_no_files(self):
++        self.assertEqual(self.run_harness("disabled", enabled=False), [])
++        self.assertEqual(self.run_harness("filtered", filter_value="global_initiator"), [])
++
++    def test_concurrent_counts_histograms_and_bounds(self):
++        files = self.run_harness("enabled", filter_value="platform.ap_")
++        self.assertEqual(len(files), 1)
++        records = [json.loads(line) for line in files[0].read_text().splitlines()]
++        self.assertEqual(records[0]["root_kind"], "cpu_memory")
++        self.assertEqual(records[0]["socket"], "platform.ap_cpu_0.mem")
++        self.assertEqual(sum(r["type"] == "mapping" for r in records), 256)
++        snapshot = next(r for r in records if r.get("reason") == "test")
++        self.assertEqual(snapshot["events"]["ram_alias_install"], 300)
++        self.assertEqual(snapshot["fallback"]["dmi_hint"], {"count": 4000, "bytes": 16000})
++        self.assertEqual(snapshot["fallback"]["qemu_mr_hint"], {"count": 200, "bytes": 400})
++        self.assertEqual(snapshot["regular_reads"], 2000)
++        self.assertEqual(snapshot["regular_writes"], 2200)
++        self.assertEqual(snapshot["transport"]["count"], 4200)
++        self.assertEqual(snapshot["transport"]["buckets"][:2], [4000, 200])
++        self.assertEqual(snapshot["transport"]["max_ns"], 1500)
++        self.assertEqual(snapshot["recursive_wait"]["sum_ns"], 10000)
++        self.assertEqual(snapshot["other_paths"]["debug"], 1)
++        self.assertEqual(len(snapshot["pages"]), 128)
++        self.assertEqual(snapshot["page_overflow_accesses"], 76)
++        self.assertEqual(records[-1]["reason"], "destructor")
++
++
++if __name__ == "__main__":
++    unittest.main()

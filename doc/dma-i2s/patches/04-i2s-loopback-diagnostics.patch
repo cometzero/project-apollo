@@ -1,0 +1,102 @@
+diff --git a/recipes-test/i2s-loopback/files/i2s_loopback.c b/recipes-test/i2s-loopback/files/i2s_loopback.c
+index b31b7fb1bc185c01081b47cf3583138bb505d056..7428eac20d6444f9af432f7b6dc7392cd705e405 100644
+--- a/recipes-test/i2s-loopback/files/i2s_loopback.c
++++ b/recipes-test/i2s-loopback/files/i2s_loopback.c
+@@ -1,6 +1,9 @@
+ /* SPDX-License-Identifier: MIT */
+ /* One process arms both ALSA streams and compares a complete PCM sequence. */
+ #include <alsa/asoundlib.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
+ #include <stdint.h>
+ #include <time.h>
+ #include <unistd.h>
+@@ -9,10 +12,57 @@
+ #define BUFFER 16384
+ #define PERIOD 1024
+ 
++static int diagnostics;
++static snd_pcm_t *diag_play, *diag_capture;
++static unsigned int diag_received, diag_written;
++
++static void dump_pcm(snd_pcm_t *pcm, const char *label)
++{
++    snd_pcm_status_t *status;
++    snd_pcm_info_t *info;
++    snd_output_t *output;
++    char path[128], line[256];
++    FILE *file;
++
++    if (!pcm)
++        return;
++    fprintf(stderr, "I2S_DIAGNOSTIC_STREAM=%s\n", label);
++    snd_pcm_status_alloca(&status);
++    if (snd_pcm_status(pcm, status) >= 0 &&
++        snd_output_stdio_attach(&output, stderr, 0) >= 0) {
++        snd_pcm_status_dump(status, output);
++        snd_output_close(output);
++    }
++    snd_pcm_info_alloca(&info);
++    if (snd_pcm_info(pcm, info) < 0)
++        return;
++    snprintf(path, sizeof(path), "/proc/asound/card%d/pcm%u%c/sub%u/status",
++             snd_pcm_info_get_card(info), snd_pcm_info_get_device(info),
++             snd_pcm_stream(pcm) == SND_PCM_STREAM_PLAYBACK ? 'p' : 'c',
++             snd_pcm_info_get_subdevice(info));
++    file = fopen(path, "r");
++    if (file) {
++        while (fgets(line, sizeof(line), file))
++            fputs(line, stderr);
++        fclose(file);
++    }
++}
++
+ static void check(int rc, const char *operation)
+ {
+     if (rc < 0) {
+         fprintf(stderr, "%s: %s\n", operation, snd_strerror(rc));
++        if (diagnostics) {
++            struct timespec now;
++
++            clock_gettime(CLOCK_MONOTONIC, &now);
++            fprintf(stderr, "I2S_DIAGNOSTIC_ERROR operation=%s rc=%d "
++                    "guest_time=%lld.%09ld received=%u written=%u\n",
++                    operation, rc, (long long)now.tv_sec, now.tv_nsec,
++                    diag_received, diag_written);
++            dump_pcm(diag_play, "playback");
++            dump_pcm(diag_capture, "capture");
++        }
+         exit(1);
+     }
+ }
+@@ -59,6 +109,8 @@ int main(int argc, char **argv)
+         fprintf(stderr, "Usage: %s playback-pcm capture-pcm\n", argv[0]);
+         return 2;
+     }
++    diagnostics = getenv("I2S_LOOPBACK_DIAGNOSTICS") &&
++                  !strcmp(getenv("I2S_LOOPBACK_DIAGNOSTICS"), "1");
+     for (const unsigned char *p = (const unsigned char *)argv[1]; *p; ++p)
+         seed = seed * 33u + *p;
+     for (unsigned int i = 0; i < FRAMES + BUFFER; ++i) {
+@@ -66,7 +118,9 @@ int main(int argc, char **argv)
+         tx[i][1] = (uint16_t)(i * 151u + (seed ^ 0xabcdu));
+     }
+     capture = open_pcm(argv[2], SND_PCM_STREAM_CAPTURE);
++    diag_capture = capture;
+     play = open_pcm(argv[1], SND_PCM_STREAM_PLAYBACK);
++    diag_play = play;
+     n = snd_pcm_writei(play, tx, BUFFER);
+     check((int)n, "preload");
+     if (n != BUFFER) return 1;
+@@ -74,6 +128,10 @@ int main(int argc, char **argv)
+     check(snd_pcm_start(play), "start playback");
+     clock_gettime(CLOCK_MONOTONIC, &start);
+     while (received < FRAMES) {
++        if (diagnostics) {
++            diag_received = received;
++            diag_written = written;
++        }
+         if (written < FRAMES + BUFFER) {
+             n = snd_pcm_writei(play, tx + written, FRAMES + BUFFER - written);
+             if (n > 0) written += n;

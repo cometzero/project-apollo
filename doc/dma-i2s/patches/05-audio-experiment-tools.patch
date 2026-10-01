@@ -1,0 +1,3313 @@
+diff --git a/scripts/test/qbox_audio_diagnostics.sh b/scripts/test/qbox_audio_diagnostics.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..bdb0ce6d9f4d4683f169ab201942c75f86a4c042
+--- /dev/null
++++ b/scripts/test/qbox_audio_diagnostics.sh
+@@ -0,0 +1,522 @@
++#!/bin/sh
++# SPDX-License-Identifier: MIT
++# Source from a guest suite. Add audio_diag_cleanup to the suite's exit trap.
++# No tracing, idle, IRQ affinity or scheduling policy changes occur on source.
++
++audio_diag_note() {
++    printf '%s\n' "$*" >> "$AUDIO_DIAG_DIR/collection.log" || :
++}
++
++audio_diag_snapshot() (
++    audio_snapshot_name=$1
++    audio_snapshot_dir=$AUDIO_DIAG_DIR/$audio_snapshot_name
++    mkdir -p "$audio_snapshot_dir/asound" "$audio_snapshot_dir/irq" || exit 0
++    {
++        date -u
++        uname -a
++        printf 'uptime: '; cat /proc/uptime
++        printf 'cmdline: '; cat /proc/cmdline
++        for audio_setting in /sys/devices/system/cpu/online \
++            /sys/devices/system/cpu/cpuidle/current_driver \
++            /sys/devices/system/cpu/cpuidle/current_governor_ro \
++            /proc/sys/kernel/sched_rt_runtime_us \
++            /proc/sys/kernel/sched_rt_period_us; do
++            test -r "$audio_setting" || continue
++            printf '%s: ' "$audio_setting"
++            cat "$audio_setting"
++        done
++    } > "$audio_snapshot_dir/manifest.txt" 2>&1
++    cat /proc/interrupts > "$audio_snapshot_dir/interrupts.txt" 2>/dev/null || :
++    cat /proc/asound/cards > "$audio_snapshot_dir/asound/cards" 2>/dev/null || :
++    cat /proc/asound/pcm > "$audio_snapshot_dir/asound/pcm" 2>/dev/null || :
++    for audio_pcm in /proc/asound/card*/pcm*/sub*; do
++        test -d "$audio_pcm" || continue
++        audio_pcm_name=$(printf '%s' "$audio_pcm" | tr / _)
++        for audio_pcm_file in status hw_params sw_params; do
++            test -r "$audio_pcm/$audio_pcm_file" || continue
++            cat "$audio_pcm/$audio_pcm_file" \
++                > "$audio_snapshot_dir/asound/$audio_pcm_name.$audio_pcm_file" 2>/dev/null || :
++        done
++    done
++    for audio_irq in $AUDIO_DIAG_IRQS; do
++        for audio_irq_file in smp_affinity smp_affinity_list effective_affinity_list; do
++            test -r "/proc/irq/$audio_irq/$audio_irq_file" || continue
++            cat "/proc/irq/$audio_irq/$audio_irq_file" \
++                > "$audio_snapshot_dir/irq/$audio_irq.$audio_irq_file" 2>/dev/null || :
++        done
++    done
++    {
++        for audio_idle_state in /sys/devices/system/cpu/cpu[0-9]*/cpuidle/state*; do
++            test -d "$audio_idle_state" || continue
++            for audio_idle_field in name desc latency residency time usage disable; do
++                test -r "$audio_idle_state/$audio_idle_field" || continue
++                printf '%s: ' "$audio_idle_state/$audio_idle_field"
++                cat "$audio_idle_state/$audio_idle_field"
++            done
++        done
++    } > "$audio_snapshot_dir/cpuidle.txt" 2>&1
++    {
++        for audio_task in /proc/[0-9]*; do
++            test -r "$audio_task/comm" || continue
++            audio_comm=$(cat "$audio_task/comm" 2>/dev/null) || continue
++            case "$audio_comm" in
++                i2s*|aplay|arecord|irq/*|pfdi*)
++                    printf '\nTASK %s %s\n' "$audio_task" "$audio_comm"
++                    cat "$audio_task/status" "$audio_task/sched" 2>/dev/null || :
++                    ;;
++            esac
++        done
++    } > "$audio_snapshot_dir/tasks.txt" 2>&1
++    audio_pfdi_snapshot "$audio_snapshot_dir/pfdi"
++)
++
++audio_diag_enable_event() {
++    audio_event=$1
++    audio_filter=${2-}
++    audio_event_path=$AUDIO_DIAG_INSTANCE/events/$audio_event
++    if test ! -w "$audio_event_path/enable"; then
++        audio_diag_note "NOT_COLLECTED event=$audio_event reason=unavailable"
++        return 0
++    fi
++    if test -n "$audio_filter"; then
++        if ! printf '%s\n' "$audio_filter" > "$audio_event_path/filter" 2>/dev/null; then
++            audio_diag_note "NOT_COLLECTED event=$audio_event reason=filter_rejected"
++            return 0
++        fi
++    fi
++    if printf '1\n' > "$audio_event_path/enable" 2>/dev/null; then
++        audio_diag_note "COLLECTED event=$audio_event filter=$audio_filter"
++        case "$audio_event" in
++            snd_pcm/xrun|*/alsa_xrun)
++                if test -w "$audio_event_path/trigger" && \
++                    printf 'traceoff:1\n' > "$audio_event_path/trigger" 2>/dev/null; then
++                    audio_diag_note "COLLECTED trigger=$audio_event action=traceoff:1 scope=private_instance"
++                else
++                    audio_diag_note "NOT_COLLECTED trigger=$audio_event reason=traceoff_unsupported"
++                fi
++                ;;
++        esac
++    else
++        audio_diag_note "NOT_COLLECTED event=$audio_event reason=enable_failed"
++    fi
++}
++
++audio_diag_load_kprobes() {
++    audio_probe_file=${AUDIO_DIAG_KPROBES_FILE:-/tmp/audio-kprobes.events}
++    if test ! -r "$audio_probe_file"; then
++        audio_diag_note 'NOT_COLLECTED kprobes reason=no_opt_in_definitions'
++        return 0
++    fi
++    cp "$audio_probe_file" "$AUDIO_DIAG_DIR/kprobes-requested.events" || return 0
++    if test ! -w "$AUDIO_DIAG_TRACE_ROOT/kprobe_events"; then
++        audio_diag_note 'NOT_COLLECTED kprobes reason=kprobe_events_unavailable'
++        return 0
++    fi
++    while IFS= read -r audio_probe_line || test -n "$audio_probe_line"; do
++        case "$audio_probe_line" in ''|'#'*) continue ;; esac
++        audio_probe_head=${audio_probe_line%% *}
++        audio_probe_type=${audio_probe_head%%:*}
++        audio_probe_name=${audio_probe_head#*:}
++        audio_probe_name=${audio_probe_name##*/}
++        case "$audio_probe_type" in p|r|r[0-9]*) ;; *)
++            audio_diag_note "NOT_COLLECTED kprobe=$audio_probe_head reason=invalid_type"
++            continue ;;
++        esac
++        case "$audio_probe_name" in ''|*[!a-zA-Z0-9_]*)
++            audio_diag_note "NOT_COLLECTED kprobe=$audio_probe_head reason=invalid_name"
++            continue ;;
++        esac
++        audio_probe_owned=$AUDIO_DIAG_PROBE_GROUP/$audio_probe_name
++        audio_probe_spec="$audio_probe_type:$audio_probe_owned ${audio_probe_line#* }"
++        if printf '%s\n' "$audio_probe_spec" >> "$AUDIO_DIAG_TRACE_ROOT/kprobe_events" 2>/dev/null; then
++            printf '%s\n' "$audio_probe_owned" >> "$AUDIO_DIAG_DIR/owned-kprobes.txt"
++            printf '%s\n' "$audio_probe_spec" >> "$AUDIO_DIAG_DIR/kprobes-registered.events"
++            audio_diag_enable_event "$audio_probe_owned"
++        else
++            audio_diag_note "NOT_COLLECTED kprobe=$audio_probe_name reason=registration_failed"
++        fi
++    done < "$audio_probe_file"
++}
++
++audio_diag_start() {
++    if test -n "${AUDIO_DIAG_DIR-}"; then
++        printf 'AUDIO_DIAGNOSTICS start=SKIP reason=already_started\n'
++        return 0
++    fi
++    AUDIO_DIAG_UPLOAD_URL=${1-}
++    AUDIO_DIAG_DIR=$(mktemp -d /tmp/qbox-audio-diag.XXXXXX) || return 0
++    AUDIO_DIAG_INSTANCE=
++    AUDIO_DIAG_TRACE_ROOT=
++    AUDIO_DIAG_MOUNT=
++    AUDIO_DIAG_PROBE_GROUP=qbox_audio_$$
++    AUDIO_DIAG_IRQS=$(awk '/dma[01]chan|30200000.i2s|30210000.i2s/ {gsub(":", "", $1); if ($1 ~ /^[0-9]+$/) print $1}' /proc/interrupts)
++    printf '%s\n' "$AUDIO_DIAG_IRQS" > "$AUDIO_DIAG_DIR/audio-irqs.txt"
++    audio_diag_snapshot before
++    for audio_trace_root in /sys/kernel/tracing /sys/kernel/debug/tracing; do
++        if test -r "$audio_trace_root/available_events"; then
++            AUDIO_DIAG_TRACE_ROOT=$audio_trace_root
++            break
++        fi
++    done
++    if test -z "$AUDIO_DIAG_TRACE_ROOT"; then
++        AUDIO_DIAG_MOUNT=$(mktemp -d /tmp/qbox-audio-tracefs.XXXXXX) || AUDIO_DIAG_MOUNT=
++        if test -n "$AUDIO_DIAG_MOUNT" && \
++            mount -t tracefs tracefs "$AUDIO_DIAG_MOUNT" 2>> "$AUDIO_DIAG_DIR/collection.log"; then
++            AUDIO_DIAG_TRACE_ROOT=$AUDIO_DIAG_MOUNT
++        else
++            test -z "$AUDIO_DIAG_MOUNT" || rmdir "$AUDIO_DIAG_MOUNT" 2>/dev/null || :
++            AUDIO_DIAG_MOUNT=
++        fi
++    fi
++    if test -z "$AUDIO_DIAG_TRACE_ROOT"; then
++        audio_diag_note 'NOT_COLLECTED tracing reason=tracefs_unavailable'
++        return 0
++    fi
++    cp "$AUDIO_DIAG_TRACE_ROOT/available_events" "$AUDIO_DIAG_DIR/available_events.txt" || :
++    audio_instance_candidate=$AUDIO_DIAG_TRACE_ROOT/instances/$AUDIO_DIAG_PROBE_GROUP
++    if ! mkdir "$audio_instance_candidate" 2>> "$AUDIO_DIAG_DIR/collection.log"; then
++        audio_diag_note 'NOT_COLLECTED tracing reason=private_instance_unavailable'
++        return 0
++    fi
++    AUDIO_DIAG_INSTANCE=$audio_instance_candidate
++    printf '0\n' > "$AUDIO_DIAG_INSTANCE/tracing_on" || :
++    printf 'nop\n' > "$AUDIO_DIAG_INSTANCE/current_tracer" || :
++    if ! printf '8192\n' > "$AUDIO_DIAG_INSTANCE/buffer_size_kb"; then
++        audio_diag_note 'NOT_COLLECTED tracing reason=buffer_size_failed'
++        return 0
++    fi
++    # Overwrite bounds memory even if the guest audio operation stalls.
++    test ! -w "$AUDIO_DIAG_INSTANCE/options/overwrite" || \
++        printf '1\n' > "$AUDIO_DIAG_INSTANCE/options/overwrite" || :
++    # Use a guest monotonic clock for cross-CPU correlation when available.
++    if grep -q 'mono_raw' "$AUDIO_DIAG_INSTANCE/trace_clock"; then
++        printf 'mono_raw\n' > "$AUDIO_DIAG_INSTANCE/trace_clock" || :
++    fi
++    cat "$AUDIO_DIAG_INSTANCE/buffer_size_kb" > "$AUDIO_DIAG_DIR/buffer_size_kb.txt" || :
++    cat "$AUDIO_DIAG_INSTANCE/trace_clock" > "$AUDIO_DIAG_DIR/trace_clock.txt" || :
++    audio_irq_filter=
++    audio_sched_match='comm ~ "i2s*" || comm == "aplay" || comm == "arecord" || comm ~ "pfdi*"'
++    for audio_irq in $AUDIO_DIAG_IRQS; do
++        test -z "$audio_irq_filter" || audio_irq_filter="$audio_irq_filter || "
++        audio_irq_filter="${audio_irq_filter}irq == $audio_irq"
++        audio_sched_match="$audio_sched_match || comm ~ \"irq/$audio_irq-*\""
++    done
++    if test -n "$audio_irq_filter"; then
++        audio_diag_enable_event irq/irq_handler_entry "$audio_irq_filter"
++        audio_diag_enable_event irq/irq_handler_exit "$audio_irq_filter"
++    else
++        audio_diag_note 'NOT_COLLECTED irq reason=no_audio_irq_ids'
++    fi
++    audio_diag_enable_event snd_pcm/hwptr
++    audio_diag_enable_event snd_pcm/xrun
++    audio_diag_enable_event snd_pcm/applptr
++    audio_diag_enable_event snd_pcm/hw_ptr_error
++    audio_diag_enable_event power/cpu_idle
++    audio_diag_enable_event sched/sched_wakeup "$audio_sched_match"
++    audio_diag_enable_event sched/sched_wakeup_new "$audio_sched_match"
++    audio_sched_prev=$(printf '%s' "$audio_sched_match" | sed 's/comm/prev_comm/g')
++    audio_sched_next=$(printf '%s' "$audio_sched_match" | sed 's/comm/next_comm/g')
++    audio_diag_enable_event sched/sched_switch "($audio_sched_prev) || ($audio_sched_next)"
++    audio_diag_load_kprobes
++    if printf '1\n' > "$AUDIO_DIAG_INSTANCE/tracing_on"; then
++        audio_diag_note "COLLECTED tracing instance=$AUDIO_DIAG_PROBE_GROUP"
++    else
++        audio_diag_note 'NOT_COLLECTED tracing reason=start_failed'
++    fi
++    return 0
++}
++
++audio_diag_cleanup() {
++    if test -n "${AUDIO_DIAG_INSTANCE-}"; then
++        printf '0\n' > "$AUDIO_DIAG_INSTANCE/tracing_on" 2>/dev/null || :
++        printf '0\n' > "$AUDIO_DIAG_INSTANCE/events/enable" 2>/dev/null || :
++        rmdir "$AUDIO_DIAG_INSTANCE" 2>/dev/null || :
++        AUDIO_DIAG_INSTANCE=
++    fi
++    if test -n "${AUDIO_DIAG_DIR-}" && test -r "$AUDIO_DIAG_DIR/owned-kprobes.txt"; then
++        while IFS= read -r audio_owned_probe; do
++            test -n "$audio_owned_probe" || continue
++            printf -- '-:%s\n' "$audio_owned_probe" >> "$AUDIO_DIAG_TRACE_ROOT/kprobe_events" 2>/dev/null || :
++        done < "$AUDIO_DIAG_DIR/owned-kprobes.txt"
++        : > "$AUDIO_DIAG_DIR/owned-kprobes.txt"
++    fi
++    if test -n "${AUDIO_DIAG_MOUNT-}"; then
++        if umount "$AUDIO_DIAG_MOUNT" 2>/dev/null; then
++            rmdir "$AUDIO_DIAG_MOUNT" 2>/dev/null || :
++            AUDIO_DIAG_MOUNT=
++        fi
++    fi
++    audio_idle_restore
++    audio_pfdi_restore || :
++    return 0
++}
++
++audio_diag_stop() {
++    test -n "${AUDIO_DIAG_DIR-}" || return 0
++    if test -n "${AUDIO_DIAG_INSTANCE-}"; then
++        printf '0\n' > "$AUDIO_DIAG_INSTANCE/tracing_on" 2>/dev/null || :
++        cat "$AUDIO_DIAG_INSTANCE/trace" > "$AUDIO_DIAG_DIR/trace.txt" 2>/dev/null || :
++        for audio_trace_stats in "$AUDIO_DIAG_INSTANCE"/per_cpu/cpu*/stats; do
++            test -r "$audio_trace_stats" || continue
++            audio_trace_cpu=${audio_trace_stats%/stats}
++            audio_trace_cpu=${audio_trace_cpu##*/}
++            cat "$audio_trace_stats" > "$AUDIO_DIAG_DIR/trace-$audio_trace_cpu-stats.txt" 2>/dev/null || :
++        done
++    fi
++    audio_diag_snapshot after
++    if test -n "${AUDIO_IDLE_STATE_FILE-}"; then
++        cp "$AUDIO_IDLE_STATE_FILE" "$AUDIO_DIAG_DIR/idle-original.txt" 2>/dev/null || :
++    fi
++    if test -n "${AUDIO_PFDI_STATE_FILE-}"; then
++        cp "$AUDIO_PFDI_STATE_FILE" "$AUDIO_DIAG_DIR/pfdi-original.txt" 2>/dev/null || :
++    fi
++    audio_diag_cleanup
++    audio_archive=$AUDIO_DIAG_DIR.tar.gz
++    if ! tar -czf "$audio_archive" -C "$AUDIO_DIAG_DIR" .; then
++        printf 'AUDIO_DIAGNOSTICS archive=FAIL path=%s\n' "$AUDIO_DIAG_DIR"
++        return 0
++    fi
++    if test -z "$AUDIO_DIAG_UPLOAD_URL"; then
++        printf 'AUDIO_DIAGNOSTICS upload=NOT_COLLECTED archive=%s\n' "$audio_archive"
++    # BusyBox wget handles POST files as strings; encode embedded NUL bytes.
++    elif ! base64 "$audio_archive" > "$audio_archive.b64"; then
++        printf 'AUDIO_DIAGNOSTICS upload=FAIL reason=base64_failed archive=%s\n' "$audio_archive"
++    elif timeout 30 wget -q --post-file="$audio_archive.b64" -O "$AUDIO_DIAG_DIR/upload-response.txt" \
++        "${AUDIO_DIAG_UPLOAD_URL%/}/base64" 2> "$AUDIO_DIAG_DIR/upload-error.txt"; then
++        printf 'AUDIO_DIAGNOSTICS upload=PASS archive=%s\n' "$audio_archive"
++    else
++        printf 'AUDIO_DIAGNOSTICS upload=FAIL archive=%s\n' "$audio_archive"
++    fi
++    AUDIO_DIAG_DIR=
++    return 0
++}
++
++# Explicit P5 experiment only. Keep state paths and old values from this guest.
++audio_idle_disable() {
++    test -z "${AUDIO_IDLE_STATE_FILE-}" || return 0
++    AUDIO_IDLE_STATE_FILE=$(mktemp /tmp/qbox-audio-idle.XXXXXX) || return 0
++    for audio_idle_file in /sys/devices/system/cpu/cpu[0-9]*/cpuidle/state*/disable; do
++        if test ! -r "$audio_idle_file" || test ! -w "$audio_idle_file"; then
++            continue
++        fi
++        audio_idle_previous=$(cat "$audio_idle_file") || continue
++        case "$audio_idle_previous" in 0|1) ;; *) continue ;; esac
++        printf '%s %s\n' "$audio_idle_file" "$audio_idle_previous" >> "$AUDIO_IDLE_STATE_FILE"
++        if ! printf '1\n' > "$audio_idle_file"; then
++            printf 'AUDIO_IDLE disable=FAIL path=%s\n' "$audio_idle_file"
++        fi
++    done
++    if test -n "${AUDIO_DIAG_DIR-}"; then
++        cp "$AUDIO_IDLE_STATE_FILE" "$AUDIO_DIAG_DIR/idle-original.txt" || :
++    fi
++    printf 'AUDIO_IDLE saved=%s states=%s\n' "$AUDIO_IDLE_STATE_FILE" "$(wc -l < "$AUDIO_IDLE_STATE_FILE")"
++    if test ! -s "$AUDIO_IDLE_STATE_FILE"; then
++        printf 'AUDIO_IDLE disable=NOT_COLLECTED reason=no_writable_idle_states\n'
++    fi
++    return 0
++}
++
++audio_idle_restore() {
++    test -n "${AUDIO_IDLE_STATE_FILE-}" && test -r "$AUDIO_IDLE_STATE_FILE" || return 0
++    audio_idle_failed=$AUDIO_IDLE_STATE_FILE.failed
++    : > "$audio_idle_failed"
++    while read -r audio_idle_file audio_idle_previous; do
++        case "$audio_idle_file" in /sys/devices/system/cpu/cpu[0-9]*/cpuidle/state*/disable) ;; *) continue ;; esac
++        case "$audio_idle_previous" in 0|1) ;; *) continue ;; esac
++        if ! printf '%s\n' "$audio_idle_previous" > "$audio_idle_file" 2>/dev/null; then
++            printf 'AUDIO_IDLE restore=FAIL path=%s\n' "$audio_idle_file"
++            printf '%s %s\n' "$audio_idle_file" "$audio_idle_previous" >> "$audio_idle_failed"
++        fi
++    done < "$AUDIO_IDLE_STATE_FILE"
++    if test -s "$audio_idle_failed"; then
++        mv "$audio_idle_failed" "$AUDIO_IDLE_STATE_FILE"
++    else
++        rm -f "$AUDIO_IDLE_STATE_FILE" "$audio_idle_failed"
++        AUDIO_IDLE_STATE_FILE=
++    fi
++    return 0
++}
++
++audio_pfdi_note() {
++    printf '%s\n' "$*"
++    if test -n "${AUDIO_DIAG_DIR-}"; then
++        printf '%s\n' "$*" >> "$AUDIO_DIAG_DIR/pfdi-scheduling.log" || :
++    fi
++}
++
++audio_pfdi_starttime() {
++    test -r "/proc/$1/stat" || return 1
++    awk '{sub(/^.*\) /, ""); print $20}' "/proc/$1/stat"
++}
++
++audio_pfdi_manifest() (
++    printf 'PFDI_SERVICE phase=%s pids=%s\n' "$1" "$(pidof pfdi-sample-app 2>/dev/null || :)"
++    for audio_pfdi_file in /usr/bin/pfdi-sample-app /etc/pfdi/pfdi_test_config_0.pack \
++        /run/pfdi-sample-app.log; do
++        if test -r "$audio_pfdi_file"; then
++            printf 'PFDI_SHA256 '
++            sha256sum "$audio_pfdi_file" || :
++        else
++            printf 'PFDI_FILE path=%s status=NOT_COLLECTED\n' "$audio_pfdi_file"
++        fi
++    done
++)
++
++audio_pfdi_snapshot() (
++    audio_pfdi_snapshot_dir=$1
++    mkdir -p "$audio_pfdi_snapshot_dir" || exit 0
++    audio_pfdi_manifest snapshot > "$audio_pfdi_snapshot_dir/manifest.txt" 2>&1
++    tail -n 40 /run/pfdi-sample-app.log > "$audio_pfdi_snapshot_dir/service-log-tail.txt" 2>/dev/null || :
++    for audio_pfdi_pid in $(pidof pfdi-sample-app 2>/dev/null || :); do
++        for audio_pfdi_task in /proc/"$audio_pfdi_pid"/task/[0-9]*; do
++            test -d "$audio_pfdi_task" || continue
++            audio_pfdi_tid=${audio_pfdi_task##*/}
++            {
++                printf 'PFDI_TASK pid=%s tid=%s starttime=%s\n' "$audio_pfdi_pid" \
++                    "$audio_pfdi_tid" "$(audio_pfdi_starttime "$audio_pfdi_tid")"
++                cat "$audio_pfdi_task/status" "$audio_pfdi_task/sched" 2>/dev/null || :
++                if command -v chrt >/dev/null 2>&1; then
++                    LC_ALL=C chrt -p "$audio_pfdi_tid" || :
++                fi
++            } > "$audio_pfdi_snapshot_dir/$audio_pfdi_pid.$audio_pfdi_tid.txt" 2>&1
++        done
++    done
++)
++
++# Explicit P4 experiment only; never stop the service or change its affinity.
++audio_pfdi_demote() {
++    if test -n "${AUDIO_PFDI_STATE_FILE-}"; then
++        audio_pfdi_note 'PFDI_SCHED demote=FAIL reason=state_already_active'
++        return 1
++    fi
++    if ! command -v chrt >/dev/null 2>&1; then
++        audio_pfdi_note 'PFDI_SCHED demote=FAIL reason=chrt_unavailable'
++        return 1
++    fi
++    audio_pfdi_pids=$(pidof pfdi-sample-app 2>/dev/null) || audio_pfdi_pids=
++    if test -z "$audio_pfdi_pids"; then
++        audio_pfdi_note 'PFDI_SCHED demote=FAIL reason=no_service_tasks'
++        return 1
++    fi
++    AUDIO_PFDI_STATE_FILE=$(mktemp /tmp/qbox-audio-pfdi.XXXXXX) || return 1
++    audio_pfdi_manifest before
++    audio_pfdi_failed=0
++    audio_pfdi_tasks=0
++    audio_pfdi_changed=0
++    for audio_pfdi_pid in $audio_pfdi_pids; do
++        audio_pfdi_pid_start=$(audio_pfdi_starttime "$audio_pfdi_pid") || audio_pfdi_pid_start=
++        for audio_pfdi_task in /proc/"$audio_pfdi_pid"/task/[0-9]*; do
++            test -d "$audio_pfdi_task" || continue
++            audio_pfdi_tasks=$((audio_pfdi_tasks + 1))
++            audio_pfdi_tid=${audio_pfdi_task##*/}
++            audio_pfdi_tid_start=$(audio_pfdi_starttime "$audio_pfdi_tid") || audio_pfdi_tid_start=
++            if test -z "$audio_pfdi_pid_start" || test -z "$audio_pfdi_tid_start" || \
++                ! audio_pfdi_sched=$(LC_ALL=C chrt -p "$audio_pfdi_tid" 2>&1); then
++                audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=read_state_failed"
++                audio_pfdi_failed=1
++                continue
++            fi
++            audio_pfdi_policy=$(printf '%s\n' "$audio_pfdi_sched" | sed -n 's/.*current scheduling policy: //p')
++            audio_pfdi_priority=$(printf '%s\n' "$audio_pfdi_sched" | sed -n 's/.*current scheduling priority: //p')
++            audio_pfdi_note "PFDI_SCHED phase=before pid=$audio_pfdi_pid tid=$audio_pfdi_tid policy=$audio_pfdi_policy priority=$audio_pfdi_priority"
++            case "$audio_pfdi_policy:$audio_pfdi_priority" in
++                SCHED_FIFO:[0-9]*|SCHED_RR:[0-9]*) ;;
++                SCHED_OTHER:0|SCHED_BATCH:0|SCHED_IDLE:0)
++                    audio_pfdi_note "PFDI_SCHED tid=$audio_pfdi_tid action=UNCHANGED reason=not_fifo_or_rr"
++                    continue ;;
++                *)
++                    audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=unsupported_state"
++                    audio_pfdi_failed=1
++                    continue ;;
++            esac
++            if ! printf '%s %s %s %s %s %s\n' "$audio_pfdi_pid" "$audio_pfdi_pid_start" \
++                "$audio_pfdi_tid" "$audio_pfdi_tid_start" "$audio_pfdi_policy" \
++                "$audio_pfdi_priority" >> "$AUDIO_PFDI_STATE_FILE"; then
++                audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=save_state_failed"
++                audio_pfdi_failed=1
++                continue
++            fi
++            if test ! -d "/proc/$audio_pfdi_pid/task/$audio_pfdi_tid" || \
++                test "$(audio_pfdi_starttime "$audio_pfdi_pid")" != "$audio_pfdi_pid_start" || \
++                test "$(audio_pfdi_starttime "$audio_pfdi_tid")" != "$audio_pfdi_tid_start"; then
++                audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=identity_changed"
++                audio_pfdi_failed=1
++                continue
++            fi
++            if ! LC_ALL=C chrt -o -p 0 "$audio_pfdi_tid"; then
++                audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=chrt_failed"
++                audio_pfdi_failed=1
++                continue
++            fi
++            audio_pfdi_after=$(LC_ALL=C chrt -p "$audio_pfdi_tid" 2>&1) || audio_pfdi_after=
++            if ! printf '%s\n' "$audio_pfdi_after" | grep -q 'current scheduling policy: SCHED_OTHER$' || \
++                ! printf '%s\n' "$audio_pfdi_after" | grep -q 'current scheduling priority: 0$'; then
++                audio_pfdi_note "PFDI_SCHED demote=FAIL tid=$audio_pfdi_tid reason=verify_failed"
++                audio_pfdi_failed=1
++                continue
++            fi
++            audio_pfdi_changed=$((audio_pfdi_changed + 1))
++            audio_pfdi_note "PFDI_SCHED phase=after pid=$audio_pfdi_pid tid=$audio_pfdi_tid policy=SCHED_OTHER priority=0"
++        done
++    done
++    audio_pfdi_manifest after
++    if test "$audio_pfdi_tasks" -eq 0 || test "$audio_pfdi_failed" -ne 0; then
++        audio_pfdi_note "PFDI_SCHED demote=FAIL tasks=$audio_pfdi_tasks changed=$audio_pfdi_changed"
++        audio_pfdi_restore || :
++        return 1
++    fi
++    audio_pfdi_note "PFDI_SCHED demote=PASS tasks=$audio_pfdi_tasks changed=$audio_pfdi_changed saved=$AUDIO_PFDI_STATE_FILE"
++    return 0
++}
++
++audio_pfdi_restore() {
++    test -n "${AUDIO_PFDI_STATE_FILE-}" || return 0
++    if test ! -r "$AUDIO_PFDI_STATE_FILE"; then
++        audio_pfdi_note 'PFDI_SCHED restore=FAIL reason=state_file_missing'
++        return 1
++    fi
++    audio_pfdi_restore_failed=$AUDIO_PFDI_STATE_FILE.failed
++    : > "$audio_pfdi_restore_failed" || return 1
++    audio_pfdi_restore_error=0
++    audio_pfdi_save_error=0
++    while read -r audio_pfdi_pid audio_pfdi_pid_start audio_pfdi_tid \
++        audio_pfdi_tid_start audio_pfdi_policy audio_pfdi_priority; do
++        if test ! -d "/proc/$audio_pfdi_pid/task/$audio_pfdi_tid"; then
++            audio_pfdi_note "PFDI_SCHED restore=SKIP pid=$audio_pfdi_pid tid=$audio_pfdi_tid reason=task_exited"
++            continue
++        fi
++        if test "$(audio_pfdi_starttime "$audio_pfdi_pid")" != "$audio_pfdi_pid_start" || \
++            test "$(audio_pfdi_starttime "$audio_pfdi_tid")" != "$audio_pfdi_tid_start"; then
++            audio_pfdi_note "PFDI_SCHED restore=SKIP pid=$audio_pfdi_pid tid=$audio_pfdi_tid reason=identity_changed"
++            continue
++        fi
++        audio_pfdi_flag=
++        case "$audio_pfdi_policy" in SCHED_FIFO) audio_pfdi_flag=-f ;; SCHED_RR) audio_pfdi_flag=-r ;; esac
++        if test -n "$audio_pfdi_flag" && \
++            LC_ALL=C chrt "$audio_pfdi_flag" -p "$audio_pfdi_priority" "$audio_pfdi_tid"; then
++            audio_pfdi_restored=$(LC_ALL=C chrt -p "$audio_pfdi_tid" 2>&1) || audio_pfdi_restored=
++            if printf '%s\n' "$audio_pfdi_restored" | grep -q "current scheduling policy: $audio_pfdi_policy\$" && \
++                printf '%s\n' "$audio_pfdi_restored" | grep -q "current scheduling priority: $audio_pfdi_priority\$"; then
++                audio_pfdi_note "PFDI_SCHED restore=PASS pid=$audio_pfdi_pid tid=$audio_pfdi_tid policy=$audio_pfdi_policy priority=$audio_pfdi_priority"
++                continue
++            fi
++        fi
++        audio_pfdi_note "PFDI_SCHED restore=FAIL pid=$audio_pfdi_pid tid=$audio_pfdi_tid policy=$audio_pfdi_policy priority=$audio_pfdi_priority"
++        audio_pfdi_restore_error=1
++        if ! printf '%s %s %s %s %s %s\n' "$audio_pfdi_pid" "$audio_pfdi_pid_start" \
++            "$audio_pfdi_tid" "$audio_pfdi_tid_start" "$audio_pfdi_policy" \
++            "$audio_pfdi_priority" >> "$audio_pfdi_restore_failed"; then
++            audio_pfdi_save_error=1
++        fi
++    done < "$AUDIO_PFDI_STATE_FILE"
++    audio_pfdi_manifest restored
++    if test "$audio_pfdi_restore_error" -ne 0; then
++        if test "$audio_pfdi_save_error" -eq 0; then
++            mv "$audio_pfdi_restore_failed" "$AUDIO_PFDI_STATE_FILE" || :
++        fi
++        return 1
++    fi
++    rm -f "$AUDIO_PFDI_STATE_FILE" "$audio_pfdi_restore_failed"
++    AUDIO_PFDI_STATE_FILE=
++    return 0
++}
+diff --git a/scripts/test/qbox_audio_dma_cfs.sh b/scripts/test/qbox_audio_dma_cfs.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..2c97c4ce655d9e169bfdb7b04863bd9ae2add164
+--- /dev/null
++++ b/scripts/test/qbox_audio_dma_cfs.sh
+@@ -0,0 +1,327 @@
++#!/bin/sh
++# Diagnostic only: demote the four existing INTID 390 audio IRQ threads.
++# Source after qbox_audio_diagnostics.sh; the suite owns the exit trap.
++# Do not change the suite, PFDI, IRQ affinity, clocks, or transfer parameters.
++
++audio_dma_irq_sched_read() {
++    audio_dma_irq_sched=$(LC_ALL=C chrt -p "$1" 2>&1) || return 1
++    audio_dma_irq_policy=$(printf '%s\n' "$audio_dma_irq_sched" |
++        sed -n 's/.*current scheduling policy: //p')
++    audio_dma_irq_priority=$(printf '%s\n' "$audio_dma_irq_sched" |
++        sed -n 's/.*current scheduling priority: //p')
++    test -n "$audio_dma_irq_policy" && test -n "$audio_dma_irq_priority"
++}
++
++audio_dma_irq_identity() {
++    test -r "/proc/$1/comm" || return 1
++    test "$(audio_pfdi_starttime "$1")" = "$2" || return 1
++    test "$(cat "/proc/$1/comm")" = "$3"
++}
++
++audio_dma_irq_setup_fail() {
++    printf 'AUDIO_DMA_IRQ_OTHER_SETUP=FAIL reason=%s\n' "$1"
++    audio_experiment_cleanup || :
++    return 1
++}
++
++audio_dma_irq_original_setup() {
++    if test -n "${AUDIO_DMA_IRQ_STATE_DIR-}"; then
++        printf 'AUDIO_DMA_IRQ_OTHER_SETUP=FAIL reason=already_active\n'
++        return 1
++    fi
++    if ! command -v chrt >/dev/null 2>&1 ||
++        ! command -v audio_pfdi_starttime >/dev/null 2>&1; then
++        printf 'AUDIO_DMA_IRQ_OTHER_SETUP=FAIL reason=missing_helper\n'
++        return 1
++    fi
++    if ! audio_dma_irq_sched_read "$$" ||
++        test "$audio_dma_irq_policy:$audio_dma_irq_priority" != SCHED_OTHER:0; then
++        printf 'AUDIO_DMA_IRQ_OTHER_SETUP=FAIL reason=suite_not_other0\n'
++        return 1
++    fi
++    printf 'AUDIO_DMA_IRQ_SUITE pid=%s policy=%s priority=%s\n' \
++        "$$" "$audio_dma_irq_policy" "$audio_dma_irq_priority"
++
++    # Match the GIC controller and INTID as separate fields, never substrings.
++    # Require exactly the four audio actions before the memory test starts.
++    audio_dma_irq_number=$(awk '
++        $1 ~ /^[0-9]+:$/ {
++            for (i = 2; i < NF; i++) {
++                if ($i == "GICv3" && $(i + 1) == "390") {
++                    matches++
++                    irq = $1
++                    sub(/:$/, "", irq)
++                    names = ""
++                    for (j = i + 3; j <= NF; j++) names = names $j
++                    count = split(names, actions, ",")
++                    valid = $(i + 2) == "Level" && count == 4
++                    for (name in seen) delete seen[name]
++                    for (j = 1; j <= count; j++) {
++                        if (actions[j] !~ /^dma1chan[0-3]$/ || seen[actions[j]]++)
++                            valid = 0
++                    }
++                }
++            }
++        }
++        END { if (matches == 1 && valid) print irq; else exit 1 }
++    ' /proc/interrupts) || {
++        printf 'AUDIO_DMA_IRQ_OTHER_SETUP=FAIL reason=irq_mapping_or_actions\n'
++        return 1
++    }
++    AUDIO_DMA_IRQ_STATE_DIR=$(mktemp -d /tmp/qbox-audio-dma-irq.XXXXXX) || return 1
++    if ! : > "$AUDIO_DMA_IRQ_STATE_DIR/original" ||
++        ! : > "$AUDIO_DMA_IRQ_STATE_DIR/attempted"; then
++        audio_dma_irq_setup_fail state_file_creation
++        return 1
++    fi
++
++    # TASK_COMM_LEN can truncate channel suffixes. The exact irq/<IRQ>-
++    # prefix plus the four /proc/interrupts actions identifies the group.
++    audio_dma_irq_count=0
++    for audio_dma_irq_proc in /proc/[0-9]*; do
++        test -r "$audio_dma_irq_proc/comm" || continue
++        audio_dma_irq_comm=$(cat "$audio_dma_irq_proc/comm" 2>/dev/null) || continue
++        case "$audio_dma_irq_comm" in
++            "irq/$audio_dma_irq_number-"*) ;;
++            *) continue ;;
++        esac
++        audio_dma_irq_pid=${audio_dma_irq_proc##*/}
++        audio_dma_irq_start=$(audio_pfdi_starttime "$audio_dma_irq_pid") || {
++            audio_dma_irq_setup_fail read_starttime
++            return 1
++        }
++        case "$audio_dma_irq_start" in ''|*[!0-9]*)
++            audio_dma_irq_setup_fail invalid_starttime
++            return 1 ;;
++        esac
++        if ! audio_dma_irq_sched_read "$audio_dma_irq_pid" ||
++            test "$audio_dma_irq_policy:$audio_dma_irq_priority" != SCHED_FIFO:50 ||
++            ! audio_dma_irq_identity "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_comm"; then
++            audio_dma_irq_setup_fail original_policy_or_identity
++            return 1
++        fi
++        printf 'AUDIO_DMA_IRQ_BEFORE irq=%s pid=%s starttime=%s comm=%s policy=%s priority=%s\n' \
++            "$audio_dma_irq_number" "$audio_dma_irq_pid" "$audio_dma_irq_start" \
++            "$audio_dma_irq_comm" "$audio_dma_irq_policy" "$audio_dma_irq_priority"
++        if ! printf '%s %s %s %s %s\n' "$audio_dma_irq_pid" "$audio_dma_irq_start" \
++            "$audio_dma_irq_comm" "$audio_dma_irq_policy" "$audio_dma_irq_priority" \
++            >> "$AUDIO_DMA_IRQ_STATE_DIR/original"; then
++            audio_dma_irq_setup_fail save_original
++            return 1
++        fi
++        audio_dma_irq_count=$((audio_dma_irq_count + 1))
++    done
++    if test "$audio_dma_irq_count" -ne 4; then
++        audio_dma_irq_setup_fail "expected_four_found_$audio_dma_irq_count"
++        return 1
++    fi
++
++    # All four original states are saved before the first policy change.
++    # Journal before chrt so cleanup also covers interrupted/failed attempts.
++    while read -r audio_dma_irq_pid audio_dma_irq_start audio_dma_irq_comm \
++        audio_dma_irq_saved_policy audio_dma_irq_saved_priority; do
++        if ! audio_dma_irq_identity "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_comm" ||
++            ! audio_dma_irq_sched_read "$audio_dma_irq_pid" ||
++            test "$audio_dma_irq_policy:$audio_dma_irq_priority" != SCHED_FIFO:50; then
++            audio_dma_irq_setup_fail prechange_identity_or_policy
++            return 1
++        fi
++        if ! printf '%s %s %s %s %s\n' "$audio_dma_irq_pid" "$audio_dma_irq_start" \
++            "$audio_dma_irq_comm" "$audio_dma_irq_saved_policy" "$audio_dma_irq_saved_priority" \
++            >> "$AUDIO_DMA_IRQ_STATE_DIR/attempted"; then
++            audio_dma_irq_setup_fail save_attempt
++            return 1
++        fi
++        if ! LC_ALL=C chrt -o -p 0 "$audio_dma_irq_pid" ||
++            ! audio_dma_irq_identity "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_comm" ||
++            ! audio_dma_irq_sched_read "$audio_dma_irq_pid" ||
++            test "$audio_dma_irq_policy:$audio_dma_irq_priority" != SCHED_OTHER:0; then
++            audio_dma_irq_setup_fail change_or_readback
++            return 1
++        fi
++        printf 'AUDIO_DMA_IRQ_AFTER irq=%s pid=%s starttime=%s policy=%s priority=%s\n' \
++            "$audio_dma_irq_number" "$audio_dma_irq_pid" "$audio_dma_irq_start" \
++            "$audio_dma_irq_policy" "$audio_dma_irq_priority"
++    done < "$AUDIO_DMA_IRQ_STATE_DIR/original"
++    printf 'AUDIO_DMA_IRQ_OTHER_SETUP=PASS irq=%s threads=4 suite=OTHER0 pfdi=UNCHANGED affinity=UNCHANGED\n' \
++        "$audio_dma_irq_number"
++}
++
++audio_dma_irq_original_cleanup() {
++    test -n "${AUDIO_DMA_IRQ_STATE_DIR-}" || return 0
++    if test ! -r "$AUDIO_DMA_IRQ_STATE_DIR/attempted"; then
++        printf 'AUDIO_DMA_IRQ_OTHER_RESTORE=FAIL reason=journal_missing\n'
++        return 1
++    fi
++    audio_dma_irq_restore_failed=0
++    audio_dma_irq_restored=0
++    # Use only saved PIDs; never discover new memory-test IRQ threads here.
++    while read -r audio_dma_irq_pid audio_dma_irq_start audio_dma_irq_comm \
++        audio_dma_irq_saved_policy audio_dma_irq_saved_priority; do
++        if test "$audio_dma_irq_saved_policy:$audio_dma_irq_saved_priority" != SCHED_FIFO:50 ||
++            ! audio_dma_irq_identity "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_comm"; then
++            printf 'AUDIO_DMA_IRQ_RESTORE=FAIL pid=%s reason=identity_or_saved_policy\n' "$audio_dma_irq_pid"
++            audio_dma_irq_restore_failed=1
++            continue
++        fi
++        if ! LC_ALL=C chrt -f -p "$audio_dma_irq_saved_priority" "$audio_dma_irq_pid" ||
++            ! audio_dma_irq_identity "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_comm" ||
++            ! audio_dma_irq_sched_read "$audio_dma_irq_pid" ||
++            test "$audio_dma_irq_policy:$audio_dma_irq_priority" != SCHED_FIFO:50; then
++            printf 'AUDIO_DMA_IRQ_RESTORE=FAIL pid=%s reason=change_or_readback\n' "$audio_dma_irq_pid"
++            audio_dma_irq_restore_failed=1
++            continue
++        fi
++        audio_dma_irq_restored=$((audio_dma_irq_restored + 1))
++        printf 'AUDIO_DMA_IRQ_RESTORE=PASS pid=%s starttime=%s policy=%s priority=%s\n' \
++            "$audio_dma_irq_pid" "$audio_dma_irq_start" "$audio_dma_irq_policy" "$audio_dma_irq_priority"
++    done < "$AUDIO_DMA_IRQ_STATE_DIR/attempted"
++    if test "$audio_dma_irq_restore_failed" -ne 0; then
++        printf 'AUDIO_DMA_IRQ_OTHER_RESTORE=FAIL restored=%s state=%s\n' \
++            "$audio_dma_irq_restored" "$AUDIO_DMA_IRQ_STATE_DIR"
++        return 1
++    fi
++    rm -f "$AUDIO_DMA_IRQ_STATE_DIR/original" "$AUDIO_DMA_IRQ_STATE_DIR/attempted" || return 1
++    rmdir "$AUDIO_DMA_IRQ_STATE_DIR" || return 1
++    AUDIO_DMA_IRQ_STATE_DIR=
++    printf 'AUDIO_DMA_IRQ_OTHER_RESTORE=PASS restored=%s\n' "$audio_dma_irq_restored"
++}
++
++
++# Only the three audio executable names receive a niceness adjustment.
++# The suite and IRQ/PFDI workers retain their existing niceness.
++audio_nice10_prepare() {
++    if test -n "${AUDIO_NICE10_DIR-}" || test "${AUDIO_NICE10_PATH_SAVED:-0}" -ne 0; then
++        printf 'AUDIO_NICE10_SETUP=FAIL reason=already_active\n'
++        return 1
++    fi
++    AUDIO_NICE10_ORIGINAL_PATH=$PATH
++    AUDIO_NICE10_PATH_SAVED=1
++    audio_nice10_stat=$(awk '{sub(/^.*\) /, ""); print $17 ":" $39 ":" $20}' "/proc/$$/stat") || return 1
++    case "$audio_nice10_stat" in
++        0:0:[0-9]*) ;;
++        *) printf 'AUDIO_NICE10_SETUP=FAIL reason=suite_not_other_nice0 stat=%s\n' "$audio_nice10_stat"; return 1 ;;
++    esac
++    AUDIO_NICE10_DIR=$(mktemp -d /tmp/qbox-audio-nice10.XXXXXX) || return 1
++    audio_nice10_native=$(command -v nice) || return 1
++    case "$audio_nice10_native" in /*) ;; *) return 1 ;; esac
++    test -f "$audio_nice10_native" && test -x "$audio_nice10_native" || return 1
++    printf '%s\n' "$audio_nice10_native" > "$AUDIO_NICE10_DIR/nice.real" || return 1
++
++    cat > "$AUDIO_NICE10_DIR/launch.sh" <<'AUDIO_NICE10_LAUNCH'
++#!/bin/sh
++set -eu
++audio_nice10_dir=${0%/*}
++audio_nice10_app=${0##*/}
++case "$audio_nice10_app" in i2s-loopback|aplay|arecord) ;; *) exit 1 ;; esac
++IFS= read -r audio_nice10_real < "$audio_nice10_dir/$audio_nice10_app.real"
++IFS= read -r audio_nice10_native < "$audio_nice10_dir/nice.real"
++audio_nice10_stat=$(awk '{sub(/^.*\) /, ""); print $17 ":" $39 ":" $20}' "/proc/$$/stat")
++case "$audio_nice10_stat" in
++    0:0:[0-9]*) ;;
++    *) printf 'AUDIO_NICE10_EXEC=FAIL app=%s reason=original_not_other_nice0 stat=%s\n' "$audio_nice10_app" "$audio_nice10_stat" >&2; exit 1 ;;
++esac
++printf 'AUDIO_NICE10_BEFORE app=%s pid=%s stat_nice_policy_start=%s\n' "$audio_nice10_app" "$$" "$audio_nice10_stat" >&2
++exec "$audio_nice10_native" -n -10 /bin/sh "$audio_nice10_dir/enter.sh" \
++    "$audio_nice10_app" "$$" "$audio_nice10_stat" "$audio_nice10_real" "$@"
++AUDIO_NICE10_LAUNCH
++    test "$?" -eq 0 || return 1
++
++    cat > "$AUDIO_NICE10_DIR/enter.sh" <<'AUDIO_NICE10_ENTER'
++#!/bin/sh
++set -eu
++audio_nice10_app=$1
++audio_nice10_pid=$2
++audio_nice10_before=$3
++shift 3
++audio_nice10_stat=$(awk '{sub(/^.*\) /, ""); print $17 ":" $39 ":" $20}' "/proc/$$/stat")
++case "$audio_nice10_stat" in
++    -10:0:[0-9]*) ;;
++    *) printf 'AUDIO_NICE10_EXEC=FAIL app=%s reason=nice_readback stat=%s\n' "$audio_nice10_app" "$audio_nice10_stat" >&2; exit 1 ;;
++esac
++if test "$$" != "$audio_nice10_pid" ||
++    test "${audio_nice10_stat##*:}" != "${audio_nice10_before##*:}"; then
++    printf 'AUDIO_NICE10_EXEC=FAIL app=%s reason=exec_identity\n' "$audio_nice10_app" >&2
++    exit 1
++fi
++printf 'AUDIO_NICE10_READBACK=PASS app=%s pid=%s nice=-10 policy=SCHED_OTHER stat_nice_policy_start=%s next_exec=%s\n' \
++    "$audio_nice10_app" "$$" "$audio_nice10_stat" "$1" >&2
++# Keep the original invocation path: arecord may be an argv[0]-sensitive link.
++exec "$@"
++AUDIO_NICE10_ENTER
++    test "$?" -eq 0 || return 1
++
++    for audio_nice10_app in i2s-loopback aplay arecord; do
++        audio_nice10_real=$(command -v "$audio_nice10_app") || return 1
++        case "$audio_nice10_real" in /*) ;; *) return 1 ;; esac
++        test -f "$audio_nice10_real" && test -x "$audio_nice10_real" || return 1
++        audio_nice10_resolved=$(readlink -f "$audio_nice10_real") || return 1
++        audio_nice10_sha=$(sha256sum "$audio_nice10_real") || return 1
++        printf 'AUDIO_NICE10_ORIGINAL app=%s invocation=%s resolved=%s sha256=%s\n' \
++            "$audio_nice10_app" "$audio_nice10_real" "$audio_nice10_resolved" "${audio_nice10_sha%% *}" || return 1
++        printf '%s\n' "$audio_nice10_real" > "$AUDIO_NICE10_DIR/$audio_nice10_app.real" || return 1
++        cp "$AUDIO_NICE10_DIR/launch.sh" "$AUDIO_NICE10_DIR/$audio_nice10_app" || return 1
++        chmod 755 "$AUDIO_NICE10_DIR/$audio_nice10_app" || return 1
++    done
++}
++
++audio_experiment_setup() {
++    audio_nice10_setup_rc=0
++    audio_nice10_prepare || audio_nice10_setup_rc=$?
++    if test "$audio_nice10_setup_rc" -eq 0; then
++        audio_dma_irq_original_setup || audio_nice10_setup_rc=$?
++    fi
++    if test "$audio_nice10_setup_rc" -ne 0; then
++        printf 'AUDIO_IRQ_OTHER_NICE10_SETUP=FAIL rc=%s\n' "$audio_nice10_setup_rc"
++        audio_experiment_cleanup || :
++        return "$audio_nice10_setup_rc"
++    fi
++    PATH=$AUDIO_NICE10_DIR:$AUDIO_NICE10_ORIGINAL_PATH
++    export PATH
++    hash -r
++    for audio_nice10_app in i2s-loopback aplay arecord; do
++        if test "$(command -v "$audio_nice10_app")" != "$AUDIO_NICE10_DIR/$audio_nice10_app"; then
++            printf 'AUDIO_IRQ_OTHER_NICE10_SETUP=FAIL reason=wrapper_resolution app=%s\n' "$audio_nice10_app"
++            audio_experiment_cleanup || :
++            return 1
++        fi
++    done
++    printf 'AUDIO_IRQ_OTHER_NICE10_SETUP=PASS suite=OTHER0_nice0 audio=OTHER0_nice-10 irq=OTHER0 pfdi=UNCHANGED affinity=UNCHANGED\n'
++}
++
++audio_experiment_cleanup() {
++    audio_nice10_cleanup_rc=0
++    if test "${AUDIO_NICE10_PATH_SAVED:-0}" -eq 1; then
++        PATH=$AUDIO_NICE10_ORIGINAL_PATH
++        export PATH
++        hash -r || audio_nice10_cleanup_rc=$?
++        AUDIO_NICE10_PATH_SAVED=0
++        printf 'AUDIO_NICE10_PATH_RESTORE=PASS\n'
++    fi
++    # Always attempt IRQ restoration, even if PATH or wrapper cleanup fails.
++    audio_dma_irq_original_cleanup || {
++        audio_nice10_step_rc=$?
++        if test "$audio_nice10_cleanup_rc" -eq 0; then audio_nice10_cleanup_rc=$audio_nice10_step_rc; fi
++    }
++    if test -n "${AUDIO_NICE10_DIR-}"; then
++        for audio_nice10_file in launch.sh enter.sh nice.real i2s-loopback i2s-loopback.real aplay aplay.real arecord arecord.real; do
++            rm -f "$AUDIO_NICE10_DIR/$audio_nice10_file" || {
++                audio_nice10_step_rc=$?
++                if test "$audio_nice10_cleanup_rc" -eq 0; then audio_nice10_cleanup_rc=$audio_nice10_step_rc; fi
++            }
++        done
++        if rmdir "$AUDIO_NICE10_DIR"; then
++            AUDIO_NICE10_DIR=
++            printf 'AUDIO_NICE10_WRAPPERS_RESTORE=PASS\n'
++        else
++            audio_nice10_step_rc=$?
++            if test "$audio_nice10_cleanup_rc" -eq 0; then audio_nice10_cleanup_rc=$audio_nice10_step_rc; fi
++        fi
++    fi
++    if test "$audio_nice10_cleanup_rc" -ne 0; then
++        printf 'AUDIO_IRQ_OTHER_NICE10_RESTORE=FAIL rc=%s\n' "$audio_nice10_cleanup_rc"
++    else
++        printf 'AUDIO_IRQ_OTHER_NICE10_RESTORE=PASS\n'
++    fi
++    return "$audio_nice10_cleanup_rc"
++}
+diff --git a/scripts/test/qbox_audio_experiment.py b/scripts/test/qbox_audio_experiment.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..baed48aaca3b4cf38ac6bc4028e4df120a7c009f
+--- /dev/null
++++ b/scripts/test/qbox_audio_experiment.py
+@@ -0,0 +1,408 @@
++"""Optional evidence collection for the AP-only and full QBox audio verifiers."""
++
++import base64
++import binascii
++import hashlib
++import http.server
++import json
++import os
++from pathlib import Path
++import re
++import shutil
++import subprocess
++import tarfile
++import time
++
++from qbox_audio_health import assess_audio_guest_health
++
++ROOT = Path(__file__).resolve().parents[2]
++PROC = Path('/proc')
++IMPLEMENTATION_FILES = {
++    '.': ('scripts/test/qbox_audio_experiment.py', 'scripts/test/qbox_audio_diagnostics.sh',
++          'scripts/test/summarize_qbox_audio_trace.py', 'scripts/test/verify_qbox_linux_audio.py',
++          'scripts/test/verify_qbox_full_audio.py', 'scripts/test/verify_qbox_i2s.sh',
++          'scripts/test/verify_dma350_memory.sh', 'scripts/test/verify_qemu_i2s_wav.py',
++          'scripts/test/qbox_audio_uki.py', 'scripts/test/qbox_audio_repeat.py',
++          'scripts/test/qbox_audio_health.py'),
++    'hsoc-stack/tools/qemu': ('hw/dma/arm-dma350.c', 'hw/audio/dw-apb-i2s.c'),
++    'hsoc-stack/tools/qbox': ('qemu-components/common/include/ports/initiator.h',
++                            'qemu-components/common/include/ports/initiator-telemetry.h',
++                            'qemu-components/common/include/ports/qemu-initiator-signal-socket.h'),
++    'hsoc-stack/tools/qbox-platform': (
++        'platforms/apollo/apollo-qvp.lua', 'platforms/apollo/apollo-qvp-linux.lua',
++        'platforms/apollo/apollo-qvp-common.lua',
++        'qemu-components/qemu_dma350/include/qemu_dma350.h',
++        'qemu-components/qemu_dw_apb_i2s/include/qemu_dw_apb_i2s.h'),
++    'hsoc-stack/components/primary_compute/linux': ('drivers/dma/arm-dma350.c',
++                                                  'sound/soc/dwc/dwc-pcm.c'),
++    'hsoc-stack/yocto/meta-hsoc-auto-solutions': ('recipes-test/i2s-loopback/files/i2s_loopback.c',),
++}
++
++
++def source_provenance():
++    """Bind tracked changes and untracked implementation bytes separately."""
++    result = {}
++    for repository, names in IMPLEMENTATION_FILES.items():
++        directory = ROOT / repository
++        git = ['git', '-C', str(directory)]
++        diff = subprocess.check_output(git + ['diff', '--binary', 'HEAD', '--', *names])
++        result[repository] = {
++            'head': subprocess.check_output(git + ['rev-parse', 'HEAD'], text=True).strip(),
++            'tracked_diff_sha256': hashlib.sha256(diff).hexdigest(),
++            'tracked_diff_bytes': len(diff),
++            'files': {name: {'sha256': hashlib.sha256((directory / name).read_bytes()).hexdigest()}
++                      if (directory / name).is_file() else {'status': 'MISSING'} for name in names},
++        }
++    return result
++
++
++def add_arguments(parser):
++    parser.add_argument('--diagnostics', action='store_true',
++                        help='Collect bounded guest tracing and native model/bridge statistics')
++    parser.add_argument('--disable-cpu-idle', action='store_true',
++                        help='Diagnostic experiment: disable guest idle states during the suite')
++    parser.add_argument('--pfdi-normal-priority', action='store_true',
++                        help='Diagnostic experiment: run existing PFDI workers with SCHED_OTHER, then restore')
++    parser.add_argument('--chrt-binary', type=Path,
++                        help='Serve an explicit guest chrt binary for scheduling experiments')
++    parser.add_argument('--experiment-script', type=Path,
++                        help='Diagnostic shell defining audio_experiment_setup/cleanup; records its SHA256')
++    parser.add_argument('--pcm-binary', type=Path,
++                        help='Serve an explicit i2s-loopback binary without replacing the initrd')
++    parser.add_argument('--kprobes', type=Path,
++                        help='Explicit build-specific guest kprobe definitions (requires diagnostics)')
++
++
++def prepare(args, output, serve):
++    if args.kprobes and not args.diagnostics:
++        raise ValueError('--kprobes requires --diagnostics and matching kernel offsets')
++    pfdi_normal = getattr(args, 'pfdi_normal_priority', False)
++    custom = getattr(args, 'experiment_script', None)
++    if args.diagnostics or args.disable_cpu_idle or pfdi_normal or custom:
++        shutil.copyfile(ROOT / 'scripts/test/qbox_audio_diagnostics.sh', serve / 'diagnostics.sh')
++    for source, name in ((args.pcm_binary, 'i2s-loopback'), (args.kprobes, 'audio-kprobes.events'),
++                         (getattr(args, 'chrt_binary', None), 'chrt'), (custom, 'experiment.sh')):
++        if source:
++            shutil.copyfile(source, serve / name)
++    if args.kprobes:
++        # Validate precisely the snapshot later downloaded by the guest.
++        args.kprobes = (serve / 'audio-kprobes.events').absolute()
++    manifest = {
++        'schema_version': 1, 'host_time_ns': time.time_ns(),
++        'diagnostics': args.diagnostics, 'disable_cpu_idle': args.disable_cpu_idle,
++        'pfdi_normal_priority': pfdi_normal,
++        'experiment_script': str(custom) if custom else None,
++        'qualification': 'DIAGNOSTIC' if args.disable_cpu_idle or pfdi_normal or custom else 'baseline-settings',
++        'host_cpu_affinity': sorted(os.sched_getaffinity(0)),
++        'injected_files': {}, 'source_heads': {}, 'configuration_sha256': {},
++    }
++    for name in ('i2s-loopback', 'audio-kprobes.events', 'diagnostics.sh', 'chrt', 'experiment.sh'):
++        path = serve / name
++        if path.exists():
++            manifest['injected_files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
++    manifest['implementation'] = source_provenance()
++    manifest['source_heads'] = {name: value['head'] for name, value in manifest['implementation'].items()}
++    for name in ('local.conf', 'bblayers.conf', 'templateconf.cfg'):
++        path = ROOT / 'build/conf' / name
++        manifest['configuration_sha256'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
++    (output / 'run-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
++
++
++def augment_suite(suite, args, port):
++    """Wrap the existing suite, preserving its exit code and default behavior."""
++    setup = []
++    pfdi_normal = getattr(args, 'pfdi_normal_priority', False)
++    custom = getattr(args, 'experiment_script', None)
++    if args.pcm_binary:
++        setup += [f'wget -q -O /tmp/i2s-loopback http://10.0.2.2:{port}/i2s-loopback',
++                  'chmod 755 /tmp/i2s-loopback', 'export PATH=/tmp:$PATH',
++                  'sha256sum /tmp/i2s-loopback']
++    if getattr(args, 'chrt_binary', None):
++        setup += [f'wget -q -O /tmp/chrt http://10.0.2.2:{port}/chrt',
++                  'chmod 755 /tmp/chrt', 'export PATH=/tmp:$PATH', 'sha256sum /tmp/chrt']
++    if args.diagnostics or args.disable_cpu_idle or pfdi_normal or custom:
++        setup += [f'wget -q -O /tmp/audio-diagnostics.sh http://10.0.2.2:{port}/diagnostics.sh',
++                  '. /tmp/audio-diagnostics.sh',
++                  '''audio_custom_ready=0
++audio_custom_cleaned=0
++audio_custom_cleanup_once() {
++    if test "$audio_custom_ready" -eq 0 || test "$audio_custom_cleaned" -eq 1; then
++        return 0
++    fi
++    audio_custom_cleaned=1
++    audio_experiment_cleanup
++}
++audio_suite_exit_cleanup() {
++    audio_exit_status=$?
++    trap - EXIT HUP INT TERM
++    set +e
++    audio_custom_cleanup_once
++    audio_cleanup_status=$?
++    if test "$audio_exit_status" -eq 0; then audio_exit_status=$audio_cleanup_status; fi
++    audio_diag_cleanup
++    audio_cleanup_status=$?
++    if test "$audio_exit_status" -eq 0; then audio_exit_status=$audio_cleanup_status; fi
++    exit "$audio_exit_status"
++}''',
++                  "trap 'audio_suite_exit_cleanup' EXIT",
++                  "trap 'exit 130' INT", "trap 'exit 143' HUP TERM"]
++    if args.kprobes:
++        setup += [f'wget -q -O /tmp/audio-kprobes.events http://10.0.2.2:{port}/audio-kprobes.events']
++    if args.diagnostics:
++        setup += ['export I2S_LOOPBACK_DIAGNOSTICS=1',
++                  f'audio_diag_start http://10.0.2.2:{port}/diagnostics/__MODE__']
++    if args.disable_cpu_idle:
++        setup += ['audio_idle_disable']
++    if pfdi_normal:
++        setup += ['audio_pfdi_demote']
++    if custom:
++        setup += [f'wget -q -O /tmp/audio-experiment.sh http://10.0.2.2:{port}/experiment.sh',
++                  '. /tmp/audio-experiment.sh',
++                  'audio_custom_ready=1',
++                  'audio_experiment_setup']
++    if not setup:
++        return suite
++    # Keep explicit exits in --tests memory/wav inside the original subshell.
++    body = suite.removeprefix('#!/bin/sh\n')
++    finish = ['suite_rc=$?', 'set -e']
++    if args.disable_cpu_idle:
++        finish += ['audio_idle_restore']
++    if pfdi_normal:
++        finish += ['policy_rc=0', 'audio_pfdi_restore || policy_rc=$?',
++                   'if test "$suite_rc" -eq 0; then suite_rc=$policy_rc; fi']
++    if custom:
++        finish += ['experiment_rc=0', 'audio_custom_cleanup_once || experiment_rc=$?',
++                   'if test "$suite_rc" -eq 0; then suite_rc=$experiment_rc; fi']
++    if args.diagnostics:
++        finish += ['audio_diag_stop || echo AUDIO_DIAGNOSTICS_UPLOAD_FAILED=1']
++    finish += ['exit "$suite_rc"']
++    return ('#!/bin/sh\nset -eu\n' + '\n'.join(setup) +
++            '\nset +e\n(\ntrap - EXIT HUP INT TERM\n' + body +
++            ')\n' + '\n'.join(finish) + '\n')
++
++
++def environment(args, out):
++    env = dict(os.environ)
++    if args.diagnostics:
++        # The AP-only launcher owns creation of its output directory.
++        directory = out.parent / (out.name + '-initiator-telemetry')
++        directory.mkdir(parents=True, exist_ok=True)
++        env.update(QEMU_AUDIO_TELEMETRY='1', QBOX_INITIATOR_TELEMETRY_DIR=str(directory),
++                   QBOX_INITIATOR_TELEMETRY_FILTER='platform.ap_')
++    return env
++
++
++def validate_probe_kernel(args, kernel_sha256):
++    if not args.kprobes:
++        return
++    match = re.search(r'exact Image SHA256 ([0-9a-f]{64})', args.kprobes.read_text())
++    if not match or match[1] != kernel_sha256:
++        raise ValueError('Kprobe definitions do not match the selected kernel Image SHA256')
++
++
++def _process_tree():
++    processes = {}
++    for path in PROC.glob('[0-9]*/stat'):
++        try:
++            fields = path.read_text().rsplit(') ', 1)[1].split()
++            processes[int(path.parent.name)] = {'ppid': int(fields[1]), 'start_ticks': int(fields[19])}
++        except (OSError, ValueError, IndexError):
++            continue
++    return processes
++
++
++def _hash_loaded_file(path, mapped_path, expected=None):
++    result = {'mapped_path': mapped_path, 'resolved_path': str(Path(mapped_path).resolve())}
++    try:
++        if mapped_path.endswith(' (deleted)'):
++            raise ValueError('Mapped file was deleted; do not hash a replacement at its old path')
++        with path.open('rb') as stream:
++            before = os.fstat(stream.fileno())
++            if expected is not None:
++                device, inode = expected
++                major, minor = (int(value, 16) for value in device.split(':'))
++                if (before.st_ino, os.major(before.st_dev), os.minor(before.st_dev)) != (inode, major, minor):
++                    raise ValueError('Path inode/device differs from the running mapping')
++            digest = hashlib.sha256()
++            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
++                digest.update(chunk)
++            after = os.fstat(stream.fileno())
++            if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (after.st_size, after.st_mtime_ns, after.st_ctime_ns):
++                raise ValueError('File changed during hashing')
++        result.update(status='COLLECTED', sha256=digest.hexdigest(), size=before.st_size,
++                      inode=before.st_ino, device=before.st_dev,
++                      identity='proc_exe' if expected is None else 'maps_inode_device_verified')
++    except (OSError, ValueError) as error:
++        result.update(status='NOT_COLLECTED', reason=str(error))
++    return result
++
++
++def capture_loaded_runtime(root_pid, out):
++    """Snapshot only the descendant simulator; call before starting traffic."""
++    manifest_path = out / 'loaded-runtime.json'
++    previous = None
++    if manifest_path.exists():
++        previous = json.loads(manifest_path.read_text())
++        if previous.get('status') == 'COLLECTED':
++            return previous
++    result = {'status': 'NOT_COLLECTED', 'root_pid': root_pid,
++              'host_time_ns': time.time_ns(), 'artifacts': []}
++    if previous is not None:
++        result['previous_failure'] = {key: previous[key] for key in ('host_time_ns', 'reason') if key in previous}
++    try:
++        processes = _process_tree()
++        descendants = {root_pid}
++        while True:
++            expanded = descendants | {pid for pid, data in processes.items() if data['ppid'] in descendants}
++            if expanded == descendants:
++                break
++            descendants = expanded
++        candidates = []
++        for pid in descendants:
++            try:
++                executable = os.readlink(PROC / str(pid) / 'exe')
++                if Path(executable.removesuffix(' (deleted)')).name == 'platforms-vp':
++                    candidates.append((pid, executable))
++            except OSError:
++                continue
++        # QBox forks a same-executable shared-memory cleanup service. Select
++        # the top-level simulator, while still rejecting separate sibling VPs.
++        candidate_ids = {pid for pid, _ in candidates}
++        def nested_candidate(pid):
++            visited = {pid}
++            parent = processes[pid]['ppid']
++            while parent in processes and parent not in visited:
++                if parent in candidate_ids:
++                    return True
++                visited.add(parent)
++                parent = processes[parent]['ppid']
++            return False
++        top_level = [(pid, executable) for pid, executable in candidates if not nested_candidate(pid)]
++        result['excluded_nested_simulator_pids'] = sorted(candidate_ids - {pid for pid, _ in top_level})
++        if len(top_level) != 1:
++            raise ValueError(f'Expected one top-level descendant platforms-vp; found {len(top_level)}')
++        pid, executable = top_level[0]
++        proc = PROC / str(pid)
++        start_ticks = processes[pid]['start_ticks']
++        maps = (proc / 'maps').read_text()
++        maps_path = out / 'loaded-runtime.maps'
++        maps_path.write_text(maps)
++        result.update(target_pid=pid, start_ticks=start_ticks, exe=executable,
++                      maps_file=str(maps_path), maps_sha256=hashlib.sha256(maps.encode()).hexdigest())
++        result['artifacts'].append(_hash_loaded_file(proc / 'exe', executable))
++        selected = {}
++        for line in maps.splitlines():
++            fields = line.split(maxsplit=5)
++            if len(fields) != 6 or not fields[5].startswith('/'):
++                continue
++            path = fields[5]
++            name = Path(path).name
++            relevant = ('/qbox/modules/' in path or name.startswith((
++                'libqemu-', 'libqbox', 'libsystemc', 'libgssync', 'libtlm')))
++            if relevant and '.so' in name:
++                selected[path] = (fields[3], int(fields[4]))
++        for path, identity in sorted(selected.items()):
++            result['artifacts'].append(_hash_loaded_file(Path(path), path, identity))
++        current = _process_tree().get(pid)
++        if current is None or current['start_ticks'] != start_ticks:
++            raise ValueError('Simulator exited or changed identity while collecting mappings')
++        loaded_names = {Path(item['mapped_path']).name for item in result['artifacts'] if item['status'] == 'COLLECTED'}
++        required = {'platforms-vp', 'qemu_dma350.so', 'qemu_dw_apb_i2s.so', 'libqemu-system-aarch64.so'}
++        missing = sorted(required - loaded_names)
++        if missing:
++            raise ValueError('Required runtime binaries not collected: ' + ', '.join(missing))
++        if any(item['status'] != 'COLLECTED' for item in result['artifacts']):
++            raise ValueError('Some selected mapped files could not be identified')
++        result['status'] = 'COLLECTED'
++    except (OSError, ValueError, KeyError) as error:
++        result['reason'] = str(error)
++    out.mkdir(parents=True, exist_ok=True)
++    manifest_path.write_text(json.dumps(result, indent=2) + '\n')
++    return result
++
++
++def validate_archive(path):
++    with tarfile.open(path, 'r:gz') as archive:
++        members = archive.getmembers()
++        if not members or len(members) > 2048 or sum(m.size for m in members) > 64 * 1024 * 1024:
++            raise ValueError('Diagnostic archive is empty or exceeds collection limits')
++
++
++class AudioHTTPHandler(http.server.SimpleHTTPRequestHandler):
++    """Receive only bounded diagnostic archives from this disposable guest."""
++
++    def do_POST(self):
++        match = re.fullmatch(r'/diagnostics/(dma|pio)(/base64)?', self.path)
++        if not match:
++            self.send_error(404)
++            return
++        try:
++            size = int(self.headers.get('Content-Length', '0'))
++        except ValueError:
++            size = 0
++        if not 0 < size <= 64 * 1024 * 1024:
++            self.send_error(413)
++            return
++        self.connection.settimeout(60)
++        mode = match[1]
++        directory = Path(self.directory).parent / mode
++        directory.mkdir(parents=True, exist_ok=True)
++        path = directory / 'guest-diagnostics.tar.gz'
++        temporary = path.with_suffix('.upload')
++        try:
++            with temporary.open('wb') as stream:
++                remaining = size
++                while remaining:
++                    chunk = self.rfile.read(min(remaining, 1024 * 1024))
++                    if not chunk:
++                        raise EOFError('Incomplete diagnostic upload')
++                    stream.write(chunk)
++                    remaining -= len(chunk)
++            if match[2]:
++                # BusyBox wget --post-file uses strlen and truncates binary
++                # gzip at its first NUL. The guest sends wrapped ASCII base64.
++                encoded = b''.join(temporary.read_bytes().split())
++                temporary.write_bytes(base64.b64decode(encoded, validate=True))
++            validate_archive(temporary)
++            temporary.replace(path)
++        except (OSError, EOFError, ValueError, binascii.Error, tarfile.TarError):
++            temporary.unlink(missing_ok=True)
++            self.send_error(400)
++            return
++        self.send_response(200)
++        self.send_header('Content-Length', '3')
++        self.end_headers()
++        self.wfile.write(b'OK\n')
++
++
++def annotate_result(result, text, args, out):
++    result['diagnostics_enabled'] = args.diagnostics
++    result['cpu_idle_disabled'] = args.disable_cpu_idle
++    result['pfdi_normal_priority'] = getattr(args, 'pfdi_normal_priority', False)
++    result['experiment_script'] = str(getattr(args, 'experiment_script', None) or '')
++    result['qualification'] = ('DIAGNOSTIC' if args.disable_cpu_idle or result['pfdi_normal_priority'] or result['experiment_script']
++                               else 'baseline-settings')
++    runtime = out / 'loaded-runtime.json'
++    result['loaded_runtime'] = json.loads(runtime.read_text()) if runtime.exists() else {
++        'status': 'NOT_COLLECTED', 'reason': 'No running simulator mapping snapshot'}
++    result['suite_exit_code'] = next((int(x) for x in re.findall(
++        r'^QBOX_AUDIO_DONE=(\d+)$', text, re.M)), None)
++    # aplay/arecord can recover and exit zero, so preserve XRUN as a failure.
++    result['xrun_messages'] = re.findall(r'^.*(?:underrun!!!|overrun!!!|Broken pipe).*$', text, re.M)
++    if result['xrun_messages']:
++        result['status'] = 'FAIL'
++    result['audio_status'] = result.get('status', 'NOT_ASSESSED')
++    result['guest_health'] = assess_audio_guest_health(text)
++    if result['guest_health']['status'] == 'FAIL':
++        result['status'] = 'FAIL'
++    if args.diagnostics:
++        archive = out / 'guest-diagnostics.tar.gz'
++        result['initiator_telemetry_directory'] = str(out.parent / (out.name + '-initiator-telemetry'))
++        result['diagnostic_archive'] = str(archive) if archive.exists() else None
++        try:
++            validate_archive(archive)
++            result['diagnostic_collection'] = 'COLLECTED'
++        except (OSError, EOFError, ValueError, tarfile.TarError) as error:
++            result['diagnostic_collection'] = 'NOT_COLLECTED'
++            result['diagnostic_error'] = str(error)
++    return result
+diff --git a/scripts/test/qbox_audio_health.py b/scripts/test/qbox_audio_health.py
+index 4426b6b1a3881740347677a4c089591e1fdeb94c..02edec613f87c90bf3c183f81f3dd0b5dcf03fc0 100644
+--- a/scripts/test/qbox_audio_health.py
++++ b/scripts/test/qbox_audio_health.py
+@@ -103,16 +103,3 @@ def assess_audio_guest_health(console_text):
+               'FAIL' if 'FAIL' in (pfdi['status'], rcu_status) else
+               'NO_FAILURE_OBSERVED')
+     return {'status': status, 'pfdi_timeouts': pfdi, 'rcu_stalls': rcu}
+-
+-
+-def apply_audio_checks(result, console_text):
+-    """Do not let command success hide XRUN or guest failure messages."""
+-    result['xrun_messages'] = re.findall(
+-        r'^.*(?:underrun!!!|overrun!!!|Broken pipe).*$', console_text, re.M)
+-    if result['xrun_messages']:
+-        result['status'] = 'FAIL'
+-    result['audio_status'] = result.get('status', 'NOT_ASSESSED')
+-    result['guest_health'] = assess_audio_guest_health(console_text)
+-    if result['guest_health']['status'] == 'FAIL':
+-        result['status'] = 'FAIL'
+-    return result
+diff --git a/scripts/test/qbox_audio_repeat.py b/scripts/test/qbox_audio_repeat.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..410c8ce45cdc4819bc3832e965935797914833a1
+--- /dev/null
++++ b/scripts/test/qbox_audio_repeat.py
+@@ -0,0 +1,199 @@
++"""Warm audio suite repetition and independent evidence assessment."""
++
++import argparse
++import base64
++import re
++import wave
++
++from verify_qemu_i2s import assess
++from verify_qemu_i2s_wav import digest, pcm
++
++
++def repeat_count(value):
++    try:
++        count = int(value)
++    except (TypeError, ValueError) as error:
++        raise argparse.ArgumentTypeError('repeat must be an integer from 1 to 100') from error
++    if not 1 <= count <= 100:
++        raise argparse.ArgumentTypeError('repeat must be an integer from 1 to 100')
++    return count
++
++
++def add_arguments(parser):
++    parser.add_argument('--repeat', type=repeat_count, default=1,
++                        help='Run the suite 1..100 times in the same boot (default: 1)')
++    parser.add_argument('--fail-fast', action='store_true',
++                        help='Stop repetitions after the first nonzero guest suite exit')
++
++
++def wrap_suite(suite, count, fail_fast=False):
++    count = repeat_count(count)
++    if count == 1:
++        return suite
++    body = suite.removeprefix('#!/bin/sh\n')
++    return f'''#!/bin/sh
++set +e
++audio_iteration=1
++audio_first_rc=0
++while test "$audio_iteration" -le {count}; do
++    printf 'QBOX_AUDIO_ITERATION_BEGIN=%s total={count}\\n' "$audio_iteration"
++    (
++        trap - EXIT HUP INT TERM
++{body.rstrip()}
++    )
++    audio_iteration_rc=$?
++    printf 'QBOX_AUDIO_ITERATION_END=%s rc=%s\\n' "$audio_iteration" "$audio_iteration_rc"
++    if test "$audio_iteration_rc" -ne 0; then
++        if test "$audio_first_rc" -eq 0; then audio_first_rc=$audio_iteration_rc; fi
++        if test {int(fail_fast)} -eq 1; then break; fi
++    fi
++    audio_iteration=$((audio_iteration + 1))
++done
++exit "$audio_first_rc"
++'''
++
++
++def split_iterations(text, count):
++    """Reject missing, reordered, nested, duplicated or malformed boundaries."""
++    text = text.replace('\r', '')
++    if count == 1 and 'QBOX_AUDIO_ITERATION_' not in text:
++        return [{'iteration': 1, 'text': text, 'exit_code': None}], []
++    slices, errors = [], []
++    active = None
++    def finish(item):
++        item['text'] = ''.join(item['text'])
++        slices.append(item)
++
++    for line in text.splitlines(keepends=True):
++        if not line.startswith('QBOX_AUDIO_ITERATION_'):
++            if active is not None:
++                active['text'].append(line)
++            continue
++        begin = re.fullmatch(r'QBOX_AUDIO_ITERATION_BEGIN=(\d+) total=(\d+)\n?', line)
++        end = re.fullmatch(r'QBOX_AUDIO_ITERATION_END=(\d+) rc=(\d+)\n?', line)
++        if begin:
++            index, total = map(int, begin.groups())
++            if active is not None:
++                errors.append(f'Iteration {active["iteration"]} has no END before BEGIN {index}')
++                finish(active)
++            if total != count or index != len(slices) + 1 or index > count:
++                errors.append(f'Unexpected iteration BEGIN {index} total={total}')
++            active = {'iteration': index, 'text': [], 'exit_code': None}
++        elif end:
++            index, rc = map(int, end.groups())
++            if active is None or active['iteration'] != index or rc > 255:
++                errors.append(f'Unexpected iteration END {index} rc={rc}')
++                continue
++            active['exit_code'] = rc
++            finish(active)
++            active = None
++        else:
++            errors.append(f'Malformed iteration marker: {line.rstrip()}')
++    if active is not None:
++        errors.append(f'Iteration {active["iteration"]} has no END')
++        finish(active)
++    if len(slices) != count:
++        errors.append(f'Expected {count} iterations, collected {len(slices)}')
++    return slices, errors
++
++
++def _single_zero(text, name):
++    return re.findall(rf'^{name}=(.*)$', text, re.M) == ['0']
++
++
++def assess_iteration(text, mode, tests, source, out):
++    """Keep the original PCM/byte comparison, scoped to exactly one run."""
++    memory_cases = re.findall(r'^DMA350_MEMORY_PASS base=(\w+) mode=(memcpy|memset)\b.*$', text, re.M)
++    expected = {(base, kind) for base in ('31000000', '31010000') for kind in ('memcpy', 'memset')}
++    memory_ok = (len(memory_cases) == 4 and set(memory_cases) == expected
++                 and _single_zero(text, 'DMA350_MEMORY_EXIT'))
++    memory = {'status': 'PASS' if memory_ok else 'FAIL', 'cases': memory_cases}
++    if tests not in ('all', 'memory'):
++        memory['status'] = 'SKIP'
++
++    pcm_result = {'status': 'SKIP'}
++    if tests in ('all', 'pcm'):
++        pcm_result = assess(text, mode)
++        markers_ok = (_single_zero(text, 'QEMU_I2S_DONE') and all(
++            len(re.findall(rf'^{marker}$', text, re.M)) == count
++            for marker, count in (('QEMU_I2S_IRQ_BEFORE', 1), ('QEMU_I2S_IRQ_AFTER', 1),
++                                  ('QEMU_I2S_IRQ_END', 2), (f'I2S_DRIVER_TEST_PASS mode={mode}', 1))))
++        if not markers_ok:
++            pcm_result['status'] = 'FAIL'
++            pcm_result['error'] = 'Missing or duplicated PCM completion/IRQ markers'
++
++    wav_results = []
++    wav_modes = re.findall(r'^WAV_MODE=(.*)$', text, re.M)
++    wav_mode_ok = tests not in ('all', 'wav') or wav_modes == [mode]
++    if tests in ('all', 'wav'):
++        source_params, source_pcm = pcm(source)
++        source_bytes = source.read_bytes()
++        for name in ('forward', 'reverse'):
++            result = {'direction': name, 'status': 'FAIL'}
++            pattern = rf'^WAV_DATA_BEGIN={name}\n(.*?)^WAV_DATA_END={name}$'
++            matches = re.findall(pattern, text, re.M | re.S)
++            boundaries_ok = all(len(re.findall(rf'^WAV_DATA_{edge}={name}$', text, re.M)) == 1
++                                for edge in ('BEGIN', 'END'))
++            if len(matches) == 1 and boundaries_ok:
++                try:
++                    path = out / f'{name}.wav'
++                    path.write_bytes(base64.b64decode(''.join(matches[0].split()), validate=True))
++                    params, data = pcm(path)
++                    same = params == source_params and data == source_pcm
++                    same_file = path.read_bytes() == source_bytes
++                    commands_ok = re.findall(rf'^WAV_EXIT={name} (.*)$', text, re.M) == ['playback=0 capture=0']
++                    result.update(status='PASS' if same and same_file and commands_ok and wav_mode_ok else 'FAIL',
++                                  frames=len(data) // 4, exact_pcm_match=same, exact_wav_match=same_file,
++                                  wav_sha256=digest(path), command_exit_success=commands_ok,
++                                  path=str(path))
++                except (ValueError, EOFError, wave.Error) as error:
++                    result['error'] = str(error)
++            else:
++                result['error'] = 'Missing, incomplete or duplicated WAV data block'
++            wav_results.append(result)
++
++    xrun = re.findall(r'^.*(?:underrun!!!|overrun!!!|Broken pipe).*$', text, re.M)
++    wav_done = tests not in ('all', 'wav') or _single_zero(text, 'WAV_DONE')
++    passed = (memory['status'] in ('PASS', 'SKIP') and pcm_result['status'] in ('PASS', 'SKIP')
++              and all(item['status'] == 'PASS' for item in wav_results)
++              and wav_mode_ok and wav_done and not xrun)
++    return {'status': 'PASS' if passed else 'FAIL', 'dma350_memory': memory,
++            'i2s_pcm': pcm_result, 'wav': wav_results, 'wav_completed': wav_done,
++            'wav_mode_confirmed': wav_mode_ok, 'wav_modes': wav_modes,
++            'xrun_messages': xrun}
++
++
++def assess_repetitions(text, mode, tests, source, out, count=1, fail_fast=False):
++    count = repeat_count(count)
++    text = text.replace('\r', '')
++    slices, errors = split_iterations(text, count)
++    iterations = []
++    done_codes = re.findall(r'^QBOX_AUDIO_DONE=(\d+)$', text, re.M)
++    done = done_codes == ['0']
++    for position, item in enumerate(slices, 1):
++        directory = out if count == 1 else out / f'iteration-{position:03d}'
++        directory.mkdir(parents=True, exist_ok=True)
++        result = assess_iteration(item['text'], mode, tests, source, directory)
++        rc = item['exit_code']
++        if count == 1 and 'QBOX_AUDIO_ITERATION_' not in text:
++            rc = int(done_codes[0]) if len(done_codes) == 1 else None
++        result.update(iteration=item['iteration'], exit_code=rc)
++        if rc != 0:
++            result['status'] = 'FAIL'
++        iterations.append(result)
++    passed = done and not errors and len(iterations) == count and all(
++        item['status'] == 'PASS' for item in iterations)
++    result = {'status': 'PASS' if passed else 'FAIL', 'repeat': count, 'fail_fast': fail_fast,
++              'iterations': iterations, 'iteration_errors': errors, 'guest_completed': done}
++    if count == 1 and len(iterations) == 1:
++        result.update({key: iterations[0][key] for key in ('dma350_memory', 'i2s_pcm', 'wav')})
++    else:
++        for key in ('dma350_memory', 'i2s_pcm'):
++            values = [item[key] for item in iterations]
++            status = 'FAIL'
++            if len(values) == count and all(item['status'] in ('PASS', 'SKIP') for item in values):
++                status = 'SKIP' if all(item['status'] == 'SKIP' for item in values) else 'PASS'
++            result[key] = {'status': status, 'iterations': values}
++        result['wav'] = [dict(wav, iteration=item['iteration'])
++                         for item in iterations for wav in item['wav']]
++    return result
+diff --git a/scripts/test/qbox_audio_rr60.sh b/scripts/test/qbox_audio_rr60.sh
+new file mode 100644
+index 0000000000000000000000000000000000000000..9719f0a53fa6abe8ee4e3688ac1b1583490c9c2d
+--- /dev/null
++++ b/scripts/test/qbox_audio_rr60.sh
+@@ -0,0 +1,28 @@
++#!/bin/sh
++# P4 diagnostic: audio suite above IRQ-thread RT50, below PFDI app FIFO99.
++# No affinity, IRQ, PFDI, firmware, clock, buffer, or sample change.
++# This reproduced audio PASS with PFDI timeouts and RCU stalls; it is not a
++# qualified full-system configuration. Retained as a diagnostic control.
++audio_experiment_setup() {
++    audio_rt_pid=$$
++    audio_rt_changed=0
++    audio_rt_before=$(chrt -p "$audio_rt_pid") || return 1
++    printf '%s\n' "$audio_rt_before"
++    printf '%s\n' "$audio_rt_before" | grep -q 'policy: SCHED_OTHER$' || return 1
++    printf '%s\n' "$audio_rt_before" | grep -q 'priority: 0$' || return 1
++    chrt -r -p 60 "$audio_rt_pid" || return 1
++    audio_rt_changed=1
++    chrt -p "$audio_rt_pid" || return 1
++    echo AUDIO_EXPERIMENT=RR60_NO_AFFINITY_PFDI_UNCHANGED
++}
++audio_experiment_cleanup() {
++    if test "${audio_rt_changed:-0}" -eq 1; then
++        chrt -o -p 0 "$audio_rt_pid" || return 1
++        audio_rt_changed=0
++        audio_rt_after=$(chrt -p "$audio_rt_pid") || return 1
++        printf '%s\n' "$audio_rt_after"
++        printf '%s\n' "$audio_rt_after" | grep -q 'policy: SCHED_OTHER$' || return 1
++        printf '%s\n' "$audio_rt_after" | grep -q 'priority: 0$' || return 1
++        echo AUDIO_RR60_RESTORE=PASS
++    fi
++}
+diff --git a/scripts/test/qbox_audio_uki.py b/scripts/test/qbox_audio_uki.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..fefeab7dbb8601bf91c9ad2d87442924477e9c81
+--- /dev/null
++++ b/scripts/test/qbox_audio_uki.py
+@@ -0,0 +1,98 @@
++"""Replace the kernel in a private, unsigned AArch64 audio-test UKI."""
++
++import hashlib
++from pathlib import Path
++import stat
++import subprocess
++import sys
++import tempfile
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'run'))
++from autosd_uki import _objcopy, inspect_uki
++
++
++def _sha(data):
++    return hashlib.sha256(data).hexdigest()
++
++
++def _raw_hashes(data, metadata):
++    """Include on-disk padding in the section preservation evidence."""
++    return {name: _sha(data[section['offset']:section['offset'] + section['raw_size']])
++            for name, section in metadata['sections'].items()}
++
++
++def replace_kernel(uki: Path, kernel: Path) -> dict:
++    """Atomically replace only ``uki`` after validating all section contents.
++
++    The caller must supply its private UKI copy. Signed images and symlink UKI
++    destinations are rejected. Failures before replacement leave that copy
++    unchanged; the source kernel is never modified.
++    """
++    uki, kernel = Path(uki).absolute(), Path(kernel).resolve()
++    if uki.is_symlink():
++        raise ValueError('UKI must be a private regular file, not a symlink')
++    if not uki.is_file():
++        raise ValueError('UKI must be an existing private regular file')
++    if not kernel.is_file() or not kernel.stat().st_size:
++        raise ValueError('Kernel must be a nonempty regular file')
++    if uki.samefile(kernel):
++        raise ValueError('UKI and source kernel must differ')
++
++    original = uki.read_bytes()
++    kernel_bytes = kernel.read_bytes()
++    kernel_sha256 = _sha(kernel_bytes)
++    mode = stat.S_IMODE(uki.stat().st_mode)
++    with tempfile.TemporaryDirectory(prefix='.qbox-audio-uki-', dir=uki.parent) as tmp:
++        tmp = Path(tmp)
++        source, payload, output = tmp / 'source.efi', tmp / 'Image', tmp / 'replaced.efi'
++        source.write_bytes(original)
++        payload.write_bytes(kernel_bytes)
++        before = inspect_uki(source)
++        preserved = {name: section for name, section in before['sections'].items()
++                     if name != '.linux'}
++        alignment = before['section_alignment']
++        end = max(section['rva'] + max(section['size'], section['raw_size'])
++                  for section in preserved.values())
++        rva = (end + alignment - 1) & ~(alignment - 1)
++        if rva + len(kernel_bytes) > 0xffffffff:
++            raise ValueError('Replacement kernel exceeds PE address range')
++        objcopy = _objcopy()
++        command = [objcopy, '--remove-section', '.linux',
++                   '--add-section', f'.linux={payload}',
++                   '--change-section-vma', f'.linux={before["image_base"] + rva:#x}',
++                   '--set-section-flags', '.linux=alloc,load,readonly,data,contents',
++                   str(source), str(output)]
++        subprocess.run(command, check=True, capture_output=True, text=True)
++        after = inspect_uki(output)
++        if after['sections'].keys() != before['sections'].keys():
++            raise ValueError('Kernel replacement changed the UKI section set')
++        for field in ('image_base', 'section_alignment'):
++            if after[field] != before[field]:
++                raise ValueError(f'Kernel replacement changed UKI {field}')
++        old_raw = _raw_hashes(original, before)
++        new_raw = _raw_hashes(output.read_bytes(), after)
++        for name, section in preserved.items():
++            if (any(after['sections'][name][field] != section[field]
++                    for field in ('size', 'rva', 'raw_size', 'sha256'))
++                    or new_raw[name] != old_raw[name]):
++                raise ValueError(f'Kernel replacement changed preserved section {name}')
++        linux = after['sections']['.linux']
++        if (linux['sha256'] != kernel_sha256 or linux['size'] != len(kernel_bytes)
++                or linux['rva'] != rva):
++            raise ValueError('Replacement .linux differs from source kernel')
++        if uki.is_symlink() or _sha(uki.read_bytes()) != before['sha256']:
++            raise ValueError('Private UKI changed during kernel replacement')
++        if _sha(kernel.read_bytes()) != kernel_sha256:
++            raise ValueError('Source kernel changed during kernel replacement')
++        output.chmod(mode)
++        output.replace(uki)
++
++    return {'uki': str(uki), 'kernel': str(kernel), 'kernel_sha256': kernel_sha256,
++            'source_sha256': before['sha256'], 'sha256': after['sha256'],
++            'secure_boot': False, 'objcopy': str(objcopy),
++            'before': before, 'after': after,
++            'preserved_sections': {
++                name: {'sha256': section['sha256'], 'raw_sha256': old_raw[name],
++                       'size': section['size'], 'raw_size': section['raw_size'],
++                       'rva': section['rva']}
++                for name, section in preserved.items()}}
+diff --git a/scripts/test/summarize_qbox_audio_trace.py b/scripts/test/summarize_qbox_audio_trace.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..95289fb49598159a6cadc4a71e35e9f467a74d51
+--- /dev/null
++++ b/scripts/test/summarize_qbox_audio_trace.py
+@@ -0,0 +1,111 @@
++#!/usr/bin/env python3
++"""Summarize bounded native audio/bridge diagnostics without inferring DMI hits."""
++
++import argparse
++import json
++from pathlib import Path
++import re
++import tarfile
++
++from qbox_audio_experiment import validate_archive
++
++
++def fields(text):
++    record = {}
++    for key, value in re.findall(r'(\w+)=(\S+)', text):
++        try:
++            record[key] = int(value, 16 if value.startswith('0x') else 10)
++        except ValueError:
++            record[key] = value
++    return record
++
++
++def summarize(directory):
++    result = {'scope': 'observed counters and bridge fallbacks; not DMI hit rate',
++              'native': {}, 'bridge': {}, 'guest': {}}
++    for mode in ('dma', 'pio'):
++        out = directory / mode
++        log = next((p for p in (out/'qbox-platform.log', out/'qbox.log') if p.exists()), None)
++        if not log:
++            continue
++        devices, raw = {}, []
++        for line in log.read_text(errors='replace').splitlines():
++            marker = re.search(r'QEMU_AUDIO_(DMA|I2S|LIMIT)\s+(.*)', line)
++            if not marker:
++                continue
++            kind, payload = marker.groups()
++            record = fields(payload)
++            record['kind'] = kind
++            raw.append(record)
++            key = f"{kind}:{record.get('dev')}:{record.get('channel', '')}"
++            device = devices.setdefault(key, {'rows': 0, 'last': {}, 'active_frame_rates_hz': []})
++            device['rows'] += 1
++            prev = device['last']
++            if kind == 'I2S' and record.get('event') == prev.get('event') == 'frame-summary':
++                dt = record['virtual_ns'] - prev['virtual_ns']
++                frames = record['tx_frames'] - prev['tx_frames']
++                if dt > 0 and frames > 0:
++                    device['active_frame_rates_hz'].append(frames * 1e9 / dt)
++            device['last'] = record
++        for device in devices.values():
++            rates = device.pop('active_frame_rates_hz')
++            if rates:
++                device['sampled_frame_rate_hz'] = {'min': min(rates), 'max': max(rates),
++                                                  'median': sorted(rates)[len(rates)//2],
++                                                  'interval_count': len(rates)}
++        result['native'][mode] = devices
++        (out/'native-audio-events.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in raw))
++        for path in sorted((directory/(mode+'-initiator-telemetry')).glob('*.jsonl')):
++            rows = []
++            for line in path.read_text().splitlines():
++                try:
++                    rows.append(json.loads(line))
++                except json.JSONDecodeError:
++                    # A forced termination can leave the final checkpoint incomplete.
++                    continue
++            checkpoints = [r for r in rows if r.get('type') == 'checkpoint']
++            metadata = next((r for r in rows if r.get('type') == 'metadata'), {})
++            result['bridge'][mode+':'+path.stem] = {
++                'metadata': metadata, 'checkpoint_count': len(checkpoints),
++                'last_checkpoint': checkpoints[-1] if checkpoints else None,
++                'mapping_events': [r for r in rows if r.get('type') == 'mapping'],
++            }
++        archive = out/'guest-diagnostics.tar.gz'
++        if archive.exists():
++            try:
++                validate_archive(archive)
++            except (OSError, EOFError, ValueError, tarfile.TarError) as error:
++                result['guest'][mode] = {'status': 'NOT_COLLECTED', 'error': str(error)}
++                continue
++            guest = {'archive': str(archive), 'files': [], 'first_xrun': None, 'wrap_events': []}
++            with tarfile.open(archive, 'r:gz') as tar:
++                for member in tar:
++                    guest['files'].append(member.name)
++                    if not member.isfile() or member.size > 64 * 1024 * 1024:
++                        continue
++                    if Path(member.name).name not in ('trace', 'trace.txt'):
++                        continue
++                    stream = tar.extractfile(member)
++                    for raw_line in stream:
++                        line = raw_line.decode(errors='replace').strip()
++                        if re.search(r'\b(?:audio_|alsa_)?xrun:', line) and guest['first_xrun'] is None:
++                            guest['first_xrun'] = line
++                        if re.search(r'\b(?:audio_|alsa_)?wrap:', line) and len(guest['wrap_events']) < 20:
++                            guest['wrap_events'].append(line)
++            result['guest'][mode] = guest
++            (out/'first-xrun.json').write_text(json.dumps(guest, indent=2)+'\n')
++    return result
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--run-dir', required=True, type=Path)
++    args = parser.parse_args()
++    result = summarize(args.run_dir)
++    target = args.run_dir/'trace-summary.json'
++    target.write_text(json.dumps(result, indent=2)+'\n')
++    print(target)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/test/verify_qbox_full_audio.py b/scripts/test/verify_qbox_full_audio.py
+index 93a8899ff5628c5be25811532ede6f6bc0dacafe..6c80a581bc322dd6b92e5fd68fadaa4649a7980c 100644
+--- a/scripts/test/verify_qbox_full_audio.py
++++ b/scripts/test/verify_qbox_full_audio.py
+@@ -2,7 +2,6 @@
+ """Run DMA350, I2S PCM and aplay/arecord checks via full-system run_qbox_yocto.sh --bsp."""
+ 
+ import argparse
+-import base64
+ import functools
+ import http.server
+ import json
+@@ -21,9 +20,10 @@ import sys
+ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "run"))
+ from autosd_uki import inspect_uki
+ 
+-from qbox_audio_health import apply_audio_checks
+-from verify_qemu_i2s import ROOT, assess
+-from verify_qemu_i2s_wav import digest, guest_script, pcm
++from verify_qemu_i2s import ROOT
++from verify_qemu_i2s_wav import digest, guest_script
++import qbox_audio_experiment as experiment
++import qbox_audio_repeat as repetition
+ 
+ 
+ def guest_suite(port):
+@@ -69,7 +69,7 @@ test "$memory_rc" -eq 0 && test "$pcm_rc" -eq 0 && test "$wav_rc" -eq 0
+ 
+ 
+ def prepare_disk(args, out, mode):
+-    """Patch only unsigned UKI DT sections in a private GPT boot WIC copy.
++    """Prepare unsigned UKI DT and optional kernel in a private WIC copy.
+ 
+     The partition offset matches the BSP WIC/runner contract. Both A/B UKIs
+     are updated because firmware boot-control state chooses the slot.
+@@ -99,13 +99,20 @@ def prepare_disk(args, out, mode):
+             start = section['offset']
+             raw[start:start + section['raw_size']] = data.ljust(section['raw_size'], b'\0')
+             uki.write_bytes(raw)
++        kernel_evidence = None
++        if args.kernel:
++            from qbox_audio_uki import replace_kernel
++            kernel_evidence = replace_kernel(uki, args.kernel)
++        if mode == 'pio' or args.kernel:
+             subprocess.run(['mcopy', '-o', '-i', image, str(uki), esp], check=True)
+         after = inspect_uki(uki)
+         for name in before['sections']:
+-            if name != '.dtb' and before['sections'][name]['sha256'] != after['sections'][name]['sha256']:
+-                raise ValueError('Unexpected non-DT UKI payload change')
++            allowed = name == '.dtb' or (args.kernel and name == '.linux')
++            if not allowed and before['sections'][name]['sha256'] != after['sections'][name]['sha256']:
++                raise ValueError('Unexpected UKI payload change')
+         evidence['slots'].append({'slot': slot, 'original': before, 'prepared': after,
+-                                  'dtb': str(tree), 'dtb_sha256': digest(tree)})
++                                  'dtb': str(tree), 'dtb_sha256': digest(tree),
++                                  'kernel_replacement': kernel_evidence})
+     if digest(args.rootfs) != source_hash:
+         raise ValueError('Source WIC changed while preparing test disk')
+     evidence['prepared_sha256'] = digest(disk)
+@@ -117,6 +124,8 @@ def run_mode(args, output, serve, mode, port):
+     out = output / mode
+     out.mkdir()
+     disk, disk_evidence = prepare_disk(args, out, mode)
++    for slot in disk_evidence['slots']:
++        experiment.validate_probe_kernel(args, slot['prepared']['sections']['.linux']['sha256'])
+     fifo = out / 'audio-input.fifo'
+     os.mkfifo(fifo, 0o600)
+     fifo_fd = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)
+@@ -132,13 +141,14 @@ def run_mode(args, output, serve, mode, port):
+                  "sh /tmp/audio-suite.sh; rc=$?; printf 'QBOX_AUDIO_%s=%s\\n' DONE \"$rc\"\n")
+     injection = 'ip link set eth0 up; ip addr replace 10.0.2.15/24 dev eth0; ' + injection
+     with (output / f'{mode}-launcher.log').open('wb') as log:
+-        child = subprocess.Popen(command, cwd=ROOT, env={**os.environ, 'QBOX_APOLLO_NETDEV': 'type=user', 'QBOX_RDASPEN_PRIMARY_UART_READ_FILE': str(fifo)},
++        child = subprocess.Popen(command, cwd=ROOT, env={**experiment.environment(args, out), 'QBOX_APOLLO_NETDEV': 'type=user', 'QBOX_RDASPEN_PRIMARY_UART_READ_FILE': str(fifo)},
+                                  stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+         try:
+             while child.poll() is None and time.monotonic() - started < args.timeout + 10:
+                 uart = out / 'qbox-primary-console.log'
+                 text = uart.read_text(errors='replace').replace('\r', '') if uart.exists() else ''
+                 if not sent and re.search(r'nexios-bsp(?:-failed)?#\s*$', text):
++                    experiment.capture_loaded_runtime(child.pid, out)
+                     os.write(fifo_fd, injection.encode())
+                     sent = True
+                 if 'Kernel panic - not syncing:' in text or re.search(r'^QBOX_AUDIO_DONE=\d+$', text, re.MULTILINE):
+@@ -156,47 +166,14 @@ def run_mode(args, output, serve, mode, port):
+     fifo.unlink(missing_ok=True)
+     uart = out / 'qbox-primary-console.log'
+     text = uart.read_text(errors='replace').replace('\r', '') if uart.exists() else ''
+-    memory_cases = re.findall(r'^DMA350_MEMORY_PASS base=(\w+) mode=(memcpy|memset)\b.*$', text, re.MULTILINE)
+-    memory_ok = set(memory_cases) == {(base, kind) for base in ('31000000', '31010000') for kind in ('memcpy', 'memset')}
+-    memory_ok &= bool(re.search(r'^DMA350_MEMORY_EXIT=0$', text, re.MULTILINE))
+-    pcm_result = assess(text, mode)
+-    source_params, source_pcm = pcm(output / 'source.wav')
+-    wav_results = []
+-    for name in ('forward', 'reverse'):
+-        result = {'direction': name, 'status': 'FAIL'}
+-        match = re.search(rf'^WAV_DATA_BEGIN={name}\n(.*?)^WAV_DATA_END={name}$', text, re.MULTILINE | re.DOTALL)
+-        if match:
+-            try:
+-                path = out / f'{name}.wav'
+-                path.write_bytes(base64.b64decode(''.join(match[1].split()), validate=True))
+-                params, data = pcm(path)
+-                same = params == source_params and data == source_pcm
+-                same_file = path.read_bytes() == (output / 'source.wav').read_bytes()
+-                commands_ok = bool(re.search(rf'^WAV_EXIT={name} playback=0 capture=0$', text, re.MULTILINE))
+-                result.update(status='PASS' if same and same_file and commands_ok else 'FAIL',
+-                              frames=len(data)//4, exact_pcm_match=same, exact_wav_match=same_file,
+-                              wav_sha256=digest(path), command_exit_success=commands_ok)
+-            except (ValueError, EOFError, wave.Error) as error:
+-                result['error'] = str(error)
+-        wav_results.append(result)
+-    wav_ok = all(r['status'] == 'PASS' for r in wav_results)
+-    memory_status = 'PASS' if memory_ok else 'FAIL'
+-    if args.tests == 'wav':
+-        memory_ok = True
+-        memory_status = 'SKIP'
+-        pcm_result = {'status': 'SKIP'}
+-    if args.tests == 'memory':
+-        pcm_result = {'status': 'SKIP'}
+-        wav_results = []
+-        wav_ok = True
+-    done = bool(re.search(r'^QBOX_AUDIO_DONE=0$', text, re.MULTILINE))
++    repeated = repetition.assess_repetitions(
++        text, mode, args.tests, output / 'source.wav', out, args.repeat, args.fail_fast)
+     qbox_log = out / 'qbox-platform.log'
+     backend_ok = qbox_log.exists() and 'Apollo QVP audio: qemu-components arm-dma350 + dw-apb-i2s' in qbox_log.read_text(errors='replace')
+-    result = {'mode': mode, 'status': 'PASS' if done and backend_ok and memory_ok and pcm_result['status'] in ('PASS', 'SKIP') and wav_ok else 'FAIL',
+-              'audio_backend_confirmed': backend_ok,
+-              'dma350_memory': {'status': memory_status, 'cases': memory_cases},
+-              'i2s_pcm': pcm_result, 'wav': wav_results, 'command': command,
+-              'elapsed_seconds': time.monotonic()-started, 'guest_completed': done,
++    result = {**repeated, 'mode': mode,
++              'status': 'PASS' if repeated['status'] == 'PASS' and backend_ok else 'FAIL',
++              'audio_backend_confirmed': backend_ok, 'command': command,
++              'elapsed_seconds': time.monotonic()-started,
+               'kernel_panic': 'Kernel panic - not syncing:' in text}
+     config = json.loads(args.qboxconf.read_text())
+     provider = config['provider']
+@@ -216,7 +193,7 @@ def run_mode(args, output, serve, mode, port):
+     result['console_logs'] = [str(path) for path in sorted(out.glob('*.log'))]
+     if (out / 'result.json').exists():
+         result['launcher'] = json.loads((out / 'result.json').read_text())
+-    apply_audio_checks(result, text)
++    experiment.annotate_result(result, text, args, out)
+     (output / f'{mode}-result.json').write_text(json.dumps(result, indent=2)+'\n')
+     return result
+ 
+@@ -227,14 +204,18 @@ def main():
+     deploy = ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp'
+     parser.add_argument('--rootfs', type=Path, default=deploy / 'nexios-bsp-initramfs-apollo-qvp.wic')
+     parser.add_argument('--qboxconf', type=Path, default=deploy / 'nexios-bsp-initramfs-apollo-qvp.qboxconf')
++    parser.add_argument('--kernel', type=Path, help='Replace the kernel in both private unsigned UKI slots')
+     parser.add_argument('--timeout', type=int, default=1800)
+     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
+-    parser.add_argument('--tests', choices=('all', 'memory', 'wav'), default='all')
++    parser.add_argument('--tests', choices=('all', 'memory', 'pcm', 'wav'), default='all')
++    repetition.add_arguments(parser)
++    experiment.add_arguments(parser)
+     args = parser.parse_args()
+     output = args.out_dir.absolute()
+     output.mkdir(parents=True, exist_ok=False)
+     serve = output / 'http'
+     serve.mkdir()
++    experiment.prepare(args, output, serve)
+     data = b''.join(struct.pack('<hh', int(18000*math.sin(2*math.pi*997*n/48000)),
+                               int(14000*math.cos(2*math.pi*1499*n/48000))) for n in range(96000))
+     with wave.open(str(output / 'source.wav'), 'wb') as wav:
+@@ -248,7 +229,7 @@ def main():
+     for command in ('i2s-loopback "$tx0" "$rx1"', 'i2s-loopback "$tx1" "$rx0"'):
+         pcm_script = pcm_script.replace(command + '\n', command + ' || result=1\n')
+     (serve / 'pcm.sh').write_text(pcm_script)
+-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(serve))
++    handler = functools.partial(experiment.AudioHTTPHandler, directory=str(serve))
+     with http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler) as server:
+         wav_script = guest_script(server.server_port, 96000).replace('aplay -D', 'aplay -N -D')
+         download = f'wget -q -O /tmp/source.wav http://10.0.2.2:{server.server_port}/source.wav'
+@@ -259,9 +240,13 @@ def main():
+         suite = guest_suite(server.server_port)
+         if args.tests == 'memory':
+             suite = suite.split('echo QEMU_I2S_IRQ_BEFORE')[0] + 'exit "$memory_rc"\n'
++        elif args.tests == 'pcm':
++            suite = suite.split('timeout 180 sh /tmp/wav.sh')[0] + 'exit "$pcm_rc"\n'
++            suite = suite.replace('timeout 180 sh /tmp/memory.sh', ':')
+         elif args.tests == 'wav':
+             suite = suite.split('set +e')[0] + 'set +e\ntimeout 180 sh /tmp/wav.sh\nrc=$?\necho WAV_DONE=$rc\nexit "$rc"\n'
+-        (serve / 'suite-template.sh').write_text(suite)
++        suite = repetition.wrap_suite(suite, args.repeat, args.fail_fast)
++        (serve / 'suite-template.sh').write_text(experiment.augment_suite(suite, args, server.server_port))
+         thread = threading.Thread(target=server.serve_forever, daemon=True)
+         thread.start()
+         try:
+diff --git a/scripts/test/verify_qbox_linux_audio.py b/scripts/test/verify_qbox_linux_audio.py
+index f3ae3e669ef20c7c93448b25691b95ee40347a88..47bb4d024889392c33d541f2fc647da4dbf11f2f 100644
+--- a/scripts/test/verify_qbox_linux_audio.py
++++ b/scripts/test/verify_qbox_linux_audio.py
+@@ -2,7 +2,6 @@
+ """Run DMA350, I2S PCM and aplay/arecord checks via run_qbox_linux.sh --bsp."""
+ 
+ import argparse
+-import base64
+ import functools
+ import http.server
+ import json
+@@ -17,9 +16,10 @@ import threading
+ import time
+ import wave
+ 
+-from qbox_audio_health import apply_audio_checks
+-from verify_qemu_i2s import ROOT, assess
+-from verify_qemu_i2s_wav import digest, guest_script, pcm
++from verify_qemu_i2s import ROOT
++from verify_qemu_i2s_wav import digest, guest_script
++import qbox_audio_experiment as experiment
++import qbox_audio_repeat as repetition
+ 
+ 
+ def guest_suite(port):
+@@ -60,10 +60,14 @@ test "$memory_rc" -eq 0 && test "$pcm_rc" -eq 0 && test "$wav_rc" -eq 0
+ 
+ 
+ def run_mode(args, output, serve, mode, port):
+-    (serve / 'suite.sh').write_text((serve / 'suite-template.sh').read_text().replace('__MODE__', mode))
+     out = output / mode
++    kernel = args.kernel or ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/Image'
++    experiment.validate_probe_kernel(args, digest(kernel))
++    (serve / 'suite.sh').write_text((serve / 'suite-template.sh').read_text().replace('__MODE__', mode))
+     command = [str(ROOT / 'run_qbox_linux.sh'), '--bsp', '--headless',
+                '--out-dir', str(out), '--timeout', str(args.timeout)]
++    if args.kernel:
++        command += ['--kernel', str(args.kernel)]
+     if mode == 'pio':
+         tree = output / 'pio.dtb'
+         shutil.copyfile(args.dtb, tree)
+@@ -79,13 +83,14 @@ def run_mode(args, output, serve, mode, port):
+                  "sh /tmp/audio-suite.sh; rc=$?; printf 'QBOX_AUDIO_%s=%s\\n' DONE \"$rc\"\n")
+     injection = 'ip link set eth0 up; ip addr replace 10.0.2.15/24 dev eth0; ' + injection
+     with (output / f'{mode}-launcher.log').open('wb') as log:
+-        child = subprocess.Popen(command, cwd=ROOT, env={**os.environ, 'QBOX_APOLLO_NETDEV': 'type=user'},
++        child = subprocess.Popen(command, cwd=ROOT, env={**experiment.environment(args, out), 'QBOX_APOLLO_NETDEV': 'type=user'},
+                                  stdout=log, stderr=subprocess.STDOUT)
+         try:
+             while child.poll() is None and time.monotonic() - started < args.timeout + 10:
+                 uart = out / 'linux-uart.log'
+                 text = uart.read_text(errors='replace').replace('\r', '') if uart.exists() else ''
+                 if not sent and re.search(r'nexios-bsp(?:-failed)?#\s*$', text):
++                    experiment.capture_loaded_runtime(child.pid, out)
+                     with (out / 'linux-uart.in').open('a') as stream:
+                         stream.write(injection)
+                     sent = True
+@@ -102,47 +107,14 @@ def run_mode(args, output, serve, mode, port):
+                 child.wait()
+     uart = out / 'linux-uart.log'
+     text = uart.read_text(errors='replace').replace('\r', '') if uart.exists() else ''
+-    memory_cases = re.findall(r'^DMA350_MEMORY_PASS base=(\w+) mode=(memcpy|memset)\b.*$', text, re.MULTILINE)
+-    memory_ok = set(memory_cases) == {(base, kind) for base in ('31000000', '31010000') for kind in ('memcpy', 'memset')}
+-    memory_ok &= bool(re.search(r'^DMA350_MEMORY_EXIT=0$', text, re.MULTILINE))
+-    pcm_result = assess(text, mode)
+-    source_params, source_pcm = pcm(output / 'source.wav')
+-    wav_results = []
+-    for name in ('forward', 'reverse'):
+-        result = {'direction': name, 'status': 'FAIL'}
+-        match = re.search(rf'^WAV_DATA_BEGIN={name}\n(.*?)^WAV_DATA_END={name}$', text, re.MULTILINE | re.DOTALL)
+-        if match:
+-            try:
+-                path = out / f'{name}.wav'
+-                path.write_bytes(base64.b64decode(''.join(match[1].split()), validate=True))
+-                params, data = pcm(path)
+-                same = params == source_params and data == source_pcm
+-                same_file = path.read_bytes() == (output / 'source.wav').read_bytes()
+-                commands_ok = bool(re.search(rf'^WAV_EXIT={name} playback=0 capture=0$', text, re.MULTILINE))
+-                result.update(status='PASS' if same and same_file and commands_ok else 'FAIL',
+-                              frames=len(data)//4, exact_pcm_match=same, exact_wav_match=same_file,
+-                              wav_sha256=digest(path), command_exit_success=commands_ok)
+-            except (ValueError, EOFError, wave.Error) as error:
+-                result['error'] = str(error)
+-        wav_results.append(result)
+-    wav_ok = all(r['status'] == 'PASS' for r in wav_results)
+-    memory_status = 'PASS' if memory_ok else 'FAIL'
+-    if args.tests == 'wav':
+-        memory_ok = True
+-        memory_status = 'SKIP'
+-        pcm_result = {'status': 'SKIP'}
+-    if args.tests == 'memory':
+-        pcm_result = {'status': 'SKIP'}
+-        wav_results = []
+-        wav_ok = True
+-    done = bool(re.search(r'^QBOX_AUDIO_DONE=0$', text, re.MULTILINE))
++    repeated = repetition.assess_repetitions(
++        text, mode, args.tests, output / 'source.wav', out, args.repeat, args.fail_fast)
+     qbox_log = out / 'qbox.log'
+     backend_ok = qbox_log.exists() and 'Apollo QVP audio: qemu-components arm-dma350 + dw-apb-i2s' in qbox_log.read_text(errors='replace')
+-    result = {'mode': mode, 'status': 'PASS' if done and backend_ok and memory_ok and pcm_result['status'] in ('PASS', 'SKIP') and wav_ok else 'FAIL',
+-              'audio_backend_confirmed': backend_ok,
+-              'dma350_memory': {'status': memory_status, 'cases': memory_cases},
+-              'i2s_pcm': pcm_result, 'wav': wav_results, 'command': command,
+-              'elapsed_seconds': time.monotonic()-started, 'guest_completed': done,
++    result = {**repeated, 'mode': mode,
++              'status': 'PASS' if repeated['status'] == 'PASS' and backend_ok else 'FAIL',
++              'audio_backend_confirmed': backend_ok, 'command': command,
++              'elapsed_seconds': time.monotonic()-started,
+               'kernel_panic': 'Kernel panic - not syncing:' in text}
+     if (out / 'launch.json').exists():
+         plan = json.loads((out / 'launch.json').read_text())
+@@ -162,7 +134,7 @@ def run_mode(args, output, serve, mode, port):
+         result['artifacts'] = {key: {'path': path, 'sha256': digest(path)} for key, path in paths.items()}
+     if (out / 'result.json').exists():
+         result['launcher'] = json.loads((out / 'result.json').read_text())
+-    apply_audio_checks(result, text)
++    experiment.annotate_result(result, text, args, out)
+     (output / f'{mode}-result.json').write_text(json.dumps(result, indent=2)+'\n')
+     return result
+ 
+@@ -171,14 +143,18 @@ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--out-dir', type=Path, required=True)
+     parser.add_argument('--dtb', type=Path, default=ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/apollo-qvp.dtb')
++    parser.add_argument('--kernel', type=Path, help='Use an explicit kernel for the experiment')
+     parser.add_argument('--timeout', type=float, default=900)
+     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
+-    parser.add_argument('--tests', choices=('all', 'memory', 'wav'), default='all')
++    parser.add_argument('--tests', choices=('all', 'memory', 'pcm', 'wav'), default='all')
++    repetition.add_arguments(parser)
++    experiment.add_arguments(parser)
+     args = parser.parse_args()
+     output = args.out_dir.absolute()
+     output.mkdir(parents=True, exist_ok=False)
+     serve = output / 'http'
+     serve.mkdir()
++    experiment.prepare(args, output, serve)
+     data = b''.join(struct.pack('<hh', int(18000*math.sin(2*math.pi*997*n/48000)),
+                               int(14000*math.cos(2*math.pi*1499*n/48000))) for n in range(96000))
+     with wave.open(str(output / 'source.wav'), 'wb') as wav:
+@@ -187,7 +163,7 @@ def main():
+     shutil.copyfile(output / 'source.wav', serve / 'source.wav')
+     shutil.copyfile(ROOT / 'scripts/test/verify_dma350_memory.sh', serve / 'memory.sh')
+     shutil.copyfile(ROOT / 'scripts/test/verify_qbox_i2s.sh', serve / 'pcm.sh')
+-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(serve))
++    handler = functools.partial(experiment.AudioHTTPHandler, directory=str(serve))
+     with http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler) as server:
+         wav_script = guest_script(server.server_port, 96000).replace('aplay -D', 'aplay -N -D')
+         wav_script = wav_script.replace('run_case forward "$tx0" "$rx1"', 'result=0\nrun_case forward "$tx0" "$rx1" || result=1')
+@@ -196,9 +172,13 @@ def main():
+         suite = guest_suite(server.server_port)
+         if args.tests == 'memory':
+             suite = suite.split('echo QEMU_I2S_IRQ_BEFORE')[0] + 'exit "$memory_rc"\n'
++        elif args.tests == 'pcm':
++            suite = suite.split('timeout 180 sh /tmp/wav.sh')[0] + 'exit "$pcm_rc"\n'
++            suite = suite.replace('timeout 180 sh /tmp/memory.sh', ':')
+         elif args.tests == 'wav':
+             suite = suite.split('set +e')[0] + 'set +e\ntimeout 180 sh /tmp/wav.sh\nrc=$?\necho WAV_DONE=$rc\nexit "$rc"\n'
+-        (serve / 'suite-template.sh').write_text(suite)
++        suite = repetition.wrap_suite(suite, args.repeat, args.fail_fast)
++        (serve / 'suite-template.sh').write_text(experiment.augment_suite(suite, args, server.server_port))
+         thread = threading.Thread(target=server.serve_forever, daemon=True)
+         thread.start()
+         try:
+diff --git a/scripts/test/verify_qemu_audio_models.py b/scripts/test/verify_qemu_audio_models.py
+index f312abc716b157fe9a4f21554393e6d155b17633..81e50dd590e4f317830b49532f18c6895e507846 100644
+--- a/scripts/test/verify_qemu_audio_models.py
++++ b/scripts/test/verify_qemu_audio_models.py
+@@ -174,6 +174,52 @@ def exercise(io, qmp, results):
+         check(f"dma-{base:x}-self-target-bus-error", bool(io.read(channel + 4) & 2) and
+               bool(error & (1 << 17)) and bool(io.read(pending) & mask), error_register=error)
+         io.write(channel, 2)
++
++    # IRQ output caches must preserve both reset deassertion and a subsequent
++    # assertion. Observe the board's GIC input instead of private model state.
++    for base, intid in ((0x30200000, 388), (0x30210000, 389)):
++        pending = 0x20800000 + 0x200 + (intid // 32) * 4
++        mask = 1 << (intid % 32)
++
++        def enable_tx_empty_irq():
++            io.write(base + 0x3c, 0x23)  # Unmask TX-empty only.
++            io.write(base + 0x2c, 1)
++            io.write(base + 8, 1)
++            io.write(base, 1)
++            advance()
++
++        enable_tx_empty_irq()
++        check(f"i2s-{base:x}-irq-assert", bool(io.read(pending) & mask))
++        qmp.qmp("system_reset")
++        check(f"i2s-{base:x}-reset-irq-clear", not (io.read(pending) & mask) and
++              io.read(base) == 0)
++        enable_tx_empty_irq()
++        check(f"i2s-{base:x}-post-reset-irq-assert", bool(io.read(pending) & mask))
++        io.write(base, 0)
++        advance()
++        check(f"i2s-{base:x}-disable-irq-clear", not (io.read(pending) & mask))
++
++    for base, intid in ((0x31000000, 311), (0x31010000, 390)):
++        channel = base + 0x1000
++        pending = 0x20800000 + 0x200 + (intid // 32) * 4
++        mask = 1 << (intid % 32)
++
++        def assert_error_irq():
++            io.write(base + 0x20c, 1)
++            io.write(channel + 8, 3)
++            io.write(channel + 0x0c, 0x207)  # Unsupported width.
++            io.write(channel, 1)
++
++        assert_error_irq()
++        check(f"dma-{base:x}-pre-reset-irq-assert", bool(io.read(pending) & mask))
++        qmp.qmp("system_reset")
++        check(f"dma-{base:x}-reset-irq-clear", not (io.read(pending) & mask) and
++              io.read(channel + 4) == 0)
++        assert_error_irq()
++        check(f"dma-{base:x}-post-reset-irq-assert", bool(io.read(pending) & mask))
++        io.write(base + 0x20c, 0)
++        check(f"dma-{base:x}-combined-mask-irq-clear", not (io.read(pending) & mask))
++        io.write(channel, 2)
+     return results
+ 
+ 
+diff --git a/scripts/test/verify_qemu_i2s_wav.py b/scripts/test/verify_qemu_i2s_wav.py
+index ae4eec6bcae465e9b2bf5137f93b0cd50ac6cf9e..6bb5f8185275cf0258ca51e68223c962d3c149b1 100644
+--- a/scripts/test/verify_qemu_i2s_wav.py
++++ b/scripts/test/verify_qemu_i2s_wav.py
+@@ -93,6 +93,9 @@ run_case() {{
+         exit 1
+     ' sh "$capture_status" "$recorder"; then ready=0; else ready=$?; fi
+     echo "WAV_READY=$name rc=$ready status=$capture_status"
++    echo WAV_CAPTURE_STATUS_BEGIN=$name
++    cat "$capture_status" 2>/dev/null || :
++    echo WAV_CAPTURE_STATUS_END=$name
+     if test "$ready" -eq 0; then
+         timeout -k 2 60 aplay -D "$tx" --fatal-errors --period-size=4096 --buffer-size=16384 \\
+             /tmp/source.wav > /tmp/$name-play.log 2>&1 &
+diff --git a/tests/test_qbox_audio_diagnostics.py b/tests/test_qbox_audio_diagnostics.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..5a0455b9861585970c5fef6c91aede7007b5da1b
+--- /dev/null
++++ b/tests/test_qbox_audio_diagnostics.py
+@@ -0,0 +1,226 @@
++"""PFDI rollback with owned tasks and fake chrt; never set host scheduling."""
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++import subprocess
++import sys
++from types import SimpleNamespace
++
++import pytest
++
++HELPER = Path(__file__).resolve().parents[1] / 'scripts/test/qbox_audio_diagnostics.sh'
++FAKE_CHRT = r'''
++import json, os, sys
++from pathlib import Path
++path = Path(os.environ['TEST_SCHED_STATE'])
++state = json.loads(path.read_text())
++args = sys.argv[1:]
++tid = args[-1]
++if tid not in state['tasks']:
++    sys.exit('refusing a task not owned by this test')
++task = state['tasks'][tid]
++if args == ['-p', tid]:
++    state['calls'].append({'op': 'get', 'tid': tid})
++    path.write_text(json.dumps(state))
++    if state.get('fail_read_tid') == tid:
++        sys.exit(1)
++    print(f"pid {tid}'s current scheduling policy: {task['policy']}")
++    print(f"pid {tid}'s current scheduling priority: {task['priority']}")
++elif len(args) == 4 and args[1] == '-p' and args[0] in ('-o', '-f', '-r'):
++    policy = {'-o': 'SCHED_OTHER', '-f': 'SCHED_FIFO', '-r': 'SCHED_RR'}[args[0]]
++    call = {'op': 'set', 'tid': tid, 'policy': policy, 'priority': int(args[2])}
++    failure = 'fail_demote_once_tid' if args[0] == '-o' else 'fail_restore_once_tid'
++    call['success'] = state.get(failure) != tid
++    state['calls'].append(call)
++    if call['success']:
++        task.update(policy=policy, priority=int(args[2]))
++    else:
++        state.pop(failure)
++    path.write_text(json.dumps(state))
++    sys.exit(0 if call['success'] else 1)
++else:
++    sys.exit('unexpected fake chrt syntax: ' + repr(args))
++'''
++
++
++@pytest.fixture
++def pfdi_shell(tmp_path):
++    # /proc identities belong only to these children; fake chrt changes JSON.
++    children = [subprocess.Popen(['/bin/sleep', '30']) for _ in range(3)]
++    originals = {
++        child.pid: (os.sched_getscheduler(child.pid), os.sched_getparam(child.pid))
++        for child in children
++    }
++    command_dir = tmp_path / 'bin'
++    command_dir.mkdir()
++    fake_chrt = command_dir / 'chrt'
++    fake_chrt.write_text(f'#!{sys.executable}\n' + FAKE_CHRT)
++    fake_chrt.chmod(0o755)
++    fake_pidof = command_dir / 'pidof'
++    fake_pidof.write_text('''#!/bin/sh
++test "$#" -eq 1 && test "$1" = pfdi-sample-app || exit 1
++test -n "$TEST_PFDI_PIDS" || exit 1
++printf '%s\\n' "$TEST_PFDI_PIDS"
++''')
++    fake_pidof.chmod(0o755)
++    tids = [str(child.pid) for child in children]
++    initial_tasks = {
++        tids[0]: {'policy': 'SCHED_FIFO', 'priority': 99},
++        tids[1]: {'policy': 'SCHED_RR', 'priority': 37},
++        tids[2]: {'policy': 'SCHED_OTHER', 'priority': 0},
++    }
++    state_path = tmp_path / 'scheduler.json'
++    state_path.write_text(json.dumps({'tasks': initial_tasks, 'calls': []}))
++    env = os.environ | {
++        'PATH': f'{command_dir}:/usr/bin:/bin',
++        'TEST_HELPER': str(HELPER), 'TEST_ROOT': str(tmp_path),
++        'TEST_FAKE_CHRT': str(fake_chrt), 'TEST_SCHED_STATE': str(state_path),
++        'TEST_PFDI_PIDS': ' '.join(tids),
++    }
++
++    def state():
++        return json.loads(state_path.read_text())
++
++    def configure(**changes):
++        state_path.write_text(json.dumps(state() | changes))
++
++    def run(body, **environment):
++        # Assert fake chrt resolution and keep temporary rollback files local.
++        script = '''set -eu
++test "$(command -v chrt)" = "$TEST_FAKE_CHRT"
++. "$TEST_HELPER"
++mktemp() { command mktemp "$TEST_ROOT/pfdi.XXXXXX"; }
++''' + body
++        return subprocess.run(
++            ['/bin/sh', '-c', script], env=env | environment,
++            text=True, capture_output=True, timeout=10,
++        )
++
++    try:
++        yield SimpleNamespace(
++            run=run, state=state, configure=configure, tids=tids,
++            initial_tasks=initial_tasks, root=tmp_path,
++        )
++    finally:
++        try:
++            for child in children:
++                assert child.poll() is None, 'fixture process exited early'
++                assert (
++                    os.sched_getscheduler(child.pid), os.sched_getparam(child.pid)
++                ) == originals[child.pid], 'real scheduling policy was changed'
++        finally:
++            for child in children:
++                if child.poll() is None:
++                    child.terminate()
++                child.wait(timeout=3)
++
++
++def test_demotes_fifo_rr_and_cleanup_restores_exact_state(pfdi_shell):
++    result = pfdi_shell.run('''
++audio_pfdi_demote
++cp "$TEST_SCHED_STATE" "$TEST_ROOT/demoted.json"
++cp "$AUDIO_PFDI_STATE_FILE" "$TEST_ROOT/saved.txt"
++audio_diag_cleanup
++test -z "$AUDIO_PFDI_STATE_FILE"
++''')
++    assert result.returncode == 0, result.stdout + result.stderr
++    assert 'demote=PASS tasks=3 changed=2' in result.stdout
++    demoted = json.loads((pfdi_shell.root / 'demoted.json').read_text())
++    assert all(task == {'policy': 'SCHED_OTHER', 'priority': 0}
++               for task in demoted['tasks'].values())
++    saved = (pfdi_shell.root / 'saved.txt').read_text().splitlines()
++    assert len(saved) == 2
++    for row, tid in zip(saved, pfdi_shell.tids):
++        pid, pid_start, saved_tid, tid_start, policy, priority = row.split()
++        assert pid == saved_tid == tid
++        assert int(pid_start) > 0 and pid_start == tid_start
++        assert policy == pfdi_shell.initial_tasks[tid]['policy']
++        assert int(priority) == pfdi_shell.initial_tasks[tid]['priority']
++    assert pfdi_shell.state()['tasks'] == pfdi_shell.initial_tasks
++    assert result.stdout.count('restore=PASS') == 2
++    assert not list(pfdi_shell.root.glob('pfdi.*'))
++
++
++def test_partial_demote_failure_rolls_back_changed_task(pfdi_shell):
++    pfdi_shell.configure(fail_demote_once_tid=pfdi_shell.tids[1])
++    result = pfdi_shell.run('''
++if audio_pfdi_demote; then exit 91; fi
++test -z "$AUDIO_PFDI_STATE_FILE"
++''')
++    assert result.returncode == 0, result.stdout + result.stderr
++    assert 'reason=chrt_failed' in result.stdout
++    assert 'demote=FAIL tasks=3 changed=1' in result.stdout
++    assert pfdi_shell.state()['tasks'] == pfdi_shell.initial_tasks
++    calls = [c for c in pfdi_shell.state()['calls'] if c['op'] == 'set']
++    assert any(c['policy'] == 'SCHED_OTHER' and not c['success'] for c in calls)
++    assert any(c['tid'] == pfdi_shell.tids[0] and c['policy'] == 'SCHED_FIFO'
++               and c['success'] for c in calls)
++
++
++@pytest.mark.parametrize('column', ['2', '4'], ids=['pid-starttime', 'tid-starttime'])
++def test_restore_skips_changed_identity_without_scheduling_it(pfdi_shell, column):
++    result = pfdi_shell.run('''
++audio_pfdi_demote
++awk -v col="$TEST_COLUMN" 'NR == 1 { $col = 0 } { print }' "$AUDIO_PFDI_STATE_FILE" > "$TEST_ROOT/changed"
++mv "$TEST_ROOT/changed" "$AUDIO_PFDI_STATE_FILE"
++audio_pfdi_restore
++test -z "$AUDIO_PFDI_STATE_FILE"
++''', TEST_COLUMN=column)
++    assert result.returncode == 0, result.stdout + result.stderr
++    assert f'restore=SKIP pid={pfdi_shell.tids[0]}' in result.stdout
++    assert 'reason=identity_changed' in result.stdout
++    calls = [c for c in pfdi_shell.state()['calls'] if c['op'] == 'set']
++    assert not any(c['tid'] == pfdi_shell.tids[0] and
++                   c['policy'] != 'SCHED_OTHER' for c in calls)
++    assert pfdi_shell.state()['tasks'][pfdi_shell.tids[1]] == {
++        'policy': 'SCHED_RR', 'priority': 37,
++    }
++
++
++def test_restore_skips_missing_task(pfdi_shell):
++    result = pfdi_shell.run('''
++audio_pfdi_demote
++awk 'NR == 1 { $3 = 2147483647 } { print }' "$AUDIO_PFDI_STATE_FILE" > "$TEST_ROOT/changed"
++mv "$TEST_ROOT/changed" "$AUDIO_PFDI_STATE_FILE"
++audio_pfdi_restore
++''')
++    assert result.returncode == 0, result.stdout + result.stderr
++    assert 'tid=2147483647 reason=task_exited' in result.stdout
++    assert not any(c['tid'] == '2147483647' for c in pfdi_shell.state()['calls'])
++
++
++def test_restore_failure_keeps_failed_record_for_retry(pfdi_shell):
++    pfdi_shell.configure(fail_restore_once_tid=pfdi_shell.tids[0])
++    result = pfdi_shell.run('''
++audio_pfdi_demote
++if audio_pfdi_restore; then exit 92; fi
++test -r "$AUDIO_PFDI_STATE_FILE"
++cp "$AUDIO_PFDI_STATE_FILE" "$TEST_ROOT/retry.txt"
++audio_pfdi_restore
++test -z "$AUDIO_PFDI_STATE_FILE"
++''')
++    assert result.returncode == 0, result.stdout + result.stderr
++    retry = (pfdi_shell.root / 'retry.txt').read_text().splitlines()
++    assert len(retry) == 1 and retry[0].split()[0] == pfdi_shell.tids[0]
++    assert f'restore=FAIL pid={pfdi_shell.tids[0]}' in result.stdout
++    assert pfdi_shell.state()['tasks'] == pfdi_shell.initial_tasks
++
++
++def test_no_service_is_an_explicit_failure(pfdi_shell):
++    result = pfdi_shell.run('audio_pfdi_demote\n', TEST_PFDI_PIDS='')
++    assert result.returncode == 1
++    assert 'demote=FAIL reason=no_service_tasks' in result.stdout
++    assert not pfdi_shell.state()['calls']
++    assert not list(pfdi_shell.root.glob('pfdi.*'))
++
++
++def test_chrt_read_failure_is_not_reported_as_pass(pfdi_shell):
++    pfdi_shell.configure(fail_read_tid=pfdi_shell.tids[0])
++    result = pfdi_shell.run('audio_pfdi_demote\n')
++    assert result.returncode == 1
++    assert 'reason=read_state_failed' in result.stdout
++    assert 'demote=PASS' not in result.stdout
++    assert pfdi_shell.state()['tasks'] == pfdi_shell.initial_tasks
++
+diff --git a/tests/test_qbox_audio_experiment.py b/tests/test_qbox_audio_experiment.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..b732ba6e90cd751bab034023bd4f06a779911469
+--- /dev/null
++++ b/tests/test_qbox_audio_experiment.py
+@@ -0,0 +1,446 @@
++"""Audio evidence uploads and shell lifecycle without starting a simulator."""
++from __future__ import annotations
++
++import functools
++import base64
++import http.client
++import http.server
++import importlib.util
++import hashlib
++import io
++import json
++import os
++from pathlib import Path
++import subprocess
++import sys
++import tarfile
++import threading
++from types import SimpleNamespace
++
++import pytest
++
++MODULE = Path(__file__).resolve().parents[1] / 'scripts/test/qbox_audio_experiment.py'
++sys.path.insert(0, str(MODULE.parent))
++SPEC = importlib.util.spec_from_file_location('qbox_audio_experiment', MODULE)
++experiment = importlib.util.module_from_spec(SPEC)
++SPEC.loader.exec_module(experiment)
++
++
++def options(**overrides):
++    defaults = dict(diagnostics=False, disable_cpu_idle=False, pcm_binary=None, kprobes=None)
++    return SimpleNamespace(**(defaults | overrides))
++
++
++@pytest.mark.parametrize('failure', [
++    'PFDI pfdi_pe_run_exec_fn timed out on CPU 3',
++    'rcu: INFO: rcu_preempt self-detected stall on CPU',
++])
++def test_audio_pass_cannot_hide_guest_failure(tmp_path, failure):
++    result = {'status': 'PASS'}
++    text = f'AUDIO_DT_BEGIN\n{failure}\nQBOX_AUDIO_DONE=0\n'
++    experiment.annotate_result(result, text, options(), tmp_path)
++    assert result['audio_status'] == 'PASS'
++    assert result['guest_health']['status'] == 'FAIL'
++    assert result['status'] == 'FAIL'
++
++
++@pytest.fixture
++def upload_server(tmp_path):
++    serving = tmp_path / 'http'
++    serving.mkdir()
++
++    class QuietHandler(experiment.AudioHTTPHandler):
++        def log_message(self, *args):
++            pass
++
++    handler = functools.partial(QuietHandler, directory=str(serving))
++    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
++    thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01}, daemon=True)
++    thread.start()
++    try:
++        yield server.server_port, tmp_path
++    finally:
++        server.shutdown()
++        server.server_close()
++        thread.join(timeout=2)
++        assert not thread.is_alive()
++
++
++def post(port, path, body=b'payload', **headers):
++    connection = http.client.HTTPConnection('127.0.0.1', port, timeout=3)
++    try:
++        connection.request('POST', path, body=body, headers=headers)
++        response = connection.getresponse()
++        return response.status, response.read()
++    finally:
++        connection.close()
++
++
++@pytest.mark.parametrize('mode', ['dma', 'pio'])
++@pytest.mark.parametrize('encoding', ['binary', 'base64'])
++def test_real_http_post_keeps_archive_bytes_and_contents(upload_server, mode, encoding):
++    port, output = upload_server
++    payload = b'COLLECTED snd_pcm/xrun\n'
++    buffer = io.BytesIO()
++    with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
++        member = tarfile.TarInfo('collection.log')
++        member.size = len(payload)
++        archive.addfile(member, io.BytesIO(payload))
++    data = buffer.getvalue()
++
++    endpoint = f'/diagnostics/{mode}'
++    body = data
++    if encoding == 'base64':
++        endpoint += '/base64'
++        body = base64.encodebytes(data)
++        assert b'\0' not in body  # BusyBox wget's strlen-based POST is safe.
++    assert post(port, endpoint, body) == (200, b'OK\n')
++    archive_path = output / mode / 'guest-diagnostics.tar.gz'
++    assert archive_path.read_bytes() == data
++    with tarfile.open(archive_path, mode='r:gz') as archive:
++        assert archive.getnames() == ['collection.log']
++        assert archive.extractfile('collection.log').read() == payload
++    assert not list(output.rglob('*.upload'))
++
++
++@pytest.mark.parametrize('endpoint,body', [
++    ('/diagnostics/dma', b'\x1f\x8b\x08'),
++    ('/diagnostics/pio/base64', b'@@invalid@@'),
++    ('/diagnostics/dma/base64', base64.b64encode(b'not a gzip archive')),
++])
++def test_post_rejects_truncated_or_invalid_archives(upload_server, endpoint, body):
++    port, output = upload_server
++    assert post(port, endpoint, body)[0] == 400
++    assert not list(output.rglob('guest-diagnostics*'))
++
++
++@pytest.mark.parametrize('path', [
++    '/diagnostics/other', '/diagnostics/../escape',
++    '/diagnostics/dma/../../escape', '/diagnostics/dma?mode=pio',
++])
++def test_post_rejects_unapproved_paths(upload_server, path):
++    port, output = upload_server
++    assert post(port, path)[0] == 404
++    assert not list(output.rglob('guest-diagnostics*'))
++    assert not (output / 'escape').exists()
++
++
++@pytest.mark.parametrize('length', ['0', '-1', 'invalid', str(64 * 1024 * 1024 + 1)])
++def test_post_rejects_invalid_or_oversized_body_without_allocating_it(upload_server, length):
++    port, output = upload_server
++    assert post(port, '/diagnostics/dma', b'', **{'Content-Length': length})[0] == 413
++    assert not list(output.rglob('guest-diagnostics*'))
++
++
++def test_augmentation_disabled_returns_original_suite():
++    original = '#!/bin/sh\nset -eu\nprintf "QBOX_AUDIO_DONE=0\\n"\nexit 0\n'
++    assert experiment.augment_suite(original, options(), 1234) == original
++
++
++@pytest.mark.parametrize('suite_exit', [0, 37])
++@pytest.mark.parametrize('stop_exit', [0, 81])
++def test_augmentation_preserves_suite_exit_and_parent_owns_cleanup(tmp_path, suite_exit, stop_exit):
++    # A subshell EXIT trap would remove this shared resource before stop can
++    # collect it. The fake helper uses a real resource and idempotent cleanup.
++    helper = tmp_path / 'helper.sh'
++    helper.write_text('''audio_diag_start() {
++    mkdir "$TEST_RESOURCE"
++    printf 'start\\n' >> "$TEST_EVENTS"
++}
++audio_idle_disable() {
++    touch "$TEST_RESOURCE/idle"
++    printf 'idle-disable\\n' >> "$TEST_EVENTS"
++}
++audio_idle_restore() {
++    if test -f "$TEST_RESOURCE/idle"; then
++        rm "$TEST_RESOURCE/idle"
++        printf 'idle-restore\\n' >> "$TEST_EVENTS"
++    fi
++}
++audio_diag_cleanup() {
++    audio_idle_restore
++    if test -d "$TEST_RESOURCE"; then
++        rmdir "$TEST_RESOURCE"
++        printf 'cleanup\\n' >> "$TEST_EVENTS"
++    fi
++}
++audio_diag_stop() {
++    test -d "$TEST_RESOURCE" || { printf 'missing-resource\\n' >> "$TEST_EVENTS"; return 99; }
++    printf 'stop\\n' >> "$TEST_EVENTS"
++    audio_diag_cleanup
++    return "$TEST_STOP_EXIT"
++}
++''')
++    commands = tmp_path / 'bin'
++    commands.mkdir()
++    wget = commands / 'wget'
++    wget.write_text('''#!/bin/sh
++test "$1" = -q && test "$2" = -O || exit 98
++cp "$TEST_HELPER" "$3"
++''')
++    wget.chmod(0o755)
++    original = ('#!/bin/sh\nset -eu\nprintf "body\\n" >> "$TEST_EVENTS"\n'
++                f'exit {suite_exit}\n')
++    args = SimpleNamespace(diagnostics=True, disable_cpu_idle=True, pcm_binary=None, kprobes=None)
++    wrapped = experiment.augment_suite(original, args, 1234)
++    # Isolate the guest's fixed /tmp download names from the real host /tmp.
++    wrapped = wrapped.replace('/tmp/audio-diagnostics.sh', str(tmp_path / 'downloaded.sh'))
++    script = tmp_path / 'suite.sh'
++    script.write_text(wrapped)
++    events = tmp_path / 'events'
++    resource = tmp_path / 'resource'
++    result = subprocess.run(['/bin/sh', str(script)], capture_output=True, text=True, timeout=5,
++                            env={**os.environ, 'PATH': f'{commands}:{os.environ["PATH"]}',
++                                 'TEST_HELPER': str(helper), 'TEST_EVENTS': str(events),
++                                 'TEST_RESOURCE': str(resource), 'TEST_STOP_EXIT': str(stop_exit)})
++    assert result.returncode == suite_exit, result.stderr
++    assert events.read_text().splitlines() == [
++        'start', 'idle-disable', 'body', 'idle-restore', 'stop', 'cleanup']
++    assert not resource.exists()
++    assert ('AUDIO_DIAGNOSTICS_UPLOAD_FAILED=1' in result.stdout) == bool(stop_exit)
++
++
++@pytest.mark.parametrize('diagnostics', [False, True])
++@pytest.mark.parametrize('setup_exit,suite_exit,custom_exit,diag_exit,expected', [
++    (0, 0, 0, 0, 0), (0, 37, 0, 0, 37),
++    (0, 0, 81, 0, 81), (0, 37, 81, 82, 37),
++    (0, 0, 81, 82, 81), (0, 0, 0, 82, 82),
++    (29, 0, 81, 82, 29), (143, 0, 81, 82, 143),
++])
++def test_custom_cleanup_once_always_releases_diagnostics_and_keeps_first_failure(
++        tmp_path, diagnostics, setup_exit, suite_exit, custom_exit, diag_exit, expected):
++    helper = tmp_path / 'helper.sh'
++    helper.write_text('''touch "$TEST_RESOURCE"
++audio_diag_start() { :; }
++audio_diag_cleanup() {
++    if test -f "$TEST_RESOURCE"; then
++        rm "$TEST_RESOURCE"
++        echo diag-cleanup >> "$TEST_EVENTS"
++    fi
++    return "$TEST_DIAG_EXIT"
++}
++audio_diag_stop() { audio_diag_cleanup; }
++''')
++    custom = tmp_path / 'custom.sh'
++    custom.write_text('''audio_experiment_setup() {
++    echo setup >> "$TEST_EVENTS"
++    if test "$TEST_SETUP_EXIT" -eq 143; then kill -TERM $$; fi
++    return "$TEST_SETUP_EXIT"
++}
++audio_experiment_cleanup() {
++    echo custom-cleanup >> "$TEST_EVENTS"
++    return "$TEST_CUSTOM_EXIT"
++}
++''')
++    commands = tmp_path / 'bin'
++    commands.mkdir()
++    wget = commands / 'wget'
++    wget.write_text('''#!/bin/sh
++case "$4" in
++    */diagnostics.sh) cp "$TEST_HELPER" "$3" ;;
++    */experiment.sh) cp "$TEST_CUSTOM" "$3" ;;
++    *) exit 98 ;;
++esac
++''')
++    wget.chmod(0o755)
++    original = '#!/bin/sh\nset -eu\necho body >> "$TEST_EVENTS"\nexit "$TEST_SUITE_EXIT"\n'
++    wrapped = experiment.augment_suite(original, options(
++        diagnostics=diagnostics, experiment_script=custom), 1234)
++    wrapped = wrapped.replace('/tmp/audio-diagnostics.sh', str(tmp_path / 'downloaded-helper.sh'))
++    wrapped = wrapped.replace('/tmp/audio-experiment.sh', str(tmp_path / 'downloaded-custom.sh'))
++    events, resource = tmp_path / 'events', tmp_path / 'resource'
++    result = subprocess.run(['/bin/sh'], input=wrapped, capture_output=True, text=True, timeout=5,
++                            env={**os.environ, 'PATH': f'{commands}:{os.environ["PATH"]}',
++                                 'TEST_HELPER': str(helper), 'TEST_CUSTOM': str(custom),
++                                 'TEST_EVENTS': str(events), 'TEST_RESOURCE': str(resource),
++                                 'TEST_SETUP_EXIT': str(setup_exit), 'TEST_SUITE_EXIT': str(suite_exit),
++                                 'TEST_CUSTOM_EXIT': str(custom_exit), 'TEST_DIAG_EXIT': str(diag_exit)})
++    assert result.returncode == expected, result.stderr
++    assert events.read_text().splitlines() == (
++        ['setup'] + ([] if setup_exit else ['body']) + ['custom-cleanup', 'diag-cleanup'])
++    assert not resource.exists()
++
++
++@pytest.mark.parametrize('message', [
++    'underrun!!! (at least 1.000 ms long)',
++    'overrun!!! (at least 1.000 ms long)',
++    'playback failed: Broken pipe',
++])
++def test_zero_exit_does_not_hide_xrun(tmp_path, message):
++    result = experiment.annotate_result({'status': 'PASS'},
++                                        f'{message}\nQBOX_AUDIO_DONE=0\n', options(), tmp_path)
++    assert result['suite_exit_code'] == 0
++    assert result['status'] == 'FAIL'
++    assert result['xrun_messages'] == [message]
++    assert result['qualification'] == 'baseline-settings'
++
++
++def test_success_without_xrun_keeps_pass(tmp_path):
++    result = experiment.annotate_result({'status': 'PASS'},
++                                        'QBOX_AUDIO_DONE=0\n', options(), tmp_path)
++    assert result['status'] == 'PASS'
++    assert result['xrun_messages'] == []
++
++
++def test_probe_kernel_guard_disabled_without_definitions(monkeypatch):
++    def unexpected_read(*args, **kwargs):
++        pytest.fail('No probe file should be read when kprobes are disabled')
++
++    monkeypatch.setattr(Path, 'read_text', unexpected_read)
++    experiment.validate_probe_kernel(options(), '0123456789abcdef' * 4)
++
++
++def test_probe_kernel_guard_accepts_exact_image(tmp_path):
++    image_sha256 = '0123456789abcdef' * 4
++    definitions = tmp_path / 'audio.events'
++    definitions.write_text(f'# exact Image SHA256 {image_sha256}\n'
++                           'p:audio_rearm d350_program_cmd\n')
++    experiment.validate_probe_kernel(options(diagnostics=True, kprobes=definitions), image_sha256)
++
++
++@pytest.mark.parametrize('binding', [
++    '# exact Image SHA256 ' + 'abcdef0123456789' * 4,
++    '# Probe offsets have no exact kernel Image binding',
++])
++def test_probe_kernel_guard_rejects_other_image_or_unbound_definitions(tmp_path, binding):
++    definitions = tmp_path / 'audio.events'
++    definitions.write_text(binding + '\np:audio_rearm d350_program_cmd\n')
++    with pytest.raises(ValueError, match='do not match the selected kernel Image SHA256'):
++        experiment.validate_probe_kernel(options(diagnostics=True, kprobes=definitions),
++                                         '0123456789abcdef' * 4)
++
++
++def test_source_provenance_binds_dirty_and_untracked_implementation_bytes(tmp_path, monkeypatch):
++    tracked = tmp_path / 'model.c'
++    tracked.write_text('old model\n')
++    subprocess.run(['git', 'init', '-q', str(tmp_path)], check=True)
++    subprocess.run(['git', '-C', str(tmp_path), 'add', 'model.c'], check=True)
++    subprocess.run(['git', '-C', str(tmp_path), '-c', 'user.name=Fixture',
++                    '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
++                    'commit', '-qm', 'fixture'], check=True)
++    tracked.write_text('new uncommitted model\n')
++    helper = tmp_path / 'new-helper.h'
++    helper.write_text('untracked telemetry\n')
++    monkeypatch.setattr(experiment, 'ROOT', tmp_path)
++    monkeypatch.setattr(experiment, 'IMPLEMENTATION_FILES', {'.': ('model.c', 'new-helper.h')})
++    result = experiment.source_provenance()['.']
++    diff = subprocess.check_output(['git', '-C', str(tmp_path), 'diff', '--binary', 'HEAD', '--',
++                                    'model.c', 'new-helper.h'])
++    assert result['tracked_diff_sha256'] == hashlib.sha256(diff).hexdigest()
++    assert result['tracked_diff_bytes'] == len(diff) > 0
++    assert result['files']['model.c']['sha256'] == hashlib.sha256(tracked.read_bytes()).hexdigest()
++    assert result['files']['new-helper.h']['sha256'] == hashlib.sha256(helper.read_bytes()).hexdigest()
++
++
++def test_prepare_validates_frozen_served_probe_when_original_changes(tmp_path, monkeypatch):
++    root = tmp_path / 'workspace'
++    script = root / 'scripts/test/qbox_audio_diagnostics.sh'
++    script.parent.mkdir(parents=True)
++    script.write_text('#!/bin/sh\n')
++    configuration = root / 'build/conf'
++    configuration.mkdir(parents=True)
++    for name in ('local.conf', 'bblayers.conf', 'templateconf.cfg'):
++        (configuration / name).write_text('test configuration\n')
++    output = tmp_path / 'output'
++    serve = output / 'http'
++    serve.mkdir(parents=True)
++    probes = tmp_path / 'source.events'
++    digest = '0123456789abcdef' * 4
++    probes.write_text(f'# exact Image SHA256 {digest}\np:sample d350_program_cmd\n')
++    monkeypatch.setattr(experiment, 'ROOT', root)
++    monkeypatch.setattr(experiment, 'source_provenance', lambda: {})
++    args = options(diagnostics=True, kprobes=probes)
++    experiment.prepare(args, output, serve)
++    probes.write_text('# Source edited after snapshot\n')
++    assert args.kprobes == (serve / 'audio-kprobes.events').absolute()
++    experiment.validate_probe_kernel(args, digest)
++    manifest = json.loads((output / 'run-manifest.json').read_text())
++    assert manifest['injected_files']['audio-kprobes.events'] == hashlib.sha256(args.kprobes.read_bytes()).hexdigest()
++
++
++def fake_process(proc, pid, ppid, executable, start=123, maps=''):
++    directory = proc / str(pid)
++    directory.mkdir(parents=True)
++    fields = ['S', str(ppid)] + ['0'] * 17 + [str(start)]
++    (directory / 'stat').write_text(f'{pid} (test process) ' + ' '.join(fields))
++    (directory / 'exe').symlink_to(executable)
++    (directory / 'maps').write_text(maps)
++
++
++def mapped_line(path, inode_offset=0):
++    stat = path.stat()
++    device = f'{os.major(stat.st_dev):02x}:{os.minor(stat.st_dev):02x}'
++    return f'1000-2000 r-xp 00000000 {device} {stat.st_ino + inode_offset} {path}\n'
++
++
++def test_loaded_runtime_uses_descendant_maps_and_caches_completed_capture(tmp_path, monkeypatch):
++    proc = tmp_path / 'proc'
++    modules = tmp_path / 'qbox/modules'
++    modules.mkdir(parents=True)
++    paths = [tmp_path / 'platforms-vp', modules / 'qemu_dma350.so',
++             modules / 'qemu_dw_apb_i2s.so', tmp_path / 'libqemu-system-aarch64.so']
++    for path in paths:
++        path.write_bytes(path.name.encode())
++    libc = tmp_path / 'libc.so.6'
++    libc.write_bytes(b'not relevant')
++    fake_process(proc, 100, 1, tmp_path / 'launcher')
++    fake_process(proc, 101, 100, tmp_path / 'wrapper')
++    fake_process(proc, 102, 101, paths[0], maps=''.join(mapped_line(p) for p in paths[1:] + [libc]))
++    # SharedMemoryCleaner forks without exec: these are not additional VPs.
++    fake_process(proc, 103, 102, paths[0], maps='')
++    fake_process(proc, 104, 103, tmp_path / 'helper')
++    fake_process(proc, 105, 104, paths[0], maps='')
++    # A different managed session must not make this capture ambiguous.
++    fake_process(proc, 999, 1, paths[0], maps='')
++    monkeypatch.setattr(experiment, 'PROC', proc)
++    output = tmp_path / 'output'
++    output.mkdir()
++    result = experiment.capture_loaded_runtime(100, output)
++    assert result['status'] == 'COLLECTED', result
++    assert result['target_pid'] == 102
++    assert result['excluded_nested_simulator_pids'] == [103, 105]
++    assert len(result['artifacts']) == 4
++    assert all(item['status'] == 'COLLECTED' for item in result['artifacts'])
++    assert {item['mapped_path'] for item in result['artifacts']} == {str(p) for p in paths}
++    assert {item['sha256'] for item in result['artifacts']} == {
++        hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
++    assert (output / 'loaded-runtime.maps').read_text() == (proc / '102/maps').read_text()
++    monkeypatch.setattr(experiment, '_process_tree', lambda: pytest.fail('Completed capture must be reused'))
++    assert experiment.capture_loaded_runtime(100, output) == result
++    annotated = experiment.annotate_result({'status': 'PASS'}, 'QBOX_AUDIO_DONE=0\n', options(), output)
++    assert annotated['loaded_runtime'] == result
++
++
++def test_loaded_runtime_records_inode_mismatch_without_hashing_replacement(tmp_path, monkeypatch):
++    proc = tmp_path / 'proc'
++    executable = tmp_path / 'platforms-vp'
++    executable.write_bytes(b'executable')
++    library = tmp_path / 'libqemu-system-aarch64.so'
++    library.write_bytes(b'replaced library')
++    fake_process(proc, 100, 1, tmp_path / 'launcher')
++    fake_process(proc, 101, 100, executable, maps=mapped_line(library, inode_offset=1))
++    monkeypatch.setattr(experiment, 'PROC', proc)
++    output = tmp_path / 'output'
++    output.mkdir()
++    result = experiment.capture_loaded_runtime(100, output)
++    assert result['status'] == 'NOT_COLLECTED'
++    failed = next(item for item in result['artifacts'] if item['mapped_path'] == str(library))
++    assert failed['status'] == 'NOT_COLLECTED'
++    assert 'inode/device differs' in failed['reason']
++    assert 'sha256' not in failed
++    assert json.loads((output / 'loaded-runtime.json').read_text()) == result
++
++
++def test_loaded_runtime_rejects_two_sibling_simulators(tmp_path, monkeypatch):
++    proc = tmp_path / 'proc'
++    executable = tmp_path / 'platforms-vp'
++    executable.write_bytes(b'executable')
++    fake_process(proc, 100, 1, tmp_path / 'launcher')
++    fake_process(proc, 101, 100, executable)
++    fake_process(proc, 102, 100, executable)
++    fake_process(proc, 103, 101, executable)
++    monkeypatch.setattr(experiment, 'PROC', proc)
++    result = experiment.capture_loaded_runtime(100, tmp_path / 'output')
++    assert result['status'] == 'NOT_COLLECTED'
++    assert 'one top-level descendant platforms-vp; found 2' in result['reason']
++    assert result['excluded_nested_simulator_pids'] == [103]
+diff --git a/tests/test_qbox_audio_health.py b/tests/test_qbox_audio_health.py
+index b5ebdcaa6a2431a3bdee5427c7bb4b9d930e9765..0354bde8418835373d64bf3a091d65cffd08df56 100644
+--- a/tests/test_qbox_audio_health.py
++++ b/tests/test_qbox_audio_health.py
+@@ -171,27 +171,3 @@ def test_repeated_markers_and_replayed_messages_do_not_erase_failure():
+     assert [item['line'] for item in result['rcu_stalls']['stalls']] == [3, 5]
+     assert 'not unique events' in result['rcu_stalls']['scope']
+     assert 'not unique events' in result['pfdi_timeouts']['scope']
+-
+-
+-@pytest.mark.parametrize('message,audio_status,overall', [
+-    ('', 'PASS', 'PASS'),
+-    ('overrun!!! (at least 1 ms long)', 'FAIL', 'FAIL'),
+-    ('underrun!!!', 'FAIL', 'FAIL'),
+-    ('write failed: Broken pipe', 'FAIL', 'FAIL'),
+-    (TIMEOUT, 'PASS', 'FAIL'),
+-    ('rcu: INFO: rcu_preempt detected stalls on CPUs/tasks:', 'PASS', 'FAIL'),
+-])
+-def test_audio_success_does_not_hide_failures(message, audio_status, overall):
+-    from qbox_audio_health import apply_audio_checks
+-
+-    result = apply_audio_checks(
+-        {'status': 'PASS'}, f'AUDIO_DT_BEGIN\n{message}\nQBOX_AUDIO_DONE=0\n')
+-    assert result['audio_status'] == audio_status
+-    assert result['status'] == overall
+-
+-
+-def test_health_check_cannot_upgrade_audio_failure():
+-    from qbox_audio_health import apply_audio_checks
+-
+-    result = apply_audio_checks({'status': 'FAIL'}, 'AUDIO_DT_BEGIN\n')
+-    assert result['status'] == result['audio_status'] == 'FAIL'
+diff --git a/tests/test_qbox_audio_repeat.py b/tests/test_qbox_audio_repeat.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..1ff02de6bf95f4b75082979e8aa54778804312f4
+--- /dev/null
++++ b/tests/test_qbox_audio_repeat.py
+@@ -0,0 +1,246 @@
++"""Repeat audio evidence must never borrow a PASS or WAV from another run."""
++
++import argparse
++import base64
++import importlib
++import os
++from pathlib import Path
++import subprocess
++import sys
++import wave
++
++import pytest
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts/test'))
++import qbox_audio_repeat as repeat
++
++
++@pytest.fixture
++def source(tmp_path):
++    path = tmp_path / 'source.wav'
++    with wave.open(str(path), 'wb') as stream:
++        stream.setparams((2, 2, 48000, 8, 'NONE', 'not compressed'))
++        stream.writeframes(bytes(range(32)))
++    return path
++
++
++def evidence(source, mode='dma'):
++    lines = [f'DMA350_MEMORY_PASS base={base} mode={kind}'
++             for base in ('31000000', '31010000') for kind in ('memcpy', 'memset')]
++    lines += ['DMA350_MEMORY_EXIT=0', 'QEMU_I2S_IRQ_BEFORE',
++              ' 30: 0 0 0 0 GICv3 390 Level dma1chan0',
++              ' 31: 0 0 0 0 GICv3 388 Level 30200000.i2s',
++              ' 32: 0 0 0 0 GICv3 389 Level 30210000.i2s', 'QEMU_I2S_IRQ_END']
++    for _ in range(2):
++        for tx, rx in (('hw:0,0', 'hw:1,1'), ('hw:1,0', 'hw:0,1')):
++            lines += [f'I2S_LOOPBACK_PASS playback={tx} capture={rx} '
++                      'frames=65536 bytes=262144 format=S16_LE rate=48000 idle=16']
++    lines += [f'I2S_DRIVER_TEST_PASS mode={mode}', 'QEMU_I2S_IRQ_AFTER',
++              ' 30: 8 16 0 0 GICv3 390 Level dma1chan0',
++              ' 31: 8 8 0 0 GICv3 388 Level 30200000.i2s',
++              ' 32: 8 8 0 0 GICv3 389 Level 30210000.i2s',
++              'QEMU_I2S_IRQ_END', 'QEMU_I2S_DONE=0', f'WAV_MODE={mode}']
++    for name in ('forward', 'reverse'):
++        lines += [f'WAV_EXIT={name} playback=0 capture=0', f'WAV_DATA_BEGIN={name}',
++                  base64.b64encode(source.read_bytes()).decode(), f'WAV_DATA_END={name}']
++    return '\n'.join(lines + ['WAV_DONE=0', ''])
++
++
++def session(*bodies, codes=None, done=0):
++    codes = codes or [0] * len(bodies)
++    return ''.join(f'QBOX_AUDIO_ITERATION_BEGIN={index} total={len(bodies)}\n{body}'
++                   f'QBOX_AUDIO_ITERATION_END={index} rc={rc}\n'
++                   for index, (body, rc) in enumerate(zip(bodies, codes), 1)) + f'QBOX_AUDIO_DONE={done}\n'
++
++
++def assess(source, text, count=2, tests='all', mode='dma'):
++    return repeat.assess_repetitions(text, mode, tests, source, source.parent / 'out', count)
++
++
++@pytest.mark.parametrize('mode', ['dma', 'pio'])
++def test_every_iteration_has_four_pcm_and_two_exact_wav_results(source, mode):
++    result = assess(source, session(evidence(source, mode), evidence(source, mode)), mode=mode)
++    assert result['status'] == 'PASS'
++    assert [item['i2s_pcm']['pcm_pass_count'] for item in result['iterations']] == [4, 4]
++    assert [len(item['wav']) for item in result['iterations']] == [2, 2]
++    assert len(result['wav']) == 4
++    assert all(item['exact_pcm_match'] and item['exact_wav_match'] for item in result['wav'])
++    assert len({item['path'] for item in result['wav']}) == 4
++
++
++@pytest.mark.parametrize('position', [0, 1])
++@pytest.mark.parametrize('old,new', [
++    ('DMA350_MEMORY_PASS', 'DMA350_MEMORY_FAIL'),
++    ('DMA350_MEMORY_EXIT=0', 'DMA350_MEMORY_EXIT=37'),
++    ('I2S_LOOPBACK_PASS', 'I2S_LOOPBACK_FAIL'),
++    ('I2S_DRIVER_TEST_PASS mode=dma', 'I2S_DRIVER_TEST_PASS mode=pio'),
++    ('QEMU_I2S_DONE=0', 'QEMU_I2S_DONE=1'),
++    ('8 16 0 0', '0 0 0 0'),
++    ('WAV_EXIT=forward playback=0 capture=0', 'WAV_EXIT=forward playback=1 capture=0'),
++    ('WAV_DATA_BEGIN=forward', 'MISSING_DATA_BEGIN=forward'),
++    ('WAV_DATA_END=reverse', 'MISSING_DATA_END=reverse'),
++    ('WAV_DONE=0', 'WAV_DONE=124'),
++    ('WAV_DONE=0', ''),
++    ('WAV_DONE=0', 'overrun!!!\nWAV_DONE=0'),
++])
++def test_failure_in_any_iteration_cannot_use_other_iteration_pass(source, position, old, new):
++    bodies = [evidence(source), evidence(source)]
++    bodies[position] = bodies[position].replace(old, new, 1)
++    result = assess(source, session(*bodies))
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][position]['status'] == 'FAIL'
++    assert result['iterations'][1 - position]['status'] == 'PASS'
++
++
++@pytest.mark.parametrize('payload', ['@@invalid@@', '', 'AAAA', 'UklGRg=='])
++def test_partial_or_invalid_base64_is_failure(source, payload):
++    body = evidence(source).replace(base64.b64encode(source.read_bytes()).decode(), payload, 1)
++    result = assess(source, session(evidence(source), body))
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][1]['wav'][0]['status'] == 'FAIL'
++
++
++def test_valid_wav_with_different_pcm_is_failure(source):
++    data = bytearray(source.read_bytes())
++    data[-1] ^= 1
++    body = evidence(source).replace(base64.b64encode(source.read_bytes()).decode(),
++                                    base64.b64encode(data).decode(), 1)
++    result = assess(source, session(body, evidence(source)))
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][0]['wav'][0]['exact_pcm_match'] is False
++
++
++@pytest.mark.parametrize('marker', [
++    'DMA350_MEMORY_PASS base=31000000 mode=memcpy', 'DMA350_MEMORY_EXIT=0',
++    'QEMU_I2S_DONE=0', 'QEMU_I2S_IRQ_BEFORE',
++    'WAV_EXIT=forward playback=0 capture=0', 'WAV_DATA_BEGIN=forward', 'WAV_DONE=0',
++])
++def test_duplicate_markers_do_not_hide_failed_or_partial_retries(source, marker):
++    body = evidence(source) + marker + '\n'
++    assert assess(source, session(body, evidence(source)))['status'] == 'FAIL'
++
++
++@pytest.mark.parametrize('old,new', [
++    ('QBOX_AUDIO_ITERATION_BEGIN=2 total=2', ''),
++    ('QBOX_AUDIO_ITERATION_END=2 rc=0', ''),
++    ('QBOX_AUDIO_ITERATION_END=1 rc=0', ''),
++    ('QBOX_AUDIO_ITERATION_BEGIN=2 total=2', 'QBOX_AUDIO_ITERATION_BEGIN=1 total=2'),
++    ('QBOX_AUDIO_ITERATION_BEGIN=2 total=2', 'QBOX_AUDIO_ITERATION_BEGIN=3 total=2'),
++    ('QBOX_AUDIO_ITERATION_BEGIN=2 total=2', 'QBOX_AUDIO_ITERATION_BEGIN=2 total=3'),
++    ('QBOX_AUDIO_ITERATION_END=1 rc=0', 'QBOX_AUDIO_ITERATION_END=2 rc=0'),
++    ('QBOX_AUDIO_ITERATION_END=2 rc=0', 'QBOX_AUDIO_ITERATION_END=2 rc=bad'),
++    ('QBOX_AUDIO_ITERATION_END=2 rc=0', 'QBOX_AUDIO_ITERATION_END=2 rc=256'),
++    ('QBOX_AUDIO_DONE=0', ''),
++    ('QBOX_AUDIO_DONE=0', 'QBOX_AUDIO_DONE=1'),
++    ('QBOX_AUDIO_DONE=0', 'QBOX_AUDIO_DONE=0\nQBOX_AUDIO_DONE=1'),
++])
++def test_missing_or_invalid_boundaries_and_outer_completion_fail(source, old, new):
++    text = session(evidence(source), evidence(source)).replace(old, new)
++    assert assess(source, text)['status'] == 'FAIL'
++
++
++def test_fail_fast_preserves_first_rc_and_rejects_unexecuted_iterations(source):
++    text = session(evidence(source), codes=[37], done=37).replace('total=1', 'total=3')
++    result = assess(source, text, count=3)
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][0]['exit_code'] == 37
++    assert result['iteration_errors'] == ['Expected 3 iterations, collected 1']
++
++
++@pytest.mark.parametrize('tests', ['memory', 'pcm', 'wav'])
++def test_selected_workload_keeps_original_skip_policy(source, tests):
++    body = evidence(source)
++    if tests == 'memory':
++        body = body.split('QEMU_I2S_IRQ_BEFORE')[0]
++    elif tests == 'pcm':
++        body = body[body.index('QEMU_I2S_IRQ_BEFORE'):body.index('WAV_EXIT=')]
++    else:
++        body = body[body.index('WAV_MODE='):]
++    assert assess(source, session(body, body), tests=tests)['status'] == 'PASS'
++
++
++@pytest.mark.parametrize('tests', ['all', 'wav'])
++@pytest.mark.parametrize('mode', ['dma', 'pio'])
++@pytest.mark.parametrize('replacement', ['', 'WAV_MODE=wrong',
++                                         'WAV_MODE=dma\nWAV_MODE=pio'])
++def test_requested_wav_mode_must_be_reported_once(source, tests, mode, replacement):
++    body = evidence(source, mode)
++    if tests == 'wav':
++        body = body[body.index('WAV_MODE='):]
++    body = body.replace(f'WAV_MODE={mode}', replacement)
++    result = assess(source, session(body, evidence(source, mode)), tests=tests, mode=mode)
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][0]['wav_mode_confirmed'] is False
++    assert all(item['status'] == 'FAIL' for item in result['iterations'][0]['wav'])
++    assert result['iterations'][1]['status'] == 'PASS'
++
++
++@pytest.mark.parametrize('requested,observed', [('pio', 'dma'), ('dma', 'pio')])
++def test_wav_only_cannot_qualify_opposite_driver_mode(source, requested, observed):
++    body = evidence(source, observed)
++    body = body[body.index('WAV_MODE='):]
++    result = assess(source, body + 'QBOX_AUDIO_DONE=0\n', count=1,
++                    tests='wav', mode=requested)
++    assert result['status'] == 'FAIL'
++    assert result['iterations'][0]['wav_modes'] == [observed]
++
++
++def test_default_one_keeps_script_and_wav_paths(source):
++    original = '#!/bin/sh\nset -eu\nexit 37\n'
++    assert repeat.wrap_suite(original, 1) == original
++    result = assess(source, evidence(source) + 'QBOX_AUDIO_DONE=0\n', count=1)
++    assert result['status'] == 'PASS'
++    assert result['i2s_pcm']['pcm_pass_count'] == 4
++    assert result['wav'][0]['path'] == str(source.parent / 'out/forward.wav')
++
++
++@pytest.mark.parametrize('value', ['0', '101', '-1', '1.5', 'bad'])
++def test_repeat_argument_rejects_out_of_range_values(value):
++    parser = argparse.ArgumentParser()
++    repeat.add_arguments(parser)
++    with pytest.raises(SystemExit):
++        parser.parse_args(['--repeat', value])
++
++
++@pytest.mark.parametrize('count', [1, 100])
++def test_repeat_argument_accepts_boundaries(count):
++    assert repeat.repeat_count(str(count)) == count
++
++
++@pytest.mark.parametrize('fail_fast', [False, True])
++@pytest.mark.parametrize('codes', [(0, 0, 0), (37, 0, 0), (0, 37, 81), (0, 0, 81)])
++def test_real_shell_repeats_same_suite_and_keeps_first_failure(tmp_path, fail_fast, codes):
++    body = '''#!/bin/sh
++set -eu
++number=0
++if test -f "$COUNTER"; then number=$(cat "$COUNTER"); fi
++number=$((number + 1))
++echo "$number" > "$COUNTER"
++echo original-suite-$number
++set -- $CODES
++shift "$((number - 1))"
++exit "$1"
++'''
++    script = repeat.wrap_suite(body, 3, fail_fast)
++    subprocess.run(['/bin/sh', '-n'], input=script, text=True, check=True)
++    result = subprocess.run(['/bin/sh'], input=script, text=True, capture_output=True,
++                            env={**os.environ, 'COUNTER': str(tmp_path / 'counter'),
++                                 'CODES': ' '.join(map(str, codes))}, timeout=5)
++    first_error = next((code for code in codes if code), 0)
++    expected_runs = codes.index(first_error) + 1 if fail_fast and first_error else len(codes)
++    assert result.returncode == first_error
++    assert (tmp_path / 'counter').read_text().strip() == str(expected_runs)
++    assert result.stdout.count('QBOX_AUDIO_ITERATION_BEGIN=') == expected_runs
++    slices, _ = repeat.split_iterations(result.stdout, 3)
++    assert [item['exit_code'] for item in slices] == list(codes[:expected_runs])
++
++
++@pytest.mark.parametrize('module_name', ['verify_qbox_full_audio', 'verify_qbox_linux_audio'])
++def test_both_launchers_accept_repeat_and_keep_existing_options(module_name):
++    module = importlib.import_module(module_name)
++    script = repeat.wrap_suite(module.guest_suite(1234), 3, True)
++    subprocess.run(['/bin/sh', '-n'], input=script, text=True, check=True)
++    help_text = subprocess.run([sys.executable, module.__file__, '--help'], check=True,
++                               capture_output=True, text=True, timeout=5).stdout
++    for option in ('--repeat', '--fail-fast', '--kernel', '--tests', '--kprobes'):
++        assert option in help_text
+diff --git a/tests/test_qbox_audio_uki.py b/tests/test_qbox_audio_uki.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..7b4bdac4d40552b7e1877070d8aec97fabbf6005
+--- /dev/null
++++ b/tests/test_qbox_audio_uki.py
+@@ -0,0 +1,156 @@
++"""Private UKI kernel replacement preserves the existing BSP payloads."""
++
++import hashlib
++from pathlib import Path
++import shutil
++import struct
++import subprocess
++import sys
++
++import pytest
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++from scripts.test import qbox_audio_uki as helper
++
++
++@pytest.fixture
++def uki(tmp_path):
++    sections = [('.text', b'stub'), ('.linux', b'old kernel'),
++                ('.initrd', b'original initrd'), ('.cmdline', b'original args\0'),
++                ('.dtb', b'original dtb'), ('.uname', b'6.12\0')]
++    data = bytearray(1024 + len(sections) * 512)
++    data[:2] = b'MZ'
++    struct.pack_into('<I', data, 60, 128)
++    data[128:132] = b'PE\0\0'
++    struct.pack_into('<HHIIIHH', data, 132, 0xAA64, len(sections), 0, 0, 0, 240, 0x2022)
++    opt = 152
++    struct.pack_into('<H', data, opt, 0x20b)
++    struct.pack_into('<I', data, opt + 16, 4096)
++    struct.pack_into('<Q', data, opt + 24, 0x140000000)
++    struct.pack_into('<II', data, opt + 32, 4096, 512)
++    struct.pack_into('<II', data, opt + 56, 7 * 4096, 1024)
++    struct.pack_into('<H', data, opt + 68, 10)
++    struct.pack_into('<I', data, opt + 108, 16)
++    for index, (name, payload) in enumerate(sections):
++        header, start = opt + 240 + index * 40, 1024 + index * 512
++        data[header:header + 8] = name.encode().ljust(8, b'\0')
++        struct.pack_into('<IIII', data, header + 8, len(payload),
++                         (index + 1) * 4096, 512, start)
++        struct.pack_into('<I', data, header + 36, 0x40000040)
++        data[start:start + len(payload)] = payload
++    path = tmp_path / 'private.efi'
++    path.write_bytes(data)
++    return path
++
++
++@pytest.fixture
++def kernel(tmp_path):
++    path = tmp_path / 'Image'
++    path.write_bytes(b'new kernel' * 10000)
++    return path
++
++
++@pytest.fixture
++def objcopy():
++    try:
++        return helper._objcopy()
++    except ValueError:
++        pytest.skip('AArch64 objcopy with PE VMA support not installed')
++
++
++def test_growing_kernel_preserves_sections_and_source(uki, kernel, objcopy, tmp_path):
++    source = tmp_path / 'source.efi'
++    shutil.copyfile(uki, source)
++    original, kernel_original = source.read_bytes(), kernel.read_bytes()
++    uki.chmod(0o640)
++    result = helper.replace_kernel(uki, kernel)
++    before, after = result['before'], result['after']
++    assert result['kernel_sha256'] == hashlib.sha256(kernel_original).hexdigest()
++    assert after['kernel_sha256'] == result['kernel_sha256']
++    assert after['sections']['.linux']['size'] == len(kernel_original)
++    assert after['sections']['.linux']['rva'] >= max(
++        section['rva'] + max(section['size'], section['raw_size'])
++        for name, section in before['sections'].items() if name != '.linux')
++    assert set(result['preserved_sections']) == set(before['sections']) - {'.linux'}
++    for name, evidence in result['preserved_sections'].items():
++        section = after['sections'][name]
++        raw = uki.read_bytes()[section['offset']:section['offset'] + section['raw_size']]
++        assert evidence['raw_sha256'] == hashlib.sha256(raw).hexdigest()
++        assert section['sha256'] == before['sections'][name]['sha256']
++    assert not result['secure_boot']
++    assert source.read_bytes() == original
++    assert kernel.read_bytes() == kernel_original
++    assert uki.stat().st_mode & 0o777 == 0o640
++    assert not list(tmp_path.glob('.qbox-audio-uki-*'))
++
++
++@pytest.mark.parametrize('kind', ['authenticode', 'pcrsig'])
++def test_signed_images_rejected_without_modification(uki, kernel, kind):
++    data = bytearray(uki.read_bytes())
++    if kind == 'authenticode':
++        struct.pack_into('<II', data, 152 + 144, 1024, 32)
++    else:
++        data[392 + 4 * 40:392 + 4 * 40 + 8] = b'.pcrsig\0'
++    uki.write_bytes(data)
++    with pytest.raises(ValueError, match='[Ss]igned'):
++        helper.replace_kernel(uki, kernel)
++    assert uki.read_bytes() == data
++
++
++def test_same_input_and_symlink_destination_rejected(uki, kernel, tmp_path):
++    original = uki.read_bytes()
++    with pytest.raises(ValueError, match='differ'):
++        helper.replace_kernel(uki, uki)
++    link = tmp_path / 'linked.efi'
++    link.symlink_to(uki)
++    with pytest.raises(ValueError, match='symlink'):
++        helper.replace_kernel(link, kernel)
++    assert uki.read_bytes() == original
++
++
++def test_empty_kernel_rejected_without_modification(uki, kernel):
++    original = uki.read_bytes()
++    kernel.write_bytes(b'')
++    with pytest.raises(ValueError, match='nonempty'):
++        helper.replace_kernel(uki, kernel)
++    assert uki.read_bytes() == original
++
++
++def test_objcopy_failure_is_atomic(uki, kernel, monkeypatch, tmp_path):
++    original = uki.read_bytes()
++    monkeypatch.setattr(helper, '_objcopy', lambda: '/no/objcopy')
++
++    def fail(*args, **kwargs):
++        raise subprocess.CalledProcessError(1, args[0])
++
++    monkeypatch.setattr(helper.subprocess, 'run', fail)
++    with pytest.raises(subprocess.CalledProcessError):
++        helper.replace_kernel(uki, kernel)
++    assert uki.read_bytes() == original
++    assert not list(tmp_path.glob('.qbox-audio-uki-*'))
++
++
++@pytest.mark.parametrize('mutation', ['initrd', 'padding', 'kernel', 'source_kernel'])
++def test_validation_failure_is_atomic(uki, kernel, objcopy, monkeypatch, mutation):
++    original = uki.read_bytes()
++    run = helper.subprocess.run
++    monkeypatch.setattr(helper, '_objcopy', lambda: objcopy)
++
++    def mutate(command, **kwargs):
++        result = run(command, **kwargs)
++        output = Path(command[-1])
++        if mutation == 'source_kernel':
++            kernel.write_bytes(b'concurrent kernel change')
++        else:
++            metadata = helper.inspect_uki(output)
++            section = metadata['sections']['.linux' if mutation == 'kernel' else '.initrd']
++            offset = section['offset'] + (section['size'] if mutation == 'padding' else 0)
++            data = bytearray(output.read_bytes())
++            data[offset] ^= 1
++            output.write_bytes(data)
++        return result
++
++    monkeypatch.setattr(helper.subprocess, 'run', mutate)
++    with pytest.raises(ValueError, match='changed|differs'):
++        helper.replace_kernel(uki, kernel)
++    assert uki.read_bytes() == original
