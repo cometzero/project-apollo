@@ -17,6 +17,7 @@ import threading
 import time
 import wave
 
+from qbox_audio_health import apply_audio_checks
 from verify_qemu_i2s import ROOT, assess
 from verify_qemu_i2s_wav import digest, guest_script, pcm
 
@@ -29,6 +30,15 @@ ip addr replace 10.0.2.15/24 dev eth0
 for file in memory.sh pcm.sh wav.sh; do
     wget -q -O /tmp/$file http://10.0.2.2:{port}/$file
 done
+echo AUDIO_DT_BEGIN
+for base in 30200000 30210000; do
+    path=/sys/firmware/devicetree/base/soc/i2s@$base
+    test -d "$path" || exit 1
+    if test -f "$path/dmas"; then selected=dma; else selected=pio; fi
+    echo "AUDIO_DT=$base mode=$selected"
+    test "$selected" = __MODE__ || exit 1
+done
+echo AUDIO_DT_END
 set +e
 timeout 180 sh /tmp/memory.sh
 memory_rc=$?
@@ -50,6 +60,7 @@ test "$memory_rc" -eq 0 && test "$pcm_rc" -eq 0 && test "$wav_rc" -eq 0
 
 
 def run_mode(args, output, serve, mode, port):
+    (serve / 'suite.sh').write_text((serve / 'suite-template.sh').read_text().replace('__MODE__', mode))
     out = output / mode
     command = [str(ROOT / 'run_qbox_linux.sh'), '--bsp', '--headless',
                '--out-dir', str(out), '--timeout', str(args.timeout)]
@@ -151,6 +162,7 @@ def run_mode(args, output, serve, mode, port):
         result['artifacts'] = {key: {'path': path, 'sha256': digest(path)} for key, path in paths.items()}
     if (out / 'result.json').exists():
         result['launcher'] = json.loads((out / 'result.json').read_text())
+    apply_audio_checks(result, text)
     (output / f'{mode}-result.json').write_text(json.dumps(result, indent=2)+'\n')
     return result
 
@@ -186,7 +198,7 @@ def main():
             suite = suite.split('echo QEMU_I2S_IRQ_BEFORE')[0] + 'exit "$memory_rc"\n'
         elif args.tests == 'wav':
             suite = suite.split('set +e')[0] + 'set +e\ntimeout 180 sh /tmp/wav.sh\nrc=$?\necho WAV_DONE=$rc\nexit "$rc"\n'
-        (serve / 'suite.sh').write_text(suite)
+        (serve / 'suite-template.sh').write_text(suite)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         try:

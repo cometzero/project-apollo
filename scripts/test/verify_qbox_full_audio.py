@@ -21,6 +21,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "run"))
 from autosd_uki import inspect_uki
 
+from qbox_audio_health import apply_audio_checks
 from verify_qemu_i2s import ROOT, assess
 from verify_qemu_i2s_wav import digest, guest_script, pcm
 
@@ -215,6 +216,7 @@ def run_mode(args, output, serve, mode, port):
     result['console_logs'] = [str(path) for path in sorted(out.glob('*.log'))]
     if (out / 'result.json').exists():
         result['launcher'] = json.loads((out / 'result.json').read_text())
+    apply_audio_checks(result, text)
     (output / f'{mode}-result.json').write_text(json.dumps(result, indent=2)+'\n')
     return result
 
