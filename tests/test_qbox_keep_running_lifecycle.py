@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import json
 import os
 from pathlib import Path
 import signal
@@ -76,6 +77,50 @@ def test_keep_running_timeout_still_terminates_child(tmp_path, monkeypatch):
     proc.terminate.assert_called_once()
     proc.kill.assert_called_once()
     assert result.call_args.kwargs["blocker"] == "child_keep_running_timeout"
+
+
+@pytest.mark.parametrize(
+    "keep,foreground,build",
+    [(True, True, False), (True, False, False), (False, True, False),
+     (True, True, True)],
+)
+@pytest.mark.parametrize("passed", [True, False])
+def test_main_reads_the_result_written_by_its_child(
+    tmp_path, monkeypatch, keep, foreground, build, passed
+):
+    module = load_runner()
+    args = argparse.Namespace(
+        out_dir=tmp_path, dry_run=False, auto_provision_rse_otp=False,
+        check_only=False, keep_running_after_pass=keep,
+        foreground_runtime=foreground, build_only=build, si_cl0_command=None,
+    )
+    monkeypatch.setattr(module, "parse_args", lambda _: args)
+    monkeypatch.setattr(module, "resolved_artifacts", lambda _: {})
+    for name in ("ensure_default_debug_manifest", "prepare_si_cl1_boot",
+                 "auto_provision_rse_otp", "copy_child_logs"):
+        monkeypatch.setattr(module, name, lambda *_: None)
+    monkeypatch.setattr(module, "missing_required", lambda *_: [])
+    expected = {"passed": passed, "blocker": None if passed else "probe_failed"}
+    filename = (
+        module.RD_ASPEN_CHILD_RESULT
+        if keep and foreground and not build else "result.json"
+    )
+
+    def run_child(*_):
+        # A stale outer result must never override the foreground child's result.
+        (tmp_path / "result.json").write_text(json.dumps({
+            "passed": not passed, "blocker": "stale_result",
+        }))
+        (tmp_path / filename).write_text(json.dumps(expected))
+        return (0 if passed else 1), ["dummy-child"]
+
+    monkeypatch.setattr(module, "run_child", run_child)
+    result = Mock(return_value=0 if passed else 1)
+    monkeypatch.setattr(module, "write_result", result)
+    assert module.main([]) == (0 if passed else 1)
+    assert result.call_args.kwargs["child_status"] == expected
+    assert result.call_args.kwargs["blocker"] == expected["blocker"]
+    assert json.loads((tmp_path / module.RD_ASPEN_CHILD_RESULT).read_text()) == expected
 
 
 @pytest.mark.skipif(os.name != "posix", reason="POSIX process-group lifecycle")

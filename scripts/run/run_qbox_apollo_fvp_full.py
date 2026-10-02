@@ -3028,9 +3028,19 @@ def main(argv: list[str] | None = None) -> int:
 
     child_rc, command = run_child(args, artifacts)
     child_result = args.out_dir / "result.json"
+    retained_child_result = args.out_dir / RD_ASPEN_CHILD_RESULT
+    if (
+        args.keep_running_after_pass
+        and args.foreground_runtime
+        and not args.build_only
+        and not args.si_cl0_command
+    ):
+        # Foreground mode waits for the child to write its dedicated result;
+        # it does not synthesize result.json while the runtime is still alive.
+        child_result = retained_child_result
     child_status = read_json(child_result)
-    if child_status:
-        shutil.copy2(child_result, args.out_dir / RD_ASPEN_CHILD_RESULT)
+    if child_status and child_result != retained_child_result:
+        shutil.copy2(child_result, retained_child_result)
     copy_child_logs(args)
     blocker = child_status.get("blocker") if child_status else f"child_failed:{child_rc}"
     if child_status and not child_status.get("passed") and not blocker and child_rc:
