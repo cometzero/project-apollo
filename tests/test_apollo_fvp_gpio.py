@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,7 +66,9 @@ def test_qvp_kernel_enables_smd_pl061() -> None:
 def test_qvp_bsp_installs_gpio_tools() -> None:
     image = QVP_BSP_IMAGE.read_text(encoding="utf-8")
 
-    assert 'PACKAGE_INSTALL:append:apollo-qvp = " libgpiod-tools"' in image
+    packages = re.search(r'^PACKAGE_INSTALL:append:apollo-qvp\s*=\s*"([^"]*)"', image, re.MULTILINE)
+    assert packages is not None
+    assert "libgpiod-tools" in packages.group(1).split()
 
 
 def test_qvp_tfm_enables_gpio_self_test_and_ap_atu() -> None:
