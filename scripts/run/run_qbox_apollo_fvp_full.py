@@ -212,7 +212,7 @@ FULL_SYSTEM_SI_SPLIT_QEMU_DEFAULTS = (
     (
         "platform.si_cl0_qemu_inst.tcg_mode",
         "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
-        "SINGLE",
+        "MULTI",
     ),
     (
         "platform.si_cl0_qemu_inst.sync_policy",
@@ -1487,7 +1487,7 @@ def write_result(
             args,
             "platform.si_cl0_qemu_inst.tcg_mode",
             "QBOX_APOLLO_FULL_SI_CL0_TCG_MODE",
-            "SINGLE",
+            "MULTI",
         ).upper(),
         "si_cl1_tcg_mode": effective_platform_param(
             args,
