@@ -64,6 +64,8 @@ def run_mode(args, output, serve, mode, port):
     out = output / mode
     command = [str(ROOT / 'run_qbox_linux.sh'), '--bsp', '--headless',
                '--out-dir', str(out), '--timeout', str(args.timeout)]
+    if args.conf:
+        command += ['--conf', str(args.conf)]
     if mode == 'pio':
         tree = output / 'pio.dtb'
         shutil.copyfile(args.dtb, tree)
@@ -156,8 +158,8 @@ def run_mode(args, output, serve, mode, port):
             paths[name] = str(Path(provider['module_dir']) / (name + '.so'))
         paths['libqemu'] = str(Path(config['sysroot']['recipe_sysroot_native']) /
                               'usr/lib/libqemu-system-aarch64.so')
-        paths['platform'] = str(ROOT / 'hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-linux.lua')
-        paths['platform_common'] = str(ROOT / 'hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-common.lua')
+        paths['platform'] = plan['command'][plan['command'].index('-l') + 1]
+        paths['platform_common'] = str(Path(paths['platform']).parent / 'apollo-qvp-common.lua')
         result['audio_backend'] = 'qemu-components'
         result['artifacts'] = {key: {'path': path, 'sha256': digest(path)} for key, path in paths.items()}
     if (out / 'result.json').exists():
@@ -170,6 +172,7 @@ def run_mode(args, output, serve, mode, port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out-dir', type=Path, required=True)
+    parser.add_argument('--conf', type=Path, help='Linux Lua entry, including an installed provider copy')
     parser.add_argument('--dtb', type=Path, default=ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/apollo-qvp.dtb')
     parser.add_argument('--timeout', type=float, default=900)
     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
