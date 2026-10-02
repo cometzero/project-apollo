@@ -261,6 +261,7 @@ def test_monitor_uses_default_dashboard_port(tmp_path: Path) -> None:
     assert full_runner.full_system_child_environment(args) == {
         "QBOX_APOLLO_MONITOR": "true",
         "QBOX_APOLLO_MONITOR_PORT": "18080",
+        "QBOX_APOLLO_MONITOR_BIND_ADDRESS": "127.0.0.1",
     }
 
 
@@ -276,6 +277,7 @@ def test_monitor_port_enables_dashboard(tmp_path: Path) -> None:
     assert full_runner.full_system_child_environment(args) == {
         "QBOX_APOLLO_MONITOR": "true",
         "QBOX_APOLLO_MONITOR_PORT": "19090",
+        "QBOX_APOLLO_MONITOR_BIND_ADDRESS": "127.0.0.1",
     }
 
 
