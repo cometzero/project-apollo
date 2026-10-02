@@ -734,7 +734,7 @@ def default_artifacts(artifact_root: Path) -> dict[str, Path]:
         "rootfs": boot / f"{machine}-local-disk.img",
         "efi_capsule_disk": boot / "boot-fat.img",
         "provisioning_bundle": firmware / "combined_provisioning_message.bin",
-        "ap_dtb": boot / f"{machine}.dtb",
+        "ap_dtb": boot / ("apollo-qvp-saturn-v.dtb" if machine == "apollo-qvp" else f"{machine}.dtb"),
         "rse_symbols": artifact_root / "debug/symbols.json",
         "si_cl0_image": firmware / "si0_ramfw.bin",
         "si_cl1_image": firmware / "zephyr-demos-cl1.bin",

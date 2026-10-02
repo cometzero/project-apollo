@@ -123,7 +123,7 @@ def create_yocto_tree(
         deploy / "ap-flash-image.img",
         deploy / "bl2.elf",
         deploy / "combined_provisioning_message.bin",
-        deploy / f"{machine}.dtb",
+        deploy / ("apollo-qvp-saturn-v.dtb" if machine == "apollo-qvp" else f"{machine}.dtb"),
         deploy / "si0_ramfw.bin",
         deploy / "zephyr-demos-cl1.bin",
         deploy / "zephyr-demos-cl1.elf",
@@ -509,7 +509,7 @@ def test_run_qbox_yocto_qvp_uses_qboxconf_sysroot_defaults(tmp_path: Path) -> No
     assert "build/qbox-apollo-qvp/yocto-apollo-qvp-" in result.stdout
     assert "nexios-image-apollo-qvp.wic" in result.stdout
     assert "efi-capsule-update-disk-image-apollo-qvp.img" in result.stdout
-    assert "apollo-qvp.dtb" in result.stdout
+    assert "apollo-qvp-saturn-v.dtb" in result.stdout
     assert "--rse-symbols" not in argv
     assert "--no-post-login-probe" in argv
     assert "--post-login-probe" not in argv

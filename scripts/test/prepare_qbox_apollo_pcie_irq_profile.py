@@ -236,7 +236,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fvp-reference-gate", required=True, type=Path)
     parser.add_argument("--base-disk", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.wic")
     parser.add_argument(
-        "--base-dtb", type=Path, default=DEFAULT_DEPLOY / "apollo-qvp.dtb"
+        "--base-dtb", type=Path, default=DEFAULT_DEPLOY / "apollo-qvp-saturn-v.dtb"
     )
     parser.add_argument("--base-initramfs", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.cpio.gz")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUT)

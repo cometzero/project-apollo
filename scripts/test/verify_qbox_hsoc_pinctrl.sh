@@ -416,7 +416,7 @@ while [ "$bank" -lt 14 ]; do
 done
 [ "$total_pins" = 56 ] || die 19 "unexpected-total-pins-$total_pins"
 
-# Default peripheral states from pinctrl.dtsi.
+# Default peripheral states selected by the Saturn-V board DT.
 if [ ! -d /sys/kernel/debug/pinctrl ]; then
     mount -t debugfs debugfs /sys/kernel/debug || die 41 'debugfs-unavailable'
 fi

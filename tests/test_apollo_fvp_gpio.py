@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+import subprocess
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,11 +18,8 @@ QVP_HW_CONFIG = (
     / "hsoc-stack/components/primary_compute/trusted-firmware-a/fdts/"
     "apollo_qvp_fvp.dts"
 )
-QVP_LINUX_DTS = (
-    ROOT
-    / "hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/"
-    "apollo-qvp.dtsi"
-)
+LINUX = ROOT / "hsoc-stack/components/primary_compute/linux"
+QVP_LINUX_DTS = LINUX / "arch/arm64/boot/dts/hsoc/apollo-qvp-saturn-v.dts"
 QVP_DEFCONFIG = (
     ROOT
     / "hsoc-stack/components/primary_compute/linux/arch/arm64/configs/"
@@ -53,13 +53,30 @@ def test_qvp_hw_config_exposes_smd_pl061_to_linux() -> None:
     assert "interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;" in hw_config
 
 
-def test_qvp_kernel_enables_smd_pl061() -> None:
-    dts = QVP_LINUX_DTS.read_text(encoding="utf-8")
+@pytest.fixture(scope="module")
+def qvp_linux_dtb(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    output = tmp_path_factory.mktemp("qvp-gpio") / "apollo-qvp-saturn-v.dtb"
+    source = subprocess.run(
+        ["cpp", "-undef", "-x", "assembler-with-cpp", "-I", str(LINUX / "include"),
+         str(QVP_LINUX_DTS)], check=True, capture_output=True,
+    ).stdout
+    subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", str(output)],
+                   input=source, check=True, capture_output=True)
+    return output
+
+
+def test_qvp_kernel_enables_smd_pl061(qvp_linux_dtb: Path) -> None:
     defconfig = QVP_DEFCONFIG.read_text(encoding="utf-8")
 
-    assert "gpio@40750000" in dts
-    assert 'compatible = "arm,pl061", "arm,primecell";' in dts
-    assert "interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;" in dts
+    def prop(name: str, kind: str = "s") -> str:
+        return subprocess.check_output(
+            ["fdtget", "-t", kind, str(qvp_linux_dtb), "/soc/gpio@40750000", name],
+            text=True,
+        ).strip()
+
+    assert prop("compatible") == "arm,pl061 arm,primecell"
+    assert tuple(int(cell, 16) for cell in prop("interrupts", "x").split()) == (0, 193, 4)
+    assert prop("status") == "okay"
     assert "CONFIG_GPIO_PL061=y" in defconfig
 
 

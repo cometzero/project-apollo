@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import re
 import subprocess
 
 import jsonschema
@@ -10,6 +11,25 @@ import pytest
 from scripts.test import gic720ae_pcie_irq_validation_contract as contract
 from scripts.test import gic720ae_pcie_irq_validation_provenance as provenance
 from scripts.test import gic720ae_pcie_irq_validation_repository as repository
+from scripts.test import gic720ae_pcie_irq_validation_inventory as inventory
+
+
+def test_linux_dtb_provenance_hashes_every_included_source() -> None:
+    root = Path(__file__).resolve().parents[1] / "hsoc-stack/components/primary_compute/linux"
+    pending = [root / inventory.LINUX_DT_SOURCES[0]]
+    visited = set()
+    while pending:
+        source = pending.pop().resolve(strict=True)
+        if source in visited:
+            continue
+        visited.add(source)
+        includes = re.findall(r'^\s*#include\s*([<"])([^>"]+)[>"]', source.read_text(), re.MULTILINE)
+        for delimiter, name in includes:
+            pending.append((source.parent if delimiter == '"' else root / "include") / name)
+    relative = {path.relative_to(root).as_posix() for path in visited}
+    assert relative == set(inventory.LINUX_DT_SOURCES)
+    assert all("hsoc-stack/components/primary_compute/linux/" + path in provenance.SOURCE_PATHS
+               for path in relative)
 
 
 def git(repo: Path, *arguments: str) -> None:

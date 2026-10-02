@@ -173,7 +173,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out-dir', type=Path, required=True)
     parser.add_argument('--conf', type=Path, help='Linux Lua entry, including an installed provider copy')
-    parser.add_argument('--dtb', type=Path, default=ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/apollo-qvp.dtb')
+    parser.add_argument('--dtb', type=Path, default=ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/apollo-qvp-saturn-v.dtb')
     parser.add_argument('--timeout', type=float, default=900)
     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
     parser.add_argument('--tests', choices=('all', 'memory', 'wav'), default='all')

@@ -516,7 +516,7 @@ def main() -> int:
     kernel = required((args.uboot or deploy / "u-boot-apollo-qemu.bin") if args.uki
                       else (args.kernel or deploy / "Image"), "Apollo U-Boot" if args.uki else "Linux Image")
     dtb = required(
-        args.dtb or Path(env.get("QBOXCONF_IMAGE_AP_DTB") or deploy / "apollo-qvp.dtb"),
+        args.dtb or Path(env.get("QBOXCONF_IMAGE_AP_DTB") or deploy / "apollo-qvp-saturn-v.dtb"),
         "Linux DTB",
     )
     initrd_image = "nexios-bsp-initramfs" if args.bsp else "nexios-initramfs-image"

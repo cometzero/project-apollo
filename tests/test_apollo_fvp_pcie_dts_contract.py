@@ -109,12 +109,12 @@ def compiled_fvp_dtbs(tmp_path_factory: pytest.TempPathFactory) -> tuple[Path, P
 def compiled_qvp_dtb(tmp_path_factory: pytest.TempPathFactory) -> Path:
     out = tmp_path_factory.mktemp("apollo-qvp-smmu-dts")
     return _compile(
-        LINUX / "arch/arm64/boot/dts/arm/apollo-qvp.dts",
-        out / "linux-apollo-qvp.dtb",
+        LINUX / "arch/arm64/boot/dts/hsoc/apollo-qvp-saturn-v.dts",
+        out / "linux-apollo-qvp-saturn-v.dtb",
         (
             LINUX / "include",
             LINUX / "scripts/dtc/include-prefixes",
-            LINUX / "arch/arm64/boot/dts/arm",
+            LINUX / "arch/arm64/boot/dts/hsoc",
         ),
     )
 

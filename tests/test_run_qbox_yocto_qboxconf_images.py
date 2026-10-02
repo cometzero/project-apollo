@@ -53,7 +53,7 @@ def create_deploy_artifacts(deploy: Path, work: Path) -> None:
         deploy / "ap-flash-image.img",
         deploy / "bl2.elf",
         deploy / "combined_provisioning_message.bin",
-        deploy / "apollo-qvp.dtb",
+        deploy / "apollo-qvp-saturn-v.dtb",
         deploy / "si0_ramfw.bin",
         deploy / "zephyr-demos-cl1.bin",
         deploy / "zephyr-demos-cl1.elf",
@@ -269,3 +269,26 @@ def test_explicit_missing_qboxconf_fails_clearly(tmp_path: Path) -> None:
     # Then: it fails on that file instead of falling back to defaults.
     assert result.returncode != 0
     assert f"qboxconf not found: {missing}" in result.stderr
+
+
+def test_dtb_manifest_and_explicit_override_precede_canonical_fallback(tmp_path: Path) -> None:
+    yocto_build, deploy, _work, _imgdeploy = create_tree(tmp_path)
+    rootfs = deploy / "nexios-image-apollo-qvp.wic"
+    touch_file(rootfs)
+    legacy = deploy / "apollo-qvp.dtb"
+    legacy.symlink_to("apollo-qvp-saturn-v.dtb")
+    write_qboxconf(
+        deploy / "nexios-image-apollo-qvp.qboxconf", yocto_build,
+        {"wic": rootfs.name, "dtb": legacy.name},
+    )
+    result = run_script(yocto_build)
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_argv(result.stdout)
+    assert argv[argv.index("--ap-dtb") + 1] == str(legacy)
+
+    explicit = deploy / "profile.dtb"
+    touch_file(explicit)
+    result = run_script(yocto_build, args=["--ap-dtb", str(explicit)])
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_argv(result.stdout)
+    assert argv[argv.index("--ap-dtb") + 1] == str(explicit)

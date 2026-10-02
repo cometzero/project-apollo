@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from typing import Final
 
+LINUX_DT_SOURCES: Final = (
+    "arch/arm64/boot/dts/hsoc/apollo-qvp-saturn-v.dts",
+    "arch/arm64/boot/dts/hsoc/apollo-qvp.dtsi",
+    "arch/arm64/boot/dts/hsoc/apollo.dtsi",
+    "arch/arm64/boot/dts/hsoc/apollo-pinctrl.dtsi",
+    "include/dt-bindings/interrupt-controller/arm-gic.h",
+    "include/dt-bindings/interrupt-controller/irq.h",
+    "include/dt-bindings/gpio/gpio.h",
+    "include/dt-bindings/pinctrl/hsoc.h",
+)
+
 SOURCE_PATHS: Final = (
     "scripts/test/run_gic720ae_pcie_irq_validation.py",
     "scripts/test/run_gic720ae_pcie_irq_validation_task9.py",
@@ -35,7 +46,7 @@ SOURCE_PATHS: Final = (
     "tests/test_gic720ae_pcie_irq_validation_interrupt.py",
     "tests/test_gic720ae_pcie_irq_validation_provenance.py",
     "tests/test_qbox_apollo_pcie_irq_task9_ap_map.py",
-)
+) + tuple("hsoc-stack/components/primary_compute/linux/" + path for path in LINUX_DT_SOURCES)
 REPOSITORIES: Final = {
     "superproject": (
         ".",
@@ -53,8 +64,13 @@ REPOSITORIES: Final = {
         (
             "arch/arm64/boot/dts/arm/apollo-fvp.dts",
             "arch/arm64/boot/dts/arm/apollo-fvp.dtsi",
+            "arch/arm64/boot/dts/Makefile",
+            "arch/arm64/boot/dts/arm/Makefile",
             "arch/arm64/boot/dts/arm/apollo-qvp.dts",
-            "arch/arm64/boot/dts/arm/apollo-qvp.dtsi",
+            "arch/arm64/boot/dts/hsoc",
+            "include/dt-bindings/interrupt-controller",
+            "include/dt-bindings/gpio/gpio.h",
+            "include/dt-bindings/pinctrl/hsoc.h",
         ),
     ),
     "trusted_firmware_a": (

@@ -1270,7 +1270,11 @@ fi
 if [[ -n "${AP_DTB_OVERRIDE}" ]]; then
     AP_DTB="$(resolve_file "AP device tree" "${AP_DTB_OVERRIDE}")"
 else
-    AP_DTB="$(resolve_file "AP device tree" "${QBOXCONF_IMAGE_AP_DTB:-}" "${DEPLOY_DIR}/${MACHINE}.dtb")"
+    AP_DTB_BASENAME="${MACHINE}.dtb"
+    if [[ "${MACHINE}" == "apollo-qvp" ]]; then
+        AP_DTB_BASENAME="apollo-qvp-saturn-v.dtb"
+    fi
+    AP_DTB="$(resolve_file "AP device tree" "${QBOXCONF_IMAGE_AP_DTB:-}" "${DEPLOY_DIR}/${AP_DTB_BASENAME}")"
 fi
 RSE_SYMBOLS=""
 if [[ -n "${RSE_SYMBOLS_OVERRIDE:-}" ]]; then

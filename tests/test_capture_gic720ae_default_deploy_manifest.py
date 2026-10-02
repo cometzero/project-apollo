@@ -25,7 +25,7 @@ def populate(root: Path, suffix: str) -> None:
     root.mkdir()
     (root / f"Image-{suffix}.bin").write_bytes(b"kernel")
     (root / "Image").symlink_to(f"Image-{suffix}.bin")
-    (root / "apollo-qvp.dtb").write_bytes(b"dtb")
+    (root / "apollo-qvp-saturn-v.dtb").write_bytes(b"dtb")
     (root / f"nexios-bsp-initramfs-{suffix}.wic").write_bytes(b"wic")
     (root / "nexios-bsp-initramfs-apollo-qvp.wic").symlink_to(
         f"nexios-bsp-initramfs-{suffix}.wic"
@@ -49,7 +49,7 @@ def test_complete_instance_detects_any_default_deploy_change(tmp_path: Path) -> 
         "--root", str(deploy), "--mode", "complete-instance",
         "--schema", str(SCHEMA), "--output", str(before),
     ).returncode == 0
-    (deploy / "apollo-qvp.dtb").write_bytes(b"changed")
+    (deploy / "apollo-qvp-saturn-v.dtb").write_bytes(b"changed")
     after = tmp_path / "after.json"
     result = run_capture(
         "--root", str(deploy), "--mode", "complete-instance",

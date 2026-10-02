@@ -61,7 +61,7 @@ def create_qbox_bsp_tree(tmp_path: Path) -> Path:
         deploy / "ap-flash-image.img",
         deploy / "bl2.elf",
         deploy / "combined_provisioning_message.bin",
-        deploy / "apollo-qvp.dtb",
+        deploy / "apollo-qvp-saturn-v.dtb",
         deploy / "si0_ramfw.bin",
         deploy / "zephyr-demos-cl1.bin",
         deploy / "zephyr-demos-cl1.elf",

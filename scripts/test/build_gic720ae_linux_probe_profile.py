@@ -187,7 +187,7 @@ def write_override(
     lines.append('INSANE_SKIP:openvswitch-src += "buildpaths"')
     lines.append(f'IMAGE_INSTALL:append = " {args.package}"')
     lines.append(
-        f'KERNEL_DEVICETREE:pn-{args.image} = "apollo-qvp.dtb"'
+        f'KERNEL_DEVICETREE:pn-{args.image} = "apollo-qvp-saturn-v.dtb"'
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -385,8 +385,8 @@ def main() -> int:
             bitbake + ["linux-yocto-rt", "-c", "deploy"],
             workspace, environment, logs / "kernel-deploy.log", args.timeout,
         )
-        base_dtb = args.deploy_dir_image / "apollo-qvp.dtb"
-        base_copy = args.output_root / "base-apollo-qvp.dtb"
+        base_dtb = args.deploy_dir_image / "apollo-qvp-saturn-v.dtb"
+        base_copy = args.output_root / "base-apollo-qvp-saturn-v.dtb"
         copy_artifact(base_dtb, base_copy)
         interrupt_parent = run(
             ["fdtget", "-t", "x", str(base_copy), "/", "interrupt-parent"],

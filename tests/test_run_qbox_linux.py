@@ -310,7 +310,7 @@ def test_tmux_layout_failure_cleans_up_new_session(monkeypatch, tmp_path):
 def make_deploy(monkeypatch, tmp_path):
     for name in (
         "Image",
-        "apollo-qvp.dtb",
+        "apollo-qvp-saturn-v.dtb",
         "platforms-vp",
         "platform.lua",
         "nexios-image-apollo-qvp.qboxconf",
@@ -349,6 +349,29 @@ def test_product_uses_verity_initramfs_and_readonly_slot(monkeypatch, tmp_path, 
     )
     assert env["QBOX_LINUX_BOOTARGS"].endswith("rootwait root=PARTLABEL=rootro_a ro")
     assert plan["source_rootfs"] == str(tmp_path / "nexios-image-apollo-qvp.wic")
+
+
+@pytest.mark.parametrize("selection", ["canonical", "manifest", "explicit"])
+def test_dtb_selection_preserves_override_and_manifest_priority(
+    monkeypatch, tmp_path, capsys, selection,
+):
+    argv = make_deploy(monkeypatch, tmp_path)
+    canonical = tmp_path / "apollo-qvp-saturn-v.dtb"
+    legacy = tmp_path / "apollo-qvp.dtb"
+    legacy.symlink_to(canonical.name)
+    explicit = tmp_path / "profile.dtb"
+    explicit.touch()
+    environment = runner.provider_environment(None, None)
+    if selection != "canonical":
+        environment["QBOXCONF_IMAGE_AP_DTB"] = str(legacy)
+    monkeypatch.setattr(runner, "provider_environment", lambda *args: environment)
+    if selection == "explicit":
+        argv += ["--dtb", str(explicit)]
+    monkeypatch.setattr(sys, "argv", argv)
+
+    assert runner.main() == 0
+    selected = json.loads(capsys.readouterr().out)["source_dtb"]
+    assert selected == str({"canonical": canonical, "manifest": legacy, "explicit": explicit}[selection])
 
 
 def test_dashboard_ssh_is_pinned_to_loopback(monkeypatch, tmp_path, capsys):

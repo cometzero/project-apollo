@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +12,16 @@ from scripts.run.qbox_validation.registry import (
     resolve_profile,
 )
 from scripts.run.qbox_validation.types import ConsoleSnapshot
+
+
+@pytest.mark.parametrize(
+    ("artifact_root", "basename"),
+    [("local-apollo-qvp", "apollo-qvp-saturn-v.dtb"),
+     ("local-apollo-fvp", "apollo-fvp.dtb")],
+)
+def test_default_dtb_identity_follows_machine(artifact_root: str, basename: str) -> None:
+    artifacts = full_runner.default_artifacts(Path("/artifacts") / artifact_root)
+    assert artifacts["ap_dtb"].name == basename
 
 
 def test_parse_args_does_not_mutate_qbox_build_environment(

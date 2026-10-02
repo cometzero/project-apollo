@@ -14,7 +14,7 @@ import jsonschema
 
 STABLE_ROLES = {
     "kernel": "Image",
-    "dtb": "apollo-qvp.dtb",
+    "dtb": "apollo-qvp-saturn-v.dtb",
     "wic": "nexios-bsp-initramfs-apollo-qvp.wic",
     "qboxconf": "nexios-bsp-initramfs-apollo-qvp.qboxconf",
     "si0": "si0_ramfw.bin",
