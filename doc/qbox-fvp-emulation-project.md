@@ -1066,3 +1066,26 @@ the cleaned source tree. See [code cleanup](dma-i2s/05-code-cleanup.md)
 for retained code and patch instructions, and
 [experiment results](dma-i2s/04-implementation-results.md) for per-run
 outcomes and original artifact provenance.
+
+### Runtime idle and SCMI polling policy (2026-10-03)
+
+The QVP default now uses MULTI TCG for SI CL0, an interrupt-safe SCP WFI
+idle path, separate M-profile WFI/WFE event handling, and Linux tickless
+idle with a 100 Hz scheduling tick. SI CL1 retains tickless 100 Hz operation.
+QVP SCMI Performance Fast Channels are disabled: the 40 ms idle poll is
+removed, and normal frequency requests complete through MHU response IRQs.
+Active-transfer TX acknowledgment polling and the 125 MHz counters remain.
+
+The QVP DT no longer advertises CPU/cluster PSCI powerdown states, whose
+wakeup integration is not modeled. Architectural WFI idle is supported;
+deep-state residency/latency remains unsupported and the existing cpuidle
+profile reports that capability boundary as BLOCKED instead of PASS.
+
+The measured BSP idle host CPU fell from 307.14% to 12.72% (100% is one
+host logical CPU) with matching simulation progress. This is the combined
+idle-policy effect, not an isolated fast-channel saving. Native tests passed
+127/127, SCMI SET/GET completed without response polling, and AP/SI CL1 PFDI
+profiles passed 7/7 and 17/17. Historical intermittent RSE/SCP startup and
+power-state readback failures remain recorded. See
+[implementation and runtime evidence](qbox-runtime-idle.md) for exact inputs,
+failed runs, measurements, and qualification limits.
