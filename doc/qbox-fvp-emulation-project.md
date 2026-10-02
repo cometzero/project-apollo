@@ -217,6 +217,34 @@ all prerequisite, service, CLI, OnL, monitoring, force-error, FMU, SBISTC, and
 PFDI-monitor failure checks for CPU0 through CPU3. Evidence is under
 `build/tests/20260820-100317-qbox-bsp-pfdi/`.
 
+The initial 2026-10-02 QVP timing adjustment increased AP and SI CL1 periodic PFDI
+diagnostics from 60 ms to 600 ms. SI CL0's online report watchdog for SI CL1
+scales from 500 ms to 5 s; the AP 60 s watchdog and OoR/boot deadlines remain
+unchanged. In full-system BSP runs, three 30 s windows before and after the
+change measured AP vCPU host CPU usage of 45.55% to 28.97% and SI CL1 usage
+of 2.41% to 0.70% (100% is one host core). Overall QBox usage decreased
+from 316.60% to 305.54%; RSE/SI CL0 CPU cost remained. AP PFDI's seven and
+SI CL1 PFDI's seventeen profile assertions passed, including fault injection
+and SI monitoring. This measures the current functional/stub implementation
+and does not establish hardware diagnostic coverage or FTTI. Details and
+reproduction are in [the PFDI load report](qbox-pfdi-load.md); raw evidence is
+under `build/qbox-apollo-qvp/pfdi-load/`.
+Both BSP and product images were rebuilt. The product's full post-login
+checks and active `pfdi-app` at 600 ms passed on retry; its first boot stopped
+at SI0 TPS6594 register initialization (`status=-7`). Identical firmware inputs
+passed the retry, but this startup failure remains recorded and unresolved.
+A subsequent request extends both diagnostic intervals to 3000 ms and the
+SI CL1 report watchdog to 25 s, retaining the same deadline-to-period ratio.
+The AP 60 s watchdog and FVP settings remain unchanged.
+Three additional 30 s windows measured AP host CPU usage at 27.42%, SI CL1
+at 0.53%, and the QBox process at 302.31%. AP PFDI worker voluntary context
+switches decreased by about 80%, while the observed whole-process CPU cost
+decreased by only about 1%. Evidence for this extension is under
+`build/qbox-apollo-qvp/pfdi-load-3000ms/`.
+The 3000 ms AP and SI CL1 fault-injection profiles passed. BSP/product builds
+and product post-login/service checks passed; the first product boot again
+stopped during SI0 PMIC initialization, and an unchanged retry passed.
+
 The 2026-08-20 CPU RAS qualification adds QEMU pseudo-fault generation for
 correctable, deferred, and uncontainable CPU errors, a BQL-safe QEMU-to-SystemC
 signal path, the AP CPER backing window, and SI0 per-core RAS records with the
