@@ -48,9 +48,9 @@ def test_fvp_and_qvp_resolve_the_si_pfdi_online_timeout() -> None:
     fvp_timeout = _effective_online_timeout("apollo-fvp")
     qvp_timeout = _effective_online_timeout("apollo-qvp")
 
-    # Then: both use the bounded 500ms SI CL1 PFDI online watchdog.
+    # Then: FVP retains 500ms; QVP scales to 25s for its 3s diagnostic period.
     assert fvp_timeout == 500_000
-    assert qvp_timeout == 500_000
+    assert qvp_timeout == 25_000_000
 
 
 def test_fvp_source_keeps_the_ten_second_si_pfdi_boot_timeout() -> None:

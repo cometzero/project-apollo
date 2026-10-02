@@ -26,6 +26,11 @@ QBOX_PFDI_POLICY: Final = (
     / "hsoc-stack/yocto/meta-hsoc-bsp/conf/machine/include"
     / "apollo-qvp-qbox-timing.inc"
 )
+QBOX_YOCTO_ZEPHYR_BUILD: Final = (
+    ROOT
+    / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel"
+    / "zephyr-demos-cl1-apollo-qvp.inc"
+)
 FVP_PFDI_MONITOR: Final = (
     ROOT
     / "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd"
@@ -52,7 +57,7 @@ QBOX_FABRIC: Final = (
 
 def qbox_pfdi_policy_value(name: str) -> int:
     source = QBOX_PFDI_POLICY.read_text(encoding="utf-8")
-    match = re.search(rf'{name}\s*\?=\s*"(\d+)UL"', source)
+    match = re.search(rf'{name}\s*\?=\s*"(\d+)(?:UL)?"', source)
     assert match is not None, name
     return int(match.group(1))
 
@@ -74,7 +79,7 @@ def test_qbox_pfdi_timing_policy_is_centralized() -> None:
         "SCP_PFDI_ONLINE_TIMEOUT_US": 60_000_000,
         "SCP_SICL1_PFDI_OOR_PERIOD_US": 1_000_000,
         "SCP_SICL1_PFDI_BOOT_TIMEOUT_US": 10_000_000,
-        "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US": 500_000,
+        "SCP_SICL1_PFDI_ONLINE_TIMEOUT_US": 25_000_000,
     }
 
     # When: every timing value and consumer is resolved.
@@ -109,7 +114,7 @@ def test_qvp_pfdi_source_defaults_match_fvp() -> None:
 
 
 def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
-    # Given: the heartbeat period and the SI0 watchdogs used by full-system builds.
+    # Given: QVP diagnostic intervals and the SI0 monitor deadlines.
     period_source = PFDI_KCONFIG.read_text(encoding="utf-8")
     agent_source = PFDI_AGENT_CONFIG.read_text(encoding="utf-8")
     platform, _ = evaluated_platform(QBOX_FABRIC.parent.parent)
@@ -127,7 +132,11 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
     assert isinstance(platform["quantum_ns"], int)
 
     # When: the complete QBox request path is budgeted in microseconds.
-    heartbeat_period_us = int(period_match.group(1)) * 1_000
+    reference_period_us = int(period_match.group(1)) * 1_000
+    heartbeat_period_us = max(
+        qbox_pfdi_policy_value("PFDI_AP_INTERVAL_MS"),
+        qbox_pfdi_policy_value("PFDI_SI_CL1_PERIOD_MS"),
+    ) * 1_000
     response_timeout_us = int(response_match.group(1)) * 1_000
     systemc_quantum_us = platform["quantum_ns"] // 1_000
     qbox_request_budget_us = (
@@ -148,7 +157,25 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
         reference_source,
     )
     assert reference_match is not None
-    assert int(reference_match.group(1)) == heartbeat_period_us
+    assert int(reference_match.group(1)) == reference_period_us
+
+
+def test_qvp_si_period_reaches_zephyr_without_changing_fvp_defaults() -> None:
+    # The actual Zephyr CMake option consumes the shared QVP policy. Leaving
+    # the external Kconfig default intact preserves FVP and reference builds.
+    recipe = QBOX_YOCTO_ZEPHYR_BUILD.read_text(encoding="utf-8")
+    assert (
+        'EXTRA_OECMAKE:append:apollo-qvp = '
+        '" -DCONFIG_PFDI_MGMT_PERIOD_MS=${PFDI_SI_CL1_PERIOD_MS}"'
+    ) in recipe
+    assert qbox_pfdi_policy_value("PFDI_SI_CL1_PERIOD_MS") == 3000
+    assert qbox_pfdi_policy_value("PFDI_AP_INTERVAL_MS") == 3000
+    default = re.search(
+        r"config PFDI_MGMT_PERIOD_MS\s+.*?default\s+(\d+)",
+        PFDI_KCONFIG.read_text(encoding="utf-8"),
+        flags=re.DOTALL,
+    )
+    assert default is not None and int(default.group(1)) == 60
 
 
 def test_full_system_gate_detects_si0_pfdi_watchdog_timeout(
