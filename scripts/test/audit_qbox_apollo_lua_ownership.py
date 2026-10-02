@@ -9,9 +9,14 @@ import re
 import sys
 from typing import Final
 
+try:
+    from apollo_lua_descriptor import evaluated_platform, DescriptorError
+except ModuleNotFoundError:
+    from scripts.test.apollo_lua_descriptor import evaluated_platform, DescriptorError
+
 
 DESCRIPTION: Final = "Audit Apollo QBox Lua hardware-object ownership."
-HW_BLOCK_REL: Final = "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block"
+APOLLO_REL: Final = "hsoc-stack/tools/qbox-platform/platforms/apollo"
 ROS_OBJECTS: Final = {
     "ap_virtioblk_0",
     "ap_virtioblk_1",
@@ -143,29 +148,57 @@ def forbidden_rse_objects(objects: list[LuaObject]) -> list[LuaObject]:
     return [
         item
         for item in objects
-        if item.owner_file == "rse.lua" and item.name.startswith(FORBIDDEN_RSE_PREFIXES)
+        if (item.owner_file == "hw-block/rse.lua" or
+            item.owner_file.startswith("soc/hw-block/rse/"))
+        and item.name.startswith(FORBIDDEN_RSE_PREFIXES)
     ]
+
+
+def evaluated_objects(source_root: Path) -> list[LuaObject]:
+    platform, locations = evaluated_platform(source_root)
+    objects = []
+
+    def visit(value: object, path: str) -> None:
+        if not isinstance(value, dict):
+            return
+        if "moduletype" in value and path != "platform":
+            name = path.removeprefix("platform.")
+            source = locations.get(path, {}).get("path", "unknown").removeprefix("./")
+            domain = classify(name)
+            if domain == "unknown" and source.startswith("soc/hw-block/"):
+                domain = source.split("/")[2]
+            elif source.startswith("board/"):
+                domain = "board"
+            elif source.startswith("vp/") and domain == "unknown":
+                domain = "vp"
+            objects.append(LuaObject(name, source, value["moduletype"], domain))
+        for key, child in value.items():
+            visit(child, path + "." + str(key))
+
+    visit(platform, "platform")
+    return sorted(objects, key=lambda obj: (obj.owner_file, obj.name))
 
 
 def parse_args() -> argparse.Namespace:
     root = workspace_root()
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--report-only", action="store_true")
+    parser.add_argument("--source-root", type=Path, default=root / APOLLO_REL)
     parser.add_argument(
         "--output",
         type=Path,
-        default=root / "build/qbox-apollo-fvp/subsystem-lua-ownership.json",
+        default=root / "build/qbox-apollo-qvp/subsystem-lua-ownership.json",
     )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    root = workspace_root()
-    hw_block = root / HW_BLOCK_REL
-    objects: list[LuaObject] = []
-    for path in sorted(hw_block.glob("*.lua")):
-        objects.extend(iter_lua_objects(path, read_text(path)))
+    try:
+        objects = evaluated_objects(args.source_root)
+    except DescriptorError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     forbidden = forbidden_rse_objects(objects)
     result = {
         "passed": args.report_only or not forbidden,
@@ -174,6 +207,9 @@ def main() -> int:
         "forbidden_rse_object_count": len(forbidden),
         "objects": [object_to_json(item) for item in objects],
         "forbidden_rse_objects": [object_to_json(item) for item in forbidden],
+        "profile": "evaluated-full-system-defaults-ap-enabled",
+        "limitations": ["First-observed function provenance, not exact assignment lines.",
+                        "Static descriptor ownership; no instantiated hardware or runtime evidence."],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")

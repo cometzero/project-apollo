@@ -474,7 +474,7 @@ def runtime_preflight(plan, proc_root=Path("/proc")):
                 continue
             argv = (proc / "cmdline").read_bytes().split(b"\0")
             full_runner = any(arg.endswith(b"/run_qbox_apollo_fvp_full.py") for arg in argv)
-            full_platform = any(arg.endswith(b"/apollo-qvp.lua") for arg in argv)
+            full_platform = any(arg.endswith((b"/apollo-qvp.lua", b"/apollo-qvp-saturn-v.lua")) for arg in argv)
             if not (full_runner or full_platform):
                 continue
             env = (proc / "environ").read_bytes().split(b"\0")

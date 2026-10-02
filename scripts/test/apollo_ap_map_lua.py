@@ -6,7 +6,8 @@ import re
 from typing import Final
 
 
-DOFILE_RE: Final = re.compile(r'dofile\s*\([^)]*"([^"]+\.lua)"[^)]*\)')
+DOFILE_RE: Final = re.compile(r'\bdofile\s*\(([^)]*)\)')
+LUA_PATH_RE: Final = re.compile(r'''["']([^"']+\.lua)["']''')
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,12 +23,32 @@ def strip_comments(text: str) -> str:
     return re.sub(r"--.*", "", text)
 
 
-def includes(path: Path, text: str) -> tuple[Path, ...]:
+def includes(path: Path, text: str, root: Path | None = None) -> tuple[Path, ...]:
     clean = strip_comments(text)
     matches = tuple(DOFILE_RE.finditer(clean))
-    if clean.count("dofile(") != len(matches):
+    if len(re.findall(r"\bdofile\s*\(", clean)) != len(matches):
         raise LuaModuleError("malformed_dofile", path)
-    return tuple(path.parent / match.group(1) for match in matches)
+    directories = {"dir": path.parent, "apollo_dir": root or path.parent,
+                   "ctx.apollo_dir": root or path.parent}
+    for alias, parent, suffix in re.findall(
+        r'''\blocal\s+(\w+)\s*=\s*([\w.]+)\s*\.\.\s*["']([^"']*)["']''', clean
+    ):
+        if parent in directories:
+            directories[alias] = directories[parent] / suffix
+    paths = []
+    for match in matches:
+        argument = match.group(1)
+        literals = LUA_PATH_RE.findall(argument)
+        if len(literals) != 1:
+            raise LuaModuleError("nonliteral_dofile", path)
+        # ctx.apollo_dir is rooted at the entrypoint, including from deeply
+        # nested factory modules. It is not relative to the including file.
+        prefix = re.match(r"\s*([\w.]+)\s*\.\.", argument)
+        if prefix and prefix.group(1) not in directories:
+            raise LuaModuleError("unknown_dofile_directory", path)
+        base = directories[prefix.group(1)] if prefix else path.parent
+        paths.append(base / literals[0])
+    return tuple(paths)
 
 
 def load_module_graph(entry: Path) -> dict[str, str]:
@@ -50,7 +71,7 @@ def load_module_graph(entry: Path) -> dict[str, str]:
         except OSError as error:
             raise LuaModuleError("missing_module", resolved) from error
         visiting.add(resolved)
-        for included in includes(resolved, text):
+        for included in includes(resolved, text, base):
             visit(included)
         visiting.remove(resolved)
         loaded[relative.as_posix()] = text

@@ -13,297 +13,147 @@ import sys
 from typing import Any
 
 
-CHECKS = {
-    "memory": [
-        ("map:ap", "doc/qbox-apollo-fvp-map-analysis.md", r"\| AP \|"),
-        ("map:rse", "doc/qbox-apollo-fvp-map-analysis.md", r"\| RSE \|"),
-        ("map:smd", "doc/qbox-apollo-fvp-map-analysis.md", r"\| SMD(?:/system-wide view| system-wide map)? \|"),
-        ("map:si-cl0", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL0 \|"),
-        ("map:si-cl1", "doc/qbox-apollo-fvp-map-analysis.md", r"\| Safety Island CL1 \|"),
-        ("platform:apollo-qvp-lua", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/rse\.lua"),
-        ("platform:apollo-qvp-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp-common.lua", r"hw-block/config\.lua"),
-        ("platform:apollo-qvp-fabric", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/fabric\.lua"),
-        ("platform:config-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua", r"Apollo QVP shared config running"),
-        (
-            "platform:config-no-hardware-map-constants",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"NOT:^(?-i:(?:local\s+)?[A-Z][A-Z0-9_]*(?:BASE|SIZE|IRQ|OFFSET|ADDRESS|STRIDE|CHANNELS|REGIONS)(?:_[A-Z0-9]+)*\s*=)",
-        ),
-        (
-            "platform:ap-map-locals",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"^local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_non_secure\s*=\s*49;",
-        ),
-        (
-            "platform:rse-map-locals",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"^local RSE_IRQ\s*=\s*\{[\s\S]*?timer0\s*=\s*3;",
-        ),
-        (
-            "platform:system-mgmt-map-locals",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"^local AP_SI_NS_MHU_PBX_IRQ\s*=\s*112$",
-        ),
-        ("platform:fabric-block", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"function fabric\.create"),
-        ("platform:smd-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"smd_router\s*=\s*\{"),
-        ("platform:system-to-smd-nci", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/fabric.lua", r"system_to_smd_nci\s*=\s*\{"),
-        ("platform:apollo-qvp-system-mgmt", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"hw-block/system_mgmt\.lua"),
-        (
-            "platform:conditional-monitor",
-            "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua",
-            r"if\s+ctx\.config\.monitor\.enabled\s+then[\s\S]*?moduletype\s*=\s*\"monitor\"[\s\S]*?server_port\s*=\s*ctx\.config\.monitor\.port",
-        ),
-        (
-            "build:apollo-monitor-target",
-            "QBOX_PLATFORM_DIR/CMakeLists.txt",
-            r"QBOX_APOLLO_REQUIRED_TARGETS[\s\S]*?\n\s*monitor\s*\n",
-        ),
-        (
-            "build:apollo-qemu-pl061-target",
-            "QBOX_PLATFORM_DIR/CMakeLists.txt",
-            r"QBOX_APOLLO_REQUIRED_TARGETS[\s\S]*?\n\s*qemu_pl061\s*\n",
-        ),
-        (
-            "gpio:qemu-pl061-wrapper",
-            "hsoc-stack/tools/qbox/qemu-components/gpio/qemu_pl061/include/qemu_pl061.h",
-            r'QemuDevice\(name, inst, "pl061"\)[\s\S]*?gpio_in[\s\S]*?gpio_out',
-        ),
-        (
-            "monitor:nonblocking-external-scripts",
-            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
-            r"<script\s+async[^>]*src=\"https://cdn\.jsdelivr\.net/npm/@xterm/xterm@5\.5\.0/lib/xterm\.min\.js\"",
-        ),
-        (
-            "monitor:offline-terminal-fallback",
-            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
-            r"function createTerminalFallback\(\)[\s\S]*?function initializeTerminal\(\)",
-        ),
-        (
-            "monitor:startup-not-window-load-blocked",
-            "hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html",
-            r"fetchObjects\(\);\s*\n\s*window\.addEventListener\('resize'",
-        ),
-        ("platform:rse-topology-inline", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua", r"Apollo RSE QBox skeleton config running"),
-        (
-            "gpio:rse-pl061-pair",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r'for\s+gpio=0,1\s+do[\s\S]*?gpio_name\s*=\s*"rse_gpio_"\.\.gpio[\s\S]*?moduletype\s*=\s*"qemu_pl061"',
-        ),
-        (
-            "gpio:rse-ppcexp0-policy",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r'platform\[gpio_name\.\."_ppc"\][\s\S]*?ppc_register_offset\s*=\s*0x10',
-        ),
-        (
-            "gpio:smd-physical-target",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"SMD_GPIO\s*=\s*\{[\s\S]*?phys_base\s*=\s*0x20000D0310000[\s\S]*?host_smd_gpio[\s\S]*?bind\s*=\s*\"&smd_router\.initiator_socket\"",
-        ),
-        (
-            "gpio:smd-no-direct-ap-logical-target",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"NOT:address\s*=\s*0x40750000",
-        ),
-        ("platform:direct-config", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp-common.lua", r"config\.create\(apollo_dir\)"),
-        ("platform:system-mgmt-ownership", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r"system_mgmt\.ownership"),
-        ("platform:ap-compute-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"function ap_compute\.enable_ap_router"),
-        ("platform:ap-atu-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"host_ap_atu\.translation_socket\.bind\s*=\s*[\r\n ]*\"&ap_router\.initiator_socket\""),
-        ("platform:system-to-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.system_to_ap_flash_bridge"),
-        ("map:system-ap-flash", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.system_to_ap_flash_bridge"),
-        ("platform:ap-to-system-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.ap_to_system_rse_carveout_bridge"),
-        ("map:ap-rse-carveout", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"platform\.ap_to_system_rse_carveout_bridge"),
-        ("platform:live-ap-rse-default", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua", r'QBOX_RDASPEN_RSE_PS_PROXY",\s*false'),
-        ("platform:ap-dram-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.host_ap_dram1,\s*\"target_socket\"\)"),
-        ("platform:ap-gic-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_socket\(platform\.ap_gic,\s*\"dist_iface\"\)"),
-        ("platform:ap-gpex-in-ap-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"bind_ap_target\(platform\.ap_gpex_0\.ecam_iface\)"),
-        ("platform:gpex-systemc-smmu-tbu", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua", r"ap_smmu_lti00\.upstream_socket"),
-        ("platform:si-cl0-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"si_cl0\.enable"),
-        ("platform:qvp-ap-router", "QBOX_PLATFORM_DIR/platforms/apollo/apollo-qvp.lua", r"ap_compute\.enable_ap_router"),
-        ("platform:si-cl0-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"platform\.si_cl0_router"),
-        ("platform:si-cl0-atu-data-path", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"host_si_atu\.translation_socket"),
-        ("platform:smdexp-atu-data-path", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"host_smdexp2smd_atu\.translation_socket"),
-        ("platform:system-to-ap-shared", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"platform\.system_to_ap_shared_bridge"),
-        ("platform:system-to-ap-gic", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"platform\.system_to_ap_gic_bridge"),
-        ("platform:si-cl0-cl1-scmi-bridge", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua", r"platform\.si_cl0_to_si_cl1_scmi_bridge"),
-        ("platform:si-cl1-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua", r"si_cl1\.enable"),
-        ("platform:si-cl1-router", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua", r"platform\.si_cl1_router"),
-        ("platform:si-cl1-hipc-bridge", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua", r"platform\.si_cl1_hipc_bridge"),
-        ("platform:ros-helper", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"ros\.peripherals"),
-        ("platform:ap-virtio-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"bind_ap_target\(virtio\.mem"),
-        ("platform:ap-rtc-in-ros-view", "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ros.lua", r"platform\.ap_rtc_0\.mem"),
-        ("source:si0-mmap", "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_mmap.h", r"SI0_"),
-    ],
-    "irq": [
-        ("irq:ledger", "doc/qbox-apollo-fvp-map-analysis.md", r"Interrupt Map"),
-        ("irq:gic-multiview", "doc/qbox-apollo-fvp-full-system-design.md", r"Safety Island GIC Multiview Design"),
-        ("irq:si0-header", "hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h", r"IRQ"),
-        ("irq:cl1-dts", "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts", r"gic"),
-        ("irq:multiview-task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-029"),
-        (
-            "irq:ap-to-si-cl1-mhu-pair",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'pair\s*=\s*"apollo_ap_to_si_cl1"',
-        ),
-        (
-            "irq:si-cl1-to-ap-mhu-pair",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'pair\s*=\s*"apollo_si_cl1_to_ap"',
-        ),
-        (
-            "irq:si-cl1-real-doorbell-bridge",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r'protocol\s*=\s*"doorbell-bridge"',
-        ),
-        (
-            "timer:ap-refclk-ns-spi49",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_non_secure\s*=\s*49;",
-        ),
-        (
-            "timer:ap-refclk-secure-spi48",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"local AP_IRQ\s*=\s*\{[\s\S]*?sys_timer_secure\s*=\s*48;",
-        ),
-        (
-            "timer:rse-timer0-irq3",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer0\s*=\s*3;",
-        ),
-        (
-            "timer:rse-timer1-irq4",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer1\s*=\s*4;",
-        ),
-        (
-            "timer:rse-timer2-irq5",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer2\s*=\s*5;",
-        ),
-        (
-            "timer:rse-timer3-irq27",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"local RSE_IRQ\s*=\s*\{[\s\S]*?timer3\s*=\s*27;",
-        ),
-        (
-            "timer:rse-no-legacy-39-through-42",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"NOT:timer[0-3]\s*=\s*(?:39|40|41|42);",
-        ),
-        (
-            "gpio:rse-combined-irq34",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r"gpio_combined\s*=\s*34;[\s\S]*?platform\.rse_gpio_irq_or[\s\S]*?RSE_IRQ\.gpio_combined",
-        ),
-        (
-            "gpio:smd-ap-spi193",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"SMD_GPIO\s*=\s*\{[\s\S]*?ap_irq\s*=\s*193;[\s\S]*?host_smd_gpio[\s\S]*?ap_gic\.spi_in_\"\.\.SMD_GPIO\.ap_irq",
-        ),
-    ],
-    "timer": [
-        (
-            "timer:css-single-provider",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"platform\.css_system_counter\s*=\s*\{[\s\S]*?moduletype\s*=\s*\"arm_system_counter\"",
-        ),
-        (
-            "timer:css-provider-frequency-contract",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"local SYSTEM_COUNTER_FREQUENCY_HZ\s*=\s*125000000[\s\S]*?input_frequency_hz\s*=\s*SYSTEM_COUNTER_FREQUENCY_HZ[\s\S]*?reported_frequency_hz\s*=\s*SYSTEM_COUNTER_FREQUENCY_HZ",
-        ),
-        (
-            "timer:ap-cpu-mirror-publisher",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"ap_cpu_counter_mirror_[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
-        ),
-        (
-            "timer:ap-mmio-mirror-publisher",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"ap_timer_counter_mirror[\s\S]*?qemu_arm_mmio_counter_mirror[\s\S]*?&platform\.css_system_counter",
-        ),
-        (
-            "timer:ap-cpu-native-counter",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r'local cpu\s*=\s*\{[\s\S]*?moduletype\s*=\s*"cpu_arm_cortexA720AE"',
-        ),
-        (
-            "timer:ap-no-pull-counter-bridge",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"NOT:qemu_arm_generic_timer_counter_bridge|counter_provider",
-        ),
-        (
-            "timer:si0-css-mirror-publisher",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
-            r"si_cl0_cpu_counter_mirror[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
-        ),
-        (
-            "timer:si1-css-mirror-publisher",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl1.lua",
-            r"si_cl1_cpu_counter_mirror_[\s\S]*?qemu_arm_counter_mirror[\s\S]*?&platform\.css_system_counter",
-        ),
-        (
-            "timer:smd-frontends-share-authority",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"host_css_counters_timers[\s\S]*?args\s*=\s*\{\"&platform\.css_system_counter\"\}[\s\S]*?host_css_counters_timers_read[\s\S]*?args\s*=\s*\{\"&platform\.css_system_counter\"\}",
-        ),
-        (
-            "timer:rse-mirror-default-enabled",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r'QBOX_APOLLO_RSE_SMD_COUNTER_MIRROR",\s*true',
-        ),
-        (
-            "timer:rse-local-mirror-selection",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/rse.lua",
-            r'rse_smd_counter_mirror\s+and[\s\S]*?"qemu_sse_counter_mirror"[\s\S]*?&platform\.css_system_counter',
-        ),
-        (
-            "timer:qemu-cpu-local-affine-state",
-            "hsoc-stack/tools/qemu/target/arm/cpu.h",
-            r"anchor_count[\s\S]*?generation[\s\S]*?\}\s*gt_counter_mirror",
-        ),
-        (
-            "timer:qemu-cpu-hot-path-no-provider",
-            "hsoc-stack/tools/qemu/target/arm/helper.c",
-            r"NOT:counter_provider|counter_proxy|qemu_arm_generic_timer_counter_bridge",
-        ),
-    ],
-    "atu": [
-        ("atu:analysis", "doc/qbox-apollo-fvp-map-analysis.md", r"ATU|ATW"),
-        ("atu:design", "doc/qbox-apollo-fvp-full-system-design.md", r"ATU|ATW"),
-        ("atu:task", "doc/qbox-apollo-fvp-full-system-tasks.md", r"QAP-FULL-043"),
-    ],
-    "reset": [
-        (
-            "reset:hipc-shared-memory-preserved",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/ap_compute.lua",
-            r"platform\.host_ap_bl2_header_sram\s*=\s*\{[\s\S]*?init_mem\s*=\s*false",
-        ),
-        (
-            "reset:ap-cpu-count-default",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r'AP_NUM_CPUS\s*=\s*enable_ap_cpus\s+and\s+getenv_number_or\("QBOX_APOLLO_NUM_CPUS",\s*"4"\)',
-        ),
-        (
-            "reset:ap-cpu-count-limit",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/config.lua",
-            r"not\s+enable_ap_cpus\s+or\s+\(AP_NUM_CPUS\s*>=\s*1\s+and\s+AP_NUM_CPUS\s*<=\s*AP_MAX_CPUS\)",
-        ),
-        (
-            "reset:ap-power-domain-count",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/system_mgmt.lua",
-            r"power_domain_reset_count\s*=\s*AP_NUM_CPUS",
-        ),
-        (
-            "reset:ap-ppu-cpu0-through-last",
-            "QBOX_PLATFORM_DIR/platforms/apollo/hw-block/si_cl0.lua",
-            r'for\s+cluster=0,\(SI_CONST\.SI_CL0_AP_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
-            r'for\s+core=0,\(SI_CONST\.SI_CL0_AP_CORE_PER_CLUSTER_COUNT\s*-\s*1\)\s+do[\s\S]*'
-            r'power_on_reset\s*=\s*cpu_active\s+and\s+\{[\s\S]*'
-            r'"&ap_cpu_"\.\.cpu_index\.\."\.reset"',
-        ),
-    ],
-}
+try:
+    from apollo_lua_contracts import contracts
+    from apollo_lua_descriptor import DescriptorError
+except ModuleNotFoundError:
+    from scripts.test.apollo_lua_contracts import contracts
+    from scripts.test.apollo_lua_descriptor import DescriptorError
 
+
+CHECKS = {'memory': [('map:ap', 'doc/qbox-apollo-fvp-map-analysis.md', '\\| AP \\|'),
+            ('map:rse', 'doc/qbox-apollo-fvp-map-analysis.md', '\\| RSE \\|'),
+            ('map:smd',
+             'doc/qbox-apollo-fvp-map-analysis.md',
+             '\\| SMD(?:/system-wide view| system-wide map)? \\|'),
+            ('map:si-cl0', 'doc/qbox-apollo-fvp-map-analysis.md', '\\| Safety Island CL0 \\|'),
+            ('map:si-cl1', 'doc/qbox-apollo-fvp-map-analysis.md', '\\| Safety Island CL1 \\|'),
+            ('platform:apollo-qvp-lua', 'APOLLO_DESCRIPTOR', 'platform:apollo-qvp-lua'),
+            ('platform:apollo-qvp-config', 'APOLLO_DESCRIPTOR', 'platform:apollo-qvp-config'),
+            ('platform:apollo-qvp-fabric', 'APOLLO_DESCRIPTOR', 'platform:apollo-qvp-fabric'),
+            ('platform:config-block', 'APOLLO_DESCRIPTOR', 'platform:config-block'),
+            ('platform:config-no-hardware-map-constants',
+             'APOLLO_DESCRIPTOR',
+             'platform:config-no-hardware-map-constants'),
+            ('platform:ap-map-locals', 'APOLLO_DESCRIPTOR', 'platform:ap-map-locals'),
+            ('platform:rse-map-locals', 'APOLLO_DESCRIPTOR', 'platform:rse-map-locals'),
+            ('platform:system-mgmt-map-locals', 'APOLLO_DESCRIPTOR', 'platform:system-mgmt-map-locals'),
+            ('platform:fabric-block', 'APOLLO_DESCRIPTOR', 'platform:fabric-block'),
+            ('platform:smd-router', 'APOLLO_DESCRIPTOR', 'platform:smd-router'),
+            ('platform:system-to-smd-nci', 'APOLLO_DESCRIPTOR', 'platform:system-to-smd-nci'),
+            ('platform:apollo-qvp-system-mgmt', 'APOLLO_DESCRIPTOR', 'platform:apollo-qvp-system-mgmt'),
+            ('platform:conditional-monitor', 'APOLLO_DESCRIPTOR', 'platform:conditional-monitor'),
+            ('build:apollo-monitor-target',
+             'QBOX_PLATFORM_DIR/CMakeLists.txt',
+             'QBOX_APOLLO_REQUIRED_TARGETS[\\s\\S]*?\\n\\s*monitor\\s*\\n'),
+            ('build:apollo-qemu-pl061-target',
+             'QBOX_PLATFORM_DIR/CMakeLists.txt',
+             'QBOX_APOLLO_REQUIRED_TARGETS[\\s\\S]*?\\n\\s*qemu_pl061\\s*\\n'),
+            ('gpio:qemu-pl061-wrapper',
+             'hsoc-stack/tools/qbox/qemu-components/gpio/qemu_pl061/include/qemu_pl061.h',
+             'QemuDevice\\(name, inst, "pl061"\\)[\\s\\S]*?gpio_in[\\s\\S]*?gpio_out'),
+            ('monitor:nonblocking-external-scripts',
+             'hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html',
+             '<script\\s+async[^>]*src=\\"https://cdn\\.jsdelivr\\.net/npm/@xterm/xterm@5\\.5\\.0/lib/xterm\\.min\\.js\\"'),
+            ('monitor:offline-terminal-fallback',
+             'hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html',
+             'function createTerminalFallback\\(\\)[\\s\\S]*?function initializeTerminal\\(\\)'),
+            ('monitor:startup-not-window-load-blocked',
+             'hsoc-stack/tools/qbox/systemc-components/monitor/static/monitor.html',
+             "fetchObjects\\(\\);\\s*\\n\\s*window\\.addEventListener\\('resize'"),
+            ('platform:rse-topology-inline', 'APOLLO_DESCRIPTOR', 'platform:rse-topology-inline'),
+            ('gpio:rse-pl061-pair', 'APOLLO_DESCRIPTOR', 'gpio:rse-pl061-pair'),
+            ('gpio:rse-ppcexp0-policy', 'APOLLO_DESCRIPTOR', 'gpio:rse-ppcexp0-policy'),
+            ('gpio:smd-physical-target', 'APOLLO_DESCRIPTOR', 'gpio:smd-physical-target'),
+            ('gpio:smd-no-direct-ap-logical-target',
+             'APOLLO_DESCRIPTOR',
+             'gpio:smd-no-direct-ap-logical-target'),
+            ('platform:direct-config', 'APOLLO_DESCRIPTOR', 'platform:direct-config'),
+            ('platform:system-mgmt-ownership', 'APOLLO_DESCRIPTOR', 'platform:system-mgmt-ownership'),
+            ('platform:ap-compute-helper', 'APOLLO_DESCRIPTOR', 'platform:ap-compute-helper'),
+            ('platform:ap-atu-in-ap-view', 'APOLLO_DESCRIPTOR', 'platform:ap-atu-in-ap-view'),
+            ('platform:system-to-ap-flash', 'APOLLO_DESCRIPTOR', 'platform:system-to-ap-flash'),
+            ('map:system-ap-flash', 'APOLLO_DESCRIPTOR', 'map:system-ap-flash'),
+            ('platform:ap-to-system-rse-carveout',
+             'APOLLO_DESCRIPTOR',
+             'platform:ap-to-system-rse-carveout'),
+            ('map:ap-rse-carveout', 'APOLLO_DESCRIPTOR', 'map:ap-rse-carveout'),
+            ('platform:live-ap-rse-default', 'APOLLO_DESCRIPTOR', 'platform:live-ap-rse-default'),
+            ('platform:ap-dram-in-ap-view', 'APOLLO_DESCRIPTOR', 'platform:ap-dram-in-ap-view'),
+            ('platform:ap-gic-in-ap-view', 'APOLLO_DESCRIPTOR', 'platform:ap-gic-in-ap-view'),
+            ('platform:ap-gpex-in-ap-view', 'APOLLO_DESCRIPTOR', 'platform:ap-gpex-in-ap-view'),
+            ('platform:gpex-systemc-smmu-tbu', 'APOLLO_DESCRIPTOR', 'platform:gpex-systemc-smmu-tbu'),
+            ('platform:si-cl0-helper', 'APOLLO_DESCRIPTOR', 'platform:si-cl0-helper'),
+            ('platform:qvp-ap-router', 'APOLLO_DESCRIPTOR', 'platform:qvp-ap-router'),
+            ('platform:si-cl0-router', 'APOLLO_DESCRIPTOR', 'platform:si-cl0-router'),
+            ('platform:si-cl0-atu-data-path', 'APOLLO_DESCRIPTOR', 'platform:si-cl0-atu-data-path'),
+            ('platform:smdexp-atu-data-path', 'APOLLO_DESCRIPTOR', 'platform:smdexp-atu-data-path'),
+            ('platform:system-to-ap-shared', 'APOLLO_DESCRIPTOR', 'platform:system-to-ap-shared'),
+            ('platform:system-to-ap-gic', 'APOLLO_DESCRIPTOR', 'platform:system-to-ap-gic'),
+            ('platform:si-cl0-cl1-scmi-bridge', 'APOLLO_DESCRIPTOR', 'platform:si-cl0-cl1-scmi-bridge'),
+            ('platform:si-cl1-helper', 'APOLLO_DESCRIPTOR', 'platform:si-cl1-helper'),
+            ('platform:si-cl1-router', 'APOLLO_DESCRIPTOR', 'platform:si-cl1-router'),
+            ('platform:si-cl1-hipc-bridge', 'APOLLO_DESCRIPTOR', 'platform:si-cl1-hipc-bridge'),
+            ('platform:ros-helper', 'APOLLO_DESCRIPTOR', 'platform:ros-helper'),
+            ('platform:ap-virtio-in-ros-view', 'APOLLO_DESCRIPTOR', 'platform:ap-virtio-in-ros-view'),
+            ('platform:ap-rtc-in-ros-view', 'APOLLO_DESCRIPTOR', 'platform:ap-rtc-in-ros-view'),
+            ('source:si0-mmap',
+             'hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_mmap.h',
+             'SI0_')],
+ 'irq': [('irq:ledger', 'doc/qbox-apollo-fvp-map-analysis.md', 'Interrupt Map'),
+         ('irq:gic-multiview',
+          'doc/qbox-apollo-fvp-full-system-design.md',
+          'Safety Island GIC Multiview Design'),
+         ('irq:si0-header',
+          'hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-fvp/si0_ramfw/include/si0_irq.h',
+          'IRQ'),
+         ('irq:cl1-dts',
+          'hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src/boards/hsoc/apollo_fvp_safety_island_c1/apollo_fvp_safety_island_c1.dts',
+          'gic'),
+         ('irq:multiview-task', 'doc/qbox-apollo-fvp-full-system-tasks.md', 'QAP-FULL-029'),
+         ('irq:ap-to-si-cl1-mhu-pair', 'APOLLO_DESCRIPTOR', 'irq:ap-to-si-cl1-mhu-pair'),
+         ('irq:si-cl1-to-ap-mhu-pair', 'APOLLO_DESCRIPTOR', 'irq:si-cl1-to-ap-mhu-pair'),
+         ('irq:si-cl1-real-doorbell-bridge', 'APOLLO_DESCRIPTOR', 'irq:si-cl1-real-doorbell-bridge'),
+         ('timer:ap-refclk-ns-spi49', 'APOLLO_DESCRIPTOR', 'timer:ap-refclk-ns-spi49'),
+         ('timer:ap-refclk-secure-spi48', 'APOLLO_DESCRIPTOR', 'timer:ap-refclk-secure-spi48'),
+         ('timer:rse-timer0-irq3', 'APOLLO_DESCRIPTOR', 'timer:rse-timer0-irq3'),
+         ('timer:rse-timer1-irq4', 'APOLLO_DESCRIPTOR', 'timer:rse-timer1-irq4'),
+         ('timer:rse-timer2-irq5', 'APOLLO_DESCRIPTOR', 'timer:rse-timer2-irq5'),
+         ('timer:rse-timer3-irq27', 'APOLLO_DESCRIPTOR', 'timer:rse-timer3-irq27'),
+         ('timer:rse-no-legacy-39-through-42', 'APOLLO_DESCRIPTOR', 'timer:rse-no-legacy-39-through-42'),
+         ('gpio:rse-combined-irq34', 'APOLLO_DESCRIPTOR', 'gpio:rse-combined-irq34'),
+         ('gpio:smd-ap-spi193', 'APOLLO_DESCRIPTOR', 'gpio:smd-ap-spi193')],
+ 'timer': [('timer:css-single-provider', 'APOLLO_DESCRIPTOR', 'timer:css-single-provider'),
+           ('timer:css-provider-frequency-contract',
+            'APOLLO_DESCRIPTOR',
+            'timer:css-provider-frequency-contract'),
+           ('timer:ap-cpu-mirror-publisher', 'APOLLO_DESCRIPTOR', 'timer:ap-cpu-mirror-publisher'),
+           ('timer:ap-mmio-mirror-publisher', 'APOLLO_DESCRIPTOR', 'timer:ap-mmio-mirror-publisher'),
+           ('timer:ap-cpu-native-counter', 'APOLLO_DESCRIPTOR', 'timer:ap-cpu-native-counter'),
+           ('timer:ap-no-pull-counter-bridge', 'APOLLO_DESCRIPTOR', 'timer:ap-no-pull-counter-bridge'),
+           ('timer:si0-css-mirror-publisher', 'APOLLO_DESCRIPTOR', 'timer:si0-css-mirror-publisher'),
+           ('timer:si1-css-mirror-publisher', 'APOLLO_DESCRIPTOR', 'timer:si1-css-mirror-publisher'),
+           ('timer:smd-frontends-share-authority',
+            'APOLLO_DESCRIPTOR',
+            'timer:smd-frontends-share-authority'),
+           ('timer:rse-mirror-default-enabled', 'APOLLO_DESCRIPTOR', 'timer:rse-mirror-default-enabled'),
+           ('timer:rse-local-mirror-selection', 'APOLLO_DESCRIPTOR', 'timer:rse-local-mirror-selection'),
+           ('timer:qemu-cpu-local-affine-state',
+            'hsoc-stack/tools/qemu/target/arm/cpu.h',
+            'anchor_count[\\s\\S]*?generation[\\s\\S]*?\\}\\s*gt_counter_mirror'),
+           ('timer:qemu-cpu-hot-path-no-provider',
+            'hsoc-stack/tools/qemu/target/arm/helper.c',
+            'NOT:counter_provider|counter_proxy|qemu_arm_generic_timer_counter_bridge')],
+ 'atu': [('atu:analysis', 'doc/qbox-apollo-fvp-map-analysis.md', 'ATU|ATW'),
+         ('atu:design', 'doc/qbox-apollo-fvp-full-system-design.md', 'ATU|ATW'),
+         ('atu:task', 'doc/qbox-apollo-fvp-full-system-tasks.md', 'QAP-FULL-043')],
+ 'reset': [('reset:hipc-shared-memory-preserved',
+            'APOLLO_DESCRIPTOR',
+            'reset:hipc-shared-memory-preserved'),
+           ('reset:ap-cpu-count-default', 'APOLLO_DESCRIPTOR', 'reset:ap-cpu-count-default'),
+           ('reset:ap-cpu-count-limit', 'APOLLO_DESCRIPTOR', 'reset:ap-cpu-count-limit'),
+           ('reset:ap-power-domain-count', 'APOLLO_DESCRIPTOR', 'reset:ap-power-domain-count'),
+           ('reset:ap-ppu-cpu0-through-last', 'APOLLO_DESCRIPTOR', 'reset:ap-ppu-cpu0-through-last')]}
 
 def workspace_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -337,8 +187,18 @@ def parse_checks(value: str) -> list[str]:
     return checks or sorted(CHECKS)
 
 
-def run_check(root: Path, category: str, item: tuple[str, str, str]) -> dict[str, Any]:
+def run_check(root: Path, category: str, item: tuple[str, str, str],
+              semantic: dict[str, bool] | None = None) -> dict[str, Any]:
     name, rel_path, pattern = item
+    if rel_path == "APOLLO_DESCRIPTOR":
+        path = qbox_platform_dir(root) / "platforms/apollo/apollo-qvp-saturn-v.lua"
+        try:
+            evaluated = semantic if semantic is not None else contracts(path.parent)
+            return {"category": category, "name": name, "path": str(path),
+                    "pattern": "evaluated descriptor contract", "passed": evaluated.get(name, False)}
+        except (DescriptorError, OSError) as exc:
+            return {"category": category, "name": name, "path": str(path),
+                    "passed": False, "error": str(exc)}
     path = resolve_check_path(root, rel_path)
     text = read_text(path)
     forbidden = pattern.startswith("NOT:")
@@ -372,8 +232,14 @@ def main() -> int:
     root = workspace_root()
     selected = args.check if isinstance(args.check, list) else parse_checks(args.check)
     checks: list[dict[str, Any]] = []
+    try:
+        semantic = contracts(qbox_platform_dir(root) / "platforms/apollo")
+    except (DescriptorError, OSError) as exc:
+        semantic = {}
+        checks.append({"name": "descriptor:evaluation", "category": "memory",
+                       "passed": False, "error": str(exc)})
     for category in selected:
-        checks.extend(run_check(root, category, item) for item in CHECKS[category])
+        checks.extend(run_check(root, category, item, semantic) for item in CHECKS[category])
     passed = all(bool(check["passed"]) for check in checks)
     result = {
         "passed": passed,
@@ -387,7 +253,8 @@ def main() -> int:
     if not passed:
         for check in checks:
             if not check["passed"]:
-                print(f"FAIL {check['name']}: {check['path']} / {check['pattern']}", file=sys.stderr)
+                detail = check.get("error") or f"{check.get('path', '')} / {check.get('pattern', '')}"
+                print(f"FAIL {check['name']}: {detail}", file=sys.stderr)
     return 0 if passed else 1
 
 

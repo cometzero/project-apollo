@@ -246,36 +246,30 @@ def lua_component_block(text: str, name: str) -> str:
 
 
 def lua_backend_checks(root: Path) -> list[dict[str, Any]]:
-    si_cl0 = read_text(root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua")
-    rse = read_text(root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/rse.lua")
-    system_mgmt = read_text(root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua")
-    expected = [
-        ("si_cl0_ssu", si_cl0, "zena_ssu"),
-        ("si_cl0_fmu", si_cl0, "zena_fmu"),
-        ("rse_nsacfg_regs", rse, "rse_protection_ctrl"),
-        ("rse_sacfg_regs", rse, "rse_protection_ctrl"),
-        ("rse_mpc_vm0_regs", rse, "rse_protection_ctrl"),
-        ("rse_mpc_vm1_regs", rse, "rse_protection_ctrl"),
-        ("rse_sic_regs", rse, "rse_protection_ctrl"),
-        ("rse_mpc_sic_regs", rse, "rse_protection_ctrl"),
-        ("rse_atu_regs", rse, "rse_atu"),
-        ("host_si_atu", system_mgmt, "rse_atu"),
-        ("host_ap_atu", system_mgmt, "rse_atu"),
-        ("host_smdexp2smd_atu", system_mgmt, "rse_atu"),
-    ]
-    checks = []
-    for name, text, backend in expected:
-        block = lua_component_block(text, name)
-        passed = f'moduletype = "{backend}"' in block
-        checks.append(
-            {
-                "name": f"backend:{name}",
-                "status": backend if passed else "missing_or_different",
-                "passed": passed,
-                "expected": backend,
-            }
-        )
-    return checks
+    try:
+        from apollo_lua_descriptor import DescriptorError, evaluated_platform
+    except ModuleNotFoundError:
+        from scripts.test.apollo_lua_descriptor import DescriptorError, evaluated_platform
+    try:
+        platform, locations = evaluated_platform(
+            root / "hsoc-stack/tools/qbox-platform/platforms/apollo")
+    except (DescriptorError, OSError) as exc:
+        return [{"name": "backend:descriptor-evaluation", "status": "error",
+                 "passed": False, "error": str(exc)}]
+    expected = {
+        "si_cl0_ssu": "zena_ssu", "si_cl0_fmu": "zena_fmu",
+        "rse_nsacfg_regs": "rse_protection_ctrl", "rse_sacfg_regs": "rse_protection_ctrl",
+        "rse_mpc_vm0_regs": "rse_protection_ctrl", "rse_mpc_vm1_regs": "rse_protection_ctrl",
+        "rse_sic_regs": "rse_protection_ctrl", "rse_mpc_sic_regs": "rse_protection_ctrl",
+        "rse_atu_regs": "rse_atu", "host_si_atu": "rse_atu",
+        "host_ap_atu": "rse_atu", "host_smdexp2smd_atu": "rse_atu",
+    }
+    return [{"name": "backend:" + name,
+             "status": backend if platform.get(name, {}).get("moduletype") == backend else "missing_or_different",
+             "passed": platform.get(name, {}).get("moduletype") == backend,
+             "expected": backend,
+             "source": locations.get("platform." + name, {})}
+            for name, backend in expected.items()]
 
 
 def classification_counts(rows: list[dict[str, Any]]) -> dict[str, int]:

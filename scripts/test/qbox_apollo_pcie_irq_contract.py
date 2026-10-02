@@ -7,6 +7,13 @@ from typing import Final, Literal, assert_never
 
 import jsonschema
 
+try:
+    from apollo_ap_map_lua import load_module_graph
+    from apollo_lua_descriptor import evaluate_modules, plain_descriptor
+except ModuleNotFoundError:
+    from scripts.test.apollo_ap_map_lua import load_module_graph
+    from scripts.test.apollo_lua_descriptor import evaluate_modules, plain_descriptor
+
 ROOT: Final = Path(__file__).resolve().parents[2]
 CONTRACT_MODULE: Final = Path(__file__).resolve()
 CANONICAL_FVP_GATE: Final = (
@@ -31,7 +38,7 @@ FVP_LIMIT_RECEIPT: Final = (
 PROFILE_SCHEMA: Final = ROOT / "tests/schemas/apollo-qbox-pcie-irq-profile.schema.json"
 INPUT_SCHEMA: Final = ROOT / "tests/schemas/apollo-qbox-pcie-irq-input.schema.json"
 AP_COMPUTE: Final = (
-    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-saturn-v.lua"
 )
 OVERLAY: Final = (
     ROOT
@@ -133,13 +140,30 @@ def artifact(path: Path, exposed_path: Path | None = None) -> Artifact:
     }
 
 
-def verified_artifact_path(entry_value: JsonValue, parent: Path, reason: str) -> Path:
+def platform_artifact(entrypoint: Path) -> Artifact:
+    result = artifact(entrypoint)
+    result["lua_sources"] = {
+        name: artifact(entrypoint.parent / name)
+        for name in sorted(load_module_graph(entrypoint))
+    }
+    return result
+
+
+def verified_artifact_path(entry_value: JsonValue, parent: Path, reason: str,
+                           *, _source: bool = False) -> Path:
     entry = object_field(entry_value, reason)
     path = require_file(Path(string_field(entry.get("path"), reason)), reason)
     if not contained(path, parent):
         raise ProfileError(reason)
     if entry.get("size") != path.stat().st_size or entry.get("sha256") != sha256(path):
         raise ProfileError(reason)
+    if path.name == "apollo-qvp-saturn-v.lua" and not _source:
+        sources = object_field(entry.get("lua_sources"), reason + ":lua_sources")
+        if set(sources) != set(load_module_graph(path)):
+            raise ProfileError(reason + ":lua_source_graph")
+        for name, source in sources.items():
+            if verified_artifact_path(source, path.parent, reason + ":" + name, _source=True) != path.parent / name:
+                raise ProfileError(reason + ":lua_source_path")
     return path
 
 
@@ -204,15 +228,17 @@ def verify_reference_gate(path: Path) -> JsonObject:
 
 
 def validate_platform_contract(ap_compute: Path, overlay: Path) -> None:
-    lua = require_file(
-        ap_compute, "platform_source", parent=ap_compute.absolute().parent
-    ).read_text(encoding="utf-8")
+    entry = require_file(ap_compute, "platform_source", parent=ap_compute.absolute().parent)
+    modules = load_module_graph(entry)
+    platform = plain_descriptor(evaluate_modules(
+        modules, entrypoint=entry.name,
+        environment={"QBOX_APOLLO_PCIE_IRQ_TEST": "true"})["descriptor"])
     dts = require_file(
         overlay, "overlay_source", parent=overlay.absolute().parent
     ).read_text(encoding="utf-8")
-    if lua.count("gic_its_cte_size = 2;") != 1 or "gic_its_cte_size = 8;" in lua:
+    if platform.get("ap_gic_its", {}).get("gicv4_1_cte_size") != 2:
         raise ProfileError("collection_entry_size")
-    if lua.count('addr = "01.0";') != 1:
+    if platform.get("ap_pcie_irq_test_endpoint", {}).get("addr") != "01.0":
         raise ProfileError("endpoint_bdf")
     required = (
         "msi-map = <0x8 &pcie_irq_its 0x8 0x1>;",

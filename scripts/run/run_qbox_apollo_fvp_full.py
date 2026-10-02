@@ -2424,7 +2424,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=qbox_platform_dir / "platforms/apollo/apollo-qvp.lua",
+        default=qbox_platform_dir / "platforms/apollo/apollo-qvp-saturn-v.lua",
     )
     parser.add_argument(
         "--artifact-root",

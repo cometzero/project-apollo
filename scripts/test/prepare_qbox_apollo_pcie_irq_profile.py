@@ -137,6 +137,7 @@ def prepare(
         input_artifacts: dict[str, Artifact] = {
             name: artifact(path) for name, path in checked.items()
         }
+        input_artifacts["ap_compute"] = profile_contract.platform_artifact(AP_COMPUTE)
         modes: JsonObject = {}
         generated: dict[str, Artifact] = {
             "overlay": artifact(overlay, output / overlay.name),

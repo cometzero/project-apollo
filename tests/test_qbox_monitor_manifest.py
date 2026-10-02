@@ -56,7 +56,7 @@ def test_qmp_private_paths_and_domain_biflows(tmp_path):
 
 def test_rse_qmp_is_constructed_before_nested_devices():
     root = Path(__file__).resolve().parents[1]
-    script = root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-qmp.lua"
+    script = root / "hsoc-stack/tools/qbox-platform/platforms/apollo/vp/debug/qmp.lua"
     lua = '''
 local platform = {rse_cpu_pass={qemu_inst_mgr={}, qemu_inst={}}}
 dofile(arg[1])(platform, true)

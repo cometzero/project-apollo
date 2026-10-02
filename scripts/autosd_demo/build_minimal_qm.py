@@ -215,7 +215,7 @@ def preflight(args):
             data = cmdline.read_bytes()
         except (OSError, PermissionError):
             continue
-        if b"apollo-qvp.lua" in data and (b"qbox" in data or b"gs-vp" in data):
+        if any(name in data for name in (b"apollo-qvp.lua", b"apollo-qvp-saturn-v.lua")) and (b"qbox" in data or b"gs-vp" in data):
             raise ValueError(f"Existing QBox full-system process {cmdline.parent.name}; shut it down explicitly first")
 
 

@@ -51,7 +51,7 @@ def test_full_system_evaluates_bindings_and_cpu_ownership():
     assert nodes["platform.si_cl0_cpu_0"]["group"] == "si_cl0"
     assert nodes["platform.ap_router"]["group"] == "ap_compute"
     assert nodes["platform.ap_qemu_inst"]["group"] == "ap_compute"
-    assert nodes["platform.ap_virtioblk_0"]["group"] == "ros"
+    assert nodes["platform.ap_virtioblk_0"]["group"] == "vp"
     assert any(edge["source"] == "platform.ap_cpu_0" and edge["target"] == "platform.ap_router"
                and edge["kind"] == "tlm" for edge in graph["edges"])
     assert any(edge["source"] == "platform.system_router" and edge["target"] == "platform.system_to_smd_nci"

@@ -5340,7 +5340,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--conf",
         type=Path,
-        default=root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua",
+        default=root / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-saturn-v.lua",
         help="RSE-oriented QBox Lua config. Missing config is reported as an implementation blocker.",
     )
     parser.add_argument("--rse-rom", type=Path, default=deploy / "rse-rom-image.img")

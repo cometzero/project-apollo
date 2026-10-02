@@ -29,7 +29,9 @@ def test_dwc_ap_ranges_are_complete_and_non_overlapping() -> None:
         **{f"ap_dw_i2c_{index}": (0x30100000 + index * 0x10000, "dw_apb_i2c") for index in range(6)},
         **{f"ap_dw_ssi_{index}": (0x30160000 + index * 0x10000, "dw_apb_ssi") for index in range(4)},
         **{f"ap_dw_uart_{index}": (0x301A0000 + index * 0x10000, "dw_apb_uart") for index in range(4)},
-        **{f"ap_dw_i2s_{index}": (0x30200000 + index * 0x10000, "dw_apb_i2s") for index in range(2)},
+        # The canonical entry replaces SystemC audio with its native QEMU
+        # backend after address routing; inspect the final descriptor.
+        **{f"ap_dw_i2s_{index}": (0x30200000 + index * 0x10000, "qemu_dw_apb_i2s") for index in range(2)},
     }
 
     assert set(sockets) == set(expected)

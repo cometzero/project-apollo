@@ -1126,7 +1126,7 @@ else
     [[ "${ARTIFACT_ROOT_EXPLICIT}" == "1" ]] ||
         die "--machine apollo-fvp requires --artifact-root"
     QBOX_BUILD_DIR="${QBOX_BUILD_DIR:-${ARTIFACT_ROOT}/work/qbox-platform}"
-    QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp.lua}"
+    QBOX_CONF="${QBOX_CONF:-${QBOX_PLATFORM_DIR}/platforms/apollo/apollo-qvp-saturn-v.lua}"
     OUT_DIR="${OUT_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/yocto-${MACHINE}-${RUN_STAMP}}"
     QBOX_TOOL_DIR="${QBOX_TOOL_DIR:-${QBOX_BUILD_DIR}}"
 fi

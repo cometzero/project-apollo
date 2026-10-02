@@ -206,7 +206,7 @@ def run_mode(args, output, serve, mode, port):
              'qboxconf': str(args.qboxconf)}
     for name in ('qemu_dma350', 'qemu_dw_apb_i2s'):
         paths[name] = str(Path(provider['module_dir']) / (name + '.so'))
-    for name in ('apollo-qvp.lua', 'apollo-qvp-common.lua'):
+    for name in ('apollo-qvp-saturn-v.lua', 'vp/backends/audio.lua', 'soc/hw-block/ros/dma.lua', 'soc/hw-block/ros/io_peri.lua'):
         candidate = Path(provider['data_dir']) / 'platforms/apollo' / name
         if candidate.exists():
             paths[name] = str(candidate)

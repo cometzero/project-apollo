@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
+from scripts.test.apollo_lua_descriptor import evaluated_platform
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,21 +30,11 @@ REQUESTED_QEMU_PARAMS = (
 )
 
 
-@pytest.mark.parametrize(
-    "relative_path",
-    (
-        "platforms/apollo/hw-block/ap_compute.lua",
-        "platforms/apollo/hw-block/rse.lua",
-        "platforms/apollo/hw-block/si_cl0.lua",
-        "platforms/apollo/hw-block/si_cl1.lua",
-    ),
-)
-def test_lua_qemu_defaults_use_freerunning(relative_path: str) -> None:
-    path = ROOT / "hsoc-stack/tools/qbox-platform" / relative_path
-
-    assert 'sync_policy = "multithread-freerunning";' in path.read_text(
-        encoding="utf-8"
-    )
+@pytest.mark.parametrize("instance", ["ap_qemu_inst", "qemu_inst", "si_cl0_qemu_inst", "si_cl1_qemu_inst"])
+def test_lua_qemu_defaults_use_freerunning(instance: str) -> None:
+    platform, _ = evaluated_platform(ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo")
+    assert platform[instance]["sync_policy"] == "multithread-freerunning"
+    assert platform[instance]["time_sync_strategy"] == "quantum_keeper"
 
 
 def test_full_system_uses_requested_qemu_defaults(

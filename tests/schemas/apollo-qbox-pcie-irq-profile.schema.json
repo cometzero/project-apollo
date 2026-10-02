@@ -58,6 +58,36 @@
       },
       "additionalProperties": false
     },
+    "platform_source": {
+      "type": "object",
+      "required": [
+        "path",
+        "size",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "lua_sources": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/artifact"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "inputs": {
       "type": "object",
       "required": ["base_disk", "base_dtb", "base_initramfs", "builder", "gic_overlay_module", "artifact_module", "inspect_module", "contract_module", "profile_schema", "input_schema", "fvp_reference_gate", "linux_image", "uki_stub", "uki_os_release", "kernel_release", "ukify", "uki_manifest", "overlay_source", "guest_probe", "guest_wrapper", "profile_validator", "shared_validator", "ap_compute"],
@@ -84,7 +114,7 @@
         "guest_wrapper": {"$ref": "#/$defs/artifact"},
         "profile_validator": {"$ref": "#/$defs/artifact"},
         "shared_validator": {"$ref": "#/$defs/artifact"},
-        "ap_compute": {"$ref": "#/$defs/artifact"}
+        "ap_compute": {"$ref": "#/$defs/platform_source"}
       },
       "additionalProperties": false
     },

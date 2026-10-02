@@ -18,18 +18,20 @@ from xml.etree import ElementTree as ET
 
 try:
     from scripts.test.apollo_ap_map_lua import LuaModuleError, load_module_graph
+    from scripts.test.apollo_lua_descriptor import DescriptorError, evaluate_modules, plain_descriptor
 except ModuleNotFoundError:
     # The dashboard is also invoked directly as a script, outside a package.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "test"))
     from apollo_ap_map_lua import LuaModuleError, load_module_graph
+    from apollo_lua_descriptor import DescriptorError, evaluate_modules, plain_descriptor
 
-ENTRYPOINT = "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp.lua"
+ENTRYPOINT = "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-saturn-v.lua"
 GROUP_LABELS = {
     "fabric": "System Fabric", "ap_compute": "AP Compute",
     "rse": "RSE", "si_cl0": "Safety Island CL0",
     "si_cl1": "Safety Island CL1", "system_mgmt": "System Management",
     "ros": "Rest of SoC", "pinctrl": "Pin Control", "board": "Board",
-    "platform": "Platform Services",
+    "platform": "Platform Services", "vp": "Virtual Platform",
 }
 _CACHE: dict[str, tuple[str, dict]] = {}
 _LOCK = threading.Lock()
@@ -39,141 +41,14 @@ class TopologyError(RuntimeError):
     """Topology cannot be safely extracted; never return an invented graph."""
 
 
-_LUA = r'''
-local origins = {}
-local env = {
-    assert=assert, error=error, ipairs=ipairs, pairs=pairs, next=next,
-    tonumber=tonumber, tostring=tostring, type=type, select=select,
-    math=math, string=string, table=table, unpack=unpack or table.unpack,
-    print=function() end, os={getenv=function(name)
-        if name == 'QBOX_RDASPEN_ENABLE_AP_CPUS' then return 'true' end
-        return nil
-    end},
-    debug={getinfo=debug.getinfo},
-}
-env._G = env
-local function mark(value, path, line, seen, accuracy)
-    if type(value) ~= 'table' or seen[value] then return end
-    seen[value] = true
-    if value.moduletype and not origins[value] then
-        origins[value] = {path=path, line=line, accuracy=accuracy or 'function-scope'}
-    end
-    for _, child in pairs(value) do mark(child, path, line, seen, accuracy) end
-end
-local function wrap(fn, path)
-    local info = debug.getinfo(fn, 'S')
-    return function(...)
-        local arguments = {...}
-        -- Attribute already-created objects to the caller before a shared
-        -- binding helper observes them. Otherwise CL1 CPUs appear to originate
-        -- in CL0 simply because CL0's IRQ helper runs first.
-        local caller = debug.getinfo(2, 'Sl')
-        local caller_path = caller and caller.source:sub(2)
-        if caller_path and sources[caller_path] then
-            local seen = {}
-            for _, value in pairs(arguments) do
-                mark(value, caller_path, caller.currentline, seen, 'call-site-scope')
-            end
-            mark(env.platform, caller_path, caller.currentline, seen, 'call-site-scope')
-        end
-        local results = {fn(...)}
-        local seen = {}
-        for _, value in pairs(results) do mark(value, path, info.linedefined, seen) end
-        for _, value in pairs(arguments) do mark(value, path, info.linedefined, seen) end
-        mark(env.platform, path, info.linedefined, seen)
-        return (unpack or table.unpack)(results)
-    end
-end
-env.dofile = function(path)
-    assert(sources[path], 'source outside allowlist: '..tostring(path))
-    local fn, err
-    if setfenv then
-        fn, err = loadstring(sources[path], '@'..path)
-        if fn then setfenv(fn, env) end
-    else
-        fn, err = load(sources[path], '@'..path, 't', env)
-    end
-    assert(fn, err)
-    local result = fn()
-    mark(result, path, 1, {})
-    if type(result) == 'table' then
-        for key, value in pairs(result) do
-            if type(value) == 'function' then result[key] = wrap(value, path) end
-        end
-    elseif type(result) == 'function' then result = wrap(result, path) end
-    return result
-end
-env.dofile(entrypoint)
-assert(type(env.platform) == 'table', 'entrypoint has no platform table')
-local function quoted(s)
-    return '"'..s:gsub('[%z\1-\31\\"]', function(c)
-        return string.format('\\u%04x', string.byte(c))
-    end)..'"'
-end
-local function encode(v, seen)
-    local t = type(v)
-    if t == 'string' then return quoted(v) end
-    if t == 'boolean' then return tostring(v) end
-    if t == 'number' then
-        assert(v == v and v ~= math.huge and v ~= -math.huge, 'nonfinite number')
-        return string.format('%.17g', v)
-    end
-    if t ~= 'table' then return 'null' end
-    assert(not seen[v], 'cyclic platform table')
-    seen[v] = true
-    local keys, parts = {}, {}
-    for key in pairs(v) do keys[#keys+1] = key end
-    table.sort(keys, function(a,b) return tostring(a)<tostring(b) end)
-    for _, key in ipairs(keys) do
-        parts[#parts+1] = quoted(tostring(key))..':'..encode(v[key], seen)
-    end
-    seen[v] = nil
-    return '{'..table.concat(parts, ',')..'}'
-end
-local locations = {}
-local function collect(value, path)
-    if type(value) ~= 'table' then return end
-    if value.moduletype then
-        locations[path] = origins[value] or {path=entrypoint,line=1,accuracy='file-scope'}
-    end
-    for key, child in pairs(value) do collect(child,path..'.'..tostring(key)) end
-end
-collect(env.platform, 'platform')
-io.write(encode({platform=env.platform, locations=locations}, {}))
-'''
-
-
-def _literal(value: str) -> str:
-    """Lua long strings preserve source bytes without JSON/Lua escape mismatch."""
-    eq = "="
-    while f"]{eq}]" in value:
-        eq += "="
-    return f"[{eq}[{value}]{eq}]"
-
-
 def _evaluate(modules: dict[str, str]) -> dict:
-    lua = next((path for name in ("lua5.4", "lua5.3", "lua", "luajit")
-                if (path := shutil.which(name))), None)
-    if not lua:
-        raise TopologyError("Lua interpreter missing (install lua5.4 or lua)")
-    # Relative filenames match debug.getinfo-derived includes. Contents are
-    # loaded from memory, so no Lua file can escape the prevalidated graph.
-    script = "local sources = {\n" + "\n".join(
-        f"[ {_literal('./' + path)} ]={_literal(text)},"
-        for path, text in modules.items()) + "\n}\n"
-    script += "local entrypoint = './apollo-qvp.lua'\n" + _LUA
     try:
-        result = subprocess.run([lua, "-"], input=script, text=True,
-                                capture_output=True, timeout=12,
-                                env={"PATH": "/usr/bin:/bin", "LANG": "C"})
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise TopologyError(f"Lua evaluation failed: {type(exc).__name__}") from exc
-    if result.returncode:
-        raise TopologyError(f"Lua evaluation failed: {result.stderr[-2000:].strip()}")
-    try:
-        return json.loads(result.stdout)
-    except (ValueError, TypeError) as exc:
-        raise TopologyError("Lua evaluation returned invalid JSON") from exc
+        entry = Path(ENTRYPOINT).name
+        evaluated = evaluate_modules(modules, entrypoint=entry if entry in modules else "apollo-qvp.lua")
+    except DescriptorError as exc:
+        raise TopologyError(str(exc)) from exc
+    return {"platform": plain_descriptor(evaluated["descriptor"], string_keys=True),
+            "locations": evaluated["locations"]}
 
 
 def _kind(module: str) -> str:
@@ -202,8 +77,18 @@ def _graph(evaluated: dict, sources: list[dict]) -> dict:
     for name, obj in sorted(objects.items()):
         location = evaluated["locations"].get(name, {})
         module_path = location.get("path", "./apollo-qvp.lua").removeprefix("./")
-        group = Path(module_path).stem if module_path.startswith("hw-block/") else (
-            "board" if module_path.startswith("board/") else "platform")
+        if module_path.startswith("soc/hw-block/"):
+            group = module_path.split("/")[2]
+        elif module_path.startswith("hw-block/"):
+            group = Path(module_path).stem
+        elif module_path.startswith("board/"):
+            group = "board"
+        elif module_path.startswith("vp/"):
+            group = "vp"
+        elif module_path.startswith("soc/"):
+            group = "fabric"
+        else:
+            group = "platform"
         if group not in GROUP_LABELS:
             group = "platform"
         # Shared builders can create another domain's objects (e.g. CL1 CPUs

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Final
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
+from scripts.test.apollo_lua_descriptor import evaluated_platform
 
 
 ROOT: Final = Path(__file__).resolve().parents[1]
@@ -45,7 +46,7 @@ PFDI_AGENT_CONFIG: Final = (
     / "pfdi_agent_scmi_cfg.h"
 )
 QBOX_FABRIC: Final = (
-    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/fabric.lua"
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/vp/qvp.lua"
 )
 
 
@@ -111,7 +112,7 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
     # Given: the heartbeat period and the SI0 watchdogs used by full-system builds.
     period_source = PFDI_KCONFIG.read_text(encoding="utf-8")
     agent_source = PFDI_AGENT_CONFIG.read_text(encoding="utf-8")
-    fabric_source = QBOX_FABRIC.read_text(encoding="utf-8")
+    platform, _ = evaluated_platform(QBOX_FABRIC.parent.parent)
     period_match = re.search(
         r"config PFDI_MGMT_PERIOD_MS\s+.*?default\s+(\d+)",
         period_source,
@@ -121,18 +122,14 @@ def test_qbox_pfdi_watchdogs_have_full_system_margin() -> None:
         r"PFDI_AGENT_RESP_TIMEOUT_MS\s+(\d+)U",
         agent_source,
     )
-    quantum_match = re.search(
-        r"SYSTEMC_QUANTUM_NS\s*=\s*(\d+)",
-        fabric_source,
-    )
     assert period_match is not None
     assert response_match is not None
-    assert quantum_match is not None
+    assert isinstance(platform["quantum_ns"], int)
 
     # When: the complete QBox request path is budgeted in microseconds.
     heartbeat_period_us = int(period_match.group(1)) * 1_000
     response_timeout_us = int(response_match.group(1)) * 1_000
-    systemc_quantum_us = int(quantum_match.group(1)) // 1_000
+    systemc_quantum_us = platform["quantum_ns"] // 1_000
     qbox_request_budget_us = (
         heartbeat_period_us + response_timeout_us + systemc_quantum_us
     )

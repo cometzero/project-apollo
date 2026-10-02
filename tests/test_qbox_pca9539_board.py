@@ -6,15 +6,16 @@ import subprocess
 def test_board_wiring():
     root = Path(__file__).resolve().parents[1]
     subprocess.run(["lua", "-"], cwd=root, check=True, input=r'''
-local board = dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/board/pca9539.lua")
-local empty = {}
-board.connect(empty)
-assert(next(empty) == nil)
+local board = dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/board/hw-block/pca9539.lua")
 local p = {
     ap_dw_i2c_0 = {}, ap_dw_i2c_0_eeprom = {},
     host_smd_gpio = {pullups = 0x80, init_inputs = 0x40},
 }
 board.connect(p)
+assert(p.board_pca9539.gpio_out_0 == nil)
+assert(p.board_pca9539.gpio_out_8 == nil)
+local loops = dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/vp/test-wiring/loopbacks.lua")
+loops.connect_ap({apollo_dir = "hsoc-stack/tools/qbox-platform/platforms/apollo/"}, p)
 assert(p.ap_dw_i2c_0.i2c_socket.bind == "&board_i2c0.target_socket")
 assert(p.ap_dw_i2c_0_eeprom.i2c_socket.bind == "&board_i2c0.initiator_socket")
 assert(p.board_pca9539.i2c_socket.bind == "&board_i2c0.initiator_socket")
@@ -26,14 +27,14 @@ assert(p.host_smd_gpio.pullups == 0x83 and p.host_smd_gpio.init_inputs == 0x43)
 assert(p.board_pca9539.gpio_out_0.bind == "&board_pca9539.gpio_in_1")
 assert(p.board_pca9539.gpio_out_8.bind == "&board_pca9539.gpio_in_9")
 
-local pmic = dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/board/tps6594.lua")
-local absent = {}
-pmic.connect(absent)
-assert(next(absent) == nil)
+local pmic = dofile("hsoc-stack/tools/qbox-platform/platforms/apollo/board/hw-block/tps6594.lua")
 p.si_cl0_router = {}
 p.si_cl0_dw_i2c_0 = {}
 p.si_cl0_pmic_gpio = {pullups = 1, init_inputs = 1}
 pmic.connect(p)
+assert(p.board_tps6594.gpio_out_0 == nil)
+assert(p.board_tps6594.gpio_out_8 == nil)
+loops.connect_pmic(p)
 assert(p.board_tps6594.address == 0x48)
 assert(p.board_tps6594.i2c_socket.bind == "&board_si_i2c0.initiator_socket")
 assert(p.board_tps6594.int_n.bind == "&si_cl0_pmic_gpio.gpio_in_0")
@@ -75,4 +76,4 @@ for index = 1, 2 do
     assert(device.size == 256 and device.address_width == 8 and device.page_size == 8)
     assert(device.i2c_socket.bind == "&board_i2c0.initiator_socket")
 end
-''', text=True)
+''', text=True, timeout=12)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 
@@ -25,7 +26,7 @@ OVERLAY = (
     / "apollo-qvp-pcie-irq-overlay.dtso"
 )
 AP_COMPUTE = (
-    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua"
+    ROOT / "hsoc-stack/tools/qbox-platform/platforms/apollo/apollo-qvp-saturn-v.lua"
 )
 
 
@@ -70,15 +71,33 @@ def test_reference_gate_is_schema_and_hash_bound(tmp_path: Path) -> None:
 def test_platform_contract_rejects_collection_entry_size_eight(tmp_path: Path) -> None:
     builder = load_module(BUILDER_PATH, "qbox_profile_platform")
     builder.validate_platform_contract(AP_COMPUTE, OVERLAY)
-    mutated = tmp_path / "ap_compute.lua"
-    mutated.write_text(
-        AP_COMPUTE.read_text(encoding="utf-8").replace(
-            "gic_its_cte_size = 2;", "gic_its_cte_size = 8;", 1
-        ),
-        encoding="utf-8",
-    )
+    copied = tmp_path / "apollo"
+    shutil.copytree(AP_COMPUTE.parent, copied)
+    mutated = copied / "soc/hw-block/ap_compute/map.lua"
+    mutated.write_text(mutated.read_text().replace(
+        "gic_its_cte_size = 2;", "gic_its_cte_size = 8;", 1))
     with pytest.raises(RuntimeError, match="collection_entry_size"):
-        builder.validate_platform_contract(mutated, OVERLAY)
+        builder.validate_platform_contract(copied / AP_COMPUTE.name, OVERLAY)
+
+
+def test_platform_source_manifest_detects_changed_included_module(tmp_path, monkeypatch):
+    builder = load_module(BUILDER_PATH, "qbox_profile_sources")
+    contract = builder.profile_contract
+    entry = tmp_path / "apollo-qvp-saturn-v.lua"
+    child = tmp_path / "child.lua"
+    entry.write_text('platform=dofile("child.lua")')
+    child.write_text('return {moduletype="Container"}')
+    snapshot = contract.platform_artifact(entry)
+    assert set(snapshot["lua_sources"]) == {entry.name, child.name}
+    # Keep the production containment check, with this isolated test root.
+    require_file = contract.require_file
+    monkeypatch.setattr(contract, "require_file", lambda path, reason, **kwargs:
+                        require_file(path, reason, parent=tmp_path))
+    assert contract.verified_artifact_path(snapshot, tmp_path, "source") == entry
+    child.write_text('return {moduletype="Container",changed=true}')
+    with pytest.raises(RuntimeError, match="source:child.lua"):
+        contract.verified_artifact_path(snapshot, tmp_path, "source")
+
 
 
 def test_profile_uses_shared_endpoint_bound_probe() -> None:

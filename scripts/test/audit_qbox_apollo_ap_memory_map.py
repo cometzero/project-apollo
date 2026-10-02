@@ -13,8 +13,10 @@ from typing import Any, Final
 
 try:
     import apollo_ap_map_lua as modular_lua
+    from apollo_lua_descriptor import evaluated_platform
 except ModuleNotFoundError:
     from scripts.test import apollo_ap_map_lua as modular_lua
+    from scripts.test.apollo_lua_descriptor import evaluated_platform
 
 
 DESCRIPTION: Final = "Audit Apollo AP 9.1.1 memory-map coverage from QBox Lua objects."
@@ -527,11 +529,25 @@ def parse_ros_bindings(ap_compute_text: str, ros_text: str) -> list[ApViewBindin
     return bindings
 
 
+APOLLO_REL = "hsoc-stack/tools/qbox-platform/platforms/apollo"
+
+
 def current_ap_view_bindings(root: Path) -> list[ApViewBinding]:
-    ap_compute = read_text(root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua")
-    ros = read_text(root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ros.lua")
-    bindings = parse_ap_compute_bindings(ap_compute)
-    bindings.extend(parse_ros_bindings(ap_compute, ros))
+    platform, locations = evaluated_platform(root / APOLLO_REL)
+    bindings = []
+    for name, obj in platform.items():
+        if not isinstance(obj, dict) or "moduletype" not in obj:
+            continue
+        source = locations.get("platform." + name, {}).get("path", "unknown").removeprefix("./")
+        for socket, config in obj.items():
+            if isinstance(config, dict) and config.get("bind") == "&ap_router.initiator_socket":
+                bindings.append(ApViewBinding(source, name, str(socket), "evaluated_ap_router_bind"))
+    gic = platform.get("ap_gic", {})
+    count = gic.get("num_cpus", 0)
+    if count > 0 and all(gic.get("redist_iface_" + str(i), {}).get("bind") ==
+                         "&ap_router.initiator_socket" for i in range(count)):
+        source = locations.get("platform.ap_gic", {}).get("path", "unknown").removeprefix("./")
+        bindings.append(ApViewBinding(source, "ap_gic", "redist_iface_*", "evaluated_all_active_redists"))
     return sorted(bindings, key=lambda item: (item.object_name, item.socket_name, item.lua_file))
 
 
@@ -653,35 +669,21 @@ def add_ros_dwc_sockets(
 
 
 def current_coverage(root: Path) -> list[LuaSocket]:
-    apollo = root / "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block"
-    lua_files = [
-        "config.lua",
-        "rse.lua",
-        "ap_compute.lua",
-        "ros.lua",
-        "pinctrl.lua",
-        "system_mgmt.lua",
-        "si_cl0.lua",
-        "si_cl1.lua",
-    ]
-    modules = modular_lua.load_module_graph(apollo.parent / "apollo-qvp.lua")
-    texts = {lua_file: modules[f"hw-block/{lua_file}"] for lua_file in lua_files}
-    constants, tables = parse_constants("\n".join(texts.values()))
-    sockets: list[LuaSocket] = []
-    for lua_file in lua_files:
-        if lua_file == "config.lua":
+    platform, locations = evaluated_platform(root / APOLLO_REL)
+    sockets = []
+    watched = WATCHED_OBJECTS | {"dma350_0", "dma350_1"}
+    for name, obj in platform.items():
+        if name not in watched and not name.startswith("ap_dw_"):
             continue
-        sockets.extend(parse_object_sockets(texts[lua_file], lua_file, constants, tables))
-    add_gic_redists(sockets, constants, "ap_compute.lua")
-    add_smmu_factory_socket(
-        texts["ap_compute.lua"], sockets, constants, tables, "ap_compute.lua"
-    )
-    add_ros_dwc_sockets(texts["ros.lua"], sockets, constants, tables, "ros.lua")
-    for name, base in (("dma350_0", "ROS_DMA350_BASE"),
-                       ("dma350_1", "ROS_I2S_DMA_BASE")):
-        if base in constants and not any(s.object_name == name for s in sockets):
-            sockets.append(LuaSocket("ros.lua", name, "dma350", "target_socket",
-                                     constants[base], constants["ROS_MMIO_SIZE"]))
+        if not isinstance(obj, dict) or "moduletype" not in obj:
+            continue
+        source = locations.get("platform." + name, {}).get("path", "unknown").removeprefix("./")
+        for socket, config in obj.items():
+            if not isinstance(config, dict):
+                continue
+            if isinstance(config.get("address"), (int, float)) and isinstance(config.get("size"), (int, float)):
+                sockets.append(LuaSocket(source, name, obj["moduletype"], str(socket),
+                                         int(config["address"]), int(config["size"])))
     return sorted(sockets, key=lambda item: (item.address, item.object_name, item.socket_name))
 
 
@@ -885,14 +887,15 @@ def high_dram_value_check(
 
 
 def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
-    config_path = "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua"
+    platform, locations = evaluated_platform(root / APOLLO_REL)
+    location = locations.get("platform.host_ap_dram2", {})
+    config_path = APOLLO_REL + "/" + location.get("path", "unknown").removeprefix("./")
+    dram_base = platform.get("host_ap_dram2", {}).get("target_socket", {}).get("address")
     dts_path = (
         "hsoc-stack/components/primary_compute/linux/arch/arm64/boot/dts/arm/"
         "apollo-fvp.dts"
     )
-    config = read_text(root / config_path)
     dts = read_text(root / dts_path)
-    config_match = re.search(r"\b(?:local\s+)?HOST_AP_DRAM2_BASE\s*=\s*(0x[0-9a-fA-F]+|\d+)", config)
     dts_node = re.search(r"memory@80000000\s*\{(?P<body>.*?)\n\s*\};", dts, re.S)
     dts_cells = re.findall(r"<[^>]+>", dts_node.group("body")) if dts_node else []
     dts_high = normalized_cells(dts_cells[1]) if len(dts_cells) > 1 else "missing"
@@ -905,8 +908,8 @@ def high_dram_inventory(root: Path) -> list[dict[str, str | int | bool | None]]:
         high_dram_value_check(
             "full_system_host_ap_dram2_base",
             config_path,
-            None if config_match is None else line_for_offset(config, config_match.start(1)),
-            None if config_match is None else int(config_match.group(1), 0),
+            location.get("line"),
+            dram_base,
         ),
         {
             "name": "linux_dts_high_memory_cells",
@@ -1446,17 +1449,10 @@ def main() -> int:
         "placeholder_only_failures": placeholder_only_failures,
         "placeholder_only_rejection_probe": placeholder_only_rejection_probe,
         "expectation_failures": expected_mismatch,
-        "sources": [
-            DOC_REL_PATH,
-            PLAN_REL_PATH,
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/config.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ap_compute.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/ros.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/rse.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/system_mgmt.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl0.lua",
-            "hsoc-stack/tools/qbox-platform/platforms/apollo/hw-block/si_cl1.lua",
-        ],
+        "sources": [DOC_REL_PATH, PLAN_REL_PATH, *[
+            APOLLO_REL + "/" + name for name in sorted(
+                modular_lua.load_module_graph(root / APOLLO_REL / "apollo-qvp.lua"))
+        ]],
     }
     if args.list_expected:
         for row in EXPECTED_ROWS:
