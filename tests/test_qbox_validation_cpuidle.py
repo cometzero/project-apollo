@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import os
 from pathlib import Path
+import re
+import subprocess
 
 import pytest
 
@@ -276,3 +279,119 @@ def test_cpuidle_timeout_and_eof_are_blocked_with_cleanup() -> None:
     assert eof.phase == "blocked"
     assert eof.blocker == "fifo_eof:primary"
     assert eof.cleanup is not None and eof.cleanup.passed
+
+
+def _unsupported_outputs() -> tuple[str, ...]:
+    commands = (
+        *((mode, "all", "all") for mode in
+          ("ensure", "cstates", "defaults", "governors", "switch", "invalid")),
+        *((mode, str(cpu), state) for mode in ("disable", "residency")
+          for cpu in range(4) for state in ("state0", "state1", "state2")),
+    )
+    return tuple(
+        "CPUIDLE_UNSUPPORTED reason=psci_powerdown_wakeup_unmodeled "
+        "compatible=arm,apollo-qvp driver=none cpu_count=4 "
+        f"dt_idle_states=0 sysfs_states=0 mode={mode} cpu={cpu} state={state}"
+        for mode, cpu, state in commands
+    )
+
+
+def test_cpuidle_actual_unsupported_records_are_blocked_with_reason() -> None:
+    spec = resolve_profile("cpuidle", MATRIX)
+    ensure_step = next(step for step in spec.steps
+                       if step.command == f"{GUEST_PROBE_PATH} ensure")
+    framing = replace(spec, steps=(ensure_step,))
+    state = new_profile_state(framing, frozenset({Console.PRIMARY}), now=0.0)
+    state = advance_profile(framing, state, ConsoleSnapshot(primary="nexios-bsp# "),
+                            now=0.0).state
+    state = advance_profile(
+        framing, state,
+        ConsoleSnapshot(primary="nexios-bsp# \n" + "\n".join(_unsupported_outputs())
+                        + "\nnexios-bsp# "), now=0.1,
+    ).state
+    assert state.phase == "blocked"
+    assert state.blocker == "unsupported:psci_powerdown_wakeup_unmodeled"
+    assert state.result is not None and state.result["verdict"] == "BLOCKED"
+    assert {item["status"] for item in state.result["assertions"]} == {"BLOCKED"}
+
+
+@pytest.mark.parametrize("mutation", (
+    "missing", "duplicate", "driver", "compatible", "dt", "sysfs", "reason", "mixed",
+))
+def test_cpuidle_forged_or_partial_unsupported_evidence_fails(mutation: str) -> None:
+    outputs = list(_unsupported_outputs())
+    replacements = {
+        "driver": ("driver=none", "driver=psci"),
+        "compatible": ("compatible=arm,apollo-qvp", "compatible=arm,apollo-fvp"),
+        "dt": ("dt_idle_states=0", "dt_idle_states=2"),
+        "sysfs": ("sysfs_states=0", "sysfs_states=1"),
+        "reason": ("reason=psci_powerdown_wakeup_unmodeled", "reason=unknown"),
+    }
+    if mutation == "missing":
+        outputs.pop()
+    elif mutation == "duplicate":
+        outputs[-1] = outputs[0]
+    elif mutation == "mixed":
+        outputs.extend(_passing_outputs())
+    else:
+        old, new = replacements[mutation]
+        outputs[0] = outputs[0].replace(old, new)
+    assert set(_statuses(tuple(outputs)).values()) == {"FAIL"}
+
+
+def _guest_capabilities(tmp_path: Path) -> tuple[Path, Path, Path, dict[str, str]]:
+    cpu_root, dt_root, bin_dir = (tmp_path / name for name in ("cpu", "dt", "bin"))
+    (cpu_root / "cpuidle").mkdir(parents=True)
+    (cpu_root / "cpuidle/current_driver").write_text("none\n")
+    (dt_root / "cpus").mkdir(parents=True)
+    (dt_root / "compatible").write_bytes(b"arm,apollo-qvp\0arm,zena-css\0")
+    for cpu in range(4):
+        (cpu_root / f"cpu{cpu}").mkdir()
+        (dt_root / f"cpus/cpu@{cpu:x}").mkdir()
+    bin_dir.mkdir()
+    (bin_dir / "nproc").write_text("#!/bin/sh\nprintf '4\\n'\n")
+    (bin_dir / "nproc").chmod(0o755)
+    probe = tmp_path / "probe.sh"
+    probe.write_text(GUEST_PROBE.replace("cpu_root=/sys/devices/system/cpu",
+                                         f"cpu_root='{cpu_root}'")
+                     .replace("dt_root=/proc/device-tree", f"dt_root='{dt_root}'"))
+    return cpu_root, dt_root, probe, {**os.environ, "PATH": f"{bin_dir}:{os.defpath}"}
+
+
+def test_cpuidle_guest_wfi_only_guard_completes_every_mode(tmp_path: Path) -> None:
+    cpu_root, _dt_root, probe, env = _guest_capabilities(tmp_path)
+    spec = resolve_profile("cpuidle", MATRIX)
+    outputs = []
+    for step in spec.steps:
+        if not step.command.startswith(GUEST_PROBE_PATH + " "):
+            continue
+        arguments = step.command.split()[1:]
+        result = subprocess.run(["sh", str(probe), *arguments], env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, result.stderr
+        assert step.completion_pattern and re.search(step.completion_pattern, result.stdout)
+        outputs.append(result.stdout)
+    assert not probe.exists()  # The final operation removes the installed probe.
+    assert (cpu_root / "cpuidle/current_driver").read_text() == "none\n"
+    assert set(_statuses(tuple(outputs)).values()) == {"BLOCKED"}
+
+
+@pytest.mark.parametrize("mismatch", ("fvp", "driver", "dt-node", "dt-reference", "sysfs-state"))
+def test_cpuidle_guest_does_not_skip_inconsistent_capabilities(
+    tmp_path: Path, mismatch: str,
+) -> None:
+    cpu_root, dt_root, probe, env = _guest_capabilities(tmp_path)
+    if mismatch == "fvp":
+        (dt_root / "compatible").write_bytes(b"arm,apollo-fvp\0")
+    elif mismatch == "driver":
+        (cpu_root / "cpuidle/current_driver").write_text("psci\n")
+    elif mismatch == "dt-node":
+        (dt_root / "cpus/idle-states").mkdir()
+    elif mismatch == "dt-reference":
+        (dt_root / "cpus/cpu@2/cpu-idle-states").write_bytes(b"\0\0\0\1")
+    else:
+        (cpu_root / "cpu2/cpuidle/state0").mkdir(parents=True)
+    result = subprocess.run(["sh", str(probe), "ensure"], env=env,
+                            capture_output=True, text=True, timeout=5)
+    assert result.returncode != 0
+    assert "CPUIDLE_UNSUPPORTED" not in result.stdout

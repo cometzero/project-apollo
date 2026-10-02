@@ -9,9 +9,39 @@ GUEST_PROBE: Final = r"""#!/bin/sh
 set -eu
 cpu_root=/sys/devices/system/cpu
 idle_root=$cpu_root/cpuidle
+dt_root=/proc/device-tree
 cpus='0 1 2 3'
 entries='state0:WFI:1:1 state1:cpu-sleep:4200:4000 state2:cluster-sleep:4500:4200'
 mode=$1
+# A missing driver alone is an error, not evidence of unsupported powerdown.
+# Check the QVP DT contract and every CPU before skipping state mutations.
+wfi_only_qvp() {
+    test -r "$dt_root/compatible" || return 1
+    tr '\000' '\n' < "$dt_root/compatible" | grep -Fxq arm,apollo-qvp || return 1
+    test -d "$dt_root/cpus" || return 1
+    test ! -e "$dt_root/cpus/idle-states" || return 1
+    idle_dt_cpus=0
+    for idle_cpu in "$dt_root"/cpus/cpu@*; do
+        test -d "$idle_cpu" || continue
+        test ! -e "$idle_cpu/cpu-idle-states" || return 1
+        idle_dt_cpus=$((idle_dt_cpus+1))
+    done
+    test "$idle_dt_cpus" -gt 0 || return 1
+    test -r "$idle_root/current_driver" || return 1
+    test "$(cat "$idle_root/current_driver")" = none || return 1
+    test "$(nproc --all)" = 4 || return 1
+    for idle_cpu in $cpus; do
+        test -d "$cpu_root/cpu$idle_cpu" || return 1
+    done
+    for idle_state in "$cpu_root"/cpu[0-9]*/cpuidle/state*; do
+        test ! -d "$idle_state" || return 1
+    done
+}
+if wfi_only_qvp; then
+    printf 'CPUIDLE_UNSUPPORTED reason=psci_powerdown_wakeup_unmodeled compatible=arm,apollo-qvp driver=none cpu_count=4 dt_idle_states=0 sysfs_states=0 mode=%s cpu=%s state=%s\n' "$mode" "${2:-all}" "${3:-all}"
+    if test "$mode" = invalid; then rm -f "$0"; fi
+    exit 0
+fi
 case $mode in
 ensure)
     test -d $idle_root

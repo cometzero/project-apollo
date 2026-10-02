@@ -18,7 +18,7 @@ class CpuIdleProbeCommand:
 def _command(arguments: str, marker: str) -> CpuIdleProbeCommand:
     return CpuIdleProbeCommand(
         f"{GUEST_PROBE_PATH} {arguments}",
-        completion_pattern=rf"(?m)^{marker} ",
+        completion_pattern=rf"(?m)^(?:{marker}|CPUIDLE_UNSUPPORTED) ",
     )
 
 
@@ -26,7 +26,7 @@ def _disable_command(cpu: int, state: str) -> CpuIdleProbeCommand:
     return CpuIdleProbeCommand(
         f"{GUEST_PROBE_PATH} disable {cpu} {state}",
         30.0,
-        completion_pattern=r"(?m)^CPUIDLE_DISABLE ",
+        completion_pattern=r"(?m)^(?:CPUIDLE_DISABLE|CPUIDLE_UNSUPPORTED) ",
     )
 
 
@@ -41,7 +41,7 @@ def _residency_command(
         f"{GUEST_PROBE_PATH} residency {cpu} {state} "
         f"{residency} {latency} {limit}",
         float(limit + 15),
-        completion_pattern=r"(?m)^CPUIDLE_RESIDENCY ",
+        completion_pattern=r"(?m)^(?:CPUIDLE_RESIDENCY|CPUIDLE_UNSUPPORTED) ",
     )
 
 

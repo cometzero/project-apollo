@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from scripts.run.qbox_cpuidle_commands import cpuidle_probe_commands
-from scripts.run.qbox_cpuidle_probe import evaluate_cpuidle_probe
+from scripts.run.qbox_cpuidle_probe import (
+    UNSUPPORTED_REASON,
+    cpuidle_powerdown_unsupported,
+    evaluate_cpuidle_probe,
+)
 
 from .reuse_common import NoopCleanup, PRIMARY_PROMPT, status
 from .types import (
@@ -11,6 +15,7 @@ from .types import (
     Console,
     ConsoleSnapshot,
     CoverageKind,
+    EvaluationError,
     ProbeStep,
     ProfileProbeSpec,
 )
@@ -25,6 +30,8 @@ class CpuIdleEvaluator:
         snapshot: ConsoleSnapshot,
         outputs: tuple[str, ...],
     ) -> tuple[AssertionObservation, ...]:
+        if cpuidle_powerdown_unsupported(outputs):
+            raise EvaluationError(f"unsupported:{UNSUPPORTED_REASON}")
         checks = evaluate_cpuidle_probe(outputs)
         return tuple(
             AssertionObservation(assertion_id, status(passed))

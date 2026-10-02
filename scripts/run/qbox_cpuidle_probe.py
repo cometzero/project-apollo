@@ -5,6 +5,7 @@ import re
 from typing import Final
 
 FIELD_RE: Final = re.compile(r"^[A-Za-z0-9_./,:+-]+$")
+UNSUPPORTED_REASON: Final = "psci_powerdown_wakeup_unmodeled"
 EXPECTED_STATES: Final = tuple(
     (cpu, state, name, residency, latency)
     for cpu in range(4)
@@ -77,8 +78,43 @@ def _state_map(
     return mapped if set(mapped) == expected else None
 
 
+def cpuidle_powerdown_unsupported(outputs: tuple[str, ...]) -> bool:
+    """Accept only complete, consistent capability records for every command."""
+    combined = "\n".join(outputs)
+    records = _records(combined, "CPUIDLE_UNSUPPORTED")
+    expected = {
+        *((mode, "all", "all") for mode in
+          ("ensure", "cstates", "defaults", "governors", "switch", "invalid")),
+        *((mode, str(cpu), state) for mode in ("disable", "residency")
+          for cpu in range(4) for state in ("state0", "state1", "state2")),
+    }
+    fields = frozenset({"reason", "compatible", "driver", "cpu_count",
+                        "dt_idle_states", "sysfs_states", "mode", "cpu", "state"})
+    if len(records) != len(expected) or any(
+        line.startswith("CPUIDLE_") and not line.startswith("CPUIDLE_UNSUPPORTED ")
+        for line in combined.splitlines()
+    ):
+        return False
+    seen = set()
+    for record in records:
+        if not _has_fields(record, fields) or any(
+            record.value(name) != value for name, value in (
+                ("reason", UNSUPPORTED_REASON), ("compatible", "arm,apollo-qvp"),
+                ("driver", "none"), ("cpu_count", "4"),
+                ("dt_idle_states", "0"), ("sysfs_states", "0"),
+            )
+        ):
+            return False
+        seen.add(tuple(record.value(name) for name in ("mode", "cpu", "state")))
+    return seen == expected
+
+
 def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
     combined = "\n".join(outputs)
+    # The profile adapter handles supported UNSUPPORTED records as BLOCKED.
+    # Mixed, malformed or incomplete records must never fall through to PASS.
+    if any(line.startswith("CPUIDLE_UNSUPPORTED") for line in combined.splitlines()):
+        return (False,) * 8
     ensure = _records(combined, "CPUIDLE_ENSURE")
     cstates = _state_map(
         _records(combined, "CPUIDLE_CSTATE"),
