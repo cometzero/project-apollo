@@ -2,6 +2,18 @@
 
 Initialized: 2026-05-20
 
+## Lua SoC / VP / Board structure
+
+The canonical full-system entry is now `apollo-qvp-saturn-v.lua`, with
+`apollo-qvp.lua` retained as a compatibility wrapper. Domain hardware is under
+`soc/hw-block/`, execution/debug/test policy under `vp/`, and external board
+population under `board/hw-block/`. Runtime CCI object paths and hardware maps
+remain stable. See [the design and implementation record](soc_plan/README.md).
+
+This structural change does not establish Saturn-V schematic, physical timing,
+or full-system audio fidelity. Runtime results are recorded separately from
+static descriptor equality in the implementation record.
+
 ## AutoSD monitor integration
 
 The dashboard now has a separate owned-loopback QBox collector, domain QK/MCIPS
