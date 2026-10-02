@@ -21,7 +21,8 @@ class FakePlatformProcess:
 def pfdi_primary_evidence() -> str:
     lines = [
         "PFDI prerequisites OK",
-        "Loading config V1.0: running 4 tasks every 60 ms",
+        "pfdi_interval_ms:600",
+        "Loading config V1.0: running 4 tasks every 600 ms",
         "libPFDI version: 1.0",
         "Stub firmware detected",
         "pfdi_prerequisites_rc:0",

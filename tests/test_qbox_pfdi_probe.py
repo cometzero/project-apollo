@@ -11,10 +11,11 @@ from scripts.run.qbox_pfdi_probe import evaluate_pfdi_probe, pfdi_probe_commands
 runtime = full_runner.runtime_engine
 
 
-def pfdi_primary_log() -> str:
+def pfdi_primary_log(interval_ms: int = 600) -> str:
     lines = [
         "PFDI prerequisites OK",
-        "Loading config V1.0: running 4 tasks every 60 ms",
+        f"pfdi_interval_ms:{interval_ms}",
+        f"Loading config V1.0: running 4 tasks every {interval_ms} ms",
         "libPFDI version: 1.0",
         "Stub firmware detected",
     ]
@@ -66,6 +67,9 @@ def test_pfdi_probe_commands_cover_same_bsp_contract() -> None:
     joined = "\n".join(commands)
     assert "/dev/cpu/0/pfdi" in joined
     assert "pidof pfdi-sample-app" in joined
+    assert "od -An -tu8 -j16 -N8 /etc/pfdi/pfdi_test_config_0.pack" in joined
+    assert "printf 'pfdi_interval_ms:%s\\n'" in joined
+    assert "every $interval_ms ms" in joined
     assert "kill $pids" in joined
     assert "pfdi-cli --pfdi_info 0" in joined
     assert "pfdi-sample-app -ivc" in joined
@@ -82,6 +86,60 @@ def test_pfdi_probe_accepts_reordered_scp_markers() -> None:
     # Then: every CPU and fault-propagation contract passes without ordering.
     assert result["passed"] is True
     assert result["failed_checks"] == []
+
+
+@pytest.mark.parametrize("interval_ms", [60, 600, 900])
+def test_pfdi_probe_uses_configured_interval(interval_ms: int) -> None:
+    commands = pfdi_probe_commands(expected_interval_ms=interval_ms)
+    assert f'test "$interval_ms" -eq {interval_ms}' in "\n".join(commands)
+    result = evaluate_pfdi_probe(
+        pfdi_primary_log(interval_ms), pfdi_scp_log(),
+        expected_interval_ms=interval_ms,
+    )
+    assert result["passed"] is True
+
+
+@pytest.mark.parametrize("interval_ms", [60, 600, 900])
+def test_pfdi_probe_defaults_to_installed_pack_interval(interval_ms: int) -> None:
+    result = evaluate_pfdi_probe(pfdi_primary_log(interval_ms), pfdi_scp_log())
+    assert result["passed"] is True
+
+
+def test_pfdi_probe_rejects_policy_interval_mismatch() -> None:
+    result = evaluate_pfdi_probe(
+        pfdi_primary_log(60), pfdi_scp_log(), expected_interval_ms=600,
+    )
+    assert result["passed"] is False
+    assert "service" in result["failed_checks"]
+
+
+def test_pfdi_probe_rejects_pack_and_active_log_mismatch() -> None:
+    primary = pfdi_primary_log().replace("pfdi_interval_ms:600", "pfdi_interval_ms:900")
+    result = evaluate_pfdi_probe(primary, pfdi_scp_log())
+    assert result["passed"] is False
+    assert "service" in result["failed_checks"]
+
+
+@pytest.mark.parametrize("marker", [
+    "", "pfdi_interval_ms:", "pfdi_interval_ms:invalid", "pfdi_interval_ms:0",
+    "pfdi_interval_ms:-1", "pfdi_interval_ms:600 trailing", "pfdi_interval_ms:4294967296",
+    "pfdi_interval_ms:600\npfdi_interval_ms:900",
+    "pfdi_interval_ms:600\npfdi_interval_ms:invalid",
+    "echo pfdi_interval_ms:600",
+])
+def test_pfdi_probe_rejects_invalid_pack_interval_evidence(marker: str) -> None:
+    primary = pfdi_primary_log().replace("pfdi_interval_ms:600", marker)
+    result = evaluate_pfdi_probe(primary, pfdi_scp_log())
+    assert result["passed"] is False
+    assert "service" in result["failed_checks"]
+
+
+@pytest.mark.parametrize("interval_ms", [0, -1, 4294967296])
+def test_pfdi_probe_rejects_unsupported_intervals(interval_ms: int) -> None:
+    with pytest.raises(ValueError, match="1..4294967295"):
+        pfdi_probe_commands(expected_interval_ms=interval_ms)
+    with pytest.raises(ValueError, match="1..4294967295"):
+        evaluate_pfdi_probe("", "", expected_interval_ms=interval_ms)
 
 
 def test_pfdi_probe_fails_when_one_cpu_marker_is_missing() -> None:
