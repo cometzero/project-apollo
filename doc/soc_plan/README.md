@@ -12,6 +12,7 @@
 - [전환 단계와 검증](migration.md): 파일별 이동, 소비자 변경, 단계별 완료 조건.
 - [계획 리뷰와 반영 사항](review.md): backend 선택 순서, 중복 정의, 오류 처리, 검사기 호환성.
 - [Lua 작성·가독성 지침](lua-style.md): 공식 문서 조사, module 예제, naming/formatting/lint 적용 방안.
+- [Linux Device Tree 후속 분리 계획](linux-device-tree.md): `hsoc/`의 SoC·pinctrl·QVP·Saturn-V 파일 구성, 기본 disabled 정책, DTB/UKI 전환과 검증. 구현 결과는 [Linux DT 구현·검증](linux-device-tree-implementation.md)에 기록한다.
 
 ## 1. 설계 범위와 경계
 
