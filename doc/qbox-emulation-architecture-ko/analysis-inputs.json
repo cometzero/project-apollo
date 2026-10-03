@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "analysis_date": "2026-10-03",
+  "scope": "Apollo QVP full-system; AP4 SI_CL1_4; source analysis plus archived runtime evidence",
+  "new_runtime_measurement": false,
+  "source_revisions": {
+    ".": "a6da5d9aa0415fde0c659bb8497f9bc8b5ec7ef2",
+    "hsoc-stack/tools/qbox": "3a75ebe182a22801f5e58b5b529b4abb824d9a13",
+    "hsoc-stack/tools/qbox-platform": "f546dd5bec82af698202616b5a80a37830974b2e",
+    "hsoc-stack/tools/qemu": "52c63bb0e10ed1e2709d0aaccc071270418154fc",
+    "hsoc-stack/components/primary_compute/linux": "803f0889bcf5bdc654cc8123f860ee7b88aa5897",
+    "hsoc-stack/components/system_mgmt/scp-firmware": "5cbcfce09295b5cfc0d5d65d945192d16c4fd5f2",
+    "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src": "c95781f22bbd33bd027bff10710825255b78a3eb",
+    "hsoc-stack/yocto/meta-hsoc-bsp": "da27eda3dae3d44581fd266fbdeb4aafd8e197cc",
+    "hsoc-stack/yocto/meta-hsoc-auto-solutions": "ef71f1ac2a41ee31f7ae2cd47558033fbd50ecc4"
+  },
+  "runtime_artifacts": {
+    "build/qbox-apollo-qvp/runtime-idle/after-verified-load.json": {
+      "sha256": "34021240295c40f1aa4d59fbca6c9e57b923ffe988c359ebab282d7db64180d6"
+    },
+    "build/qbox-apollo-qvp/runtime-idle/qualification.json": {
+      "sha256": "31bbf5240490eacc52dd042f332a90e5c93f7fcab2ea39eb5f4948817c30b4bf"
+    },
+    "build/qbox-apollo-qvp/runtime-load/baseline-perf-retry-load.json": {
+      "sha256": "398812f541cdc24851112601e43a82af64b8de299f242a01a9b1ae8cd7c8ca83"
+    }
+  },
+  "archived_snapshot": {
+    "source": "build/qbox-apollo-qvp/runtime-idle/after-verified-load.json",
+    "window_index": 0,
+    "endpoint": "host_before",
+    "host_pid": 833082,
+    "total_host_threads": 36,
+    "thread_names": {
+      "platforms-vp": 12,
+      "qemu-iothread": 5,
+      "call_rcu": 5,
+      "IO mon_iothread": 4,
+      "CPU 0/TCG": 3,
+      "CPU 1/TCG": 2,
+      "CPU 2/TCG": 2,
+      "CPU 3/TCG": 2,
+      "ALL CPUs/TCG": 1
+    },
+    "cpu_domains": {
+      "rse": {
+        "cpu_count": 1,
+        "host_tids": [
+          833109
+        ],
+        "qom_types": [
+          "cortex-m55-arm-cpu"
+        ]
+      },
+      "si-cl0": {
+        "cpu_count": 1,
+        "host_tids": [
+          833111
+        ],
+        "qom_types": [
+          "cortex-r82-arm-cpu"
+        ]
+      },
+      "si-cl1": {
+        "cpu_count": 4,
+        "host_tids": [
+          833112,
+          833113,
+          833114,
+          833115
+        ],
+        "qom_types": [
+          "cortex-r82-arm-cpu"
+        ]
+      },
+      "ap": {
+        "cpu_count": 4,
+        "host_tids": [
+          833102,
+          833103,
+          833104,
+          833105
+        ],
+        "qom_types": [
+          "cortex-a720ae-arm-cpu"
+        ]
+      }
+    },
+    "note": "Historical PID/TIDs are not live identifiers. after-verified harness later failed in its tick probe; measurement snapshots are retained."
+  },
+  "qualification_status": "PASS_WITH_DOCUMENTED_LIMITATIONS",
+  "runtime_libqemu": {
+    "path": "build/tmp_baremetal/work/x86_64-linux/qbox-apollo-qvp-native/1.0/recipe-sysroot-native/usr/lib/libqemu-system-aarch64.so",
+    "sha256": "3d4b8501d5bcdea93c7bb342288c9a2de98ffd2d11255a65eae0a82d11e5678d",
+    "build_id": "91341cf69895ec63b1eb50301978c505ad590005"
+  },
+  "comparison": {
+    "baseline_cpu_percent": 307.14239035704713,
+    "after_cpu_percent": 12.7205510697196,
+    "reduction_percent": 95.8584189388732,
+    "note": "Combined changes; not an isolated 40ms polling result."
+  },
+  "boundaries": [
+    "Existing intermittent RSE/SCP cold-start and power-state readback failures remain unresolved.",
+    "QVP CPU/cluster PSCI powerdown wake unsupported; default architectural WFI remains supported.",
+    "FVP/physical power, RT deadline bounds, migration compatibility, and audio/DMA workload qualification are outside this validation.",
+    "Measurement/probe tooling failures remain preserved; only verified functional runs are marked PASS."
+  ]
+}
