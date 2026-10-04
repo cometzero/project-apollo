@@ -49,6 +49,8 @@ Options:
   --uboot-only                Validate only through U-Boot FWU Regular State
   --dwc-peripheral-probe      Run opt-in DWC I2C/SPI/UART guest qualification
   --headless                  Run without tmux and write logs under --out-dir
+  --stats                     Log QBox load every 5 seconds; enable monitor/QMP
+  --stats-interval SECONDS     Set a positive interval and enable --stats
   --monitor                   Enable the QBox web dashboard (default port: 18080)
   --monitor-port PORT         Enable the dashboard on the selected TCP port
   --keep-running-after-pass   Keep QBox alive after the pass condition (default)
@@ -710,6 +712,7 @@ RUN_QBOX_RECORD_INITIAL_STATE="${RUN_QBOX_RECORD_INITIAL_STATE:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
 MONITOR=0
+STATS_INTERVAL=""
 MONITOR_PORT=18080
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 UBOOT_ONLY="${UBOOT_ONLY:-0}"
@@ -902,6 +905,21 @@ while (($#)); do
             HEADLESS=1
             shift
             ;;
+        --stats)
+            STATS_INTERVAL="${STATS_INTERVAL:-5}"
+            shift
+            ;;
+        --stats-interval)
+            [[ $# -ge 2 ]] || die "--stats-interval requires a value"
+            STATS_INTERVAL="$2"
+            [[ -n "${STATS_INTERVAL}" ]] || die "--stats-interval requires a value"
+            shift 2
+            ;;
+        --stats-interval=*)
+            STATS_INTERVAL="${1#*=}"
+            [[ -n "${STATS_INTERVAL}" ]] || die "--stats-interval requires a value"
+            shift
+            ;;
         --monitor)
             MONITOR=1
             shift
@@ -1046,6 +1064,12 @@ while (($#)); do
             ;;
     esac
 done
+
+if [[ -n "${STATS_INTERVAL}" ]]; then
+    "${PYTHON:-python3}" -c 'import math, sys; value = float(sys.argv[1]); sys.exit(0 if math.isfinite(value) and value > 0 else 1)' "${STATS_INTERVAL}" 2>/dev/null ||
+        die "--stats-interval must be a finite positive number: ${STATS_INTERVAL}"
+    MONITOR=1
+fi
 
 [[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
     ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
@@ -1478,6 +1502,9 @@ if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
     RUNNER_CMD+=(--keep-running-after-pass)
 elif [[ "${HEADLESS}" == "0" ]]; then
     RUNNER_CMD+=(--exit-after-pass)
+fi
+if [[ -n "${STATS_INTERVAL}" ]]; then
+    RUNNER_CMD+=(--stats-interval "${STATS_INTERVAL}")
 fi
 if [[ "${MONITOR}" == "1" ]]; then
     RUNNER_CMD+=(--monitor --monitor-port "${MONITOR_PORT}")

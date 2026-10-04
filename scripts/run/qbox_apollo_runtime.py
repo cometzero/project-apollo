@@ -24,6 +24,10 @@ import struct
 import subprocess
 import sys
 import time
+import tempfile
+
+from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args
+from qbox_monitor_manifest import monitor_plan
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
 from qbox_validation.registry import (
@@ -4492,7 +4496,12 @@ def run_platform(
     print("+ " + " ".join(cmd), flush=True)
     start = time.monotonic()
     proc: subprocess.Popen[bytes] | None = None
+    stats = None
+    stats_qmp_directory = None
     try:
+        if interval_from_args(args) is not None and not env.get("QBOX_APOLLO_QMP_DIR"):
+            stats_qmp_directory = tempfile.TemporaryDirectory(prefix="qbox-qmp-")
+            env["QBOX_APOLLO_QMP_DIR"] = stats_qmp_directory.name
         proc = subprocess.Popen(
             cmd,
             cwd=root,
@@ -4502,6 +4511,16 @@ def run_platform(
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+        stats_monitor = monitor_plan(
+            env.get("QBOX_APOLLO_MONITOR", "false") == "true",
+            int(env.get("QBOX_APOLLO_MONITOR_PORT", "18080")), out_dir, full=True)
+        stats_monitor["enabled"] = env.get("QBOX_APOLLO_MONITOR", "false") == "true"
+        if env.get("QBOX_APOLLO_QMP_DIR"):
+            for domain in stats_monitor["domains"]:
+                name = domain["domain_id"].replace("-", "_")
+                prefix = "platform.rse_cpu_pass" if name == "rse" else "platform"
+                domain["qmp_biflow"] = f"{prefix}.{name}_qmp.qmp_socket.qmp_socket_router"
+        stats = LoadStats(proc.pid, interval_from_args(args), stats_monitor)
         with platform_log.open("w", encoding="utf-8", errors="replace", buffering=1) as log:
             assert proc.stdout is not None
             os.set_blocking(proc.stdout.fileno(), False)
@@ -4514,6 +4533,9 @@ def run_platform(
                     decoded = chunk.decode("utf-8", errors="replace")
                     log.write(decoded)
                     platform_stdout += decoded
+                for line in stats.poll():
+                    # Stats are log annotations, never boot/probe input.
+                    log.write("\n" + line + "\n")
                 logs = read_console_logs(out_dir)
                 drive_post_login_probe(args, logs, post_login_probe, primary_uart_fd)
                 if profile_session is not None:
@@ -4648,9 +4670,13 @@ def run_platform(
         if proc is not None:
             stop_process(proc)
     finally:
+        if stats is not None:
+            stats.close()
         elapsed_s = time.monotonic() - start
         if proc is not None:
             stop_process(proc)
+        if stats_qmp_directory is not None:
+            stats_qmp_directory.cleanup()
         if primary_uart_fd is not None and profile_context is None:
             os.close(primary_uart_fd)
         if profile_session is not None and profile_session.state.phase == "running":
@@ -5337,6 +5363,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run or preflight the QBox Apollo RSE-oriented boot path."
     )
+    add_stats_arguments(parser)
     parser.add_argument(
         "--conf",
         type=Path,

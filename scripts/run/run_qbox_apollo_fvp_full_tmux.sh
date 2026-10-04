@@ -42,6 +42,7 @@ NETDEV="${NETDEV:-${QBOX_APOLLO_NETDEV:-}}"
 SKIP_BUILD="${SKIP_BUILD:-1}"
 KEEP_RUNNING_AFTER_PASS="${KEEP_RUNNING_AFTER_PASS:-1}"
 MONITOR="${MONITOR:-0}"
+STATS_INTERVAL="${STATS_INTERVAL:-}"
 MONITOR_PORT="${MONITOR_PORT:-18080}"
 TMUX_LAYOUT="${TMUX_LAYOUT:-tiled}"
 TMUX_UART_INPUT_FIFOS="${TMUX_UART_INPUT_FIFOS:-1}"
@@ -88,6 +89,9 @@ Options:
   --keep-running-after-pass
                        keep QBox alive after Linux boot/probes pass (default)
   --exit-after-pass    stop QBox when the normal pass condition is reached
+  --stats              log QBox load every 5 seconds; enable monitor/QMP
+  --stats-interval SECONDS
+                       set a positive interval and enable --stats
   --monitor            enable the QBox web dashboard (default port: 18080)
   --monitor-port PORT  enable the dashboard on the selected TCP port
   --rootfs-bootargs-profile NAME
@@ -356,6 +360,9 @@ runner_command()
     fi
     if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" ]]; then
         _out+=(--keep-running-after-pass)
+    fi
+    if [[ -n "${STATS_INTERVAL}" ]]; then
+        _out+=(--stats-interval "${STATS_INTERVAL}")
     fi
     if [[ "${MONITOR}" == "1" ]]; then
         _out+=(--monitor --monitor-port "${MONITOR_PORT}")
@@ -1357,6 +1364,11 @@ start_tmux()
     validate_bool "CC3XX_LOCAL_MMIO_FASTPATH" "${CC3XX_LOCAL_MMIO_FASTPATH}"
     validate_bool "SKIP_BUILD" "${SKIP_BUILD}"
     validate_bool "KEEP_RUNNING_AFTER_PASS" "${KEEP_RUNNING_AFTER_PASS}"
+    if [[ -n "${STATS_INTERVAL}" ]]; then
+        "${PYTHON_BIN}" -c 'import math, sys; value = float(sys.argv[1]); sys.exit(0 if math.isfinite(value) and value > 0 else 1)' "${STATS_INTERVAL}" 2>/dev/null ||
+            die "--stats-interval must be a finite positive number: ${STATS_INTERVAL}"
+        MONITOR=1
+    fi
     validate_bool "MONITOR" "${MONITOR}"
     [[ "${MONITOR_PORT}" =~ ^[0-9]+$ ]] &&
         ((MONITOR_PORT >= 1 && MONITOR_PORT <= 65535)) ||
@@ -1486,6 +1498,7 @@ start_tmux()
         fi
         printf 'SKIP_BUILD=%q ' "${SKIP_BUILD}"
         printf 'KEEP_RUNNING_AFTER_PASS=%q ' "${KEEP_RUNNING_AFTER_PASS}"
+        printf 'STATS_INTERVAL=%q ' "${STATS_INTERVAL}"
         printf 'MONITOR=%q MONITOR_PORT=%q ' "${MONITOR}" "${MONITOR_PORT}"
         printf 'TMUX_LAYOUT=%q TMUX_UART_INPUT_FIFOS=%q ' \
             "${TMUX_LAYOUT}" "${TMUX_UART_INPUT_FIFOS}"
@@ -1653,6 +1666,21 @@ while (($# > 0)); do
             ;;
         --exit-after-pass)
             KEEP_RUNNING_AFTER_PASS=0
+            shift
+            ;;
+        --stats)
+            STATS_INTERVAL="${STATS_INTERVAL:-5}"
+            shift
+            ;;
+        --stats-interval)
+            [[ $# -ge 2 ]] || die "--stats-interval requires a value"
+            STATS_INTERVAL="$2"
+            [[ -n "${STATS_INTERVAL}" ]] || die "--stats-interval requires a value"
+            shift 2
+            ;;
+        --stats-interval=*)
+            STATS_INTERVAL="${1#*=}"
+            [[ -n "${STATS_INTERVAL}" ]] || die "--stats-interval requires a value"
             shift
             ;;
         --monitor)

@@ -32,6 +32,7 @@ WORKSPACE_DIR = SCRIPT_DIR.parents[1]
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
 import qbox_apollo_runtime as runtime_engine  # noqa: E402
+import qbox_load_stats  # noqa: E402
 from qbox_validation.result import (  # noqa: E402
     blocked_profile_result,
     safety_diagnostics_compatibility,
@@ -2202,6 +2203,9 @@ def child_command(args: argparse.Namespace, artifacts: dict[str, Path]) -> list[
         "--primary-shell-prompt-re",
         args.primary_shell_prompt_re,
     ]
+    stats_interval = qbox_load_stats.interval_from_args(args)
+    if stats_interval is not None:
+        cmd.extend(["--stats-interval", str(stats_interval)])
     if args.skip_build:
         cmd.append("--skip-build")
     if args.rse_flash_state is not None:
@@ -2421,6 +2425,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         os.environ.get("QBOX_PLATFORM_DIR", str(root / "hsoc-stack/tools/qbox-platform"))
     )
     parser = argparse.ArgumentParser(description=__doc__)
+    qbox_load_stats.add_arguments(parser)
     parser.add_argument(
         "--conf",
         type=Path,
@@ -2875,6 +2880,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         or args.dwc_peripheral_probe
     ):
         args.post_login_probe = True
+    if qbox_load_stats.interval_from_args(args) is not None:
+        args.monitor = True
     if args.monitor_port is not None:
         if not 1 <= args.monitor_port <= 65535:
             parser.error("--monitor-port must be in range 1..65535")

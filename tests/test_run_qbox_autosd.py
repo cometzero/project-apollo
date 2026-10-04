@@ -523,3 +523,14 @@ def test_attach_failure_keeps_created_session_and_observer(monkeypatch, tmp_path
     monkeypatch.setattr(runner, "cleanup_created_tmux", lambda value: cleaned.append(value))
     assert runner.start_tmux(plan) == 1
     assert cleaned == []
+
+
+@pytest.mark.parametrize("interval", [None, 2.])
+def test_stats_enable_monitor_and_qmp(inputs, interval):
+    inputs.stats = interval is None
+    inputs.stats_interval = interval
+    plan = runner.make_plan(inputs)
+    assert plan["monitor"]["enabled"]
+    assert plan["qmp_enabled"]
+    assert "--monitor" in plan["command"]
+    assert "--stats-interval" in plan["command"]

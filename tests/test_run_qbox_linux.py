@@ -474,3 +474,13 @@ def test_product_initrd_override_wins(monkeypatch, tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)["environment"][
         "QBOX_LINUX_INITRD"
     ] == str(override)
+
+
+@pytest.mark.parametrize("options", [["--stats"], ["--stats-interval", "2"]])
+def test_stats_enable_monitor_and_qmp(monkeypatch, tmp_path, capsys, options):
+    monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) + options)
+    assert runner.main() == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["monitor"]["enabled"]
+    assert plan["qmp_enabled"]
+    assert plan["environment"]["QBOX_APOLLO_MONITOR"] == "true"

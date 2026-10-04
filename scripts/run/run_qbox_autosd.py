@@ -19,6 +19,7 @@ import sys
 import threading
 import time
 
+import qbox_load_stats
 from run_qbox_linux import autosd_manifest, required
 from autosd_uki import inspect_uki, prepare_uki
 from autosd_disk import inspect_disk, prepare_disk
@@ -62,6 +63,7 @@ FAIL_MARKERS = {
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
+    qbox_load_stats.add_arguments(p)
     p.add_argument("--autosd", type=Path,
                    help="manifest (default: BUILD/autosd/demo-minimal-qm-prepared/regular.json)")
     p.add_argument("--rootfs", type=Path)
@@ -176,13 +178,17 @@ def make_plan(args):
                "--out-dir", str(out / "full-system"), "--timeout", str(int(args.timeout)),
                *(["--headless"] if args.headless else ["--session", session, "--no-attach"]),
                "--", "--foreground-runtime"]
-    monitor = monitor_plan(args.monitor or args.runtime_injection or args.qmp, args.monitor_port, out, full=True)
+    stats_interval = qbox_load_stats.interval_from_args(args)
+    if stats_interval is not None:
+        command[1:1] = ["--stats-interval", str(stats_interval)]
+    stats_enabled = qbox_load_stats.interval_from_args(args) is not None
+    monitor = monitor_plan(args.monitor or args.runtime_injection or args.qmp or stats_enabled, args.monitor_port, out, full=True)
     if monitor["enabled"]:
         command[1:1] = ["--monitor", "--monitor-port", str(monitor["port"])]
     monitor_env = monitor_environment(monitor)
     monitor_env["QBOX_APOLLO_RUNTIME_INJECTION"] = "true" if args.runtime_injection else "false"
     return {"backend": "qbox-full", "boot_method": "full-system-ukiboot-efi",
-            "schema_version": 1, "run_id": out.name, "monitor": monitor, "qmp_enabled": args.qmp,
+            "schema_version": 1, "run_id": out.name, "monitor": monitor, "qmp_enabled": args.qmp or stats_enabled,
             "autosd": str(manifest_path.absolute()), "mode": manifest["mode"],
             "input_selection": selection,
             "boot_profile": "diagnostic" if args.diagnostic_boot else "normal-rt",

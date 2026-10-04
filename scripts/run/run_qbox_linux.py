@@ -20,11 +20,13 @@ import time
 import tty
 
 ROOT = Path(__file__).resolve().parents[2]
+from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args, drain_output
 from qbox_monitor_manifest import monitor_plan, monitor_environment, preflight as monitor_preflight, update_runtime, prepare_qmp
 
 
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
+    add_stats_arguments(p)
     images = p.add_mutually_exclusive_group()
     images.add_argument(
         "--bsp", action="store_true", help="boot the BSP initramfs with its BSP WIC disk"
@@ -208,11 +210,15 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
             plan["command"],
             env={**os.environ, **plan["environment"]},
             cwd=ROOT,
-            stdout=log,
+            stdout=subprocess.PIPE if plan.get("stats_interval") is not None else log,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
             start_new_session=True,
         )
+
+        stats = LoadStats(child.pid, plan.get("stats_interval"), plan.get("monitor"))
+        if child.stdout is not None:
+            os.set_blocking(child.stdout.fileno(), False)
 
         def interrupted(_signum: int, _frame: object) -> None:
             raise KeyboardInterrupt
@@ -225,6 +231,10 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
             with (out / "linux-uart.log").open("rb") as uart:
                 observed = b""
                 while child.poll() is None:
+                    if child.stdout is not None:
+                        drain_output(child.stdout, log)
+                    for line in stats.poll():
+                        log.write(("\n" + line + "\n").encode())
                     update_runtime(plan.get("monitor", {}), child.pid, plan.get("run_id", out.name))
                     chunk = uart.read()
                     if echo_uart and chunk:
@@ -345,15 +355,26 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
         except KeyboardInterrupt:
             status, rc = ("PASS", 0) if passed else ("STOPPED", 130)
         finally:
+            stats.close()
             for sig, handler in old.items():
                 signal.signal(sig, handler)
             if child.poll() is None:
                 os.killpg(child.pid, signal.SIGTERM)
+                if child.stdout is not None:
+                    # A terminating simulator may still emit more than a pipe
+                    # buffer of logs. Keep consuming until exit or the deadline.
+                    deadline = time.monotonic() + 5
+                    while child.poll() is None and time.monotonic() < deadline:
+                        drain_output(child.stdout, log)
+                        time.sleep(.02)
                 try:
-                    child.wait(timeout=5)
+                    child.wait(timeout=0 if child.stdout is not None else 5)
                 except subprocess.TimeoutExpired:
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait()
+            if child.stdout is not None:
+                drain_output(child.stdout, log)
+                child.stdout.close()
             bootctl = None
             if plan.get("uki"):
                 from autosd_disk import inspect_disk
@@ -571,7 +592,8 @@ def main() -> int:
                "boot_command": "setenv bootargs; "
                    f"fatload virtio 0:{disk_info['partitions']['efi']['index']} 0x90000000 /EFI/BOOT/BOOTAA64.EFI "
                    "&& bootefi 0x90000000 ${fdtcontroladdr}\n"}
-    monitor = monitor_plan(args.monitor or args.qmp, args.monitor_port, out, cpus=args.cpus)
+    stats_enabled = interval_from_args(args) is not None
+    monitor = monitor_plan(args.monitor or args.qmp or stats_enabled, args.monitor_port, out, cpus=args.cpus)
     launch_env = {
         **monitor_environment(monitor),
         "QBOX_RDASPEN_ENABLE_AP_CPUS": "true",
@@ -602,7 +624,8 @@ def main() -> int:
         command.extend(["-p", value])
     plan = {
         "schema_version": 1, "run_id": out.name, "backend": "qbox", "monitor": monitor,
-        "qmp_enabled": args.qmp,
+        "stats_interval": interval_from_args(args),
+        "qmp_enabled": args.qmp or stats_enabled,
         "command": command,
         "environment": launch_env,
         "qboxconf": str(qboxconf),
