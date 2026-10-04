@@ -349,6 +349,13 @@ CPU%가 줄었지만 simulation 진행률도 줄었다면 유효한 최적화로
 AP의 `pfdi-sample-app`만 보면 SMC를 수행하는 kernel `pfdi_worker/*` 비용이 빠진다.
 또한 PFDI `count`는 지원 진단 항목 수이며 완료된 진단 실행 횟수 counter가 아니다.
 
+### 6.4 실행 중 간단한 부하 표시
+
+`run_qbox_*.sh --stats`는 기본 5초 간격으로 기존 QBox 로그에 host 부하를
+기록한다. `--stats-interval SECONDS`로 간격을 변경한다. Headless에서는
+로그 파일, TUI에서는 기존 platform/QBox log pane에서 확인한다.
+항목 정의와 monitor/QMP 연동은 [실행 중 부하 표시](../qbox-runtime-stats.md)를 참고한다.
+
 ## 7. 병목 위치 찾기와 개선 판단
 
 ### 7.1 증상별로 다음 조사를 선택
