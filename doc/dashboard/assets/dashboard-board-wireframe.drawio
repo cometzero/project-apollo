@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxGraphModel dx="1600" dy="1110" grid="1" gridSize="10" page="1" pageWidth="1600" pageHeight="1110" background="#f5f7fa" adaptiveColors="auto">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="title" value="SATURN-V    /    APOLLO BOARD" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#122f43;strokeColor=#122f43;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=27;spacing=12;align=left;verticalAlign=middle;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="25" y="20" width="1545" height="75" />
+    </mxCell>
+    <mxCell id="run" value="설계 WIREFRAME · 실시간 데이터 없음   image: &lt;resolved&gt;   run: &lt;run_id&gt;   health: &lt;source + age&gt;&#10;부하 (--stats): CPU &lt;total&gt;  main / vCPU [AP · RSE · SI0 · SI1] / other   RSS &lt;MiB&gt;   threads=&lt;N&gt;   최근 추이 펼치기" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9eef3;strokeColor=#cbd5e1;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=14;spacing=8;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="25" y="105" width="1545" height="55" />
+    </mxCell>
+    <mxCell id="nav" value="BOARD&#10;&#10;UART&#10;&#10;SCENARIOS&#10;&#10;CONTROL&#10;&#10;EVIDENCE" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#edf2f6;strokeColor=#afc2cf;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=19;spacing=12;align=left;verticalAlign=middle;verticalAlign=top;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="25" y="170" width="165" height="840" />
+    </mxCell>
+    <mxCell id="tabs" value="[ 보드 그림 ]   [ 블록도 ]     연결: UART · Safety · GPIO · I²C · CAN     검색 / 맞춤 / 확대" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#afc2cf;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=17;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="215" y="170" width="1010" height="55" />
+    </mxCell>
+    <mxCell id="pcb" value="QVP LOGICAL BOARD   ·   실물 배치 / schematic parity UNVERIFIED" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#164d40;strokeColor=#0a3c30;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;fontColor=#e9fff4;verticalAlign=top;spacingTop=18;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="215" y="240" width="1010" height="555" />
+    </mxCell>
+    <mxCell id="mcu" value="TC397&#10;vMCU&#10;&#10;Zephyr / 별도 QEMU" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#f0f3f4;strokeColor=#adc2b9;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=20;spacing=12;align=left;verticalAlign=middle;fontStyle=1;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="250" y="400" width="210" height="150" />
+    </mxCell>
+    <mxCell id="soc" value="APOLLO SoC" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#0b2630;strokeColor=#81b7a2;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=24;spacing=12;align=left;verticalAlign=middle;fontColor=#e9fff4;verticalAlign=top;align=center;fontStyle=1;spacingTop=22;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="530" y="315" width="380" height="390" />
+    </mxCell>
+    <mxCell id="ap" value="AP Compute&#10;Linux · PFDI agent" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e1edf4;strokeColor=#8cb3c7;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="560" y="390" width="320" height="75" />
+    </mxCell>
+    <mxCell id="si0" value="SI CL0&#10;PFDI / PMIC" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#d9f0e4;strokeColor=#8ac1a8;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="560" y="495" width="145" height="95" />
+    </mxCell>
+    <mxCell id="rse" value="RSE&#10;secure boot" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e1edf4;strokeColor=#8cb3c7;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="735" y="495" width="145" height="95" />
+    </mxCell>
+    <mxCell id="si1" value="SI CL1 / fabric / memory · 펼치기" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e1edf4;strokeColor=#8cb3c7;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=15;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="560" y="620" width="320" height="45" />
+    </mxCell>
+    <mxCell id="pmic" value="TPS6594&#10;SI I²C · 0x48&#10;조회 / 설정값" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff1cf;strokeColor=#d8bd7d;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="975" y="315" width="210" height="115" />
+    </mxCell>
+    <mxCell id="eeprom" value="EEPROM bank&#10;AP I²C0–5&#10;각 node 펼치기" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff1cf;strokeColor=#d8bd7d;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=17;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="975" y="470" width="210" height="100" />
+    </mxCell>
+    <mxCell id="pca" value="PCA9539&#10;AP I²C0 · 0x74" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff1cf;strokeColor=#d8bd7d;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="975" y="610" width="210" height="80" />
+    </mxCell>
+    <mxCell id="canport" value="CAN connector&#10;M_CAN" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#f0f3f4;strokeColor=#adc2b9;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=16;spacing=12;align=left;verticalAlign=middle;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="260" y="660" width="190" height="65" />
+    </mxCell>
+    <mxCell id="tracehint" value="연결·부품은 Lua + 실행 manifest에서 생성. 위치·package 모양은 presentation 규칙." style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=15;spacing=12;align=left;verticalAlign=middle;fontColor=#dbf1e7;align=center;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="245" y="745" width="940" height="30" />
+    </mxCell>
+    <mxCell id="inspector" value="COMPONENT INSPECTOR&#10;&#10;선택: &lt;node ID&gt;&#10;&#10;model / QemuInstance&#10;source path / SHA&#10;provenance / age&#10;&#10;주소 공간 / decode window&#10;ports / 원래 binding&#10;&#10;[ 관련 UART ]&#10;[ 사용 가능한 제어 ]&#10;[ 시나리오 / 증거 ]&#10;&#10;PMIC는 rail 설정 readback&#10;실측 전압 / power gating 아님" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#afc2cf;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;verticalAlign=top;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="1250" y="170" width="320" height="625" />
+    </mxCell>
+    <mxCell id="vehicle" value="보드 외부 · SIL Kit VehicleCAN&#10;TC397CanBridge ↔ VehicleRestbus   |   registry / endpoint 상태" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="215" y="825" width="1010" height="75" />
+    </mxCell>
+    <mxCell id="log" value="UART DOCK   AP primary · AP secure · RSE · SI CL0 · SI CL1 · TC397&#10;&lt;실제 수신 log&gt;        filter / pause scroll / copy / download / gap 표시" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#122f43;strokeColor=#122f43;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;fontColor=#e9f2ff;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="215" y="930" width="1010" height="95" />
+    </mxCell>
+    <mxCell id="job" value="CURRENT JOB&#10;request → receipt → 관측&#10;→ verdict → cleanup" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff3df;strokeColor=#d3b881;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=19;spacing=12;align=left;verticalAlign=middle;verticalAlign=top;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="1250" y="825" width="320" height="200" />
+    </mxCell>
+    <mxCell id="b1" value="AP UART / Safety&#10;GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b866;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;startArrow=block;startFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.41;fontColor=#f9edb2;labelBackgroundColor=#164d40;" edge="1" parent="1" source="mcu" target="soc">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="b2" value="I²C" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b866;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.15;entryX=0;entryY=0.5;fontColor=#f9edb2;labelBackgroundColor=#164d40;" edge="1" parent="1" source="soc" target="pmic">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="b3" value="I²C" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b866;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.53;entryX=0;entryY=0.5;fontColor=#f9edb2;labelBackgroundColor=#164d40;" edge="1" parent="1" source="soc" target="eeprom">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="b4" value="I²C / GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b866;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.86;entryX=0;entryY=0.5;fontColor=#f9edb2;labelBackgroundColor=#164d40;" edge="1" parent="1" source="soc" target="pca">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="b5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#d6b866;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;startArrow=block;startFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="mcu" target="canport">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="b6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#13765a;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;startArrow=block;startFill=1;exitX=0.5;exitY=1;entryX=0.14;entryY=0;" edge="1" parent="1" source="canport" target="vehicle">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="foot" value="모든 상태: 값 + source + age. 기존 SI CL0 PFDI가 AP health 기준. 조용한 UART ≠ 장애. 두 보기의 node/edge는 동일 graph." style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=16;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="25" y="1045" width="1545" height="40" />
+    </mxCell>
+  </root>
+</mxGraphModel>

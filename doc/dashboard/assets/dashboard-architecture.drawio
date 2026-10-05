@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxGraphModel dx="1480" dy="1060" grid="1" gridSize="10" page="1" pageWidth="1480" pageHeight="1060" background="#f5f7fa" adaptiveColors="auto">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="title" value="APOLLO / SATURN-V   Board Dashboard 설계" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#122f43;strokeColor=#122f43;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=28;spacing=12;align=left;verticalAlign=middle;fontColor=#ffffff;fontStyle=1;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="35" y="25" width="1410" height="65" />
+    </mxCell>
+    <mxCell id="subtitle" value="계획 · 미구현     |     기존 웹 기반 재사용 → Yocto backend → 소유한 board session" style="rounded=1;whiteSpace=wrap;html=0;fillColor=none;strokeColor=none;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=16;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="35" y="100" width="1410" height="40" />
+    </mxCell>
+    <mxCell id="browser" value="외부 Browser&#10;Board / Block · UART · Scenario · Control" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=20;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="50" y="165" width="330" height="105" />
+    </mxCell>
+    <mxCell id="listener" value="HTTP 8765 · LAN + loopback&#10;Basic auth · Host / Origin · CSRF&#10;QBox monitor / QMP는 내부 전용" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=19;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="530" y="165" width="390" height="105" />
+    </mxCell>
+    <mxCell id="launcher" value="run_qbox_yocto.sh --dashboard&#10;자동 headless / auto boot&#10;선택한 image · provider 보존" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e2f1e9;strokeColor=#87af9e;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="1060" y="165" width="360" height="105" />
+    </mxCell>
+    <mxCell id="host" value="HOST WORKSPACE   ·   run_id + process ownership + evidence" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#edf2f6;strokeColor=#afc2cf;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=19;spacing=12;align=left;verticalAlign=middle;verticalAlign=top;fontStyle=1;spacingTop=15;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="35" y="305" width="1410" height="625" />
+    </mxCell>
+    <mxCell id="server" value="공통 Web / Job service&#10;기존 server.py 확장&#10;인증 · typed job · artifact" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="70" y="365" width="290" height="120" />
+    </mxCell>
+    <mxCell id="backend" value="신규 Yocto board adapter&#10;readiness · capability · UART map&#10;AutoSD 전용 정책과 분리" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e2f1e9;strokeColor=#87af9e;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="425" y="365" width="310" height="120" />
+    </mxCell>
+    <mxCell id="topology" value="Topology + Runtime overlay&#10;provider Lua / env / overrides&#10;TC397 · SIL Kit manifest 결합" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="800" y="365" width="310" height="120" />
+    </mxCell>
+    <mxCell id="evidence" value="Run 증거&#10;source / image SHA&#10;logs / jobs / verdict&#10;이전 run 보존" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#fff3df;strokeColor=#d3b881;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="1165" y="365" width="245" height="120" />
+    </mxCell>
+    <mxCell id="collect" value="기존 관측 adapter&#10;Monitor / QMP read-only&#10;UART tail · bounded cursor" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="70" y="555" width="290" height="120" />
+    </mxCell>
+    <mxCell id="supervisor" value="공통 Board supervisor&#10;QBox / TC397 / SIL Kit 소유&#10;foreground · FIFO · cleanup" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e2f1e9;strokeColor=#87af9e;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="425" y="555" width="310" height="120" />
+    </mxCell>
+    <mxCell id="vmcuadapter" value="Typed vMCU / CAN adapter&#10;단일 writer · epoch / cookie&#10;요청 receipt ≠ 동작 완료" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e2f1e9;strokeColor=#87af9e;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="800" y="555" width="310" height="120" />
+    </mxCell>
+    <mxCell id="qbox" value="Apollo QBox process&#10;AP · SI CL0/CL1 · RSE&#10;PMIC SI 단일 소유" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=20;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="70" y="755" width="370" height="125" />
+    </mxCell>
+    <mxCell id="tc397" value="TC397 QEMU process&#10;Zephyr · PFDI report monitoring&#10;ASCLIN / GPIO / M_CAN" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=20;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="535" y="755" width="370" height="125" />
+    </mxCell>
+    <mxCell id="silkit" value="SIL Kit processes&#10;registry · bridge · restbus&#10;VehicleCAN / 별도 비동기 clock" style="rounded=1;whiteSpace=wrap;html=0;fillColor=#e9f2ff;strokeColor=#97b6d6;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=20;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="1000" y="755" width="370" height="125" />
+    </mxCell>
+    <mxCell id="e1" value="same-origin API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="browser" target="listener">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e2" value="launch spec" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="launcher" target="listener">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e3" value="dispatch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="server" target="backend">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e4" value="run snapshot" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="backend" target="topology">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e5" value="save" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="topology" target="evidence">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e6" value="owned lifecycle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="backend" target="supervisor">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e7" value="read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="server" target="collect">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e8" value="typed action" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="supervisor" target="vmcuadapter">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e9" value="private monitor / logs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="collect" target="qbox">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e10" value="start / stop" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0.65;exitY=1;entryX=0.35;entryY=0;" edge="1" parent="1" source="supervisor" target="tc397">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e11" value="FIFO / event JSONL" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;exitX=0.85;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="vmcuadapter" target="silkit">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e12" value="UART / GPIO" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#13765a;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;startArrow=block;startFill=1;exitX=1;exitY=0.6;entryX=0;entryY=0.6;" edge="1" parent="1" source="qbox" target="tc397">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="e13" value="M_CAN transport" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=0;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#13765a;fontFamily=Noto Sans CJK KR;fontSize=13;fontColor=#31475a;labelBackgroundColor=#f5f7fa;startArrow=block;startFill=1;exitX=1;exitY=0.6;entryX=0;entryY=0.6;" edge="1" parent="1" source="tc397" target="silkit">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="legend" value="흰색: 기존 기반 확장   |   녹색: 신규 adapter / 공통화   |   청색: 실행 경계   |   황색: 증거&#10;감시 기준: 기존 SI CL0 PFDI → vMCU 5초 보고. QBox pause는 TC397/SIL Kit까지 정지하지 않음." style="rounded=1;whiteSpace=wrap;html=0;fillColor=#ffffff;strokeColor=#cbd5e1;fontColor=#182b3b;fontFamily=Noto Sans CJK KR;fontSize=16;spacing=12;align=left;verticalAlign=middle;" vertex="1" parent="1">
+      <mxGeometry as="geometry" x="50" y="955" width="1370" height="70" />
+    </mxCell>
+    <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#526f88;exitX=0;exitY=0.8;entryX=0;entryY=0.25;" edge="1" parent="1" source="listener" target="server">
+      <mxGeometry as="geometry" relative="1">
+        <Array as="points">
+          <mxPoint x="400" y="249" />
+          <mxPoint x="400" y="287" />
+          <mxPoint x="45" y="287" />
+          <mxPoint x="45" y="395" />
+        </Array>
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>
