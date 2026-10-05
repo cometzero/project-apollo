@@ -4,6 +4,7 @@ CPU percentages describe the preceding wall-clock interval; 100% is one host
 logical CPU. Domain figures, when available, cover vCPU threads only.
 """
 import argparse
+import json
 import math
 import os
 from pathlib import Path
@@ -92,13 +93,17 @@ def summarize(before, after, pid, ticks_per_second):
 
 class LoadStats:
     """Called by the log owner; never writes guest input or changes VM state."""
-    def __init__(self, pid, interval, monitor=None):
+    def __init__(self, pid, interval, monitor=None, *, output=None, run_id=None):
         self.pid, self.interval = pid, interval
         self.before = None
         self.started = time.monotonic()
         self.next_due = self.started + (interval or 5)
         self.hz = os.sysconf('SC_CLK_TCK')
         self.monitor = None
+        self.output = Path(output) if output is not None and interval is not None else None
+        self.run_id = run_id or os.environ.get('QBOX_DASHBOARD_RUN_ID')
+        self.seq = 0
+        self.last_record = None
         self.domain_ids = [d["domain_id"] for d in (monitor or {}).get("domains", [])]
         if interval is not None:
             try:
@@ -109,6 +114,37 @@ class LoadStats:
                 from qbox_stats_monitor import StatsMonitor
                 self.monitor = StatsMonitor(pid, monitor, interval)
                 self.monitor.start()
+            self._record('WARMING_UP', self.started)
+
+    def _record(self, status, now, value=None, domains=None, error=None):
+        """Publish the same accounting used by the compact text formatter.
+
+        Keep at most two 2 MiB JSONL generations. A dashboard uses seq/run_id
+        to detect a slow reader's gap, rather than interpreting rotation as 0%.
+        """
+        self.seq += 1
+        value = value or {}
+        record = {
+            'schema_version': 1, 'run_id': self.run_id, 'seq': self.seq,
+            'pid': self.pid,
+            'start_ticks': self.before['process']['start'] if self.before else None,
+            'sample_monotonic': now, 'interval_s': value.get('dt'),
+            'cpu_pct': value.get('cpu'), 'main_pct': value.get('main'),
+            'vcpu_pct': value.get('tcg'), 'other_pct': value.get('other'),
+            'domain_vcpu_pct': domains or {name: None for name in self.domain_ids},
+            'rss_mib': value.get('rss'), 'threads': value.get('threads'),
+            'partial': value.get('partial', True), 'status': status, 'error': error,
+        }
+        self.last_record = record
+        if self.output is not None:
+            try:
+                if self.output.exists() and self.output.stat().st_size >= 2 * 1024 * 1024:
+                    self.output.replace(self.output.with_suffix('.jsonl.1'))
+                with self.output.open('a', encoding='utf-8') as stream:
+                    stream.write(json.dumps(record, allow_nan=False) + '\n')
+            except OSError as exc:
+                # A stats sink must not terminate a running simulator.
+                record['output_error'] = str(exc)
 
     def poll(self):
         now = time.monotonic()
@@ -121,14 +157,24 @@ class LoadStats:
             after = snapshot(self.pid)
             if self.before is None:
                 self.before = after
+                self._record('WARMING_UP', now)
                 return [prefix + 'CPU warming-up']
             value = summarize(self.before, after, self.pid, self.hz)
             self.before = after
         except (OSError, ValueError, IndexError) as exc:
+            self.before = None  # PID reuse / counter rollback starts a new baseline.
+            self._record('UNAVAILABLE', now, error=str(exc))
             return [prefix + f'CPU unavailable ({exc})']
         domains = ""
+        domain_values = {name: None for name in self.domain_ids}
+        monitor_error = None
         if self.monitor:
-            mappings = self.monitor.snapshot().get('domain_threads', {})
+            monitor_sample = self.monitor.snapshot()
+            mappings = monitor_sample.get('domain_threads', {})
+            monitor_error = monitor_sample.get('error')
+            observed = monitor_sample.get('monotonic')
+            if isinstance(observed, (float, int)) and now - observed > 3 * self.interval:
+                mappings, monitor_error = {}, 'QMP mapping observation stale'
             names = {'ap': 'AP', 'rse': 'RSE', 'si-cl0': 'SI0', 'si-cl1': 'SI1'}
             active = set(self.domain_ids) | mappings.keys()
             ordered = [name for name in names if name in active]
@@ -140,11 +186,14 @@ class LoadStats:
                 label = names.get(domain, domain)
                 if not tids or seen.intersection(tids) or any(t not in value['thread_cost'] for t in tids):
                     fields.append(f'{label} N/A')
+                    domain_values[domain] = None
                 else:
-                    fields.append(f"{label} {sum(value['thread_cost'][t] for t in tids):.1f}")
+                    domain_values[domain] = sum(value['thread_cost'][t] for t in tids)
+                    fields.append(f"{label} {domain_values[domain]:.1f}")
                 seen.update(tids)
             if fields:
                 domains = ' [' + ' '.join(fields) + ']'
+        self._record('OK', now, value, domain_values, monitor_error)
         return [prefix + f"CPU {value['cpu']:.1f}% (main {value['main']:.1f}% | "
                 f"vCPU {value['tcg']:.1f}%{domains} | other {value['other']:.1f}%) "
                 f"RSS {value['rss']:.0f}M threads={value['threads']}"]

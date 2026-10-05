@@ -133,3 +133,44 @@ def test_compact_domain_output(monkeypatch):
     del value['thread_cost'][1]
     clock[0] = 110.
     assert '[AP N/A RSE 0.2 SI0 1.5 SI1 1.2]' in sampler.poll()[0]
+
+
+def test_structured_records_share_text_sample_and_rotate(monkeypatch, tmp_path):
+    clock = [100.]
+    monkeypatch.setattr(stats.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(stats, 'snapshot', lambda pid: sample(clock[0], int(clock[0] * 100), 0))
+    path = tmp_path / 'stats.jsonl'
+    sampler = stats.LoadStats(42, 5, output=path, run_id='run-stats')
+    initial = json.loads(path.read_text())
+    assert initial['status'] == 'WARMING_UP' and initial['cpu_pct'] is None
+    clock[0] = 105.
+    text = sampler.poll()[0]
+    record = json.loads(path.read_text().splitlines()[-1])
+    assert record['run_id'] == 'run-stats'
+    assert record['pid'] == 42 and record['start_ticks'] == 10
+    assert record['interval_s'] == 5 and record['seq'] == 2
+    assert f"CPU {record['cpu_pct']:.1f}%" in text
+    assert f"threads={record['threads']}" in text
+    with path.open('a') as stream:
+        stream.write(' ' * (2 * 1024 * 1024))
+    clock[0] = 110.
+    sampler.poll()
+    assert path.with_suffix('.jsonl.1').is_file()
+    assert json.loads(path.read_text())['seq'] == 3
+
+
+def test_pid_reuse_restarts_structured_baseline(monkeypatch, tmp_path):
+    clock, start = [100.], [10]
+    monkeypatch.setattr(stats.time, 'monotonic', lambda: clock[0])
+    def snapshot(pid):
+        value = sample(clock[0], 0, 0)
+        value['process']['start'] = start[0]
+        return value
+    monkeypatch.setattr(stats, 'snapshot', snapshot)
+    sampler = stats.LoadStats(42, 5, output=tmp_path / 'stats.jsonl')
+    start[0], clock[0] = 11, 105.
+    assert 'identity changed' in sampler.poll()[0]
+    assert sampler.last_record['status'] == 'UNAVAILABLE'
+    clock[0] = 110.
+    assert 'warming-up' in sampler.poll()[0]
+    assert sampler.last_record['start_ticks'] == 11
