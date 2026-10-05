@@ -6,6 +6,7 @@ import re
 import pytest
 
 from scripts.run.qbox_validation.registry import resolve_profile
+from scripts.run.qbox_validation.engine import advance_profile, new_profile_state
 from scripts.run.qbox_validation.result import evaluate_profile_result
 from scripts.run.qbox_validation.types import Console, ConsoleSnapshot
 
@@ -206,8 +207,8 @@ def test_smcf_requires_startup_four_distinct_runs_and_sensor_format() -> None:
 def test_smcf_waits_for_integration_end_not_cli_prompt() -> None:
     # Given: SMCF enters its CLI before the integration test finishes.
     spec = resolve_profile("smcf", MATRIX)
-    prompt = re.compile(spec.steps[0].prompt_pattern)
-    initial = "[FWK] Module initialization complete!"
+    prompt = re.compile(spec.steps[1].prompt_pattern)
+    initial = "[SMCF_CLIENT] start data_sampling for MGI[0]"
     partial = initial + "\n[CLI_DEBUGGER_MODULE] Entering CLI\n>\n[INTEGRATION_TEST] Start: smcf"
     complete = partial + "\n1 Tests 0 Failures 0 Ignored\nOK\n[INTEGRATION_TEST] End: smcf"
 
@@ -216,8 +217,61 @@ def test_smcf_waits_for_integration_end_not_cli_prompt() -> None:
     complete_matches = tuple(prompt.finditer(complete))
 
     # Then: the transient CLI prompt cannot complete the command.
-    assert partial_matches[-1].end() == len(initial)
+    assert not partial_matches
     assert complete_matches[-1].end() == len(complete)
+
+
+def test_smcf_late_client_waits_for_each_enabled_sensor_sample() -> None:
+    # The real failure executed all four toggles before MGI startup, then
+    # evaluated startup/sensor assertions too early. Drive the actual engine.
+    spec = resolve_profile("smcf", MATRIX)
+    state = new_profile_state(spec, frozenset({Console.SI0}), now=0)
+    text = "[SI0_PLATFORM] SCP started\n[FWK] Module initialization complete!\n"
+
+    def observe(now):
+        nonlocal state
+        advanced = advance_profile(spec, state, ConsoleSnapshot(si0=text), now=now)
+        state = advanced.state
+        return advanced.dispatch
+
+    assert observe(0) is None
+    text += "[SMCF_CLIENT] start data_sampling for MGI[0]"
+    assert observe(3).step_index == 0
+    text += "\n"  # A line terminator cannot complete the dispatched command.
+    assert observe(3.1) is None
+    text += "\n".join(f"[SMCF_CLIENT] start data_sampling for MGI[{i}]" for i in range(1, 5)) + "\n"
+    assert observe(3.2) is None
+    text += _smcf_output() + "\n"
+    assert observe(4) is None  # Printing is on; wait for an actual sample.
+    sensor = ("[SMCF_CLIENT] Values for MGI TEMP MLI 1 (Sensor)\n"
+              "[SMCF_CLIENT] Value[0] data = 0x1a\n")
+    text += sensor
+    assert observe(5).step_index == 1  # Now turn printing off.
+    text += _smcf_output() + "\n"
+    assert observe(6).step_index == 2  # Third run enables it again.
+    text += _smcf_output() + "\n"
+    assert observe(7) is None  # Previous sample cannot satisfy this on-window.
+    text += sensor
+    assert observe(8).step_index == 3
+    text += _smcf_output() + "\n"
+    assert observe(9) is None
+    assert state.phase == "passed" and state.result["verdict"] == "PASS"
+    assert len(state.outputs) == 4 and state.cleanup.passed
+
+
+def test_smcf_missing_sensor_is_bounded_and_does_not_toggle_off_early() -> None:
+    spec = resolve_profile("smcf", MATRIX)
+    state = new_profile_state(spec, frozenset({Console.SI0}), now=0)
+    text = "[SI0_PLATFORM] SCP started\n[SMCF_CLIENT] start data_sampling for MGI[0]\n"
+    start = advance_profile(spec, state, ConsoleSnapshot(si0=text), now=0)
+    assert start.dispatch.step_index == 0
+    text += _smcf_output() + "\n"
+    waiting = advance_profile(spec, start.state, ConsoleSnapshot(si0=text), now=119)
+    assert waiting.dispatch is None and waiting.state.next_step == 0
+    expired = advance_profile(spec, waiting.state, ConsoleSnapshot(si0=text), now=121)
+    assert expired.dispatch is None and expired.state.phase == "blocked"
+    assert expired.state.blocker == "command_timeout:0:si0"
+    assert expired.state.cleanup.passed and expired.state.result["verdict"] != "PASS"
 
 
 @pytest.mark.parametrize("mutation", ["missing", "duplicate", "timeout"])

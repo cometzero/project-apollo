@@ -152,3 +152,49 @@ def test_run_platform_launch_failure_cleans_managed_fifo(
 
     # Then: managed profile ownership removes the FIFO on that exit too.
     assert not (tmp_path / "primary-uart-input.fifo").exists()
+
+
+@pytest.mark.parametrize("post_login", [False, True])
+def test_boot_and_probe_completion_wait_for_outer_profile_marker(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, post_login: bool,
+) -> None:
+    marker_path = tmp_path / "outer-profile.complete"
+    marker_path.write_text("")
+    argv = ["--out-dir", str(tmp_path), "--timeout", "3",
+            "--required-pass-marker", str(marker_path), "SI0_PROFILE_PASS"]
+    if post_login:
+        argv.append("--post-login-probe")
+    args = runtime.parse_args(argv)
+    reader_fd, writer_fd = os.pipe()
+    process = FakePlatformProcess(reader_fd)
+    samples = 0
+
+    def fake_logs(out_dir):
+        nonlocal samples
+        samples += 1
+        if samples == 3:
+            marker_path.write_text("SI0_PROFILE_PASS\n")
+        return {"primary_console": "", "secure_console": "", "scp": "", "rse": ""}
+
+    def completed_probe(args, logs, state, fd):
+        state["complete"] = True
+
+    def stop(active):
+        active.returncode = 0
+
+    monkeypatch.setattr(runtime, "qbox_env", lambda *values: {})
+    monkeypatch.setattr(runtime.subprocess, "Popen", lambda *values, **kw: process)
+    monkeypatch.setattr(runtime, "read_console_logs", fake_logs)
+    monkeypatch.setattr(runtime, "drive_post_login_probe", completed_probe)
+    monkeypatch.setattr(runtime, "stop_process", stop)
+    monkeypatch.setattr(runtime, "evaluate", lambda *a, **kw: {"passed": True, "fail_patterns": {}})
+    monkeypatch.setattr(runtime, "update_progress_marker_first_hits", lambda *a: None)
+    try:
+        result = runtime.run_platform(Path.cwd(), args, {})
+    finally:
+        os.close(writer_fd)
+        process.stdout.close()
+
+    assert result[0] == 0 and result[2] is False
+    assert samples == 3
+    assert marker_path.read_text().strip() == "SI0_PROFILE_PASS"

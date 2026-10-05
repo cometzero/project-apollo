@@ -4607,6 +4607,7 @@ def run_platform(
                 if (
                     probe_requested
                     and probe_complete
+                    and not required_markers_missing
                     and (
                         not args.pfdi_si_cl1_probe
                         or status["passed"]

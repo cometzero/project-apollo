@@ -281,6 +281,7 @@ class SiCl0TransportReceipt(TypedDict):
     validation_profile_result: NotRequired[NormalizedResultJson]
     profile_blocker: NotRequired[str | None]
     profile_cleanup: NotRequired[dict[str, bool | str]]
+    completion_gate: NotRequired[dict[str, bool | str]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1896,6 +1897,14 @@ def run_child_with_live_si0_profile(
         "commands": [],
     }
     args.si_cl0_command_transport = receipt
+    # The runtime owns the AP boot gate, while this process owns SI0 profile
+    # completion. Keep the runtime alive after AP readiness until both pass.
+    # A new filename for every launch prevents stale PASS evidence releasing it.
+    completion_path = args.out_dir / f"si0-profile-{uuid.uuid4().hex}.complete"
+    completion_marker = "SI0_PROFILE_PASS"
+    receipt["completion_gate"] = {
+        "path": str(completion_path), "released": False, "cleaned": False,
+    }
     child_env = env.copy()
     proc: subprocess.Popen[bytes] | None = None
     session: LiveProfileSession | None = None
@@ -1906,7 +1915,10 @@ def run_child_with_live_si0_profile(
 
     signal.signal(signal.SIGTERM, handle_sigterm)
     try:
-        with managed_profile_writers(pipes, WriterOwner.OUTER_CHILD) as writers:
+        with (
+            completion_path.open("x", encoding="utf-8") as completion_file,
+            managed_profile_writers(pipes, WriterOwner.OUTER_CHILD) as writers,
+        ):
             active_session = start_live_profile(spec, writers, now=time.monotonic())
             session = active_session
             if active_session.state.phase == "blocked":
@@ -1916,6 +1928,9 @@ def run_child_with_live_si0_profile(
                 return 1
             for key, value in profile_environment(pipes):
                 child_env[key] = value
+            command.extend([
+                "--required-pass-marker", str(completion_path), completion_marker,
+            ])
             proc = subprocess.Popen(
                 command,
                 cwd=workspace_root(),
@@ -1984,6 +1999,9 @@ def run_child_with_live_si0_profile(
                 if proc.poll() is None:
                     receipt["child_returncode"] = terminate_process_group(proc)
                 return 124 if "timeout" in str(active_session.state.blocker) else 1
+            completion_file.write(completion_marker + "\n")
+            completion_file.flush()
+            receipt["completion_gate"]["released"] = True
             child_returncode = proc.wait()
             receipt["child_returncode"] = child_returncode
             return child_returncode
@@ -2017,6 +2035,8 @@ def run_child_with_live_si0_profile(
                 else {"passed": False, "detail": "missing_cleanup_receipt"}
             )
         receipt["fifo_cleaned"] = not fifo_path.exists()
+        completion_path.unlink(missing_ok=True)
+        receipt["completion_gate"]["cleaned"] = True
 
 
 def run_child_with_si_cl0_transport(

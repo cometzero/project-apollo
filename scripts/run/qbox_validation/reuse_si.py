@@ -33,9 +33,16 @@ MONITOR_FAILURE_RE: Final = re.compile(
     r"\[PFDI_MONITOR\].*(?:timeout|fail(?:ed|ure)?)",
     re.IGNORECASE,
 )
-SMCF_PROMPT: Final = (
-    r"(?m)(?:\[FWK\] Module initialization complete!|"
-    r"\[INTEGRATION_TEST\]\s+End:\s*smcf)\s*$"
+SMCF_PROMPT: Final = r"(?m)\[INTEGRATION_TEST\]\s+End:\s*smcf[ \t]*$"
+SMCF_SAMPLE_PROMPT: Final = (
+    SMCF_PROMPT + r"[\s\S]*?" + SMCF_SENSOR_RE.pattern
+)
+# Firmware starts MGI indices at zero. Later startup messages (MGI[1] etc.)
+# must not look like completion of the first command. FWK init precedes actual
+# sampling by seconds, so it is not a readiness marker for this profile.
+SMCF_INITIAL_PROMPT: Final = (
+    r"(?m)(?:\[SMCF_CLIENT\]\s+start data_sampling for MGI\[0\][ \t]*$|"
+    + SMCF_SAMPLE_PROMPT.removeprefix("(?m)") + r")"
 )
 
 
@@ -141,10 +148,12 @@ def smcf_spec(
     return ProfileProbeSpec(
         profile_id,
         frozenset({Console.SI0}),
-        tuple(
-            ProbeStep(Console.SI0, "test smcf", SMCF_PROMPT, 120.0)
-            for _run in range(4)
-        ),
+        # test_smcf toggles printing. Observe a sensor sample while each 'on'
+        # command is active before its following 'off' command. Four commands
+        # retain the initial execution + three repetitions and end with off.
+        tuple(ProbeStep(Console.SI0, "test smcf", prompt, 120.0)
+              for prompt in (SMCF_INITIAL_PROMPT, SMCF_PROMPT,
+                             SMCF_SAMPLE_PROMPT, SMCF_PROMPT)),
         expected,
         coverage_kind,
         SmcfEvaluator(expected),
