@@ -26,7 +26,7 @@ import sys
 import time
 import tempfile
 
-from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args
+from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args, read_stat
 from qbox_monitor_manifest import monitor_plan
 from qbox_vmcu_boot import prepare_vmcu_rootfs
 
@@ -4499,10 +4499,38 @@ def run_platform(
     proc: subprocess.Popen[bytes] | None = None
     stats = None
     stats_qmp_directory = None
+    board_launch = None
+
+    def save_board_launch():
+        temporary = out_dir / 'board-launch.json.tmp'
+        temporary.write_text(json.dumps(board_launch, indent=2) + '\n')
+        temporary.replace(out_dir / 'board-launch.json')
+
     try:
         if interval_from_args(args) is not None and not env.get("QBOX_APOLLO_QMP_DIR"):
             stats_qmp_directory = tempfile.TemporaryDirectory(prefix="qbox-qmp-")
             env["QBOX_APOLLO_QMP_DIR"] = stats_qmp_directory.name
+        if env.get('QBOX_DASHBOARD_RUN_ID'):
+            board_launch = {
+                'schema_version': 1, 'run_id': env['QBOX_DASHBOARD_RUN_ID'],
+                'runtime_pid': os.getpid(),
+                'runtime_start_ticks': read_stat(Path(f'/proc/{os.getpid()}/stat'))['start'],
+                'conf': str(args.conf.resolve()), 'command': cmd,
+                'environment': {key: value for key, value in env.items()
+                                if key.startswith(('QBOX_', 'GS_', 'SCC_'))
+                                and not any(secret in key.upper() for secret in
+                                            ('TOKEN', 'PASSWORD', 'SECRET', 'CREDENTIAL'))},
+                'platform_params': [qbox_platform_param_value(p) for p in args.platform_param],
+                'provider': {'executable': str((build_dir / 'platforms-vp').resolve()),
+                             'qbox_build_dir': str(build_dir.resolve())},
+            }
+            save_board_launch()
+            try:
+                from scripts.autosd_dashboard.board_topology import get_board_topology
+                get_board_topology(root, out_dir)
+            except Exception as exc:
+                board_launch['topology_error'] = str(exc)
+                save_board_launch()
         proc = subprocess.Popen(
             cmd,
             cwd=root,
@@ -4512,6 +4540,10 @@ def run_platform(
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+        if board_launch is not None:
+            board_launch.update(pid=proc.pid,
+                                start_ticks=read_stat(Path(f'/proc/{proc.pid}/stat'))['start'])
+            save_board_launch()
         stats_monitor = monitor_plan(
             env.get("QBOX_APOLLO_MONITOR", "false") == "true",
             int(env.get("QBOX_APOLLO_MONITOR_PORT", "18080")), out_dir, full=True)
@@ -4521,7 +4553,14 @@ def run_platform(
                 name = domain["domain_id"].replace("-", "_")
                 prefix = "platform.rse_cpu_pass" if name == "rse" else "platform"
                 domain["qmp_biflow"] = f"{prefix}.{name}_qmp.qmp_socket.qmp_socket_router"
-        stats = LoadStats(proc.pid, interval_from_args(args), stats_monitor)
+                domain['qmp_socket'] = str(Path(env['QBOX_APOLLO_QMP_DIR']) / (domain['domain_id'] + '.sock'))
+        if board_launch is not None:
+            board_launch['monitor'] = dict(stats_monitor, owner_pid=proc.pid,
+                                           owner_start_ticks=board_launch['start_ticks'])
+            save_board_launch()
+        stats = LoadStats(proc.pid, interval_from_args(args), stats_monitor,
+                          output=out_dir / 'stats.jsonl',
+                          run_id=env.get('QBOX_DASHBOARD_RUN_ID'))
         with platform_log.open("w", encoding="utf-8", errors="replace", buffering=1) as log:
             assert proc.stdout is not None
             os.set_blocking(proc.stdout.fileno(), False)

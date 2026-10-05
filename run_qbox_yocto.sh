@@ -54,6 +54,11 @@ Options:
   --uboot-only                Validate only through U-Boot FWU Regular State
   --dwc-peripheral-probe      Run opt-in DWC I2C/SPI/UART guest qualification
   --headless                  Run without tmux and write logs under --out-dir
+  --dashboard                 Start the board web server; implies persistent headless
+  --dashboard-listen IPV4     Bind this local address (repeatable; default LAN + localhost)
+  --dashboard-port PORT       Board web server port (default: 8765)
+  --dashboard-password-file F Enable web login (default: no login required)
+  --dashboard-boot-timeout N  Board boot deadline in seconds (default: 900)
   --stats                     Log QBox load every 5 seconds; enable monitor/QMP
   --stats-interval SECONDS     Set a positive interval and enable --stats
   --monitor                   Enable the QBox web dashboard (default port: 18080)
@@ -717,6 +722,12 @@ RUN_QBOX_COPY_DISKS="${RUN_QBOX_COPY_DISKS:-0}"
 RUN_QBOX_RECORD_INITIAL_STATE="${RUN_QBOX_RECORD_INITIAL_STATE:-0}"
 LEGACY_FILE_BACKED_SRAM="${LEGACY_FILE_BACKED_SRAM:-0}"
 HEADLESS="${HEADLESS:-0}"
+DASHBOARD=0
+DASHBOARD_LISTEN=()
+DASHBOARD_PORT=8765
+DASHBOARD_PASSWORD_FILE=""
+DASHBOARD_BOOT_TIMEOUT=900
+DASHBOARD_OPTIONS_SET=0
 MONITOR=0
 STATS_INTERVAL=""
 MONITOR_PORT=18080
@@ -940,6 +951,26 @@ while (($#)); do
             HEADLESS=1
             shift
             ;;
+        --dashboard)
+            DASHBOARD=1
+            shift
+            ;;
+        --dashboard-listen)
+            [[ $# -ge 2 ]] || die "--dashboard-listen requires a value"
+            DASHBOARD_LISTEN+=("$2")
+            DASHBOARD_OPTIONS_SET=1
+            shift 2
+            ;;
+        --dashboard-port|--dashboard-password-file|--dashboard-boot-timeout)
+            [[ $# -ge 2 ]] || die "$1 requires a value"
+            case "$1" in
+                --dashboard-port) DASHBOARD_PORT="$2" ;;
+                --dashboard-password-file) DASHBOARD_PASSWORD_FILE="$2" ;;
+                --dashboard-boot-timeout) DASHBOARD_BOOT_TIMEOUT="$2" ;;
+            esac
+            DASHBOARD_OPTIONS_SET=1
+            shift 2
+            ;;
         --stats)
             STATS_INTERVAL="${STATS_INTERVAL:-5}"
             shift
@@ -1100,6 +1131,25 @@ while (($#)); do
     esac
 done
 
+if [[ "${DASHBOARD}" == "1" ]]; then
+    [[ "${MACHINE}" == "apollo-qvp" ]] || die "--dashboard requires --machine apollo-qvp"
+    [[ -z "${DEBUG_TARGET}" && "${DEBUG_MODE_SET}" == "0" ]] || die "--dashboard conflicts with --debug/--debug-mode"
+    [[ "${UBOOT_ONLY}" == "0" && "${KEEP_RUNNING_AFTER_PASS}" == "1" ]] || die "--dashboard requires a persistent full board run; remove --uboot-only/--exit-after-pass"
+    [[ "${TIMEOUT}" == "0" ]] || die "--dashboard requires --timeout 0; use --dashboard-boot-timeout for the boot deadline"
+    for dashboard_extra in "${TMUX_RUNNER_ARGS[@]}" "${EXTRA_CHILD_ARGS[@]}"; do
+        case "${dashboard_extra}" in
+            --tmux-*|--debug-*|--stop-existing-sessions|--timeout|--timeout=*|--out-dir|--out-dir=*|--exit-after-pass|--uboot-only)
+                die "--dashboard conflicts with runner option ${dashboard_extra}" ;;
+        esac
+    done
+    [[ "${DASHBOARD_PORT}" =~ ^[0-9]+$ ]] && ((DASHBOARD_PORT >= 1 && DASHBOARD_PORT <= 65535)) || die "--dashboard-port must be in range 1..65535"
+    "${PYTHON:-python3}" -c 'import math, sys; v=float(sys.argv[1]); sys.exit(0 if math.isfinite(v) and v>0 else 1)' "${DASHBOARD_BOOT_TIMEOUT}" 2>/dev/null || die "--dashboard-boot-timeout must be a finite positive number"
+    HEADLESS=1
+    MONITOR=1
+elif [[ "${DASHBOARD_OPTIONS_SET}" == "1" ]]; then
+    die "dashboard options require --dashboard"
+fi
+
 if [[ -n "${STATS_INTERVAL}" ]]; then
     "${PYTHON:-python3}" -c 'import math, sys; value = float(sys.argv[1]); sys.exit(0 if math.isfinite(value) and value > 0 else 1)' "${STATS_INTERVAL}" 2>/dev/null ||
         die "--stats-interval must be a finite positive number: ${STATS_INTERVAL}"
@@ -1136,7 +1186,7 @@ elif [[ "${DEBUG_MODE_SET}" == "1" ]]; then
     die "--debug-mode requires --debug TARGET"
 fi
 
-if [[ "${BSP_MODE}" == "1" && "${HEADLESS}" == "0" &&
+if [[ "${BSP_MODE}" == "1" && ( "${HEADLESS}" == "0" || "${DASHBOARD}" == "1" ) &&
       "${MACHINE}" == "apollo-qvp" && "${VMCU_DISABLED}" == "0" &&
       -z "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}" ]]; then
     VMCU_ENABLED=1
@@ -1150,7 +1200,7 @@ fi
 
 if [[ "${SIL_KIT}" == "1" ]]; then
     [[ "${VMCU_ENABLED}" == "1" ]] ||
-        die "--sil-kit requires the local TC397 companion (--bsp with tmux, without --no-vmcu/external UART)"
+        die "--sil-kit requires the local TC397 companion (--bsp with tmux or --dashboard, without --no-vmcu/external UART)"
     [[ -z "${SIL_KIT_REGISTRY}" || "${SIL_KIT_REGISTRY}" == silkit://* ]] ||
         die "--sil-kit-registry must be a silkit:// URI"
     if [[ "${DRY_RUN}" == "0" ]]; then
@@ -1165,7 +1215,7 @@ elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SI
     die "SIL Kit options require --sil-kit"
 fi
 
-if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
+if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" && "${DASHBOARD}" == "0" ]]; then
     "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
         --stop-existing-sessions
 fi
@@ -1249,6 +1299,9 @@ else
     PRIMARY_LOGIN_PROMPT="${PRIMARY_LOGIN_PROMPT:-${MACHINE} login:}"
     PRIMARY_SHELL_MARKER="${PRIMARY_SHELL_MARKER:-~ #}"
     PRIMARY_SHELL_PROMPT_RE="${PRIMARY_SHELL_PROMPT_RE:-(?:root@${MACHINE}[^\\n]*[#>]|\\S+ #)\\s*$}"
+fi
+if [[ "${DASHBOARD}" == "1" && -z "${RSE_STATE_DIR}" ]]; then
+    RSE_STATE_DIR="${OUT_DIR}/state"
 fi
 RSE_STATE_DIR="${RSE_STATE_DIR:-${ROOT_DIR}/build/qbox-apollo-fvp/state/yocto-${MACHINE}}"
 if [[ "${RESET_RSE_STATE}" == "1" && "${PERSIST_RSE_STATE}" != "1" ]]; then
@@ -1636,6 +1689,9 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
 fi
 RUNNER_CMD+=("${QBOX_ACCEL_ARGS[@]}")
 RUNNER_CMD+=("${EXTRA_CHILD_ARGS[@]}")
+if [[ "${DASHBOARD}" == "1" ]]; then
+    RUNNER_CMD+=(--foreground-runtime)
+fi
 if [[ "${DWC_PERIPHERAL_PROBE}" == "1" ]]; then
     RUNNER_CMD+=(--dwc-peripheral-probe)
 fi
@@ -1714,6 +1770,58 @@ EOF
         printf '  debug attach:  %s contains %s\n' \
             "${DEBUG_WAIT_LOG}" "${DEBUG_WAIT_MARKER}"
     fi
+fi
+
+if [[ "${DASHBOARD}" == "1" ]]; then
+    DASHBOARD_SPEC="${OUT_DIR}/dashboard-launch-spec.json"
+    DASHBOARD_CMD=("${PYTHON:-python3}" "${ROOT_DIR}/scripts/autosd_dashboard/board_server.py"
+        --launch-spec "${DASHBOARD_SPEC}" --port "${DASHBOARD_PORT}"
+        --boot-timeout "${DASHBOARD_BOOT_TIMEOUT}")
+    for dashboard_address in "${DASHBOARD_LISTEN[@]}"; do
+        DASHBOARD_CMD+=(--listen "${dashboard_address}")
+    done
+    [[ -z "${DASHBOARD_PASSWORD_FILE}" ]] || DASHBOARD_CMD+=(--password-file "${DASHBOARD_PASSWORD_FILE}")
+    "${PYTHON:-python3}" - "${DASHBOARD_SPEC}" "${DRY_RUN}" "${ROOT_DIR}" "${OUT_DIR}" \
+        "${QBOX_CONF}" "${QBOX_CONF_FILE}" "${MACHINE}" "${IMAGE_BASENAME}" \
+        "${BSP_MODE}" "${VMCU_ENABLED}" "${SIL_KIT}" "${SIL_KIT_REGISTRY}" \
+        "${SIL_KIT_ALLOW_ACTUATION}" "${SIL_KIT_ECHO_FIXTURE}" "${TC397_QEMU}" \
+        "${TC397_FIRMWARE}" "${STATS_INTERVAL}" "${MONITOR_PORT}" "${RUNNER_CMD[@]}" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+
+path, dry, cwd, output, conf, qboxconf, machine, image = sys.argv[1:9]
+bsp, vmcu, silkit, registry, actuation, echo, qemu, firmware, interval, port = sys.argv[9:19]
+environment = {key: value for key, value in os.environ.items()
+               if (key.startswith(('QBOX_', 'GS_', 'SCC_')) or key == 'LD_LIBRARY_PATH')
+               and not any(secret in key.upper() for secret in ('PASSWORD', 'TOKEN', 'SECRET', 'CREDENTIAL'))}
+spec = dict(schema_version=1, cwd=cwd, out_dir=str(Path(output).resolve()),
+            conf=str(Path(conf).resolve()), qboxconf=str(Path(qboxconf).resolve()),
+            machine=machine, image_basename=image, bsp=bsp == '1', vmcu=vmcu == '1',
+            silkit=silkit == '1', silkit_registry=registry,
+            silkit_allow_actuation=actuation == '1', silkit_echo_fixture=echo == '1',
+            tc397_qemu=qemu, tc397_firmware=firmware,
+            stats_interval=float(interval) if interval else None,
+            monitor_port=int(port), env=environment, command=sys.argv[19:])
+if dry == '1':
+    print('Dashboard resolved launch specification (no bind/boot/files):')
+    print(json.dumps(spec, indent=2))
+else:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with open(target, 'w', opener=lambda name, flags: os.open(name, flags | os.O_NOFOLLOW, 0o600)) as stream:
+        os.fchmod(stream.fileno(), 0o600)
+        json.dump(spec, stream, indent=2)
+        stream.write('\n')
+PY
+    if [[ "${DRY_RUN}" == "1" ]]; then
+        printf 'Dashboard server command:\n  '
+        printf '%q ' "${DASHBOARD_CMD[@]}"
+        printf '\n'
+        exit 0
+    fi
+    exec "${DASHBOARD_CMD[@]}"
 fi
 
 if [[ "${HEADLESS}" == "1" && "${DRY_RUN}" == "1" ]]; then
