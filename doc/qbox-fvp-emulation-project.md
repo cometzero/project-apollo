@@ -24,6 +24,33 @@ See the [implementation and qualification report](dashboard/qbox-monitor-impleme
 for actual evidence and remaining gaps. Simulation clocks and MCIPS configuration
 are not physical CPU performance, WCET/FTTI, or FVP timing-equivalence evidence.
 
+## External TC397 and SI CL0 safety channel
+
+Interactive `./run_qbox_yocto.sh --bsp` starts the standalone TC397 Zephyr
+application and its ASCLIN1 shell pane. ASCLIN0 connects to Apollo DW UART2
+for AP ping/status management. ASCLIN2 connects to a dedicated SI CL0 PL011
+at 0x2a820000; the existing SI PFDI monitor supplies a report every 5 seconds.
+The AP synthetic HEALTH/workload generator has been removed.
+
+A separate GPIO transport connects TC397 PORT0 to SI PL061 at 0x2a830000.
+SOC_ERROR toggles only when the existing PFDI monitor is READY. MCU reset_N
+joins the AP cold-reset fanout. SI-managed AP-only shutdown asserts power-request
+and drives shutdown-complete only after all AP cores are OFF; wake requests
+RSE reload and AP reboot while SI/RSE stay powered.
+SI/RSE/PMIC/MCU are outside this AP reset scope. These addresses and pin
+assignments are QVP extensions, not physical Saturn-V schematic claims.
+
+The companion owns per-run endpoints and stops with QBox. The new SI MMIO
+blocks remain mapped with an output sink and safe GPIO defaults under
+`--no-vmcu`; AP UART2/3 loopback is restored. The app logs state transitions
+instead of periodic host-decoded status. Functional tests and limitations
+are recorded in [SI CL0 safety channel](vmcu/si0-safety-channel.md).
+The external TC397 now has M_CAN register/FIFO/IRQ support and a native SIL Kit
+5.0.7 bridge, enabled with `--bsp --sil-kit`. PMIC readback, MCU session repair
+and SI-controlled AP recovery/off/wake are documented in
+[CAN and control services](vmcu/can-and-services.md). PMIC rail gating, SC7,
+physical CAN timing and cross-process safety deadlines remain unqualified.
+
 ## Goal
 
 Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox using
