@@ -22,7 +22,12 @@ run_fvp.sh. Use --headless for file-backed regression runs without tmux.
 
 Options:
   --machine NAME              Yocto machine name (default: apollo-qvp)
-  --bsp                       Boot nexios-bsp-initramfs from its boot-only WIC
+  --bsp                       Boot nexios-bsp-initramfs; tmux also starts TC397
+  --no-vmcu                   Disable the automatic TC397 Zephyr shell pane
+  --sil-kit                   Start owned SIL Kit registry and CAN participants (BSP tmux)
+  --sil-kit-registry URI      Use an external SIL Kit registry
+  --sil-kit-allow-actuation   Allow explicit VehicleRestbus power/recovery commands
+  --sil-kit-echo-fixture      Enable CAN loopback fixture replies
   --build-dir DIR             Yocto build directory (default: ./build)
   --deploy-dir DIR            Yocto deploy image directory
   --work-dir DIR              Yocto machine work directory
@@ -87,7 +92,8 @@ Useful environment variables:
   MACHINE, YOCTO_BUILD_DIR, DEPLOY_DIR, YOCTO_WORK_DIR, IMAGE_BASENAME,
   QBOX_CONF_FILE, ARTIFACT_ROOT, QBOX_TOOL_DIR, QBOX_BUILD_DIR, QBOX_CONF,
   OUT_DIR, TMUX_SESSION, TIMEOUT, JOBS, RUN_QBOX_COPY_DISKS, SSH_PORT,
-  RUN_QBOX_RECORD_INITIAL_STATE, QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE
+  RUN_QBOX_RECORD_INITIAL_STATE, QBOX_RSE_STATE_DIR, QBOX_PERSIST_RSE_STATE,
+  QBOX_TC397_QEMU, QBOX_TC397_FIRMWARE (standalone TC397 executable/ELF)
 EOF
 }
 
@@ -725,6 +731,14 @@ RSE_STATE_DIR="${QBOX_RSE_STATE_DIR:-}"
 PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
 RESET_RSE_STATE=0
 BSP_MODE=0
+VMCU_DISABLED=0
+VMCU_ENABLED=0
+SIL_KIT=0
+SIL_KIT_REGISTRY=""
+SIL_KIT_ALLOW_ACTUATION=0
+SIL_KIT_ECHO_FIXTURE=0
+TC397_QEMU="${QBOX_TC397_QEMU:-${ROOT_DIR}/build/qbox-apollo-qvp/tc397-minimal/qemu-build/qemu-system-tricore}"
+TC397_FIRMWARE="${QBOX_TC397_FIRMWARE:-${ROOT_DIR}/build/qbox-apollo-qvp/zephyr-vmcu/app/zephyr/zephyr.elf}"
 DEBUG_TARGET=""
 DEBUG_COMPONENT=""
 DEBUG_ENTRYPOINT=""
@@ -777,6 +791,27 @@ while (($#)); do
             ;;
         --bsp)
             BSP_MODE=1
+            shift
+            ;;
+        --sil-kit)
+            SIL_KIT=1
+            shift
+            ;;
+        --sil-kit-registry)
+            [[ $# -ge 2 ]] || die "--sil-kit-registry requires a value"
+            SIL_KIT_REGISTRY="$2"
+            shift 2
+            ;;
+        --sil-kit-allow-actuation)
+            SIL_KIT_ALLOW_ACTUATION=1
+            shift
+            ;;
+        --sil-kit-echo-fixture)
+            SIL_KIT_ECHO_FIXTURE=1
+            shift
+            ;;
+        --no-vmcu)
+            VMCU_DISABLED=1
             shift
             ;;
         --build-dir)
@@ -1082,11 +1117,6 @@ fi
 
 reject_removed_env
 
-if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
-    "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
-        --stop-existing-sessions
-fi
-
 if [[ -n "${DEBUG_TARGET}" ]]; then
     qbox_debug_configure_target
     case "${DEBUG_MODE}" in
@@ -1104,6 +1134,40 @@ if [[ -n "${DEBUG_TARGET}" ]]; then
     fi
 elif [[ "${DEBUG_MODE_SET}" == "1" ]]; then
     die "--debug-mode requires --debug TARGET"
+fi
+
+if [[ "${BSP_MODE}" == "1" && "${HEADLESS}" == "0" &&
+      "${MACHINE}" == "apollo-qvp" && "${VMCU_DISABLED}" == "0" &&
+      -z "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}" ]]; then
+    VMCU_ENABLED=1
+    if [[ "${DRY_RUN}" == "0" ]]; then
+        [[ -x "${TC397_QEMU}" ]] || die "TC397 QEMU not executable: ${TC397_QEMU}; see doc/vmcu/tc397-minimal-implementation.md, or use --no-vmcu"
+        [[ -f "${TC397_FIRMWARE}" ]] || die "TC397 firmware missing: ${TC397_FIRMWARE}; run scripts/build/build_vmcu_zephyr.sh, or use --no-vmcu"
+    fi
+    TC397_QEMU="$(realpath -m "${TC397_QEMU}")"
+    TC397_FIRMWARE="$(realpath -m "${TC397_FIRMWARE}")"
+fi
+
+if [[ "${SIL_KIT}" == "1" ]]; then
+    [[ "${VMCU_ENABLED}" == "1" ]] ||
+        die "--sil-kit requires the local TC397 companion (--bsp with tmux, without --no-vmcu/external UART)"
+    [[ -z "${SIL_KIT_REGISTRY}" || "${SIL_KIT_REGISTRY}" == silkit://* ]] ||
+        die "--sil-kit-registry must be a silkit:// URI"
+    if [[ "${DRY_RUN}" == "0" ]]; then
+        [[ -x "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" ]] ||
+            die "SIL Kit participant unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
+        if [[ -z "${SIL_KIT_REGISTRY}" ]]; then
+            [[ -x "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}" ]] ||
+                die "SIL Kit registry unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
+        fi
+    fi
+elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
+    die "SIL Kit options require --sil-kit"
+fi
+
+if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" ]]; then
+    "${ROOT_DIR}/scripts/run/run_qbox_apollo_fvp_full_tmux.sh" \
+        --stop-existing-sessions
 fi
 
 BOOT_PROFILE="product"
@@ -1482,6 +1546,15 @@ else
         --netdev "${NETDEV}"
         --tmux-layout fvp-like
     )
+    if [[ "${VMCU_ENABLED}" == "1" ]]; then
+        RUNNER_CMD+=(--tc397-qemu "${TC397_QEMU}" --tc397-firmware "${TC397_FIRMWARE}")
+        if [[ "${SIL_KIT}" == "1" ]]; then
+            RUNNER_CMD+=(--sil-kit)
+            [[ -z "${SIL_KIT_REGISTRY}" ]] || RUNNER_CMD+=(--sil-kit-registry "${SIL_KIT_REGISTRY}")
+            [[ "${SIL_KIT_ALLOW_ACTUATION}" == "0" ]] || RUNNER_CMD+=(--sil-kit-allow-actuation)
+            [[ "${SIL_KIT_ECHO_FIXTURE}" == "0" ]] || RUNNER_CMD+=(--sil-kit-echo-fixture)
+        fi
+    fi
     if [[ -n "${DEBUG_TARGET}" ]]; then
         RUNNER_CMD+=(
             --debug-target "${DEBUG_TARGET}"
@@ -1609,6 +1682,7 @@ Apollo QBox Yocto launch
   session:       ${TMUX_SESSION}
   multi session: ${MULTI_SESSION}
   headless:      ${HEADLESS}
+  tc397:         $([[ "${VMCU_ENABLED}" == "1" ]] && printf '%s' "${TC397_FIRMWARE}" || printf '%s' disabled-or-external)
   monitor:       $([[ "${MONITOR}" == "1" ]] && printf 'http://127.0.0.1:%s/' "${MONITOR_PORT}" || printf disabled)
   qboxconf:      ${QBOX_CONF_FILE:-}
   qbox tools:    ${QBOX_TOOL_DIR}

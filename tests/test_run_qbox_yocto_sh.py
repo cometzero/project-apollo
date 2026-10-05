@@ -1078,7 +1078,8 @@ def test_run_qbox_yocto_passes_child_args_after_separator(tmp_path: Path) -> Non
     assert "--check-only" in result.stdout
 
 
-def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
+@pytest.mark.parametrize("with_tc397", [False, True])
+def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path, with_tc397: bool) -> None:
     yocto_build, deploy, _work, local_build, conf = create_yocto_tree(tmp_path)
     out_dir = tmp_path / "out"
     fake_bin_dir = tmp_path / "bin"
@@ -1123,9 +1124,18 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
         }
     )
 
+    companion_args = []
+    if with_tc397:
+        qemu = tmp_path / "qemu-system-tricore"
+        touch_file(qemu)
+        qemu.chmod(0o755)
+        firmware = tmp_path / "vmcu.elf"
+        touch_file(firmware)
+        companion_args = ["--tc397-qemu", str(qemu), "--tc397-firmware", str(firmware)]
+
     result = subprocess.run(
         # Fake tmux does not isolate the launcher's host process cleanup.
-        [str(SCRIPT), "--multi-session", "--no-attach"],
+        [str(SCRIPT), "--multi-session", "--no-attach", *companion_args],
         cwd=ROOT,
         env=env,
         check=False,
@@ -1137,12 +1147,12 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     tmux_lines = tmux_log.read_text(encoding="utf-8").splitlines()
     split_lines = [line for line in tmux_lines if line.startswith("split-window ")]
-    assert len(split_lines) == 6
+    assert len(split_lines) == (7 if with_tc397 else 6)
     assert any(" -v -b -l 70% -t %0 " in f" {line} " for line in split_lines)
     assert any(" -h -l 40% -t %1 " in f" {line} " for line in split_lines)
-    assert any(" -v -l 75% -t %2 " in f" {line} " for line in split_lines)
-    assert any(" -v -l 67% -t %3 " in f" {line} " for line in split_lines)
-    assert any(" -v -l 50% -t %4 " in f" {line} " for line in split_lines)
+    percentages = (80, 75, 67, 50) if with_tc397 else (75, 67, 50)
+    for pane, percent in enumerate(percentages, 2):
+        assert any(f" -v -l {percent}% -t %{pane} " in f" {line} " for line in split_lines)
     assert any(" -h -l 50% -t %0 " in f" {line} " for line in split_lines)
     assert any(line == "select-pane -t %1 -T primary_console" for line in tmux_lines)
     assert any(line == "select-pane -t %2 -T rse" for line in tmux_lines)
@@ -1150,8 +1160,14 @@ def test_run_qbox_yocto_uses_fvp_like_tmux_splits(tmp_path: Path) -> None:
     assert any(line == "select-pane -t %4 -T safety_island_cl1" for line in tmux_lines)
     assert any(line == "select-pane -t %5 -T secure_console" for line in tmux_lines)
     assert any(line == "select-pane -t %0 -T platform" for line in tmux_lines)
-    assert any(line == "select-pane -t %6 -T shell" for line in tmux_lines)
-    assert sum("--uart-console" in line for line in split_lines) == 5
+    shell_pane = 7 if with_tc397 else 6
+    assert f"select-pane -t %{shell_pane} -T shell" in tmux_lines
+    if with_tc397:
+        assert "select-pane -t %6 -T tc397" in tmux_lines
+        assert any("--uart-console tc397" in line for line in split_lines)
+        assert any("TC397_QEMU=" in line and "TC397_FIRMWARE=" in line
+                   for line in tmux_lines if line.startswith("run-shell "))
+    assert sum("--uart-console" in line for line in split_lines) == (6 if with_tc397 else 5)
     assert any("QBOX_RDASPEN_PRIMARY_UART_READ_FILE=" in line for line in tmux_lines)
     assert any("QBOX_RDASPEN_UART_READ_FILE=" in line for line in tmux_lines)
     assert any("QBOX_APOLLO_FULL_SI_CL0_UART_READ_FILE=" in line for line in tmux_lines)
@@ -1254,7 +1270,8 @@ def test_run_qbox_yocto_can_disable_tmux_uart_input_fifos(tmp_path: Path) -> Non
     assert "QBOX_RDASPEN_UART_READ_FILE=" not in result.stdout
 
 
-def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
+@pytest.mark.parametrize("with_tc397", [False, True])
+def test_fvp_like_rebalance_keeps_right_stack_even_after_resize(with_tc397: bool) -> None:
     tmux_bin = shutil.which("tmux")
     if tmux_bin is None:
         pytest.skip("tmux is not installed")
@@ -1314,7 +1331,7 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
             "#{pane_id}",
             "-v",
             "-l",
-            "75%",
+            "80%" if with_tc397 else "75%",
             "-t",
             rse,
             "sleep",
@@ -1327,7 +1344,7 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
             "#{pane_id}",
             "-v",
             "-l",
-            "67%",
+            "75%" if with_tc397 else "67%",
             "-t",
             si0,
             "sleep",
@@ -1340,12 +1357,16 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
             "#{pane_id}",
             "-v",
             "-l",
-            "50%",
+            "67%" if with_tc397 else "50%",
             "-t",
             si1,
             "sleep",
             "600",
         )
+        right_panes = [rse, si0, si1, secure]
+        if with_tc397:
+            right_panes.append(tmux("split-window", "-P", "-F", "#{pane_id}",
+                                    "-v", "-l", "50%", "-t", secure, "sleep", "600"))
         tmux(
             "split-window",
             "-P",
@@ -1365,10 +1386,7 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
             [
                 str(TMUX_SCRIPT),
                 "--rebalance-fvp-like-log-panes",
-                rse,
-                si0,
-                si1,
-                secure,
+                *right_panes,
             ],
             check=True,
             env={**os.environ, "TMUX_BIN": tmux_bin},
@@ -1378,7 +1396,7 @@ def test_fvp_like_rebalance_keeps_right_stack_even_after_resize() -> None:
 
         heights = [
             int(tmux("display-message", "-p", "-t", pane, "#{pane_height}"))
-            for pane in (rse, si0, si1, secure)
+            for pane in right_panes
         ]
         assert max(heights) - min(heights) <= 1
     finally:

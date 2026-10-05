@@ -28,6 +28,7 @@ import tempfile
 
 from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args
 from qbox_monitor_manifest import monitor_plan
+from qbox_vmcu_boot import prepare_vmcu_rootfs
 
 from gic720ae_operation_manifest import load_operations, serialize_operation
 from qbox_validation.registry import (
@@ -6568,6 +6569,16 @@ def main(argv: list[str] | None = None) -> int:
             profile=args.rootfs_bootargs_profile,
             maxcpus=args.rootfs_maxcpus,
         )
+        run_artifacts["rootfs"], vmcu_boot = prepare_vmcu_rootfs(
+            run_artifacts["rootfs"], image_dir,
+            enabled=bool(os.environ.get("QBOX_APOLLO_VMCU_UART_ENDPOINT")),
+            copy_image=copy_sparse, image_location=mtools_image_arg,
+        )
+        rootfs_preparation["vmcu"] = vmcu_boot
+        if vmcu_boot["changed"]:
+            rootfs_preparation["changed"] = True
+            rootfs_preparation["state"] = "private_bsp_uki_bootarg"
+            rootfs_preparation["output"] = str(run_artifacts["rootfs"])
     except RuntimeError as exc:
         blocker = str(exc)
         logs = write_placeholder_logs(args.out_dir, blocker)

@@ -53,6 +53,12 @@ DEBUG_ENDPOINT="${DEBUG_ENDPOINT:-}"
 DEBUG_MANIFEST="${DEBUG_MANIFEST:-}"
 DEBUG_WAIT_LOG="${DEBUG_WAIT_LOG:-}"
 DEBUG_WAIT_MARKER="${DEBUG_WAIT_MARKER:-}"
+TC397_QEMU="${TC397_QEMU:-}"
+TC397_FIRMWARE="${TC397_FIRMWARE:-}"
+SIL_KIT="${SIL_KIT:-0}"
+SIL_KIT_REGISTRY="${SIL_KIT_REGISTRY:-}"
+SIL_KIT_ALLOW_ACTUATION="${SIL_KIT_ALLOW_ACTUATION:-0}"
+SIL_KIT_ECHO_FIXTURE="${SIL_KIT_ECHO_FIXTURE:-0}"
 NO_ATTACH=0
 DRY_RUN=0
 START_INTERACTIVE_PANE_ID=""
@@ -137,6 +143,12 @@ Options:
   --debug-wait-marker S
                        marker paired with --debug-wait-log
   --no-attach          start tmux but do not attach
+  --sil-kit           start SIL Kit registry, CAN bridge and VehicleRestbus
+  --sil-kit-registry URI use an external registry (requires --sil-kit)
+  --sil-kit-allow-actuation allow explicit Restbus power/recovery commands
+  --sil-kit-echo-fixture enable CAN fixture echo replies
+  --tc397-qemu FILE    start this standalone TC397 QEMU with the QBox runner
+  --tc397-firmware ELF TC397 Zephyr vMCU firmware (requires --tc397-qemu)
   --multi-session      preserve existing QBox tmux sessions
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -275,7 +287,7 @@ detect_tmux_window_size_args()
 
 rebalance_fvp_like_log_panes()
 {
-    (($# == 4)) || return 0
+    (($# == 4 || $# == 5)) || return 0
 
     local -a panes=("$@")
     local total_height=0
@@ -290,9 +302,11 @@ rebalance_fvp_like_log_panes()
     local target_height=$((total_height / ${#panes[@]}))
     is_positive_int "${target_height}" || return 0
 
-    local i
+    local i height_for_pane
+    local remainder=$((total_height % ${#panes[@]}))
     for ((i = 0; i < ${#panes[@]} - 1; i++)); do
-        tmux_cmd resize-pane -t "${panes[$i]}" -y "${target_height}" >/dev/null 2>&1 || return 0
+        height_for_pane=$((target_height + (i < remainder ? 1 : 0)))
+        tmux_cmd resize-pane -t "${panes[$i]}" -y "${height_for_pane}" >/dev/null 2>&1 || return 0
     done
 }
 
@@ -370,6 +384,20 @@ runner_command()
     if ((${#extra_args[@]} > 0)); then
         _out+=("${extra_args[@]}")
     fi
+    if [[ -n "${TC397_QEMU}" ]]; then
+        # Keep the companion alive for the actual runtime, including after login.
+        _out+=(--foreground-runtime)
+        local -a silkit_args=()
+        if [[ "${SIL_KIT}" == "1" ]]; then
+            silkit_args+=(--sil-kit)
+            [[ -z "${SIL_KIT_REGISTRY}" ]] || silkit_args+=(--sil-kit-registry "${SIL_KIT_REGISTRY}")
+            [[ "${SIL_KIT_ALLOW_ACTUATION}" == "0" ]] || silkit_args+=(--sil-kit-allow-actuation)
+            [[ "${SIL_KIT_ECHO_FIXTURE}" == "0" ]] || silkit_args+=(--sil-kit-echo-fixture)
+        fi
+        _out=("${PYTHON_BIN}" "${ROOT_DIR}/scripts/run/qbox_tc397.py"
+              --qemu "${TC397_QEMU}" --firmware "${TC397_FIRMWARE}"
+              --out-dir "${OUT_DIR}" "${silkit_args[@]}" -- "${_out[@]}")
+    fi
 }
 
 known_logs()
@@ -382,6 +410,9 @@ safety_island_cl1:qbox-safety-island-cl1.log:Safety Island CL1 / Zephyr
 secure_console:qbox-secure-console.log:TF-A / OP-TEE secure AP
 primary_console:qbox-primary-console.log:U-Boot / Linux
 EOF
+    if [[ -n "${TC397_QEMU}" ]]; then
+        printf '%s\n' 'tc397:tc397-uart.log:TC397 / Zephyr vmcu-cli shell'
+    fi
 }
 
 prepare_log_files()
@@ -466,7 +497,7 @@ supervise_run()
     printf 'Logs: %s\n' "${OUT_DIR}"
     printf 'Runner log: %s\n' "${OUT_DIR}/qbox-runner.log"
     printf 'Command: %s\n\n' "$(quote_args "${cmd[@]}")"
-    printf 'F12 stops QBox and kills the tmux session.\n\n'
+    printf 'F12 stops this run and kills the tmux session.\n\n'
 
     local status_file="${OUT_DIR}/qbox-run.status.tmp"
     rm -f "${status_file}"
@@ -494,10 +525,11 @@ supervise_run()
 
     printf '\nQBox runner exited with status %s.\n' "${status}" |
         tee -a "${OUT_DIR}/qbox-runner.log"
-    if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" && "${status}" == "0" ]]; then
+    if [[ "${KEEP_RUNNING_AFTER_PASS}" == "1" && "${status}" == "0" &&
+          -z "${TC397_QEMU}" ]]; then
         printf 'Boot pass condition was reached; QBox is still running for the interactive demo.\n' |
             tee -a "${OUT_DIR}/qbox-runner.log"
-        printf 'Use F12 to stop QBox and kill the tmux session.\n' |
+        printf 'Use F12 to stop this run and kill the tmux session.\n' |
             tee -a "${OUT_DIR}/qbox-runner.log"
     fi
     printf 'Logs remain under: %s\n' "${OUT_DIR}" |
@@ -591,7 +623,7 @@ process_is_managed_qbox_session()
 
     cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
     case "${cmdline}" in
-        *"run_qbox_apollo_fvp_full.py"*|*"/platforms-vp"*|*"platforms-vp"*) ;;
+        *"run_qbox_apollo_fvp_full.py"*|*"qbox_tc397.py"*|*"qemu-system-tricore"*|*"platforms-vp"*) ;;
         *) return 1 ;;
     esac
 
@@ -680,7 +712,7 @@ process_matches_out_dir()
     [[ -r "/proc/${pid}/cmdline" ]] || return 1
     cmdline="$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)"
     case "${cmdline}" in
-        *"/platforms-vp"*|*"platforms-vp"*) ;;
+        *"platforms-vp"*|*"qemu-system-tricore"*) ;;
         *) return 1 ;;
     esac
 
@@ -734,6 +766,7 @@ stop_session()
     local pid_file="${OUT_DIR}/qbox-run.pid"
     local done_file="${OUT_DIR}/.qbox-run.done"
     local pid=""
+    local companion=0
     local -a pids=()
     local -a runtime_pids=()
     local -a runtime_pgids=()
@@ -745,12 +778,21 @@ stop_session()
     if process_environment_matches_out_dir "${pid}" &&
         kill -0 "${pid}" 2>/dev/null; then
         mapfile -t pids < <(process_tree_snapshot "${pid}")
+        case "$(tr '\0' '\n' <"/proc/${pid}/cmdline" 2>/dev/null || true)" in
+            *"/qbox_tc397.py"*) companion=1 ;;
+        esac
     fi
     mapfile -t runtime_pids < <(qbox_runtime_pids_for_out_dir)
     mapfile -t runtime_pgids < <(qbox_runtime_pgids_for_pids "${runtime_pids[@]}")
 
-    signal_pids INT "${pids[@]}"
-    signal_pgids TERM "${runtime_pgids[@]}"
+    if ((companion)); then
+        # Let the owner stop its foreground runner and MCU in order, allowing
+        # result/log writers to finish before falling back to tree signals.
+        signal_pids TERM "${pid}"
+    else
+        signal_pids INT "${pids[@]}"
+        signal_pgids TERM "${runtime_pgids[@]}"
+    fi
     wait_pids_exit 5 "${pids[@]}" "${runtime_pids[@]}" || {
         signal_pids TERM "${pids[@]}"
         signal_pgids TERM "${runtime_pgids[@]}"
@@ -917,6 +959,8 @@ Apollo QBox full-system tmux run
   effective_cc3xx_local_mmio_fastpath: ${effective_cc3xx_local_mmio_fastpath}
   netdev: ${NETDEV:-default}
   tmux_layout: ${TMUX_LAYOUT}
+  tc397_qemu: ${TC397_QEMU:-disabled}
+  tc397_firmware: ${TC397_FIRMWARE:-disabled}
   debug_target: ${DEBUG_TARGET:-disabled}
   debug_component: ${DEBUG_COMPONENT:-disabled}
   debug_endpoint: ${DEBUG_ENDPOINT:-disabled}
@@ -939,7 +983,7 @@ EOF
     done < <(known_logs)
     if [[ "${TMUX_UART_INPUT_FIFOS}" == "1" ]]; then
         printf '\nUART input FIFOs\n'
-        for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
+        for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console ${TC397_QEMU:+tc397}; do
             printf '  %-18s %s\n' "${domain}" "$(uart_fifo_for_domain "${domain}")"
         done
     else
@@ -957,6 +1001,7 @@ uart_fifo_for_domain()
         safety_island_cl1) printf '%s/si-cl1-uart-input.fifo\n' "${OUT_DIR}" ;;
         secure_console) printf '%s/secure-uart-input.fifo\n' "${OUT_DIR}" ;;
         primary_console) printf '%s/primary-uart-input.fifo\n' "${OUT_DIR}" ;;
+        tc397) printf '%s/tc397-uart-input.fifo\n' "${OUT_DIR}" ;;
         *) return 1 ;;
     esac
 }
@@ -968,7 +1013,7 @@ prepare_uart_input_fifos()
 
     : >"${OUT_DIR}/tmux-uart-inputs.tsv"
     printf 'domain\tfifo\n' >"${OUT_DIR}/tmux-uart-inputs.tsv"
-    for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console; do
+    for domain in rse safety_island_cl0 safety_island_cl1 secure_console primary_console ${TC397_QEMU:+tc397}; do
         fifo_path="$(uart_fifo_for_domain "${domain}")"
         rm -f "${fifo_path}"
         mkfifo "${fifo_path}"
@@ -1332,24 +1377,34 @@ start_fvp_like_log_panes()
     local si0_pane_id
     local si1_pane_id
     local secure_pane_id
+    local -a right_panes=()
+    local rse_split=75 si0_split=67 si1_split=50
+    if [[ -n "${TC397_QEMU}" ]]; then
+        rse_split=80 si0_split=75 si1_split=67
+    fi
 
     start_domain_log_pane primary_console -v -b -l 70% -t "${platform_pane_id}"
     primary_pane_id="${START_LOG_PANE_ID}"
     start_domain_log_pane rse -h -l 40% -t "${primary_pane_id}"
     rse_pane_id="${START_LOG_PANE_ID}"
-    start_domain_log_pane safety_island_cl0 -v -l 75% -t "${rse_pane_id}"
+    start_domain_log_pane safety_island_cl0 -v -l "${rse_split}%" -t "${rse_pane_id}"
     si0_pane_id="${START_LOG_PANE_ID}"
-    start_domain_log_pane safety_island_cl1 -v -l 67% -t "${si0_pane_id}"
+    start_domain_log_pane safety_island_cl1 -v -l "${si0_split}%" -t "${si0_pane_id}"
     si1_pane_id="${START_LOG_PANE_ID}"
-    start_domain_log_pane secure_console -v -l 50% -t "${si1_pane_id}"
+    start_domain_log_pane secure_console -v -l "${si1_split}%" -t "${si1_pane_id}"
     secure_pane_id="${START_LOG_PANE_ID}"
+    right_panes=("${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}")
+    if [[ -n "${TC397_QEMU}" ]]; then
+        start_domain_log_pane tc397 -v -l 50% -t "${secure_pane_id}"
+        right_panes+=("${START_LOG_PANE_ID}")
+    fi
     if [[ -n "${DEBUG_COMPONENT}" ]]; then
         start_debug_pane -h -l 50% -t "${platform_pane_id}"
     else
         start_shell_pane -h -l 50% -t "${platform_pane_id}"
     fi
-    rebalance_fvp_like_log_panes "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
-    install_fvp_like_rebalance_hooks "${rse_pane_id}" "${si0_pane_id}" "${si1_pane_id}" "${secure_pane_id}"
+    rebalance_fvp_like_log_panes "${right_panes[@]}"
+    install_fvp_like_rebalance_hooks "${right_panes[@]}"
 }
 
 start_tmux()
@@ -1393,6 +1448,29 @@ start_tmux()
     require_command "${PYTHON_BIN}"
 
     [[ -f "${QBOX_CONF}" ]] || die "QBox config not found: ${QBOX_CONF}"
+    if [[ "${SIL_KIT}" == "1" ]]; then
+        [[ -n "${TC397_QEMU}" ]] || die "--sil-kit requires --tc397-qemu and --tc397-firmware"
+        [[ -z "${SIL_KIT_REGISTRY}" || "${SIL_KIT_REGISTRY}" == silkit://* ]] ||
+            die "--sil-kit-registry must be a silkit:// URI"
+        if (( ! DRY_RUN )); then
+            [[ -x "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" ]] ||
+                die "SIL Kit participant unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
+            [[ -n "${SIL_KIT_REGISTRY}" || -x "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}" ]] ||
+                die "SIL Kit registry unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
+        fi
+    elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
+        die "SIL Kit options require --sil-kit"
+    fi
+    if [[ -n "${TC397_QEMU}" || -n "${TC397_FIRMWARE}" ]]; then
+        [[ -n "${TC397_QEMU}" && -n "${TC397_FIRMWARE}" ]] ||
+            die "--tc397-qemu and --tc397-firmware must be used together"
+        [[ -z "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}" ]] ||
+            die "TC397 companion conflicts with an external QBOX_APOLLO_VMCU_UART_ENDPOINT"
+        TC397_QEMU="$(abspath "${TC397_QEMU}")"
+        TC397_FIRMWARE="$(abspath "${TC397_FIRMWARE}")"
+        ((DRY_RUN)) || [[ -x "${TC397_QEMU}" && -f "${TC397_FIRMWARE}" ]] ||
+            die "TC397 executable or firmware missing; build the minimal model/firmware first"
+    fi
     ((DRY_RUN)) || [[ -d "${ARTIFACT_ROOT}" ]] ||
         die "QBox input directory not found: ${ARTIFACT_ROOT}"
 
@@ -1449,6 +1527,13 @@ start_tmux()
         printf 'cd %q || exit 1; ' "${ROOT_DIR}"
         printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
+        printf 'TC397_QEMU=%q TC397_FIRMWARE=%q ' "${TC397_QEMU}" "${TC397_FIRMWARE}"
+        printf 'SIL_KIT=%q SIL_KIT_REGISTRY=%q SIL_KIT_ALLOW_ACTUATION=%q SIL_KIT_ECHO_FIXTURE=%q ' \
+            "${SIL_KIT}" "${SIL_KIT_REGISTRY}" "${SIL_KIT_ALLOW_ACTUATION}" "${SIL_KIT_ECHO_FIXTURE}"
+        printf 'QBOX_SILKIT_BINARY=%q QBOX_SILKIT_REGISTRY_BINARY=%q ' \
+            "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" \
+            "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}"
+        printf 'QBOX_APOLLO_VMCU_UART_ENDPOINT=%q ' "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}"
         printf 'QBOX_MANAGED_SESSION=1 QBOX_SESSION_OWNER_UID=%q ' \
             "${CURRENT_UID}"
         printf 'QBOX_SESSION_OUT_DIR=%q ' "${OUT_DIR}"
@@ -1557,7 +1642,7 @@ start_tmux()
         printf 'monitor dashboard: http://127.0.0.1:%s/\n' "${MONITOR_PORT}"
     fi
     printf 'attach command: %s attach-session -t %s\n' "${TMUX_BIN}" "${TMUX_SESSION}"
-    printf 'F12 stops QBox and kills the session.\n'
+    printf 'F12 stops this run and kills the session.\n'
 
     if ((NO_ATTACH)); then
         return 0
@@ -1616,6 +1701,33 @@ fi
 EXTRA_RUNNER_ARGS=()
 while (($# > 0)); do
     case "$1" in
+        --sil-kit)
+            SIL_KIT=1
+            shift
+            ;;
+        --sil-kit-registry)
+            (($# >= 2)) || die "--sil-kit-registry requires a value"
+            SIL_KIT_REGISTRY="$2"
+            shift 2
+            ;;
+        --sil-kit-allow-actuation)
+            SIL_KIT_ALLOW_ACTUATION=1
+            shift
+            ;;
+        --sil-kit-echo-fixture)
+            SIL_KIT_ECHO_FIXTURE=1
+            shift
+            ;;
+        --tc397-qemu)
+            (($# >= 2)) || die "--tc397-qemu requires a value"
+            TC397_QEMU="$2"
+            shift 2
+            ;;
+        --tc397-firmware)
+            (($# >= 2)) || die "--tc397-firmware requires a value"
+            TC397_FIRMWARE="$2"
+            shift 2
+            ;;
         --session)
             (($# >= 2)) || die "--session requires a value"
             TMUX_SESSION="$2"
