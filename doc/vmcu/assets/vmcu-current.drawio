@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="vmcu-current" name="현재 vMCU와 Apollo 연결">
+    <mxGraphModel dx="1260" dy="665" grid="1" gridSize="10" page="1" pageWidth="1320" pageHeight="720" adaptiveColors="auto">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="silkit" value="VEHICLE SIL / HOST PARTICIPANTS" vertex="1" parent="1" style="swimlane;startSize=30;horizontal=1;container=1;collapsible=0;rounded=1;arcSize=8;html=1;fillColor=#eaf0e6;swimlaneFillColor=#f4f4ed;strokeColor=#bacabb;fontColor=#18312f;fontSize=13;">
+          <mxGeometry as="geometry" x="15" y="38" width="230" height="575" />
+        </mxCell>
+        <mxCell id="tc397" value="TC397 / INDEPENDENT QEMU" vertex="1" parent="1" style="swimlane;startSize=30;horizontal=1;container=1;collapsible=0;rounded=1;arcSize=8;html=1;fillColor=#eaf0e6;swimlaneFillColor=#f4f4ed;strokeColor=#bacabb;fontColor=#18312f;fontSize=13;">
+          <mxGeometry as="geometry" x="310" y="38" width="300" height="575" />
+        </mxCell>
+        <mxCell id="soc" value="APOLLO SoC / QBOX + LIBQEMU" vertex="1" parent="1" style="swimlane;startSize=30;horizontal=1;container=1;collapsible=0;rounded=1;arcSize=8;html=1;fillColor=#eaf0e6;swimlaneFillColor=#f4f4ed;strokeColor=#bacabb;fontColor=#18312f;fontSize=13;">
+          <mxGeometry as="geometry" x="825" y="38" width="420" height="438" />
+        </mxCell>
+        <mxCell id="registry" value="&lt;b&gt;SIL Kit Registry&lt;/b&gt;&lt;br&gt;발견 · participant lifecycle" vertex="1" parent="silkit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="20" y="49" width="190" height="59" />
+        </mxCell>
+        <mxCell id="vehicle" value="&lt;b&gt;VehicleRestbus&lt;/b&gt;&lt;br&gt;차량 명령 · 상태 수신&lt;br&gt;0x600 → / ← 0x510, 0x601" vertex="1" parent="silkit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="20" y="175" width="190" height="87" />
+        </mxCell>
+        <mxCell id="bridge" value="&lt;b&gt;TC397CanBridge&lt;/b&gt;&lt;br&gt;native SIL Kit CAN Service&lt;br&gt;SDK Tx ACK → CAN1 ACK" vertex="1" parent="silkit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="20" y="388" width="190" height="85" />
+        </mxCell>
+        <mxCell id="vmcu" value="&lt;b&gt;Zephyr vMCU&lt;/b&gt;&lt;br&gt;상태 감시 · shell · 명령 정책&lt;br&gt;TC397 CPU0 / STM / IRQ" vertex="1" parent="tc397" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="49" width="250" height="83" />
+        </mxCell>
+        <mxCell id="uart0" value="&lt;b&gt;ASCLIN0&lt;/b&gt;&lt;br&gt;AP 관리 UART · serial0" vertex="1" parent="tc397" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="172" width="250" height="66" />
+        </mxCell>
+        <mxCell id="uart2" value="&lt;b&gt;ASCLIN2&lt;/b&gt;&lt;br&gt;Safety UART · serial2" vertex="1" parent="tc397" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="277" width="250" height="66" />
+        </mxCell>
+        <mxCell id="can" value="&lt;b&gt;M_CAN0 / node0&lt;/b&gt;&lt;br&gt;Zephyr driver → MRAM / FIFO&lt;br&gt;TX / RX IRQ source 364, 365" vertex="1" parent="tc397" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="388" width="250" height="85" />
+        </mxCell>
+        <mxCell id="port" value="&lt;b&gt;PORT0 / P00.0–4&lt;/b&gt;&lt;br&gt;독립 GPIO transport" vertex="1" parent="tc397" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="503" width="250" height="54" />
+        </mxCell>
+        <mxCell id="ap" value="&lt;b&gt;AP · Linux / TF-A&lt;/b&gt;&lt;br&gt;vmcu-ap 관리 peer + 기존 PFDI agent&lt;br&gt;DW UART2 0x301c0000 / INTID 364" vertex="1" parent="soc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="49" width="370" height="104" />
+        </mxCell>
+        <mxCell id="si" value="&lt;b&gt;SI CL0 · SCP&lt;/b&gt;&lt;br&gt;기존 PFDI monitor / vmcu_safety&lt;br&gt;PL011 + PL061 + PMIC owner" vertex="1" parent="soc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="25" y="277" width="235" height="125" />
+        </mxCell>
+        <mxCell id="rse" value="&lt;b&gt;RSE&lt;/b&gt;&lt;br&gt;BL2 reload&lt;br&gt;AP 복구" vertex="1" parent="soc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="285" y="277" width="110" height="125" />
+        </mxCell>
+        <mxCell id="pmic" value="&lt;b&gt;보드 PMIC · TPS6594&lt;/b&gt;&lt;br&gt;SI 전용 I²C 0x2a800000 · slave 0x48&lt;br&gt;rail 설정 보존 / 상태 조회" vertex="1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffef9;strokeColor=#9faf9f;fontColor=#18312f;fontSize=13;spacing=8;">
+          <mxGeometry as="geometry" x="850" y="541" width="370" height="71" />
+        </mxCell>
+        <mxCell id="e-discovery" value="발견 / 연결" edge="1" parent="silkit" source="registry" target="vehicle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#b24b29;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-vehicle-can" value="VehicleCAN · CAN FD" edge="1" parent="silkit" source="vehicle" target="bridge" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#b24b29;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-can-wire" value="CAN1" edge="1" parent="1" source="bridge" target="can" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#b24b29;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-ap-uart" value="AP 관리 UART" edge="1" parent="1" source="uart0" target="ap" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#286e9d;startArrow=block;startFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5673;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-safety-uart" value="Safety UART · 5초" edge="1" parent="1" source="si" target="uart2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#197568;startArrow=block;startFill=1;exitX=0;exitY=0.264;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-pfdi" value="PFDI / SCMI 0x90" edge="1" parent="soc" source="ap" target="si" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#197568;exitX=0.3162;exitY=1;entryX=0.4979;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-gpio-wire" value="GPIO · GP8" edge="1" parent="1" source="port" target="si" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#8e6633;startArrow=block;startFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.728;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-reload" value="" edge="1" parent="soc" source="si" target="rse" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#8e6633;startArrow=block;startFill=1;exitX=1;exitY=0.536;entryX=0;entryY=0.536;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e-pmic-i2c" value="SI 소유 I²C" edge="1" parent="1" source="si" target="pmic" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;fontSize=12;labelBackgroundColor=#fffef9;strokeColor=#697124;startArrow=block;startFill=1;exitX=0.4979;exitY=1;entryX=0.3162;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
