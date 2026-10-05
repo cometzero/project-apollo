@@ -132,3 +132,7 @@
 [submodule "autosd/crun"]
 	path = autosd/crun
 	url = https://github.com/containers/crun.git
+[submodule "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_vmcu_src"]
+	path = hsoc-stack/components/system_mgmt/zephyrproject/zephyr_vmcu_src
+	url = git@github.com:cometzero/zephyr_vmcu_src.git
+	branch = main
