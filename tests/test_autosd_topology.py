@@ -100,7 +100,7 @@ def test_unresolved_binding_is_reported_not_invented(fixture_root):
 
 
 def test_missing_lua_is_explicit_error():
-    with patch.object(topology.shutil, "which", return_value=None):
+    with patch.object(shutil, "which", return_value=None):
         with pytest.raises(topology.TopologyError, match="interpreter missing"):
             topology._evaluate({"apollo-qvp.lua": "platform={}"})
 
@@ -111,8 +111,8 @@ def test_missing_entry_is_explicit_error(tmp_path):
 
 
 def test_evaluation_timeout_is_explicit_error():
-    with patch.object(topology.shutil, "which", return_value="/usr/bin/lua"), patch.object(
-            topology.subprocess, "run", side_effect=subprocess.TimeoutExpired("lua", 12)):
+    with patch.object(shutil, "which", return_value="/usr/bin/lua"), patch.object(
+            subprocess, "run", side_effect=subprocess.TimeoutExpired("lua", 12)):
         with pytest.raises(topology.TopologyError, match="TimeoutExpired"):
             topology._evaluate({"apollo-qvp.lua": "while true do end"})
 

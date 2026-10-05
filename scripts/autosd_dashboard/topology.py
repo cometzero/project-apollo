@@ -9,8 +9,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
-import shutil
-import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -41,10 +39,13 @@ class TopologyError(RuntimeError):
     """Topology cannot be safely extracted; never return an invented graph."""
 
 
-def _evaluate(modules: dict[str, str]) -> dict:
+def _evaluate(modules: dict[str, str], *, entrypoint: str | None = None,
+              environment: dict[str, str] | None = None) -> dict:
     try:
-        entry = Path(ENTRYPOINT).name
-        evaluated = evaluate_modules(modules, entrypoint=entry if entry in modules else "apollo-qvp.lua")
+        entry = entrypoint or Path(ENTRYPOINT).name
+        evaluated = evaluate_modules(
+            modules, entrypoint=entry if entry in modules else "apollo-qvp.lua",
+            environment=environment)
     except DescriptorError as exc:
         raise TopologyError(str(exc)) from exc
     return {"platform": plain_descriptor(evaluated["descriptor"], string_keys=True),
@@ -62,7 +63,8 @@ def _kind(module: str) -> str:
     return "component"
 
 
-def _graph(evaluated: dict, sources: list[dict]) -> dict:
+def _graph(evaluated: dict, sources: list[dict], *,
+           entrypoint: str = ENTRYPOINT) -> dict:
     objects: dict[str, dict] = {}
     def visit(value, path):
         if not isinstance(value, dict):
@@ -73,7 +75,7 @@ def _graph(evaluated: dict, sources: list[dict]) -> dict:
             visit(child, f"{path}.{key}")
     visit(evaluated["platform"], "platform")
     nodes, edges, warnings = [], [], []
-    base = str(Path(ENTRYPOINT).parent)
+    base = str(Path(entrypoint).parent)
     for name, obj in sorted(objects.items()):
         location = evaluated["locations"].get(name, {})
         module_path = location.get("path", "./apollo-qvp.lua").removeprefix("./")
@@ -188,7 +190,7 @@ def _graph(evaluated: dict, sources: list[dict]) -> dict:
               if any(node["group"] == group for node in nodes)]
     return {"schema_version": 1, "profile": "apollo-qvp-full-static-defaults",
             "environment": {"QBOX_RDASPEN_ENABLE_AP_CPUS": "true"},
-            "entrypoint": ENTRYPOINT, "sources": sources, "groups": groups,
+            "entrypoint": entrypoint, "sources": sources, "groups": groups,
             "nodes": nodes, "edges": edges, "warnings": sorted(set(warnings)),
             "limitations": ["Evaluated Lua defaults with AP CPUs enabled; not the active VM configuration or runtime traffic.",
                             "Source locations identify first-observed function/call-site scopes, not exact assignment lines.",
@@ -226,8 +228,11 @@ def topology_drawio(graph: dict) -> str:
     root = ET.SubElement(model, "root")
     ET.SubElement(root, "mxCell", id="0")
     ET.SubElement(root, "mxCell", id="1", parent="0")
+    notice = ("Apollo QVP · 시작 구성 snapshot (실제 object/traffic 관측과 별개)"
+              if graph.get("frozen") else
+              "Apollo QVP · 정적 Lua 연결도 (AP CPU 활성화 기본값; 실행 중 VM/트래픽 아님)")
     title = ET.SubElement(root, "mxCell", id="topology-notice", parent="1", vertex="1",
-                          value="Apollo QVP · 정적 Lua 연결도 (AP CPU 활성화 기본값; 실행 중 VM/트래픽 아님)",
+                          value=notice,
                           style="text;html=0;align=left;whiteSpace=wrap;")
     ET.SubElement(title, "mxGeometry", x="40", y="0", width="1060", height="30", **{"as": "geometry"})
     node_groups = {node["id"]: node["group"] for node in graph["nodes"]}
