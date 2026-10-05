@@ -1,0 +1,256 @@
+{
+  "date": "2026-10-04",
+  "scope": "integration design and reference research; standalone TC397 minimal model plus Apollo UART heartbeat firmware implementation and runtime verification; TC397 Zephyr shell/app and AP UART RPC implementation and runtime validation",
+  "repositories": [
+    {
+      "path": ".",
+      "branch": "feature/qbox-rebase",
+      "head": "fff9b1e1b602cbcdd1715aef5c33f656ce21c024",
+      "status": "M .vscode/settings.json\n ? hsoc-stack/components/system_mgmt/scp-firmware\n?? bitbake-cookerdaemon.log\n?? doc/apollo_qvp_i2s_implementation_plan.md\n?? doc/apollo_qvp_i2s_pio_debug_review.md"
+    },
+    {
+      "path": "hsoc-stack/tools/qbox",
+      "branch": "qbox-timer",
+      "head": "3a75ebe182a22801f5e58b5b529b4abb824d9a13",
+      "status": ""
+    },
+    {
+      "path": "hsoc-stack/tools/qbox-platform",
+      "branch": "qbox-timer",
+      "head": "f546dd5bec82af698202616b5a80a37830974b2e",
+      "status": ""
+    },
+    {
+      "path": "hsoc-stack/tools/qemu",
+      "branch": "qbox-timer",
+      "head": "52c63bb0e10ed1e2709d0aaccc071270418154fc",
+      "status": ""
+    },
+    {
+      "path": "hsoc-stack/components/system_mgmt/scp-firmware",
+      "branch": "apollo-fvp-scp-2.16",
+      "head": "5cbcfce09295b5cfc0d5d65d945192d16c4fd5f2",
+      "status": "?? arch/arm/aarch64/test/"
+    },
+    {
+      "path": "hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src",
+      "branch": "work/apollo-qvp-yocto-qbox",
+      "head": "c95781f22bbd33bd027bff10710825255b78a3eb",
+      "status": ""
+    }
+  ],
+  "local_build_inputs": {
+    "MACHINE": "apollo-qvp (local.conf text; no bitbake -e execution)",
+    "TMPDIR": "build/tmp_baremetal",
+    "templateconf": "hsoc-stack/yocto/meta-hsoc-auto-solutions/conf/templates/apollo-qvp",
+    "bblayers_inspected": true
+  },
+  "source_evidence": "Original wiring inspection retained; later TC397 implementation evidence is recorded separately below",
+  "external_references": {
+    "accessed": "2026-10-04",
+    "nvidia_sdk_versions": [
+      "6.0.9.1",
+      "7.0.3"
+    ],
+    "silkit_documentation_version": "5.0.7",
+    "urls": [
+      "https://developer.download.nvidia.com/drive/docs/nvidia-drive-agx-thor-platform-for-developers.pdf",
+      "https://developer.nvidia.com/docs/drive/drive-os/6.0.9.1/public/drive-os-linux-sdk/common/topics/mcu_setup_usage/mcu_setup_and_usage1.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/6.0.9.1/public/drive-os-linux-sdk/common/topics/mcu_setup_usage/mcu_setup_soc_to_microcontroller_communications.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/6.0.9.1/public/drive-os-linux-sdk/common/topics/mcu_sw_modules/mcu_failover_handler_on_mcu.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/6.0.9.1/public/drive-os-linux-sdk/common/topics/sys_components/CANDriver1.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/7.0.3/public/drive-os-linux-sdk/core-concepts/fsi_runtime_env.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/7.0.3/public/drive-os-linux-sdk/embedded-software-components/Micro_Controller_Unit_MCU/rh850_console.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/7.0.3/public/drive-os-linux-sdk/embedded-software-components/Micro_Controller_Unit_MCU/soc_to_mcu_communication.html",
+      "https://developer.nvidia.com/docs/drive/drive-os/7.0.3/public/drive-os-linux-sdk/getting-started/flashing_aurix_from_thor.html",
+      "https://docs.zephyrproject.org/latest/boards/qemu/tricore/doc/index.html",
+      "https://documentation.infineon.com/aurixtc3xx/docs/ztz1745575952703",
+      "https://github.com/linumiz/qemu-tricore/releases/tag/v1.0.0",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/char/tricore_asclin.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/intc/tricore_ir.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/tricore/tc39xb_soc.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/tricore/triboard.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/tricore/tricore_scu.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/hw/tricore/tricore_sfr.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/target/tricore/cpu.c",
+      "https://raw.githubusercontent.com/linumiz/qemu-tricore/v1.0.0/target/tricore/cpu_helper.c",
+      "https://raw.githubusercontent.com/qemu/qemu/2a0ac9c8ac2d303ca515dc819043409aef18cab5/hw/tricore/meson.build",
+      "https://raw.githubusercontent.com/vectorgrp/sil-kit-adapters-qemu/main/README.md",
+      "https://raw.githubusercontent.com/vectorgrp/sil-kit-adapters-vcan/main/README.md",
+      "https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/894020886d647a5f9b8a58bdf2cb8c211a62716b/boards/qemu/tricore/board.cmake",
+      "https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/894020886d647a5f9b8a58bdf2cb8c211a62716b/dts/tricore/qemu/tc3x.dtsi",
+      "https://vectorgrp.github.io/sil-kit-docs/api/api.html",
+      "https://vectorgrp.github.io/sil-kit-docs/api/netsim.html",
+      "https://vectorgrp.github.io/sil-kit-docs/api/services/can.html",
+      "https://vectorgrp.github.io/sil-kit-docs/api/services/timesync.html",
+      "https://vectorgrp.github.io/sil-kit-docs/index.html",
+      "https://vectorgrp.github.io/sil-kit-docs/simulation/simulation.html",
+      "https://vectorgrp.github.io/sil-kit-docs/simulation/simulation.html#timestamps-in-messages",
+      "https://www.ti.com/lit/ds/symlink/tps6594-q1.pdf",
+      "https://www.ti.com/product/TPS6594-Q1"
+    ]
+  },
+  "files_sha256": {
+    "doc/vmcu/README.md": "659cc604312e924abeda1f32866cc01c4944657b3fbaa5601ec11ad14c21e71e",
+    "doc/vmcu/architecture.md": "c34d4734efa6849e51febccef22ce06a182e943471c83301cc38eaff62a68f16",
+    "doc/vmcu/assets/01-board-integration.drawio.svg": "9e4916b55c9f7769955e3f45aa355342aa4f776c425b48feb440d904b00d1438",
+    "doc/vmcu/assets/02-sil-kit.drawio.svg": "0f5743acb5516ff14dcb5698c0e04ea11d38ccd39aca0614ad7330a226de4642",
+    "doc/vmcu/control-and-power.md": "ac3cdbde7a766165e8f67cc54eca5b8057a2880cdade32bb43006477080695b9",
+    "doc/vmcu/implementation-plan.md": "d75d84f5bcd6f9700843b21cd55915caf1c63fb0ba8063dd118592c33f33784d",
+    "doc/vmcu/references.md": "6989957534e49c6179d6fb5646eefaa54964c55c53fd6e7b89199ec5f40daec9",
+    "doc/vmcu/sil-kit.md": "dd54dab47c469cc57067bcd6fbcf2b0104b93689a8a5b1bb40b9240c67275e28",
+    "doc/vmcu/tc397-minimal-implementation.md": "e8e75ce2102a8f110c12f26d20072678e111f49e028b4d88d1f9efb34af5fd2d",
+    "doc/vmcu/tc397-qemu.md": "d4eb131828d9de853430d02a70c1401505ab769fcb0d480fc469d7699e298ee6",
+    "doc/vmcu/uart-heartbeat-implementation.md": "f109b2d03b7982501c3816fe7c3dfa906d5f452b0964f0158084ae4a74b28e1d",
+    "doc/vmcu/zephyr-implementation.md": "0a7580d4f032c3c2448cdefd3e7cbfb71473997430f682656b1fbb80f840e799"
+  },
+  "tc397_followup": {
+    "date": "2026-10-04",
+    "fork": "https://github.com/linumiz/qemu-tricore",
+    "tag": "v1.0.0",
+    "commit": "9e888198363d89048baf3776b7784f2680703609",
+    "upstream_master": "2a0ac9c8ac2d303ca515dc819043409aef18cab5",
+    "zephyr_main": "894020886d647a5f9b8a58bdf2cb8c211a62716b",
+    "archive_sha256": "6d75f626a70eb9ea2cae3516b4a34e19e7c7e1fb111d0e126f78c0fdbc55f797",
+    "binary_probe": "build/qbox-apollo-qvp/vmcu-tc397-research/binary-probe.json",
+    "evidence_scope": "source inspection plus paused machine instantiation; no firmware execution, IRQ, UART, CAN, PMIC or QBox integration qualification"
+  },
+  "repositories_capture": "Initial research baseline before TC397 working-tree implementation; unrelated changes preserved",
+  "tc397_minimal": {
+    "date": "2026-10-04",
+    "source_owner": "hsoc-stack/tools/qemu",
+    "base_head": "52c63bb0e10ed1e2709d0aaccc071270418154fc",
+    "machine": "KIT_AURIX_TC397B_TRB",
+    "cpu": "tc397",
+    "evidence_manifest": "build/qbox-apollo-qvp/tc397-minimal/manifest.json",
+    "build": "PASS",
+    "cold_boot_checks": 21,
+    "qmp_reset_checks": 21,
+    "tcg_regression_checks": 21,
+    "scope": "bare-metal CPU0/ELF/memory/IR/STM/ASCLIN/QMP reset; no Zephyr/vendor/CAN/PMIC/QBox qualification"
+  },
+  "uart_followup": {
+    "date": "2026-10-04",
+    "source_owners": [
+      "root: hsoc-stack/components/system_mgmt/vmcu-firmware, scripts/test, tests, doc",
+      "hsoc-stack/tools/qbox-platform"
+    ],
+    "evidence_manifest": "build/qbox-apollo-qvp/vmcu-link/manifest.json",
+    "scope": "P0 UART contract and P1 AP UART connection only; no AP hardware reset, SI health channel, GPIO actuation, CAN, SIL Kit, PMIC control or synchronized timing qualification",
+    "checks": {
+      "tc397_minimal": {
+        "status": "PASS",
+        "cold": 21,
+        "qmp_reset": 21,
+        "isa_csa": 21,
+        "result": "build/qbox-apollo-qvp/tc397-minimal/revalidation-20261004T110237Z/result.json"
+      },
+      "firmware_host_test": {
+        "status": "PASS",
+        "log": "firmware-build.log"
+      },
+      "decoder_pytest": {
+        "status": "PASS",
+        "count": 10,
+        "log": "decoder-check/pytest.log"
+      },
+      "qbox_runner_pytest": {
+        "status": "PASS",
+        "count": 2,
+        "log": "qbox-runner-tests.log"
+      },
+      "standalone_protocol": {
+        "status": "PASS",
+        "count": 17,
+        "result": "standalone-final/result.json"
+      },
+      "native_provider": {
+        "status": "PASS",
+        "log": "qbox-native-provider.log"
+      },
+      "platform_ctest": {
+        "status": "PASS",
+        "count": 65,
+        "log": "qbox-platform-unit-tests.log"
+      },
+      "core_ctest": {
+        "status": "PASS",
+        "count": 63,
+        "log": "qbox-core-unit-tests.log"
+      },
+      "apollo_uart": {
+        "status": "PASS",
+        "count": 11,
+        "result": "qbox-first/result.json",
+        "uart2_irq": {
+          "status": "PASS",
+          "intid": 364,
+          "before": 10,
+          "after": 181
+        }
+      },
+      "default_off_boot": {
+        "status": "PASS",
+        "result": "default-off/result.json",
+        "post_login_full_qualification": "SKIP"
+      }
+    }
+  },
+  "launcher_followup": {
+    "date": "2026-10-04",
+    "scope": "apollo-qvp --bsp interactive auto-start TC397, decoded UART TX pane, ordered F12 cleanup; headless/product unchanged",
+    "evidence": "build/qbox-apollo-qvp/tc397-tmux/result.json",
+    "manifest": "build/qbox-apollo-qvp/tc397-tmux/manifest.json",
+    "pytest_passed": 73,
+    "runtime_boot": "PASS",
+    "runtime_uart": "PASS",
+    "runtime_f12_cleanup": "PASS"
+  },
+  "zephyr_followup": {
+    "date": "2026-10-04",
+    "manifest": "build/qbox-apollo-qvp/vmcu-zephyr/manifest.json",
+    "zephyr_revision": "894020886d647a5f9b8a58bdf2cb8c211a62716b",
+    "firmware_sha256": "0342f5f3b4e154cc483c42d5b54e10da94fd0d1e6aaea50a69bd91e3e3dacc45",
+    "checks": {
+      "tc397_regression": "PASS: cold 21 + reset 21",
+      "dual_uart": "PASS: 3",
+      "zephyr_bringup": "PASS: 5",
+      "zephyr_app_build": "PASS",
+      "native_protocol_peer": "PASS including ASan/UBSan",
+      "tc397_native_peer": "PASS: 8",
+      "yocto_bsp_build": "PASS: 5865 tasks",
+      "qbox_required_ctest": "PASS: 65 + 63",
+      "focused_pytest": "PASS: 115",
+      "full_system": {
+        "status": "PASS",
+        "checks": 16,
+        "elapsed_seconds": 85.53870588899917
+      },
+      "default_off": {
+        "status": "PASS",
+        "boot_passed": true,
+        "vmcu_boot": {
+          "changed": false,
+          "enabled": false,
+          "state": "disabled"
+        },
+        "peer_start_marker": false,
+        "companion_started": false
+      },
+      "broader_bsp_workflow": {
+        "status": "FAIL",
+        "passed": 25,
+        "failed": 1,
+        "reason": "Pre-existing exact SRC_URI assertion in test_qvp_pfdi_agent_enables_tx_completion_irq; meta-hsoc-bsp HEAD and working tree both contain an additional patch token"
+      }
+    },
+    "scope": "TC397 Zephyr app/shell and AP UART status/heartbeat/synthetic workload control",
+    "limitations": [
+      "No AP hardware reset/reboot, PMIC, CAN or SIL Kit implementation",
+      "Independent MCU reset with unchanged AP peer is not supported: RPC transaction session renegotiation remains",
+      "Synthetic workload counter only",
+      "Independent emulator clocks, no physical timing or safety qualification",
+      "Full post-login qualification disabled"
+    ]
+  }
+}
