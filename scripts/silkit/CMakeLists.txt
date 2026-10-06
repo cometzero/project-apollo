@@ -13,3 +13,6 @@ add_executable(can-wire-test can-wire-test.cpp)
 target_compile_options(can-wire-test PRIVATE -Wall -Wextra -Werror -Wpedantic)
 enable_testing()
 add_test(NAME can-wire COMMAND can-wire-test)
+
+include(GNUInstallDirs)
+install(TARGETS vmcu-silkit RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

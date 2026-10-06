@@ -1201,14 +1201,12 @@ if [[ "${SIL_KIT}" == "1" ]]; then
         die "--sil-kit requires the local TC397 companion (--bsp with tmux or --dashboard, without --no-vmcu/external UART)"
     [[ -z "${SIL_KIT_REGISTRY}" || "${SIL_KIT_REGISTRY}" == silkit://* ]] ||
         die "--sil-kit-registry must be a silkit:// URI"
-    if [[ "${DRY_RUN}" == "0" ]]; then
-        [[ -x "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" ]] ||
-            die "SIL Kit participant unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
-        if [[ -z "${SIL_KIT_REGISTRY}" ]]; then
-            [[ -x "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}" ]] ||
-                die "SIL Kit registry unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
-        fi
-    fi
+    silkit_resolve_args=(--deploy-dir "${DEPLOY_DIR}")
+    [[ "${DRY_RUN}" == "0" ]] || silkit_resolve_args+=(--dry-run)
+    [[ -z "${SIL_KIT_REGISTRY}" ]] || silkit_resolve_args+=(--external-registry)
+    silkit_assignments="$("${PYTHON:-python3}" "${ROOT_DIR}/scripts/run/qbox_silkit.py" "${silkit_resolve_args[@]}")" ||
+        die "SIL Kit provider unavailable; run ./yocto_build.sh --bsp"
+    eval "${silkit_assignments}"
 elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
     die "SIL Kit options require --sil-kit"
 fi

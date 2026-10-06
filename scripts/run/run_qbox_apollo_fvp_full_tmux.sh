@@ -1452,12 +1452,13 @@ start_tmux()
         [[ -n "${TC397_QEMU}" ]] || die "--sil-kit requires --tc397-qemu and --tc397-firmware"
         [[ -z "${SIL_KIT_REGISTRY}" || "${SIL_KIT_REGISTRY}" == silkit://* ]] ||
             die "--sil-kit-registry must be a silkit:// URI"
-        if (( ! DRY_RUN )); then
-            [[ -x "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" ]] ||
-                die "SIL Kit participant unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
-            [[ -n "${SIL_KIT_REGISTRY}" || -x "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}" ]] ||
-                die "SIL Kit registry unavailable; run scripts/build/build_vmcu_silkit.sh --bootstrap"
-        fi
+        local -a silkit_resolve_args=()
+        (( ! DRY_RUN )) || silkit_resolve_args+=(--dry-run)
+        [[ -z "${SIL_KIT_REGISTRY}" ]] || silkit_resolve_args+=(--external-registry)
+        local silkit_assignments
+        silkit_assignments="$("${PYTHON_BIN}" "${ROOT_DIR}/scripts/run/qbox_silkit.py" "${silkit_resolve_args[@]}")" ||
+            die "SIL Kit provider unavailable; run ./yocto_build.sh --bsp"
+        eval "${silkit_assignments}"
     elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
         die "SIL Kit options require --sil-kit"
     fi
@@ -1531,9 +1532,8 @@ start_tmux()
         printf 'QBOX_TC397_LIBRARY_PATH=%q ' "${QBOX_TC397_LIBRARY_PATH:-}"
         printf 'SIL_KIT=%q SIL_KIT_REGISTRY=%q SIL_KIT_ALLOW_ACTUATION=%q SIL_KIT_ECHO_FIXTURE=%q ' \
             "${SIL_KIT}" "${SIL_KIT_REGISTRY}" "${SIL_KIT_ALLOW_ACTUATION}" "${SIL_KIT_ECHO_FIXTURE}"
-        printf 'QBOX_SILKIT_BINARY=%q QBOX_SILKIT_REGISTRY_BINARY=%q ' \
-            "${QBOX_SILKIT_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/native/vmcu-silkit}" \
-            "${QBOX_SILKIT_REGISTRY_BINARY:-${ROOT_DIR}/build/qbox-apollo-qvp/vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit/bin/sil-kit-registry}"
+        printf 'QBOX_SILKIT_BINARY=%q QBOX_SILKIT_REGISTRY_BINARY=%q QBOX_SILKIT_LIBRARY_PATH=%q ' \
+            "${QBOX_SILKIT_BINARY:-}" "${QBOX_SILKIT_REGISTRY_BINARY:-}" "${QBOX_SILKIT_LIBRARY_PATH:-}"
         printf 'QBOX_APOLLO_VMCU_UART_ENDPOINT=%q ' "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}"
         printf 'QBOX_MANAGED_SESSION=1 QBOX_SESSION_OWNER_UID=%q ' \
             "${CURRENT_UID}"

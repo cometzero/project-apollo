@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import socket
@@ -21,8 +22,8 @@ import time
 
 
 ROOT = Path(__file__).resolve().parents[2]
-BUILD = ROOT / "build/qbox-apollo-qvp"
-SDK = BUILD / "vmcu-silkit/sdk/SilKit-5.0.7-ubuntu-22.04-x86_64-gcc/SilKit"
+sys.path.insert(0, str(ROOT / "scripts/run"))
+from qbox_silkit import provider, environment
 
 
 def digest(path):
@@ -71,7 +72,8 @@ class Probe:
         argv = [str(value) for value in command]
         self.result["commands"].append({"name": name, "argv": argv})
         process = subprocess.Popen(argv, cwd=ROOT, stdin=subprocess.DEVNULL,
-                                   stdout=log, stderr=subprocess.STDOUT)
+                                   stdout=log, stderr=subprocess.STDOUT,
+                                   env=environment(self.args.sil_kit_library_path) if name != "qemu" else None)
         self.children[name] = {"process": process, "expected_alive": True}
         return process
 
@@ -302,14 +304,24 @@ class Probe:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True, help="new evidence directory")
-    parser.add_argument("--qemu", type=Path,
-                        default=BUILD / "tc397-minimal/qemu-build/qemu-system-tricore")
-    parser.add_argument("--firmware", type=Path, default=BUILD / "zephyr-vmcu/app/zephyr/zephyr.elf")
-    parser.add_argument("--participant", type=Path, default=BUILD / "vmcu-silkit/native/vmcu-silkit")
-    parser.add_argument("--registry", type=Path, default=SDK / "bin/sil-kit-registry")
+    parser.add_argument("--qemu", type=Path, required=True,
+                        help="tricore_executable from the qemu-apollo-native manifest")
+    deploy = Path(os.environ.get("DEPLOY_DIR", str(
+        Path(os.environ.get("YOCTO_BUILD_DIR", ROOT / "build")) /
+        "tmp_baremetal/deploy/images" / os.environ.get("MACHINE", "apollo-qvp"))))
+    parser.add_argument("--firmware", type=Path, default=Path(os.environ.get(
+        "QBOX_TC397_FIRMWARE", deploy / "zephyr-vmcu-tc397.elf")))
+    parser.add_argument("--participant", type=Path, default=None)
+    parser.add_argument("--registry", type=Path, default=None)
     parser.add_argument("--timeout", type=float, default=45,
                         help="overall exercise deadline in seconds, followed by bounded cleanup")
     args = parser.parse_args()
+    try:
+        binary, registry, args.sil_kit_library_path = provider(
+            deploy, args.participant, args.registry)
+    except (ValueError, OSError, TypeError) as error:
+        parser.error(str(error))
+    args.participant, args.registry = Path(binary), Path(registry)
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("--timeout must be finite and positive")
     for name in ("out_dir", "qemu", "firmware", "participant", "registry"):
