@@ -748,8 +748,8 @@ SIL_KIT=0
 SIL_KIT_REGISTRY=""
 SIL_KIT_ALLOW_ACTUATION=0
 SIL_KIT_ECHO_FIXTURE=0
-TC397_QEMU="${QBOX_TC397_QEMU:-${ROOT_DIR}/build/qbox-apollo-qvp/tc397-minimal/qemu-build/qemu-system-tricore}"
-TC397_FIRMWARE="${QBOX_TC397_FIRMWARE:-${ROOT_DIR}/build/qbox-apollo-qvp/zephyr-vmcu/app/zephyr/zephyr.elf}"
+TC397_QEMU="${QBOX_TC397_QEMU:-}"
+TC397_FIRMWARE="${QBOX_TC397_FIRMWARE:-}"
 DEBUG_TARGET=""
 DEBUG_COMPONENT=""
 DEBUG_ENTRYPOINT=""
@@ -1186,16 +1186,14 @@ elif [[ "${DEBUG_MODE_SET}" == "1" ]]; then
     die "--debug-mode requires --debug TARGET"
 fi
 
+YOCTO_BUILD_DIR="${YOCTO_BUILD_DIR:-${ROOT_DIR}/build}"
+DEPLOY_DIR="${DEPLOY_DIR:-${YOCTO_BUILD_DIR}/tmp_baremetal/deploy/images/${MACHINE}}"
+
 if [[ "${BSP_MODE}" == "1" && ( "${HEADLESS}" == "0" || "${DASHBOARD}" == "1" ) &&
       "${MACHINE}" == "apollo-qvp" && "${VMCU_DISABLED}" == "0" &&
       -z "${QBOX_APOLLO_VMCU_UART_ENDPOINT:-}" ]]; then
     VMCU_ENABLED=1
-    if [[ "${DRY_RUN}" == "0" ]]; then
-        [[ -x "${TC397_QEMU}" ]] || die "TC397 QEMU not executable: ${TC397_QEMU}; see doc/vmcu/tc397-minimal-implementation.md, or use --no-vmcu"
-        [[ -f "${TC397_FIRMWARE}" ]] || die "TC397 firmware missing: ${TC397_FIRMWARE}; run scripts/build/build_vmcu_zephyr.sh, or use --no-vmcu"
-    fi
-    TC397_QEMU="$(realpath -m "${TC397_QEMU}")"
-    TC397_FIRMWARE="$(realpath -m "${TC397_FIRMWARE}")"
+
 fi
 
 if [[ "${SIL_KIT}" == "1" ]]; then
@@ -1213,6 +1211,39 @@ if [[ "${SIL_KIT}" == "1" ]]; then
     fi
 elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
     die "SIL Kit options require --sil-kit"
+fi
+
+if [[ "${VMCU_ENABLED}" == "1" ]]; then
+    TC397_FIRMWARE="${TC397_FIRMWARE:-${DEPLOY_DIR}/zephyr-vmcu-tc397.elf}"
+    if [[ -z "${TC397_QEMU}" ]]; then
+        tc397_provider="${DEPLOY_DIR}/../../qemu-apollo-native/qemu-apollo-native.json"
+        if [[ -f "${tc397_provider}" ]]; then
+            tc397_assignments="$("${PYTHON:-python3}" - "${tc397_provider}" <<'PYTHON'
+import json
+import shlex
+import sys
+with open(sys.argv[1]) as source:
+    manifest = json.load(source)
+print("TC397_QEMU=" + shlex.quote(manifest["tricore_executable"]))
+libraries = manifest.get("library_path", [])
+if isinstance(libraries, list):
+    libraries = ":".join(libraries)
+print("export QBOX_TC397_LIBRARY_PATH=" + shlex.quote(libraries))
+PYTHON
+)" || die "invalid TC397 provider manifest: ${tc397_provider}; run ./yocto_build.sh --bsp"
+            eval "${tc397_assignments}"
+        elif [[ "${DRY_RUN}" == "1" ]]; then
+            TC397_QEMU="${DEPLOY_DIR}/../../qemu-apollo-native/qemu-system-tricore"
+        else
+            die "TC397 provider missing: ${tc397_provider}; run ./yocto_build.sh --bsp"
+        fi
+    fi
+    if [[ "${DRY_RUN}" == "0" ]]; then
+        [[ -x "${TC397_QEMU}" ]] || die "TC397 QEMU not executable: ${TC397_QEMU}; run ./yocto_build.sh --bsp, or use --no-vmcu"
+        [[ -f "${TC397_FIRMWARE}" ]] || die "TC397 firmware missing: ${TC397_FIRMWARE}; run ./yocto_build.sh --bsp, or use --no-vmcu"
+    fi
+    TC397_QEMU="$(realpath -m "${TC397_QEMU}")"
+    TC397_FIRMWARE="$(realpath -m "${TC397_FIRMWARE}")"
 fi
 
 if [[ "${DRY_RUN}" == "0" && "${MULTI_SESSION}" == "0" && "${DASHBOARD}" == "0" ]]; then

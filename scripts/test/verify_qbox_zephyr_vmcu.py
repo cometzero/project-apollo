@@ -206,7 +206,12 @@ def main():
         result.update(status="FAIL", error=str(error))
     result["elapsed_seconds"] = time.monotonic() - started
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    for name, path in (("firmware", ROOT / "build/qbox-apollo-qvp/zephyr-vmcu/app/zephyr/zephyr.elf"),
+    deploy = Path(os.environ.get("DEPLOY_DIR", str(
+        Path(os.environ.get("YOCTO_BUILD_DIR", ROOT / "build")) /
+        "tmp_baremetal/deploy/images" / os.environ.get("MACHINE", "apollo-qvp"))))
+    firmware = Path(os.environ.get("QBOX_TC397_FIRMWARE", deploy / "zephyr-vmcu-tc397.elf"))
+    result["firmware"] = str(firmware.resolve())
+    for name, path in (("firmware", firmware),
                        ("runner", Path(__file__))):
         if path.exists():
             with path.open("rb") as stream:

@@ -312,7 +312,10 @@ def run(args, output):
                             "port=0,server=on,wait=off", "-global", "tc397-can.chardev=tc397can"]
             status["qemu_command"] = command
             message("Starting TC397 Zephyr; ASCLIN0 AP, ASCLIN1 shell, ASCLIN2 SI0, PORT0 GPIO.")
-            mcu = subprocess.Popen(command, stdout=qemu_log,
+            qemu_env = os.environ.copy()
+            if qemu_env.get("QBOX_TC397_LIBRARY_PATH"):
+                qemu_env["LD_LIBRARY_PATH"] = qemu_env["QBOX_TC397_LIBRARY_PATH"]
+            mcu = subprocess.Popen(command, env=qemu_env, stdout=qemu_log,
                                    stderr=subprocess.STDOUT, start_new_session=True)
             owners.append(OwnedProcesses(mcu))
             status["tc397_pid"] = mcu.pid

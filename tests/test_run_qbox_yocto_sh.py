@@ -1227,6 +1227,7 @@ def test_run_qbox_yocto_qvp_tmux_preserves_machine_console_prompts(
             "TMUX_SESSION": "pytest-run-qbox-yocto-qvp-prompts",
             "TMUX_BIN": str(fake_tmux),
             "TMUX_LOG": str(tmux_log),
+            "QBOX_TC397_LIBRARY_PATH": "/native libs:/other",
             "SSH_PORT_START": "25400",
             "SSH_PORT_END": "25499",
         }
@@ -1256,6 +1257,8 @@ def test_run_qbox_yocto_qvp_tmux_preserves_machine_console_prompts(
     assert r"PRIMARY_LOGIN_PROMPT=apollo-qvp\ login:" in tmux_output
     assert r"PRIMARY_SHELL_PROMPT_RE=\(\?:root@apollo-qvp" in tmux_output
     assert r"PRIMARY_LOGIN_PROMPT=apollo-fvp\ login:" not in tmux_output
+
+    assert r"QBOX_TC397_LIBRARY_PATH=/native\ libs:/other" in tmux_output
 
 
 def test_run_qbox_yocto_can_disable_tmux_uart_input_fifos(tmp_path: Path) -> None:

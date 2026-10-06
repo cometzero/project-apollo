@@ -32,6 +32,8 @@ import json, os, socket, struct, sys, time, zlib
 from pathlib import Path
 args = sys.argv[1:]
 config = json.loads(Path(args[args.index('-kernel') + 1]).read_text())
+if 'expected_library_path' in config:
+    assert os.environ.get('LD_LIBRARY_PATH') == config['expected_library_path']
 if config.get('startup_exit'):
     sys.exit(17)
 if config.get('startup_hang'):
@@ -156,12 +158,14 @@ def wait_file(path):
 
 def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path):
     env = dict(os.environ, QBOX_MANAGED_SESSION="test-session",
-               QBOX_SESSION_OWNER=str(os.getuid()))
+               QBOX_SESSION_OWNER=str(os.getuid()),
+               QBOX_TC397_LIBRARY_PATH=str(tmp_path / "native libs"))
     received = tmp_path / "env.json"
     code = ("import json,os,time;from pathlib import Path;"
             f"Path({str(received)!r}).write_text(json.dumps(dict(os.environ)));"
             "time.sleep(.2)")
-    process, output = launch([sys.executable, "-c", code], env=env)
+    process, output = launch([sys.executable, "-c", code], env=env,
+                             config={"expected_library_path": env["QBOX_TC397_LIBRARY_PATH"]})
     value = result(process, output)
     child_env = json.loads(received.read_text())
     assert child_env["QBOX_MANAGED_SESSION"] == "test-session"
