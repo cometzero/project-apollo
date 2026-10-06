@@ -104,6 +104,19 @@ def execute(args, result):
                     os.close(fd)
                 return wait_for(primary, marker, offset, timeout=10)
             ap("kill $(cat /run/vmcu-ap.pid); echo AP_MANAGEMENT_STOPPED", r"\nAP_MANAGEMENT_STOPPED")
+            # SI0 status RPC sends an immediate health report between periodic
+            # ticks. Wait for two subsequent reports before measuring cadence.
+            mark = cli("vmcu-cli status", r"VMCU_STATUS source=SI0_PFDI state=RUN fault=NONE[^\n]*")
+            baseline = int(re.search(r"sequence=(\d+)", read(uart)[mark:]).group(1))
+            settle_deadline = time.monotonic() + 20
+            while True:
+                time.sleep(1)
+                mark = cli("vmcu-cli status", r"VMCU_STATUS source=SI0_PFDI state=RUN fault=NONE[^\n]*")
+                sequence = int(re.search(r"sequence=(\d+)", read(uart)[mark:]).group(1))
+                if sequence >= baseline + 2:
+                    break
+                if time.monotonic() >= settle_deadline:
+                    raise TimeoutError("SI0 periodic reports did not settle after status RPC")
             samples = []
             for _ in range(3):
                 time.sleep(6)
