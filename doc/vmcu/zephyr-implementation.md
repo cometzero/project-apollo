@@ -4,6 +4,76 @@
 > 아래 AP heartbeat/workload와 두 UART 구성 및 수치는 이전 단계의 기록이다.
 > 현재 AP는 ping/status만 제공하며 ASCLIN2의 SI CL0 PFDI 보고와 PORT0 GPIO를 사용한다.
 
+## 현재 빌드 경로 (Yocto 통합)
+
+```sh
+./yocto_build.sh --bsp
+./run_qbox_yocto.sh --bsp
+# firmware만 갱신할 때
+./yocto_build.sh --keep-conf zephyr-vmcu
+```
+
+`meta-hsoc-auto-solutions`의 `zephyr-vmcu` 레시피는 기존
+`hsoc-stack/components/system_mgmt/zephyrproject/zephyr`의 Zephyr 4.1.0과
+`zephyr_vmcu_src` overlay를 사용한다. `zephyr_hsoc_src`와 같은 module 방식으로
+architecture/board/SoC/DTS roots를 등록한다. 별도의 upstream Zephyr checkout,
+로컬 Python venv 또는 수동 QEMU 빌드는 필요하지 않다.
+
+공유 Zephyr 4.1.0에는 TriCore 지원이 없으므로 overlay에 upstream revision
+`894020886d647a5f9b8a58bdf2cb8c211a62716b`의 architecture, board, SoC 및
+UART/interrupt/STM 지원을 backport했다. STM tick accounting과 CAN API는
+4.1 계약에 맞췄다. Architecture dispatch·compiler/linker·shell ABI 연결은
+`compat/zephyr-4.1.patch`로 처리하며, 레시피가 만든 `${WORKDIR}/zephyr` 복사본에만
+적용한다. 공유 Zephyr checkout과 Safety Island의 빌드 원본은 수정하지 않는다.
+원본·라이선스와 변경 범위는
+[overlay 호환성 기록](../../hsoc-stack/components/system_mgmt/zephyrproject/zephyr_vmcu_src/compat/README.md)에 명시한다.
+
+`tricore-toolchain-native`는 GCC 11.3.1이 포함된 `v11.3.0` 배포의
+`aurixgcc_03-2026_Linux_x86-x64.zip`을 고정 SHA256으로 가져와 native sysroot에
+설치한다. Compiler 자체를 소스에서 재빌드하는 구성은 아니다. SHA256은
+`4d2a82c0bd2a65657e9f5212c75c6d9e5fab325d24baf632ff19b5214a332858`이다.
+`qemu-apollo-native`는 기존 `hsoc-stack/tools/qemu`에서 AArch64와 TriCore를 빌드한다.
+`nexios-bsp-initramfs`의 `apollo-qvp` 의존성으로 firmware와 QEMU가 함께 배포된다.
+
+배포 ELF는 `build/tmp_baremetal/deploy/images/apollo-qvp/zephyr-vmcu-tc397.elf`,
+QEMU는 `build/tmp_baremetal/deploy/qemu-apollo-native/qemu-apollo-native.json`의
+`tricore_executable`로 선택한다. `--deploy-dir`은 firmware와 인접 provider manifest
+탐색에 함께 적용하며, `QBOX_TC397_QEMU`/`QBOX_TC397_FIRMWARE` override도 유지한다.
+`scripts/build/build_vmcu_zephyr.sh`는 `zephyr-vmcu` Yocto target의 호환 진입점이다.
+
+### Yocto 통합 검증 (2026-10-06)
+
+| 검사 | 결과 | 증거 (`build/qbox-apollo-qvp/` 기준) |
+|---|---|---|
+| `qemu-apollo-native tricore-toolchain-native` | PASS: 594 tasks | `vmcu-yocto-providers.log` |
+| `zephyr-vmcu` firmware 빌드·배포 | PASS: 909 tasks | `vmcu-yocto-firmware.log` |
+| 배포 QEMU + 배포 toolchain으로 TC397 최소 모델 회귀 | PASS: cold boot 21 + QMP reset 21 | `vmcu-yocto-tc397-model/result.json` |
+| 일반 `./yocto_build.sh --bsp`, overlay 수정 후 재빌드 포함 | PASS: 각 5,892 tasks | `vmcu-yocto-bsp.log`, `vmcu-yocto-bsp-final.log` |
+| 관련 회귀 tests | PASS: 104 | `vmcu-yocto-tests.log` |
+| 배포 QEMU·Zephyr ELF + 실제 SIL Kit CAN 연동 | PASS: 9 checks | `vmcu-yocto-silkit-final/result.json` |
+| Yocto firmware를 사용한 Apollo 전체 연동 | PASS: 부팅·AP/SI UART·5초 보고·timeout 복구·GPIO | `vmcu-yocto-runtime-final/vmcu-result.json` |
+
+BSP 빌드에는 기존 forced-task taint 경고 5건이 있었으며 task 실패는 없었다.
+최종 빌드는 `prj.conf` 수정만으로 firmware가 다시 빌드·배포되는 것도 확인했다.
+SIL Kit 검증은 실제 registry/participant와 Classic CAN, extended CAN FD 64-byte/BRS,
+RX/TX IRQ callback, 단절 시 BUS-OFF 및 controller restart 복구를 확인했다.
+
+초기 실패 기록도 보존한다. `vmcu-yocto-silkit/result.json`에서는 긴 FD shell 명령이
+64-byte RX ring에서 잘렸다. `CONFIG_SHELL_BACKEND_SERIAL_RX_RING_BUFFER_SIZE`를
+256으로 늘려 재빌드한 최종 ELF로 위 9 checks가 통과했다.
+`vmcu-yocto-runtime`의 초기 주기 검사는 SI의 즉시 상태 보고와 다음 정기 보고 간
+3,500 ms를 정기 주기로 판정해 실패했다. 검증기가 report sequence 두 번을 기다린 후
+측정하도록 수정했으며, 정기 보고 허용 범위 4,000–8,000 ms는 유지했다.
+최종 재검증은 PASS다. AP 관리 서비스 중단 중에도 SI PFDI 보고가 유지됐고,
+Safety UART timeout·재개 및 wake/reset GPIO 왕복을 확인했다.
+물리 timing, 실제 PMIC rail 차단과 SoC cold power cycle은 검증 범위가 아니다.
+
+TC397 최소 모델 회귀는 별도의 freestanding 시험 firmware로 CPU·memory·STM·IRQ·UART를
+확인한다. 이 결과를 Zephyr app 또는 Apollo 전체 연동 통과로 해석하지 않는다.
+
+아래의 독립 checkout·로컬 빌드 명령과 수치는 **도입 당시의 기록**이며,
+현재 빌드 방법과 검증 결과는 위 절을 사용한다.
+
 기준: 2026-10-04. [이전 bare-metal UART 구성](uart-heartbeat-implementation.md)을
 실제 Zephyr application과 shell로 전환한다. 제어 범위는 상태 조회와
 heartbeat/workload 제어다. AP hardware reset·CAN·PMIC는 별도 단계다.

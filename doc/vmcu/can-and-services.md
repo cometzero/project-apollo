@@ -8,13 +8,13 @@ SYSTOP/SI/RSE 유지**다. PMIC rail 차단과 SoC cold power cycle은 아직 �
 ## 실행
 
 ```sh
-./scripts/build/build_vmcu_silkit.sh --bootstrap
-./scripts/build/build_vmcu_zephyr.sh
 ./yocto_build.sh --bsp
 ./run_qbox_yocto.sh --bsp --sil-kit
 ```
 
-TC397 QEMU 빌드는 [최소 모델 빌드 절차](tc397-minimal-implementation.md)를 따른다.
+TC397 QEMU·Zephyr firmware·SIL Kit SDK/registry/participant는 위 `--bsp`에서 함께 빌드한다.
+SIL Kit만 갱신할 때는 `./yocto_build.sh vmcu-silkit-native`를 사용한다.
+현재 경로는 [Yocto 통합 안내](zephyr-implementation.md#현재-빌드-경로-yocto-통합)를 따른다.
 `--sil-kit`는 별도 registry와 `TC397CanBridge`/`VehicleRestbus`를 시작한다.
 외부 registry는 `--sil-kit-registry silkit://HOST:PORT`로 지정한다. 두 participant가
 준비되고 QEMU CAN endpoint와 연결된 다음 TC397 CPU를 시작한다. 필수 process
@@ -144,11 +144,31 @@ Safety UART, AP 제어, RSE 응답 polling은 이벤트 처리 후 10ms one-shot
 재현 명령:
 
 ```sh
-python3 scripts/test/verify_tc397_silkit.py --out-dir build/qbox-apollo-qvp/vmcu-can/retest
+# Yocto native QEMU는 manifest의 실행 파일과 라이브러리 경로를 함께 사용한다.
+provider=build/tmp_baremetal/deploy/qemu-apollo-native/qemu-apollo-native.json
+qemu=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tricore_executable"])' "$provider")
+libs=$(python3 -c 'import json,sys; print(":".join(json.load(open(sys.argv[1]))["library_path"]))' "$provider")
+LD_LIBRARY_PATH="$libs" python3 scripts/test/verify_tc397_silkit.py --qemu "$qemu" --out-dir build/qbox-apollo-qvp/vmcu-can/retest
 python3 scripts/test/verify_qbox_vmcu_services.py --out-dir build/qbox-apollo-qvp/vmcu-services/retest
 # 실제 AP PFDI agent 정지 → CAN 고장 보고 → 명시적 AP 복구
 python3 scripts/test/verify_qbox_vmcu_services.py --inject-pfdi-timeout --out-dir build/qbox-apollo-qvp/vmcu-services/fault-retest
 ```
+
+2026-10-06 Yocto 통합 검증 (증거: `build/qbox-apollo-qvp/`):
+
+| 검증 | 결과와 증거 |
+|---|---|
+| SDK/registry/participant native 빌드 및 CAN wire CTest | PASS: `silkit-yocto-native.log` |
+| 일반 `./yocto_build.sh --bsp` | PASS: 5,912 tasks, `silkit-yocto-bsp-final.log` |
+| Provider/launcher/lifecycle/dashboard 회귀 | PASS: 104 tests, `silkit-yocto-tests.log` |
+| Yocto 배포 QEMU·Zephyr·SIL Kit CAN 검증 | PASS: 9 checks, `silkit-yocto-can/result.json` |
+| Apollo 전체 연동: PMIC 조회·vMCU reset·CAN AP 복구·종료/wake 1회 | PASS: `silkit-yocto-services/vmcu-services-result.json` |
+
+SDK의 utility 심볼 분리 함수가 `SILKIT_PACKAGE_SYMBOLS=OFF`를 따르도록
+레시피 패치를 적용했다. 최초 native 빌드의 already-stripped 경고 3개는
+최종 빌드에서 해소됐다. 최종 BSP 경고 5개는 기존 kernel/QBox/image task의
+forced-run taint이며 SIL Kit 경고는 없다. 런타임 CAN 시험은 manifest가 지정한
+Yocto registry·participant·shared library를 사용했다.
 
 2026-10-05 실행 결과:
 

@@ -231,15 +231,17 @@ The BSP starts the AP UART peer automatically. The app reports state changes;
 use `vmcu-cli status` and `safety status` for the SI CL0 PFDI report,
 `heartbeat on|off` to test the 5-second report link, and `gpio status` to inspect
 the board signals. AP management remains on a separate UART. F12 stops both emulators.
-Build the [TC397 model](doc/vmcu/tc397-minimal-implementation.md) and
-[Zephyr firmware](doc/vmcu/zephyr-implementation.md) first; the launcher reports
-missing artifacts and does not build them implicitly. Use `--no-vmcu` for the
+Run `./yocto_build.sh --bsp` to build the TC397 model and
+[Zephyr firmware](doc/vmcu/zephyr-implementation.md) together with the BSP.
+The launcher reads `zephyr-vmcu-tc397.elf` from the machine deploy directory
+and the TriCore executable from the `qemu-apollo-native` deployment manifest;
+it reports missing artifacts and does not build them implicitly. Use `--no-vmcu` for the
 original UART2/3 loopback, or set `QBOX_TC397_QEMU` and `QBOX_TC397_FIRMWARE`
 to select compatible artifacts. Headless/product launches retain their existing
 companion behavior. See [SI CL0 safety wiring and validation](doc/vmcu/si0-safety-channel.md).
 
-Build `scripts/build/build_vmcu_silkit.sh --bootstrap` once to enable
-`--bsp --sil-kit`. The vehicle restbus accepts commands through the run's
+The BSP Yocto build also provides SIL Kit SDK, registry and participants; launch
+with `--bsp --sil-kit`. The vehicle restbus accepts commands through the run's
 `vehicle-can.in` FIFO and records traffic in `vehicle-can.jsonl`. The MCU shell
 also provides `pmic rail|fault INDEX`, `recover start|status`, `power off|on|status`,
 and `can status|restart`. Vehicle-issued power/recovery commands require

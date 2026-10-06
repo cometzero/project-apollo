@@ -7,29 +7,31 @@ QBox/SystemC 또는 기존 SI firmware에 SDK를 링크하지 않는다.
 ## 빌드
 
 ```sh
-scripts/build/build_vmcu_silkit.sh --bootstrap
+./yocto_build.sh --bsp
+# SIL Kit SDK와 participant만 빌드:
+./yocto_build.sh vmcu-silkit-native
 ```
 
-공식 SIL Kit **5.0.7**, commit `fcb625632ad82edd85e322e1ec0de6f021bff497`,
-Ubuntu 22.04 x86_64 prebuilt package를
-`build/qbox-apollo-qvp/vmcu-silkit/sdk/`에 내려받는다. archive SHA256은
-`0f2ad1ed0a78bc1655eb6e2d451890973fdc2ab3b6b7cd73f7d5f24b86595990`이다.
-필요 도구는 CMake, Ninja, C++14 compiler, Python3, curl, unzip, sha256sum이다.
-libc/libstdc++/libgcc/libm과 SDK shared library는 실제 `ldd` 결과로
-`build-manifest.json`에 기록한다. 원본 MIT LICENSE 및 ThirdParty/LICENSES.rst를
-SDK와 함께 보존한다. SDK core 자체는 C++17이지만 이 client는 공개 API를
-`-std=c++14 -Wall -Wextra -Werror -Wpedantic`으로 빌드한다.
+`meta-hsoc-auto-solutions`의 `sil-kit-native`가 공식 SIL Kit **5.0.7**,
+commit `fcb625632ad82edd85e322e1ec0de6f021bff497`과 ThirdParty 소스를
+고정하여 빌드한다. `vmcu-silkit-native`는 이 디렉터리의 participant를
+native sysroot SDK로 빌드한다. SDK core는 C++17, participant는 C++14이다.
+Yocto가 compiler·CMake·Ninja·라이선스와 의존성을 관리하며 Ubuntu prebuilt SDK는
+사용하지 않는다. `scripts/build/build_vmcu_silkit.sh`는 Yocto 호출 호환 wrapper다.
 
-다른 host architecture에서는 같은 source commit으로 SIL Kit를 별도 빌드하고
-`cmake -S scripts/silkit -B <build> -DCMAKE_PREFIX_PATH=<installed-SilKit>`로
-client를 구성할 수 있다. SDK bootstrap 스크립트의 배포 바이너리는 x86_64용이다.
+실행 경로는 `${DEPLOY_DIR}/../../vmcu-silkit-native/vmcu-silkit-native.json`의
+`executable`, `registry_executable`, `library_path`로 결정한다. 기본 deploy는
+`build/tmp_baremetal/deploy/images/apollo-qvp`이며 `--deploy-dir` 또는
+`DEPLOY_DIR`/`YOCTO_BUILD_DIR`로 변경할 수 있다. 명시적
+`QBOX_SILKIT_BINARY`, `QBOX_SILKIT_REGISTRY_BINARY`, `QBOX_SILKIT_LIBRARY_PATH`
+override도 지원한다. library path는 SIL Kit 자식 process에만 적용한다.
 
 ## 실행 계약
 
 Registry는 `sil-kit-registry --listen-uri silkit://127.0.0.1:0
 --generate-configuration <run>/registry.yaml`로 임의의 가용 port를 선택할 수 있다.
 해당 파일 생성이 완료되면 `Middleware.RegistryUri`를 두 participant에 전달한다.
-registry executable은 다운로드한 package의 `SilKit/bin/`에 있다.
+registry executable은 위 Yocto manifest에서 조회한다.
 
 ```sh
 vmcu-silkit --role bridge --registry-uri "$registry_uri" \
@@ -39,7 +41,7 @@ vmcu-silkit --role restbus --registry-uri "$registry_uri" \
   --require-peer TC397CanBridge --stdin --events "$run_dir/restbus.jsonl"
 ```
 
-이 명령의 `vmcu-silkit`은 build 디렉터리의 `native/vmcu-silkit`이다.
+이 명령의 `vmcu-silkit`은 Yocto manifest의 `executable` 경로다.
 QEMU는 별도 CAN chardev TCP server를 사용한다. network 기본값은 `VehicleCAN`,
 controller 이름은 `VMCU_CAN0`/`Vehicle_CAN0`이다. 이름과 network는 CLI로
 선택하며 다른 실험의 participant와 섞지 않는다. Registry 생성·외부 registry
