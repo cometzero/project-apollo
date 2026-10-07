@@ -54,7 +54,7 @@ def contracts(source_root: Path) -> dict[str, bool]:
         "platform:config-no-hardware-map-constants": not any(
             re.search(r"(?m)^\s*(?:local\s+)?[A-Z][A-Z0-9_]*(?:BASE|SIZE|IRQ|OFFSET|ADDRESS|STRIDE|CHANNELS|REGIONS)(?:_[A-Z0-9]+)*\s*=", text)
             for name, text in sources.items() if name.startswith("vp/options/")),
-        "platform:ap-map-locals": eq("ap_timer_mem.irq.1.bind", "&ap_gic.spi_in_49"),
+        "platform:ap-map-locals": eq("ap_timer_mem.irq_0.bind", "&ap_gic.spi_in_49"),
         "platform:rse-map-locals": eq("rse_cpu_pass.rse_timer_0.irq.bind", "&cpu_0.cpu.nvic.irq_in_3"),
         "platform:system-mgmt-map-locals": bind("host_ap_si_ns_scmi_mhu_pbx", "irq", "&ap_gic.spi_in_112"),
         "platform:fabric-block": exists("system_router", "router"),
@@ -104,8 +104,8 @@ def contracts(source_root: Path) -> dict[str, bool]:
         "irq:ap-to-si-cl1-mhu-pair": eq("host_ap_si_cl1_mhu_pbx.pair", "apollo_ap_to_si_cl1"),
         "irq:si-cl1-to-ap-mhu-pair": eq("host_ap_si_cl1_mhu_mbx.pair", "apollo_si_cl1_to_ap"),
         "irq:si-cl1-real-doorbell-bridge": all(eq(f"host_ap_si_cl1_mhu_{frame}.protocol", "doorbell-bridge") for frame in ("pbx", "mbx")),
-        "timer:ap-refclk-ns-spi49": eq("ap_timer_mem.irq.1.bind", "&ap_gic.spi_in_49"),
-        "timer:ap-refclk-secure-spi48": eq("ap_timer_mem.irq.2.bind", "&ap_gic.spi_in_48"),
+        "timer:ap-refclk-ns-spi49": eq("ap_timer_mem.irq_0.bind", "&ap_gic.spi_in_49"),
+        "timer:ap-refclk-secure-spi48": eq("ap_timer_mem.irq_1.bind", "&ap_gic.spi_in_48"),
         "timer:rse-no-legacy-39-through-42": all(value(f"rse_cpu_pass.rse_timer_{i}.irq.bind") not in
                                                 {f"&cpu_0.cpu.nvic.irq_in_{irq}" for irq in range(39,43)} for i in range(4)),
         "gpio:rse-combined-irq34": bind("rse_gpio_irq_or", "signal_out", "&rse_cpu_pass.target_signal_socket_34"),
