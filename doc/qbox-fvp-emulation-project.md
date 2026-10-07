@@ -1094,6 +1094,19 @@ for retained code and patch instructions, and
 [experiment results](dma-i2s/04-implementation-results.md) for per-run
 outcomes and original artifact provenance.
 
+### PSCI CPU/cluster wake integration (2026-10-07)
+
+QVP now wires A720AE powerdown WFI, GIC wake requests, core/cluster PPU
+interrupts, OFF-lock/UNLK and TF-A warm resume. CPU/cluster DT idle states were
+restored for validation, then removed at the user's request to default to WFI.
+NO_HZ_IDLE, HZ100 and the 125 MHz counters remain unchanged.
+SCP coalesces dynamic observations and suppresses unchanged reports without
+suppressing explicit control completions. SMCF now subscribes to the actual
+SYSTOP domain rather than AP core0. See [implementation and evidence](qbox-psci-idle.md)
+for current validation results. WFI remains the default policy; CPU/cluster
+powerdown now has functional evidence. This does not qualify full SYS0 suspend or
+physical power/isolation/timing behavior.
+
 ### Runtime idle and SCMI polling policy (2026-10-03)
 
 The QVP default now uses MULTI TCG for SI CL0, an interrupt-safe SCP WFI
