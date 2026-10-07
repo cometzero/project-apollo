@@ -29,7 +29,7 @@ wfi_only_qvp() {
     test "$idle_dt_cpus" -gt 0 || return 1
     test -r "$idle_root/current_driver" || return 1
     test "$(cat "$idle_root/current_driver")" = none || return 1
-    test "$(nproc --all)" = 4 || return 1
+    test "$(cat "$cpu_root/online")" = 0-3 || return 1
     for idle_cpu in $cpus; do
         test -d "$cpu_root/cpu$idle_cpu" || return 1
     done
@@ -48,7 +48,7 @@ ensure)
     test -r $idle_root/available_governors
     test -r $idle_root/current_governor_ro
     test -r $idle_root/current_governor
-    test $(nproc --all) -eq 4
+    test "$(cat "$cpu_root/online")" = 0-3
     test $(cat /etc/nexios-bsp-cpus) -eq 4
     count=0
     for cpu in $cpus; do
@@ -169,7 +169,11 @@ governors)
     available=$(cat $idle_root/available_governors)
     current=$(cat $idle_root/current_governor)
     current_ro=$(cat $idle_root/current_governor_ro)
-    test x"$available" = x"menu teo"; test x$current = x$current_ro
+    set -- $available
+    available="$*"
+    case "$available" in menu|teo|"menu teo"|"teo menu") ;; *) exit 1 ;; esac
+    case " $available " in *" $current "*) ;; *) exit 1 ;; esac
+    test x$current = x$current_ro
     csv=$(printf '%s' "$available" | tr ' ' ',')
     printf 'CPUIDLE_GOVERNORS available=%s current=%s current_ro=%s\n' $csv $current $current_ro
     ;;

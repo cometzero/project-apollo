@@ -343,13 +343,14 @@ def _guest_capabilities(tmp_path: Path) -> tuple[Path, Path, Path, dict[str, str
     cpu_root, dt_root, bin_dir = (tmp_path / name for name in ("cpu", "dt", "bin"))
     (cpu_root / "cpuidle").mkdir(parents=True)
     (cpu_root / "cpuidle/current_driver").write_text("none\n")
+    (cpu_root / "online").write_text("0-3\n")
     (dt_root / "cpus").mkdir(parents=True)
     (dt_root / "compatible").write_bytes(b"arm,apollo-qvp\0arm,zena-css\0")
-    for cpu in range(4):
+    for cpu in range(16):
         (cpu_root / f"cpu{cpu}").mkdir()
         (dt_root / f"cpus/cpu@{cpu:x}").mkdir()
     bin_dir.mkdir()
-    (bin_dir / "nproc").write_text("#!/bin/sh\nprintf '4\\n'\n")
+    (bin_dir / "nproc").write_text("#!/bin/sh\nprintf '16\\n'\n")
     (bin_dir / "nproc").chmod(0o755)
     probe = tmp_path / "probe.sh"
     probe.write_text(GUEST_PROBE.replace("cpu_root=/sys/devices/system/cpu",
@@ -395,3 +396,32 @@ def test_cpuidle_guest_does_not_skip_inconsistent_capabilities(
                             capture_output=True, text=True, timeout=5)
     assert result.returncode != 0
     assert "CPUIDLE_UNSUPPORTED" not in result.stdout
+
+
+def test_cpuidle_accepts_only_advertised_menu_governor() -> None:
+    outputs = list(_passing_outputs())
+    outputs[5] = outputs[5].replace("menu,teo", "menu")
+    outputs[6] = "\n".join(line for line in outputs[6].splitlines()
+                           if "requested=teo" not in line)
+    assert set(_statuses(tuple(outputs)).values()) == {"PASS"}
+
+
+@pytest.mark.parametrize("available", ["menu,menu", "menu,", ",menu", ""])
+def test_cpuidle_rejects_malformed_governor_list(available: str) -> None:
+    outputs = list(_passing_outputs())
+    outputs[5] = outputs[5].replace("menu,teo", available)
+    assert _statuses(tuple(outputs))["cpuidle-governors"] == "FAIL"
+
+
+def test_cpuidle_guest_accepts_sysfs_governor_whitespace(tmp_path: Path) -> None:
+    cpu_root, _dt_root, probe, env = _guest_capabilities(tmp_path)
+    idle = cpu_root / "cpuidle"
+    (idle / "current_driver").write_text("psci\n")
+    for name, value in (("available_governors", "menu \n"),
+                        ("current_governor", "menu\n"),
+                        ("current_governor_ro", "menu\n")):
+        (idle / name).write_text(value)
+    result = subprocess.run(["sh", str(probe), "governors"], env=env,
+                            capture_output=True, text=True, check=True)
+    assert result.stdout.strip() == (
+        "CPUIDLE_GOVERNORS available=menu current=menu current_ro=menu")

@@ -208,14 +208,16 @@ def evaluate_cpuidle_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
     )
     governor = governors[0] if len(governors) == 1 else Record(())
     available_raw = governor.value("available") or ""
-    available = tuple(item for item in available_raw.split(",") if item)
+    available = tuple(available_raw.split(","))
     original = governor.value("current")
     governors_ok = (
         _has_fields(
             governor,
             frozenset({"available", "current", "current_ro"}),
         )
-        and available == ("menu", "teo")
+        and bool(available)
+        and len(set(available)) == len(available)
+        and set(available) <= {"menu", "teo"}
         and original in available
         and governor.value("current_ro") == original
     )
