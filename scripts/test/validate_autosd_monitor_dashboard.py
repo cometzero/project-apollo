@@ -17,8 +17,8 @@ def main():
                         'mixed-criticality', 'mixed-criticality-mc01', 'mixed-criticality-mc02', 'mixed-criticality-mc03',
                         'rt-r02', 'watchdog-wd01', 'reboot', 'pause', 'resume', 'shutdown'])
     parser.add_argument('--confirm-disruptive', action='store_true')
-    parser.add_argument('--backend', choices=('qemu', 'qbox', 'qbox-full'),
-                        help='Select backend while powered off; requires --action boot')
+    parser.add_argument('--backend', choices=('qbox-full',),
+                        help='Require the full-system backend; requires --action boot')
     parser.add_argument('--timeout', type=float, default=1200)
     args = parser.parse_args()
     if args.backend and args.action != 'boot':
@@ -97,7 +97,7 @@ def main():
         results = {'state': state, 'snapshot': call('/api/simulator/snapshot'),
                    'capabilities': call('/api/simulator/capabilities'),
                    'objects': call('/api/simulator/objects?parent=platform')}
-        domains = ['rse', 'si-cl0', 'si-cl1', 'ap'] if state['vm']['backend'] == 'qbox-full' else ['ap']
+        domains = ['rse', 'si-cl0', 'si-cl1', 'ap']
         results['qmp'] = {domain: {command: call('/api/simulator/qmp?domain=' + domain + '&command=' + command)
                          for command in ('query-status', 'query-cpus-fast', 'query-version')} for domain in domains}
         (args.out / 'observation.json').write_text(json.dumps(results, indent=2))

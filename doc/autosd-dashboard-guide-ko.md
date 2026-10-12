@@ -14,7 +14,7 @@ Lua 기반 전체/Subsystem 연결도와 컴포넌트 Inspector는
 
 | 기능 | 데이터/실행 경로 | 제한 |
 | --- | --- | --- |
-| 부팅·종료 | `run_qemu_linux.sh`, `run_qbox_linux.sh`, `run_qbox_autosd.sh`, private disk copy | 서버가 소유한 VM만 제어 |
+| 부팅·종료 | `run_qbox_autosd.sh`, private disk copy | 서버가 소유한 VM만 제어 |
 | 정상 상태 | 기존 `check-guest.sh` | BlueChi/root/ADAS/QM/monitor 검사 |
 | Automotive 데모 | `demo-guest.py` S01–S06 | 장애 주입·서비스 재시작·복구 포함, 확인 필요 |
 | RT 측정 | R01–R06 runner | SCHED_OTHER/FIFO/QM 부하/경합/주입/cyclictest |
@@ -25,8 +25,7 @@ Lua 기반 전체/Subsystem 연결도와 컴포넌트 Inspector는
 | subsystem | systemd 서비스, 실제 container PID cgroup, safety JSON | CPU cores·memory·cpuset; 인증 안전 모니터 아님 |
 | 과거 결과 | 기존 검증 JSON과 새 job evidence | 측정일·출처를 확인; 현재 실행과 혼동 금지 |
 
-Linux 전용 QEMU/QBox AP direct에는 RSE/Safety Island firmware telemetry가 없으므로 해당 항목은
-UNSUPPORTED다. QBox full-system의 firmware 부팅과 로그는
+AutoSD는 QBox full-system으로만 부팅한다. firmware 부팅과 로그는
 [full-system Quick Guide](autosd-fullsystem-dashboard-ko.md)를 따른다.
 native OTA/rollback·IPC/iceoryx2·SELinux 정책 데모는
 이미지/프로비저닝 조건이 다르므로 이 regular VM 실행 adapter와 구분한다.
@@ -42,13 +41,10 @@ TCG용 새 관찰 기준과 해석은 [RT 결과 가이드](autosd-rt-dashboard-
 상단 **System control**은 이 대시보드가 소유한 AutoSD VM만 제어한다.
 빌드 호스트 전원 제어가 아니다. QBox full-system에서는 정상 guest 종료 후
 소유한 전체 도메인 프로세스를 정리한다. QBox full은 native Reboot를 지원하지만,
-Pause/Resume은 지원하지 않는다.
-기본 백엔드는 `--backend qemu`다. `--backend qbox`로 AP domain 직접 부팅과
-동일한 Automotive/RT 시나리오를 사용할 수 있다. 시작 명령과 검증 범위는
-[QBox AP domain Quick Guide](autosd-qbox-dashboard-ko.md)를 참고한다.
-Reboot는 QEMU와 QBox full에서 지원하며, QBox AP-only에서는 비활성화된다.
-Pause/Resume은 QEMU 전용이다. QBox full Reboot는 새 boot ID뿐 아니라 최신
-firmware boot epoch와 해당 epoch의 provisioning PASS까지 최대 900초 확인한다.
+Pause/Resume은 현재 실행에 대한 반복·HIPC·watchdog 검증을 통과한 뒤 활성화한다.
+기본이자 유일한 백엔드는 `qbox-full`이며 `--backend qbox-full`은 생략할 수 있다.
+Reboot는 새 boot ID뿐 아니라 최신 firmware boot epoch와 해당 epoch의
+provisioning PASS까지 최대 900초 확인한다.
 QBox full Power off는 최대 180초 기다리며 timeout에도 강제 종료하지 않는다.
 
 | 버튼 | 동작 / 완료 확인 |
@@ -56,8 +52,8 @@ QBox full Power off는 최대 180초 기다리며 timeout에도 강제 종료하
 | Power on | 새 Feature 주기 시작 → 1번 guest 부팅 확인 → 2번 Automotive health 자동 검사 |
 | Power off | Feature 상태 즉시 초기화; guest `systemctl poweroff`, VM exit와 UART Power down 확인 |
 | Reboot | Feature 상태 즉시 초기화 → 1번 새 boot ID/SSH 확인 → 2번 health 자동 검사 |
-| Pause | QEMU `stop` 후 `info status`로 paused 확인 |
-| Resume | QEMU `cont` 후 running 확인; 다음 telemetry 표본 대기 |
+| Pause | 현재 실행의 QBox 제어 검증 통과 후 전체 도메인 정지 확인 |
+| Resume | QBox 전체 도메인 재개 확인; 다음 telemetry 표본 대기 |
 
 데모/제어 작업 실행 중에는 중복 제어를 차단한다. Pause 중에는 guest SSH 작업과
 모니터링도 중단되며 마지막 표본은 현재 측정값이 아니다. Power off/Reboot를 하려면

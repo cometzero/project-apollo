@@ -91,11 +91,9 @@ python3 scripts/test/validate_autosd_monitor_dashboard.py \
 호스트 timeout은 제출된 모델 동작이 취소됐음을 의미하지 않는다.
 `--action` 없는 관측 검증은 QMP까지 검사하므로 서버의 `--qbox-diagnostics`가 필요하다.
 
-Backend 회귀는 먼저 `--action shutdown --confirm-disruptive`로 정상 종료한 뒤
-`--action boot --backend qbox` 또는 `--action boot --backend qemu`로 실행한다.
-실행 중 backend 변경은 거부한다. AP-only에서는 관측 검증 명령으로 AP QMP를
-확인할 수 있다. QEMU에서는 QBox 진단 대신 `/api/simulator/snapshot`이
-UNSUPPORTED인지와 기존 Guest health를 확인한다.
+AutoSD 실행 대상은 `qbox-full`로 고정되어 있다. 재부팅 검증은 먼저
+`--action shutdown --confirm-disruptive`로 정상 종료한 뒤 `--action boot`로 실행한다.
+관측 검증은 AP, RSE, SI CL0, SI CL1의 QMP와 QBox 수집 결과를 확인한다.
 
 ## 증거와 제한
 

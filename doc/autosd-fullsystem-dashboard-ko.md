@@ -2,14 +2,9 @@
 
 ## 실행 대상
 
-대시보드 System control의 실행 대상에서 다음 세 가지를 선택한다.
-VM 또는 작업이 실행 중이면 선택할 수 없다. 먼저 정상 Power off를 완료한다.
-
-| 선택 | 실제 실행 범위 |
-| --- | --- |
-| QEMU TCG | standalone Apollo AP Linux |
-| QBox AP only | AP 직접 Linux 부팅, 다른 도메인 mock |
-| QBox full system | RSE TF-M, SI CL0 SCP, SI CL1 Zephyr, AP TF-A/OP-TEE/U-Boot/UKIBoot/AutoSD |
+대시보드는 `run_qbox_autosd.sh`를 통해 QBox full-system으로만 부팅한다.
+기본 백엔드는 `qbox-full`이며 QEMU/AP-only AutoSD 실행은 지원하지 않는다.
+RSE TF-M, SI CL0 SCP, SI CL1 Zephyr, AP TF-A/OP-TEE/U-Boot/UKIBoot/AutoSD를 실행한다.
 
 full-system은 네 도메인의 필수 로그, AP SSH/boot ID, full-system 모듈 배포를
 확인한 뒤 Feature 1을 PASS 처리한다. Feature 2 Automotive health는 별도 자동 검사다.
@@ -29,20 +24,23 @@ Automotive 정상 상태 및 QBox full-system 부팅 검사까지 연결한다.
    동일 deploy의 firmware/UKI/DTB/modules를 사용할 수 있다.
 2. [Automotive Quick Guide](autosd-automotive-demo-guide-ko.md)에 따라 AutoSD regular
    customization 디스크와 manifest를 준비한다. 마지막 정상 종료 디스크를 보존한다.
-3. 최초 full-system 전환 전에는 QEMU 또는 QBox AP-only로 준비 디스크를 부팅하고
-   아래 payload 준비를 수행한다. SI CL0는 AP 전원 인가 후 PFDI 응답을 감시하므로
-   full-system 로그인 뒤 처음 설치하면 감시 제한 시간보다 늦을 수 있다.
+3. 첫 부팅 전에 matching modules와 HIPC/PFDI payload가 디스크에 설치되어 있어야 한다.
+   `build_autosd_minimal_qm.sh`는 이를 자동으로 준비한다. 별도 regular 이미지는
+   다음처럼 `--modules-archive`로 실행별 디스크 복사본에 offline 설치한 뒤 부팅한다.
+   SI CL0가 AP 전원 인가 후 PFDI 응답을 감시하므로 guest 로그인 뒤 첫 설치에 의존하지 않는다.
 
 ```sh
-python3 scripts/run/autosd_fullsystem_modules.py \
-  --port 2244 --build-dir build --prepare-only \
-  --out build/autosd/fullsystem-payload-prepare
+./run_qbox_autosd.sh \
+  --autosd build/autosd/demo-minimal-qm-prepared/regular.json \
+  --modules-archive build/tmp_baremetal/deploy/images/apollo-qvp/modules-apollo-qvp.tgz \
+  --out-dir build/autosd/fullsystem-first-boot
 ```
 
-   이 단계는 설치/enable만 수행한다. PFDI 진단 성공으로 간주하지 않는다.
-   출력 디렉터리는 새 경로여야 하며 SSH port는 실행 중인 private VM과 일치해야 한다.
-   정상 Power off 후 같은 서버에서 `QBox full system`을 선택하면 보존된 디스크를 사용한다.
-   서버를 재시작할 경우 `--rootfs`에 방금 준비하고 정상 종료한 디스크를 지정한다.
+`guestfish`가 PATH에 없으면 `--guestfish /path/to/guestfish`를 추가한다.
+모듈 archive는 사용 중인 BSP kernel과 일치해야 하며 offline 설치는 regular 이미지에만 지원한다.
+설치 성공 자체는 PFDI 진단 성공이 아니다. 부팅 및 정상 종료 후 대시보드의 `--rootfs`에
+`build/autosd/fullsystem-first-boot/rootfs.wic`를 지정하면 준비한 디스크를 보존하여 사용한다.
+이미 준비된 minimal_qm 디스크는 아래처럼 대시보드에서 바로 실행한다.
 
 ```sh
 python3 scripts/autosd_dashboard/server.py \
@@ -59,7 +57,7 @@ python3 scripts/autosd_dashboard/server.py \
 7. Guest 로그 선택에서 RSE, SI CL0, SI CL1 또는 AP UART/AutoSD 서비스 로그를 확인한다.
 8. 정상 Power off 뒤 다른 실행 대상을 선택하거나 Power on한다. QBox full의 native
    Reboot는 새 guest boot ID와 현재 firmware epoch/모듈 provisioning PASS를 확인한다
-   (최대 900초). QBox AP-only의 Reboot와 모든 QBox의 Pause/Resume은 비활성화한다.
+   (최대 900초). Pause/Resume은 현재 실행의 별도 제어 검증을 통과한 뒤 활성화한다.
    full-system Power off는 강제 종료 없이 최대 180초 기다린다.
 
 ### 독립 CLI: tmux TUI

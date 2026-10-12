@@ -216,21 +216,8 @@ function renderBackendSelector() {
   const select = $('backend-select');
   const backends = state.backends || [];
   updateOptions(select, backends.map((item) => [item.id, item.title]), state.vm?.backend || '', '백엔드 API 적용 대기');
-  select.disabled = pending || !state.backend_selection_enabled;
-  $('backend-note').textContent = state.vm?.running ? '실행 중에는 변경할 수 없습니다. 먼저 Power off 하세요.' :
-    state.backend_selection_enabled ? '선택 후 Power on · 보존된 AutoSD 디스크로 부팅합니다.' : '진행 중 작업 또는 서버 설정을 확인하세요.';
-  select.onchange = async () => {
-    if (pending) return;
-    pending = true;
-    const backend = select.value;
-    renderSystemControls();
-    try {
-      const response = await fetch('/api/backend', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': state.csrf_token}, body: JSON.stringify({backend})});
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    } catch (error) { notice(`실행 대상 변경 실패: ${error.message}`); }
-    finally { pending = false; await refresh(); }
-  };
+  select.disabled = true;
+  $('backend-note').textContent = 'AutoSD는 QBox full system으로 부팅합니다.';
 }
 
 function renderDomainBoot() {
@@ -275,9 +262,7 @@ function renderSystemControls() {
   }
   const vm = state.vm || {};
   $('system-description').textContent = `${state.capabilities?.platform || 'AutoSD'} · 호스트 전원 제어가 아닙니다. ` +
-    (vm.backend === 'qbox-full' ? 'RSE · SI CL0 · SI CL1 · AP firmware 부팅. Reboot는 새 boot ID와 도메인 상태를 확인합니다. Pause/Resume은 현재 실행의 10회 반복·HIPC·watchdog 실증 검증 후 활성화됩니다.' :
-      vm.backend === 'qbox' ? 'AP 직접 부팅 · 다른 도메인은 mock. 재시작은 Power off → Power on을 사용하세요. Reboot/Pause/Resume은 미지원입니다.' :
-      'Pause 상태에서는 Resume 후 종료·재부팅하세요.');
+    'RSE · SI CL0 · SI CL1 · AP firmware 부팅. Reboot는 새 boot ID와 도메인 상태를 확인합니다. Pause/Resume은 현재 실행의 10회 반복·HIPC·watchdog 실증 검증 후 활성화됩니다.';
   $('system-state').textContent = vm.paused ? 'PAUSED' : vm.running ? 'POWERED ON' : 'POWERED OFF';
   const latest = [...(state.jobs || [])].reverse().find((j) => ['boot', 'shutdown', 'reboot', 'pause', 'resume'].includes(j.action));
   const progress = $('system-progress');

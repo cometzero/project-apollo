@@ -117,36 +117,27 @@ test('QBox system controls label AP-only scope and unsupported operations', () =
   const nodes = Object.fromEntries(['system-controls', 'system-description', 'system-state', 'system-progress'].map((id) => [id, {
     dataset: {}, replaceChildren() {}, append() {}, textContent: '',
   }]));
-  const scope = {state: {vm: {backend: 'qbox', running: true}, capabilities: {platform: 'QBox AP direct'}},
+  const scope = {state: {vm: {backend: 'qbox-full', running: true}, capabilities: {platform: 'QBox full system'}},
     pending: false, $: (id) => nodes[id], el: () => ({})};
   vm.createContext(scope);
   vm.runInContext(source.slice(source.indexOf('function renderSystemControls('), source.indexOf('async function runAction(')), scope);
   scope.renderSystemControls();
-  assert.match(nodes['system-description'].textContent, /QBox AP direct/);
-  assert.match(nodes['system-description'].textContent, /다른 도메인은 mock/);
-  assert.match(nodes['system-description'].textContent, /Reboot\/Pause\/Resume은 미지원/);
+  assert.match(nodes['system-description'].textContent, /QBox full system/);
+  assert.match(nodes['system-description'].textContent, /SI CL0/);
+  assert.match(nodes['system-description'].textContent, /실증 검증 후 활성화/);
   assert.equal(nodes['system-state'].textContent, 'POWERED ON');
 });
-test('backend selector is server-gated and supports the three explicit choices', async () => {
+test('backend selector exposes only the fixed full-system target', () => {
   const nodes = {'backend-select': {}, 'backend-note': {}};
-  const calls = [];
-  const scope = {state: {vm: {backend: 'qbox-full', running: false}, backend_selection_enabled: true, csrf_token: 'token',
-    backends: [{id: 'qemu', title: 'QEMU'}, {id: 'qbox', title: 'QBox (AP only)'}, {id: 'qbox-full', title: 'QBox (full)'}]},
-    pending: false, $: (id) => nodes[id], updateOptions: (node, rows, selected) => {node.rows = rows; node.value = selected;},
-    renderSystemControls() {}, refresh: async () => {}, notice() {},
-    fetch: async (...args) => {calls.push(args); return {ok: true, json: async () => ({backend: 'qemu'})};}};
+  const scope = {state: {vm: {backend: 'qbox-full'},
+    backends: [{id: 'qbox-full', title: 'QBox full system'}]},
+    $: (id) => nodes[id], updateOptions: (node, rows, selected) => {node.rows = rows; node.value = selected;}};
   vm.createContext(scope);
   vm.runInContext(source.slice(source.indexOf('function renderBackendSelector('), source.indexOf('function renderDomainBoot(')), scope);
   scope.renderBackendSelector();
-  assert.equal(nodes['backend-select'].rows.length, 3);
-  assert.equal(nodes['backend-select'].disabled, false);
-  nodes['backend-select'].value = 'qemu'; await nodes['backend-select'].onchange();
-  assert.equal(calls[0][0], '/api/backend');
-  assert.equal(calls[0][1].headers['X-CSRF-Token'], 'token');
-  assert.deepEqual(JSON.parse(calls[0][1].body), {backend: 'qemu'});
-  scope.state.vm.running = true; scope.state.backend_selection_enabled = false;
-  scope.renderBackendSelector();
+  assert.equal(nodes['backend-select'].rows.length, 1);
   assert.equal(nodes['backend-select'].disabled, true);
+  assert.match(nodes['backend-note'].textContent, /QBox full system/);
 });
 test('full domain cards never infer firmware PASS from guest login', () => {
   const target = {children: [], replaceChildren() {this.children = [];}, append(n) {this.children.push(n);}};

@@ -122,7 +122,7 @@ def test_late_sample_cannot_update_new_epoch(setup):
     assert not simulator.history
 
 
-def test_qemu_unsupported_and_guest_boot_event_is_distinct(setup):
+def test_guest_boot_event_is_distinct(setup):
     _, simulator, context, _ = setup
     context['guest'] = {'status': 'ONLINE', 'boot_id': 'guest-A'}
     simulator.tick()
@@ -130,8 +130,6 @@ def test_qemu_unsupported_and_guest_boot_event_is_distinct(setup):
     simulator.tick()
     assert [event['details']['boot_id'] for event in simulator.events] == ['guest-A', 'guest-B']
     assert all(event['run_id'] == 'run-A' for event in simulator.events)
-    context['backend'] = 'qemu'
-    assert simulator.snapshot()['status'] == 'UNSUPPORTED'
 
 
 def test_model_log_tail_incremental_partial_rotation_and_timestamps(setup):

@@ -12,18 +12,18 @@ server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
 
 
-@pytest.mark.parametrize("backend", ["qemu", "qbox", "qbox-full"])
+@pytest.mark.parametrize("backend", ["qbox-full"])
 def test_launch_diagnostics_are_opt_in(tmp_path, backend):
     app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), backend=backend)
     assert "--qmp" not in app.boot_command(tmp_path)
     assert "--runtime-injection" not in app.boot_command(tmp_path)
     app.qbox_diagnostics, app.runtime_injection = True, True
     command = app.boot_command(tmp_path)
-    assert ("--qmp" in command) == (backend != "qemu")
-    assert ("--runtime-injection" in command) == (backend == "qbox-full")
+    assert "--qmp" in command
+    assert "--runtime-injection" in command
 
 
-@pytest.mark.parametrize("backend,opt_in", [("qemu", True), ("qbox", True), ("qbox-full", False)])
+@pytest.mark.parametrize("backend,opt_in", [("qbox-full", False)])
 def test_start_and_catalog_reject_without_full_opt_in(tmp_path, monkeypatch, backend, opt_in):
     app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), allow=True,
                            backend=backend, runtime_injection=opt_in)

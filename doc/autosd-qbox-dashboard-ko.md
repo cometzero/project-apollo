@@ -1,3 +1,7 @@
+> **과거 AP-only 실행 기록**: 이 문서의 실행 명령과 지원 범위는 당시 검증 기록이다.
+> 현재 AutoSD는 `run_qbox_autosd.sh` / 대시보드 `qbox-full`로만 부팅한다.
+> 현재 사용법은 [full-system 가이드](autosd-fullsystem-dashboard-ko.md)를 따른다.
+
 # QBox AP domain AutoSD 대시보드
 
 RSE/SI CL0/SI CL1까지 실행하는 `qbox-full`은

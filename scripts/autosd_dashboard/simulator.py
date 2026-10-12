@@ -55,8 +55,8 @@ class Simulator:
     def snapshot(self):
         context = self.context()
         with self.lock:
-            if self.key != context['run_id'] or context['backend'] == 'qemu':
-                return {"status": "UNSUPPORTED" if context['backend'] == 'qemu' else "WAITING",
+            if self.key != context['run_id']:
+                return {"status": "WAITING",
                         "run_id": context['run_id'], "cpus": [], "domains": [], "history": [], "events": []}
             value = dict(self.value)
             value['last_sample_feature_session'] = value.get('feature_session')
@@ -108,7 +108,7 @@ class Simulator:
                 features['qmp'] = {'available': bool(getattr(self.app, 'qbox_diagnostics', False)),
                                    'qualified': False, 'reason': 'read-only; each domain response verified on demand'}
                 return value
-        return {"status": "UNSUPPORTED" if context['backend'] == 'qemu' else 'WAITING',
+        return {"status": 'WAITING',
                 "run_id": context['run_id'], "pause": {"available": False, "qualified": False},
                 "injection": {"available": False, "qualified": False}}
 
@@ -235,7 +235,7 @@ class Simulator:
 
     def tick(self):
         context = self.context()
-        if context['backend'] == 'qemu' or not context['run_id']:
+        if not context['run_id']:
             return
         with self.lock:
             if self.key != context['run_id']:

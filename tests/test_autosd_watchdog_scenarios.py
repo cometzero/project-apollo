@@ -42,11 +42,8 @@ def test_fresh_offsets_and_truncation(tmp_path):
 
 @pytest.mark.parametrize("backend", ["qemu", "qbox"])
 def test_hardware_expiry_rejected_outside_full(tmp_path, backend):
-    app = server.Dashboard(tmp_path, "manifest", "disk", allow=True, backend=backend)
-    with pytest.raises(ValueError, match="only on QBox full"):
-        app.start("watchdog-wd04", confirmed=True)
-    child = next(c for p in app.state()["catalog"] for c in p["children"] if c["code"] == "WD04")
-    assert not child["enabled"] and child["unsupported_reason"]
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        server.Dashboard(tmp_path, "manifest", "disk", allow=True, backend=backend)
 
 
 def test_expiry_requires_confirmation(tmp_path):

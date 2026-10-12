@@ -16,8 +16,10 @@ spec.loader.exec_module(server)
 
 
 @pytest.fixture
-def app(tmp_path):
-    return server.Dashboard(tmp_path)
+def app(tmp_path, monkeypatch):
+    app = server.Dashboard(tmp_path)
+    monkeypatch.setattr(app, "domain_boot", lambda: {"status": "PASS", "domains": []})
+    return app
 
 
 def test_default_read_only(app):
@@ -33,40 +35,37 @@ def test_default_read_only(app):
 
 def test_backend_default_and_validation(tmp_path):
     app = server.Dashboard(tmp_path)
-    assert app.state()["vm"]["backend"] == "qemu"
-    assert app.state()["capabilities"]["platform"] == "QEMU TCG"
-    assert app.boot_timeout == 240
+    assert app.state()["vm"]["backend"] == "qbox-full"
+    assert app.state()["capabilities"]["platform"] == "QBox full system"
+    assert app.boot_timeout == 900
     with pytest.raises(ValueError, match="Unsupported backend"):
         server.Dashboard(tmp_path, backend="qbox; rm -rf")
 
 
-@pytest.mark.parametrize("backend", ["qemu", "qbox", "qbox-full"])
+@pytest.mark.parametrize("backend", ["qbox-full"])
 def test_boot_backend_argv(tmp_path, backend):
     app = server.Dashboard(tmp_path, Path("manifest with spaces"), Path("disk with spaces"),
                            2255, True, backend=backend)
     argv = app.boot_command(tmp_path)
-    assert ("--copy-disk" in argv) == (backend == "qbox")
-    assert argv[0] == str(server.ROOT / ("run_qbox_autosd.sh" if backend == "qbox-full" else "run_" + backend + "_linux.sh"))
+    assert "--copy-disk" not in argv
+    assert argv[0] == str(server.ROOT / "run_qbox_autosd.sh")
     assert argv[argv.index("--autosd") + 1] == "manifest with spaces"
     assert argv[argv.index("--rootfs") + 1] == "disk with spaces"
     assert "--headless" in argv
-    if backend != "qemu":
-        assert argv[-2:] == ["--ssh-port", "2255"]
-        assert "--netdev" not in argv  # launcher constructs fixed loopback forwarding
-    else:
-        assert argv[-2:] == ["--netdev", "user,id=net0,hostfwd=tcp:127.0.0.1:2255-:22"]
+    assert argv[-2:] == ["--ssh-port", "2255"]
+    assert "--netdev" not in argv  # launcher constructs fixed loopback forwarding
 
 
-@pytest.mark.parametrize("action", ["pause", "resume", "reboot"])
+@pytest.mark.parametrize("action", ["pause", "resume"])
 def test_qbox_unqualified_controls_rejected(tmp_path, monkeypatch, action):
-    app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), allow=True, backend="qbox")
+    app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), allow=True, backend="qbox-full")
     monkeypatch.setattr(app, "running", lambda: True)
     state = app.state()
     control = next(c for c in state["system_controls"] if c["action"] == action)
     assert not control["enabled"]
     assert "not qualified" in control["unsupported_reason"]
-    assert state["capabilities"]["platform"] == "QBox AP direct"
-    assert app.boot_timeout == 600
+    assert state["capabilities"]["platform"] == "QBox full system"
+    assert app.boot_timeout == 900
     with pytest.raises(ValueError, match="not qualified"):
         app.start(action, confirmed=True)
     assert app.jobs == []
@@ -74,7 +73,7 @@ def test_qbox_unqualified_controls_rejected(tmp_path, monkeypatch, action):
 
 
 @pytest.mark.parametrize("action", ["rt", "rt-r02", "timerlat", "osnoise"])
-@pytest.mark.parametrize("backend,platform", [("qemu", "tcg"), ("qbox", "qbox"), ("qbox-full", "qbox")])
+@pytest.mark.parametrize("backend,platform", [("qbox-full", "qbox")])
 def test_rt_platform_tracks_backend(tmp_path, action, backend, platform):
     app = server.Dashboard(tmp_path, backend=backend)
     args = app.guest_command({"action": action, "id": "a" * 32, "evidence_path": str(tmp_path)})
@@ -84,13 +83,13 @@ def test_rt_platform_tracks_backend(tmp_path, action, backend, platform):
 
 
 def test_qbox_boot_job_tags_backend_and_bounded_deadline(tmp_path, monkeypatch):
-    app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), 0, True, backend="qbox")
+    app = server.Dashboard(tmp_path, Path("manifest"), Path("disk"), 0, True, backend="qbox-full")
     monkeypatch.setattr(server.threading.Thread, "start", lambda _: None)
     monkeypatch.setattr(server.time, "monotonic", lambda: 10)
     job = app.start("boot")
-    assert job["backend"] == "qbox"
-    assert app.boot_deadline == 610
-    assert "QBox AP direct" in app.state()["catalog"][0]["description"]
+    assert job["backend"] == "qbox-full"
+    assert app.boot_deadline == 910
+    assert "QBox full system" in app.state()["catalog"][0]["description"]
     assert all("TCG" not in row["description"] for row in app.state()["catalog"])
 
 
@@ -99,36 +98,21 @@ def test_qbox_boot_job_tags_backend_and_bounded_deadline(tmp_path, monkeypatch):
                                            ("automotive", 1500), ("automotive-s04", 600),
                                            ("shutdown", 240)])
 def test_qbox_host_operation_timeout(tmp_path, action, timeout):
-    app = server.Dashboard(tmp_path, backend="qbox")
+    app = server.Dashboard(tmp_path, backend="qbox-full")
     assert app.operation_timeout(action) == timeout
     argv = app.guest_command({"id": "a" * 32, "action": action, "evidence_path": str(tmp_path)})
     assert argv[argv.index("--timeout") + 1] == str(timeout)
-    assert server.Dashboard(tmp_path).operation_timeout(action) == server.guest_timeout(action)
 
 
-def test_backend_switch_preserves_disk_and_history_but_resets_current_state(app):
-    app.rootfs = Path("preserved-runtime.wic")
-    app.jobs = [{"id": "old", "backend": "qbox", "status": "PASS"}]
-    app.backend = "qbox"
-    app.feature_session = app.log_session = app.vm_job = "old"
-    app.feature_boot = {"status": "PASS"}
-    app.feature_health = {"status": "PASS"}
-    app.history = [{"cpus": [1]}]
-    app.monitoring = {"cpus": [1]}
-    app.service_log_cache[("old", "root")] = (0, {"text": "old"})
-    result = app.select_backend("qbox-full")
-    assert result["backend"] == "qbox-full"
-    assert app.boot_timeout == 900
-    assert app.rootfs == Path("preserved-runtime.wic")
-    assert app.jobs[0]["backend"] == "qbox"
-    assert app.feature_session is app.log_session is app.vm_job is None
-    assert app.feature_boot is app.feature_health is None
-    assert app.history == [] and app.monitoring["cpus"] == []
-    assert app.service_log_cache == {}
+@pytest.mark.parametrize("backend", ["qemu", "qbox", "shell"])
+def test_removed_backends_rejected(app, tmp_path, backend):
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        server.Dashboard(tmp_path, backend=backend)
+    with pytest.raises(ValueError, match="Unsupported backend"):
+        app.select_backend(backend)
     state = app.state()
-    assert state["backend_selection_enabled"]
-    assert [row["id"] for row in state["backends"]] == ["qemu", "qbox", "qbox-full"]
-    assert state["capabilities"]["platform"] == "QBox full system"
+    assert not state["backend_selection_enabled"]
+    assert [row["id"] for row in state["backends"]] == ["qbox-full"]
 
 
 @pytest.mark.parametrize("busy", ["vm", "job", "health"])
@@ -138,7 +122,7 @@ def test_backend_switch_rejects_busy_state(app, monkeypatch, busy):
     app.auto_health_pending = busy == "health"
     with pytest.raises(ValueError, match="Power off"):
         app.select_backend("qbox-full")
-    assert app.backend == "qemu"
+    assert app.backend == "qbox-full"
     assert not app.state()["backend_selection_enabled"]
 
 
@@ -155,9 +139,6 @@ def test_full_native_reboot_is_supported_but_not_pause(app):
     assert app.unsupported_control("reboot") is None
     assert app.shutdown_wait_timeout() == 180
     assert "QBox Pause/Resume/Reboot" not in app.state()["capabilities"]["unsupported"]
-    app.select_backend("qbox")
-    assert app.unsupported_control("reboot")
-    assert app.shutdown_wait_timeout() == 60
 
 
 @pytest.mark.parametrize("new_id,epoch,provision,status,expected", [
@@ -235,9 +216,6 @@ def test_full_domain_log_sources_bounded_and_whitelisted(full_app, tmp_path):
     assert {"rse", "si-cl0", "si-cl1"} <= {row["id"] for row in full_app.state()["guest_log_sources"]}
     with pytest.raises(ValueError, match="Unknown"):
         full_app.guest_log("../../etc/passwd")
-    full_app.backend = "qbox"
-    with pytest.raises(ValueError, match="Unknown"):
-        full_app.guest_log("si-cl0")
 
 
 @pytest.fixture
@@ -315,7 +293,7 @@ def test_boot_exit_before_autohealth_cancels_queue(lifecycle_app, monkeypatch):
     def exited():
         app.boot_ready(started["id"], "ready")
         return 1
-    monkeypatch.setattr(server.subprocess, "Popen", lambda *a, **k: SimpleNamespace(wait=exited))
+    monkeypatch.setattr(server.subprocess, "Popen", lambda *a, **k: SimpleNamespace(wait=exited, poll=lambda: None))
     app.execute(app.jobs[-1])
     assert app.feature_boot["status"] == "PASS"  # historical readiness was observed
     assert app.feature_health["status"] == "BLOCKED"
@@ -337,6 +315,12 @@ def test_reboot_epoch_waits_for_new_boot_id_before_health(lifecycle_app, tmp_pat
     from types import SimpleNamespace
     app = lifecycle_app
     monkeypatch.setattr(app, "running", lambda: True)
+    epochs = iter(range(1, 100))
+    def ready_domains():
+        epoch = next(epochs)
+        return {"status": "PASS", "domains": [{"id": "ap", "boot_epoch": epoch}],
+                "provision": {"status": "PASS", "boot_epoch": epoch}}
+    monkeypatch.setattr(app, "domain_boot", ready_domains)
     samples = iter([{"status": "ONLINE", "boot_id": "old"},
                     {"status": "ONLINE", "boot_id": "old"},
                     {"status": "ONLINE", "boot_id": "new"}])
@@ -380,6 +364,7 @@ def test_automatic_health_wait_is_bounded_but_manual_is_single_check(app):
 def test_system_control_state_gates(app, monkeypatch):
     app.allow, app.manifest, app.rootfs = True, Path("manifest"), Path("rootfs")
     monkeypatch.setattr(app, "running", lambda: True)
+    app.vm_job = app.qbox_pause_run = "qualified-boot"
     controls = {c["action"]: c["enabled"] for c in app.state()["system_controls"]}
     assert controls == dict(boot=False, shutdown=True, reboot=True, pause=True, resume=False)
     with pytest.raises(ValueError, match="confirm"):
@@ -397,25 +382,6 @@ def test_system_control_state_gates(app, monkeypatch):
     assert not any(c["enabled"] for c in app.state()["system_controls"])
 
 
-@pytest.mark.parametrize("action,status", [("pause", "paused"), ("resume", "running")])
-def test_system_monitor_confirmation(app, tmp_path, monkeypatch, action, status):
-    import io
-    vm = tmp_path / "owned/vm"
-    vm.mkdir(parents=True)
-    (vm / "qemu-monitor.in").touch()
-    (vm / "qemu-monitor.log").write_text("old VM status: paused\n")
-    app.jobs = [{"id": "boot", "evidence_path": str(vm.parent)}]
-    app.vm_job = "boot"
-    monkeypatch.setattr(app, "running", lambda: True)
-    def response(_):
-        with (vm / "qemu-monitor.log").open("a") as stream:
-            stream.write("VM status: " + status + "\n")
-    monkeypatch.setattr(server.time, "sleep", response)
-    result = app.control_monitor(action, io.BytesIO())
-    assert result["qemu_status"] == status
-    assert app.vm_paused == (action == "pause")
-    assert (vm / "qemu-monitor.in").read_text() == ("stop" if action == "pause" else "cont") + "\ninfo status\n"
-
 
 def test_reboot_command_is_guest_os_reboot(app):
     argv = app.guest_command({"action": "reboot", "id": "reboot", "evidence_path": "/tmp/example"})
@@ -425,6 +391,12 @@ def test_reboot_command_is_guest_os_reboot(app):
 def test_reboot_requires_new_boot_id(app, tmp_path, monkeypatch):
     import sys
     from types import SimpleNamespace
+    epochs = iter(range(1, 100))
+    def ready_domains():
+        epoch = next(epochs)
+        return {"status": "PASS", "domains": [{"id": "ap", "boot_epoch": epoch}],
+                "provision": {"status": "PASS", "boot_epoch": epoch}}
+    monkeypatch.setattr(app, "domain_boot", ready_domains)
     samples = iter([{"status": "ONLINE", "boot_id": "old"},
                     {"status": "ONLINE", "boot_id": "old"},
                     {"status": "ONLINE", "boot_id": "new"}])
@@ -708,7 +680,7 @@ def test_backend_http_strict_payload(http, body):
         request(http, "/api/backend", body,
                 {"Content-Type": "application/json", "X-CSRF-Token": http.app.token})
     assert error.value.code == 400
-    assert http.app.backend == "qemu"
+    assert http.app.backend == "qbox-full"
 
 
 def test_backend_http_csrf_required(http):
@@ -717,9 +689,8 @@ def test_backend_http_csrf_required(http):
     assert error.value.code == 403
 
 
-@pytest.mark.parametrize("action", ["reboot", "pause", "resume"])
+@pytest.mark.parametrize("action", ["pause", "resume"])
 def test_qbox_http_rejects_unqualified_controls(http, monkeypatch, action):
-    http.app.backend = "qbox"
     http.app.allow, http.app.manifest, http.app.rootfs = True, Path("manifest"), Path("disk")
     monkeypatch.setattr(http.app, "running", lambda: True)
     with pytest.raises(urllib.error.HTTPError) as error:
@@ -869,7 +840,7 @@ def test_child_command_is_fixed_bounded_and_archived(app, action):
     args = app.guest_command({"id": "abc123", "action": action, "evidence_path": "/tmp/test"})
     command = args[args.index("--command") + 1]
     assert " --case " + case in command
-    assert args[args.index("--timeout") + 1] == ("360" if parent == "automotive" else "240")
+    assert args[args.index("--timeout") + 1] == "600"
     assert "--upload" in args and "evidence.tar.gz" in " ".join(args)
     assert "rc=$?" in command and "exit $rc" in command
     if parent == "rt":
@@ -916,7 +887,7 @@ def test_child_execution_status_and_telemetry_barrier(app, tmp_path, monkeypatch
     class Process:
         def wait(self, timeout=None):
             assert barrier.held == (action in server.MEASUREMENT_ACTIONS)
-            assert timeout == server.guest_timeout(action) + 50
+            assert timeout == app.operation_timeout(action) + 50
             return returncode
 
     monkeypatch.setattr(server.subprocess, "Popen", lambda *args, **kwargs: Process())
