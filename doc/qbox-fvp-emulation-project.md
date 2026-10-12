@@ -75,25 +75,15 @@ QEMU owns runtime DT fixups and disables devices outside its implemented subset.
 See [the QEMU Linux contract](qemu-apollo-linux.md); this profile does not
 qualify the full QBox hardware map or cross-domain firmware behavior.
 
-Both direct Linux launchers also accept `--autosd` with a prepared AutoSD
-regular or OSTree manifest. This uses the Apollo BSP kernel and the original
-AutoSD initramfs/disk; the OSTree path requires EROFS and fs-verity for
-composefs. See [AutoSD integration](autosd-apollo-linux.md). AP boot evidence
-does not qualify AutoSD UKI selection, Secure Boot, OTA or rollback.
-
-The opt-in QBox `--autosd MANIFEST --uki UKI` path instead loads U-Boot and
-boots through UKIBoot/EFI. Regular and OSTree first-boot tests verified valid
-bootctl CRC and successful slot A. This is still an AP-only mock profile:
-whole-platform guest reset is not implemented, and QBox OTA/rollback and
-Secure Boot remain unqualified. See [QBox EFI evidence](autosd-qbox-efi-followup-ko.md).
+AutoSD boots only through the full-system launcher; the direct Linux
+launchers support product/BSP images without AutoSD or EFI options.
 
 `run_qbox_autosd.sh` and dashboard backend `qbox-full` integrate the AutoSD
-private disk with the canonical full-system firmware chain instead. The dashboard
+private disk with the canonical full-system firmware chain. The dashboard
 requires RSE, SI CL0, SI CL1 (including RPMsg attach), AP UKIBoot/login and SSH
 readiness separately; an AP login is not whole-platform qualification. See the
 [full-system AutoSD guide](autosd-fullsystem-dashboard-ko.md) for prerequisites,
-per-domain evidence and runtime limitations. QEMU and QBox AP-only remain separate
-selectable backends; switching requires all owned VM operations to stop first.
+per-domain evidence and runtime limitations. The dashboard uses only `qbox-full`.
 
 An explicitly separate development profile, `run_qbox_linux.sh` /
 `apollo-qvp-linux.lua`, boots Linux directly using SystemC domain mocks.
@@ -101,7 +91,7 @@ An explicitly separate development profile, `run_qbox_linux.sh` /
 not a disk-backed root filesystem); the default selects the Yocto
 root filesystem. Shared AP/RoS hardware construction lives in
 `apollo-qvp-common.lua`. RSE/SI firmware and TF-A do not run in this
-profile; U-Boot runs only in the opt-in AutoSD EFI path. SCMI/MHU responses and the optional SMC bridge are mock behavior,
+profile. SCMI/MHU responses and the SMC bridge are mock behavior,
 not evidence for the full-system fidelity goal. Its results must be reported
 as AP Linux smoke evidence, separately from domain or FVP qualification.
 The BSP launcher uses the unmodified initramfs and its original `/init`, without

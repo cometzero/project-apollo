@@ -253,7 +253,8 @@ AP-only는 [run_qbox_linux.py](../../scripts/run/run_qbox_linux.py)가 선택한
 | 소비자 | 필요한 변경 |
 |---|---|
 | `run_qbox_yocto.sh`, `run_qbox_apollo_fvp_full.py` | 명시적 DTB/qboxconf 선택 우선순위 유지, `${MACHINE}.dtb` 등 fallback을 canonical 이름에 맞춤 |
-| `run_qbox_linux.py`, QBox AutoSD | canonical basename 기본값, manifest 우선 선택, AP-only prepare 후 tree 검증 |
+| `run_qbox_linux.py` | canonical basename 기본값, AP-only prepare 후 tree 검증 |
+| `run_qbox_autosd.py` | full-system UKI에 포함된 DTB 사용; AutoSD 부팅은 이 런처로 통일 |
 | `verify_qbox_linux_audio.py`, `prepare_qbox_apollo_pcie_irq_profile.py` | 기본 DTB 및 파생 profile 입력 변경 |
 | `build_gic720ae_linux_probe_profile.py`, `capture_gic720ae_default_deploy_manifest.py` | kernel 타깃과 image basename 구분, artifact identity 갱신 |
 | `gic720ae_pcie_irq_validation_inventory.py` | 새 DTS/DTSI source graph와 모든 include hash 수집 |

@@ -1,5 +1,7 @@
 # Apollo QVP AutoSD 데모 실행 리포트
 
+> 과거 검증 기록입니다. AP-only AutoSD 부팅 옵션은 제거되었습니다. 현재 실행 방법은 [AutoSD 가이드](autosd-apollo-linux.md)를 따르세요.
+
 검증일: 2026-09-22. 실행 순서: **QM·컨테이너·네트워크 → CPU/IPC/SELinux → BlueChi/iceoryx2 → OTA/rollback**.
 
 이 문서는 최초 실행 단계의 기록이다. 이후 QM 경계 IPC·BlueChi·SELinux·iceoryx2,

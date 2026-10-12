@@ -1,5 +1,7 @@
 # Apollo AutoSD 잔여 데모 후속 검증
 
+> 과거 검증 기록입니다. AP-only AutoSD 부팅 옵션은 제거되었습니다. 현재 실행 방법은 [AutoSD 가이드](autosd-apollo-linux.md)를 따르세요.
+
 검증 시작: 2026-09-22 KST. 이전 결과는 [기본 데모 리포트](autosd-demo-validation-ko.md)를 참고한다.
 
 ## 범위와 판정 원칙

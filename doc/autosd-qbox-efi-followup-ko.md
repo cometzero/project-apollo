@@ -1,5 +1,7 @@
 # Apollo QBox AutoSD EFI 최초 부팅
 
+> 과거 검증 기록입니다. AP-only AutoSD 부팅 옵션은 제거되었습니다. 현재 실행 방법은 [AutoSD 가이드](autosd-apollo-linux.md)를 따르세요.
+
 ## 범위
 
 기존 AP-only direct Linux 경로를 유지하면서 `--autosd MANIFEST --uki UKI`를

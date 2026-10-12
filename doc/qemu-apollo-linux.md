@@ -5,14 +5,8 @@ dm-verity initramfs with a private copy of `nexios-image-apollo-qvp.wic`.
 `--bsp` selects the original `nexios-bsp-initramfs` cpio and boot/misc WIC;
 the BSP root remains in RAM. Neither mode modifies the deployed images.
 
-`--autosd build/autosd/regular.json` or `--autosd build/autosd/ostree.json`
-selects a prepared AutoSD nightly disk and its original dracut initramfs,
-using the deployed Apollo kernel. See [AutoSD preparation and qualification](autosd-apollo-linux.md).
-Add `--uki PATH` to install an adapted unsigned Yocto UKI into both raw
-AutoSD boot slots of a private disk copy. Dedicated `u-boot-apollo-qemu.bin`
-firmware executes the Yocto-built UKIBoot loader from the ESP, which selects
-the slot and maintains boot-control metadata. Kernel and EFI stub are preserved.
-`./yocto_build.sh --keep-conf --bsp` deploys these prerequisites.
+AutoSD boots only through `run_qbox_autosd.sh`; this launcher supports
+product and BSP direct Linux boot. See [AutoSD](autosd-apollo-linux.md).
 
 Build the host emulator with:
 
@@ -34,7 +28,7 @@ binary and uses the caller's library environment.
 The launcher passes the deployed `apollo-qvp-saturn-v.dtb` directly to QEMU
 with `-dtb`; it does not rewrite the DTB. The default command line comes from
 Saturn `/chosen/bootargs`, with `nr_cpus` adjusted to `--cpus` and product root
-arguments appended. `--bootargs` and AutoSD manifest arguments take precedence.
+arguments appended. `--bootargs` takes precedence.
 
 QEMU's ARM loader sets the low memory bank, PSCI, command line and actual
 initramfs start/end in the in-memory DT. `hw/arm/apollo-qvp.c` adds the high
