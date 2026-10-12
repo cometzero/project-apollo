@@ -106,7 +106,16 @@ as AP Linux smoke evidence, separately from domain or FVP qualification.
 The BSP launcher uses the unmodified initramfs and its original `/init`, without
 an init overlay. Failed selftests remain visible and enter the original
 `nexios-bsp-failed#` shell; boot smoke and `bsp_selftest` are reported separately.
-SI remoteproc/RPMsg is enabled in the generated Linux-only DT for the
+The launcher preserves Saturn DT hardware nodes and uses its default bootargs;
+the default BSP launcher copies the deployed DTB byte-for-byte.
+The reset payload loads and starts at `0x000f0000` in AP shared SRAM, outside
+Linux RAM, and uses TF-A's libfdt library to set initramfs bounds in the
+in-memory DTB immediately before entering Linux. No reset-payload
+reserved-memory node is needed. Explicit CPU or
+bootargs overrides alter the command line only. Unused virtio block slots expose
+read-only identification registers with DeviceID zero, allowing the unchanged DT
+to probe them safely; these slots provide no block device. SI remoteproc/RPMsg uses the
+Saturn DT nodes for the
 `apollo_si_stub` SystemC service: resource-table attach, two virtqueues,
 RPMsg `ethsi1` enumeration, and a bounded Ethernet ARP/IPv4 ICMP peer.
 This replaces the SI firmware's communication role only; no SI CPU or Zephyr

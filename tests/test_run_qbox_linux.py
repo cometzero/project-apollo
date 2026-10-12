@@ -50,7 +50,8 @@ def test_autosd_console_does_not_repeat_credentials_or_probe():
     assert console.respond(b"[root@localhost ~]# ", True) == b""
 
 
-def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path):
+@pytest.mark.parametrize("initrd_size", [23, 4097])
+def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path, initrd_size):
     helper = SCRIPT.parents[2] / "hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py"
     spec = importlib.util.spec_from_file_location("linux_boot_prepare", helper)
     prepare = importlib.util.module_from_spec(spec)
@@ -59,7 +60,7 @@ def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path):
 
     def command(*args):
         commands.append(args)
-        return ""
+        return "rdinit=/init" if args[0] == "fdtget" else ""
 
     monkeypatch.setattr(prepare, "command", command)
     kernel = tmp_path / "Image"
@@ -67,18 +68,23 @@ def test_prepare_keeps_initramfs_bytes_without_overlay(monkeypatch, tmp_path):
     dtb = tmp_path / "source.dtb"
     dtb.write_bytes(b"test dtb")
     initrd = tmp_path / "bsp.cpio.gz"
-    original = b"original initramfs bytes"
+    original = b"x" * initrd_size
     initrd.write_bytes(original)
     output = tmp_path / "boot"
     result = prepare.prepare(argparse.Namespace(
         kernel=kernel, dtb=dtb, initrd=initrd, output_dir=output,
-        bootargs="rdinit=/init", cpus=4, disk=False,
+        bootargs="rdinit=/init",
     ))
+    assert result["addresses"]["boot_stub"] == 0x000f0000
     assert result["initrd"] == str(initrd.resolve())
     assert initrd.read_bytes() == original
     assert not (output / "linux-initramfs.cpio.gz").exists()
-    for node in ("/soc/si_remoteproc", "/soc/si_remoteproc/si-cl1"):
-        assert any(call[-3:] == (node, "status", "okay") for call in commands)
+    edits = [call for call in commands if call[0] == "fdtput"]
+    assert edits == []
+    assert any(f"INITRD_SIZE={initrd_size}" in call for call in commands)
+    assert any("INITRD_START=2415919104" in call for call in commands)
+    assert (output / "linux.dtb").read_bytes() == dtb.read_bytes()
+    assert not any("-r" in call for call in commands)
 
 
 def test_prepare_firmware_entry_and_no_external_initrd(monkeypatch, tmp_path):
@@ -97,7 +103,7 @@ def test_prepare_firmware_entry_and_no_external_initrd(monkeypatch, tmp_path):
     dtb = tmp_path / "source.dtb"
     dtb.write_bytes(b"test dtb")
     args = argparse.Namespace(kernel=firmware, dtb=dtb, initrd=None, output_dir=tmp_path / "boot",
-                              bootargs="", cpus=4, disk=True, firmware=True)
+                              bootargs="", firmware=True)
     result = prepare.prepare(args)
     assert result["addresses"]["kernel"] == 0x80080000
     assert any("BOOT_ENTRY=2148007936" in call for call in commands)
@@ -240,12 +246,13 @@ time.sleep(30)
     assert (b"dd if=/dev/vda" in (tmp_path / "linux-uart.in").read_bytes()) == disk
 
 
-def test_kernel_panic_fails_without_waiting_for_timeout(tmp_path):
+@pytest.mark.parametrize("marker", ["Kernel panic - not syncing: test", "LINUX_BOOT_FDT_FAILED"])
+def test_boot_failure_fails_without_waiting_for_timeout(tmp_path, marker):
     make_plan(
         tmp_path,
         "import pathlib, sys, time; "
         "(pathlib.Path(sys.argv[1])/'linux-uart.log').write_text("
-        "'Kernel panic - not syncing: test'); time.sleep(30)",
+        f"{marker!r}); time.sleep(30)",
     )
     assert runner.supervise(tmp_path, 5, True) == 1
     assert json.loads((tmp_path / "result.json").read_text())["status"] == "FAIL"
@@ -308,6 +315,8 @@ def test_tmux_layout_failure_cleans_up_new_session(monkeypatch, tmp_path):
 
 
 def make_deploy(monkeypatch, tmp_path):
+    monkeypatch.setattr(runner.subprocess, "check_output",
+                        lambda *a, **kw: "console=ttyAMA0,115200 mem=4064M nr_cpus=4 rdinit=/init")
     for name in (
         "Image",
         "apollo-qvp-saturn-v.dtb",
@@ -339,6 +348,7 @@ def make_deploy(monkeypatch, tmp_path):
     ]
 
 
+
 def test_product_uses_verity_initramfs_and_readonly_slot(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path))
     assert runner.main() == 0
@@ -347,7 +357,7 @@ def test_product_uses_verity_initramfs_and_readonly_slot(monkeypatch, tmp_path, 
     assert env["QBOX_LINUX_INITRD"] == str(
         tmp_path / "nexios-initramfs-image-apollo-qvp.cpio.gz"
     )
-    assert env["QBOX_LINUX_BOOTARGS"].endswith("rootwait root=PARTLABEL=rootro_a ro")
+    assert plan["bootargs"].endswith("rootwait root=PARTLABEL=rootro_a ro")
     assert plan["source_rootfs"] == str(tmp_path / "nexios-image-apollo-qvp.wic")
 
 
@@ -390,7 +400,7 @@ def test_autosd_device_timeout_is_bounded_and_respects_explicit_value(monkeypatc
                                    "bootargs": "console=ttyAMA0" + override}))
     monkeypatch.setattr(sys, "argv", argv + ["--autosd", str(manifest)])
     assert runner.main() == 0
-    bootargs = json.loads(capsys.readouterr().out)["environment"]["QBOX_LINUX_BOOTARGS"]
+    bootargs = json.loads(capsys.readouterr().out)["bootargs"]
     assert bootargs.count("systemd.default_device_timeout_sec=") == 1
     assert bootargs.endswith(override.strip() or "systemd.default_device_timeout_sec=180s")
 
@@ -440,13 +450,23 @@ def test_bsp_keeps_its_original_initramfs_and_init(monkeypatch, tmp_path, capsys
     assert plan["environment"]["QBOX_LINUX_INITRD"] == str(
         tmp_path / "nexios-bsp-initramfs-apollo-qvp.cpio.gz"
     )
-    assert plan["environment"]["QBOX_LINUX_BOOTARGS"].endswith(
-        "rdinit=/init"
+    assert plan["bootargs"] == (
+        "console=ttyAMA0,115200 mem=4064M nr_cpus=4 rdinit=/init"
     )
     assert plan["source_rootfs"] == str(tmp_path / "nexios-bsp-initramfs-apollo-qvp.wic")
     assert plan["environment"]["QBOX_RDASPEN_ROOTFS"].endswith("/rootfs.wic")
-    assert "root=" not in plan["environment"]["QBOX_LINUX_BOOTARGS"]
+    assert "root=" not in plan["bootargs"]
 
+
+
+def test_bsp_cpu_override_preserves_dtb_defaults(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) +
+                        ["--bsp", "--cpus", "2"])
+    assert runner.main() == 0
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["bootargs"] == (
+        "console=ttyAMA0,115200 mem=4064M nr_cpus=2 rdinit=/init"
+    )
 
 def test_bsp_disk_override(monkeypatch, tmp_path, capsys):
     arguments = make_deploy(monkeypatch, tmp_path)

@@ -34,15 +34,25 @@ for name, obj in pairs(platform) do
     if type(obj) == "table" and obj.moduletype == "cpu_arm_cortexA720AE" then
         cpus = cpus + 1
         assert(name:match("^ap_cpu_%d+$"))
-        assert(obj.rvbar == 0x80000000 and not obj.start_in_reset)
+        assert(obj.rvbar == 0x000f0000 and not obj.start_in_reset)
         assert(obj.psci_conduit == "smc")
     end
 end
 assert(cpus == tonumber(os.getenv("QBOX_APOLLO_NUM_CPUS")))
+local boot_address = platform.linux_loader[1].address
+local sram = platform.host_ap_shared_sram.target_socket
+assert(boot_address == platform.ap_cpu_0.rvbar)
+assert(boot_address >= sram.address and boot_address + 0x10000 <= sram.address + sram.size)
 assert(not platform.qemu_inst and not platform.si_cl0_qemu_inst)
 assert(not platform.si_cl1_qemu_inst and not platform.ap_bl2_reset_loader)
-assert((platform.ap_virtioblk_0 ~= nil) == (os.getenv("QBOX_RDASPEN_ROOTFS") ~= ""))
-assert(not platform.ap_virtioblk_1)
+local first_empty = os.getenv("QBOX_RDASPEN_ROOTFS") == "" and 0 or 1
+if first_empty == 1 then assert(platform.ap_virtioblk_0.moduletype == "virtio_mmio_blk") end
+for i=first_empty,3 do
+    local slot = platform["ap_virtioblk_"..i]
+    assert(slot.moduletype == "gs_memory" and slot.read_only and not slot.dmi_allow)
+    assert(slot.target_socket.address == 0x30020000 + i * 0x10000)
+    assert(slot.load.data[1] == 0x74726976 and slot.load.data[3] == 0)
+end
 assert(platform.linux_si_stub.moduletype == "apollo_si_stub")
 assert(platform.linux_si_stub.target_socket.address == 0x400b0000)
 assert(platform.linux_si_stub.target_socket.size == 0x60000)

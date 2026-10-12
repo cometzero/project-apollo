@@ -207,7 +207,7 @@ dw_i2c0: i2c@30100000 {
 - `/soc/si_remoteproc/si-cl1`, 4개 reserved-memory와 MHU 채널/순서, CPU/cache/PMU 참조.
 - 기존 label은 가능한 한 유지한다. 새 Board override에 필요한 watchdog/RTC 등 label 추가는 DT node 이름 변경과 구분한다.
 
-CPU node 선언 순서도 보존한다. [AP-only prepare.py](../../hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py#L82)는 `fdtget -l /cpus` 순서로 CPU를 선택·삭제한다. 단순 문자열 정렬로 `cpu@10000` 등을 앞당기면 같은 CPU 수를 선택해도 MPIDR 집합이 달라질 수 있다.
+CPU node 선언 순서도 보존한다. AP-only 런처는 CPU 노드나 `cpu-map`을 삭제하지 않는다. 실행 CPU 수는 QBox CPU 구성과 커널 `nr_cpus` 인자로 지정하며, [prepare.py](../../hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py)는 CPU 토폴로지를 수정하지 않는다.
 
 ## 7. Kbuild·Yocto·배포 경로 전환
 
@@ -248,7 +248,7 @@ Kernel 값은 [linux-yocto-apollo-qvp.inc](../../hsoc-stack/yocto/meta-hsoc-bsp/
 
 Full-system 검증은 kernel DTB → UKI A/B `.dtb` → WIC ESP → guest live DT까지 추적한다. [A/B UKI 생성](../../hsoc-stack/yocto/meta-hsoc-auto-solutions/classes/auto-ad-nexios-uki-ab.bbclass#L129)이 배포 DTB를 삽입하므로 DT 변경 후 UKI와 WIC를 재생성한다. Secure Boot를 사용하면 UKI 재서명도 검증한다. 현재 U-Boot의 FIT 지원 옵션이 켜져 있다는 이유로 Linux의 활성 포장 경로를 FIT라고 설명하지 않는다.
 
-AP-only는 [run_qbox_linux.py](../../scripts/run/run_qbox_linux.py#L519)가 선택한 DTB를 [prepare.py](../../hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py#L54)로 복제·수정해 `QBOX_LINUX_DTB`로 전달한다. 입력 DTB와 생성된 `linux.dtb`를 모두 검사해야 한다. CPU 삭제, cpu-map 제거, PMU/VirtIO 조정, reserved memory/SCMI/RPMsg 경로의 기존 동작을 보존한다.
+AP-only는 [run_qbox_linux.py](../../scripts/run/run_qbox_linux.py)가 선택한 DTB를 [prepare.py](../../hsoc-stack/tools/qbox-platform/platforms/apollo/linux-boot/prepare.py)로 복제해 `QBOX_LINUX_DTB`로 전달한다. 기본 BSP의 복사본은 원본과 동일하며, 부팅 인자가 달라질 때만 호스트에서 `/chosen/bootargs`를 갱신한다. AP SRAM의 부팅 코드가 Linux 진입 직전에 메모리상의 DTB에 initramfs 범위를 기록한다. CPU/PMU/VirtIO/SCMI/RPMsg 노드는 보존하고 별도 부팅 코드 예약 노드는 추가하지 않는다. 입력 DTB, 실행용 DTB 파일과 게스트의 DT 속성을 구분해 검사한다.
 
 | 소비자 | 필요한 변경 |
 |---|---|

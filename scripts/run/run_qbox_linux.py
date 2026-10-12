@@ -277,7 +277,8 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
                             bsp_selftest = "PASS"
                         if bsp_selftest != previous_selftest:
                             report(f"BSP selftest: {bsp_selftest}")
-                    if exit_after_pass and b"Kernel panic - not syncing:" in observed:
+                    if exit_after_pass and any(marker in observed for marker in (
+                            b"Kernel panic - not syncing:", b"LINUX_BOOT_FDT_FAILED")):
                         break
                     if autosd:
                         response = autosd.respond(observed, exit_after_pass)
@@ -557,9 +558,15 @@ def main() -> int:
         / "build/qbox-apollo-qvp"
         / ("linux-" + time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}")
     ).absolute()
-    bootargs = args.bootargs or autosd.get("bootargs") or "console=ttyAMA0 earlycon=pl011,0x1a400000 " + (
-        "rdinit=/init" if args.bsp else "rootwait root=PARTLABEL=rootro_a ro"
-    )
+    bootargs = args.bootargs or autosd.get("bootargs")
+    if not bootargs:
+        bootargs = subprocess.check_output(
+            ["fdtget", str(dtb), "/chosen", "bootargs"], text=True,
+        ).strip()
+        if not args.bsp:
+            bootargs += " rootwait root=PARTLABEL=rootro_a ro"
+        # CPU population is a runtime choice; preserve the DT topology.
+        bootargs = re.sub(r"\bnr_cpus=\d+\b", f"nr_cpus={args.cpus}", bootargs)
     if autosd and not args.uki and not any(
             word.startswith("systemd.default_device_timeout_sec=") for word in bootargs.split()):
         # AutoSD's normal 30s device timeout can expire during QBox
@@ -602,10 +609,9 @@ def main() -> int:
         "QBOX_APOLLO_NUM_CPUS": str(args.cpus),
         "QBOX_LINUX_KERNEL": str(kernel),
         "QBOX_LINUX_DTB": str(out / "linux-boot/linux.dtb"),
-        "QBOX_LINUX_INITRD": str(initrd) if initrd and not uki else "",
+        "QBOX_LINUX_INITRD": str(initrd) if not uki else "",
         "QBOX_LINUX_FIRMWARE": "true" if uki else "false",
         "QBOX_LINUX_BOOT_STUB": str(out / "linux-boot/boot.bin"),
-        "QBOX_LINUX_BOOTARGS": bootargs,
         "QBOX_RDASPEN_ROOTFS": str(out / "rootfs.wic") if rootfs else "",
         "QBOX_APOLLO_NETDEV": (f"type=user,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22"
                               if args.ssh_port is not None else os.environ.get("QBOX_APOLLO_NETDEV",
@@ -630,7 +636,8 @@ def main() -> int:
         "environment": launch_env,
         "qboxconf": str(qboxconf),
         "source_dtb": str(dtb),
-        "source_rootfs": str(rootfs) if rootfs else None,
+        "source_rootfs": str(rootfs),
+        "bootargs": bootargs,
         "bsp": args.bsp,
         "autosd_mode": autosd.get("mode"),
         "uki": uki,
@@ -680,15 +687,11 @@ def main() -> int:
         str(out / "linux-boot"),
         "--bootargs",
         bootargs,
-        "--cpus",
-        str(args.cpus),
     ]
     if uki:
         prepare.append("--firmware")
-    elif initrd:
+    else:
         prepare.extend(["--initrd", str(initrd)])
-    if rootfs:
-        prepare.append("--disk")
     payload = json.loads(subprocess.check_output(prepare, text=True))
     launch_env["QBOX_LINUX_BOOT_STUB"] = payload["boot_stub"]
     launch_env["QBOX_LINUX_DTB"] = payload["dtb"]
