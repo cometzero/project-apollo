@@ -70,7 +70,8 @@ QBox configuration carries that value into the full-system runtime.
 
 The separate `run_qemu_linux.sh [--bsp]` profile boots Apollo Linux on the
 standalone QEMU `apollo-qvp` machine. Its CPU/GIC/UART/virtio/RTC subset and
-generated device tree support AP boot without SystemC or firmware execution.
+Saturn DTB input support AP boot without SystemC or firmware execution.
+QEMU owns runtime DT fixups and disables devices outside its implemented subset.
 See [the QEMU Linux contract](qemu-apollo-linux.md); this profile does not
 qualify the full QBox hardware map or cross-domain firmware behavior.
 

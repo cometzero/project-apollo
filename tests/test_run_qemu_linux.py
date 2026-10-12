@@ -5,6 +5,7 @@ import fcntl
 import json
 from pathlib import Path
 import sys
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -16,6 +17,15 @@ SPEC = importlib.util.spec_from_file_location("qemu_linux", RUN_DIR / "run_qemu_
 runner = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(runner)
 sys.path.pop(0)
+
+
+@pytest.fixture(autouse=True)
+def saturn_dtb(tmp_path):
+    source = '/dts-v1/; / { chosen { bootargs = "console=ttyAMA0,115200 mem=4064M nr_cpus=4 rdinit=/init"; }; };'
+    path = tmp_path / "apollo-qvp-saturn-v.dtb"
+    subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", str(path)],
+                   input=source, text=True, check=True)
+    return path
 
 
 def fake_guest(tmp_path, source, *, bsp=True):
@@ -470,7 +480,26 @@ def test_i2s_mode_selects_machine_dt(tmp_path, mode):
     plan = runner.make_plan(args, tmp_path / "private")
     machine = plan["command"][plan["command"].index("-machine") + 1]
     assert machine == ("apollo-qvp,i2s-dma=off" if mode == "pio" else "apollo-qvp")
-    if mode == "pio":
-        args.dtb = tmp_path / "external.dtb"
-        with pytest.raises(ValueError, match="machine-generated DT"):
-            runner.make_plan(args, tmp_path / "private")
+    args.dtb = tmp_path / "external.dtb"
+    args.dtb.write_bytes((tmp_path / "apollo-qvp-saturn-v.dtb").read_bytes())
+    override = runner.make_plan(args, tmp_path / "private")
+    assert override["command"][-2:] == ["-dtb", str(args.dtb)]
+
+
+@pytest.mark.parametrize("cpus", [1, 4, 16])
+def test_saturn_input_is_unchanged_and_cpu_count_is_forwarded(tmp_path, saturn_dtb, cpus):
+    for name in ("Image", "qemu", "nexios-bsp-initramfs-apollo-qvp.cpio.gz",
+                 "nexios-bsp-initramfs-apollo-qvp.wic"):
+        (tmp_path / name).touch()
+    before = saturn_dtb.read_bytes()
+    args = runner.parser().parse_args([
+        "--bsp", "--qemu", str(tmp_path / "qemu"), "--deploy-dir", str(tmp_path),
+        "--cpus", str(cpus),
+    ])
+    plan = runner.make_plan(args, tmp_path / "out")
+    assert plan["command"][-2:] == ["-dtb", str(saturn_dtb)]
+    assert f"nr_cpus={cpus}" in plan["bootargs"].split()
+    assert "mem=4064M" in plan["bootargs"].split()
+    assert saturn_dtb.read_bytes() == before
+    args.bootargs = "console=ttyAMA0 custom=1"
+    assert runner.make_plan(args, tmp_path / "out")["bootargs"] == args.bootargs

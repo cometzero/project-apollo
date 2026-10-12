@@ -44,9 +44,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--rootfs", type=Path)
     p.add_argument("--reuse-autosd-disk", type=Path, metavar="PREVIOUS_OUT_DIR",
                    help="boot a completed UKIBoot run's private disk in place without rewriting slots")
-    p.add_argument("--dtb", type=Path, help="override the machine-generated device tree")
+    p.add_argument("--dtb", type=Path, help="override the deployed Saturn device tree")
     p.add_argument("--i2s-mode", choices=("dma", "pio"), default="dma",
-                   help="I2S transfer mode in the generated device tree (default: dma)")
+                   help="I2S transfer mode configured by QEMU (default: dma)")
     p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
     p.add_argument("--memory", default="4080M", help="Apollo DRAM size, default 4080M")
     p.add_argument("--bootargs", help="replace the default Linux command line")
@@ -102,16 +102,21 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
     initrd = (None if native else required(args.initrd or (Path(autosd["initrd"]) if autosd else
               deploy / f"{initrd_name}-apollo-qvp.cpio.gz"), "initramfs"))
     disk = required(args.rootfs or (Path(autosd["rootfs"]) if autosd else deploy / f"{image}-apollo-qvp.wic"), "rootfs disk")
-    bootargs = args.bootargs or autosd.get("bootargs") or "console=ttyAMA0 earlycon=pl011,0x1a400000 " + (
-        "rdinit=/init" if args.bsp else "rootwait root=PARTLABEL=rootro_a ro"
-    )
+    dtb = required(args.dtb or deploy / "apollo-qvp-saturn-v.dtb", "Saturn DTB")
+    bootargs = args.bootargs or autosd.get("bootargs")
+    if not bootargs and not native:
+        bootargs = subprocess.check_output(
+            ["fdtget", str(dtb), "/chosen", "bootargs"], text=True,
+        ).strip()
+        bootargs = re.sub(r"\bnr_cpus=\d+\b", f"nr_cpus={args.cpus}", bootargs)
+        if not args.bsp:
+            bootargs += " rootwait root=PARTLABEL=rootro_a ro"
+    bootargs = bootargs or ""
     if args.uki and not any(word.startswith("efi=") for word in bootargs.split()):
         # PREEMPT_RT disables runtime services by default. UKI userspace needs
         # EFI variables; enabling these services does not qualify RT latency.
         bootargs += " efi=runtime"
     machine = "apollo-qvp" + (",i2s-dma=off" if args.i2s_mode == "pio" else "")
-    if args.dtb and args.i2s_mode == "pio":
-        raise ValueError("--i2s-mode pio requires the machine-generated DT; omit --dtb")
     command = [str(executable), "-machine", machine, "-accel", "tcg",
                "-smp", str(args.cpus), "-m", args.memory, "-display", "none",
                "-chardev", "socket,id=hmp,fd=@MONITOR_FD@",
@@ -124,8 +129,7 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
                "-netdev", args.netdev,
                "-device", "virtio-net-device,netdev=net0,bus=virtio-mmio-bus.1,mac=52:54:00:12:34:56",
                "-device", "virtio-rng-device,bus=virtio-mmio-bus.2"]
-    if args.dtb:
-        command += ["-dtb", str(required(args.dtb, "DTB"))]
+    command += ["-dtb", str(dtb)]
     uki = None
     if efi:
         from autosd_disk import inspect_disk
@@ -180,6 +184,7 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
             "disk_path": str(reused_disk or out / "rootfs.wic"),
             "reused_disk": bool(reused_disk),
             "cpus": args.cpus, "source_rootfs": str(reused_disk or disk), "kernel": str(kernel) if not reused_disk and not native else None,
+            "source_dtb": str(dtb), "bootargs": bootargs,
             "initrd": str(initrd) if initrd else None, "provider": str(provider) if not args.qemu else None,
             "layout": "Linux UART 70%; QEMU monitor and interactive shell 15% each"}
 

@@ -31,8 +31,21 @@ it records the native executable and library paths used by the launcher.
 This manifest is tied to this build tree. `--qemu PATH` selects another
 binary and uses the caller's library environment.
 
-The machine implementation is `hw/arm/apollo-qvp.c`. Its generated DT
-describes the implemented Linux-facing Apollo hardware:
+The launcher passes the deployed `apollo-qvp-saturn-v.dtb` directly to QEMU
+with `-dtb`; it does not rewrite the DTB. The default command line comes from
+Saturn `/chosen/bootargs`, with `nr_cpus` adjusted to `--cpus` and product root
+arguments appended. `--bootargs` and AutoSD manifest arguments take precedence.
+
+QEMU's ARM loader sets the low memory bank, PSCI, command line and actual
+initramfs start/end in the in-memory DT. `hw/arm/apollo-qvp.c` adds the high
+memory bank and adapts Saturn to the implemented AP subset: it limits GIC
+redistributor regions and enabled CPUs to `-smp`, sets PL011/RTC register
+windows to the native models' 4 KiB size, disables unavailable
+peripherals, and removes I2S pinctrl dependencies. PIO mode also removes I2S
+DMA properties. Source DTB bytes remain unchanged. Direct QEMU invocation
+without `-dtb` retains the generated-tree fallback.
+
+The machine implements the following Linux-facing Apollo hardware:
 
 | Device | Address | Interrupt / contract |
 | --- | --- | --- |
@@ -49,8 +62,10 @@ describes the implemented Linux-facing Apollo hardware:
 
 The default RAM size is 4080 MiB, preserving the Apollo gap below 4 GiB.
 `--cpus`, `--memory`, `--kernel`, `--initrd`, `--rootfs` and `--bootargs`
-override individual inputs. `--dtb` is an advanced override: it must match
-this machine's devices; the full-system Apollo DT contains extra devices.
+override individual inputs. `--dtb` selects an alternative input DTB; its
+addresses and bindings must match this machine. The Saturn defaults include
+`mem=4064M`; use `--bootargs` to override that Linux memory cap if needed.
+`--memory` still controls the actual QEMU RAM allocation and DT memory banks.
 
 Interactive mode uses the same 70/30 tmux layout as the Linux-only QBox
 launcher: UART above, interactive QEMU HMP monitor and host shell below. Mouse selection
@@ -72,11 +87,12 @@ smoke check verifies an interactive guest, the CPU count and a disk read.
 Interactive sessions retain a `qemu.pid` for diagnostics; the supervisor
 owns and terminates its child when the session closes.
 
-RSE, SI CL0/CL1, SCMI, remoteproc/RPMsg, PFDI, DSU, watchdog, DMA, PCIe,
-I2C, SPI and audio are not implemented by this Linux boot machine.
+RSE, SI CL0/CL1, SCMI, remoteproc/RPMsg, PFDI, watchdog, PCIe,
+I2C and SPI are not implemented by this Linux boot machine. Native DMA350
+and DW I2S models provide DMA/PIO audio; this is not full-board qualification.
 Direct-kernel modes do not execute firmware; `--uki` executes standalone
 U-Boot and the EFI stub, not TF-A, OP-TEE, RSE or Safety Island firmware.
-The generated DT omits unavailable devices;
+QEMU disables unavailable Saturn devices in its in-memory DT;
 the original BSP checks still report their failures and enter the
 `nexios-bsp-failed#` shell. Boot smoke PASS is not full BSP qualification
 or evidence of FVP timing, power/reset or safety fidelity.
@@ -93,3 +109,10 @@ Evidence is under `build/qemu-apollo-qvp/{bsp-first,yocto-first,bsp-tmux-16}/`.
 The default BSP selftest remains FAIL for `dsu_cache`, `watchdog`,
 `remoteproc`, `rpmsg_bus`, `pfdi_misc` and `dsu_pmu`. The sixteen-CPU run
 additionally fails the original BSP's fixed four-CPU expectation.
+
+The Saturn-input update was checked with the native provider build, 105 focused
+launcher/helper tests, and direct BSP/product boot smoke. BSP also passed
+one-CPU/1 GiB and sixteen-CPU/PIO boot smoke. QEMU DT dumps checked variable
+initramfs sizes and preserved source bytes. Evidence and remaining selftest
+failures are recorded in `build/qemu-apollo-qvp/saturn-validation/validation.md`.
+EFI/UKI runtime and audio transfers were not rerun for this update.
