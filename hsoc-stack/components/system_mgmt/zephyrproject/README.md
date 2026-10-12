@@ -24,3 +24,16 @@ tree.
 Build the supported BSP with `./yocto_build.sh --bsp`. The
 `zephyr-demos-cl1` recipe uses the module list above with dependencies from
 the Yocto unpack tree.
+
+Apollo QVP CL1 integrates HIPC, zperf, PFDI and the PFDI agent in
+`zephyr_hsoc_src/boards/hsoc/apollo_qvp_safety_island_c1/`: the board
+`*_defconfig` owns software settings and the DTS owns shared memory,
+mailbox connections and enabled devices. The QVP recipe passes no feature
+configuration or devicetree overlays. FVP continues to use its overlays.
+
+The QVP board defaults to an enabled PFDI agent, matching the supported
+`PFDI_MONITOR_SUPPORT=1` profile. That Yocto switch still controls other
+firmware components; setting it to zero no longer disables the CL1 agent.
+`PFDI_SI_CL1_PERIOD_MS` remains a Yocto timing override (3000 ms by default).
+Applications using this QVP board inherit its integrated feature defaults
+and require the Safety Island and OpenAMP modules.
