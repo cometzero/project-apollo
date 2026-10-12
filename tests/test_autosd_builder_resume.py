@@ -13,7 +13,10 @@ def test_resume_selected_output(tmp_path, monkeypatch):
     builder.mkdir()
     old.mkdir()
     (old / "builder-uart.log").write_text("old evidence")
-    (builder / "launch.json").write_text(json.dumps({"command": ["fake-qemu"]}))
+    (builder / "vm").mkdir()
+    (builder / "vm/result.json").write_text(json.dumps({"status": "POWERED_OFF", "poweroff_observed": True}))
+    (builder / "launch.json").write_text(json.dumps({"command": ["/project/run_qbox_autosd.sh",
+        "--out-dir", str(builder / "vm"), "--rootfs", "original", "--scratch-disk", "scratch"]}))
     previous = tmp_path / "build/autosd/demo-regular-session"
     previous.mkdir(parents=True)
     (previous / "launch.json").write_text('{"environment": {}}')
@@ -39,8 +42,14 @@ def test_resume_selected_output(tmp_path, monkeypatch):
             return 0
 
     monkeypatch.setattr(module.socket, "socket", Socket)
-    monkeypatch.setattr(module.subprocess, "Popen", lambda *args, **kwargs: Process())
+    def popen(command, **kwargs):
+        assert command[0] == "/project/run_qbox_autosd.sh"
+        assert command[command.index("--out-dir") + 1] == str(output / "vm")
+        assert command[command.index("--rootfs") + 1] == str(builder / "vm/rootfs.wic")
+        assert command[command.index("--scratch-disk") + 1] == str(builder / "vm/efi-capsule.img")
+        return Process()
+    monkeypatch.setattr(module.subprocess, "Popen", popen)
     assert module.main() == 0
     assert (old / "builder-uart.log").read_text() == "old evidence"
     assert (output / "builder-uart.log").is_file()
-    assert (output / "qemu.pid").read_text() == "123456789\n"
+    assert (output / "launcher.pid").read_text() == "123456789\n"

@@ -1,13 +1,13 @@
 # AutoSD 전체 빌드 및 실행 가이드
 
 이 문서는 Apollo BSP 준비부터 외부 입력 다운로드, AutoSD 이미지 생성,
-Automotive 설치, QEMU/QBox 부팅 검증, 캐시 재사용까지의 통합 Quick Guide이다.
+Automotive 설치, QBox full-system 부팅 검증, 캐시 재사용까지의 통합 Quick Guide이다.
 모든 명령은 workspace 최상위에서 실행한다.
 
 Dashboard의 실제 데모 검증 결과는
 [빌드 이미지 Dashboard 검증 리포트](autosd-dashboard-image-validation-20260929-ko.md)를
 참고한다. 해당 리포트에서 발견한 RT 준비 누락을 보완하여 기본 Automotive
-빌드에는 이제 RT 패키지·probe·health-check 설치와 QEMU/QBox 준비 검사가 포함된다.
+빌드에는 이제 RT 패키지·probe·health-check 설치와 QBox full-system 준비 검사가 포함된다.
 준비 검사 PASS와 실제 RT 시나리오/latency 판정 PASS는 구분한다.
 통합 후 실제 빌드·QBox Dashboard RT 측정 결과는
 [RT 빌드 통합 검증 리포트](autosd-rt-build-validation-20260929-ko.md)를 참고한다.
@@ -39,7 +39,6 @@ Yocto의 `build/tmp_baremetal` 초기화는 별개다. BSP가 없다면 순서�
 ```bash
 git submodule update --init --recursive -- autosd/sig-docs autosd/automotive-image-builder autosd/crun
 ./yocto_build.sh --machine apollo-qvp --bsp
-./yocto_build.sh --keep-conf qemu-apollo-native
 ```
 
 공유 BitBake는 직렬 실행한다. 기존 matching BSP가 있으면 다시 빌드할 필요 없다.
@@ -58,6 +57,10 @@ appliance 커널은 필요 시 APT에서 다운로드·추출한다.
 시작 전 디스크 여유와 도구를 확인한다. 스크립트의 최소 여유 공간 검사는
 32 GiB이며, 여러 실행 디스크를 보관하면 더 많은 공간이 필요하다. 빌더 scratch는
 24 GiB 가상 디스크이고 실제 사용량과 가상 크기는 다를 수 있다.
+빌더도 `run_qbox_autosd.sh`를 사용하며 실행 디스크는 builder/vm 아래에 있다.
+두 번째 디스크 슬롯의 `efi-capsule.img`가 빌더 scratch 사본이다.
+첫 부팅 전 모듈/PFDI 설치에는 guestfish와 호스트 depmod가 필요하다.
+오프라인 설치는 regular 이미지에만 지원하며 기존 이미지 원본은 수정하지 않는다.
 
 ```bash
 df -h build
@@ -66,9 +69,8 @@ python3 -c 'import paramiko, yaml, jsonschema'
 docker info >/dev/null
 ```
 
-기본 SSH 포트는 builder `2226`, QEMU `2224`, QBox `2244`이며 loopback에 바인딩한다.
-다른 VM이 사용 중이면 정상 종료하거나 `--builder-port`, `--qemu-port`,
-`--qbox-port`를 각각 다른 포트로 지정한다. QBox full-system은 공유 리소스 때문에
+기본 SSH 포트는 builder `2226`, QBox `2244`이며 loopback에 바인딩한다.
+다른 VM이 사용 중이면 정상 종료하거나 `--builder-port`, `--qbox-port`를 각각 다른 포트로 지정한다. QBox full-system은 공유 리소스 때문에
 포트만 바꿔 동시에 실행하지 않는다. `--dry-run`은 계획 출력이지 전체 선행 조건
 검사나 부팅 검증이 아니다.
 
@@ -104,15 +106,15 @@ byte-identical 재현이나 완전한 offline 빌드를 보장하지 않는다.
 ```
 
 입력 준비 후 격리된 ARM64 builder VM에서 AIB 빌드 → qcow2 회수/SHA 비교 →
-QEMU UKI 부팅 → 필수 패키지·모듈 설치 → Automotive 구성 → 정상 종료 →
-QBox full-system 네 도메인 부팅/guest 검사 → 정상 종료를 수행한다.
+private 디스크에 matching 모듈/PFDI 오프라인 설치 →
+QBox full-system 네 도메인 부팅 → SSH 패키지 준비 → Automotive 구성/guest 검사 → 정상 종료를 수행한다.
 
 | 단계 | 확인하는 결과 |
 |---|---|
 | 입력 준비 | nightly checksum, ARM64 AIB digest, guestfish 동작, crun 소스/바이너리 hash |
 | builder/AIB | matching 모듈 배포, 공식 manifest 빌드, qcow2·osbuild manifest 생성 |
 | 결과 회수 | guest/host SHA256 일치, `qemu-img check`, builder 정상 종료 |
-| QEMU | EFI/UKIBoot, 커널 release, SELinux Enforcing, QM PID namespace |
+| QBox guest | EFI/UKIBoot, 커널 release, SELinux Enforcing, QM PID namespace |
 | Automotive | BlueChi root/QM online, Safety Monitor HEALTHY, ADAS/QM 서비스 |
 | RT 준비 | root RT 패키지, QM stress-ng, 양쪽 probe 실행/hash 일치, RT 커널 및 timerlat/osnoise tracer |
 | QBox full-system | RSE·SI CL0·SI CL1·AP 부팅 표식, HIPC/PFDI 모듈, guest 정상 상태 |
@@ -206,7 +208,7 @@ AIB 작업 디스크를 자동으로 이어받지 않는다.
 | `CACHE/crun/` | 소스, sysroot, 바이너리, base image archive | 소스/패치/빌드 스크립트/hash 일치 시 완성된 바이너리 재사용 |
 | `WORK/builder/` | 빌더 OS와 scratch 디스크 | 실행마다 새로 생성, 자동 resume 없음 |
 | `WORK/fetch/` | 완성된 qcow2 및 osbuild manifest | 명시적 `--image` 입력으로 재사용 가능 |
-| `WORK/qemu/rootfs.wic` | 모듈·Automotive를 설치한 QEMU 디스크 | 해당 실행의 QBox 입력으로 복사 |
+| `WORK/builder/vm/efi-capsule.img` | 빌더의 private 24 GiB scratch | 정상 종료 후에만 회수 |
 
 `WORK`는 `--work-dir`이며 기본값은 `CACHE/minimal-qm-build-<UTC시간>`이다.
 AIB 중간 결과는 호스트 디렉터리에 직접 펼쳐지지 않고 아래 디스크에 저장된다.
@@ -254,7 +256,7 @@ nightly/AIB/crun 입력은 재사용하지만 AIB OS 빌드와 부팅 검증은 
 ```
 
 builder VM/AIB 생성 단계만 생략한다. 이미지 변환, 필수 도구·모듈 설치,
-Automotive 구성 및 QEMU/QBox 검사는 다시 수행한다. 이는 qcow2에서 시작하는
+Automotive 구성 및 QBox full-system 검사는 다시 수행한다. 이는 qcow2에서 시작하는
 재검증이지 이전 private VM의 실행 상태 복원이 아니다.
 
 ### 6.3 설정·소스 변경 또는 완전 재생성
@@ -281,7 +283,7 @@ nightly ID, builder reference, crun 소스/패치가 기존 캐시와 다르면 
 # AIB 상세 빌드 출력
 tail -f build/autosd/run-01/aib/console.log
 # QEMU 부팅 출력
-tail -f build/autosd/run-01/qemu/linux-uart.log
+tail -f build/qbox-apollo-qvp/autosd-run-01/linux-uart.log
 # QBox AP 부팅 출력 (RSE/SI UART도 같은 출력 디렉터리에 존재)
 tail -f build/qbox-apollo-qvp/autosd-run-01/linux-uart.log
 ```

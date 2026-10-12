@@ -12,7 +12,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts/run"))
-import run_qemu_linux
+from autosd_manifest import autosd_manifest
+from run_qbox_autosd import required
 
 
 def parser():
@@ -21,8 +22,9 @@ def parser():
     p.add_argument("--deploy-dir", type=Path)
     p.add_argument("--manifest", type=Path, help="default: BUILD_DIR/autosd/regular.json")
     p.add_argument("--rootfs", type=Path, help="override the manifest source disk")
-    p.add_argument("--kernel", type=Path, help="default: Apollo Yocto deploy Image")
-    p.add_argument("--qemu", type=Path, help="default: canonical Yocto QEMU provider")
+    p.add_argument("--modules", type=Path)
+    p.add_argument("--guestfish", default="guestfish")
+    p.add_argument("--uki", type=Path, help="default: Apollo BSP UKI")
     p.add_argument("--work-dir", type=Path, default=ROOT / "build/autosd/demo-builder-fullsystem")
     p.add_argument("--ssh-port", type=int, default=2226)
     p.add_argument("--dry-run", action="store_true")
@@ -57,29 +59,21 @@ def make_plan(args):
     if work.exists():
         raise ValueError(f"Builder output already exists; preserve it and choose a new --work-dir: {work}")
     manifest = args.manifest or args.build_dir / "autosd/regular.json"
-    forwarded = ["--build-dir", str(args.build_dir), "--autosd", str(manifest), "--netdev",
-                 f"user,id=net0,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22"]
-    for flag, value in (("--rootfs", args.rootfs), ("--kernel", args.kernel),
-                        ("--qemu", args.qemu), ("--deploy-dir", args.deploy_dir)):
-        if value is not None:
-            forwarded += [flag, str(value)]
-    plan = run_qemu_linux.make_plan(run_qemu_linux.parser().parse_args(forwarded), work)
-    command = plan["command"]
-    start = command.index("-chardev")
-    end = command.index("-kernel")
-    command[start:end] = ["-monitor", "none", "-serial", "stdio"]
-    command[-2:] = ["-drive", f"if=none,id=scratch,format=raw,file={str(work / 'scratch.raw').replace(',', ',,')}",
-                    "-device", "virtio-blk-device,drive=scratch,bus=virtio-mmio-bus.2"]
-    command[command.index("-kernel") + 1] = str(work / "Image")
-    command[command.index("-initrd") + 1] = str(work / "initrd.img")
-    # Nightly debug/expedited-RCU settings make the TCG builder needlessly slow.
-    debug_args = {"slub_debug=FPZ", "rcupdate.rcu_expedited=1", "rcupdate.rcu_normal_after_boot=0"}
-    append = command.index("-append") + 1
-    command[append] = " ".join(word for word in command[append].split() if word not in debug_args)
-    plan["layout"] = "unattended builder; persistent uart.log"
-    plan.update(work_dir=str(work), manifest=str(manifest.absolute()), ssh_port=args.ssh_port,
-                purpose="isolated full-system AIB builder; direct boot is not UKIBoot qualification")
-    return plan
+    manifest = manifest.absolute()
+    inputs = autosd_manifest(manifest)
+    source = required(args.rootfs or Path(inputs["rootfs"]), "builder rootfs")
+    deploy = (args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp").absolute()
+    uki = required(args.uki or deploy / "nexios-bsp-initramfs-a.efi", "builder UKI")
+    command = [str(ROOT / "run_qbox_autosd.sh"), "--autosd", str(manifest),
+               "--rootfs", str(source), "--uki", str(uki),
+               "--build-dir", str(args.build_dir.absolute()), "--deploy-dir", str(deploy),
+               "--headless", "--out-dir", str(work / "vm"),
+               "--ssh-port", str(args.ssh_port), "--scratch-disk", str(work / "scratch.raw"),
+               "--timeout", "14400", "--modules-archive",
+               str(args.modules or deploy / "modules-apollo-qvp.tgz"), "--guestfish", args.guestfish]
+    return {"command": command, "environment": {}, "source_rootfs": str(source),
+            "uki": str(uki), "work_dir": str(work), "manifest": str(manifest),
+            "ssh_port": args.ssh_port, "purpose": "isolated full-system QBox AIB builder"}
 
 
 def main(argv=None):
@@ -100,17 +94,14 @@ def main(argv=None):
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", args.ssh_port))
         work.mkdir(parents=True, exist_ok=False)
-        shutil.copyfile(plan["kernel"], work / "Image")
-        shutil.copyfile(plan["initrd"], work / "initrd.img")
-        subprocess.run(["cp", "--sparse=always", "--reflink=auto", str(source), str(work / "rootfs.wic")], check=True)
         with (work / "scratch.raw").open("xb") as disk:
             disk.truncate(24 * 1024**3)
-        plan["kernel_sha256"] = hashlib.sha256((work / "Image").read_bytes()).hexdigest()
+        plan["uki_sha256"] = hashlib.sha256(Path(plan["uki"]).read_bytes()).hexdigest()
         (work / "launch.json").write_text(json.dumps(plan, indent=2) + "\n")
         with (work / "uart.log").open("xb") as log:
             child = subprocess.Popen(plan["command"], env=os.environ | plan["environment"],
                                      stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
-            (work / "qemu.pid").write_text(str(child.pid) + "\n")
+            (work / "launcher.pid").write_text(str(child.pid) + "\n")
             return child.wait()
     except (ValueError, OSError) as error:
         raise SystemExit(str(error)) from error

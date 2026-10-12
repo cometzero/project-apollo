@@ -534,3 +534,30 @@ def test_stats_enable_monitor_and_qmp(inputs, interval):
     assert plan["qmp_enabled"]
     assert "--monitor" in plan["command"]
     assert "--stats-interval" in plan["command"]
+
+
+def test_builder_second_disk_and_regular_offline_payload(inputs, tmp_path):
+    scratch = tmp_path / "scratch.raw"
+    scratch.touch()
+    inputs.scratch_disk = scratch
+    inputs.modules_archive = tmp_path / "modules.tgz"
+    inputs.modules_archive.touch()
+    inputs.provision_ready_file = tmp_path / "ready"
+    plan = runner.make_plan(inputs)
+    assert plan["efi_source"] == str(scratch)
+    assert plan["modules_archive"] == str(inputs.modules_archive)
+    assert plan["provision_ready_file"] == str(inputs.provision_ready_file)
+    manifest = json.loads(inputs.autosd.read_text())
+    manifest["mode"] = "ostree"
+    inputs.autosd.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="regular"):
+        runner.make_plan(inputs)
+    inputs.modules_archive = None
+    assert runner.make_plan(inputs)["mode"] == "ostree"
+
+
+def test_provisioner_waits_for_bootstrap_marker(tmp_path):
+    provisioner = runner.EpochProvisioner({"ssh_port": 2244,
+        "provision_ready_file": str(tmp_path / "ready")}, tmp_path)
+    assert provisioner.update(1, True)["status"] == "WAITING"
+    assert provisioner.thread is None

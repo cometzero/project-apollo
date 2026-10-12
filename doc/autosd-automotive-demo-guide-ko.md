@@ -194,8 +194,8 @@ df -h /srv/aib
 systemctl poweroff
 # host: UART Power down과 QEMU 프로세스 종료, host 여유 공간 확인 후
 df -h /build
-qemu-img info -f raw build/autosd/demo-builder-fullsystem/scratch.raw
-qemu-img resize -f raw build/autosd/demo-builder-fullsystem/scratch.raw 40G
+qemu-img info -f raw build/autosd/demo-builder-fullsystem/vm/efi-capsule.img
+qemu-img resize -f raw build/autosd/demo-builder-fullsystem/vm/efi-capsule.img 40G
 python3 scripts/autosd_demo/ota_builder_resume.py --out build/autosd/automotive-guide-builder-expanded
 # 재부팅한 builder: lsblk/UUID로 대상 확인 후 기존 filesystem 확장
 test "$(blkid -s UUID -o value /dev/disk/by-label/apollo-aib-scrat)" = 8c4d0da8-b098-4885-b027-4bc7c7d2af8f
@@ -322,7 +322,7 @@ QEMU 프로세스 종료 및 scratch를 열고 있는 프로세스 부재를 확
 ```sh
 test ! -e build/autosd/automotive-demo-bundle/automotive.qcow2
 debugfs -R 'dump /automotive-demo-build/bundle/automotive.qcow2 build/autosd/automotive-demo-bundle/automotive.qcow2' \
-  build/autosd/demo-builder-fullsystem/scratch.raw
+  build/autosd/demo-builder-fullsystem/vm/efi-capsule.img
 sha256sum build/autosd/automotive-demo-bundle/automotive.qcow2
 qemu-img check -f qcow2 build/autosd/automotive-demo-bundle/automotive.qcow2
 # builder에서 기록한 SHA와 일치한 뒤 위 raw 변환 명령 수행
@@ -332,16 +332,15 @@ qemu-img check -f qcow2 build/autosd/automotive-demo-bundle/automotive.qcow2
 
 ### 3.3. 이미지 부팅 [host 터미널 A]
 
+현재 AutoSD 실행은 `run_qbox_autosd.sh` full-system 경로로 통일되어 있다.
+아래 A/native UKI 설명은 과거 검증 기록이며 현재 실행 절차가 아니다.
+원본 native UKI 슬롯을 보존하는 standalone QEMU 부팅은 더 이상 지원하지 않는다.
+새 이미지는 [통합 빌드 가이드](autosd-minimal-qm-build-ko.md)로 준비하고 B 경로를 사용한다.
+이전의 부팅/성능 검증 결과는 새 full-system 경로의 검증 결과로 간주하지 않는다.
+
 **A: 새 AIB 이미지 — native UKI 경로, 신규 customization 이미지 부팅 검증 완료**
 
-```sh
-./run_qemu_linux.sh \
-  --native-autosd-disk build/autosd/automotive-demo-bundle/automotive.raw \
-  --ukiboot-dir build/tmp_baremetal/deploy/images/apollo-qvp \
-  --headless --timeout 1800 \
-  --out-dir build/autosd/automotive-demo-run \
-  --netdev user,id=net0,hostfwd=tcp:127.0.0.1:2232-:22
-```
+현재 미지원: native UKI를 보존하는 AP-only 부팅 절차는 제거되었다.
 
 **B: customization 설치 완료 regular 이미지 — 검증된 재현 경로**
 
@@ -349,12 +348,13 @@ qemu-img check -f qcow2 build/autosd/automotive-demo-bundle/automotive.qcow2
 원본 디스크를 직접 수정하지 않는다. `--reuse-disk` 같은 공유 사용 옵션을 추가하지 않는다.
 
 ```sh
-./run_qemu_linux.sh \
+./run_qbox_autosd.sh \
   --autosd build/autosd/demo-minimal-qm-prepared/regular.json \
+  --modules-archive build/tmp_baremetal/deploy/images/apollo-qvp/modules-apollo-qvp.tgz \
   --rootfs build/autosd/automotive-scenario-coldboot/rootfs.wic \
   --headless --timeout 1800 \
   --out-dir build/autosd/automotive-demo-run \
-  --netdev user,id=net0,hostfwd=tcp:127.0.0.1:2232-:22
+  --ssh-port 2232
 ```
 
 터미널 B에서 `tail -f build/autosd/automotive-demo-run/linux-uart.log`로 부팅 로그를
@@ -473,12 +473,13 @@ unmount와 `Power down`, launcher 종료 결과를 확인한다. **QEMU 종료 �
 터미널 A에서 실행한다.
 
 ```sh
-./run_qemu_linux.sh \
+./run_qbox_autosd.sh \
   --autosd build/autosd/demo-minimal-qm-prepared/regular.json \
+  --modules-archive build/tmp_baremetal/deploy/images/apollo-qvp/modules-apollo-qvp.tgz \
   --rootfs build/autosd/automotive-demo-run/rootfs.wic \
   --headless --timeout 600 \
   --out-dir build/autosd/automotive-demo-reboot-run \
-  --netdev user,id=net0,hostfwd=tcp:127.0.0.1:2232-:22
+  --ssh-port 2232
 ```
 
 부팅 후 터미널 B:
@@ -495,22 +496,7 @@ python3 scripts/autosd_demo/guest_exec.py --port 2232 \
 마지막 VM도 종료될 때까지 기다린다. fault 상태는 `/run`이므로 reboot를 넘어서
 보존되지 않는다. 영속 fault latch가 필요한 제품은 별도 설계가 필요하다.
 
-**A: native UKI 경로** — B 명령 대신 아래 명령을 사용한다. 첫 poweroff 후 반드시
-터미널 A의 QEMU 종료를 확인한 뒤, 두 번째 launcher는 터미널 A에서 실행한다.
-
-```sh
-ssh -i "$AUTOSD_DEMO_KEY" -p 2232 root@127.0.0.1 'systemctl poweroff'
-# QEMU 종료를 확인한 다음 터미널 A:
-./run_qemu_linux.sh \
-  --native-autosd-disk build/autosd/automotive-demo-run/rootfs.wic \
-  --ukiboot-dir build/tmp_baremetal/deploy/images/apollo-qvp \
-  --headless --timeout 600 --out-dir build/autosd/automotive-demo-reboot-run \
-  --netdev user,id=net0,hostfwd=tcp:127.0.0.1:2232-:22
-# 부팅 후 터미널 B:
-ssh -i "$AUTOSD_DEMO_KEY" -p 2232 root@127.0.0.1 \
-  'bash /root/wait-ready-guest.sh && bash /root/check-guest.sh'
-ssh -i "$AUTOSD_DEMO_KEY" -p 2232 root@127.0.0.1 'systemctl poweroff'
-```
+**A: native UKI 경로**의 과거 cold-boot 절차는 현재 지원하지 않는다.
 
 두 경로 모두 UART `Power down`과 launcher 종료를 확인하고 로그/private disk를
 보존한다. A의 boot-success/OTA health 정책 검증은 이 smoke demo와 별개다.
@@ -547,7 +533,7 @@ bash /root/check-guest.sh
 
 ### 3.9. QBox full-system 전원·SBSA watchdog 확장
 
-QEMU 데모와 별도로 RSE·SI CL0·SI CL1·AP를 실행하는 경우에는
+현재 기본인 RSE·SI CL0·SI CL1·AP full-system의 추가 검증은
 [full-system Quick Guide](autosd-fullsystem-dashboard-ko.md)를 따른다.
 다른 full-system VM을 정상 종료하고 private 실행 디스크를 복사할 여유 공간을
 확인한 뒤 `./run_qbox_autosd.sh --reset-trace`로 시작한다.

@@ -20,7 +20,8 @@ import threading
 import time
 
 import qbox_load_stats
-from run_qbox_linux import autosd_manifest, required
+from autosd_manifest import autosd_manifest
+from run_qbox_linux import required
 from autosd_uki import inspect_uki, prepare_uki
 from autosd_disk import inspect_disk, prepare_disk
 from autosd_esp import check_private_esp
@@ -67,6 +68,10 @@ def parser():
     p.add_argument("--autosd", type=Path,
                    help="manifest (default: BUILD/autosd/demo-minimal-qm-prepared/regular.json)")
     p.add_argument("--rootfs", type=Path)
+    p.add_argument("--modules-archive", type=Path, help="install matching modules and PFDI offline before first boot (regular images)")
+    p.add_argument("--guestfish", default="guestfish", help="libguestfs tool for offline payload installation")
+    p.add_argument("--scratch-disk", type=Path, help="copy a builder scratch disk into the second disk slot instead of the EFI capsule disk")
+    p.add_argument("--provision-ready-file", type=Path, help="wait for this local automation marker before SSH module provisioning")
     p.add_argument("--build-dir", type=Path, default=ROOT / "build")
     p.add_argument("--deploy-dir", type=Path)
     p.add_argument("--uki", type=Path)
@@ -146,6 +151,9 @@ def make_plan(args):
         if selected is not None:
             selection = "latest matching full-system PASS and normal poweroff"
     source = required(selected or Path(manifest["rootfs"]), "AutoSD rootfs")
+    if args.modules_archive and manifest["mode"] != "regular":
+        raise ValueError("--modules-archive requires a regular AutoSD image")
+    modules_archive = required(args.modules_archive, "matching modules archive") if args.modules_archive else None
     if out.exists() and any(out.iterdir()):
         raise ValueError("--out-dir must be empty; never overwrite a previous run")
     initrd = required(Path(manifest["initrd"]), "AutoSD initrd")
@@ -197,7 +205,9 @@ def make_plan(args):
             "initrd": str(initrd), "uki_source": str(uki), "uki": str(out / "autosd.efi"),
             "uki_source_metadata": inspect_uki(uki), "source_disk": inspect_disk(source),
             "loader_files": loader_files, "bootargs": bootargs,
-            "efi_source": str(required(deploy / "efi-capsule-update-disk-image-apollo-qvp.img", "EFI capsule disk")),
+            "efi_source": str(required(args.scratch_disk or deploy / "efi-capsule-update-disk-image-apollo-qvp.img", "second disk")),
+            "provision_ready_file": str(args.provision_ready_file.absolute()) if args.provision_ready_file else None,
+            "modules_archive": str(modules_archive) if modules_archive else None, "guestfish": args.guestfish,
             "command": command, "out_dir": str(out), "timeout": args.timeout,
             "headless": args.headless, "session": session, "no_attach": args.no_attach,
             "build_dir": str(build), "ssh_port": args.ssh_port,
@@ -294,7 +304,9 @@ class EpochProvisioner:
                 if self.result.get("status") != "PASS":
                     self.result["status"] = "FAIL"
                 write_json(self.out / "modules.json", self.result)
-        if login and not self.started and self.thread is None and "ssh_port" in self.plan:
+        ready_file = self.plan.get("provision_ready_file")
+        ready = not ready_file or Path(ready_file).is_file()
+        if login and ready and not self.started and self.thread is None and "ssh_port" in self.plan:
             self.started = True
             self.result = {"status": "RUNNING", "boot_epoch": epoch}
             directory = self.out / "provision" / f"boot-{epoch}"
@@ -572,6 +584,10 @@ def main():
     for source, destination in ((plan["source_rootfs"], out / "rootfs.wic"),
                                 (plan["efi_source"], out / "efi-capsule.img")):
         subprocess.run(["cp", "--reflink=auto", "--sparse=always", source, str(destination)], check=True)
+    if plan.get("modules_archive"):
+        from autosd_offline_modules import prepare
+        plan["offline_payload"] = prepare(out / "rootfs.wic", plan["modules_archive"],
+                                          Path(plan["build_dir"]), plan["guestfish"])
     plan["prepared_uki"] = prepare_uki(Path(plan["uki_source"]), Path(plan["initrd"]),
                                       plan["bootargs"], Path(plan["uki"]))
     plan["prepared_disk"] = prepare_disk(out / "rootfs.wic", Path(plan["uki"]),

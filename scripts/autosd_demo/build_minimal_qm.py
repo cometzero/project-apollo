@@ -14,6 +14,7 @@ from pathlib import Path
 import shlex
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import tarfile
@@ -56,17 +57,14 @@ def parser():
     p.add_argument("--cc", default="aarch64-linux-gnu-gcc", help="customization static workload compiler")
     p.add_argument("--build-dir", type=Path, default=ROOT / "build")
     p.add_argument("--deploy-dir", type=Path)
-    p.add_argument("--kernel", type=Path)
     p.add_argument("--uki", type=Path)
     p.add_argument("--modules", type=Path)
-    p.add_argument("--qemu", type=Path)
     p.add_argument("--guestfish", default="guestfish")
     p.add_argument("--qemu-img", default="qemu-img")
     p.add_argument("--qbox-out-dir", type=Path, help="new full-system output directory; default is discoverable by run_qbox_autosd.sh")
     p.add_argument("--output", type=Path, help="default: BUILD_DIR/autosd/demo-minimal-qm-prepared")
     p.add_argument("--work-dir", type=Path, help="default: new timestamped directory under BUILD_DIR/autosd")
     p.add_argument("--builder-port", type=int, default=2226)
-    p.add_argument("--qemu-port", type=int, default=2224)
     p.add_argument("--qbox-port", type=int, default=2244)
     p.add_argument("--boot-timeout", type=int, default=1800)
     p.add_argument("--build-timeout", type=int, default=7200)
@@ -75,7 +73,7 @@ def parser():
 
 
 def resolve(args):
-    for key in ("manifest", "aib_manifest", "image", "build_dir", "deploy_dir", "kernel", "uki", "modules", "qemu", "output", "work_dir", "qbox_out_dir", "crun_binary", "builder_archive"):
+    for key in ("manifest", "aib_manifest", "image", "build_dir", "deploy_dir", "uki", "modules", "output", "work_dir", "qbox_out_dir", "crun_binary", "builder_archive"):
         value = getattr(args, key)
         if value is not None:
             setattr(args, key, value.absolute())
@@ -83,7 +81,6 @@ def resolve(args):
     args.output = args.output or args.build_dir / "autosd/demo-minimal-qm-prepared"
     args.work_dir = args.work_dir or args.build_dir / "autosd" / ("minimal-qm-build-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ"))
     args.deploy_dir = args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp"
-    args.kernel = args.kernel or args.deploy_dir / "Image"
     args.uki = args.uki or args.deploy_dir / "nexios-bsp-initramfs-a.efi"
     args.modules = args.modules or args.deploy_dir / "modules-apollo-qvp.tgz"
     args.qbox_out_dir = args.qbox_out_dir or args.build_dir / "qbox-apollo-qvp" / ("autosd-" + args.work_dir.name)
@@ -102,7 +99,7 @@ def resolve(args):
         import re
         if not re.fullmatch(r"quay\.io/centos-sig-automotive/automotive-image-builder@sha256:[0-9a-f]{64}", args.builder_image):
             raise ValueError("--builder-image must be an official AIB image pinned to a SHA256 digest")
-    ports = [args.builder_port, args.qemu_port, args.qbox_port]
+    ports = [args.builder_port, args.qbox_port]
     if len(set(ports)) != len(ports) or any(not 1024 <= port <= 65535 for port in ports):
         raise ValueError("SSH ports must be distinct unprivileged TCP ports")
     return args
@@ -116,28 +113,19 @@ def plan(args):
     commands = {}
     if not args.image:
         commands["builder"] = [py, str(ROOT / "scripts/autosd_demo/builder_launch.py"),
-            "--manifest", str(args.manifest), "--kernel", str(args.kernel),
+            "--manifest", str(args.manifest), "--uki", str(args.uki),
+            "--modules", str(args.modules), "--guestfish", args.guestfish,
             "--work-dir", str(work / "builder"), "--ssh-port", str(args.builder_port),
             "--build-dir", str(args.build_dir), "--deploy-dir", str(args.deploy_dir)]
-        if args.qemu:
-            commands["builder"] += ["--qemu", str(args.qemu)]
     commands["prepare"] = [py, str(ROOT / "scripts/prepare_autosd.py"), "--image", str(image),
         "--mode", "regular", "--output", str(args.output), "--guestfish", args.guestfish,
         "--qemu-img", args.qemu_img]
-    commands["qemu"] = [str(ROOT / "run_qemu_linux.sh"), "--autosd", str(prepared),
-        "--uki", str(args.uki), "--build-dir", str(args.build_dir), "--deploy-dir", str(args.deploy_dir),
-        "--headless", "--out-dir", str(work / "qemu"), "--netdev",
-        f"user,id=net0,hostfwd=tcp:127.0.0.1:{args.qemu_port}-:22"]
-    if args.qemu:
-        commands["qemu"] += ["--qemu", str(args.qemu)]
-    commands["modules"] = [py, str(ROOT / "scripts/run/autosd_fullsystem_modules.py"),
-        "--prepare-only", "--port", str(args.qemu_port), "--build-dir", str(args.build_dir),
-        "--out", str(work / "fullsystem-modules")]
     commands["qbox"] = [str(ROOT / "run_qbox_autosd.sh"), "--autosd", str(prepared),
-        "--rootfs", str(work / "qemu/rootfs.wic"), "--uki", str(args.uki),
+        "--uki", str(args.uki), "--modules-archive", str(args.modules), "--guestfish", args.guestfish,
         "--build-dir", str(args.build_dir), "--deploy-dir", str(args.deploy_dir),
         "--headless", "--out-dir", str(args.qbox_out_dir), "--ssh-port", str(args.qbox_port),
-        "--timeout", str(2 * args.boot_timeout + 2400)]
+        "--timeout", str(2 * args.boot_timeout + 2400),
+        "--provision-ready-file", str(work / "provision-ready")]
     if args.customize:
         commands["customization-bundle"] = [py, str(ROOT / "autosd/customization/prepare.py"),
             "--out", str(work / "customization-bundle"), "--crun-binary", str(args.crun_binary), "--cc", args.cc,
@@ -149,11 +137,10 @@ def plan(args):
         "customize": args.customize,
         "rt_tools": args.customize,
         "stages": ["preflight", "builder boot + matching modules + AIB build + SHA-verified fetch" if not args.image else "validate supplied qcow2",
-            "graceful builder shutdown", "prepare image", "QEMU UKI boot", "UART root login + SSH/iproute bootstrap",
+            "graceful builder shutdown", "prepare image", "QBox full boot", "UART root login + SSH/iproute bootstrap",
             "matching modules + full-system assets",
             "minimal QM guest verification",
-            *(["Automotive + RT bundle and root/QM packages", "QEMU RT readiness"] if args.customize else []),
-            "graceful QEMU shutdown", "QBox full boot + all domains/modules",
+            *(["Automotive + RT bundle and root/QM packages"] if args.customize else []),
             *(["QBox Automotive + RT readiness"] if args.customize else []),
             "minimal QM guest and UKIBoot verification", "graceful QBox shutdown"],
         "limitations": ("Automotive and RT tools installation/readiness only; scenario suites not executed." if args.customize
@@ -167,11 +154,11 @@ def preflight(args):
             raise ValueError(f"Refusing to overwrite existing directory: {path}")
     if not args.image and not args.builder_image:
         raise ValueError("Use build_autosd_minimal_qm.sh to prepare inputs, or supply --builder-image")
-    required = [args.kernel, args.uki, args.modules,
+    required = [args.uki, args.modules,
                 args.aib_manifest]
     required += [args.deploy_dir / name for name in (
         "ukibootaa64.efi", "slot_a.addon.efi", "slot_b.addon.efi",
-        "u-boot-apollo-qemu.bin", "efi-capsule-update-disk-image-apollo-qvp.img",
+        "efi-capsule-update-disk-image-apollo-qvp.img",
         "nexios-bsp-initramfs-apollo-qvp.qboxconf")]
     required.append(args.image if args.image else args.manifest)
     if args.builder_archive:
@@ -182,14 +169,10 @@ def preflight(args):
             raise ValueError(f"Missing customization compiler: {args.cc}")
         import yaml  # noqa: F401
         import jsonschema  # noqa: F401
-    if args.qemu:
-        required.append(args.qemu)
-    else:
-        required.append(args.build_dir / "tmp_baremetal/deploy/qemu-apollo-native/qemu-apollo-native.json")
     for path in required:
         if not path.is_file():
             raise ValueError(f"Missing prerequisite: {path}; build the Apollo BSP/provider first")
-    for binary in (args.guestfish, args.qemu_img, "cp", "modinfo", "fsck.fat", "mcopy", "mdir"):
+    for binary in (args.guestfish, args.qemu_img, "cp", "modinfo", "depmod", "fsck.fat", "mcopy", "mdir"):
         if not shutil.which(binary):
             raise ValueError(f"Missing host tool: {binary}; no packages will be installed automatically")
     import paramiko  # noqa: F401; fail before creating images
@@ -205,7 +188,7 @@ def preflight(args):
         ancestor = ancestor.parent
     if shutil.disk_usage(ancestor).free < 32 * 1024**3:
         raise ValueError("At least 32 GiB free disk space is required")
-    ports = (args.qemu_port, args.qbox_port) if args.image else (args.builder_port, args.qemu_port, args.qbox_port)
+    ports = (args.qbox_port,) if args.image else (args.builder_port, args.qbox_port)
     for port in ports:
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", port))
@@ -286,15 +269,15 @@ class Pipeline:
                 client.close()
         raise TimeoutError(f"SSH not ready on {port}")
 
-    def bootstrap_qemu_ssh(self, process):
+    def bootstrap_qbox_ssh(self, process):
         """Bootstrap official minimal_qm through the launcher's owned UART.
 
         That image intentionally has no SSH server. Wait for auto-login, then
         require a standalone output marker, never the echoed command text.
         """
-        uart = self.args.work_dir / "qemu/linux-uart.log"
-        uart_in = self.args.work_dir / "qemu/linux-uart.in"
-        stage = "qemu-ssh-bootstrap"
+        uart = self.args.qbox_out_dir / "linux-uart.log"
+        uart_in = self.args.qbox_out_dir / "full-system/primary-uart-input.fifo"
+        stage = "qbox-ssh-bootstrap"
         token = uuid.uuid4().hex
         prefix = "APOLLO_SSH_BOOTSTRAP_" + token
         success, failure = prefix + "_PASS", prefix + "_FAIL"
@@ -316,7 +299,7 @@ class Pipeline:
         try:
             while time.monotonic() < deadline:
                 if process.poll() is not None:
-                    raise RuntimeError("QEMU exited during SSH bootstrap")
+                    raise RuntimeError("QBox exited during SSH bootstrap")
                 if uart.is_file():
                     with uart.open("rb") as stream:
                         if sent:
@@ -328,11 +311,15 @@ class Pipeline:
                     if not sent and re.search(r"(?:\[root@[^\n]*\]#|root@[^\n]*#)\s*$", clean):
                         # Do not create a missing input endpoint: only the
                         # owned launcher may establish the console channel.
-                        if not uart_in.is_file():
-                            raise RuntimeError("QEMU UART input endpoint is missing")
+                        if not uart_in.exists() or not stat.S_ISFIFO(uart_in.stat().st_mode):
+                            raise RuntimeError("QBox UART input endpoint is missing")
                         offset = uart.stat().st_size
-                        with uart_in.open("ab") as destination:
-                            destination.write(command.encode())
+                        fd = os.open(uart_in, os.O_WRONLY | os.O_NONBLOCK)
+                        try:
+                            if os.write(fd, command.encode()) != len(command.encode()):
+                                raise RuntimeError("Incomplete QBox UART command write")
+                        finally:
+                            os.close(fd)
                         sent = True
                         deadline = time.monotonic() + 1020
                     elif sent:
@@ -344,7 +331,7 @@ class Pipeline:
                         if failure in lines:
                             raise RuntimeError("Guest SSH package installation/service startup failed")
                 time.sleep(2)
-            raise TimeoutError("QEMU root console/SSH bootstrap exceeded deadline")
+            raise TimeoutError("QBox root console/SSH bootstrap exceeded deadline")
         except (OSError, RuntimeError) as error:
             result["error"] = str(error)
             raise
@@ -363,8 +350,8 @@ class Pipeline:
         code = process.wait(timeout=300)
         if code:
             raise RuntimeError(f"{name} shutdown returned {code}")
-        if name in ("builder", "qemu"):
-            uart = self.args.work_dir / name / ("uart.log" if name == "builder" else "linux-uart.log")
+        if name == "builder":
+            uart = self.args.work_dir / name / "vm/linux-uart.log"
             if "reboot: Power down" not in uart.read_text(errors="replace"):
                 raise RuntimeError(f"{name} missing guest poweroff marker; disk not qualified for reuse")
 
@@ -380,7 +367,7 @@ class Pipeline:
             uploads=[(ROOT / "scripts/autosd_demo/qm_guest_check.sh", "/root/qm_guest_check.sh")], timeout=900)
 
     def provenance(self):
-        files = [self.args.kernel, self.args.uki, self.args.modules,
+        files = [self.args.uki, self.args.modules,
                  self.args.aib_manifest,
                  ROOT / "scripts/autosd_demo/builder_guest.sh"]
         repositories = [ROOT, ROOT / "autosd/sig-docs", ROOT / "autosd/automotive-image-builder",
@@ -421,26 +408,26 @@ class Pipeline:
         with tarfile.open(archive, "w:gz") as target:
             for path in sorted((args.work_dir / "customization-bundle").iterdir()):
                 target.add(path, arcname=path.name)
-        self.guest("customization-packages", args.qemu_port,
+        self.guest("customization-packages", args.qbox_port,
             "timeout 900 dnf -y install bluechi-controller bluechi-agent bluechi-selinux bluechi-ctl python3 podman; "
             "test $? = 0 && mkdir -p /root/bluechi-payload", timeout=1000)
         source = ROOT / "autosd/sig-docs/demos/bluechi_root_qm"
         uploads = [(path, "/root/bluechi-payload/" + path.name) for path in sorted((source / "conf").iterdir()) if path.is_file()]
         uploads += [(source / "systemd/test.service", "/root/bluechi-payload/test.service"),
                     (ROOT / "scripts/autosd_demo/qm_followup_setup.sh", "/root/qm_followup_setup.sh")]
-        self.guest("customization-bluechi", args.qemu_port,
+        self.guest("customization-bluechi", args.qbox_port,
             "bash /root/qm_followup_setup.sh /root/bluechi-payload", uploads=uploads, timeout=1500)
-        self.guest("customization-rt-packages", args.qemu_port,
+        self.guest("customization-rt-packages", args.qbox_port,
             "bash /root/prepare-rt-guest.sh install",
             uploads=[(ROOT / "autosd/customization/rt/prepare-guest.sh", "/root/prepare-rt-guest.sh")],
             timeout=2000)
-        self.guest("customization-install", args.qemu_port,
+        self.guest("customization-install", args.qbox_port,
             "set -eu; mkdir /root/automotive-demo-bundle; "
             "tar -C /root/automotive-demo-bundle -xzf /root/automotive-demo-bundle.tar.gz; "
             "python3 /root/automotive-demo-bundle/install-private-guest.py",
             uploads=[(archive, "/root/automotive-demo-bundle.tar.gz")], timeout=900)
-        self.verify_customization("qemu-customization", args.qemu_port)
-        self.verify_rt("qemu-rt-readiness", args.qemu_port)
+        self.verify_customization("qbox-customization", args.qbox_port)
+        self.verify_rt("qbox-rt-readiness", args.qbox_port)
 
     def verify_rt(self, name, port):
         self.guest(name, port, "bash /root/prepare-rt-guest.sh check",
@@ -478,17 +465,11 @@ class Pipeline:
             (args.work_dir / "image-sha256.txt").write_text(digest + "  " + str(image) + "\n")
             self.command("image-check", [args.qemu_img, "check", "-f", "qcow2", str(image)], 300)
             self.command("prepare", self.plan["commands"]["prepare"], 1800)
-            qemu = self.start("qemu")
-            self.bootstrap_qemu_ssh(qemu)
-            self.wait_ssh(qemu, args.qemu_port)
-            self.install_modules("qemu-modules", args.qemu_port)
-            self.command("modules", self.plan["commands"]["modules"], 1200)
-            self.verify_guest("qemu-guest-check", args.qemu_port)
-            if args.customize:
-                self.customize()
-            self.shutdown("qemu", qemu, args.qemu_port)
             qbox = self.start("qbox")
+            self.bootstrap_qbox_ssh(qbox)
             self.wait_ssh(qbox, args.qbox_port)
+            self.install_modules("qbox-modules", args.qbox_port)
+            (args.work_dir / "provision-ready").touch()
             deadline = time.monotonic() + args.boot_timeout
             while time.monotonic() < deadline:
                 modules = args.qbox_out_dir / "modules.json"
@@ -505,8 +486,7 @@ class Pipeline:
                 raise TimeoutError("QBox matching modules did not become ready")
             self.verify_guest("qbox-guest-check", args.qbox_port)
             if args.customize:
-                self.verify_customization("qbox-customization", args.qbox_port)
-                self.verify_rt("qbox-rt-readiness", args.qbox_port)
+                self.customize()
             domains = json.loads((args.qbox_out_dir / "domains.json").read_text())
             if domains.get("status") != "PASS":
                 raise RuntimeError("QBox domain boot evidence is not PASS")

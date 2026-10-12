@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import tarfile
 from types import SimpleNamespace
@@ -45,7 +46,7 @@ def test_existing_image_skips_only_builder(module, tmp_path):
     config = args(module, tmp_path, "--image", str(tmp_path / "source.qcow2"))
     plan = module.plan(config)
     assert "builder" not in plan["commands"]
-    assert {"prepare", "qemu", "modules", "qbox"} <= plan["commands"].keys()
+    assert {"prepare", "qbox"} <= plan["commands"].keys()
     assert plan["image"] == str(tmp_path / "source.qcow2")
 
 
@@ -54,9 +55,9 @@ def test_full_output_discoverable_and_private_disk(module, tmp_path):
     assert config.qbox_out_dir.parent == config.build_dir / "qbox-apollo-qvp"
     commands = module.plan(config)["commands"]
     command = commands["qbox"]
-    assert command[command.index("--rootfs") + 1] == str(config.work_dir / "qemu/rootfs.wic")
+    assert "--rootfs" not in command
+    assert "qemu" not in commands
     assert "--headless" in command
-    assert "--prepare-only" in commands["modules"]
     assert commands["builder"][commands["builder"].index("--manifest") + 1] == str(config.manifest)
 
 
@@ -76,7 +77,7 @@ def test_existing_outputs_refused(module, tmp_path, field):
         module.preflight(config)
 
 
-@pytest.mark.parametrize("missing", ["u-boot-apollo-qemu.bin",
+@pytest.mark.parametrize("missing", [
     "efi-capsule-update-disk-image-apollo-qvp.img", "nexios-bsp-initramfs-apollo-qvp.qboxconf",
     "fsck.fat", "mcopy", "mdir"])
 def test_missing_boot_prerequisite_fails_before_mutation(module, tmp_path, monkeypatch, missing):
@@ -119,23 +120,23 @@ def test_guest_verifies_efi_qm_slot_and_kernel(module, tmp_path, monkeypatch):
 
 def test_shutdown_does_not_kill_foreign_process(module, tmp_path, monkeypatch):
     pipeline = module.Pipeline(args(module, tmp_path))
-    (pipeline.args.work_dir / "qemu").mkdir(parents=True)
-    (pipeline.args.work_dir / "qemu/linux-uart.log").write_text("reboot: Power down\n")
+    (pipeline.args.work_dir / "builder/vm").mkdir(parents=True)
+    (pipeline.args.work_dir / "builder/vm/linux-uart.log").write_text("reboot: Power down\n")
     calls = []
     monkeypatch.setattr(pipeline, "guest", lambda *a, **k: calls.append(a))
     owned = SimpleNamespace(wait=lambda timeout: 0)
-    pipeline.shutdown("qemu", owned, 2224)
+    pipeline.shutdown("builder", owned, 2224)
     assert calls[0][1] == 2224
     assert "systemctl poweroff" in calls[0][2]
 
 
 def test_shutdown_requires_guest_poweroff_marker(module, tmp_path, monkeypatch):
     pipeline = module.Pipeline(args(module, tmp_path))
-    (pipeline.args.work_dir / "qemu").mkdir(parents=True)
-    (pipeline.args.work_dir / "qemu/linux-uart.log").write_text("login: root\n")
+    (pipeline.args.work_dir / "builder/vm").mkdir(parents=True)
+    (pipeline.args.work_dir / "builder/vm/linux-uart.log").write_text("login: root\n")
     monkeypatch.setattr(pipeline, "guest", lambda *a, **k: None)
     with pytest.raises(RuntimeError, match="poweroff marker"):
-        pipeline.shutdown("qemu", SimpleNamespace(wait=lambda timeout: 0), 2224)
+        pipeline.shutdown("builder", SimpleNamespace(wait=lambda timeout: 0), 2224)
 
 
 def test_failure_reports_owned_live_process_without_kill(module, tmp_path, monkeypatch):
@@ -192,7 +193,7 @@ def test_customize_uses_existing_payloads(module, tmp_path, monkeypatch):
     assert len(calls) == 6
     stages = [call[0][0] for call in calls]
     assert stages.index("customization-rt-packages") < stages.index("customization-install")
-    assert stages[-1] == "qemu-rt-readiness"
+    assert stages[-1] == "qbox-rt-readiness"
     for _, keywords in calls:
         for local, _ in keywords.get("uploads", []):
             assert local.is_file()
@@ -226,7 +227,7 @@ def test_run_requires_complete_full_system_receipt(module, tmp_path, monkeypatch
     monkeypatch.setattr(pipeline, "provenance", lambda: {})
     monkeypatch.setattr(pipeline, "command", lambda *a, **k: None)
     monkeypatch.setattr(pipeline, "wait_ssh", lambda *a: None)
-    monkeypatch.setattr(pipeline, "bootstrap_qemu_ssh", lambda *a: None)
+    monkeypatch.setattr(pipeline, "bootstrap_qbox_ssh", lambda *a: None)
     monkeypatch.setattr(pipeline, "install_modules", lambda *a: None)
     monkeypatch.setattr(pipeline, "verify_guest", lambda *a: None)
     monkeypatch.setattr(pipeline, "shutdown", lambda *a: None)
@@ -289,12 +290,16 @@ def test_archive_provenance_records_input_hash(module, tmp_path, monkeypatch):
 def test_uart_bootstrap_requires_actual_marker(module, tmp_path, monkeypatch, outcome):
     config = args(module, tmp_path)
     pipeline = module.Pipeline(config)
-    directory = config.work_dir / "qemu"
+    directory = config.qbox_out_dir
+    config.work_dir.mkdir(parents=True)
     directory.mkdir(parents=True)
     uart = directory / "linux-uart.log"
     uart.write_text("[root@autosd ~]# ")
-    uart_in = directory / "linux-uart.in"
-    uart_in.touch()
+    uart_in = directory / "full-system/primary-uart-input.fifo"
+    uart_in.parent.mkdir()
+    os.mkfifo(uart_in)
+    reader = os.open(uart_in, os.O_RDWR | os.O_NONBLOCK)
+    written = []
     monkeypatch.setattr(module.uuid, "uuid4", lambda: SimpleNamespace(hex="testtoken"))
     clock = [0]
     monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
@@ -302,19 +307,22 @@ def test_uart_bootstrap_requires_actual_marker(module, tmp_path, monkeypatch, ou
         clock[0] += 600
         with uart.open("a") as stream:
             # Include the complete command echo. It must never be sufficient.
-            stream.write(uart_in.read_text())
+            if not written:
+                written.append(os.read(reader, 4096).decode())
+            stream.write(written[0])
             if outcome != "echo-only":
                 stream.write("\r\nAPOLLO_SSH_BOOTSTRAP_testtoken_" + outcome + "\r\n")
     monkeypatch.setattr(module.time, "sleep", advance)
     process = SimpleNamespace(poll=lambda: None)
     if outcome == "PASS":
-        pipeline.bootstrap_qemu_ssh(process)
+        pipeline.bootstrap_qbox_ssh(process)
     else:
         with pytest.raises((RuntimeError, TimeoutError)):
-            pipeline.bootstrap_qemu_ssh(process)
-    report = json.loads((config.work_dir / "qemu-ssh-bootstrap.json").read_text())
+            pipeline.bootstrap_qbox_ssh(process)
+    report = json.loads((config.work_dir / "qbox-ssh-bootstrap.json").read_text())
     assert report["status"] == ("PASS" if outcome == "PASS" else "FAIL")
-    command = uart_in.read_text()
+    os.close(reader)
+    command = written[0]
     assert "openssh-server iproute" in command
     assert "PermitRootLogin yes" in command and "PasswordAuthentication yes" in command
     assert "systemctl is-active --quiet sshd" in command
@@ -325,9 +333,9 @@ def test_uart_bootstrap_rejects_dead_launcher(module, tmp_path):
     config = args(module, tmp_path)
     config.work_dir.mkdir()
     pipeline = module.Pipeline(config)
-    with pytest.raises(RuntimeError, match="QEMU exited"):
-        pipeline.bootstrap_qemu_ssh(SimpleNamespace(poll=lambda: 1))
-    assert json.loads((config.work_dir / "qemu-ssh-bootstrap.json").read_text())["status"] == "FAIL"
+    with pytest.raises(RuntimeError, match="QBox exited"):
+        pipeline.bootstrap_qbox_ssh(SimpleNamespace(poll=lambda: 1))
+    assert json.loads((config.work_dir / "qbox-ssh-bootstrap.json").read_text())["status"] == "FAIL"
 
 
 def test_uart_bootstrap_root_prompt_deadline(module, tmp_path, monkeypatch):
@@ -338,5 +346,5 @@ def test_uart_bootstrap_root_prompt_deadline(module, tmp_path, monkeypatch):
     monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
     monkeypatch.setattr(module.time, "sleep", lambda _: clock.__setitem__(0, 2))
     with pytest.raises(TimeoutError, match="deadline"):
-        pipeline.bootstrap_qemu_ssh(SimpleNamespace(poll=lambda: None))
-    assert not (config.work_dir / "qemu/linux-uart.in").exists()
+        pipeline.bootstrap_qbox_ssh(SimpleNamespace(poll=lambda: None))
+    assert not (config.qbox_out_dir / "linux-uart.in").exists()
