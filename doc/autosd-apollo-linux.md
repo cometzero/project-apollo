@@ -29,11 +29,11 @@ private regular disk before the first firmware boot. This replaces the old
 AP-only staging boot. The deployed kernel and modules must match; AutoSD's original kernel modules
 cannot be loaded across kernel ABIs.
 
-The BSP build deploys `ukibootaa64.efi`, `slot_a.addon.efi` and
+Both product and BSP builds deploy `ukibootaa64.efi`, `slot_a.addon.efi` and
 `slot_b.addon.efi` through the `ukiboot` recipe. The separate
 `u-boot-apollo-qemu` recipe has been removed: the full-system platform U-Boot
-provides EFI services. `ukiboot` remains a BSP build dependency so the
-existing AutoSD preparation command continues to work.
+provides EFI services. The shared image configuration builds `ukiboot`, `zephyr-vmcu`,
+`qemu-apollo-native` and `vmcu-silkit-native` for both product and BSP targets.
 
 Use `--headless` for foreground operation or `--no-attach` to create the tmux
 session without attaching. Outputs live under `build/qbox-apollo-qvp/`.
