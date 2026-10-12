@@ -4,6 +4,9 @@
 대상은 `apollo-qvp`이며 AP/SI CL1 PFDI 주기는 기존 3000 ms를 유지한다.
 유휴 CPU 측정과 기능 검증 원본은 아래 증거 경로에 보관한다.
 
+2026-10-06의 [SCP polling/WFI 분리 측정](scp-idle-ablation.md)은 부팅 후
+idle 상태에서 두 옵션의 개별 효과를 비교한다.
+
 ## 적용 내용
 
 | 대상 | 변경 | 목적 |
