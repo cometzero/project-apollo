@@ -45,6 +45,7 @@ def test_boot_backend_argv(tmp_path, backend):
     app = server.Dashboard(tmp_path, Path("manifest with spaces"), Path("disk with spaces"),
                            2255, True, backend=backend)
     argv = app.boot_command(tmp_path)
+    assert ("--copy-disk" in argv) == (backend == "qbox")
     assert argv[0] == str(server.ROOT / ("run_qbox_autosd.sh" if backend == "qbox-full" else "run_" + backend + "_linux.sh"))
     assert argv[argv.index("--autosd") + 1] == "manifest with spaces"
     assert argv[argv.index("--rootfs") + 1] == "disk with spaces"

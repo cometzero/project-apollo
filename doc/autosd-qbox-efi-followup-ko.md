@@ -65,7 +65,7 @@ QBox QemuInstance는 `-M none -m 0`으로 실행하므로 standalone QEMU의
 
 ```sh
 QBOX_APOLLO_NETDEV='type=user,hostfwd=tcp:127.0.0.1:2229-:22' \
-./run_qbox_linux.sh \
+./run_qbox_linux.sh --copy-disk \
   --autosd build/autosd/demo-minimal-qm-prepared/regular.json \
   --uki build/tmp_baremetal/deploy/images/apollo-qvp/nexios-bsp-initramfs-a.efi \
   --headless --exit-after-pass --timeout 180 \
@@ -77,7 +77,7 @@ out-dir를 `build/autosd/qbox-efi-ostree-first`로 바꾸어 실행했다.
 
 `--uboot`과 `--ukiboot-dir`로 firmware 및 loader/addon 경로를 명시할 수 있다.
 UKI 모드에서 `--kernel`, `--initrd`, bootargs의 고정 slot suffix는 거부한다.
-원본 disk/UKI는 수정하지 않는다.
+위 명령은 `--copy-disk`로 원본 disk를 보존하며 원본 UKI도 수정하지 않는다. 옵션을 생략하면 선택한 원본 disk의 ESP에 UKI를 설치하고 그 disk로 부팅한다.
 
 ## 현재 검사
 

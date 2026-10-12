@@ -117,8 +117,12 @@ def test_prepare_firmware_entry_and_no_external_initrd(monkeypatch, tmp_path):
                                             (True, False, True), (True, True, False)])
 def test_efi_supervisor_requires_firmware_and_slot_evidence(tmp_path, monkeypatch, efi, slot, success):
     from types import SimpleNamespace
-    monkeypatch.setitem(sys.modules, "autosd_disk", SimpleNamespace(inspect_disk=lambda path: {
-        "bootctl": {"valid": True, "slots": [{"successful_boot": int(success), "tries_remaining": 0}]}}))
+    inspected = []
+    def inspect_disk(path):
+        inspected.append(path)
+        return {"bootctl": {"valid": True,
+                           "slots": [{"successful_boot": int(success), "tries_remaining": 0}]}}
+    monkeypatch.setitem(sys.modules, "autosd_disk", SimpleNamespace(inspect_disk=inspect_disk))
     make_plan(tmp_path, f"""
 import pathlib, sys, time
 p = pathlib.Path(sys.argv[1])
@@ -144,6 +148,7 @@ time.sleep(30)
     assert runner.supervise(tmp_path, 1, True) == expected
     result = json.loads((tmp_path / "result.json").read_text())
     assert result["efi_reboot_support"] == "NOT_IMPLEMENTED"
+    assert inspected == [tmp_path / "source.wic"]
 
 
 def test_efi_reboot_is_explicitly_unsupported(tmp_path, monkeypatch):
@@ -175,7 +180,7 @@ def make_plan(tmp_path, program):
         json.dumps(
             {
                 "command": [sys.executable, "-c", program, str(tmp_path)],
-                "environment": {},
+                "environment": {"QBOX_RDASPEN_ROOTFS": str(tmp_path / "source.wic")},
                 "pass_marker": "nexios-bsp(?:-failed)?#",
                 "bsp": True,
             }
@@ -349,6 +354,40 @@ def make_deploy(monkeypatch, tmp_path):
 
 
 
+@pytest.mark.parametrize("copy_disk", [False, True])
+@pytest.mark.parametrize("bsp", [False, True])
+def test_disk_selection_and_copy(monkeypatch, tmp_path, capsys, copy_disk, bsp):
+    arguments = make_deploy(monkeypatch, tmp_path)
+    arguments.remove("--dry-run")
+    out = tmp_path / "run"
+    arguments += ["--headless", "--out-dir", str(out)]
+    if bsp:
+        arguments.append("--bsp")
+    if copy_disk:
+        arguments.append("--copy-disk")
+    source = tmp_path / (("nexios-bsp-initramfs" if bsp else "nexios-image") +
+                         "-apollo-qvp.wic")
+    source.write_bytes(b"original disk")
+
+    def output(command, **kwargs):
+        if command[0] == "fdtget":
+            return "console=ttyAMA0 nr_cpus=4"
+        assert command[1].endswith("/linux-boot/prepare.py")
+        return json.dumps({"boot_stub": str(out / "boot.bin"),
+                           "dtb": str(out / "linux.dtb"), "initrd": None})
+
+    monkeypatch.setattr(runner.subprocess, "check_output", output)
+    monkeypatch.setattr(runner, "supervise", lambda *a, **kw: 0)
+    monkeypatch.setattr(sys, "argv", arguments)
+    assert runner.main() == 0
+    plan = json.loads((out / "launch.json").read_text())
+    selected = out / "rootfs.wic" if copy_disk else source
+    assert plan["environment"]["QBOX_RDASPEN_ROOTFS"] == str(selected)
+    assert plan["copy_disk"] is copy_disk
+    assert (out / "rootfs.wic").exists() is copy_disk
+    assert selected.read_bytes() == b"original disk"
+    assert source.read_bytes() == b"original disk"
+
 def test_product_uses_verity_initramfs_and_readonly_slot(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path))
     assert runner.main() == 0
@@ -454,7 +493,8 @@ def test_bsp_keeps_its_original_initramfs_and_init(monkeypatch, tmp_path, capsys
         "console=ttyAMA0,115200 mem=4064M nr_cpus=4 rdinit=/init"
     )
     assert plan["source_rootfs"] == str(tmp_path / "nexios-bsp-initramfs-apollo-qvp.wic")
-    assert plan["environment"]["QBOX_RDASPEN_ROOTFS"].endswith("/rootfs.wic")
+    assert plan["environment"]["QBOX_RDASPEN_ROOTFS"] == plan["source_rootfs"]
+    assert plan["copy_disk"] is False
     assert "root=" not in plan["bootargs"]
 
 

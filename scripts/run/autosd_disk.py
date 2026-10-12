@@ -1,8 +1,8 @@
-"""Install Apollo UKIs in a private AutoSD disk, preserving boot-control state.
+"""Install Apollo UKIs in a caller-selected writable AutoSD disk, preserving boot-control state.
 
 The EFI ukiboot loader, not this host tool, initializes the nightly image's
 boot-control sentinel and updates its slot attempts. No GPT or rootfs changes
-are made here. Callers must supply a disposable run copy, never the download.
+are made here. Callers select the writable disk; supply a disposable copy to preserve the source.
 """
 
 import hashlib
@@ -240,7 +240,7 @@ def prepare_native_disk(disk, *, loader=None, addon_a=None, addon_b=None):
 
 
 def prepare_disk(disk, uki, *, loader=None, addon_a=None, addon_b=None):
-    """Write both UKI slots on a private run copy; never initialize bootctl.
+    """Write both UKI slots on the selected disk; never initialize bootctl.
 
     Optional loader/addons must be provided together and built for EFI/BOOT.
     With no overrides the nightly image's existing ESP remains unchanged.

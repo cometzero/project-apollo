@@ -306,6 +306,8 @@ class Dashboard:
         argv = [str(ROOT / launcher),
                 "--autosd", str(self.manifest), "--rootfs", str(self.rootfs),
                 "--headless", "--timeout", "7200", "--out-dir", str(directory / "vm")]
+        if self.backend == "qbox":
+            argv += ["--copy-disk"]
         if self.backend != "qemu":
             with socket.socket() as probe:
                 probe.bind(('127.0.0.1', 0))

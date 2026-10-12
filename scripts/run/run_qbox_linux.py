@@ -42,6 +42,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--dtb", type=Path)
     p.add_argument("--initrd", type=Path)
     p.add_argument("--rootfs", type=Path)
+    p.add_argument("--copy-disk", action="store_true",
+                   help="copy the disk into the run directory (default: use the source disk)")
     p.add_argument("--ssh-port", type=int,
                    help="forward loopback TCP port to guest SSH through user networking")
     p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
@@ -380,7 +382,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool, *, echo_uart: bo
             if plan.get("uki"):
                 from autosd_disk import inspect_disk
                 try:
-                    bootctl = inspect_disk(out / "rootfs.wic")["bootctl"]
+                    bootctl = inspect_disk(Path(plan["environment"]["QBOX_RDASPEN_ROOTFS"]))["bootctl"]
                     if exit_after_pass and passed:
                         slot = bootctl["slots"][booted_slot] if booted_slot is not None else {}
                         if not (bootctl["valid"] and slot.get("successful_boot") == 1
@@ -558,6 +560,7 @@ def main() -> int:
         / "build/qbox-apollo-qvp"
         / ("linux-" + time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}")
     ).absolute()
+    disk = out / "rootfs.wic" if args.copy_disk else rootfs
     bootargs = args.bootargs or autosd.get("bootargs")
     if not bootargs:
         bootargs = subprocess.check_output(
@@ -612,7 +615,7 @@ def main() -> int:
         "QBOX_LINUX_INITRD": str(initrd) if not uki else "",
         "QBOX_LINUX_FIRMWARE": "true" if uki else "false",
         "QBOX_LINUX_BOOT_STUB": str(out / "linux-boot/boot.bin"),
-        "QBOX_RDASPEN_ROOTFS": str(out / "rootfs.wic") if rootfs else "",
+        "QBOX_RDASPEN_ROOTFS": str(disk),
         "QBOX_APOLLO_NETDEV": (f"type=user,hostfwd=tcp:127.0.0.1:{args.ssh_port}-:22"
                               if args.ssh_port is not None else os.environ.get("QBOX_APOLLO_NETDEV",
                                   os.environ.get("QBOX_RDASPEN_NETDEV", "type=user,hostfwd=tcp::2222-:22"))),
@@ -637,6 +640,7 @@ def main() -> int:
         "qboxconf": str(qboxconf),
         "source_dtb": str(dtb),
         "source_rootfs": str(rootfs),
+        "copy_disk": args.copy_disk,
         "bootargs": bootargs,
         "bsp": args.bsp,
         "autosd_mode": autosd.get("mode"),
@@ -654,14 +658,14 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=False)
     for name in ("linux-uart.log", "linux-uart.in", "qbox.log"):
         (out / name).touch()
-    if rootfs:
+    if args.copy_disk:
         subprocess.run(
             [
                 "cp",
                 "--reflink=auto",
                 "--sparse=always",
                 str(rootfs),
-                str(out / "rootfs.wic"),
+                str(disk),
             ],
             check=True,
         )
@@ -670,7 +674,7 @@ def main() -> int:
         from autosd_disk import prepare_disk
         uki["prepared_metadata"] = prepare_uki(Path(uki["source"]), initrd,
                                                 bootargs, Path(uki["output"]))
-        uki["prepared_disk"] = prepare_disk(out / "rootfs.wic", Path(uki["output"]),
+        uki["prepared_disk"] = prepare_disk(disk, Path(uki["output"]),
                                             **{key: Path(value) for key, value in uki["loader_files"].items()})
     # Boot payload helper is shared with the platform's direct-boot tests.
     helper = (
