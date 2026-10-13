@@ -102,7 +102,7 @@ def test_every_migrated_full_map_check_has_a_semantic_predicate():
 def test_full_map_rejects_wrong_effective_irq_after_component_split(tmp_path):
     source_root = tmp_path / "apollo"
     shutil.copytree(APOLLO, source_root)
-    source = source_root / "soc/hw-block/ap_compute/timers.lua"
+    source = source_root / "soc/hw-block/ap_compute/system.lua"
     original = source.read_text()
     assert "local AP_SYS_TIMER_NON_SECURE_SPI = 49" in original
     source.write_text(original.replace(

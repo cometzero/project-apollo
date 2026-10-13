@@ -73,9 +73,9 @@ def test_platform_contract_rejects_collection_entry_size_eight(tmp_path: Path) -
     builder.validate_platform_contract(AP_COMPUTE, OVERLAY)
     copied = tmp_path / "apollo"
     shutil.copytree(AP_COMPUTE.parent, copied)
-    mutated = copied / "soc/hw-block/ap_compute/map.lua"
+    mutated = copied / "soc/hw-block/ap_compute/system.lua"
     mutated.write_text(mutated.read_text().replace(
-        "gic_its_cte_size = 2;", "gic_its_cte_size = 8;", 1))
+        "local AP_GIC_ITS_CTE_SIZE = 2", "local AP_GIC_ITS_CTE_SIZE = 8", 1))
     with pytest.raises(RuntimeError, match="collection_entry_size"):
         builder.validate_platform_contract(copied / AP_COMPUTE.name, OVERLAY)
 
