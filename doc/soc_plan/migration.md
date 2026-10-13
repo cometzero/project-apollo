@@ -199,3 +199,35 @@ reset은 `io_peri.lua`로 이동했다. Mailbox는 `rse_si_mailbox.lua`,
 full-system 부팅 및 기본 post-login 검사는 PASS했다(로그인 98.013초, 전체 111.050초).
 증거는 `runtime/boot/result.json`, 명령과 설치본 검증은 `runtime/command.json`,
 `runtime/installed-lua.json`이다. FWU·보안 서비스·DWC 선택형 검사는 실행하지 않았다.
+
+## 독립 SoC 구성과 VP override
+
+초기 분리에서 VP로 이동했던 하드웨어 조립을 SoC 도메인 집계 파일과
+`soc/apollo.lua`로 복귀시켰다. `soc/config.lua`가 기본값을 제공하며 SoC는
+VP·board·환경변수·host 파일 없이 구성된다. CPU 파일은 필수 QEMU instance를
+생성하고 VP는 그 instance의 실행 정책을 변경한다. PCIe 시험 profile은
+기본 PCIe 구성이 완료된 뒤 필요한 속성·root port를 변경한다.
+
+하드웨어 reset은 도메인 system과 fabric에서 구성한다. VP는 loader·확장 장치
+reset 및 QEMU 실행 순서만 보정하고 EEPROM reset은 board에서 추가한다.
+RSE local flash의 필수 cold-reset adapter도 SoC boot 정의와 함께 생성된다.
+이미지·console·가속·진단·loopback은 VP에 유지한다. 전체 CCI 경로와 최종
+reset fanout 순서는 기존 descriptor 비교로 확인한다.
+
+독립 구성 검사는 AP 16/4 CPU 및 RSE local flash/crypto 선택을 포함하며,
+누락된 reset 대상과 잘못된 구성도 거부한다. 이번 증거 경로는
+`build/qbox-apollo-qvp/soc-standalone/`이다.
+
+변경 전후 22개 profile descriptor가 일치하고 독립 구성·회귀 pytest 92개,
+Lua 문법 111개, full-map 95개, vMCU 구성 회귀 검사가 통과했다.
+Yocto provider 빌드와 native 테스트 130개(67+63)가 통과했으며, 설치 Lua
+111개의 SHA-256 일치와 삭제 파일 부재를 확인했다.
+
+기존 제품 `nexios-image-apollo-qvp-20261002154207.wic`와 배포 firmware,
+performance preset으로 full-system 부팅 및 기본 post-login 검사가 PASS했다.
+로그인 94.324초, 전체 107.568초이며 SI CL0/CL1·HIPC/RPMsg·AP 4 CPU 기본
+PFDI 결과를 확인했다. 실행 증거는 위 경로의 `runtime/boot/result.json`,
+정확한 입력과 설치본 검증은 `runtime/command.json`, `runtime/installed-lua.json`이다.
+선택형 FWU·보안 서비스·DWC·확장 PFDI는 미실행이다. 기존 SE proxy/SMM gateway
+오류 문자열 관측은 남아 있으며 기본 gate PASS를 보안 서비스 자격으로 해석하지 않는다.
+SoC 기본 구성만의 C++ elaboration·firmware 부팅은 별도로 검증하지 않았다.

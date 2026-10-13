@@ -1179,3 +1179,30 @@ SMD 장치 정의를 `system.lua`, `memory.lua`, `interconnect.lua`, `io_peri.lu
 PFDI 기본 결과를 확인했으며 선택형 보안 서비스·FWU·DWC 검사는 미실행이다.
 기본 gate의 PASS는 미실행 보안 서비스의 자격을 뜻하지 않는다. 결과 JSON에는
 보안 서비스 관련 오류 문자열 관측이 남아 있다.
+
+### 독립 SoC 구성과 VP override
+
+`soc/apollo.lua`가 기본 SoC 전체를 생성하고 `soc/config.lua`가 독립 기본값을
+제공한다. SoC는 VP/board를 로드하거나 host 입력을 읽지 않는다. 필수 QEMU
+instance·reset adapter는 SoC 모델에 포함하고, VP는 실행 정책·loader·host
+backend·가속·진단·시험 장치와 에뮬레이션 제약의 보정만 적용한다.
+하드웨어 reset은 SoC, EEPROM reset 참여는 board, QEMU reset 순서 보정은 VP가
+소유한다. 기존 CCI 계층과 full-system/AP-only 동작은 유지한다.
+
+독립 descriptor 생성은 firmware 부팅 또는 실물 fidelity의 증명이 아니다.
+SI entry 0은 미설정 모델 값이다. 검증 증거는
+`build/qbox-apollo-qvp/soc-standalone/`에 기록한다.
+
+변경 전후 22개 profile descriptor가 일치하고 독립 구성·회귀 pytest 92개,
+Lua 문법 111개, full-map 95개, vMCU 구성 회귀 검사가 통과했다.
+Yocto provider 빌드와 native 테스트 130개(67+63)가 통과했으며, 설치 Lua
+111개의 SHA-256 일치와 삭제 파일 부재를 확인했다.
+
+기존 제품 `nexios-image-apollo-qvp-20261002154207.wic`와 배포 firmware,
+performance preset으로 full-system 부팅 및 기본 post-login 검사가 PASS했다.
+로그인 94.324초, 전체 107.568초이며 SI CL0/CL1·HIPC/RPMsg·AP 4 CPU 기본
+PFDI 결과를 확인했다. 실행 증거는 위 경로의 `runtime/boot/result.json`,
+정확한 입력과 설치본 검증은 `runtime/command.json`, `runtime/installed-lua.json`이다.
+선택형 FWU·보안 서비스·DWC·확장 PFDI는 미실행이다. 기존 SE proxy/SMM gateway
+오류 문자열 관측은 남아 있으며 기본 gate PASS를 보안 서비스 자격으로 해석하지 않는다.
+SoC 기본 구성만의 C++ elaboration·firmware 부팅은 별도로 검증하지 않았다.

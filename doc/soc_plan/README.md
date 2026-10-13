@@ -14,6 +14,27 @@
 - [Lua 작성·가독성 지침](lua-style.md): 공식 문서 조사, module 예제, naming/formatting/lint 적용 방안.
 - [Linux Device Tree 후속 분리 계획](linux-device-tree.md): `hsoc/`의 SoC·pinctrl·QVP·Saturn-V 파일 구성, 기본 disabled 정책, DTB/UKI 전환과 검증. 구현 결과는 [Linux DT 구현·검증](linux-device-tree-implementation.md)에 기록한다.
 
+## 현재 SoC / VP 의존성 경계
+
+`soc/apollo.lua`가 기본 SoC 전체 생성과 도메인 사이 연결을 소유한다.
+`local soc = dofile(".../soc/apollo.lua"); platform = soc.create()`만으로
+VP·board·환경변수·host 파일 없이 기본 하드웨어 descriptor를 생성한다.
+기본값은 `soc/config.lua`, 주소·IRQ는 기존 장치별 파일에 둔다.
+아래 초기 설계보다 이 현재 경계가 우선한다.
+
+- `soc/`: 하드웨어 조립, clock·reset·IRQ·주소 view, 필수 QEMU instance와 adapter.
+- `vp/`: 구성 선택 override, QEMU 실행 정책, loader·파일·console·가속·진단,
+  가상/시험 장치, 에뮬레이션 제약에 따른 배선·reset 순서 보정.
+- `board/`: 외부 장치와 bus·배선 및 해당 장치의 reset 참여.
+- `vp/composition.lua`: SoC 구성을 호출한 후 VP 변경만 적용한다.
+  SoC 생성 코드에 VP callback을 전달하지 않는다.
+
+독립 구성 기본값은 AP 16 CPU, RSE, SI CL0/CL1 전체이며 optional DMI·trace는 꺼져 있다.
+SI entry 0은 미설정 모델 값이며 실제 하드웨어 reset vector 검증을 의미하지 않는다.
+독립적인 descriptor 생성과 firmware 부팅은 별도 검증이다. SoC 내부 참조의 소유 객체
+존재는 검사하지만 C++ 모델 내부 socket의 실제 바인딩은 full-system runtime으로 확인한다.
+QBox 모델 자체 의존성은 유지하며 별도의 하드웨어 명세 DSL은 도입하지 않는다.
+
 ## 1. 설계 범위와 경계
 
 | 계층 | 소유하는 내용 | 다른 계층에 전달하는 내용 |
