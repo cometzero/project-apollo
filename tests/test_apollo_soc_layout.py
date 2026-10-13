@@ -81,6 +81,133 @@ dofile("./soc/hw-block/ap_compute/memory.lua").define(ctx, platform)
 ''')
 
 
+SOC_STANDALONE = '''
+local load = dofile
+dofile = function(path)
+    assert(path:match("^%%./soc/"), "SoC loaded an external layer: " .. path)
+    return load(path)
+end
+os.getenv = function() error("SoC requested environment") end
+assert(io == nil, "host file API must be unavailable")
+local soc = dofile("./soc/apollo.lua")
+local config = soc.default_config()
+%s
+platform = soc.create(config)
+assert(platform.ap_gic.num_cpus == config.options.AP_NUM_CPUS)
+for i = 0, config.options.AP_NUM_CPUS - 1 do
+    assert(platform["ap_cpu_" .. i].moduletype == "cpu_arm_cortexA720AE")
+end
+assert(platform["ap_cpu_" .. config.options.AP_NUM_CPUS] == nil)
+assert(platform.rse_cpu_pass.cpu_0.moduletype == "ApolloRseCPU")
+assert(platform.si_cl0_cpu_0.moduletype == "cpu_arm_cortexR82")
+assert(platform.si_cl1_cpu_3.moduletype == "cpu_arm_cortexR82")
+assert(platform.si_cl0_gic.num_cpus == 1)
+assert(platform.si_cl1_gic.num_cpus == 4)
+for _, name in ipairs({"rse_itcm", "rse_dtcm", "host_ap_shared_sram",
+                       "si_cl0_sram", "si_cl1_sram"}) do
+    assert(platform[name].moduletype == "gs_memory", name)
+end
+assert(platform.rse_boot_flash.moduletype == "strata_flash_j3")
+assert(platform.host_ap_rse_mhu_pbx.protocol == "doorbell-bridge")
+assert(platform.host_ap_si_scmi_mhu_pbx.system_reset.bind ~= nil)
+assert(platform.ap_bl2_reset_loader == nil and platform.si_cl0_loader == nil)
+assert(platform.board_i2c0 == nil)
+%s
+-- Socket names can be implicit C++ model children, but their owning Lua
+-- object must exist. Descend through explicit Container boundaries as well.
+local function reference(target, scope)
+    local parts = {}
+    for part in target:sub(2):gmatch("[^.]+") do parts[#parts + 1] = part end
+    local owner, index = scope, 1
+    if parts[1] == "platform" then owner, index = platform, 2 end
+    assert(owner[parts[index]], "missing SoC reference: " .. target)
+    owner = owner[parts[index]]
+    index = index + 1
+    while type(owner) == "table" and owner.moduletype == "Container" and
+          index < #parts do
+        assert(owner[parts[index]], "missing SoC container child: " .. target)
+        owner = owner[parts[index]]
+        index = index + 1
+    end
+end
+local function scan(value, scope)
+    if type(value) == "string" and value:sub(1, 1) == "&" then
+        for target in value:gmatch("[^;]+") do reference(target, scope) end
+    elseif type(value) == "table" then
+        assert(value.moduletype ~= "loader", "SoC contains a host loader")
+        for key, child in pairs(value) do
+            local child_scope = scope
+            if value.moduletype == "Container" and type(child) == "table" and
+               child.moduletype then child_scope = value end
+            scan(child, child_scope)
+        end
+    end
+end
+scan(platform, platform)
+'''
+
+
+@pytest.mark.parametrize("cpus", [16, 4])
+def test_soc_constructs_without_host_services(sources, cpus):
+    configure = "" if cpus == 16 else (
+        f"config.options.AP_NUM_CPUS = {cpus}; config.options.AP_GIC_NUM_CPUS = {cpus}"
+    )
+    evaluate_contract(sources, SOC_STANDALONE % (configure, ""))
+
+
+@pytest.mark.parametrize("backend", ["systemc-strata", "qemu-cfi-local"])
+def test_soc_local_backends_resolve_without_vp(sources, backend):
+    configure = (
+        'config.options.rse_local_boot_flash = true; '
+        'config.options.rse_local_crypto = true; '
+        'config.options.cc3xx_backend = "qemu-native"; '
+        f'config.options.rse_flash_backend = "{backend}"'
+    )
+    body = SOC_STANDALONE.replace(
+        'assert(platform.rse_boot_flash.moduletype == "strata_flash_j3")',
+        'assert(platform.rse_cpu_pass.remote_main_router and platform.rse_boot_flash == nil)',
+    )
+    evaluate_contract(sources, body % (configure, ""))
+
+
+@pytest.mark.parametrize(("target", "message"), [
+    ("&missing.reset", "missing SoC reference"),
+    ("&rse_cpu_pass.missing.reset", "missing SoC container child"),
+])
+def test_soc_reference_check_detects_dangling_reset(sources, target, message):
+    mutation = f'platform.host_ap_si_scmi_mhu_pbx.system_reset.bind = "{target}"'
+    with pytest.raises(DESCRIPTOR.DescriptorError, match=message):
+        evaluate_contract(sources, SOC_STANDALONE % ("", mutation))
+
+
+@pytest.mark.parametrize(("mutation", "message"), [
+    ("config.options.enable_ap_cpus = false; config.options.AP_NUM_CPUS = 0; "
+     "config.options.AP_GIC_NUM_CPUS = 1", "complete Apollo SoC requires AP CPUs"),
+    ("config.options.AP_NUM_CPUS = 17", "Apollo AP CPU count"),
+    ("config.options.AP_NUM_CPUS = 1.5", "Apollo AP CPU count"),
+    ("config.options.AP_GIC_NUM_CPUS = 4", "Apollo GIC CPU count"),
+    ('config.options.rse_flash_backend = "qemu-cfi-local"', "requires RSE local boot flash"),
+    ('config.options.smmu_backend = "invalid"', "unsupported SMMU backend"),
+])
+def test_invalid_standalone_soc_configuration(sources, mutation, message):
+    with pytest.raises(DESCRIPTOR.DescriptorError, match=message):
+        evaluate_contract(sources, SOC_STANDALONE % (mutation, ""))
+
+
+def test_soc_sources_exclude_host_policy(sources):
+    for path, source in sources.items():
+        if not path.startswith("soc/"):
+            continue
+        assert not re.search(r"\bgetenv\w*\b|vp/|board/|\bio\.open\b", source), path
+        assert not re.search(
+            r'moduletype\s*=\s*"(?:loader|char_backend_\w+)"', source
+        ), path
+        assert not re.search(
+            r"\b(?:bin_file|backing_file|blkdev_str|map_file|trace_file|"
+            r"trace_pc_file|stats_file|otp_image)\s*=", source
+        ), path
+
+
 @pytest.mark.parametrize("proxy", [False, True])
 def test_system_mgmt_mailbox_modes_and_runtime_inputs(sources, proxy):
     evaluate_contract(sources, '''
