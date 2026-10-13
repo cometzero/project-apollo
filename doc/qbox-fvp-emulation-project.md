@@ -14,6 +14,12 @@ This structural change does not establish Saturn-V schematic, physical timing,
 or full-system audio fidelity. Runtime results are recorded separately from
 static descriptor equality in the implementation record.
 
+AP compute and SI CL0/CL1 now keep single-owner address/size constants and AP
+IRQ values as file-local constants in their consuming Lua modules. Shared values
+and address derivations remain in `map.lua`/`hardware.lua` for a later pass;
+the existing SI common IRQ routes and composition APIs are preserved. This is
+an incremental definition move, not a new hardware schema or runtime feature.
+
 ## AutoSD monitor integration
 
 The dashboard now has a separate owned-loopback QBox collector, domain QK/MCIPS
