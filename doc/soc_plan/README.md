@@ -69,13 +69,13 @@ apollo/
         io_peri.lua
       system_mgmt/
         system_mgmt.lua
-        syscore.lua           # counter/PIK/SCR/RGM 등
-        mailbox.lua           # AP/RSE/SI host-side MHU
-        memory.lua
-        interconnect.lua      # SMD ATU 및 주소 경로
-        reset.lua             # system reset source 및 내부 fanout
-      si_common/
-        interrupts.lua        # CL0/CL1 공용 SI GIC view/IRQ 계약
+        system.lua            # 공용 counter, PPU/SCR, reset controller
+        memory.lua            # 공유 SRAM, AP/RSE pointer-access memory
+        interconnect.lua      # SI/AP/SMDEXP ATU
+        io_peri.lua           # GPIO와 해당 cold reset
+        rse_si_mailbox.lua
+        ap_si_mailbox.lua
+        ap_rse_mailbox.lua
       si_cl0/
         si_cl0.lua
         cpu.lua
@@ -275,7 +275,7 @@ DRAM/flash도 세 부분으로 구분한다. SoC aperture/controller/alias는 So
 
 ### 5.4 SI CL0/CL1 공용 interrupt 계약
 
-현재 CL1은 CL0의 PPI/SPI helper를 사용한다. 이를 `si_common/interrupts.lua`로 분리해 SoC aggregator가 양쪽에 전달한다. CL0/CL1의 실제 GIC, multiview wiring은 hardware 정의에 남긴다.
+SI IRQ는 각 소비 파일의 상수와 직접 연결로 정의한다. CL1/AP의 CL0 IRQ helper 의존성은 제거했다. 기존 공용 테이블의 시작 시 검증은 `tests/test_apollo_soc_layout.py`에서 실제 구성의 SPI 소유권·범위·중복 및 PPI 연결을 검사하는 회귀 테스트로 대체한다. GIC와 multiview 장치 정의는 각 system 모듈에 유지한다.
 
 SI normal SPI의 `architectural INTID - 32` 변환, View1/View2 owner, PPI의 per-CPU 의미를 그대로 유지한다. 모든 IP의 IRQ 숫자에 일괄 `-32`를 적용하는 generic helper는 만들지 않는다. AP와 각 component socket의 숫자 의미는 현재 코드에 따라 검증한다.
 

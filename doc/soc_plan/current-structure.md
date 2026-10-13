@@ -51,7 +51,7 @@
 | 현재 결합 | 소스 근거 | 설계 영향 |
 |---|---|---|
 | module 로드 전에 globals 필요 | [AP:140](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/ap_compute.lua#L140), [RSE:79](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/rse.lua#L79) | 옵션 값 의존 계산을 함수 내부로 옮긴 뒤 globals 제거 |
-| CL1이 CL0의 interrupt helper 사용 | [CL0:366](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl0.lua#L366), [CL1:99](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl1.lua#L99) | `si_common/interrupts.lua`를 공유; CL0 전체 include 불필요 |
+| CL1이 CL0의 interrupt helper 사용 | [CL0:366](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl0.lua#L366), [CL1:99](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl1.lua#L99) | 현재는 소비 파일별 IRQ 상수와 직접 연결로 대체; CL0 helper 의존성 제거 |
 | AP 주소 view가 CL1 HIPC window를 참조 | [AP:1032](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/ap_compute.lua#L1032), [CL1:51](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl1.lua#L51) | 공유 window의 단일 정의 유지 |
 | CL0 소스가 CL1 CPU PPU도 생성 | [CL0:1455](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl0.lua#L1455) | reset 제어 소유권과 대상 CPU domain을 구분 |
 | CL0가 SMD ATU를 후속 수정 | [CL0:955](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl0.lua#L955) | SoC interconnect 연결 단계로 명시화 |
@@ -61,7 +61,7 @@
 | AP router 재구성이 RoS callback 사용 | [AP:1124](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/ap_compute.lua#L1124), [RoS:434](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/ros.lua#L434) | VirtIO를 VP로 옮겨도 기존 MMIO 재연결 범위 유지 |
 | MHU pair와 shared-memory 이름으로 연결 | [SMD:164](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/system_mgmt.lua#L164), [CL0:864](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/si_cl0.lua#L864) | source 파일 분리와 endpoint pair identity 변경을 분리 |
 
-`system_mgmt.ownership`은 [SMD:76](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/system_mgmt.lua#L76)에 있지만 나열된 모든 객체를 이 파일이 직접 생성하는 것은 아니다. 이 table만으로 새 파일 소유권을 자동 생성하면 안 된다.
+`system_mgmt.ownership`은 [SMD:76](../../build/qbox-apollo-qvp/soc-refactor/baseline/apollo/hw-block/system_mgmt.lua#L76)에 있지만 나열된 모든 객체를 이 파일이 직접 생성하는 것은 아니다. 이 table만으로 새 파일 소유권을 자동 생성하면 안 된다. 후속 SMD 정리에서 미사용 `ownership` table은 제거했으며, 이 설명은 초기 baseline에 대한 기록이다.
 
 ## 4. 세 계층이 섞여 있는 구체적인 위치
 

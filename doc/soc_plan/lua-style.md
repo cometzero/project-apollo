@@ -39,7 +39,7 @@
 - leaf는 보통 100–300행: 같은 IP군의 상수·정의·연결을 함께 둔다. 400행을 넘으면 owner나 변경 이유가 섞였는지 검토한다.
 - helper는 한 가지 변환·검사·생성만 담당한다. 제어 흐름이 긴 함수는 나누되 긴 선언 table을 함수 여러 개로 잘라 숨기지 않는다.
 - `syscore.lua`가 GIC·timer·watchdog의 집합으로 커지면 그때 `interrupts.lua`, `timers.lua`로 추출한다. 한두 객체만 있는 작은 domain에 동일 파일 수를 강요하지 않는다.
-- `utils.lua`, `common.lua`에 모든 helper를 모으지 않는다. SI IRQ 변환처럼 공유 이유가 명확한 기능만 이름이 구체적인 module로 분리한다.
+- `utils.lua`, `common.lua`에 모든 helper를 모으지 않는다. 공유 이유가 명확한 기능만 이름이 구체적인 module로 분리한다. SI IRQ는 소비 파일별 상수로 선언하고 연결 계약은 테스트에서 검증한다.
 
 파일 배치는 **목적/제약 주석 → local module/include → local 상수/spec → private helper → 공개 `define/connect` → return** 순서를 권장한다. 기존 라이선스/저작권 표기는 이동 시 그대로 보존한다.
 

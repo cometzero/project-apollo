@@ -19,7 +19,7 @@
 | `hw-block/ap_compute.lua` | `soc/hw-block/ap_compute/*` + `vp/boot`, `vp/qemu`, 시험 장치 | CPU/GIC/PCIe/SMMU 주소·IRQ·reset·instance |
 | `hw-block/rse.lua` | `soc/hw-block/rse/*` + VP firmware/가속/backend | nested container, secure alias, crypto/flash backend |
 | `hw-block/system_mgmt.lua` | `soc/hw-block/system_mgmt/*` | SMD map, counter, MHU pair, reset source |
-| `hw-block/si_cl0.lua` | `soc/hw-block/si_cl0/*`, `si_common/interrupts.lua`, VP PMIC host | CL1/AP PPU 제어, GIC views, ATU 연결 |
+| `hw-block/si_cl0.lua` | `soc/hw-block/si_cl0/*`, VP PMIC host | CL1/AP PPU 제어, GIC views, ATU 연결 |
 | `hw-block/si_cl1.lua` | `soc/hw-block/si_cl1/*`, VP loader/console | shared window, HIPC/PFDI, reset ordering |
 | `hw-block/ros.lua` | `soc/hw-block/ros/*`, `vp/virtio.lua`, Board EEPROM, VP loopback | 모든 MMIO target의 AP view 재연결 |
 | `hw-block/pinctrl.lua` | `soc/hw-block/ros/pinctrl.lua` | bank/GPIO/peripheral gate; backend별 지원 한계 |
@@ -75,7 +75,7 @@ dofile(dir .. "apollo-qvp-saturn-v.lua")
 
 ### 단계 2 — domain별 파일 분리
 
-AP → RoS/pinctrl → RSE → SMD → SI 순으로 작은 변경을 권장한다. 각 domain aggregator는 현재 `define/enable` 순서를 그대로 실행한다. `cpu/syscore/io_peri`부터 나누고 파일 크기와 기능 응집도에 따라 memory/PCIe/safety를 추출한다. SI 공용 interrupt helper는 중복 생성 없이 SoC aggregator에서 전달한다.
+AP → RoS/pinctrl → RSE → SMD → SI 순으로 작은 변경을 권장한다. 각 domain aggregator는 현재 `define/enable` 순서를 그대로 실행한다. `cpu/syscore/io_peri`부터 나누고 파일 크기와 기능 응집도에 따라 memory/PCIe/safety를 추출한다. SI IRQ는 소비 파일의 상수로 정의하고 실제 연결을 회귀 테스트로 검증한다.
 
 고정 파일을 읽는 검사기와 해당 tests를 각 이동에 함께 갱신한다. 테스트를 지우거나 수집 결과가 0개인 상태를 PASS로 만들지 않는다. 새 helper와 경로가 검사 범위에 포함되는지 확인한다.
 
@@ -181,3 +181,21 @@ full-system의 post-login qualification은 canonical [Python runner](../../scrip
 | old entry 제거 시점 | 기존 소비자가 없어졌음을 확인하기 전까지 forwarding 유지 |
 
 문서 작성 단계에서 위 사항의 결정을 기다릴 필요는 없다. 기존 동작을 유지하는 경계와 단계가 이미 정해져 있으며, 실물 board 사양을 변경하는 시점에만 추가 근거가 필요하다.
+
+## System Management 후속 정리
+
+`system.lua`에 PPU/SCR/reset controller와 공용 CSS counter를 모으고,
+세 ATU는 `interconnect.lua`, 세 메모리는 `memory.lua`, GPIO와 해당 cold
+reset은 `io_peri.lua`로 이동했다. Mailbox는 `rse_si_mailbox.lua`,
+`ap_si_mailbox.lua`, `ap_rse_mailbox.lua`로 통신 상대별 분리를 유지한다.
+`constants.lua`를 제거하고 각 파일 상단에 주소·크기·IRQ 상수를 둔다.
+여러 파일이 사용하는 주소의 중복은 유지하며 ATU trace 입력은 함수에서 읽는다.
+미사용 `ownership` table을 제거하고 기존 객체 정의 순서와 외부 AP/SI 연결을 보존한다.
+변경 전후 descriptor 및 정적 검증 증거는
+`build/qbox-apollo-qvp/system-mgmt-layout/`에 기록한다.
+후속 Yocto provider 빌드와 native 테스트 130개(67+63)가 통과했다.
+설치된 Lua 98개는 소스와 SHA-256이 일치하며 삭제된 Lua도 남아 있지 않다.
+기존 `nexios-image-apollo-qvp-20261002154207.wic`와 배포 firmware를 사용한
+full-system 부팅 및 기본 post-login 검사는 PASS했다(로그인 98.013초, 전체 111.050초).
+증거는 `runtime/boot/result.json`, 명령과 설치본 검증은 `runtime/command.json`,
+`runtime/installed-lua.json`이다. FWU·보안 서비스·DWC 선택형 검사는 실행하지 않았다.

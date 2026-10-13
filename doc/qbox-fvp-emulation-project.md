@@ -15,10 +15,39 @@ or full-system audio fidelity. Runtime results are recorded separately from
 static descriptor equality in the implementation record.
 
 AP compute and SI CL0/CL1 now keep single-owner address/size constants and AP
-IRQ values as file-local constants in their consuming Lua modules. Shared values
-and address derivations remain in `map.lua`/`hardware.lua` for a later pass;
-the existing SI common IRQ routes and composition APIs are preserved. This is
+IRQ values as file-local constants in their consuming Lua modules. Shared constants are temporarily duplicated in consumers;
+SI IRQ bindings and composition APIs are preserved. This is
 an incremental definition move, not a new hardware schema or runtime feature.
+
+AP compute removes its shared map and separates system control, safety, boot
+storage and interconnect definitions. GIC/ITS and SMMU/TBU definitions are
+merged into `system.lua`; PCIe remains separate. Firmware
+loading stays in VP code, and final routing still follows RoS/system management
+construction. Existing CCI paths, reset target ordering and DMA paths are retained.
+
+RSE now groups definitions into CPU, system, security, memory, boot, I/O and
+interconnect modules. Its centralized hardware and reset files are removed:
+constants belong to consumers, device reset adapters accompany their devices,
+and system reset fanouts retain the existing SYS/RSS and AON domains.
+SoC boot devices are separate from VP firmware loading. Shared constants are
+temporarily duplicated; runtime CCI paths and configurable memory sizes remain
+unchanged. This is a structural refactor, not runtime qualification.
+
+SI CL0 consolidates GIC/multiview and system devices in `system.lua`, moves
+SMCF monitor definitions to `safety.lua`, and replaces `hardware.lua` with
+consumer-local constants. Power and mailbox definitions stay separate. SI IRQ bindings, protected routing, view priorities and PPU reset sequencing
+are unchanged; firmware loading remains a VP responsibility.
+
+SI CL1 removes `hardware.lua` and consolidates GIC windows and ordered SI
+reset finalization in `system.lua`. PPU ownership remains unchanged. The HIPC
+window query delegates to the interconnect module while preserving the public
+API, four-core topology and existing VP loader.
+
+SI IRQ values are now local to their consuming device/CPU modules and VP
+extensions. The shared route table and CL0 IRQ helper exports are removed.
+Regression tests validate actual generated SPI ownership, bounds, duplicates
+and PPI connections. This replaces route-table startup checks with test-time
+configuration checks; it does not add runtime IRQ qualification.
 
 ## AutoSD monitor integration
 
@@ -1135,3 +1164,18 @@ profiles passed 7/7 and 17/17. Historical intermittent RSE/SCP startup and
 power-state readback failures remain recorded. See
 [implementation and runtime evidence](qbox-runtime-idle.md) for exact inputs,
 failed runs, measurements, and qualification limits.
+
+### System Management Lua 구조 정리
+
+SMD 장치 정의를 `system.lua`, `memory.lua`, `interconnect.lua`, `io_peri.lua`와
+통신 상대별 mailbox 세 파일로 정리했다. 주소와 IRQ는 각 파일의 지역 상수이며
+기존 `constants.lua`와 미사용 `ownership` table은 제거했다. `platform.*` 경로,
+객체 정의 순서, 공용 CSS counter, ATU 후속 연결 및 reset 배선은 유지한다.
+변경 전후 descriptor와 관련 정적 검사는 `build/qbox-apollo-qvp/system-mgmt-layout/`에
+기록한다. 후속 Yocto provider 빌드와 native 테스트 130개가 통과했고,
+설치 Lua 98개의 소스 SHA-256 일치 및 삭제 파일 부재를 확인했다.
+기존 제품 WIC와 배포 firmware로 full-system 부팅 및 기본 post-login 검사를
+통과했다(`runtime/boot/result.json`, 전체 111.050초). HIPC/RPMsg와 AP 4 CPU
+PFDI 기본 결과를 확인했으며 선택형 보안 서비스·FWU·DWC 검사는 미실행이다.
+기본 gate의 PASS는 미실행 보안 서비스의 자격을 뜻하지 않는다. 결과 JSON에는
+보안 서비스 관련 오류 문자열 관측이 남아 있다.
