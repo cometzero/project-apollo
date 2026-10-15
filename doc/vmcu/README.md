@@ -1,5 +1,9 @@
 # Apollo QVP Saturn-V 외부 vMCU 통합 계획
 
+2026-10-15 후속 결정: **TC397 SPI master ↔ Apollo slave**, Apollo GPIO toggle로
+전송을 요청한다. 초기 transport는 직접 SPI socket bus로 구현했으며 통합 검증 중이다. [SPI 조사·선정 근거와 GPIO 계약](spi-master-decision.md)을 따른다.
+단계별 작업·소유 파일·통과 조건은 [직접 socket SPI 구현 계획](spi-implementation-plan.md)에 있다.
+
 **[HTML 시각화: vMCU와 Apollo의 연결·동작](visualization.html)** — 경로 강조,
 구성 요소별 소스, 정상 감시·고장 복구·종료/wake의 단계별 흐름, GPIO·검증 결과.
 브라우저에서 직접 열 수 있으며 외부 JavaScript/CSS 의존성이 없다.
@@ -15,7 +19,7 @@ Saturn-V 보드에 **Apollo SoC와 별도 reset·전원 수명을 갖는 외부 
 |---|---|
 | QBox에 QemuInstance를 추가하는가? | **현재 QEMU에 이식한 최소 TC397을 별도 process로 사용**한다. Apollo UART 연동 검증을 마쳤고, 내부 `vmcu_qemu_inst` 통합은 후속 평가다. 실제 Zephyr app과 shell을 실행하고 ASCLIN0은 AP 관리, ASCLIN2는 SI CL0 safety, PORT0는 독립 GPIO에 사용한다. generic Arm은 대안이며 vendor firmware 호환과 RH850 backend는 미검증·미구현이다. |
 | SIL Kit은 어디에 연결하는가? | 보드 바깥 차량 CAN 네트워크가 1차 경계다. TC397 QEMU M_CAN MMIO/FIFO/IRQ ↔ native SIL Kit bridge ↔ 차량/시험 participant를 연결한다. QBox 내부 공통 virtual-time 연동은 후속이다. |
-| SoC↔vMCU 통신은 무엇인가? | 목표는 **Ethernet/UDP 관리 채널 + SPI 주기 상태 채널 + 독립 GPIO fault/reset/wake**다. 초기 QVP는 UART byte 경로를 이용한다. 현재 DW SSI에는 외부 SPI socket이 없어 SPI bus 연결을 먼저 구현해야 한다. 물리 부품과 다른 경로는 QVP 대체 경로로 표시한다. |
+| SoC↔vMCU 통신은 무엇인가? | 목표는 **Ethernet/UDP 관리 채널 + SPI 주기 상태 채널 + 독립 GPIO fault/reset/wake**다. 초기 QVP는 UART byte 경로를 이용한다. `--vmcu-link spi`는 TC397 QSPI0 master와 QVP SI slave를 직접 socket으로 연결한다. 실제 검증 범위는 SPI 구현 기록을 따른다. 물리 부품과 다른 경로는 QVP 대체 경로로 표시한다. |
 | 무엇을 제어하는가? | 부팅 허가, heartbeat/freshness, 고장 통보, 차량 command 유효성, graceful shutdown, 제한된 reset/retry, wake를 단계적으로 구현한다. 차량의 안전 상태는 별도 차량 안전 설계가 결정한다. |
 | PMIC를 누가 관리하는가? | 초기에는 **현재 TPS6594의 단일 소유자 SI CL0를 유지**한다. vMCU는 요청/응답과 독립 fault 관찰로 감독한다. SoC 전체 전원 차단은 별도 always-on 전원 경로와 보드 sequencer가 있어야 하며, 기존 PMIC I2C 버스에 두 master를 바로 연결하지 않는다. |
 
@@ -61,3 +65,6 @@ Saturn-V 보드에 **Apollo SoC와 별도 reset·전원 수명을 갖는 외부 
 CAN/SIL Kit, PMIC 조회, AP 복구·종료·wake의 최신 검증 결과는
 [CAN과 제어 서비스](can-and-services.md#검증)와
 [추가 구현 manifest](../../build/qbox-apollo-qvp/vmcu-services/manifest.json)에 기록한다.
+
+직접 소켓 SPI의 실행 방법, wire/controller 계약과 검증 상태는
+[SPI 구현 기록](spi-implementation.md)에 기록한다.

@@ -2,6 +2,8 @@
 
 상위 문서: [통합 계획](README.md). 이하 객체명·파일명·protocol은 별도 표시가 없으면 **신규 제안**이다. 현재 구현의 UART/GPIO 배치와 wire format은 [SI CL0 Safety Channel](si0-safety-channel.md)을 따른다. [TC397 최소 모델](tc397-minimal-implementation.md)과 [Zephyr 도입 기록](zephyr-implementation.md)은 이전 단계의 근거다.
 
+SPI의 실제 controller/wire/firmware 계약은 [SPI 구현 기록](spi-implementation.md)을 따른다.
+
 ## 1. 외부 vMCU와 내부 Safety Island의 역할
 
 | 영역 | 책임 | 독립성 요구 |
@@ -37,13 +39,13 @@ NVIDIA 레퍼런스는 [조사 문서](references.md)의 관리 Ethernet, safety
 | 링크 | 용도와 방향 | QVP 1차 구현 | 목표/제약 |
 |---|---|---|---|
 | SoC↔vMCU Ethernet/UDP | AP↔MCU 관리, 상태, 진단, CAN payload 전달 | 기존 AP VirtIO network를 이용한 기능 실험은 가능하나 전용 management network 분리와 상대 endpoint가 필요하다. | 보드 Ethernet MAC/switch/VLAN을 확정한 후 재배치한다. VirtIO 성공은 실물 Ethernet driver 검증이 아니다. |
-| SoC↔vMCU SPI | 주기 상태·fault detail, 짧고 제한된 frame | 현재 DW SSI는 **내부 SRL loopback만 구현**하고 외부 SPI socket이 없다. 먼저 bus/CS/mode/transaction을 구현한 후 Apollo master↔vMCU slave를 시험한다. | NVIDIA처럼 MCU master/SoC slave를 원하면 Apollo slave controller 지원도 필요하다. master끼리 연결하지 않는다. |
+| SoC↔vMCU SPI | TC397 master ↔ Apollo slave; Apollo GPIO toggle로 전송 요청 | PLANNED: 직접 socket 기반 SPI bus와 TC397 QSPI/Apollo slave 모델. 현재 DW SSI는 내부 SRL loopback만 지원한다. | [2026-10-15 결정](spi-master-decision.md): SI CL0 slave 권장, GPIO는 ACK까지 toggle level 유지. SIL Kit custom adapter는 보류한다. |
 | SoC↔vMCU UART | 초기 health/command protocol, bring-up | AP 기능 시험은 기존 DW UART pair loopback을 opt-in으로 대체한다. SI CL0 PFDI 보고는 **PL011 0x2a820000 / INTID41 ↔ ASCLIN2**를 사용한다. 기존 SI PL011 console은 유지한다. | byte socket은 baud/FIFO/IRQ/overrun 검증을 대신하지 않는다. QVP extension을 실물 SI 핀으로 주장하지 않는다. |
 | 독립 GPIO | `SOC_ERROR`, `SOC_PWR_REQ`, `IST_DONE_N`, `SOC_RESET_N`, `MCU_SOC_WAKE` | SI PL061 0x2a830000 ↔ TC397 PORT0, GPIO 전용 transport와 reset arbiter | 핀 이름은 제안이다. 실제 SSI/UART data가 끊겨도 fault·reset이 전달되어야 한다. |
 | vMCU↔Vehicle CAN/CAN FD | 차량 상태 수신, 허용된 command/health/진단 송신 | frame endpoint↔SIL Kit CAN service, traffic generator/receiver | 1개 logical channel로 시작한다. 차체·섀시·진단 channel 분리는 요구된 bus topology가 있을 때 추가한다. |
 | vMCU↔보드 PMIC | 전원 정책, fault와 reset | 기존 PMIC는 SI CL0 proxy로 관리, vMCU에 direct I2C master를 추가하지 않는다. | 독립 power supervisor 또는 명시적 PMIC ownership 이전은 별도 단계다. |
 
-한 profile에서 UART와 SPI를 동시에 mandatory heartbeat로 만들지 않는다. 초기에는 UART만 지원하고, 향후 선택 옵션 예시인 `soc-link=spi`는 외부 SPI 구현·검증 이후 제공한다. 관리 Ethernet은 선택 기능으로 추가한다. GPIO fault는 data channel과 독립적으로 유지한다. prototype의 AP master SPI를 reference의 MCU master SPI와 같은 배선으로 설명하지 않는다.
+한 profile에서 UART와 SPI를 동시에 mandatory heartbeat로 만들지 않는다. 초기에는 UART만 지원하고, 향후 선택 옵션 예시인 `soc-link=spi`는 외부 SPI 구현·검증 이후 제공한다. 관리 Ethernet은 선택 기능으로 추가한다. GPIO fault는 data channel과 독립적으로 유지한다. 기존 Apollo-master PoC 제안은 TC397-master 결정으로 대체하며 실물 pinmux 대응은 미확정이다.
 
 ### 3.1 향후 CAN·전원 protocol 확장 제안
 

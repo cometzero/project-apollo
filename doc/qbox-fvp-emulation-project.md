@@ -86,6 +86,16 @@ and SI-controlled AP recovery/off/wake are documented in
 [CAN and control services](vmcu/can-and-services.md). PMIC rail gating, SC7,
 physical CAN timing and cross-process safety deadlines remain unqualified.
 
+`--bsp --vmcu-link spi` selects the direct socket SPI implementation: TC397
+QSPI0 master, QVP SI CL0 slave at 0x2a840000 (INTID43), and retained GPIO5
+requests. The transaction transport preserves full-duplex data, CS boundaries,
+FIFO and controller IRQ behavior; it does not model SCLK waveforms or shared
+virtual time. UART remains the default. Implementation and evidence status are
+tracked in [direct SPI implementation](vmcu/spi-implementation.md). SPI service,
+real PFDI fault/recovery, report-off/on and UART service runs passed. Broader AP
+DMA regression failed at an arm-dma350 re-entrant register read during SPI1
+traffic; sporadic pre-SPI RunOnSysc boot exceptions remain unresolved.
+
 ## Goal
 
 Implement the Arm Zena CSS RD-Aspen FVP behavior in QBox using

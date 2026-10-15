@@ -1,5 +1,9 @@
 # SIL Kit 연동 구현과 후속 시간 동기 계획
 
+2026-10-15 SPI 조사: 공식 QEMU adapter의 chardev 예제는 byte Pub/Sub이며
+native SPI controller/bus API가 아니다. 초기 TC397-master 링크는 직접 socket
+SPI bus로 선정했다. [선정 근거와 향후 RPC adapter 조건](spi-master-decision.md)을 따른다.
+
 상위 문서: [통합 계획](README.md). 조사한 공식 문서는 SIL Kit 5.0.7을 표시한다. **현재 구현은 TC397 외부 QEMU의 실제 M_CAN endpoint와 native SIL Kit bridge다.** 실행·메시지·검증은 [CAN과 제어 서비스](can-and-services.md), SDK와 wire 계약은 [native participant README](../../scripts/silkit/README.md)를 따른다. 아래 SystemC 직접 bridge와 coordinated time은 후속 설계다.
 
 ## 1. 권장 경계

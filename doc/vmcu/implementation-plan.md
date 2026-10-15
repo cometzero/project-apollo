@@ -7,6 +7,12 @@ P0/P1에는 AP 관리 UART에 더해 **기존 SI CL0 PFDI 결과의 5초 Safety 
 
 ## 1. 순서와 완료 조건
 
+SPI 후속 작업은 [TC397-master SPI 결정](spi-master-decision.md)을 따른다.
+Apollo GPIO toggle 요청, SI slave와 직접 socket bus가 초기 구현 대상이다.
+직접 SPI 구현과 검증 상태는 [SPI 구현 기록](spi-implementation.md)을 따른다.
+SIL Kit SPI adapter는 구현하지 않는다.
+세부 작업은 [SPI 전용 구현 계획의 P0–P5](spi-implementation-plan.md)로 관리한다.
+
 | 단계 | 구현 범위 | 선행 조건 | 완료 증거 |
 |---|---|---|---|
 | P-MIN 최소 MCU | 현재 QEMU에 TC397 CPU0·memory·IR·STM·ASCLIN, 독립 bare-metal probe | 공개 fork pinned source, TriCore GCC | 현재 source 빌드, ELF boot, timer ISR, UART RX/WAIT·TX, mask/priority, reset 후 반복, 기존 ISA 회귀 |
