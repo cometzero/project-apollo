@@ -3,6 +3,7 @@
 
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -183,7 +184,7 @@ def endpoint_from_chardev(devices, label="tc397_uart"):
     raise RuntimeError(f"QMP did not report the TC397 loopback listener: {label}")
 
 
-def wait_endpoint(path, process, timeout, stopped, with_can=False, resume=False):
+def wait_endpoint(path, process, timeout, stopped, with_can=False, resume=False, with_spi=False):
     """Use QMP readiness; probing the UART would consume its one connection."""
     deadline = time.monotonic() + timeout
     with socket.socket(socket.AF_UNIX) as sock:
@@ -237,6 +238,8 @@ def wait_endpoint(path, process, timeout, stopped, with_can=False, resume=False)
         labels = ("tc397_uart", "tc397_safety", "tc397gpio")
         if with_can:
             labels += ("tc397can",)
+        if with_spi:
+            labels += ("tc397spi",)
         return {label: endpoint_from_chardev(response["return"], label)
                 for label in labels}
 
@@ -245,6 +248,17 @@ def write_json(path, value):
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, indent=2) + "\n")
     temporary.replace(path)
+
+
+def validate_firmware(path, transport):
+    """Reject a stale or wrong-transport ELF before starting/stopping processes."""
+    metadata = path.with_suffix(path.suffix + ".json")
+    if transport == "uart" and not metadata.exists():
+        return  # Legacy deployments contain only the UART ELF.
+    manifest = json.loads(metadata.read_text())
+    if (manifest["safety_transport"] != transport or
+            manifest["sha256"] != hashlib.sha256(path.read_bytes()).hexdigest()):
+        raise ValueError("transport or firmware hash mismatch")
 
 
 def supervise(args):
@@ -267,7 +281,7 @@ def run(args, output):
                 for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)}
     started = time.monotonic()
     status = {"status": "STARTING", "supervisor_pid": os.getpid(),
-              "qbox_command": args.command, "cleanup": []}
+              "qbox_command": args.command, "vmcu_link": args.vmcu_link, "cleanup": []}
     status_path = output / "tc397-status.json"
     console = None
     silkit = None
@@ -310,6 +324,9 @@ def run(args, output):
             if args.sil_kit:
                 command += ["-chardev", "socket,id=tc397can,host=127.0.0.1,"
                             "port=0,server=on,wait=off", "-global", "tc397-can.chardev=tc397can"]
+            if args.vmcu_link == "spi":
+                command += ["-chardev", "socket,id=tc397spi,host=127.0.0.1,"
+                            "port=0,server=on,wait=off,nodelay=on", "-global", "tc397-qspi.chardev=tc397spi"]
             status["qemu_command"] = command
             message("Starting TC397 Zephyr; ASCLIN0 AP, ASCLIN1 shell, ASCLIN2 SI0, PORT0 GPIO.")
             qemu_env = os.environ.copy()
@@ -321,7 +338,8 @@ def run(args, output):
             status["tc397_pid"] = mcu.pid
             write_json(status_path, status)
             endpoints = wait_endpoint(qmp, mcu, args.startup_timeout,
-                                     lambda: stop_signal, with_can=args.sil_kit)
+                                     lambda: stop_signal, with_can=args.sil_kit,
+                                     with_spi=args.vmcu_link == "spi")
             endpoint = endpoints["tc397_uart"]
             status.update(uart_endpoint=endpoint,
                           safety_endpoint=endpoints["tc397_safety"],
@@ -343,11 +361,18 @@ def run(args, output):
             env = dict(os.environ, QBOX_APOLLO_VMCU_UART_ENDPOINT=endpoint,
                        QBOX_APOLLO_VMCU_SAFETY_ENDPOINT=endpoints["tc397_safety"],
                        QBOX_APOLLO_VMCU_GPIO_ENDPOINT=endpoints["tc397gpio"])
+            env.pop("QBOX_APOLLO_VMCU_SPI_ENDPOINT", None)
+            if args.vmcu_link == "spi":
+                status["spi_endpoint"] = endpoints["tc397spi"]
+                env["QBOX_APOLLO_VMCU_SPI_ENDPOINT"] = endpoints["tc397spi"]
             child = subprocess.Popen(args.command, env=env, start_new_session=True)
             owners.append(OwnedProcesses(child))
             status.update(status="RUNNING", qbox_pid=child.pid)
+            if args.vmcu_link == "spi":
+                status["spi_ready"] = False
             write_json(status_path, status)
             next_discovery = 0
+            spi_deadline = time.monotonic() + 180
             while True:
                 if stop_signal:
                     status["status"], code = "INTERRUPTED", 128 + stop_signal
@@ -365,9 +390,22 @@ def run(args, output):
                 if child.poll() is not None:
                     code = child.returncode
                     code = code if code >= 0 else 128 - code
+                    if code == 0 and args.vmcu_link == "spi" and not status["spi_ready"]:
+                        raise RuntimeError("QBox exited before SPI firmware handshake completed")
                     status["status"] = "EXITED" if code == 0 else "FAILED"
                     break
                 if time.monotonic() >= next_discovery:
+                    if args.vmcu_link == "spi" and not status["spi_ready"]:
+                        si_log = output / "qbox-safety-island-cl0.log"
+                        si_text = si_log.read_text(errors="replace") if si_log.exists() else ""
+                        mcu_text = uart_log.read_text(errors="replace")
+                        if ("transport=spi" in si_text and "[VMCU_SPI] ACK" in si_text and
+                                re.search(r"VMCU_SPI rx=[1-9]\d* ack=[1-9]\d*", mcu_text)):
+                            status["spi_ready"] = True
+                            message("SPI firmware data/ACK handshake ready.")
+                            write_json(status_path, status)
+                        elif time.monotonic() >= spi_deadline:
+                            raise TimeoutError("SPI firmware handshake timed out (180 host seconds)")
                     for owner in owners:
                         owner.discover()
                     next_discovery = time.monotonic() + .5
@@ -375,6 +413,7 @@ def run(args, output):
         except InterruptedError:
             status["status"], code = "INTERRUPTED", 128 + stop_signal
         except Exception as error:
+            code = 1
             status.update(status="FAILED", error=str(error))
             message(f"ERROR: {error}")
             print(f"TC397 companion: {error}", file=sys.stderr)
@@ -410,6 +449,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qemu", type=Path, required=True)
     parser.add_argument("--firmware", type=Path, required=True)
+    parser.add_argument("--vmcu-link", choices=("uart", "spi"), default="uart")
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--startup-timeout", type=float, default=15)
     parser.add_argument("--shutdown-timeout", type=float, default=30)
@@ -427,6 +467,10 @@ def main(argv=None):
         parser.error(f"QEMU executable unavailable: {args.qemu}")
     if not args.firmware.is_file():
         parser.error(f"TC397 firmware unavailable: {args.firmware}")
+    try:
+        validate_firmware(args.firmware, args.vmcu_link)
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        parser.error(f"vMCU firmware manifest invalid: {error}")
     validate(args, parser)
     try:
         return supervise(args)

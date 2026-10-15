@@ -162,9 +162,12 @@ def _add_attachments(graph: dict, run_dir: Path) -> list[dict]:
     graph["groups"].append({"id": "external", "label": "External board participants",
                              "description": "Launcher configuration; independent processes, not Lua CCI objects."})
     links = []
-    for key, channel, port in (("uart_endpoint", "uart", "ASCLIN0"),
-                               ("safety_endpoint", "uart", "ASCLIN2"),
-                               ("gpio_endpoint", "gpio", "PORT0")):
+    channels = [("uart_endpoint", "uart", "ASCLIN0"),
+                ("safety_endpoint", "uart", "ASCLIN2"),
+                ("gpio_endpoint", "gpio", "PORT0")]
+    if manifest.get("vmcu_link") == "spi":
+        channels[1] = ("spi_endpoint", "spi", "QSPI0")
+    for key, channel, port in channels:
         endpoint = manifest.get(key)
         targets = [node for node in graph["nodes"]
                    if node["moduletype"] == "char_backend_socket" and endpoint

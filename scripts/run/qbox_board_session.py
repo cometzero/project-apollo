@@ -53,6 +53,7 @@ def child_command(spec, output):
     wrapper = [sys.executable, str(Path(__file__).with_name('qbox_tc397.py')),
                '--qemu', spec['tc397_qemu'], '--firmware', spec['tc397_firmware'],
                '--out-dir', str(output)]
+    wrapper += ['--vmcu-link', spec.get('vmcu_link', 'uart')]
     if spec.get('silkit'):
         wrapper.append('--sil-kit')
         if spec.get('silkit_registry'):

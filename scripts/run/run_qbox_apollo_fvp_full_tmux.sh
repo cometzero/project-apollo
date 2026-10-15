@@ -56,6 +56,7 @@ DEBUG_WAIT_MARKER="${DEBUG_WAIT_MARKER:-}"
 TC397_QEMU="${TC397_QEMU:-}"
 TC397_FIRMWARE="${TC397_FIRMWARE:-}"
 SIL_KIT="${SIL_KIT:-0}"
+VMCU_LINK="${VMCU_LINK:-uart}"
 SIL_KIT_REGISTRY="${SIL_KIT_REGISTRY:-}"
 SIL_KIT_ALLOW_ACTUATION="${SIL_KIT_ALLOW_ACTUATION:-0}"
 SIL_KIT_ECHO_FIXTURE="${SIL_KIT_ECHO_FIXTURE:-0}"
@@ -149,6 +150,7 @@ Options:
   --sil-kit-echo-fixture enable CAN fixture echo replies
   --tc397-qemu FILE    start this standalone TC397 QEMU with the QBox runner
   --tc397-firmware ELF TC397 Zephyr vMCU firmware (requires --tc397-qemu)
+  --vmcu-link MODE     SI safety transport: uart (default) or spi
   --multi-session      preserve existing QBox tmux sessions
   --dry-run            print the run command and log layout only
   -h, --help           show this help
@@ -396,6 +398,7 @@ runner_command()
         fi
         _out=("${PYTHON_BIN}" "${ROOT_DIR}/scripts/run/qbox_tc397.py"
               --qemu "${TC397_QEMU}" --firmware "${TC397_FIRMWARE}"
+              --vmcu-link "${VMCU_LINK}"
               --out-dir "${OUT_DIR}" "${silkit_args[@]}" -- "${_out[@]}")
     fi
 }
@@ -1462,6 +1465,8 @@ start_tmux()
     elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SIL_KIT_ECHO_FIXTURE}" == "1" ]]; then
         die "SIL Kit options require --sil-kit"
     fi
+    [[ "${VMCU_LINK}" == uart || "${VMCU_LINK}" == spi ]] || die "--vmcu-link must be uart or spi"
+    [[ "${VMCU_LINK}" != spi || -n "${TC397_QEMU}" ]] || die "--vmcu-link spi requires --tc397-qemu"
     if [[ -n "${TC397_QEMU}" || -n "${TC397_FIRMWARE}" ]]; then
         [[ -n "${TC397_QEMU}" && -n "${TC397_FIRMWARE}" ]] ||
             die "--tc397-qemu and --tc397-firmware must be used together"
@@ -1529,6 +1534,7 @@ start_tmux()
         printf 'ROOT_DIR=%q SCRIPT_PATH=%q PYTHON_BIN=%q QBOX_CONF=%q ' \
             "${ROOT_DIR}" "${SCRIPT_PATH}" "${PYTHON_BIN}" "${QBOX_CONF}"
         printf 'TC397_QEMU=%q TC397_FIRMWARE=%q ' "${TC397_QEMU}" "${TC397_FIRMWARE}"
+        printf 'VMCU_LINK=%q ' "${VMCU_LINK}"
         printf 'QBOX_TC397_LIBRARY_PATH=%q ' "${QBOX_TC397_LIBRARY_PATH:-}"
         printf 'SIL_KIT=%q SIL_KIT_REGISTRY=%q SIL_KIT_ALLOW_ACTUATION=%q SIL_KIT_ECHO_FIXTURE=%q ' \
             "${SIL_KIT}" "${SIL_KIT_REGISTRY}" "${SIL_KIT_ALLOW_ACTUATION}" "${SIL_KIT_ECHO_FIXTURE}"
@@ -1718,6 +1724,11 @@ while (($# > 0)); do
         --sil-kit-echo-fixture)
             SIL_KIT_ECHO_FIXTURE=1
             shift
+            ;;
+        --vmcu-link)
+            (($# >= 2)) || die "--vmcu-link requires uart or spi"
+            VMCU_LINK="$2"
+            shift 2
             ;;
         --tc397-qemu)
             (($# >= 2)) || die "--tc397-qemu requires a value"

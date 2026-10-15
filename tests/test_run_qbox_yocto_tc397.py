@@ -19,6 +19,7 @@ from test_run_qbox_yocto_sh import (
     (["--headless"], False, False),
     ([], True, False),
     (["--sil-kit"], False, True),
+    (["--vmcu-link", "spi"], False, True),
     (["--sil-kit", "--sil-kit-registry", "silkit://127.0.0.1:8500",
       "--sil-kit-allow-actuation", "--sil-kit-echo-fixture"], False, True),
 ])
@@ -48,6 +49,7 @@ def test_bsp_companion_selection(tmp_path, args, external, enabled):
         argv = shlex.split(command)
         assert argv[argv.index("--qemu") + 1] == env["QBOX_TC397_QEMU"]
         assert argv[argv.index("--firmware") + 1] == env["QBOX_TC397_FIRMWARE"]
+        assert argv[argv.index('--vmcu-link') + 1] == ('spi' if '--vmcu-link' in args else 'uart')
         assert "--foreground-runtime" in argv
         for option in ("--sil-kit", "--sil-kit-registry", "--sil-kit-allow-actuation", "--sil-kit-echo-fixture"):
             assert (option in argv) == (option in args)
@@ -76,6 +78,8 @@ def test_tc397_pair_required(tmp_path):
 
 
 @pytest.mark.parametrize('args,message', [
+    (['--bsp', '--vmcu-link', 'spi', '--no-vmcu'], 'requires the local TC397'),
+    (['--bsp', '--vmcu-link', 'bad'], 'must be uart or spi'),
     (['--bsp', '--sil-kit', '--headless'], 'requires the local TC397'),
     (['--bsp', '--sil-kit', '--no-vmcu'], 'requires the local TC397'),
     (['--bsp', '--sil-kit-echo-fixture'], 'options require --sil-kit'),

@@ -1,6 +1,7 @@
 """TC397 companion shell transport and owned-process lifecycle regressions."""
 
 import importlib.util
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -43,12 +44,13 @@ options = [args[i+1] for i, arg in enumerate(args) if arg == '-chardev']
 logfile = options[0].split('logfile=', 1)[1].split(',')[0]
 assert 'logfile=' not in options[1]
 has_can = any('id=tc397can,' in option for option in options)
+has_spi = any('id=tc397spi,' in option for option in options)
 console_path = options[1].split('path=', 1)[1].split(',')[0]
 console_server = socket.socket(socket.AF_UNIX)
 console_server.bind(console_path)
 console_server.listen()
 listeners = {}
-for label in ('tc397_uart', 'tc397_safety', 'tc397gpio') + (('tc397can',) if has_can else ()):
+for label in ('tc397_uart', 'tc397_safety', 'tc397gpio') + (('tc397can',) if has_can else ()) + (('tc397spi',) if has_spi else ()):
     listener = socket.socket()
     listener.bind(('127.0.0.1', 0))
     listener.listen()
@@ -90,6 +92,10 @@ if '-S' in args:
             stream.flush()
 console.setblocking(False)
 console.sendall(b'test shell ready\n')
+if has_spi and not config.get('no_spi_handshake'):
+    console.sendall(b'VMCU_SPI rx=1 ack=1 errors=0\n')
+    (Path(logfile).parent / 'qbox-safety-island-cl0.log').write_text(
+        '[VMCU_SAFETY] transport=spi\n[VMCU_SPI] ACK seq=1 count=1 irq=2\n')
 started = time.monotonic()
 with open(logfile, 'ab', buffering=0) as raw:
     while True:
@@ -118,6 +124,9 @@ def launch(tmp_path):
 
     def start(command, config=None, env=None, options=()):
         firmware.write_text(json.dumps(config or {}))
+        if '--vmcu-link' in options and options[options.index('--vmcu-link') + 1] == 'spi':
+            firmware.with_suffix('.json.json').write_text(json.dumps({
+                'safety_transport': 'spi', 'sha256': hashlib.sha256(firmware.read_bytes()).hexdigest()}))
         process = subprocess.Popen(
             [sys.executable, str(SCRIPT), "--qemu", str(qemu),
              "--firmware", str(firmware), "--out-dir", str(output),
@@ -156,7 +165,8 @@ def wait_file(path):
     pytest.fail(f"file not written: {path}")
 
 
-def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path):
+@pytest.mark.parametrize('transport', ['uart', 'spi'])
+def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path, transport):
     env = dict(os.environ, QBOX_MANAGED_SESSION="test-session",
                QBOX_SESSION_OWNER=str(os.getuid()),
                QBOX_TC397_LIBRARY_PATH=str(tmp_path / "native libs"))
@@ -165,6 +175,7 @@ def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path):
             f"Path({str(received)!r}).write_text(json.dumps(dict(os.environ)));"
             "time.sleep(.2)")
     process, output = launch([sys.executable, "-c", code], env=env,
+                             options=('--vmcu-link', transport),
                              config={"expected_library_path": env["QBOX_TC397_LIBRARY_PATH"]})
     value = result(process, output)
     child_env = json.loads(received.read_text())
@@ -173,6 +184,13 @@ def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path):
     assert child_env["QBOX_APOLLO_VMCU_UART_ENDPOINT"] == value["uart_endpoint"]
     assert child_env["QBOX_APOLLO_VMCU_SAFETY_ENDPOINT"] == value["safety_endpoint"]
     assert child_env["QBOX_APOLLO_VMCU_GPIO_ENDPOINT"] == value["gpio_endpoint"]
+    assert value['vmcu_link'] == transport
+    if transport == 'spi':
+        assert child_env['QBOX_APOLLO_VMCU_SPI_ENDPOINT'] == value['spi_endpoint']
+        assert 'tc397-qspi.chardev=tc397spi' in value['qemu_command']
+        assert value['spi_ready'] is True
+    else:
+        assert 'QBOX_APOLLO_VMCU_SPI_ENDPOINT' not in child_env
     assert len({value[k] for k in ("uart_endpoint", "safety_endpoint", "gpio_endpoint")}) == 3
     assert value["console_output_bytes"] == (output / "tc397-uart.log").stat().st_size
     assert value["console_output_bytes"] > 0
@@ -181,6 +199,28 @@ def test_normal_exit_preserves_environment_and_shell_log(launch, tmp_path):
     assert "test shell ready" in text
     assert "[host" not in text and "type=STATUS" not in text
     assert (output / "tc397-link-tx.bin").stat().st_size >= 28
+
+
+def test_firmware_manifest_rejects_wrong_transport_and_modified_elf(tmp_path):
+    elf = tmp_path / 'vmcu.elf'
+    elf.write_bytes(b'firmware')
+    meta = elf.with_suffix('.elf.json')
+    meta.write_text(json.dumps({'safety_transport': 'spi',
+                               'sha256': hashlib.sha256(elf.read_bytes()).hexdigest()}))
+    companion.validate_firmware(elf, 'spi')
+    with pytest.raises(ValueError):
+        companion.validate_firmware(elf, 'uart')
+    elf.write_bytes(b'changed')
+    with pytest.raises(ValueError):
+        companion.validate_firmware(elf, 'spi')
+
+
+def test_spi_socket_without_guest_handshake_is_not_success(launch):
+    process, output = launch([sys.executable, '-c', 'import time; time.sleep(.2)'],
+                             config={'no_spi_handshake': True}, options=('--vmcu-link', 'spi'))
+    value = result(process, output, expected=1)
+    assert not value['spi_ready']
+    assert 'before SPI firmware handshake' in value['error']
 
 
 def test_child_launch_failure_stops_mcu(launch):

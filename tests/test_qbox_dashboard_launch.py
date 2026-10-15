@@ -35,6 +35,7 @@ def fixture_env(tmp_path, bsp):
 @pytest.mark.parametrize('options,bsp,vmcu,silkit,interval', [
     ([], False, False, False, None),
     (['--bsp', '--stats'], True, True, False, 5),
+    (['--bsp', '--vmcu-link', 'spi'], True, True, False, None),
     (['--bsp', '--sil-kit', '--stats-interval', '2.5'], True, True, True, 2.5),
     (['--bsp', '--no-vmcu'], True, False, False, None),
 ])

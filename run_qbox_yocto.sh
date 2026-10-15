@@ -24,6 +24,7 @@ Options:
   --machine NAME              Yocto machine name (default: apollo-qvp)
   --bsp                       Boot nexios-bsp-initramfs; tmux also starts TC397
   --no-vmcu                   Disable the automatic TC397 Zephyr shell pane
+  --vmcu-link uart|spi         Select the SI safety transport (BSP companion)
   --sil-kit                   Start owned SIL Kit registry and CAN participants (BSP tmux)
   --sil-kit-registry URI      Use an external SIL Kit registry
   --sil-kit-allow-actuation   Allow explicit VehicleRestbus power/recovery commands
@@ -743,6 +744,7 @@ PERSIST_RSE_STATE="${QBOX_PERSIST_RSE_STATE:-1}"
 RESET_RSE_STATE=0
 BSP_MODE=0
 VMCU_DISABLED=0
+VMCU_LINK=uart
 VMCU_ENABLED=0
 SIL_KIT=0
 SIL_KIT_REGISTRY=""
@@ -820,6 +822,11 @@ while (($#)); do
         --sil-kit-echo-fixture)
             SIL_KIT_ECHO_FIXTURE=1
             shift
+            ;;
+        --vmcu-link)
+            [[ $# -ge 2 ]] || die "--vmcu-link requires uart or spi"
+            VMCU_LINK="$2"
+            shift 2
             ;;
         --no-vmcu)
             VMCU_DISABLED=1
@@ -1196,6 +1203,11 @@ if [[ "${BSP_MODE}" == "1" && ( "${HEADLESS}" == "0" || "${DASHBOARD}" == "1" ) 
 
 fi
 
+[[ "${VMCU_LINK}" == uart || "${VMCU_LINK}" == spi ]] || die "--vmcu-link must be uart or spi"
+if [[ "${VMCU_LINK}" == spi && "${VMCU_ENABLED}" != 1 ]]; then
+    die "--vmcu-link spi requires the local TC397 companion (--bsp with tmux or --dashboard)"
+fi
+
 if [[ "${SIL_KIT}" == "1" ]]; then
     [[ "${VMCU_ENABLED}" == "1" ]] ||
         die "--sil-kit requires the local TC397 companion (--bsp with tmux or --dashboard, without --no-vmcu/external UART)"
@@ -1212,7 +1224,9 @@ elif [[ -n "${SIL_KIT_REGISTRY}" || "${SIL_KIT_ALLOW_ACTUATION}" == "1" || "${SI
 fi
 
 if [[ "${VMCU_ENABLED}" == "1" ]]; then
-    TC397_FIRMWARE="${TC397_FIRMWARE:-${DEPLOY_DIR}/zephyr-vmcu-tc397.elf}"
+    vmcu_suffix=""
+    [[ "${VMCU_LINK}" != spi ]] || vmcu_suffix="-spi"
+    TC397_FIRMWARE="${TC397_FIRMWARE:-${DEPLOY_DIR}/zephyr-vmcu-tc397${vmcu_suffix}.elf}"
     if [[ -z "${TC397_QEMU}" ]]; then
         tc397_provider="${DEPLOY_DIR}/../../qemu-apollo-native/qemu-apollo-native.json"
         if [[ -f "${tc397_provider}" ]]; then
@@ -1239,6 +1253,13 @@ PYTHON
     if [[ "${DRY_RUN}" == "0" ]]; then
         [[ -x "${TC397_QEMU}" ]] || die "TC397 QEMU not executable: ${TC397_QEMU}; run ./yocto_build.sh --bsp, or use --no-vmcu"
         [[ -f "${TC397_FIRMWARE}" ]] || die "TC397 firmware missing: ${TC397_FIRMWARE}; run ./yocto_build.sh --bsp, or use --no-vmcu"
+        "${PYTHON:-python3}" - "${ROOT_DIR}" "${TC397_FIRMWARE}" "${VMCU_LINK}" <<'PY' || die "vMCU firmware manifest invalid"
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts/run'))
+from qbox_tc397 import validate_firmware
+validate_firmware(Path(sys.argv[2]), sys.argv[3])
+PY
     fi
     TC397_QEMU="$(realpath -m "${TC397_QEMU}")"
     TC397_FIRMWARE="$(realpath -m "${TC397_FIRMWARE}")"
@@ -1630,6 +1651,7 @@ else
     )
     if [[ "${VMCU_ENABLED}" == "1" ]]; then
         RUNNER_CMD+=(--tc397-qemu "${TC397_QEMU}" --tc397-firmware "${TC397_FIRMWARE}")
+        RUNNER_CMD+=(--vmcu-link "${VMCU_LINK}")
         if [[ "${SIL_KIT}" == "1" ]]; then
             RUNNER_CMD+=(--sil-kit)
             [[ -z "${SIL_KIT_REGISTRY}" ]] || RUNNER_CMD+=(--sil-kit-registry "${SIL_KIT_REGISTRY}")
@@ -1814,14 +1836,14 @@ if [[ "${DASHBOARD}" == "1" ]]; then
         "${QBOX_CONF}" "${QBOX_CONF_FILE}" "${MACHINE}" "${IMAGE_BASENAME}" \
         "${BSP_MODE}" "${VMCU_ENABLED}" "${SIL_KIT}" "${SIL_KIT_REGISTRY}" \
         "${SIL_KIT_ALLOW_ACTUATION}" "${SIL_KIT_ECHO_FIXTURE}" "${TC397_QEMU}" \
-        "${TC397_FIRMWARE}" "${STATS_INTERVAL}" "${MONITOR_PORT}" "${RUNNER_CMD[@]}" <<'PY'
+        "${TC397_FIRMWARE}" "${STATS_INTERVAL}" "${MONITOR_PORT}" "${VMCU_LINK}" "${RUNNER_CMD[@]}" <<'PY'
 import json
 import os
 from pathlib import Path
 import sys
 
 path, dry, cwd, output, conf, qboxconf, machine, image = sys.argv[1:9]
-bsp, vmcu, silkit, registry, actuation, echo, qemu, firmware, interval, port = sys.argv[9:19]
+bsp, vmcu, silkit, registry, actuation, echo, qemu, firmware, interval, port, vmcu_link = sys.argv[9:20]
 environment = {key: value for key, value in os.environ.items()
                if (key.startswith(('QBOX_', 'GS_', 'SCC_')) or key == 'LD_LIBRARY_PATH')
                and not any(secret in key.upper() for secret in ('PASSWORD', 'TOKEN', 'SECRET', 'CREDENTIAL'))}
@@ -1830,9 +1852,9 @@ spec = dict(schema_version=1, cwd=cwd, out_dir=str(Path(output).resolve()),
             machine=machine, image_basename=image, bsp=bsp == '1', vmcu=vmcu == '1',
             silkit=silkit == '1', silkit_registry=registry,
             silkit_allow_actuation=actuation == '1', silkit_echo_fixture=echo == '1',
-            tc397_qemu=qemu, tc397_firmware=firmware,
+            tc397_qemu=qemu, tc397_firmware=firmware, vmcu_link=vmcu_link,
             stats_interval=float(interval) if interval else None,
-            monitor_port=int(port), env=environment, command=sys.argv[19:])
+            monitor_port=int(port), env=environment, command=sys.argv[20:])
 if dry == '1':
     print('Dashboard resolved launch specification (no bind/boot/files):')
     print(json.dumps(spec, indent=2))
