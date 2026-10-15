@@ -48,3 +48,18 @@ def test_injected_fault_never_masks_unrelated_failure(damage):
     damage(result)
     with pytest.raises(RuntimeError):
         module.validate_boot_result(result, True)
+
+
+@pytest.mark.parametrize('value,expected', [(0x1c, 0x1c), (0x1d, 0x1c),
+    (0x3c, 0x1c), (0x3d, 0x1c), (0x2c, 0x0c), (0x24, 0x04)])
+def test_spi_request_pin_does_not_change_control_assertions(value, expected):
+    line = f'VMCU_RPC peer=SI0 operation=6 result=OK value=0x{value:08x}'
+    assert module.validate_gpio_reply(line, expected, 'spi') == value & 0x1f
+
+
+@pytest.mark.parametrize('value,transport', [(0x3c, 'uart'), (0x5c, 'spi'),
+    (0x34, 'spi'), (0x0c, 'spi')])
+def test_unexpected_gpio_bits_still_fail(value, transport):
+    line = f'VMCU_RPC peer=SI0 operation=6 result=OK value=0x{value:08x}'
+    with pytest.raises(RuntimeError):
+        module.validate_gpio_reply(line, 0x1c, transport)

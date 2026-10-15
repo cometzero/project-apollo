@@ -34,17 +34,31 @@ def tmux(*args):
     return subprocess.check_output(["tmux", *args], text=True).strip()
 
 
+def validate_gpio_reply(line, expected, transport):
+    """Check legacy control pins while allowing the dedicated SPI request output."""
+    match = re.search(r'VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x([0-9a-fA-F]+)', line)
+    if match is None:
+        raise RuntimeError('Missing successful SI GPIO reply')
+    value = int(match.group(1), 16)
+    allowed = 0x3f if transport == 'spi' else 0x1f
+    if value & ~allowed or value & 0x1e != expected:
+        raise RuntimeError(f'Unexpected GPIO pins: {value:#x}, expected bits1..4={expected:#x}')
+    return value & 0x1f
+
+
 def execute(args, result):
     out = args.out_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
     session = f"apollo-qbox-zephyr-vmcu-{os.getpid()}"
     command = [str(ROOT / "run_qbox_yocto.sh"), "--bsp", "--no-attach",
                "--multi-session", "--copy-disks", "--no-persistent-rse-state",
+               "--vmcu-link", args.vmcu_link,
                "--session", session, "--out-dir", str(out),
                "--timeout", str(args.timeout)]
-    result.update(command=command, session=session, checks={})
+    result.update(command=command, session=session, checks={}, vmcu_link=args.vmcu_link)
     env = dict(os.environ, LINES="60", COLUMNS="180")
-    env.pop("QBOX_APOLLO_VMCU_UART_ENDPOINT", None)
+    for name in ("UART", "SAFETY", "GPIO", "SPI"):
+        env.pop(f"QBOX_APOLLO_VMCU_{name}_ENDPOINT", None)
     started = False
     with (out / "launcher.log").open("w") as log:
         try:
@@ -74,24 +88,39 @@ def execute(args, result):
                 result["checks"][command] = {"status": "PASS", "response": observed}
                 return offset
 
-            # Observe a quiet healthy interval. No host-side decoder is a monitor.
-            before = read(uart)
-            time.sleep(2)
-            assert read(uart) == before, "healthy console emitted unsolicited output"
-            assert "[host +" not in before and "type=STATUS" not in before
-            result["checks"]["quiet-healthy-console"] = "PASS"
+            def gpio_rpc(expected):
+                mark = cli("vmcu-cli safety gpio",
+                           r"VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x[0-9a-fA-F]+[^\n]*")
+                validate_gpio_reply(read(uart)[mark:], expected, args.vmcu_link)
+
+            spi_startup_failures = 0
+            if args.vmcu_link == "spi":
+                mark = cli("vmcu-cli spi status", r"VMCU_SPI_STATUS[^\n]*")
+                spi_startup_failures = int(re.search(
+                    r"failures=(\d+)", read(uart)[mark:]).group(1))
+                result["checks"]["SPI-startup-failures"] = spi_startup_failures
+                result["checks"]["quiet-healthy-console"] = {
+                    "status": "SKIP", "reason": "SPI profile emits per-frame diagnostic counters"}
+            else:
+                # Observe a quiet healthy interval. No host decoder is a monitor.
+                before = read(uart)
+                time.sleep(2)
+                assert read(uart) == before, "healthy console emitted unsolicited output"
+                assert "[host +" not in before and "type=STATUS" not in before
+                result["checks"]["quiet-healthy-console"] = "PASS"
             cli("vmcu-cli status", r"VMCU_STATUS source=SI0_PFDI state=RUN fault=NONE[^\n]*")
             cli("vmcu-cli apollo ping", r"VMCU_RPC peer=AP operation=1[^\n]*result=OK[^\n]*")
             cli("vmcu-cli apollo status", r"VMCU_RPC peer=AP operation=2[^\n]*result=OK[^\n]*")
             cli("vmcu-cli safety ping", r"VMCU_RPC peer=SI0 operation=1[^\n]*result=OK[^\n]*")
             cli("vmcu-cli safety status", r"VMCU_RPC peer=SI0 operation=2[^\n]*result=OK[^\n]*")
-            cli("vmcu-cli gpio status", r"VMCU_GPIO[^\n]*IST_DONE_N=1 SOC_RESET_N=1 MCU_SOC_WAKE=0")
+            cli("vmcu-cli gpio status", r"VMCU_GPIO(?=[^\n]*\bIST_DONE_N=1\b)"
+                r"(?=[^\n]*\bSOC_RESET_N=1\b)(?=[^\n]*\bMCU_SOC_WAKE=0\b)[^\n]*")
             cli("vmcu-cli gpio wake on", r"VMCU_GPIO wake on[^\n]*")
             time.sleep(.3)
-            cli("vmcu-cli safety gpio", r"VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x0000001[cd]")
+            gpio_rpc(0x1c)
             cli("vmcu-cli gpio wake off", r"VMCU_GPIO wake off[^\n]*")
             time.sleep(.3)
-            cli("vmcu-cli safety gpio", r"VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x0000000[cd]")
+            gpio_rpc(0x0c)
             result["checks"]["gpio-bidirectional-and-safe-defaults"] = "PASS"
             # AP management service loss must not change the SI0 PFDI decision.
             primary = out / "qbox-primary-console.log"
@@ -132,7 +161,7 @@ def execute(args, result):
             wait_for(uart, "VMCU_STATE source=SI0_PFDI state=DEGRADED fault=LINK_TIMEOUT", mark, timeout=22)
             mark = cli("vmcu-cli heartbeat on", r"VMCU_RPC peer=SI0 operation=3[^\n]*result=OK value=0x00000001")
             wait_for(uart, r"VMCU_STATE source=SI0_PFDI state=RUN fault=NONE[^\n]*\n", mark, timeout=10)
-            result["checks"]["safety-uart-timeout-recovery"] = "PASS"
+            result["checks"][f"safety-{args.vmcu_link}-timeout-recovery"] = "PASS"
             cli("vmcu-cli workload stall", r"VMCU_RPC result=UNSUPPORTED[^\n]*")
             if args.inject_pfdi_timeout:
                 # Exercise the existing real PFDI online watchdog, without shortening it.
@@ -150,11 +179,17 @@ def execute(args, result):
             # remain observable even while the AP reset output is asserted.
             cli("vmcu-cli gpio reset assert", r"VMCU_GPIO reset assert output=0x0000")
             time.sleep(.3)
-            cli("vmcu-cli safety gpio", r"VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x0000000[45]")
+            gpio_rpc(0x04)
             cli("vmcu-cli gpio reset release", r"VMCU_GPIO reset release output=0x0008")
             time.sleep(.3)
-            cli("vmcu-cli safety gpio", r"VMCU_RPC peer=SI0 operation=6[^\n]*result=OK value=0x0000000[cd]")
+            gpio_rpc(0x0c)
             result["checks"]["explicit-reset-wire-and-si0-survival"] = "PASS"
+            if args.vmcu_link == "spi":
+                from verify_qbox_vmcu_services import validate_spi_evidence
+                mark = cli("vmcu-cli spi status", r"VMCU_SPI_STATUS[^\n]*")
+                result["checks"]["SPI-controller-GPIO-ACK"] = validate_spi_evidence(
+                    read(uart), read(out / "qbox-safety-island-cl0.log"),
+                    read(uart)[mark:], spi_startup_failures)
             (out / "tc397-pane.txt").write_text(tmux("capture-pane", "-p", "-S", "-200", "-t", pane))
             result["status"] = "PASS"
         finally:
@@ -204,13 +239,14 @@ def validate_boot_result(boot, injected):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument("--vmcu-link", choices=("uart", "spi"), default="uart")
     parser.add_argument("--timeout", type=int, default=360)
     parser.add_argument("--inject-pfdi-timeout", action="store_true",
                         help="Stop the real PFDI agent; retain the expected canonical failure")
     args = parser.parse_args()
     if args.out_dir.exists() or args.timeout <= 0:
         parser.error("a new output directory and positive timeout are required")
-    result = {"status": "FAIL", "scope": "SI0 existing PFDI, 5-second safety UART, TC397 Zephyr and board GPIO",
+    result = {"status": "FAIL", "scope": f"SI0 existing PFDI, 5-second safety {args.vmcu_link}, TC397 Zephyr and board GPIO",
               "not_evaluated": ["AP recovery", "PMIC power sequencing", "SC7", "CAN", "physical timing"]}
     started = time.monotonic()
     try:
@@ -222,7 +258,8 @@ def main():
     deploy = Path(os.environ.get("DEPLOY_DIR", str(
         Path(os.environ.get("YOCTO_BUILD_DIR", ROOT / "build")) /
         "tmp_baremetal/deploy/images" / os.environ.get("MACHINE", "apollo-qvp"))))
-    firmware = Path(os.environ.get("QBOX_TC397_FIRMWARE", deploy / "zephyr-vmcu-tc397.elf"))
+    variant = "zephyr-vmcu-tc397-spi.elf" if args.vmcu_link == "spi" else "zephyr-vmcu-tc397.elf"
+    firmware = Path(os.environ.get("QBOX_TC397_FIRMWARE", deploy / variant))
     result["firmware"] = str(firmware.resolve())
     for name, path in (("firmware", firmware),
                        ("runner", Path(__file__))):

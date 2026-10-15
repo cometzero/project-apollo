@@ -76,20 +76,49 @@ def processes(parent):
     return {pid: table[pid][1:] for pid in children if pid in table and table[pid][2] == 'platforms-vp'}
 
 
+def validate_spi_evidence(mcu_log, si_log, status_line, startup_failures=0):
+    """Require both guests' transport activity, not merely boot or socket readiness."""
+    status = re.search(r'VMCU_SPI_STATUS frames=(\d+) ack=(\d+) irq=(\d+) '
+                       r'req=(\d+) failures=(\d+)', status_line)
+    if status is None:
+        raise RuntimeError('Missing MCU SPI controller counters')
+    frames, ack, irq, req, failures = map(int, status.groups())
+    if min(frames, ack, irq, req) < 1 or failures != startup_failures or ack > frames:
+        raise RuntimeError(f'Invalid MCU SPI counters: {status.group(0)}')
+    if 'safety=QSPI0' not in mcu_log or 'transport=spi' not in si_log:
+        raise RuntimeError('Both guests must select the SPI safety profile')
+    received = re.findall(r'VMCU_SPI rx=(\d+) ack=(\d+) errors=(\d+) '
+                          r'epoch=(\d+) sequence=(\d+) type=(\d+)', mcu_log)
+    completed = re.findall(r'\[VMCU_SPI\] ACK seq=(\d+) count=(\d+) irq=(\d+)', si_log)
+    sequences = {int(seq) for seq, count, interrupts in completed
+                 if int(count) > 0 and int(interrupts) > 0}
+    types = {int(kind) for rx, acks, errors, epoch, seq, kind in received
+             if int(rx) > 0 and int(acks) > 0 and int(errors) == startup_failures
+             and int(epoch) > 0 and int(seq) in sequences}
+    if not {6, 7} <= types:
+        raise RuntimeError('Missing matched SI ACK for actual SPI safety and RPC frames')
+    toggles = set(re.findall(r'\[VMCU_SPI\] READY type=\d+ seq=\d+ req=([01])', si_log))
+    if toggles != {'0', '1'} or '[VMCU_SPI] SYNC epoch=' not in si_log:
+        raise RuntimeError('Missing SI SPI SYNC or alternating GPIO request evidence')
+    return dict(frames=frames, ack=ack, irq=irq, req=req, failures=failures,
+                matched_frame_types=sorted(types))
+
+
 def execute(args, result):
     out = args.out_dir.resolve()
     out.mkdir(parents=True, exist_ok=False)
     session = f"apollo-qbox-vmcu-services-{os.getpid()}"
     command = [str(ROOT / 'run_qbox_yocto.sh'), '--bsp', '--sil-kit',
                '--sil-kit-allow-actuation', '--sil-kit-echo-fixture', '--no-attach',
+               '--vmcu-link', args.vmcu_link,
                '--multi-session', '--copy-disks', '--no-persistent-rse-state',
                '--session', session, '--out-dir', str(out), '--timeout', str(args.timeout)]
     checks = result['checks']
-    result.update(command=command, session=session)
+    result.update(command=command, session=session, vmcu_link=args.vmcu_link)
     uart, primary = out / 'tc397-uart.log', out / 'qbox-primary-console.log'
     vehicle = out / 'vehicle-can.jsonl'
     env = dict(os.environ, LINES='60', COLUMNS='180')
-    for name in ('UART', 'SAFETY', 'GPIO'):
+    for name in ('UART', 'SAFETY', 'GPIO', 'SPI'):
         env.pop(f'QBOX_APOLLO_VMCU_{name}_ENDPOINT', None)
     with (out / 'launcher.log').open('w') as log:
         try:
@@ -141,10 +170,29 @@ def execute(args, result):
                 checks.setdefault('vehicle-commands', []).append(item)
                 return struct.unpack_from('<I', payload, 16)[0]
 
+            spi_startup_failures = 0
+
+            def spi_baseline(phase):
+                # MCU can start before the SI controller is enabled; preserve those retries.
+                line = cli('spi status', r'VMCU_SPI_STATUS')
+                match = re.search(r'failures=(\d+)', line)
+                if match is None:
+                    raise RuntimeError('Missing SPI startup failure counter')
+                count = int(match.group(1))
+                checks[f'SPI-startup-{phase}'] = {'failures': count, 'status': line.strip()}
+                return count
+
+            if args.vmcu_link == 'spi':
+                spi_startup_failures = spi_baseline('boot')
+
             tele = telemetry(lambda b: b[1] == 2 and struct.unpack_from('<I', b, 8)[0] != 0)
             original_epoch, original_cookie = struct.unpack_from('<II', bytes.fromhex(tele['data']), 4)
             rpc('apollo ping', 1)
             rpc('safety ping', 1)
+            if args.vmcu_link == 'spi':
+                spi_status = cli('spi status', r'VMCU_SPI_STATUS')
+                checks['SPI-boot-controller-GPIO-ACK'] = validate_spi_evidence(
+                    read(uart), read(out / 'qbox-safety-island-cl0.log'), spi_status, spi_startup_failures)
             cli('can trace on', 'VMCU_CAN_TRACE on')
             for ident, response_id, flags, payload in (
                     (0x123, 0x321, 0, bytes(range(8))),
@@ -176,6 +224,8 @@ def execute(args, result):
                              not in (0, original_cookie), before, timeout=25)
             epoch, cookie = struct.unpack_from('<II', bytes.fromhex(tele['data']), 4)
             assert epoch == original_epoch and cookie != original_cookie
+            if args.vmcu_link == 'spi':
+                spi_startup_failures = spi_baseline('mcu-reset')
             rpc('apollo ping', 1)
             rpc('safety ping', 1)
             vehicle_command(2)
@@ -212,9 +262,15 @@ def execute(args, result):
                 vehicle_command(6)
                 wait_for(out / 'qbox-safety-island-cl0.log', 'AP cores OFF verified', si_before, timeout=20)
                 rpc('power status', 13, 3)
-                cli('gpio status', r'VMCU_GPIO[^\n]*SOC_PWR_REQ=1 IST_DONE_N=0 SOC_RESET_N=1 MCU_SOC_WAKE=0')
+                cli('gpio status', r'VMCU_GPIO(?=[^\n]*\bSOC_PWR_REQ=1\b)'
+                    r'(?=[^\n]*\bIST_DONE_N=0\b)(?=[^\n]*\bSOC_RESET_N=1\b)'
+                    r'(?=[^\n]*\bMCU_SOC_WAKE=0\b)[^\n]*')
                 wait_for(uart, 'VMCU_STATE source=SI0_PFDI state=OFF fault=NONE', mcu_before, timeout=15)
                 rpc('safety ping', 1)
+                if args.vmcu_link == 'spi':
+                    spi_status = cli('spi status', r'VMCU_SPI_STATUS')
+                    checks[f'SPI-AP-off-cycle-{cycle + 1}'] = validate_spi_evidence(
+                        read(uart), read(out / 'qbox-safety-island-cl0.log'), spi_status, spi_startup_failures)
                 # State and MCU timer must continue while AP cores remain off.
                 tele_off = telemetry(lambda b: b[1] == 3, offset=can_before, timeout=15)
                 time.sleep(5.5)
@@ -230,6 +286,10 @@ def execute(args, result):
             assert processes(status['qbox_pid']) == initial, 'QBox process restarted'
             assert json.loads((out / 'tc397-status.json').read_text())['tc397_pid'] == status['tc397_pid']
             checks['same-QBox-and-MCU-processes'] = 'PASS'
+            if args.vmcu_link == 'spi':
+                spi_status = cli('spi status', r'VMCU_SPI_STATUS')
+                checks['SPI-final-controller-GPIO-ACK'] = validate_spi_evidence(
+                    read(uart), read(out / 'qbox-safety-island-cl0.log'), spi_status, spi_startup_failures)
             faults_seen = set(re.findall(r'state=DEGRADED fault=(\w+)', read(uart)))
             expected_faults = {'PFDI_FAULT'} if args.inject_pfdi_timeout else set()
             assert faults_seen == expected_faults, f'Unexpected safety faults: {faults_seen}'
@@ -256,6 +316,7 @@ def execute(args, result):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out-dir', type=Path, required=True)
+    parser.add_argument('--vmcu-link', choices=('uart', 'spi'), default='uart')
     parser.add_argument('--timeout', type=int, default=600)
     parser.add_argument('--power-cycles', type=int, default=2)
     parser.add_argument('--inject-pfdi-timeout', action='store_true',
