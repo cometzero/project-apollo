@@ -1,0 +1,1384 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" version="28.2.0">
+  <diagram id="01-hardware" name="01-hardware">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1120" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1120" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="01" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="Mailbox는 두 CPU 사이의 상태 전달 규약이다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="MHUv3 한 방향은 Sender PBX + Receiver MBX. 반대 방향 알림에는 별도 pair를 사용한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1032" />
+            <mxPoint as="targetPoint" x="1552" y="1032" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="H1 · M1 · SCMI / RPMsg는 shared memory + doorbell, AP–RSE SFCP는 DBCH를 serialized word 운반에도 사용한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1047" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="left" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="218" width="350" height="560" />
+        </mxCell>
+        <mxCell id="left-label" parent="1" value="송신 CPU · Domain A" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="232" width="310" height="32" />
+        </mxCell>
+        <mxCell id="appA" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;서비스 / transport&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;요청 생성 · 전송 소유권&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="290" width="290" height="100" />
+        </mxCell>
+        <mxCell id="pbxA" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PBX-A · 송신 frame&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;DBCH SET / ST&lt;br&gt;전송 완료 ACK 상태&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="470" width="290" height="110" />
+        </mxCell>
+        <mxCell id="mbxA" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;MBX-A · 응답 수신&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;반대 방향의 receiver&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="650" width="290" height="90" />
+        </mxCell>
+        <mxCell id="right" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="1202" y="218" width="350" height="560" />
+        </mxCell>
+        <mxCell id="right-label" parent="1" value="수신 CPU · Domain B" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1222" y="232" width="310" height="32" />
+        </mxCell>
+        <mxCell id="appB" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;ISR / 서비스&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;channel 식별 · 요청 처리&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1232" y="290" width="290" height="100" />
+        </mxCell>
+        <mxCell id="mbxB" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;MBX-B · 수신 frame&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;ST / MASK / CLR&lt;br&gt;receive IRQ&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1232" y="470" width="290" height="110" />
+        </mxCell>
+        <mxCell id="pbxB" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PBX-B · 응답 송신&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;반대 방향의 sender&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1232" y="650" width="290" height="90" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="appA" target="pbxA">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-3" parent="1" value="IRQ" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="mbxB" target="appB">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-4" parent="1" value="A → B · SET bits가 peer STATUS에 반영" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="368" y="500" />
+            <mxPoint as="targetPoint" x="1232" y="500" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-5" parent="1" value="CLR → ACK · 데이터를 소비할 수 있는 상태로 복귀" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1232" y="555" />
+            <mxPoint as="targetPoint" x="368" y="555" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="B → A · 별도 pair로 응답 / notification" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1232" y="695" />
+            <mxPoint as="targetPoint" x="368" y="695" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="shmem" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;데이터 경로 ① · 공유 메모리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:19px&quot;&gt;SCMI: header + payload + FREE/BUSY&lt;br&gt;HIPC: resource table + vrings + packet buffers&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="470" y="275" width="660" height="130" />
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="368" y="340" />
+            <mxPoint as="targetPoint" x="470" y="340" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-8" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="340" />
+            <mxPoint as="targetPoint" x="1232" y="340" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="stream" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;데이터 경로 ② · DBCH word stream&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:19px&quot;&gt;AP–RSE: ch0 길이 → data words → 마지막 channel notify&lt;br&gt;SW가 DBE 위에 framing을 정의한다. FIFO / FastChannel hardware 사용을 뜻하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="470" y="824" width="1082" height="140" />
+        </mxCell>
+        <mxCell id="distinction" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;세 개의 완료를 구분&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;MHU transfer ACK&lt;br&gt;SCMI response / FREE&lt;br&gt;RPMsg·PSA 서비스 완료&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="824" width="350" height="140" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="02-registers" name="02-registers">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1120" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1120" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="02" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="DBCH의 SET·MASK·CLR이 level IRQ와 ACK를 만든다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="channel n의 창 = frame + 0x1000 + n × 0x20. 한 channel은 32개 flag이며, 메시지 queue나 CPU 한 개를 뜻하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1032" />
+            <mxPoint as="targetPoint" x="1552" y="1032" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="M1 · L2 · QVP reset: ST / MASK / INT_EN = 0, CTRL = 1. Linux가 probe에서 mask한 뒤 사용하는 bit를 unmask한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1047" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="pbx" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="215" width="560" height="540" />
+        </mxCell>
+        <mxCell id="pbx-label" parent="1" value="PBX · 송신 측" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="229" width="520" height="32" />
+        </mxCell>
+        <mxCell id="set" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SET +0x0C&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;write-1 → ST |= bits&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="280" width="250" height="105" />
+        </mxCell>
+        <mxCell id="pst" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;ST +0x00&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;미완료 flag bitmap&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="440" width="250" height="100" />
+        </mxCell>
+        <mxCell id="ack" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;INT_ST / INT_EN / CTRL&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;+0x10 / +0x18 / +0x1C&lt;br&gt;ACK pending × enable × combined 참여&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="600" width="500" height="105" />
+        </mxCell>
+        <mxCell id="mbx" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="992" y="215" width="560" height="540" />
+        </mxCell>
+        <mxCell id="mbx-label" parent="1" value="MBX · 수신 측" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1012" y="229" width="520" height="32" />
+        </mxCell>
+        <mxCell id="mst" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;ST +0x00 · ST_MSK +0x04&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;수신 상태 / ST &amp;amp; ~MASK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1022" y="280" width="500" height="105" />
+        </mxCell>
+        <mxCell id="mask" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;MSK_SET +0x14 / MSK_CLR +0x18&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;mask=1이면 해당 flag의 수신 IRQ 차단&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1022" y="440" width="500" height="100" />
+        </mxCell>
+        <mxCell id="clr" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CLR +0x08&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;소비한 bit clear → peer PBX도 clear&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1022" y="600" width="500" height="105" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="set" target="pst">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-3" parent="1" value="peer ST |= bits" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="328" y="330" />
+            <mxPoint as="targetPoint" x="1022" y="330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="mst" target="mask">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-5" parent="1" value="SW 처리 후" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="mask" target="clr">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="전송 ACK pending" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1022" y="653" />
+            <mxPoint as="targetPoint" x="578" y="653" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="irqR" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;MBX combined IRQ&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;ORₙ[CTRLₙ.bit0&lt;br&gt;∧ (STₙ &amp;amp; ~MASKₙ)]&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="658" y="414" width="284" height="130" />
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1022" y="490" />
+            <mxPoint as="targetPoint" x="942" y="490" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="irqT" parent="1" value="&lt;b style=&quot;font-size:18px&quot;&gt;PBX IRQ&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:16px&quot;&gt;ORₙ[CTRLₙ.bit0&lt;br&gt;∧ INT_STₙ ∧ INT_ENₙ]&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="358" y="440" width="220" height="105" />
+        </mxCell>
+        <mxCell id="auto-edge-8" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="ack" target="irqT">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="demux" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;한 IRQ에서 여러 channel / flag를 분리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;DBCH_INT_ST[0..3] → channel n → ST_MSK → bit b&lt;br&gt;Linux mbox specifier: &amp;lt;extension=0, n, b&amp;gt;&lt;br&gt;Zephyr flattened ID: 32 × n + b&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="815" width="720" height="150" />
+        </mxCell>
+        <mxCell id="rules" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;ACK는 서비스의 성공 응답이 아니다&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;동일 bit의 반복 SET은 합쳐진다. 이벤트 횟수는 저장하지 않는다.&lt;br&gt;CLR로 HW 전송을 회수해도 SCMI·PSA 처리 결과는 따로 확인한다.&lt;br&gt;GIC EOI만으로 MHU source level이 지워지지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="824" y="815" width="728" height="150" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="03-topology" name="03-topology">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1220" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1220" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="03" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="네 CPU domain을 일곱 통신 경로가 연결한다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="기본 full profile: AP A720AE ×4 · SI CL0 R82 ×1 · SI CL1 R82 ×4 · RSE M55 ×1. 코어 수와 MHU channel 수는 별개다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1132" />
+            <mxPoint as="targetPoint" x="1552" y="1132" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="P1–P5 · 14방향 bridge = 28 frame. 추가 RSE MHU0 2 frame은 non-bridging local 구성으로, 활성 서비스 수에 포함하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1147" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="src0" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP Linux&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="220" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc0" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI NS · OSPM / performance&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;D0 · ch0 bit0 요청/응답, bit2 notification&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="220" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst0" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0 · SCP&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="220" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="262" />
+            <mxPoint as="targetPoint" x="440" y="262" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="262" />
+            <mxPoint as="targetPoint" x="1247" y="262" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src1" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP TF-A EL3&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="342" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc1" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI Secure · PSCI / power&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;D1 · ch0 bit0 / response는 SRAM FREE polling&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="342" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst1" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0 · SCP&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="342" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="384" />
+            <mxPoint as="targetPoint" x="440" y="384" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="384" />
+            <mxPoint as="targetPoint" x="1247" y="384" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src2" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP TF-A · CPU별&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="464" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc2" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI 0x90 · PFDI report&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;D3 · physical channel n, bit0 / 40-byte slot&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="464" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst2" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0 · monitor&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="464" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="506" />
+            <mxPoint as="targetPoint" x="440" y="506" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="506" />
+            <mxPoint as="targetPoint" x="1247" y="506" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src3" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP Linux&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="586" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc3" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;HIPC · remoteproc / RPMsg&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;2개 vring + attach / detach / software ACK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="586" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst3" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL1 · Zephyr&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="586" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-8" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="628" />
+            <mxPoint as="targetPoint" x="440" y="628" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-9" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="628" />
+            <mxPoint as="targetPoint" x="1247" y="628" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src4" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL1 · CPU별&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="708" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc4" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI 0x90 · PFDI report&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;physical channel 2..5 / response FREE polling&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="708" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst4" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0 · monitor&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="708" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-10" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="750" />
+            <mxPoint as="targetPoint" x="440" y="750" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-11" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="750" />
+            <mxPoint as="targetPoint" x="1247" y="750" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src5" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;RSE TF-M / BL2&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="830" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc5" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI · boot / power / reload&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;ch0 bit1 command · bit2 notification · bit3 reload ACK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="830" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst5" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0 · SCP&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="830" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-12" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="872" />
+            <mxPoint as="targetPoint" x="440" y="872" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-13" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="872" />
+            <mxPoint as="targetPoint" x="1247" y="872" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="src6" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP Secure client&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="952" width="305" height="84" />
+        </mxCell>
+        <mxCell id="svc6" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SFCP / PSA · DBCH word stream&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP polling ↔ RSE receive IRQ / embed·pointer-access&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="440" y="952" width="720" height="84" />
+        </mxCell>
+        <mxCell id="dst6" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;RSE TF-M&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="1247" y="952" width="305" height="84" />
+        </mxCell>
+        <mxCell id="auto-line-14" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="353" y="994" />
+            <mxPoint as="targetPoint" x="440" y="994" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-15" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1160" y="994" />
+            <mxPoint as="targetPoint" x="1247" y="994" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="04-fvp-qvp" name="04-fvp-qvp">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1190" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1190" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="04" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="Arm의 HW 계약과 QVP의 구현 범위를 함께 읽는다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="참조: Zena 개발 가이드 + Arm design / 원본 도면 + MHU-320AE TRM. 실제 FVP traffic·latency는 이번 작업에서 측정하지 않았다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1102" />
+            <mxPoint as="targetPoint" x="1552" y="1102" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="H1–H4 · 같은 주소와 driver를 사용하는 것은 호환성 근거다. timing / security / safety mechanism의 동등성 증거는 별도다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1117" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="l" parent="1" value="Arm Zena CSS / FVP reference" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=23;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="356" y="206" width="550" height="45" />
+        </mxCell>
+        <mxCell id="r" parent="1" value="Apollo QVP · full profile" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=23;fontColor=#147B79;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="963" y="206" width="580" height="45" />
+        </mxCell>
+        <mxCell id="k0" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;연결 구조&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="276" width="250" height="112" />
+        </mxCell>
+        <mxCell id="a0" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;단방향 PBX→MBX / 반대 방향은 별도 MHU&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="344" y="276" width="560" height="112" />
+        </mxCell>
+        <mxCell id="b0" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;명시적 pair key로 SystemC frame 2개 연결&lt;br&gt;14 bridge 방향 + non-bridging RSE MHU0&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="960" y="276" width="592" height="112" />
+        </mxCell>
+        <mxCell id="k1" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;확장 기능&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="421" width="250" height="112" />
+        </mxCell>
+        <mxCell id="a1" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;DBE·FIFO·FastChannel·TZE 등은 구성별 기능&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="344" y="421" width="560" height="112" />
+        </mxCell>
+        <mxCell id="b1" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;DBE register 중심 / 기본 128, 일부 32 DBCH&lt;br&gt;FIFO·FastChannel engine 없음&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="960" y="421" width="592" height="112" />
+        </mxCell>
+        <mxCell id="k2" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP↔CL0 용량&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="566" width="250" height="112" />
+        </mxCell>
+        <mxCell id="a2" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Arm reference는 16 DBCH 제약 때문에&lt;br&gt;PSCI와 16-core PFDI를 다른 device로 분리&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="344" y="566" width="560" height="112" />
+        </mxCell>
+        <mxCell id="b2" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;D1(SCMI) / D3(PFDI) 분리 유지&lt;br&gt;모델 channel_count를 실제 HW 용량으로 해석 금지&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="960" y="566" width="592" height="112" />
+        </mxCell>
+        <mxCell id="k3" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;프로토콜 책임&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="711" width="250" height="112" />
+        </mxCell>
+        <mxCell id="a3" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCP: SCMI / Zephyr: HIPC&lt;br&gt;RSE: secure service&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="344" y="711" width="560" height="112" />
+        </mxCell>
+        <mxCell id="b3" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;full은 각 firmware가 처리&lt;br&gt;linux-direct는 별도 stub / mock 응답&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="960" y="711" width="592" height="112" />
+        </mxCell>
+        <mxCell id="k4" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;시간·접근·오류&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="856" width="250" height="112" />
+        </mxCell>
+        <mxCell id="a4" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;clock / power / security / safety 통합 계약&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="344" y="856" width="560" height="112" />
+        </mxCell>
+        <mxCell id="b4" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;zero-time IRQ event · 동기 clear&lt;br&gt;보안 필터·CDC·자율 MHU 오류 검출은 미구현&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="960" y="856" width="592" height="112" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="05-qbox-model" name="05-qbox-model">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1190" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1190" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="05" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="QEMU의 MMIO가 SystemC peer 상태와 IRQ로 이어진다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="활성 backend는 SystemC mhu320ae이다. full profile의 protocol=doorbell-bridge는 메시지 의미를 firmware에 맡긴다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1102" />
+            <mxPoint as="targetPoint" x="1552" y="1102" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="M1–M4 · full bridge는 delay 인자를 소비하지 않는다. 선택적 synthetic mode의 1000ns completion 설정을 HW latency로 인용하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1117" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="qa" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="214" width="350" height="680" />
+        </mxCell>
+        <mxCell id="qa-label" parent="1" value="송신 QEMU instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="228" width="310" height="32" />
+        </mxCell>
+        <mxCell id="cpuA" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Guest CPU&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;payload 준비 → SET write&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="280" width="290" height="100" />
+        </mxCell>
+        <mxCell id="tlm" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;QemuInitiatorSocket&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;iothread lock 해제&lt;br&gt;run_on_sysc&lt;br&gt;TLM attrs / requester ID&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="455" width="290" height="130" />
+        </mxCell>
+        <mxCell id="readback" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Guest 후속 처리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;ACK / response 확인&lt;br&gt;IRQ 또는 polling&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="664" width="290" height="130" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="cpuA" target="tlm">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sc" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="448" y="214" width="704" height="680" />
+        </mxCell>
+        <mxCell id="sc-label" parent="1" value="SYSTEMC · mhu320ae" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="468" y="228" width="664" height="32" />
+        </mxCell>
+        <mxCell id="pbx" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PBX b_transport&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;router decode&lt;br&gt;pair recursive mutex&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="478" y="285" width="280" height="115" />
+        </mxCell>
+        <mxCell id="mbx" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;동일 pair의 MBX&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;peer STATUS |= bits&lt;br&gt;payload queue 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="818" y="285" width="304" height="115" />
+        </mxCell>
+        <mxCell id="evt" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;IRQ 갱신 event&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SC_ZERO_TIME notify&lt;br&gt;SC_METHOD&lt;br&gt;emit_combined_irq&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="818" y="470" width="304" height="130" />
+        </mxCell>
+        <mxCell id="clr" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;MBX CLR → 양쪽 flag / ACK 갱신&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;이미 올라간 IRQ는 MMIO 반환 전에 동기 deassert&lt;br&gt;이전 비동기 assert가 clear를 뒤집지 않도록 조정&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="478" y="660" width="644" height="135" />
+        </mxCell>
+        <mxCell id="auto-edge-3" parent="1" value="MMIO" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="tlm" target="pbx">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-4" parent="1" value="SET" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="pbx" target="mbx">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="mbx" target="evt">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-6" parent="1" value="ACK 상태" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="clr" target="readback">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="qb" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="1202" y="214" width="350" height="680" />
+        </mxCell>
+        <mxCell id="qb-label" parent="1" value="수신 QEMU instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1222" y="228" width="310" height="32" />
+        </mxCell>
+        <mxCell id="gic" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;GIC / NVIC GPIO&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;target instance lock 획득&lt;br&gt;pending → IRQ / FIQ&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1232" y="470" width="290" height="130" />
+        </mxCell>
+        <mxCell id="isr" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Guest ISR&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;channel / bit 분리&lt;br&gt;CLR / callback 순서는 driver별&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1232" y="660" width="290" height="135" />
+        </mxCell>
+        <mxCell id="auto-edge-7" parent="1" value="level" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="evt" target="gic">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-8" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="gic" target="isr">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-9" parent="1" value="CLR" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="isr" target="clr">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="scope" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;모델과 서비스의 책임 경계&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;pair bridge = HW 상태 / SCMI·RPMsg·PSA parsing = guest SW&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="952" width="720" height="110" />
+        </mxCell>
+        <mxCell id="hold" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;CL1 PFDI의 QVP 전용 동기화&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;requester vCPU sync_hold → SRAM FREE 확인 후 해제&lt;br&gt;CPU reset / guest interrupt / 합성 응답을 의미하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="824" y="952" width="728" height="110" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="06-address-irq" name="06-address-irq">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1150" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1150" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="06" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="주소 변환과 IRQ 번호는 서로 다른 경로다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="AP logical 주소, system-global decode, 수신 CPU의 local frame을 구분한다. Doorbell bit / GIC SPI / INTID도 같은 번호가 아니다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1062" />
+            <mxPoint as="targetPoint" x="1552" y="1062" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="P1–P6 · SPI n → architectural INTID n+32. RSE NVIC external IRQ에는 +32를 적용하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1077" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="path" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="215" width="1504" height="360" />
+        </mxCell>
+        <mxCell id="path-label" parent="1" value="예: Linux AP → SI CL0 · non-secure SCMI request" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="229" width="1464" height="32" />
+        </mxCell>
+        <mxCell id="alias" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP guest PBX&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;0x40020000&lt;br&gt;ch0 SET: +0x100C&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="290" width="315" height="120" />
+        </mxCell>
+        <mxCell id="atu" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP ATU → system_router&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;0x400003B000000&lt;br&gt;host_ap_si_ns_scmi_mhu_pbx&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="467" y="290" width="310" height="120" />
+        </mxCell>
+        <mxCell id="peer" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;같은 pair의 MBX&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;CL0 local: 0x38040000&lt;br&gt;si_cl0_ap_ns_mhu_mbx&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="852" y="290" width="310" height="120" />
+        </mxCell>
+        <mxCell id="irq" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CL0 GIC → SCP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SPI65 → INTID97&lt;br&gt;DBCH / bit demux&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1237" y="290" width="285" height="120" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="alias" target="atu">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-3" parent="1" value="pair" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="atu" target="peer">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-4" parent="1" value="level" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="peer" target="irq">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="back" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;응답 IRQ / notification은 반대 방향 pair&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;CL0 PBX 0x38000000 → global MBX 0x400003B040000 → AP alias 0x40050000 → SPI113 / INTID145&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="465" width="1444" height="75" />
+        </mxCell>
+        <mxCell id="small" parent="1" value="CPU별 대표 수신 경로" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=22;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="612" width="1500" height="40" />
+        </mxCell>
+        <mxCell id="dom0" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;AP&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="675" width="230" height="65" />
+        </mxCell>
+        <mxCell id="route0" parent="1" value="NS 응답 INTID145 · HIPC 수신 INTID153&lt;br&gt;&lt;font color=&quot;#52657A&quot;&gt;AP Secure↔RSE frame IRQ 미연결 → client polling&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="320" y="675" width="1232" height="65" />
+        </mxCell>
+        <mxCell id="dom1" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL0&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="760" width="230" height="65" />
+        </mxCell>
+        <mxCell id="route1" parent="1" value="NS request 97 · Secure PSCI 99 · AP PFDI 103&lt;br&gt;&lt;font color=&quot;#52657A&quot;&gt;RSE request 105 · CL1 PFDI 107&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="320" y="760" width="1232" height="65" />
+        </mxCell>
+        <mxCell id="dom2" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI CL1&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="845" width="230" height="65" />
+        </mxCell>
+        <mxCell id="route2" parent="1" value="HIPC MBX INTID73 / PBX completion INTID72&lt;br&gt;&lt;font color=&quot;#52657A&quot;&gt;PFDI PBX completion INTID82 · reply MBX IRQ 미연결&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="320" y="845" width="1232" height="65" />
+        </mxCell>
+        <mxCell id="dom3" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;RSE&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="930" width="230" height="65" />
+        </mxCell>
+        <mxCell id="route3" parent="1" value="AP-S message NVIC45 · SCP runtime notification / response NVIC139&lt;br&gt;&lt;font color=&quot;#52657A&quot;&gt;BL2 SCMI response는 polling · MHU0 NVIC41은 별도 local frame&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="320" y="930" width="1232" height="65" />
+        </mxCell>
+        <mxCell id="pfdix" parent="1" value="AP PFDI 0x40110000은 QVP의 별도 static bridge가 우선 처리한다. 모든 주소를 ATU 동작으로 설명하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#9A681E;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1018" width="1504" height="35" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="07-shared-memory" name="07-shared-memory">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1220" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1220" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="07" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="같은 payload가 CPU마다 다른 주소로 보인다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="SCMI는 작은 소유권 기반 message slot, HIPC는 descriptor/ring/buffer, SFCP pointer-access는 허용 shared region을 사용한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1132" />
+            <mxPoint as="targetPoint" x="1552" y="1132" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="P7 · L1/L3 · A1 · S1 · 그림의 주소는 CPU view를 명시했다. 주소 변환은 cache coherence나 ordering을 대신하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1147" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="scmi" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="214" width="1504" height="290" />
+        </mxCell>
+        <mxCell id="scmi-label" parent="1" value="SCMI / PFDI · AP와 SI CL0가 동일 backing을 공유" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="228" width="1464" height="32" />
+        </mxCell>
+        <mxCell id="ns" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;NS OSPM · 256B씩&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;AP request 0x00180000&lt;br&gt;SI0 alias 0xE01B0000&lt;br&gt;notification +0x100&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="280" width="440" height="170" />
+        </mxCell>
+        <mxCell id="sec" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Secure PSCI · 256B (0x100)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;AP 0x00000DC0&lt;br&gt;SI0 alias 0xE0030DC0&lt;br&gt;SDS 뒤에 배치&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="580" y="280" width="440" height="170" />
+        </mxCell>
+        <mxCell id="pfdi" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;AP PFDI · 40B × CPU slot&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP 0x00000EC0 + 40×n&lt;br&gt;SI0 0xE0030EC0 + 40×n&lt;br&gt;전용 D3 physical channel n&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1082" y="280" width="440" height="170" />
+        </mxCell>
+        <mxCell id="hipc" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="558" width="1504" height="270" />
+        </mxCell>
+        <mxCell id="hipc-label" parent="1" value="HIPC · 총 512KiB / 각 영역 128KiB" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="572" width="1464" height="32" />
+        </mxCell>
+        <mxCell id="mem0" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;Resource table&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP 0x00100000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="628" width="340" height="90" />
+        </mxCell>
+        <mxCell id="mem1" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;vring0 · CL1 → AP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP 0x00120000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="446" y="628" width="340" height="90" />
+        </mxCell>
+        <mxCell id="mem2" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;vring1 · AP → CL1&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP 0x00140000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="814" y="628" width="340" height="90" />
+        </mxCell>
+        <mxCell id="mem3" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;Packet buffers&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP 0x00160000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1182" y="628" width="340" height="90" />
+        </mxCell>
+        <mxCell id="alias" parent="1" value="SI CL1 alias 0xE0130000..0xE01AFFFF → AP 0x00100000..0x0017FFFF · MHU가 Ethernet frame을 복사하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#147B79;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="747" width="1444" height="42" />
+        </mxCell>
+        <mxCell id="rest" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="884" width="1504" height="190" />
+        </mxCell>
+        <mxCell id="rest-label" parent="1" value="다른 shared-memory 경로" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="898" width="1464" height="32" />
+        </mxCell>
+        <mxCell id="cl1" parent="1" value="&lt;b&gt;CL1 PFDI&lt;/b&gt;&lt;br&gt;CL0 / CL1: 0x48000000&lt;br&gt;40B × 4 slot / channel 2..5" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="943" width="444" height="95" />
+        </mxCell>
+        <mxCell id="rse" parent="1" value="&lt;b&gt;RSE ↔ CL0 SCMI&lt;/b&gt;&lt;br&gt;CL0: 0x40000000 / +0x100&lt;br&gt;RSE: firmware가 ATU window 구성" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#172C43;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="580" y="943" width="444" height="95" />
+        </mxCell>
+        <mxCell id="psa" parent="1" value="&lt;b&gt;AP-S ↔ RSE pointer payload&lt;/b&gt;&lt;br&gt;AP 0xFFFE0000 / 128KiB&lt;br&gt;허용 AP SRAM도 별도 정책 적용" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#9A681E;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="1082" y="943" width="440" height="95" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08-ap-scp-software" name="08-ap-scp-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1250" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1250" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="08" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="AP의 세 서비스 경로가 다른 consumer로 이어진다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="Linux SCMI, TF-A PSCI/PFDI, Secure Services는 MHU API를 공유해도 protocol·shared memory·권한·완료 조건이 다르다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1162" />
+            <mxPoint as="targetPoint" x="1552" y="1162" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="L1–L4 · A1–A3 · S1–S3 · SE-Proxy는 OP-TEE가 관리하는 SP다. OP-TEE core 자체를 MHU driver로 그리지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1177" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="lnx" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="210" width="456" height="690" />
+        </mxCell>
+        <mxCell id="lnx-label" parent="1" value="AP NORMAL WORLD · Linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="224" width="416" height="32" />
+        </mxCell>
+        <mxCell id="cpufreq" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;cpufreq / OSPM&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SCMI performance protocol 0x13&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="280" width="396" height="90" />
+        </mxCell>
+        <mxCell id="scmit" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCMI core + mailbox transport&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;mutex / token / FREE 상태&lt;br&gt;tx_prepare → shared payload&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="435" width="396" height="125" />
+        </mxCell>
+        <mxCell id="mbox" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Linux mailbox framework&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;arm_mhuv3 · &amp;lt;0,0,0&amp;gt; SET&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="625" width="396" height="100" />
+        </mxCell>
+        <mxCell id="ns" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;NS D0 → CL0 INTID97&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;response: AP INTID145&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="790" width="396" height="75" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="cpufreq" target="scmit">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="scmit" target="mbox">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="mbox" target="ns">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="el3" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="572" y="210" width="456" height="690" />
+        </mxCell>
+        <mxCell id="el3-label" parent="1" value="AP SECURE · TF-A EL3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="592" y="224" width="416" height="32" />
+        </mxCell>
+        <mxCell id="psci" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PSCI / PFDI agent&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;power-domain / vendor protocol 0x90&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="602" y="280" width="396" height="90" />
+        </mxCell>
+        <mxCell id="sync" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCMI synchronous client&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;channel lock → BUSY&lt;br&gt;dmbst → SET → FREE polling → dmbld&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="602" y="435" width="396" height="125" />
+        </mxCell>
+        <mxCell id="sec" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;D1 PSCI / D3 PFDI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SCMI SRAM / per-core 40B slots&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="602" y="625" width="396" height="100" />
+        </mxCell>
+        <mxCell id="si" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;CL0 INTID99 / INTID103&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SW response 완료를 SRAM에서 확인&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="602" y="790" width="396" height="75" />
+        </mxCell>
+        <mxCell id="auto-edge-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="psci" target="sync">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-6" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="sync" target="sec">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-7" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="sec" target="si">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sp" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="1096" y="210" width="456" height="690" />
+        </mxCell>
+        <mxCell id="sp-label" parent="1" value="AP SECURE SERVICES" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1116" y="224" width="416" height="32" />
+        </mxCell>
+        <mxCell id="normal" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Linux libpsats / U-Boot UEFI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;FF-A call · secure world 진입&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1126" y="280" width="396" height="90" />
+        </mxCell>
+        <mxCell id="proxy" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SE-Proxy SP / SMM Gateway&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;OP-TEE SPMC가 SP 관리&lt;br&gt;PSA proxy → RSE communications&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1126" y="435" width="396" height="125" />
+        </mxCell>
+        <mxCell id="rpc" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;MHUv3 wrapper&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;serialized request / reply&lt;br&gt;embed 또는 pointer-access&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="1126" y="625" width="396" height="100" />
+        </mxCell>
+        <mxCell id="rs" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;AP-S ↔ RSE TF-M&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SCMI / SCP 경로와 별개&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="1126" y="790" width="396" height="75" />
+        </mxCell>
+        <mxCell id="auto-edge-8" parent="1" value="FF-A" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="normal" target="proxy">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-9" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="proxy" target="rpc">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-edge-10" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="rpc" target="rs">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="scp" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="956" width="1504" height="152" />
+        </mxCell>
+        <mxCell id="scp-label" parent="1" value="SI CL0 · native SCP-firmware" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="970" width="1464" height="32" />
+        </mxCell>
+        <mxCell id="stack" parent="1" value="mhu3 ISR → transport_signal_message → SCMI event → protocol handler&lt;br&gt;power / DVFS / PFDI / RSE boot 관리 → shared response + FREE → 필요한 경우 reverse doorbell" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=center;verticalAlign=middle;fontSize=21;fontColor=#147B79;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="1016" width="1444" height="70" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="09-cl1-rse-software" name="09-cl1-rse-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1190" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1190" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="09" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="SI CL1과 RSE의 Mailbox SW는 서로 다른 일을 수행한다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="CL1은 HIPC packet과 PFDI 보고를 분리한다. RSE는 boot-control SCMI와 AP secure-service SFCP를 분리한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1102" />
+            <mxPoint as="targetPoint" x="1552" y="1102" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="Z1–Z3 · R1–R3 · callback/worker/partition 분리를 통해 IRQ 문맥과 protocol 처리를 구분한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1117" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="z" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="214" width="720" height="685" />
+        </mxCell>
+        <mxCell id="z-label" parent="1" value="SI CL1 · Zephyr" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="68" y="228" width="680" height="32" />
+        </mxCell>
+        <mxCell id="zh" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;HIPC RX: OpenAMP / RPMsg → veth → network&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;resource table / RPMsg virtqueue / packet buffers&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="282" width="660" height="100" />
+        </mxCell>
+        <mxCell id="zw" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;MHUv3 ISR → callback → work queue&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;attach / detach / notify event 처리&lt;br&gt;IP packet 처리는 MHU register 밖에서 진행&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="448" width="660" height="100" />
+        </mxCell>
+        <mxCell id="zp" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PFDI: CPU별 worker → SCMI 0x90&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;shared 40B slot → channel 2+CPU, bit0&lt;br&gt;response FREE polling&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="620" width="660" height="100" />
+        </mxCell>
+        <mxCell id="zs" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;Source / build owner&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;Arm module copy + Apollo board DTS/defconfig + reattach patch&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="78" y="786" width="660" height="75" />
+        </mxCell>
+        <mxCell id="auto-edge-2" parent="1" value="RX work" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="zw" target="zh">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
+          <mxGeometry as="geometry" x="832" y="214" width="720" height="685" />
+        </mxCell>
+        <mxCell id="r-label" parent="1" value="RSE · TF-M / BL2" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="852" y="228" width="680" height="32" />
+        </mxCell>
+        <mxCell id="rc" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCMI boot / power / AP reload&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;RSE ↔ CL0 MHU + dedicated shared SRAM&lt;br&gt;IRQ / polling 사용은 단계별 driver가 결정&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="862" y="282" width="660" height="100" />
+        </mxCell>
+        <mxCell id="ri" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP-S MHU RX IRQ45 → SFCP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;length / words / notify 수신&lt;br&gt;serialized request를 PSA 처리 경로로 전달&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="862" y="448" width="660" height="100" />
+        </mxCell>
+        <mxCell id="rp" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;TF-M PSA service partition&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;crypto / storage / attestation / platform&lt;br&gt;결과를 반대 방향 MHU stream으로 반환&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="862" y="620" width="660" height="100" />
+        </mxCell>
+        <mxCell id="ra" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;Pointer-access의 책임&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;RSE: 허용 region 검사 + ATU mapping / AP cache 유지보수는 별도 책임&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="862" y="786" width="660" height="75" />
+        </mxCell>
+        <mxCell id="auto-edge-3" parent="1" value="queue / NS agent" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="ri" target="rp">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ids" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;번호 공간은 항상 구분한다&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;CL1 flattened ID 64/96/128/160 = DBCH 2/3/4/5의 bit0&lt;br&gt;MHU channel = CPU identity라는 가정은 성립하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="955" width="720" height="120" />
+        </mxCell>
+        <mxCell id="ack" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;전송 ACK / protocol 응답을 구분한다&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SFCP의 마지막 DBCH clear는 batch 수거 완료&lt;br&gt;PSA return status는 서비스가 실행된 뒤의 별도 reply&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="832" y="955" width="720" height="120" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10-scmi-sequence" name="10-scmi-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1320" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1320" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="SCMI 요청은 IRQ로 시작하고 firmware event에서 처리된다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="예: Linux performance request → CL0 SCP. 하나의 shared slot을 소유권과 token으로 관리하고, 응답용 doorbell은 반대 pair를 사용한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1232" />
+            <mxPoint as="targetPoint" x="1552" y="1232" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="L2–L4 · S2–S3 · transfer ACK와 SCMI 응답은 다르다. Timeout / stale response / FREE 상태까지 확인해야 transaction 완료다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1247" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="a" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP Linux&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SCMI / mailbox / MHU&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194.0" y="300" />
+            <mxPoint as="targetPoint" x="194.0" y="1170" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Shared SRAM&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;0x180000 · request/response&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="452" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="598.0" y="300" />
+            <mxPoint as="targetPoint" x="598.0" y="1170" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="h" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;MHUv3 + GIC&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SET / CLR / IRQ97&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="856" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002.0" y="300" />
+            <mxPoint as="targetPoint" x="1002.0" y="1170" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SI CL0 SCP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;mhu3 ISR / framework&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1260" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406.0" y="300" />
+            <mxPoint as="targetPoint" x="1406.0" y="1170" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="① BUSY + header(token) + payload" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="374" />
+            <mxPoint as="targetPoint" x="598" y="374" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="② PBX ch0 bit0 SET · publish 후 notify" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="458" />
+            <mxPoint as="targetPoint" x="1002" y="458" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-8" parent="1" value="③ MBX pending → GIC INTID97" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="535" />
+            <mxPoint as="targetPoint" x="1406" y="535" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="isr" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;④ ISR&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;flag 확인 → source CLR → transport signal&lt;br&gt;입력 copy / SCMI event enqueue&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="1170" y="582" width="382" height="112" />
+        </mxCell>
+        <mxCell id="auto-line-9" parent="1" value="⑤ ④의 CLR로 요청 PBX 상태 clear / ACK" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406" y="735" />
+            <mxPoint as="targetPoint" x="1002" y="735" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="worker" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;⑥ framework event&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;protocol handler / power·DVFS 처리&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1170" y="777" width="382" height="95" />
+        </mxCell>
+        <mxCell id="auto-line-10" parent="1" value="⑦ response payload → channel FREE" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406" y="928" />
+            <mxPoint as="targetPoint" x="598" y="928" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-11" parent="1" value="⑧ reverse PBX ch0 bit0 → AP MBX / INTID145" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406" y="1008" />
+            <mxPoint as="targetPoint" x="194" y="1008" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="done" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;⑨ AP RX callback&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;FREE / message header 확인 → response fetch / token 매칭&lt;br&gt;MHUv3 callback 후 MBX CLR → 반대 pair ACK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1055" width="1080" height="115" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="11-hipc-sequence" name="11-hipc-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1420" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="HIPC는 vring에 packet을 두고 MHU로 소비를 알린다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="SI CL1은 독립 boot된다. Linux remoteproc는 이미 실행 중인 Zephyr에 attach하며, Linux가 이 경로에서 CL1 firmware를 load/start하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1332" />
+            <mxPoint as="targetPoint" x="1552" y="1332" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="H2 · L5 · Z2 · attach ACK(bit2)는 resource 준비 handshake다. endpoint ready / packet 처리 / HW transfer ACK와 구분한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1347" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="a" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP Linux&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;arm_si_rproc / rpmsg_net&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194.0" y="300" />
+            <mxPoint as="targetPoint" x="194.0" y="1260" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Shared memory&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;resource table / vrings&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="452" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="598.0" y="300" />
+            <mxPoint as="targetPoint" x="598.0" y="1260" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="z" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CL1 ISR / work&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;MHUv3 / veth callbacks&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="856" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002.0" y="300" />
+            <mxPoint as="targetPoint" x="1002.0" y="1260" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Zephyr network&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;OpenAMP / RPMsg / IP&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1260" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406.0" y="300" />
+            <mxPoint as="targetPoint" x="1406.0" y="1260" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="① attach: ch0 bit3" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="366" />
+            <mxPoint as="targetPoint" x="1002" y="366" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="attach" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;② CL1 resource table 준비 / 재접속 처리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;MBX CLR은 HW ACK · 별도 PBX bit2는 attach software ACK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="836" y="408" width="716" height="100" />
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="③ software ACK bit2 → remoteproc 등록" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="554" />
+            <mxPoint as="targetPoint" x="194" y="554" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ready" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;통신 준비 gate&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;VirtIO ring negotiation → 후속 kick에서 CL1 endpoint 생성 → 첫 RPMsg handshake로 ready&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="591" width="1504" height="76" />
+        </mxCell>
+        <mxCell id="auto-line-8" parent="1" value="④ vring1 + packet buffer 작성 (AP → CL1)" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="724" />
+            <mxPoint as="targetPoint" x="598" y="724" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-9" parent="1" value="⑤ vq1_tx: ch0 bit1 → CL1 INTID73" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="808" />
+            <mxPoint as="targetPoint" x="1002" y="808" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="notify" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;⑥ ISR callback → worker → OpenAMP notify&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;vring descriptor를 읽고 RPMsg endpoint로 packet 전달&lt;br&gt;MHU ISR에서 전체 network stack을 실행하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="836" y="852" width="716" height="100" />
+        </mxCell>
+        <mxCell id="auto-line-10" parent="1" value="⑦ 반환 packet: vring0 (CL1 → AP)" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406" y="1007" />
+            <mxPoint as="targetPoint" x="598" y="1007" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-11" parent="1" value="⑧ ch0 bit0 → AP INTID153 → rx callback" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="1090" />
+            <mxPoint as="targetPoint" x="194" y="1090" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="work" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;⑨ Linux workqueue가 virtqueue를 처리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;arm_si_rproc_mb_callback → queue_work → rproc_vq_interrupt → RPMsg → rpmsg_netdev_cb → netif_rx&lt;br&gt;두 vring은 데이터 진행 상태를 보존한다. doorbell bit 자체에는 packet 수나 packet bytes가 없다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1140" width="1504" height="115" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="12-rse-sequence" name="12-rse-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1320" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1320" />
+        </mxCell>
+        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / MAILBOX ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        </mxCell>
+        <mxCell id="num" parent="1" value="12" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        </mxCell>
+        <mxCell id="title" parent="1" value="AP–RSE는 DBCH register를 직렬화 메시지 운반에 쓴다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
+        </mxCell>
+        <mxCell id="sub" parent="1" value="128 DBCH 구성의 첫 batch: ch0=전체 길이, ch1..126=data word, ch127=notify. 후속 batch의 data는 ch0부터 시작한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="48" y="1232" />
+            <mxPoint as="targetPoint" x="1552" y="1232" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="footer" parent="1" value="A3 · R2–R3 · model commit_on_notify는 부분 word 쓰기 중 IRQ 재계산을 미룬다. FIFO / packet atomicity / 서비스 성공 보장은 아니다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1247" width="1504" height="50" />
+        </mxCell>
+        <mxCell id="a" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP secure client&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;TF-A / SE-Proxy&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194.0" y="300" />
+            <mxPoint as="targetPoint" x="194.0" y="1160" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP PBX / MBX&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;0x40680000 / 0x406B0000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="452" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="598.0" y="300" />
+            <mxPoint as="targetPoint" x="598.0" y="1160" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="r" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;RSE MHU / SFCP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;RX NVIC45 · word framing&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="856" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002.0" y="300" />
+            <mxPoint as="targetPoint" x="1002.0" y="1160" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;TF-M PSA&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;service partition&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="1260" y="220" width="292" height="80" />
+        </mxCell>
+        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406.0" y="300" />
+            <mxPoint as="targetPoint" x="1406.0" y="1160" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-6" parent="1" value="① serialize → length / data words SET" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="194" y="375" />
+            <mxPoint as="targetPoint" x="598" y="375" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-7" parent="1" value="② 마지막 ch127 = 1234(0x4D2) notify" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="598" y="464" />
+            <mxPoint as="targetPoint" x="1002" y="464" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="read" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;③ NVIC45 → SFCP link receive&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;길이와 data words를 수거&lt;br&gt;현재 batch의 채널들을 CLR → sender status clear&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
+          <mxGeometry as="geometry" x="836" y="511" width="716" height="110" />
+        </mxCell>
+        <mxCell id="auto-line-8" parent="1" value="④ AP는 clear polling → 다음 batch 또는 send 완료" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="672" />
+            <mxPoint as="targetPoint" x="194" y="672" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-9" parent="1" value="⑤ queue → NS_MAILBOX_AGENT" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="755" />
+            <mxPoint as="targetPoint" x="1406" y="755" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="service" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;⑥ PSA partition 실행&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;mapped invec / outvec 사용&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="1170" y="802" width="382" height="100" />
+        </mxCell>
+        <mxCell id="agent" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;NS agent에서 권한과 mapping 처리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;deserialize → permission / pointer ATU mapping → tfm_rpc_psa_call&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="808" width="1080" height="95" />
+        </mxCell>
+        <mxCell id="auto-line-10" parent="1" value="⑦ PSA return status + outvec 직렬화" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1406" y="955" />
+            <mxPoint as="targetPoint" x="1002" y="955" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="auto-line-11" parent="1" value="⑧ 반대 방향 DBCH stream · AP receiver polling" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1002" y="1038" />
+            <mxPoint as="targetPoint" x="194" y="1038" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="final" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;⑨ AP: reply 수신·decode → 호출자에게 반환&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;AP-side MHU IRQ socket은 현재 미연결. RSE SFCP는 실제 firmware 서비스이며 full profile에서 C++ PSA stub가 응답하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="1080" width="1504" height="100" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
