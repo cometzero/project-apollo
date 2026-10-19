@@ -1,27 +1,6 @@
-# Interrupt Architecture — 조사 근거와 검증 범위
+# Apollo Interrupt SW Implementation Report — Source References
 
-[세미나 본문](README.md) · [배선표](WIRING-MAP.md)
-
-**조사일: 2026-10-16.** 아래는 현재 checkout과 최종 Lua descriptor에 대한 정적 조사다. 과거 실행 이력을 이번 Phase1 완료의 신규 IRQ 검증 결과로 재사용하지 않았다.
-
-| 저장소 | 조사 시 HEAD |
-|---|---|
-| `.` | `a37dcba0d32d` |
-| `arm-zena-css` | `bf34d9e71f67` |
-| `hsoc-stack/tools/qbox` | `b8a0499359ba` |
-| `hsoc-stack/tools/qbox-platform` | `17ac742e2257` |
-| `hsoc-stack/tools/qemu` | `2d83203dc366` |
-| `hsoc-stack/components/primary_compute/linux` | `728c53f73006` |
-| `hsoc-stack/components/primary_compute/trusted-firmware-a` | `532c9e6dc679` |
-| `hsoc-stack/components/primary_compute/optee_os` | `a2a275865d65` |
-| `hsoc-stack/components/system_mgmt/scp-firmware` | `b17d6d0873b9` |
-| `hsoc-stack/components/system_mgmt/trusted-firmware-m` | `94c5d43ae48c` |
-| `hsoc-stack/components/system_mgmt/zephyrproject/zephyr` | `992228a26f3f` |
-| `hsoc-stack/yocto/meta-hsoc-bsp` | `c691b907bcff` |
-
-현재 [local.conf](../../../build/conf/local.conf)의 `MACHINE=apollo-qvp`, `RD_ASPEN_VARIANT=cfg2`, 기본 AP4를 확인했다. 아래의 “현재 구성”은 **source/metadata 선택**이며 BitBake 최종 변수, 실행 중인 ELF·DTB·`.config`의 재확인 결과는 아니다.
-
-Codebase index는 관계 탐색에만 사용했다. Platform index는 2026-09-30 기준이고 최신 Lua 경로에 gap이 있어, 최종 배선은 직접 소스와 기존 [descriptor evaluator](../../../scripts/test/apollo_lua_descriptor.py)의 sandbox 평가로 확인했다. QBox를 실행하지 않고 full-system composition과 audio·crypto 선택을 적용했다.
+[본문](README.md) · [배선표](WIRING-MAP.md)
 
 <a id="s1"></a>
 ## S1. Arm HW · FVP 참조
@@ -110,7 +89,7 @@ IP별 상세 소스·정확한 socket/INTID·조건은 [WIRING-MAP](WIRING-MAP.m
 | [veth 적용 패치](../../../hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel/files/0001-veth-restore-resource-table-on-reattach.patch) | callback의 atomic pending event / work submit; workqueue의 attach·detach·normal kick |
 | [MHU model](../../../hsoc-stack/tools/qbox-platform/systemc-components/mhu320ae/include/mhu320ae.h) | paired frame의 SET/CLEAR/MASK·receiver IRQ·sender ACK |
 
-수신 callback 이벤트는 bitset으로 합쳐질 수 있다. IRQ 1회와 packet 1개를 1:1로 해석하지 않는다. Fetched OpenAMP 내부의 모든 호출과 현재 실행 중인 vring 상태까지 검증하지는 않았다.
+수신 callback 이벤트는 bitset으로 합쳐질 수 있다. IRQ 1회와 packet 1개를 1:1로 해석하지 않는다.
 
 <a id="s7"></a>
 ## S7. RSE TF-M · M55 NVIC
@@ -136,20 +115,50 @@ IP별 상세 소스·정확한 socket/INTID·조건은 [WIRING-MAP](WIRING-MAP.m
 | [arm_gicv3_redist.c](../../../hsoc-stack/tools/qemu/hw/intc/arm_gicv3_redist.c) | LPI property/pending table, EnableLPIs 조건 |
 | [PCIe wiring](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/pcie.lua) | INTx4개와 별도 MSI message 경로 |
 
-QEMU에는 GICv4/v4.1·DirectLPI·VLPI 코드가 존재한다. 반면 현재 wrapper의 ESPI/EPPI 수는 기본값0이며 QEMU가 1-of-N SPI routing을 지원한다고 광고하지 않는다. “전부 미구현”과 “물리 GIC-720AE 전체 검증 완료” 어느 쪽으로도 단정하지 않았다.
+QEMU에는 GICv4/v4.1·DirectLPI·VLPI 코드가 존재한다. 반면 현재 wrapper의 ESPI/EPPI 수는 기본값0이며 QEMU가 1-of-N SPI routing을 지원한다고 광고하지 않는다.
 
-## 문서 검증
+<a id="automotive-enhanced"></a>
 
-- 도면 12장의 native XML ID·연결·white theme와 SVG 내 편집 정보 일치를 확인했다(364 cells).
-- draw.io Desktop CLI로 원본 book 12개 page를 렌더링·시각 검토하고, Chrome에서도 SVG 12개를 열어 확인했다.
-- Markdown diagram validator와 로컬 링크·anchor·공백 검사를 수행했다.
-- Validator의 raw draw.io `viewer_required` 1건은 위 Desktop의 전체 page 렌더링·시각 검토로 별도 확인했다.
+## Automotive Enhanced — Multiview / FMU
 
-| 항목 | 결과 |
+[Arm v2.1 공식 SI Multiview SVG](https://arm-auto-solutions.docs.arm.com/en/v2.1/_images/si_gic_multiple_view.svg)를 내려받아 렌더링한 뒤 driver–view의 CFG/IRQ 경로 배치를 참고했다. AP 그림은 SCP의 View0 관리와 단일 실행 View1을 표시하며 SI View2를 포함하지 않는다. FMU는 별도 페이지로 분리했다. AP FMU 그림은 GIC-720AE TRM Figure 6-2를 기준으로 Distributor 내부 FMU, AXI5-Stream 보고, block type별 OR 오류 wire, Secure APB5 및 CRI/ERI 구조를 표시한다.
+
+2026-10-19에 아래 설계·정적 구성을 추가 확인했다. GIC의 view, timer frame, NoC FMU와 GIC 내부 FMU를 구분했다.
+
+| 대상 | 근거 | 확인 내용 |
+|---|---|---|
+| GIC HW 계약 | [Arm GIC-720AE TRM, 102666_0100_09_en](https://documentation-service.arm.com/static/679b9c8f27eda361ad4ee88f), GICD_IVIEWR·GICR_VIEWR 및 §6.1, pp.330–331 | View 할당 register, GIC FMU의 오류 수집·APB 접근·fault injection·critical/non-critical 출력 |
+| SI view 소유 | [Arm components 설계](../../../arm-zena-css/documentation/design/components.rst) 110–128행, [canonical SI diagram](../../../arm-zena-css/documentation/images/si_gic_multiple_view.svg) | View0 관리, CL0 View1, CL1 View2 |
+| AP/SI view 설정 | [SCP multiview config](../../../hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-qvp/si0_ramfw/config_gicx00_multiview.c) 14·35–153행 | AP의 16개 Redistributor descriptor 모두 View1; NS MMIO timer INTID81 → View1; AP 설정은 CMN 이후 |
+| AP view 구현 | [AP system Lua](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/system.lua), [multiview 모델](../../../hsoc-stack/tools/qbox-platform/systemc-components/gicx00_multiview/include/gicx00_multiview.h) | View0 주소, View1 backend 주소, backend_socket 연결, view register 상태 |
+| AP 실행 주소 | [TF-A platform_def.h](../../../hsoc-stack/components/primary_compute/trusted-firmware-a/plat/arm/board/automotive_rd/platform/apollo_qvp/include/platform_def.h) 153–154행, [Timer AP Software 근거 A1](../timer/SOURCES.md#ap-software) | GICD 0x20800000 / GICR 0x20880000. 일부 매크로의 VIEW0 명칭보다 주소와 SCP 할당표를 기준으로 분류 |
+| SI QVP 차이 | [SI CL0 system Lua](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/si_cl0/system.lua), [SI CL1 system Lua](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/si_cl1/system.lua) | 별도 GIC backend; SI multiview 관리 모델은 backend_socket 미연결 |
+| AP NoC FMU | [AP safety Lua](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/safety.lua), [NI-710AE FMU 모델](../../../hsoc-stack/tools/qbox-platform/systemc-components/zena_ni710ae_fmu/include/zena_ni710ae_fmu.h) | AP cluster0–3 FMU 주소·parent record·fault_socket, 주입 오류의 상위 record 전달 |
+| SI 오류 수집 | [SI CL0 safety Lua](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/si_cl0/safety.lua), [SCP FMU driver](../../../hsoc-stack/components/system_mgmt/scp-firmware/product/automotive-rd/apollo-qvp/module/fmu/src/mod_fmu.c) 75–189행 | SI GIC FMU와 root FMU의 구분; INTID128/129, leaf record 탐색·acknowledge |
+
+AP GIC 내부 FMU의 전용 instance·오류 입력 배선은 조사한 AP/SoC Lua에서 확인하지 못했다.
+
+
+<a id="uboot-interrupt"></a>
+## U-Boot / Domain Initialization
+
+| 소스 | 반영 내용 |
 |---|---|
-| Source/metadata/최종 Lua 교차 조사 | 완료 |
-| Diagram XML·export·viewer | 12/12 일치·렌더링·시각 검토 완료 |
-| Markdown 링크·diagram validator | 로컬 링크181개 정상; diagram13건 hard failure0 |
-| 신규 빌드·부팅·IRQ traffic·latency 측정 | 미실행 |
+| [U-Boot interrupts_64.c](../../../hsoc-stack/components/primary_compute/u-boot/arch/arm/lib/interrupts_64.c) | Generic interrupt_init·enable_interrupts 및 do_irq/do_fiq panic 경로 |
+| [U-Boot ARM library Makefile](../../../hsoc-stack/components/primary_compute/u-boot/arch/arm/lib/Makefile) | ARM64 interrupts_64.o 선택 |
+| [TF-A BL31 setup](../../../hsoc-stack/components/primary_compute/trusted-firmware-a/plat/arm/board/automotive_rd/platform/apollo_qvp/apollo_qvp_bl31_setup.c) | Platform 초기화·조건부 EHF handler 등록 |
+| [OP-TEE platform main.c](../../../hsoc-stack/components/primary_compute/optee_os/core/arch/arm/plat-automotive_rd/main.c) | RD-Aspen primary GIC 초기화 |
+| [Zephyr GICv3](../../../hsoc-stack/components/system_mgmt/zephyrproject/zephyr/drivers/interrupt_controller/intc_gicv3.c) | PRE_KERNEL_1·Redistributor·secondary CPU interface 초기화 |
+| [TF-M mailbox signal template](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/secure_fw/partitions/ns_agent_mailbox/ns_agent_mailbox_signal_utils.h.template) | Manifest signal별 psa_irq_enable 생성 |
 
-문서는 source-backed architecture 산출물이다. 실제 ISR 수행·IRQ storm 회복·동시 IRQ0 처리·FVP parity·하드웨어 안전성은 별도 실행 근거가 필요하다.
+
+## Domain Hardware / Register Interface
+
+| 소스 | 반영 내용 |
+|---|---|
+| [Timer Hardware Architecture](../timer/README.md#2-hardware-architecture) | Domain별 구성·Hardware/Register/Interrupt map·QVP 구현의 문서 형식 |
+| [GIC common register definitions](../../../hsoc-stack/components/primary_compute/trusted-firmware-a/include/drivers/arm/gic_common.h) | GICD control·enable register offset |
+| [GICv3 register definitions](../../../hsoc-stack/components/primary_compute/trusted-firmware-a/include/drivers/arm/gicv3.h) | IROUTER·GICR WAKER·SGI frame register 배치 |
+| [Domain별 전체 배선](WIRING-MAP.md) | AP·SI·RSE source 번호·controller base·현재 QVP 배선 |
+
+Hardware 도면은 AP 16 PE, SI 단일 GIC Multiview, RSE NVIC 구조로 분리했다. QVP 기본 AP4와 SI의 별도 backend는 각 Domain의 QVP 구현 항목에 표시한다.

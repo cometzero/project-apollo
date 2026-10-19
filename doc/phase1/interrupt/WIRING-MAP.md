@@ -1,6 +1,6 @@
 # Apollo QVP Interrupt Wiring Map
 
-[세미나 문서로 돌아가기](README.md)
+[보고서로 돌아가기](README.md)
 
 이 문서는 canonical full-system Lua의 **최종 descriptor를 정적으로 평가한 배선 지도**다. IRQ 발생, guest ISR 실행, 동시에 발생한 interrupt의 처리 결과를 입증하지 않는다.
 AP 4 CPU·CL0 1 CPU·CL1 4 CPU, runner 기본 native CC3XX 및 VP audio backend를 반영했다. SPI 배선은 **AP 68 + CL0 41 + CL1 4 = 113개**이며 아래 범위 표로 압축했다. 동일 source의 다른 controller 연결은 각각 센다.
