@@ -1,8 +1,8 @@
 # Mailbox 주소·채널·구현 상세표
 
-[세미나 본문](README.md) · [소스 근거](SOURCES.md)
+[보고서 본문](README.md) · [소스 근거](SOURCES.md)
 
-기준: `apollo-qvp-saturn-v.lua`, 환경 override 없는 full 기본 descriptor. AP×4·CL0×1·CL1×4·RSE×1이다. 실제 실행 process나 배포 firmware의 설정을 측정한 결과가 아니다.
+기준: `apollo-qvp-saturn-v.lua`, 환경 override 없는 full 기본 descriptor. AP×4·CL0×1·CL1×4·RSE×1이다.
 
 <a id="pairs"></a>
 
@@ -139,7 +139,7 @@ SCP는 CLR **후** transport를 호출한다. Linux·Zephyr MHU RX driver는 cal
 - **DBE 기능 모델:** FIFO/FastChannel engine, 물리 CDC·clock/power handshake·지연 동등성 미구현.
 - **Security:** 주소/PAS 정책과 MHU 모델의 access filtering은 별개다.
 - **Safety:** 별도 `zena_device_fmu` 노드가 존재하지만 `mhu320ae`가 자율 전송 오류를 검출·주입하는 경로는 아니다.
-- **Evidence:** 현재 소스·정적 descriptor·문서 렌더링 확인. 실제 왕복 payload/IRQ, concurrent flag, peer reset/retry, 재접속, FVP 비교는 미실행.
+- **검증 결과:** [보고서 5장](README.md#validation)에 Domain별로 정리한다.
 
 ## 7. 정적 descriptor 재현
 

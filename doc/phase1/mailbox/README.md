@@ -1,211 +1,548 @@
-# Project Apollo Mailbox Architecture
+# Apollo Mailbox SW Implementation Report
 
-**Phase1 기술 세미나 · 2026-10-18 · Apollo QVP / Cfg2 / full profile**
+<a id="overview"></a>
 
-**Mailbox의 핵심은 알림, 데이터 위치, 소유권, 완료 조건이다.** Apollo는 MHUv3 위에 SCMI·HIPC/RPMsg·SFCP/PSA를 구현한다. 같은 MHU register를 사용해도 메시지를 운반하고 완료를 판단하는 방식은 다르다.
+## 1. Overview
 
-현재 소스와 최종 Lua descriptor를 조사했다. Arm의 HIPC·SCMI·Secure Services 설계 문서와 원본 도면을 대조했으며, 이번 작업에서 빌드·부팅·통신 시험은 수행하지 않았다.
+### 1.1 Purpose and Scope
 
-[주소·채널·IRQ 상세표](MAILBOX-MAP.md) · [소스 근거·검증 범위](SOURCES.md) · [흰색 draw.io 원본 — 12장](apollo-mailbox-architecture.drawio)
+Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 처리 경로를 설명한다.
 
-| 발표 순서 | 핵심 질문 |
+- **시스템 용도:** Automotive AD의 AP–Safety Island 데이터 교환, 전원·성능 제어, RSE 보안 서비스 호출.
+- **Hardware:** Arm Zena CSS의 MHU-320AE PBX/MBX, shared memory, GIC/NVIC 연결.
+- **Software:** AP Linux·TF-A·Secure Services, SI CL0 SCP, SI CL1 Zephyr, RSE TF-M/BL2.
+
+### 1.2 Mailbox Summary
+
+**MHU는 Domain 사이의 전송 상태를 알리고, 상위 protocol은 데이터 형식·소유권·서비스 완료를 결정한다.** 수신 flag clear로 발생하는 HW ACK와 명령의 성공 응답은 다르다.
+
+| Domain / SW | 상대 Domain | 주요 사용 방식 |
+|---|---|---|
+| AP / Linux | SI CL0 | SCMI performance 요청; shared slot + doorbell |
+| AP / Linux | SI CL1 | HIPC/RPMsg network; vring + doorbell |
+| AP / TF-A | SI CL0 | PSCI·PFDI SCMI; shared slot + 응답 polling |
+| AP / Secure client | RSE | PSA 요청; DBCH word stream 및 허용 shared buffer |
+| SI CL0 / SCP | AP·CL1·RSE | SCMI server, power/performance 제어, notification |
+| SI CL1 / Zephyr | AP·CL0 | HIPC endpoint, CPU별 SCMI transport |
+| RSE / BL2·TF-M | CL0·AP | Boot/power SCMI, Secure service request 처리 |
+
+### 1.3 Glossary
+
+| 용어 | 의미 |
 |---|---|
-| [1. HW 구조](#hardware) | PBX·MBX, doorbell, ACK는 무엇을 보장하는가? |
-| [2. FVP와 QVP](#comparison) | 참조 HW 계약과 현재 모델의 차이는 무엇인가? |
-| [3. QBox 구현](#implementation) | QEMU MMIO가 SystemC 상태와 IRQ로 어떻게 이어지는가? |
-| [4. CPU·주소·메모리](#cpu) | 누가 어느 주소·채널·interrupt를 사용하는가? |
-| [5. Subsystem SW](#software) | IRQ 이후 실제 protocol은 어디서 처리하는가? |
-| [6. HW → SW sequence](#sequences) | SCMI·RPMsg·PSA의 요청과 응답은 어떻게 다른가? |
+| MHU / PBX / MBX | Message Handling Unit / 송신 Postbox / 수신 Mailbox |
+| DBE / DBCH | Doorbell Extension / 32개 flag를 갖는 channel window |
+| Combined IRQ | 여러 channel의 interrupt 상태를 모은 출력 |
+| Transfer ACK | Receiver가 flag를 clear했다는 HW 전송 완료 상태 |
+| SCMI | System Control and Management Interface; power·performance 등 제어 protocol |
+| HIPC / RPMsg | 이기종 CPU 통신 / VirtIO 기반 메시지 protocol |
+| Vring | Shared memory에 두는 VirtIO descriptor queue |
+| SFCP / PSA | Secure Firmware Communication Protocol / 보안 서비스 API 규약 |
+| ATU | Address Translation Unit; CPU별 주소 view 변환 |
+| FREE / BUSY | SCMI shared slot의 소유권 상태 |
+| GIC INTID / NVIC IRQ | AP·SI의 interrupt ID / RSE Cortex-M의 external IRQ 번호 |
 
 <a id="hardware"></a>
 
-## 1. Mailbox HW 구조
+## 2. Hardware Architecture
 
-![MHUv3의 방향과 두 데이터 전달 방식](diagrams/01-hardware.drawio.svg)
+### 2.1 System Architecture — Automotive AD System
 
-MHUv3의 한 방향은 **송신 CPU의 PBX(Postbox)**와 **수신 CPU의 MBX(Mailbox)**로 구성한다. 응답 IRQ나 역방향 알림에는 별도 pair를 사용한다. 같은 CPU에 있는 PBX와 MBX가 서로의 peer라는 뜻은 아니다. [HW 근거](SOURCES.md#hardware)
+![Automotive AD Mailbox System Architecture](diagrams/00-system.drawio.svg)
 
-| 용어 | 의미 | 혼동하지 않을 대상 |
+- **System:** AP와 Safety Island의 데이터 교환, 시스템 제어 요청, RSE 보안 서비스 호출.
+- **Hardware — MHU:** PBX SET·MBX status/clear와 interrupt 제공.
+- **Software — Mailbox driver:** Channel 송수신·IRQ 처리; SCMI·RPMsg·SFCP가 메시지와 응답 관리.
+
+#### 2.1.1 MHU-320AE Hardware 구조
+
+![MHUv3 PBX MBX와 shared memory 데이터 경로](diagrams/01-hardware.drawio.svg)
+
+- 한 방향의 MHU 연결은 **송신 PBX → 수신 MBX**다. 반대 방향에는 별도의 PBX/MBX pair가 필요하다.
+- DBCH 하나는 32-bit pending flag를 제공한다. 같은 bit를 반복 SET해도 메시지 개수는 누적되지 않는다.
+- SCMI·HIPC는 payload를 shared memory에 둔다. AP–RSE는 DBE register에 serialized words를 쓰는 SW framing도 사용한다.
+- MHU-320AE의 extension 구성과 실제 사용하는 DBE 경로를 구분한다. 현재 QVP는 FIFO·FastChannel engine을 구현하지 않는다.
+
+#### 2.1.2 Register / Interrupt 구조
+
+![MHUv3 register와 수신 interrupt 및 transfer ACK](diagrams/02-registers.drawio.svg)
+
+`DBCH[n] = frame base + 0x1000 + 0x20 × n`. 아래 offset은 DBCH 시작 기준이다.
+
+| Frame | Register / Offset | 기능 |
 |---|---|---|
-| DBCH | 32-bit flag를 갖는 HW channel window | CPU 수, SCMI protocol ID |
-| Doorbell flag | 상대가 확인할 pending 상태 | 메시지 개수, packet queue |
-| Combined IRQ | 여러 channel의 상태를 합친 interrupt | channel마다 독립된 IRQ |
-| Transfer ACK | 수신 CLR로 HW 전송 상태를 회수 | SCMI 명령 성공, PSA 서비스 완료 |
-| Shared payload | SW protocol이 관리하는 SRAM/DRAM | MHU register frame |
+| PBX | `ST +0x00`, `SET +0x0C` | 송신 pending 조회 / flag set |
+| PBX | `INT_ST +0x10`, `INT_CLR +0x14`, `INT_EN +0x18` | Transfer ACK 상태 / clear / enable |
+| MBX | `ST +0x00`, `ST_MSK +0x04`, `CLR +0x08` | 수신 상태 / mask 적용 상태 / flag clear |
+| MBX | `MSK_ST +0x10`, `MSK_SET +0x14`, `MSK_CLR +0x18` | 수신 flag mask 상태 / 설정 / 해제 |
+| 양쪽 | `CTRL +0x1C` | 해당 channel의 combined IRQ 참여 |
 
-현재 full 구성은 **30개 `mhu320ae` frame / 15개 방향별 pair**를 생성한다. 이 중 14방향은 bridge이고, RSE MHU0의 2개 frame은 non-bridging local 구성이다. 이 개수는 실제 통신이 확인된 서비스 수가 아니다.
+- MBX IRQ: channel별 `CTRL.bit0 && (ST & ~MASK)`를 OR.
+- PBX ACK IRQ: channel별 `CTRL.bit0 && (INT_ST & INT_EN)`를 OR.
+- Driver는 frame의 `DBCH_INT_ST`에서 channel을 찾고 해당 channel의 flag를 처리한다.
+- `MBX CLR`은 MHU source를 해제한다. GIC EOI/NVIC exception return은 MHU flag를 대신 지우지 않는다.
 
-### 1.1 Register와 IRQ
+[전체 register map](MAILBOX-MAP.md#registers)
 
-![SET MASK CLR와 combined IRQ](diagrams/02-registers.drawio.svg)
+### 2.2 AP Domain Mailbox
 
-`DBCH[n] = frame + 0x1000 + n × 0x20`이다. 송신 `SET`은 flag를 OR하고, 수신 `CLR`은 선택한 flag를 양쪽에서 지운 뒤 송신 ACK 상태를 만든다. 동일 bit를 여러 번 SET해도 pending 상태 하나로 합쳐진다.
+#### 2.2.1 Hardware 구조
 
-- MBX 수신 IRQ: channel별 `CTRL.bit0 && (ST & ~MASK)`를 OR.
-- PBX 완료 IRQ: channel별 `CTRL.bit0 && (INT_ST & INT_EN)`를 OR.
-- SW는 `DBCH_INT_ST → channel → flag` 순서로 원인을 찾는다.
-- GIC EOI만으로 MHU source가 지워지지 않는다. Driver가 MBX CLR을 수행해야 한다.
+![AP Domain CPU clusters MHU shared memory GIC](diagrams/03-ap-hardware.drawio.svg)
 
-QVP reset에서 MASK는 0이다. Linux는 초기화 중 모든 flag를 mask한 뒤 사용할 bit를 unmask한다. [register 상세](MAILBOX-MAP.md#registers)
+Arm Zena CSS AP는 **4 clusters × 4 Cortex-A720AE**, 기본 Apollo QVP는 AP 4 CPU 구성이다. MHU는 CPU마다 배치되지 않고 상대 Domain·보안 경로·서비스별로 공유한다.
 
-### 1.2 같은 DBE, 다른 데이터 경로
+- **AP↔CL0:** Non-secure SCMI, Secure PSCI, CPU별 PFDI transport를 분리한다.
+- **AP↔CL1:** HIPC용 양방향 doorbell과 512KiB shared SRAM을 사용한다.
+- **AP↔RSE:** Secure MHU 경로로 PSA 요청·응답을 전달한다.
+- **IRQ:** AP의 수신·전송 ACK 출력은 GIC SPI로 연결한다. AP–RSE 응답은 현재 QVP에서 polling한다.
 
-| 사용 경로 | MHU에 기록하는 것 | 데이터 위치 / 완료 판단 |
+#### 2.2.2 MMIO / Interrupt Map
+
+| AP 경로 | AP guest PBX / MBX | QVP AP GIC INTID | 사용 |
+|---|---|---|---|
+| NS SCMI | `0x40020000` / `0x40050000` | TX ACK 144 / RX 145 | Linux SCMI |
+| Secure SCMI | PBX `0x40080000`; reverse frame은 global map 참조 | TX ACK 146 / RX 147 | TF-A PSCI; response polling |
+| PFDI | PBX `0x40110000`; reverse frame은 global map 참조 | TX ACK 150 / RX 151 | CPU별 SCMI slot; response polling |
+| HIPC | `0x400B0000` / `0x400E0000` | TX ACK 152 / RX 153 | Linux remoteproc/RPMsg |
+| RSE Secure | `0x40680000` / `0x406B0000` | AP IRQ 미연결 | Secure client polling |
+
+AP guest alias와 system-global decode 주소는 다르다. 예를 들어 NS SCMI PBX는 ATU를 거쳐 `0x400003B000000`에 도달한다. PFDI의 `0x40110000`은 QVP static bridge가 우선 처리한다. **IRQ 배선의 존재가 SW의 IRQ 사용을 뜻하지는 않는다.**
+
+#### 2.2.3 AP Domain QVP 구현
+
+- `system_mgmt/ap_si_mailbox.lua`: CL0 NS/Secure/PFDI 및 CL1 HIPC의 AP-facing frame.
+- `system_mgmt/ap_rse_mailbox.lua`: RSE Secure PBX/MBX, 마지막 notify write 기준 IRQ 갱신.
+- AP-facing frame은 총 10개이며 AP cold reset에 연결한다.
+- 기본 DBCH 수는 128, HIPC는 32다. Arm reference의 AP–CL0 16 DBCH 제약과 동일한 capacity로 해석하지 않는다.
+
+### 2.3 Safety Island Domain Mailbox
+
+#### 2.3.1 Hardware 구조
+
+![Safety Island CL0 CL1 CPU MHU GIC와 상대 Domain](diagrams/04-si-hardware.drawio.svg)
+
+- **CL0:** SCP가 AP·RSE·CL1 요청을 수신하고 시스템 제어 서비스를 제공한다.
+- **CL1:** Zephyr가 AP와 HIPC로 통신하고 CL0에는 별도 SCMI/PFDI 경로를 사용한다.
+- 각 cluster의 MHU interrupt는 해당 cluster의 GIC 경로로 전달한다. Shared memory와 MHU register는 독립된 주소 영역이다.
+
+#### 2.3.2 MMIO / Interrupt Map
+
+주소는 SI local view, IRQ는 **GIC INTID**다.
+
+| Cluster / 상대 | PBX / MBX | TX ACK / RX INTID |
 |---|---|---|
-| SCMI | 선택한 channel의 flag | 공유 slot의 header·payload; response와 `FREE` 확인 |
-| HIPC/RPMsg | vring kick·attach·detach flag | 공유 vring·packet buffer; ownership과 endpoint handshake |
-| AP–RSE SFCP | 길이·직렬화한 32-bit words·마지막 notify | 작은 payload도 DBCH로 전달; pointer 방식은 허용 공유 영역 접근 |
+| CL0 / AP NS | `0x38000000` / `0x38040000` | 96 / 97 |
+| CL0 / AP Secure | `0x38080000` / `0x380C0000` | 98 / 99 |
+| CL0 / AP PFDI | `0x38380000` / `0x383C0000` | 102 / 103 |
+| CL0 / RSE | `0x38100000` / `0x38140000` | 미연결 / 105 |
+| CL0 / CL1 | `0x38200000` / `0x38240000` | 미연결 / 107 |
+| CL1 / AP HIPC | `0x39000000` / `0x39040000` | 72 / 73 |
+| CL1 / CL0 PFDI | `0x39200000` / `0x39240000` | 82 / 미연결 |
 
-따라서 “MHU는 언제나 데이터 없이 알림만 전달한다”는 설명은 현재 RSE 경로에 맞지 않는다. SFCP의 word stream은 **DBE 위에 정의한 SW framing**이며 MHU FIFO extension은 아니다. [SW 근거](SOURCES.md#rse)
+#### 2.3.3 Shared Memory / Channel 구성
 
-<a id="comparison"></a>
-
-## 2. ARM Zena CSS FVP와 Apollo QVP 비교
-
-![Arm reference와 Apollo 구현 비교](diagrams/04-fvp-qvp.drawio.svg)
-
-| 비교 항목 | Arm reference / FVP 설계 근거 | 현재 Apollo QVP |
+| 용도 | SI 주소 | Channel / flag |
 |---|---|---|
-| 통신 구조 | PBX→MBX의 단방향 연결 | 명시적 `pair`로 두 SystemC frame 연결 |
-| Protocol 처리 | SCP SCMI, Zephyr HIPC, RSE 보안 서비스 | full에서는 해당 guest firmware가 처리 |
-| Channel 용량 | AP–CL0 16 DBCH 제약으로 PSCI/PFDI device 분리 | 기본 128 DBCH; HIPC·CL1 PFDI는 32 |
-| 기능 확장 | DBE·FIFO·FastChannel·TZE 등 구성 가능한 기능 | DBE 중심; FIFO·FastChannel engine 없음 |
-| 접근 보호 | S/NS·ATU·보호 제어의 통합 계약 | MHU 모델 자체의 security/privilege filter 없음 |
-| 시간·전력·오류 | clock/power bridge, safety 통합 | 기능 모델; CDC·물리 지연·자율 MHU fault 검출 미구현 |
+| CL0 NS SCMI | `0xE01B0000` | ch0 bit0 request/reply, bit2 notification |
+| CL0 Secure PSCI | `0xE0030DC0` | ch0 bit0 |
+| CL0 AP PFDI | `0xE0030EC0 + 40×CPU` | ch0..15 bit0 |
+| CL1 HIPC | `0xE0130000`, 512KiB | ch0 bit0/1 vring; bit2/3 lifecycle |
+| CL1↔CL0 PFDI | `0x48000000`, 4KiB backing | ch2..5 bit0; CPU별 40B slot |
+| CL0↔RSE SCMI | `0x40000000` | ch0 bit1 command, bit2 notification, bit3 reload ACK |
 
-동일한 주소와 driver를 사용하는 것은 SW 호환성 근거다. 실제 FVP의 feature register·traffic·latency는 조사하지 않았으므로 완전한 동등성으로 표현하지 않는다. Arm의 validation 시나리오도 이번 실행 결과와 구분한다. [참조 문서·원본 도면](SOURCES.md#reference)
+#### 2.3.4 Safety Island QVP 구현
+
+`si_cl0/mailbox.lua`와 `si_cl1/mailbox.lua`가 pair·IRQ·channel 수를 설정한다. CL1 HIPC와 CL1↔CL0 경로는 32 DBCH이며 SCP ISR은 첫 32 channels의 bitmap을 처리한다.
+
+CL1→CL0 요청의 requester hold는 QEMU instance 간 진행을 맞추는 QVP 실행 정책이다. MHU HW의 전송 latency나 SW protocol의 완료 조건을 바꾸는 정의가 아니다.
+
+### 2.4 RSE Domain Mailbox
+
+#### 2.4.1 Hardware 구조
+
+![RSE Cortex-M55 NVIC local MHU2와 SCP 연결](diagrams/05-rse-hardware.drawio.svg)
+
+RSE Cortex-M55는 **AP Secure service 경로**와 **CL0 boot/power SCMI 경로**를 분리한다. MHU2는 RSE local frame, RSE–CL0 frame은 system fabric과 ATU를 통해 접근한다.
+
+- AP-S 요청 → MHU2 receiver → NVIC45 → SFCP 처리.
+- CL0 notification → RSE–SI MBX → NVIC139 → SCMI partition.
+- RSE MHU0는 QVP local frame으로 존재하지만 기본 구성에서 AP peer로 bridge하지 않는다.
+
+#### 2.4.2 MMIO / Interrupt Map
+
+| 경로 | PBX / MBX view | RSE 수신 IRQ |
+|---|---|---|
+| AP Secure MHU2 | RSE local `0x501A0000` / `0x501B0000` | NVIC45 |
+| RSE↔CL0 | System-global `0x400003C000000` / `0x400003C020000` | NVIC139 |
+| MHU0 local | RSE local `0x50160000` / `0x50170000` | NVIC41; 기본 AP bridge 없음 |
+
+NVIC 번호는 external IRQ이며 GIC SPI의 `+32` 변환을 적용하지 않는다. RSE–CL0 shared memory의 global base는 `0x4000040000000`이다.
+
+#### 2.4.3 RSE Domain QVP 구현
+
+- `rse/system.lua`: MHU0 local 및 MHU2 AP-S frame, NVIC 연결.
+- `system_mgmt/rse_si_mailbox.lua`: RSE–CL0 bridge와 shared memory 접근.
+- MHU2는 DBCH word stream을 전달하고 PSA 의미·권한 검사는 TF-M이 처리한다.
+- RSE local SYS/RSS reset fanout에는 현재 MHU frame이 포함되지 않는다. CPU reset과 mailbox 상태 reset은 별개다.
+
+### 2.5 Subsystem별 HW 구성 요약
+
+| Domain | 상대 / MHU 역할 | Payload 자원 | 수신 interrupt |
+|---|---|---|---|
+| AP | CL0 SCMI·CL1 HIPC·RSE Secure | SCMI slots, HIPC SRAM, SFCP words/buffer | GIC SPI; RSE reply polling |
+| SI CL0 | AP·RSE·CL1 제어 요청 | SCMI shared slots | GIC INTID97/99/103/105/107 |
+| SI CL1 | AP HIPC·CL0 SCMI | HIPC 512KiB, CPU별 SCMI slot | HIPC INTID73 |
+| RSE | AP SFCP·CL0 SCMI | DBCH words, 허용 AP buffer, SCMI pages | NVIC45/139 |
+
+[방향별 pair·주소·채널 전체표](MAILBOX-MAP.md#pairs)
 
 <a id="implementation"></a>
 
-## 3. Apollo QVP QBox의 Mailbox 구현
+## 3. QVP Mailbox Implementation
 
-![QEMU SystemC MHU IRQ 실행 경계](diagrams/05-qbox-model.drawio.svg)
+### 3.1 Implementation Overview
 
-### 3.1 모델의 책임
+![QEMU instances와 SystemC TLM MHU 모델 경계](diagrams/06-qvp.drawio.svg)
 
-| 계층 | 현재 구현의 책임 |
+기본 full 구성은 **SystemC `mhu320ae` 30 frames / 15 directional pairs**다. 14방향은 bridge이며 MHU0 local pair는 non-bridging 구성이다.
+
+| 계층 | 구현 책임 |
 |---|---|
-| QEMU / LibQemu | CPU 명령·MMIO·GIC/NVIC exception 실행 |
-| QBox initiator | 정상 MMIO 경로에서 QEMU lock 해제 → `run_on_sysc()` → TLM 전달 |
-| `mhu320ae` | register·mask·pending·ACK·reset 상태; pair mutex 아래 peer 상태 갱신 |
-| SystemC event | `SC_ZERO_TIME`으로 IRQ assert 갱신; 올라간 IRQ의 clear는 MMIO 반환 전에 동기 처리 |
-| QBox GPIO target | 대상 LibQemu instance lock 아래 GIC/NVIC 입력 설정 |
-| Guest firmware / OS | 메시지 구조·소유권·retry·서비스 응답 처리 |
+| QEMU / LibQemu | CPU MMIO 실행, GIC/NVIC exception 처리 |
+| QBox initiator | QEMU lock 전환, `run_on_sysc()`를 통한 TLM 접근 |
+| SystemC `mhu320ae` | Register·pending·mask·ACK, pair 상태 전달 |
+| SystemC event / GPIO socket | IRQ 갱신 및 대상 QEMU instance 입력 |
+| Guest firmware / OS | Shared memory 소유권·message 형식·서비스 실행·response |
 
-현재 backend는 **SystemC `mhu320ae`**다. QEMU MHU 장치나 MHUv2 model을 선택한 구성이 아니다. `protocol="doorbell-bridge"`는 DB 상태를 전달하며 full 모드에서 C++가 SCMI·PSA 서비스를 대신 실행하지 않는다. [모델·bridge 소스](SOURCES.md#models)
+### 3.2 Doorbell / Interrupt Execution Flow
 
-### 3.2 QVP에만 있는 처리와 한계
+1. 송신 SW가 payload를 publish하고 PBX `SET`을 쓴다.
+2. 모델이 pair mutex 아래 sender pending과 peer MBX 상태를 갱신한다.
+3. Unmasked flag가 있으면 combined IRQ를 assert한다.
+4. 수신 CPU의 ISR이 상태를 읽고 선택 flag를 `CLR`한다.
+5. MBX source를 낮추고 PBX transfer ACK를 만든다.
+6. 서비스 완료는 response payload·FREE 또는 역방향 메시지로 별도 전달한다.
 
-- AP–RSE의 `doorbell_commit_on_notify`는 마지막 DBCH write까지 부분 payload의 IRQ 재계산을 미룬다. 메시지 queue나 원자적 packet 전송은 아니다.
-- CL1 PFDI는 실제 요청 vCPU를 `sync_hold`하고 SRAM `FREE`를 10µs 간격으로 확인한다. 서로 다른 QEMU instance의 진행 속도를 조정하는 정책이다.
-- Register 부작용은 32-bit access에 구현되어 있다. 다른 지원 크기의 access는 backing bytes 접근이므로 동등한 동작으로 가정하지 않는다.
-- `b_transport`는 delay를 소비하지 않는다. 선택적 synthetic mode의 1000ns completion 설정은 full bridge의 HW latency가 아니다.
-- S/NS 이름과 ATU mapping만으로 실제 보안 격리를 입증할 수 없다. [구현 범위](MAILBOX-MAP.md#limits)
+Assert 갱신은 `SC_ZERO_TIME` event를 사용한다. 이미 올라간 IRQ의 deassert는 clear MMIO 반환 전에 동기 처리한다. `b_transport`는 delay를 소비하지 않으며 register side effect는 32-bit access에 구현되어 있다.
 
-**`linux-direct`는 별도 비교 대상이다.** SCMI mock은 BASE discovery만 제공하고 clock/power/DVFS를 지원하지 않는다. HIPC는 `apollo_si_stub`, RSE mock은 `PSA_ERROR_NOT_SUPPORTED`를 반환한다. AP-only 결과를 SCP·Zephyr·TF-M의 실제 통신 증거로 확대하지 않는다.
+### 3.3 Shared Memory / Ownership
 
-<a id="cpu"></a>
+![SCMI HIPC SFCP 데이터 위치와 소유권](diagrams/07-shared-memory.drawio.svg)
 
-## 4. 각 CPU와 Mailbox 구조
-
-![CPU domain별 일곱 통신 경로](diagrams/03-topology.drawio.svg)
-
-| Domain / 기본 CPU 수 | 주요 역할 | 대표 수신 interrupt |
+| Protocol | 데이터 경로 | 완료 조건 |
 |---|---|---|
-| AP A720AE ×4 | Linux SCMI·HIPC, TF-A PSCI/PFDI, Secure Services | NS 응답 INTID145, HIPC INTID153; AP–RSE는 polling |
-| SI CL0 R82 ×1 | SCP 제어 서비스·PFDI monitor | NS97, Secure99, AP PFDI103, RSE105, CL1 PFDI107 |
-| SI CL1 R82 ×4 | Zephyr HIPC endpoint·CPU별 PFDI agent | HIPC INTID73; PFDI response는 shared-memory polling |
-| RSE M55 ×1 | AP secure-service 처리, SCP boot/power 제어 | AP-S NVIC45, SCP runtime NVIC139; BL2는 polling |
+| SCMI | Header·token·payload를 shared slot에 기록 | 응답 header/token/status와 `FREE` 확인 |
+| HIPC/RPMsg | Resource table·vring·buffer | Descriptor ownership·endpoint handshake·응답 packet |
+| SFCP/PSA | DBCH batch 또는 pointer/length와 허용 buffer | Batch clear 후 최종 PSA reply decode |
 
-MHU는 주로 subsystem·보안 domain·서비스 경로 단위로 배치된다. PFDI가 CPU별 slot과 channel을 사용한다고 해서 CPU마다 별도 MHU instance가 있는 것은 아니다.
+HIPC 512KiB는 resource table·vring0·vring1·buffer 각 128KiB다. AP `0x00100000`과 CL1 `0xE0130000`은 같은 backing을 본다. Address translation이 cache coherence나 memory barrier를 대신하지 않는다.
 
-### 4.1 주소와 IRQ의 번호 공간
+### 3.4 Arm Zena CSS / Apollo QVP 구현 비교
 
-![AP ATU 주소 변환과 interrupt 전달](diagrams/06-address-irq.drawio.svg)
+<a id="comparison"></a>
 
-Linux가 사용하는 AP PBX `0x40020000`은 ATU 뒤에서 global `0x400003B000000`에 도달한다. Peer MBX는 CL0 local `0x38040000`에 보이며 CL0 **SPI65 / INTID97**을 발생시킨다.
+| 항목 | Arm Zena CSS reference | Apollo QVP full |
+|---|---|---|
+| 전송 구조 | 단방향 PBX→MBX, 역방향 별도 pair | 동일 구조를 SystemC peer 연결로 구현 |
+| 확장 기능 | MHU-320AE의 configurable extensions | DBE 중심; FIFO·FastChannel engine 없음 |
+| Channel 수 | AP–CL0 16 DBCH 제약으로 PSCI/PFDI 분리 | 기본 128; HIPC·CL1 PFDI 32 |
+| Security / safety | 접근 보호와 safety 통합 | MHU 내부 security filter·자율 fault 검출 미구현 |
+| Clock / timing | HW clock·power·bridge 계약 | 기능 모델; 물리 CDC·전송 지연 모델 없음 |
+| Protocol | SCP·Zephyr·TF-M이 처리 | 실제 guest가 처리; host가 서비스 대행하지 않음 |
 
-AP PFDI `0x40110000`은 QVP의 별도 static bridge가 우선 처리한다. AP guest alias, extended system address, SI/RSE local address를 한 주소 표에 섞지 않는다. NVIC external IRQ에는 GIC의 `+32`를 적용하지 않는다. [15개 pair 전체표](MAILBOX-MAP.md#pairs)
-
-### 4.2 Payload 메모리
-
-![SCMI PFDI HIPC 공유 메모리](diagrams/07-shared-memory.drawio.svg)
-
-SCMI의 `FREE`는 shared slot의 소유권을 나타낸다. HIPC의 512KiB는 resource table·vring0·vring1·packet buffer에 각각 128KiB를 배정한다. AP와 CL1이 같은 bytes를 서로 다른 주소로 본다.
-
-주소 변환은 cache coherence를 제공하지 않는다. SCP/Zephyr의 memory attribute, payload publish barrier, AP의 필요한 cache 유지보수는 각 SW의 책임이다. [CPU별 alias·메모리 표](MAILBOX-MAP.md#memory)
+- **AP–RSE:** `doorbell_commit_on_notify`는 마지막 notify까지 IRQ 재계산을 미룬다. Queue나 atomic packet engine은 아니다.
+- **CL1→CL0:** 요청 vCPU의 `sync_hold`와 10µs 간격 shared `FREE` 확인을 사용한다.
+- **Reset:** AP cold reset은 AP-facing 10 frames를 초기화한다. HIPC SRAM은 `init_mem=false`로 보존하므로 재접속 handshake가 필요하다.
+- **Linux-direct:** BASE-only SCMI mock, HIPC stub, RSE unsupported 응답을 사용하는 별도 구성이다.
 
 <a id="software"></a>
 
-## 5. Subsystem별 Mailbox Software Architecture
+## 4. Mailbox Software Architecture
 
-### 5.1 AP — Linux / TF-A / Secure Services
+### 4.1 Mailbox Software Architecture Overview
 
-![AP와 SCP의 software stack](diagrams/08-ap-scp-software.drawio.svg)
+![Mailbox 공통 SW 계층 및 IRQ와 deferred processing](diagrams/08-software-overview.drawio.svg)
 
-| Consumer | 소스 기반 경로 | 완료 방식 |
-|---|---|---|
-| Linux SCMI | cpufreq → SCMI mailbox transport → mailbox core → `arm_mhuv3` | shared response·token·FREE; 별도 RX doorbell |
-| Linux HIPC | `rpmsg_net` → RPMsg/Virtio → `arm_si_rproc` → mailbox | vring 진행 상태와 software handshake |
-| TF-A PSCI/PFDI | channel lock → shared payload → `dmbst` → SET → `dmbsy` | FREE polling 후 `dmbld`, response 확인 |
-| Secure Services | Linux/U-Boot → FF-A → OP-TEE가 관리하는 SP → SE-Proxy MHU client | RSE의 PSA reply |
-| TF-A RSE communications | `psa_call` → serialize → `rse_mbx_*` → MHU wrapper | DBCH batch clear polling + 최종 reply decode |
-
-Linux의 실제 DT 진입점은 `hsoc/apollo-qvp-saturn-v.dts`이며 mailbox·SCMI 정의는 `hsoc/apollo.dtsi`에 있다. `arm/apollo-qvp.dts`는 호환용 include다. Defconfig는 MHUv3·mailbox·SCMI·remoteproc를 선택하고 RPMsg/Virtio는 module로 구성한다. 외부 `arm_si_rproc`·`rpmsg_net` 소스는 `sw-ref-stack` 소유다. [Linux·AP 근거](SOURCES.md#linux)
-
-OP-TEE는 SP manager이며 MHU consumer는 SE-Proxy 내부 driver다. OP-TEE core에서 직접 MHU 호출을 찾지 못했다는 이유로 secure runtime 경로를 빠뜨리지 않는다. [Secure Services 선택 근거](SOURCES.md#ap)
-
-### 5.2 SI CL0 — SCP-firmware
-
-`mhu3_isr → transport → SCMI event → protocol handler`로 처리한다. **SCP ISR은 해당 flag를 먼저 CLR한 후 transport를 호출**한다. Transport는 shared message를 내부 buffer에 복사하고, SCMI는 framework event로 서비스 처리를 넘긴다.
-
-응답 시 payload·length를 기록하고 barrier 뒤 `FREE=1`로 바꾼다. 요청에 interrupt-enable flag가 있을 때 reverse doorbell을 보낸다. 따라서 **HW ACK는 명령 완료보다 먼저 발생**할 수 있다. Transport readiness 이전의 메시지는 수락되지 않을 수 있다. [SCP 근거](SOURCES.md#scp)
-
-### 5.3 SI CL1 — Zephyr
-
-![CL1과 RSE의 software stack](diagrams/09-cl1-rse-software.drawio.svg)
-
-- **HIPC:** MHU ISR callback → atomic event 저장·`k_work_submit()` → veth worker → OpenAMP/RPMsg → network stack.
-- **PFDI:** CPU별 40B slot → physical channel `2+CPU`, bit0 → CL0 monitor. Response는 FREE polling으로 확인한다.
-- HIPC의 attach ACK는 resource 준비 신호다. Endpoint 생성과 RPMsg ready는 후속 negotiation·kick·handshake에서 완료한다.
-
-MHU·veth·PFDI driver 원본은 Arm reference module이다. QVP recipe는 이를 generated copy로 만들고 reattach patch를 적용한다. QVP board DTS/defconfig가 기본 구성을 제공하며 inherited FVP overlay 인자는 제거한다. `hsoc-stack`의 Zephyr 본체만 조사하면 이 경로를 놓친다. [source/build 선택](SOURCES.md#zephyr)
-
-### 5.4 RSE — TF-M / BL2
-
-| 경로 | 처리 문맥과 역할 |
+| 계층 | 역할 |
 |---|---|
-| BL2 ↔ SCP SCMI | RX IRQ mask + polling; SCP protocol/version 준비 확인 후 AP load 진행 |
-| TF-M runtime ↔ SCP | NVIC139 → SCMI partition signal → `psa_wait` → notification 처리 |
-| AP-S → SFCP | NVIC45 → SFCP word 수거·queue → `NS_MAILBOX_AGENT` → PSA decode·permission 검사 → service dispatch |
-| AP reload 완료 | RSE→SCP ch0 bit3 전용 doorbell; shared SCMI packet 없는 ACK |
+| Application / service | 제어 요청·packet 송수신·PSA 호출 |
+| Protocol / transport | Header·token·buffer ownership·timeout·reply 관리 |
+| Mailbox driver | Channel 요청, SET·status·CLR, RX callback·TX completion |
+| IRQ / execution context | ISR에서 최소 수신 처리 후 event·workqueue·partition으로 전달 |
+| Hardware | PBX/MBX 상태, shared memory, interrupt controller |
 
-SFCP embed 방식은 payload도 DBCH로 전달한다. Pointer-access는 pointer/length를 전달하고 RSE가 허용 영역을 확인한 뒤 ATU로 접근한다. 현재 AP_S node의 허용 범위는 AP SRAM `0..0xFFFFF`와 DRAM carveout `0xFFFE0000..0xFFFFFFFF`다. 서비스 결과는 반대 방향 stream으로 반환한다. [RSE 근거](SOURCES.md#rse)
+Mailbox에는 scheduler 기능이 없다. SCP framework event, Zephyr workqueue, TF-M partition scheduling은 driver 위에서 서비스 실행 시점을 결정한다.
 
-<a id="sequences"></a>
+### 4.2 AP Domain — Linux Kernel·TF-A·Secure Services
 
-## 6. Mailbox Sequence — HW에서 SW까지
+#### 4.2.1 Linux Kernel Mailbox Architecture
 
-### 6.1 Linux SCMI → SCP
+![Linux SCMI Mailbox Layered Architecture](diagrams/09-linux-software.drawio.svg)
 
-![SCMI 요청 IRQ event 응답 sequence](diagrams/10-scmi-sequence.drawio.svg)
+- `arm_mhuv3`: DBCH별 flag를 mailbox channel로 노출하는 controller driver.
+- Mailbox core: client/controller 연결, TX queue·completion, RX callback 전달.
+- SCMI mailbox transport: shared slot 준비, channel lock, 응답 header/token 확인.
+- HIPC client는 SCMI와 별개로 remoteproc/RPMsg와 자체 shared memory를 사용한다.
 
-`payload publish → SET → MBX IRQ → SCP CLR → transport copy → SCMI event → 서비스 실행 → response/FREE → 선택적 응답 IRQ` 순서다. Linux는 늦은 응답이 다음 transaction에 섞이지 않도록 FREE와 header/token을 확인한다. IRQ 발생만으로 protocol 성공을 판정하지 않는다.
+##### 4.2.1.1 Mailbox Initialization
 
-### 6.2 Linux HIPC ↔ Zephyr
+![실제 Linux DT 노드와 driver 초기화](diagrams/10-linux-init.drawio.svg)
 
-![HIPC attach 및 RPMsg packet sequence](diagrams/11-hipc-sequence.drawio.svg)
+1. `hsoc/apollo-qvp-saturn-v.dts` → `apollo.dtsi`의 MHU·SCMI·shared SRAM 노드를 사용한다.
+2. `arm_mhuv3`가 MMIO frame·DBE capacity를 읽고 controller와 IRQ를 등록한다.
+3. SCMI transport가 `tx`, `tx_reply`, `rx` channel 및 shared memory를 요청한다.
+4. TX ACK를 enable하고 사용 중인 RX flag만 unmask한다.
 
-CL1은 독립적으로 boot된다. `arm_si_rproc`는 `RPROC_DETACHED` 상태에서 attach 요청을 보내며, 이 경로에서 CL1 firmware를 load/start하지 않는다. Packet은 vring/buffer로 이동하고 MHU는 해당 queue의 진행을 알린다. Linux RX callback은 workqueue를 통해 `rproc_vq_interrupt → RPMsg → netif_rx`로 이어진다.
+| DT 설정 | 의미 |
+|---|---|
+| `mailbox@40020000` / `mailbox@40050000` | PBX / MBX; `compatible = "arm,mhuv3"` |
+| `interrupts = <GIC_SPI 112/113 ...>` | AP INTID144/145 |
+| `#mbox-cells = <3>` | `<extension window flag>`; DBE extension=0 |
+| SCMI `mboxes` | TX `<0 0 0>`, reply `<0 0 0>`, notification `<0 0 2>` |
+| `sram@180000` | Request slot +0, notification slot +0x100; 각 256B |
 
-### 6.3 AP secure client ↔ RSE SFCP
+##### 4.2.1.2 Mailbox / SCMI API
 
-![DBCH word stream과 TF-M PSA dispatch](diagrams/12-rse-sequence.drawio.svg)
+| API / callback | 동작 |
+|---|---|
+| `mbox_request_channel*()` | DT로 controller channel 획득 |
+| `mbox_send_message()` | Client 요청 enqueue; controller가 flag SET |
+| `mbox_chan_received_data()` | IRQ에서 client RX callback 호출 |
+| `mbox_chan_txdone()` | HW 전송 완료 통지; SCMI 서비스 응답과 별개 |
+| SCMI transfer | Message header/token과 shared status로 최종 응답 검사 |
 
-128 DBCH의 첫 batch는 **ch0 길이 → ch1..126 words → ch127 notify(1234)**다. 수신 측이 batch를 읽고 channel을 clear하면 송신 측이 다음 batch를 진행한다. 최종 PSA reply는 서비스 실행 이후의 별도 메시지다. RSE IRQ 안에서 word 수거·queue까지 수행하고, 저우선순위 NS mailbox agent가 PSA 처리를 이어간다.
+한 flag에 동시 진행 중인 전송은 하나다. Driver의 `-EBUSY`는 상위 protocol이 buffer·순서를 관리해야 한다는 의미다.
 
-### 6.4 Reset 이후에도 남는 책임
+##### 4.2.1.3 SCMI Request / Response Sequence
 
-AP cold reset은 AP-facing MHU frame 10개를 reset한다. 상대 firmware와 shared memory는 별도 수명을 갖는다. HIPC SRAM은 reset callback을 받아도 `init_mem=false`로 bytes를 보존하며, 재접속 시 resource table과 vring 상태를 다시 협상해야 한다. Peer가 reset 상태일 때의 SET은 자동 응답이나 자동 replay를 보장하지 않는다. [reset 상세](MAILBOX-MAP.md#reset)
+![Linux SCMI에서 SCP까지 HW SW sequence](diagrams/11-scmi-sequence.drawio.svg)
 
-**Phase1 설명 범위:** 구현·배선·소스 선택을 확인한 architecture 문서다. 실제 왕복 통신, 부하·동시성, timeout 복구, AP 재접속, FVP 동등성은 실행 증거로 별도 판단한다. [문서 검증 결과](SOURCES.md#validation)
+1. Linux가 shared request를 준비하고 AP PBX ch0 bit0을 SET한다.
+2. CL0 IRQ에서 SCP가 flag를 CLR한 뒤 request를 내부 buffer로 복사한다.
+3. SCMI framework event가 서비스를 실행한다.
+4. SCP가 response를 기록하고 barrier 뒤 `FREE=1`로 전환한다.
+5. 요청이 interrupt 응답을 요구하면 역방향 doorbell로 AP를 알린다.
+6. Linux RX callback이 FREE·header/token을 검사한 후 driver가 MBX flag를 CLR한다.
+
+Late IRQ가 다음 transaction의 응답으로 처리되지 않도록 token과 channel 상태를 함께 검사한다.
+
+##### 4.2.1.4 HIPC / RPMsg Architecture
+
+![Linux Zephyr HIPC 양측 계층 및 shared memory](diagrams/12-hipc-software.drawio.svg)
+
+Arm HIPC reference의 Linux remoteproc/RPMsg와 Zephyr OpenAMP/veth 계층을 유지한다. Data는 vring/buffer, notification은 MHU 경로다.
+
+| Linux 구성 | 역할 |
+|---|---|
+| `arm_si_rproc` | 독립 boot된 CL1에 attach; resource table·vring·MHU 채널 연결 |
+| VirtIO / RPMsg | Buffer ownership·endpoint·name service |
+| `rpmsg_net` | RPMsg payload와 network skb 변환 |
+| RX workqueue | MHU callback에서 예약 → `rproc_vq_interrupt()` → RPMsg → `netif_rx()` |
+
+![HIPC Attach와 Packet Sequence](diagrams/13-hipc-sequence.drawio.svg)
+
+1. Linux는 CL1을 `RPROC_DETACHED`로 등록하고 attach flag를 보낸다.
+2. Zephyr가 resource table을 준비하고 software ACK를 보낸다.
+3. VirtIO negotiation·RPMsg name service로 endpoint를 연결한다.
+4. 송신 측이 buffer/vring을 갱신하고 해당 queue의 MHU flag를 SET한다.
+5. 수신 측 worker가 descriptor를 소비하고 network stack으로 packet을 전달한다.
+
+Attach ACK는 endpoint ready나 packet 처리 완료가 아니다. 이 Linux driver 경로는 CL1 firmware를 load/start하지 않는다.
+
+#### 4.2.2 TF-A Mailbox Architecture
+
+![TF-A SCMI Layered Architecture](diagrams/14-tfa-software.drawio.svg)
+
+TF-A는 mailbox framework 대신 platform SCMI channel과 synchronous transport를 사용한다. PSCI는 Secure D1, PFDI는 별도 D3와 CPU별 slot을 사용한다.
+
+##### 4.2.2.1 Configuration / Initialization
+
+- `apollo_qvp_bl31_setup.c`: MHU doorbell 주소·shared slot·lock·ring callback 설정.
+- PSCI slot: AP `0xDC0`; PFDI slot: `0xEC0 + 40×CPU`.
+- PSCI는 ch0 bit0, PFDI는 CPU index별 channel bit0으로 알린다.
+
+##### 4.2.2.2 SCMI API / Sequence
+
+![TF-A synchronous SCMI Sequence](diagrams/15-tfa-sequence.drawio.svg)
+
+1. `scmi_get_channel()`로 lock을 얻고 기존 channel FREE를 확인한다.
+2. 요청 header/payload를 기록하고 `scmi_send_sync_command()`가 BUSY로 전환한다.
+3. `dmbst` → MHU SET → `dmbsy` 순서로 request를 publish한다.
+4. SCP가 처리하는 동안 shared status의 FREE를 polling한다.
+5. `dmbld` 뒤 응답을 읽고 `scmi_put_channel()`로 lock을 해제한다.
+
+이 경로는 AP의 MHU RX IRQ를 기다리지 않는다. 현재 synchronous FREE 대기 loop 자체에는 timeout 탈출이 없다.
+
+TF-A의 RSE communications는 별도 경로다. `psa_call` 계열 요청을 serialize하고 MHU wrapper가 batch를 송수신한다. BL2 measured-boot consumer는 build option에 따라 선택된다.
+
+#### 4.2.3 U-Boot / OP-TEE Secure Services Architecture
+
+![U-Boot Linux FFA OP-TEE SE-Proxy RSE 경로](diagrams/16-secure-services.drawio.svg)
+
+| 구성 | 역할 |
+|---|---|
+| U-Boot | UEFI variable service → FF-A → SMM Gateway |
+| Linux | `libpsats/libts` → FF-A → Secure service |
+| TF-A / OP-TEE | Secure-world 진입과 SP 관리·dispatch |
+| SMM Gateway / SE-Proxy SP | UEFI storage proxy 및 PSA 요청 변환 |
+| SE-Proxy MHU client | RSE와 실제 MHU 요청·응답 송수신 |
+
+OP-TEE core와 U-Boot을 직접 MHU driver로 표현하지 않는다. 이 runtime 경로의 MHU consumer는 **SE-Proxy SP**이며 TF-A의 boot-time RSE client와도 구분한다. RSE 측 batch·PSA dispatch 순서는 4.5.3에 정리한다.
+
+### 4.3 Safety Island CL0 — SCP Mailbox Architecture
+
+![SCP MHU3 Transport SCMI Layered Architecture](diagrams/17-scp-software.drawio.svg)
+
+`mhu3` module은 IRQ·flag, `transport`는 shared slot, `scmi`는 메시지 dispatch를 담당한다. 실제 서비스는 framework event 문맥에서 실행한다.
+
+#### 4.3.1 Mailbox Initialization
+
+| 설정 / 단계 | 동작 |
+|---|---|
+| `config_mhu3.c` | PBX/MBX base, IRQ, physical channel/flag, logical sub-element 설정 |
+| `config_transport.c` | Shared slot·size·agent 방향·SCMI binding 설정 |
+| Module init / bind / start | Driver context 생성, transport API 연결, ISR 등록·enable |
+| Channel setup | 수신 flag mask와 combined IRQ 참여 설정 |
+
+MMIO는 Device, payload는 Normal Non-cacheable memory attribute를 사용한다. RSE reload ACK ch0 bit3은 transport 없는 전용 doorbell이다.
+
+#### 4.3.2 SCMI Service Sequence
+
+![SCP ISR Transport Framework Service Sequence](diagrams/18-scp-sequence.drawio.svg)
+
+1. `mhu3_isr()`가 IRQ에 해당하는 device와 pending channel/flag를 찾는다.
+2. 해당 flag를 W1C로 clear하고 `signal_message()`를 호출한다.
+3. Transport가 readiness·소유권을 검사하고 request를 내부 buffer로 복사한다.
+4. SCMI event가 protocol handler를 호출한다.
+5. Response·length 기록 → barrier → FREE → 필요한 경우 reverse doorbell 순서로 응답한다.
+
+CLR 시점의 HW ACK는 3–5보다 먼저 발생한다. Logical channel이 같은 DBCH를 공유하므로 CLR은 해당 flag만 직접 write하며 read-modify-write하지 않는다.
+
+### 4.4 Safety Island CL1 — Zephyr Mailbox Architecture
+
+![Zephyr Mailbox OpenAMP Workqueue Layered Architecture](diagrams/19-zephyr-software.drawio.svg)
+
+#### 4.4.1 Mailbox Initialization
+
+- QVP board DTS가 HIPC TX/RX frame, IRQ, shared-memory attribute와 channel을 지정한다.
+- `mbox_register_callback()`으로 client callback을 연결하고 `mbox_set_enabled()`로 필요한 channel을 활성화한다.
+- HIPC는 AP와의 attach·resource-table·endpoint 연결을 거쳐 packet 송수신을 시작한다.
+- Driver 원본은 Arm reference module이며 Apollo recipe가 generated copy에 reattach patch를 적용한다. Board 설정은 `zephyr_hsoc_src`가 소유한다.
+
+#### 4.4.2 Mailbox API / Channel
+
+| API / 경로 | 동작 |
+|---|---|
+| `mbox_send()` | PBX SET; DBE driver는 payload 전송 없이 doorbell 사용 |
+| RX callback | Flag event를 저장하고 worker 예약 |
+| Flattened channel ID | `32 × DBCH + flag`; Linux의 3-cell specifier와 다름 |
+| HIPC ID 0 / 1 | vring0 / vring1 kick |
+| HIPC RX ID 2 / 3 | detach / attach; TX ID2는 software ACK |
+| CL0 SCMI ID 64/96/128/160 | ch2..5 bit0, CPU별 40B shared slot |
+
+#### 4.4.3 HIPC Receive Sequence
+
+![Zephyr IRQ Callback Workqueue RPMsg Sequence](diagrams/20-zephyr-sequence.drawio.svg)
+
+1. AP의 doorbell이 CL1 GIC INTID73을 발생시킨다.
+2. MHU ISR이 client callback을 호출한다.
+3. Veth callback이 atomic event를 기록하고 `k_work_submit()`을 호출한다.
+4. Callback 반환 후 MHU driver가 해당 flag를 CLR한다.
+5. Worker가 OpenAMP/RPMsg를 진행하고 network stack에 packet을 전달한다.
+
+SMP에서는 worker가 ISR 종료 전에 다른 CPU에서 실행될 수 있다. TX ACK, attach ACK, RPMsg reply는 서로 다른 완료다. CL0 SCMI response는 shared FREE polling으로 확인한다.
+
+### 4.5 RSE Domain — TF-M Mailbox Architecture
+
+![RSE TF-M SCMI SFCP Partition Layered Architecture](diagrams/21-tfm-software.drawio.svg)
+
+#### 4.5.1 Configuration / Initialization
+
+| 단계 | 설정 / 동작 |
+|---|---|
+| BL2 SCMI | Shared command page·MHU 설정, 수신 IRQ mask, SCP readiness polling |
+| TF-M SCMI | NVIC139와 SCMI partition signal 연결; `psa_wait()`에서 notification 대기 |
+| SFCP | MHU2 AP_S link·node·buffer·IRQ45 설정 |
+| NS mailbox agent | Inter-core communication 초기화, mailbox IRQ enable, signal 대기 |
+| Pointer access | AP SRAM `0..0xFFFFF`, DRAM `0xFFFE0000..0xFFFFFFFF` 범위 검사 후 ATU 접근 |
+
+#### 4.5.2 SCMI Boot / Runtime Sequence
+
+![RSE BL2 및 TF-M과 SCP SCMI Sequence](diagrams/22-rse-scmi-sequence.drawio.svg)
+
+1. BL2가 SCP protocol/version 준비를 polling으로 확인한다.
+2. RSE가 SCMI power 요청을 보내 AP primary core 기동을 진행한다.
+3. Runtime에서 RSE가 system power notification을 구독한다.
+4. SCP의 notification doorbell이 NVIC139와 partition signal로 전달된다.
+5. TF-M SCMI partition이 shared notification을 읽고 상태 변경을 처리한다.
+
+RSE→SCP ch0 bit3 reload ACK는 shared SCMI packet을 동반하지 않는 전용 doorbell이다.
+
+#### 4.5.3 SFCP / PSA Request Sequence
+
+![AP Secure와 RSE의 DBCH Batch 및 PSA Sequence](diagrams/23-sfcp-sequence.drawio.svg)
+
+1. AP client가 요청을 serialize한다. 첫 batch는 **ch0 길이, ch1..126 data, ch127 notify=1234**다.
+2. RSE NVIC45 → SFCP handler가 batch를 읽고 channel을 clear한다.
+3. 추가 batch는 ch0부터 data를 쓰고 마지막 channel로 notify한다.
+4. 완성된 메시지를 queue에 넣고 NS mailbox agent로 전달한다.
+5. Agent가 `psa_wait()`에서 깨어나 `psa_eoi()` 후 RPC handler를 호출한다.
+6. Message·pointer·permission을 검사하고 PSA service를 실행한다.
+7. 결과는 반대 MHU pair의 별도 serialized reply로 반환한다.
+
+Embed 방식은 payload를 DBCH로 전달한다. Pointer 방식은 pointer/length를 전달하고 허용 buffer에 접근한다. Batch clear는 버퍼 전송의 진행 신호이며 PSA service 성공은 최종 reply로 판단한다.
+
+<a id="validation"></a>
+
+## 5. Test and Verification
+
+현재 Apollo에 있는 full-system runner·profile·debug 관찰 경로를 기준으로 한다. **NOT RUN은 이번 문서 개정에서 실행하지 않은 항목**이다. 실행 결과는 image/ELF revision·build 설정과 profile JSON·Domain별 log에 연결한다.
+
+**판정:** PASS는 기대 결과 충족, FAIL은 불충족, NOT RUN은 미수행, BLOCKED는 image·symbol 등 선행 조건 문제, N/A는 해당 구성에 미적용이다. 초기화 breakpoint는 해당 boot stage 진입 전에 설정한다.
+
+### 5.1 AP Domain — Linux
+
+| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+|---|---|---|---|---|---|
+| MBX-101 | SCMI performance: `cpufreq` profile; policy·frequency 전환과 protocol 응답 | SCMI policy 등록·주파수 요청 성공 | — | NOT RUN | — |
+| MBX-102 | MHU IRQ: Full guest `/proc/interrupts` 전후와 MHU trace; RX/ACK 구분 | 선택 RX/ACK IRQ 증가와 flag clear 일치 | — | NOT RUN | — |
+| MBX-103 | HIPC 연결·payload: `hipc` profile; DT·stack·memory layout, ICMP·UDP·TCP 양방향 | HIPC assertions 통과·양방향 payload 수신 | — | NOT RUN | — |
+
+Frequency 상태만으로 MHU 전송 횟수를 판정하지 않는다. Driver cache 또는 fast path 여부를 trace와 함께 확인한다.
+
+### 5.2 AP Domain — TF-A / Secure Services
+
+| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+|---|---|---|---|---|---|
+| MBX-201 | PSCI SCMI: Full boot의 AP secondary-core 기동 + TF-A/SCP log 또는 SCMI 함수 breakpoint | PSCI 요청·SCP 응답 후 secondary core online | — | NOT RUN | — |
+| MBX-202 | RSE 보안 서비스: `trusted-services` profile의 PSA crypto·PS·ITS·IAT 결과 및 secure console | Suite별 PASS/SKIP 집계 일치·secure error 없음 | — | NOT RUN | — |
+| MBX-203 | TF-A boot-time RSE client: Measured-boot 활성 image에서 RSE communication 함수·reply 관찰 | 활성 consumer의 RSE 요청과 reply 확인 | — | NOT RUN | — |
+
+단순 WFI 진입은 PSCI→SCMI 증거가 아니다. PSA suite의 지원 제외 항목은 runner의 SKIP 판정을 유지한다.
+
+### 5.3 Safety Island CL0 — SCP
+
+| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+|---|---|---|---|---|---|
+| MBX-301 | Linux SCMI 처리: `cpufreq` traffic + `mhu3_isr`·transport·SCMI event 관찰 | IRQ→transport→SCMI 처리·FREE 반환 | — | NOT RUN | — |
+| MBX-302 | Boot/power SCMI: Full boot의 RSE readiness·AP power-on 요청과 응답 | SCP readiness 응답·AP power-on 성공 | — | NOT RUN | — |
+| MBX-303 | 채널 분리: MHU trace의 device/channel/flag와 SCP config 대조 | 다른 flag를 지우지 않고 대상 channel 처리 | — | NOT RUN | — |
+
+### 5.4 Safety Island CL1 — Zephyr
+
+| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+|---|---|---|---|---|---|
+| MBX-401 | HIPC 초기화: `hipc` profile의 Linux stack·shared-memory·attach 결과 | Resource table·VirtIO·RPMsg endpoint 연결 | — | NOT RUN | — |
+| MBX-402 | Packet 송수신: 동일 profile의 ICMP·UDP·TCP 및 payload/multistream 항목 | 양방향 packet 및 boundary assertions 통과 | — | NOT RUN | — |
+| MBX-403 | IRQ→worker: CL1 console/GDB에서 MHU callback과 veth worker 관찰 | IRQ callback→workqueue→RPMsg 수신 확인 | — | NOT RUN | — |
+
+### 5.5 RSE Domain — TF-M
+
+| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+|---|---|---|---|---|---|
+| MBX-501 | SCP boot readiness: Full boot RSE/SCP log와 BL2 SCMI 응답 | BL2 protocol version 응답·boot 진행 | — | NOT RUN | — |
+| MBX-502 | SFCP→PSA round trip: `trusted-services` profile + RSE handler/partition 관찰 | SFCP 요청·PSA dispatch·reply 확인 | — | NOT RUN | — |
+| MBX-503 | Runtime notification: 기존 power lifecycle 실행 시 NVIC139·SCMI signal·response 관찰 | NVIC139→partition→notification 처리 확인 | — | NOT RUN | — |
+
+[검증 runner·profile](SOURCES.md#validation) · [소스 참조](SOURCES.md) · [draw.io 원본](apollo-mailbox-architecture.drawio)

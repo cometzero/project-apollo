@@ -1,10 +1,6 @@
-# 소스 근거와 검증 범위
+# Mailbox Source Reference
 
-[세미나 본문](README.md) · [주소·채널표](MAILBOX-MAP.md) · [draw.io 원본](apollo-mailbox-architecture.drawio)
-
-조사일: **2026-10-18**. 현재 checkout·정적 Lua 평가·레시피 입력을 근거로 작성했다. 기존 generated source/config는 선택 경로의 보조 확인에만 사용했으며, 현재 배포 image나 runtime 성공을 증명하지 않는다. 도면 하단 ID는 아래 표의 근거를 가리킨다.
-
-Linux index는 일부 parse gap과 변경된 DT metadata가 있어 직접 소스를 읽었다. Arm documentation subtree도 index coverage 밖이어서 원문과 실제 그림을 열어 확인했다. 대규모 index 갱신이나 build는 수행하지 않았다.
+[보고서 본문](README.md) · [주소·채널표](MAILBOX-MAP.md) · [draw.io 원본](apollo-mailbox-architecture.drawio)
 
 <a id="hardware"></a>
 
@@ -109,42 +105,16 @@ Linux mailbox의 client/controller 분리와 IRQ·polling 완료 모델은 [공�
 | R2 | [SFCP link HAL](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/sfcp/sfcp_core/sfcp_link_hal.c) 14–15·279–314·411–451·553–628·677–739행; [SFCP IRQ handler](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/sfcp/sfcp_core/sfcp_interrupt_handler.c) 119–175·215–241행; [NS mailbox agent](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/secure_fw/partitions/ns_agent_mailbox/ns_agent_mailbox.c) 33–58행 | DBCH data framing/clear polling, IRQ 수거→queue→low-priority agent |
 | R3 | [PSA handler](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/sfcp/sfcp_psa/sfcp_psa_handler/sfcp_psa_handler.c) 48–113·177–281행; [Pointer access](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/sfcp/sfcp_psa/sfcp_psa_protocol/sfcp_psa_protocol_pointer_access.c) 46–123행; [Permissions](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/automotive_rd/apollo-qvp/sfcp/sfcp_permissions_hal.c) 80–102행; [AP allowed memory](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/automotive_rd/apollo-qvp/host_ap_memory_map.h) 16–28행; [SFCP selection](../../../hsoc-stack/components/system_mgmt/trusted-firmware-m/platform/ext/target/arm/rse/common/config.cmake) 277–294행 | PSA request queue, dispatch/reply, node2 allowed SRAM/carveout, legacy compatibility |
 
-## 소스 snapshot
-
-아래 repository는 조사 시 clean이었다. Root에는 기존 `doc/phase1/` 미추적 문서가 있었으며 다른 주제 문서를 수정하지 않았다.
-
-| Repository | HEAD |
-|---|---|
-| `.` | `a37dcba0d32d` |
-| `arm-zena-css` | `bf34d9e71f67` |
-| `sw-ref-stack` | `a42c7d9dee23` |
-| `hsoc-stack/tools/qbox-platform` | `17ac742e2257` |
-| `hsoc-stack/tools/qbox` | `b8a0499359ba` |
-| `hsoc-stack/tools/qemu` | `2d83203dc366` |
-| `hsoc-stack/components/primary_compute/linux` | `728c53f73006` |
-| `hsoc-stack/components/primary_compute/trusted-firmware-a` | `532c9e6dc679` |
-| `hsoc-stack/components/primary_compute/optee_os` | `a2a275865d65` |
-| `hsoc-stack/components/primary_compute/u-boot` | `312634600420` |
-| `hsoc-stack/components/system_mgmt/scp-firmware` | `b17d6d0873b9` |
-| `hsoc-stack/components/system_mgmt/trusted-firmware-m` | `94c5d43ae48c` |
-| `hsoc-stack/components/system_mgmt/zephyrproject/zephyr` | `992228a26f3f` |
-| `hsoc-stack/components/system_mgmt/zephyrproject/zephyr_hsoc_src` | `35fde511340d` |
-| `hsoc-stack/yocto/meta-hsoc-bsp` | `c691b907bcff` |
-| `hsoc-stack/yocto/meta-hsoc-auto-solutions` | `ef32be9fbfb9` |
-
 <a id="validation"></a>
 
-## 문서 검증과 실행 한계
+## Test and Verification Sources
 
-| 검사 | 결과 / 범위 |
+| 경로 | 제공 기능 |
 |---|---|
-| 최종 full Lua descriptor | `mhu320ae` 30 frames / 15 directional pairs; 14 bridge directions와 RSE MHU0 local pair 구분 |
-| draw.io 원본 | 12 pages / 362 native cells; 흰색 배경, image shape 0개 |
-| SVG 편집 정보 | 12개 SVG의 embedded XML과 원본 cell·geometry 일치 |
-| 실제 표시 | draw.io Desktop으로 12장 export·시각 검토; 브라우저에서 SVG 12장의 표시와 하단 문구 확인 |
-| Markdown 참조 | 로컬 링크 139개; 누락 파일·명시적 anchor 오류 0개 |
-| Diagram validator | 14 references 중 실패 0개; SVG 12개 통과. 원본 2개 참조는 `viewer_required`이며 별도 Desktop 검토 완료 |
-| 소스 대조 | HW topology·QBox model·SW consumer를 교차 검토; SCP CLR 순서, HIPC attach/ready 구분, RSE IRQ/agent 경계 반영 |
-| 실행 검증 | 이번 문서 작업에서 빌드·부팅·mailbox traffic·FVP 비교 실행을 수행하지 않음 |
+| [Validation matrix](../../../qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml) | cpufreq·HIPC·Trusted Services의 profile/assertion 정의 |
+| [CPUfreq profile](../../../scripts/run/qbox_validation/reuse_cpufreq.py) | SCMI performance consumer 검증 |
+| [HIPC profile](../../../qa-tests/profiles/hipc.yaml) | DT·memory·양방향 packet·boundary traffic |
+| [Trusted Services profile](../../../scripts/run/qbox_validation/reuse_trusted_services.py) | PSA suite 실행·PASS/FAIL/SKIP 집계 |
+| [Domain debugger](../../../scripts/debug) | TF-A·SCP·Zephyr·TF-M 함수와 IRQ 경로 관찰 |
 
-실행 미검증: 실제 shared payload 왕복, IRQ/ACK 빈도·latency, concurrent flag/backpressure, peer reset/retry, AP 재접속 후 packet, cache/permission 통합, FVP 동등성. 이 작업은 문서 작성이며 모델·firmware·DT·recipe를 변경하지 않았다.
+실행 여부와 결과는 [보고서 5장](README.md#validation)에 기록한다.
