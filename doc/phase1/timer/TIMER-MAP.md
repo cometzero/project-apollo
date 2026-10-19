@@ -1,10 +1,10 @@
 # Apollo QVP Timer / Counter Map
 
-[세미나 문서로 돌아가기](README.md)
+[구현 보고서로 돌아가기](README.md)
 
 ## 범위와 읽는 법
 
-canonical full-system Lua의 **최종 descriptor를 정적으로 평가한 구성 지도**다. AP 4 CPU, SI CL0 1 CPU, CL1 4 CPU와 기본 RSE CSS mirror를 기준으로 한다. 빌드·부팅·timer IRQ 주입을 수행하지 않았으며, 실제 guest ISR 실행이나 boot 후 register 값을 입증하지 않는다.
+canonical full-system Lua의 **최종 descriptor를 정적으로 평가한 구성 지도**다. AP 4 CPU, SI CL0 1 CPU, CL1 4 CPU와 기본 RSE CSS mirror를 기준으로 한다.
 
 | 표기 | 의미 |
 |---|---|
@@ -32,7 +32,7 @@ canonical full-system Lua의 **최종 descriptor를 정적으로 평가한 구�
 | CNTINCR 32-bit write | 값8 | 모델이 증가량8을 적용하면 실효1 GHz |
 | 현재 SCP 일반 분기 | CNTINCR 값8, `uintptr_t` store | AArch64 64-bit 요청; 아래 no-op 경로와 구분 |
 
-현재 SCP 일반 분기의 설정값은 REFCLK=125 MHz, CNTINCR=8이지만 `gtimer_control_init()`은 `volatile uintptr_t *`로 저장한다. 현재 QBox 경로는 AArch64의 8-byte 요청을 보존하며, `host_gtimer`는 control offset0xC0–0xF8의 정렬된 8-byte write를 **OK 응답 후 no-op**으로 처리한다. 따라서 이 SCP 경로를 32-bit CNTINCR write와 동일시하여 1 GHz 전환으로 설명하면 안 된다. 실제 boot의 최종 register 값은 미측정이다. [ABI·transport 근거 M9/S3](SOURCES.md#models).
+현재 SCP 일반 분기의 설정값은 REFCLK=125 MHz, CNTINCR=8이지만 `gtimer_control_init()`은 `volatile uintptr_t *`로 저장한다. 현재 QBox 경로는 AArch64의 8-byte 요청을 보존하며, `host_gtimer`는 control offset0xC0–0xF8의 정렬된 8-byte write를 **OK 응답 후 no-op**으로 처리한다. 따라서 이 SCP 경로를 32-bit CNTINCR write와 동일시하여 1 GHz 전환으로 설명하면 안 된다. [ABI·transport 근거 M9/S3](SOURCES.md#models).
 
 근거: [SCP gtimer driver](../../../hsoc-stack/components/system_mgmt/scp-firmware/module/gtimer/src/mod_gtimer.c) 294–312행, [host_gtimer access](../../../hsoc-stack/tools/qbox-platform/systemc-components/host_gtimer/src/host_gtimer.cc) 55–64·330–334행.
 
@@ -123,7 +123,7 @@ SysTick은 외부 refclk가 연결되지 않아 QEMU가 cpuclk를 선택한다. 
 
 근거: [RSE SysTick](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/rse/cpu.lua) 61–68행, [SysTick wrapper](../../../hsoc-stack/tools/qbox/qemu-components/irq-ctrl/armv7m_nvic/include/armv7m-nvic.h) 147–199행, [watchdog clock](../../../hsoc-stack/tools/qbox-platform/systemc-components/zena_watchdog/include/zena_watchdog.h) 54–63행, [RTC 구성](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ros/io_peri.lua), [PL031](../../../hsoc-stack/tools/qemu/hw/rtc/pl031.c) 198–204행, [RTC clock 기본값](../../../hsoc-stack/tools/qemu/system/rtc.c) 145행.
 
-## Reset · retention의 확인 범위
+## Reset 연결과 retention
 
 | 경로 | 명시된 timer 관련 대상 | 한계 |
 |---|---|---|
@@ -133,7 +133,7 @@ SysTick은 외부 refclk가 연결되지 않아 QEMU가 cpuclk를 선택한다. 
 | RSE AON fanout | TIMER3; mirror=false이면 local counter도 포함 | canonical Lua에서 fanout reset_in의 source bind 미확인 |
 | NVIC cold reset | NVIC와 S/NS SysTick | SSE LSC/TIMER reset과 별도 |
 
-reset wire가 없다는 정적 사실은 모든 CPU/instance reset에서 상태 유지가 검증됐다는 뜻이 아니다. 특히 AON fanout의 존재만으로 TIMER3 AON reset 실행을 주장할 수 없다.
+명시적 reset 연결이 없는 객체의 retention은 해당 QemuInstance·상위 reset 처리에 따른다. AON fanout은 입력 source가 연결되어야 TIMER3 reset을 전달한다.
 
 근거: [fabric reset](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/fabric/reset.lua) 13–55·71–134행, [RSE reset domains](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/rse/system.lua) 287–329행, [NVIC cold_reset](../../../hsoc-stack/tools/qbox/qemu-components/irq-ctrl/armv7m_nvic/include/armv7m-nvic.h) 232–237행.
 
