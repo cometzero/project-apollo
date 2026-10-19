@@ -1,6 +1,6 @@
 # Watchdog 주소·배선·구현 상세표
 
-[세미나 본문](README.md) · [근거 소스](SOURCES.md)
+[보고서 본문](README.md) · [소스 참조](SOURCES.md)
 
 기준은 현재 source의 **full-system 기본 Lua descriptor**다. AP 4 / SI CL0 1 / SI CL1 4 / RSE 1 CPU 구성이며, 실제 launcher override·guest 실행 결과와 구분한다. `SPI n`은 zero-based 소켓 번호, `INTID = n + 32`다. NVIC IRQ에는 이 변환을 적용하지 않는다.
 
@@ -26,7 +26,7 @@
 
 AP target은 생성 후 `interconnect.lua`에서 `system_router`에서 `ap_router`로 재지정된다. RSE IRQ는 `Container → LocalPass → NVIC`로 전달된다. IRQ0에는 host UART도 직접 연결되어 있으며, 명시적 OR 결합과 동시 source 동작은 별도 확인 대상이다.
 
-**CPU 관계:** AP NS/S는 AP CPU들이 공유한다. SI1 전용 HW watchdog instance는 없으며, 코어별 PFDI alarm은 아래 별도 감시 계층이다.
+**CPU 관계:** AP NS/S는 AP CPU들이 공유한다. SI1 전용 HW watchdog instance는 없다.
 
 ## 2. Reset 연결과 범위
 
@@ -55,7 +55,6 @@ Reset fanout의 1ps 이벤트 지연은 시뮬레이션 순서 제어다. 실제
 | AP S WS1 | AP reset controller | 미연결 |
 | SI firmware recovery | SCP·RSE 협력 | 제거 |
 | AP cold / Apollo system fanout | 존재 | 제거 |
-| AP SBISTC instance | 4개 cluster register 모델 | 제거 |
 
 | Zena reference 계약 | 현재 QVP에서의 경계 |
 |---|---|
@@ -89,31 +88,7 @@ FVP 설정에서 watchdog clock/reset override는 확인되지 않았다. FVP �
 
 [모델·QEMU bridge 근거](SOURCES.md#models)
 
-<a id="monitoring"></a>
-
-## 5. 코어별·진단용 감시 계층
-
-| 감시 종류 | 주소 / 단위 | Reference 또는 SW 역할 | 현재 QVP |
-|---|---|---|---|
-| E_CPU_CSR WDT | `0x142000000 + cluster × 0x04000000` | core별 WDT clear·timeout status | 64KiB `gs_memory`; 능동 countdown·IRQ 없음 |
-| E_CPU_CSR registers | `+0x200/204/208/20C`, `+0xF24` | core0–3 clear bit0, timeout bits[3:0] | register 저장 공간과 HW 기능을 구분 |
-| SBISTC | `0x140100000 + cluster × 0x04000000` | chunk별 `FCTLR.FREQ × 32 cycles` timeout → DEADLOCK → FMU | 4개 cluster 모델; FAIL 명시적 주입만, countdown 없음 |
-| RSE SLOWCLK WD | `0x5802E000`, 4KiB | Secure/Privileged, NMI·cold-reset source | device target 없음; 32MHz timestamp WD와 다른 IP |
-| RSE SAM watchdog | SAM 내부 | NMI response 감시·cold-reset 정책 | 별도 IP; timestamp WD의 동작 근거로 사용하지 않음 |
-| PFDI monitor | AP/SI1 CPU별 SW alarm | 진단 report 수신 기한 감시 | CL0 timer alarm → fault bitmap·log |
-
-SBISTC의 일반 `FCTLR.FAIL` write는 FMU bank1의 `record 210 + CPU`에 fault를 주입한다. 이 경로는 자율 DEADLOCK 감지가 아니다. PFDI timeout handler도 직접 reset/FMU escalation을 호출하지 않는다. [모델](SOURCES.md#models) · [PFDI 소스](SOURCES.md#pfdi)
-
-| QVP PFDI 정책 | AP | SI CL1 |
-|---|---:|---:|
-| 진단 interval | 3초 | 3초 |
-| Out-of-reset 기한 | 10초 | 1초 |
-| Boot 기한 | 180초 | 10초 |
-| Online report 기한 | 60초 | 25초 |
-
-`WAIT_FOR_OOR → WAIT_FOR_BOOT → WAIT_FOR_ONL`로 진행하며 정상 report가 deadline을 갱신한다. OFF/SLEEP은 alarm을 중지하고, timeout은 fault를 기록한다. 위 값은 QVP Yocto 정책 기본값이며 FTTI·실시간 보장이나 배포 바이너리의 실행 측정값이 아니다. Linux `/dev/watchdog` timeout과도 별개다.
-
-## 6. 정적 descriptor 재현
+## 5. 정적 descriptor 재현
 
 프로젝트 root에서 실행한다. VM을 생성하지 않으며 host 환경변수 대신 source 기본 구성을 평가한다.
 

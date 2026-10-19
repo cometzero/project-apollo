@@ -1,60 +1,38 @@
-<?xml version='1.0' encoding='utf-8'?>
 <mxfile host="app.diagrams.net" compressed="false" version="28.2.0">
   <diagram id="01-hardware" name="01-hardware">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1080" math="0" shadow="0">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="565" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1080" />
-        </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
-        </mxCell>
-        <mxCell id="num" parent="1" value="01" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
-        </mxCell>
-        <mxCell id="title" parent="1" value="Watchdog는 응답 기한을 감시하고 대응을 단계적으로 높인다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="Arm Generic Watchdog의 HW 계약: refresh가 늦으면 WS0, 한 watch period가 더 지나면 WS1을 발생시킨다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="992" />
-            <mxPoint as="targetPoint" x="1552" y="992" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="footer" parent="1" value="H1–H3 · WS1은 출력 신호다. 최종 interrupt / reset 동작은 SoC 배선과 firmware 정책으로 결정된다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1007" width="1504" height="50" />
+          <mxGeometry as="geometry" x="0" y="0" width="1600" height="565" />
         </mxCell>
         <mxCell id="wd" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="410" y="208" width="740" height="475" />
+          <mxGeometry as="geometry" x="410" y="48.0" width="740" height="475" />
         </mxCell>
-        <mxCell id="wd-label" parent="1" value="GENERIC WATCHDOG · timestamp 기반 2단계 감시" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="430" y="222" width="700" height="32" />
+        <mxCell id="wd-label" parent="1" value="Generic Watchdog" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="430" y="62.0" width="700" height="32" />
         </mxCell>
-        <mxCell id="cpu" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;감시 대상 SW&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;keepalive / recovery&lt;br&gt;MMIO write&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="270" width="290" height="105" />
+        <mxCell id="cpu" parent="1" value="감시 대상 SW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="110.0" width="290" height="105" />
         </mxCell>
-        <mxCell id="ctrl" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Control frame&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WCS · WOR · WCV&lt;br&gt;설정 / 상태 / deadline&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="450" y="280" width="285" height="110" />
+        <mxCell id="ctrl" parent="1" value="Control frame" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="450" y="120.0" width="285" height="110" />
         </mxCell>
-        <mxCell id="refresh" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Refresh frame&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WRR write&lt;br&gt;watch period 재시작&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="795" y="280" width="315" height="110" />
+        <mxCell id="refresh" parent="1" value="Refresh frame" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="795" y="120.0" width="315" height="110" />
         </mxCell>
-        <mxCell id="counter" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;System Counter&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;timestamp TSVALUEB&lt;br&gt;CPU clock과 별개&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="510" width="290" height="110" />
+        <mxCell id="counter" parent="1" value="System Counter" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="48" y="350.0" width="290" height="110" />
         </mxCell>
-        <mxCell id="compare" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;비교기 + 상태 머신&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;timestamp ≥ deadline&lt;br&gt;1차 만료 → WS0 유지 + 다음 기한 / 2차 만료 → WS1&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="450" y="490" width="660" height="130" />
+        <mxCell id="compare" parent="1" value="비교기 + 상태 머신" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="450" y="330.0" width="660" height="130" />
         </mxCell>
-        <mxCell id="ws0" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 · 1차 알림&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;일반적으로 IRQ&lt;br&gt;복구할 한 구간의 여유&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="1220" y="310" width="330" height="110" />
+        <mxCell id="ws0" parent="1" value="WS0" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1220" y="150.0" width="330" height="110" />
         </mxCell>
-        <mxCell id="ws1" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS1 · 2차 escalation&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;상위 권한의 IRQ 또는 reset&lt;br&gt;통합 정책에 따라 결정&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="1220" y="510" width="330" height="110" />
+        <mxCell id="ws1" parent="1" value="WS1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;fontSize=20;fontStyle=1;" vertex="1">
+          <mxGeometry as="geometry" x="1220" y="350.0" width="330" height="110" />
         </mxCell>
         <mxCell id="auto-edge-2" parent="1" value="configure" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="cpu" target="ctrl">
           <mxGeometry as="geometry" relative="1">
@@ -63,21 +41,21 @@
         </mxCell>
         <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="193" y="375" />
-            <mxPoint as="targetPoint" x="193" y="425" />
+            <mxPoint as="sourcePoint" x="193" y="215.0" />
+            <mxPoint as="targetPoint" x="193" y="265.0" />
           </mxGeometry>
         </mxCell>
         <mxCell id="auto-line-4" parent="1" value="WRR write" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="193" y="425" />
-            <mxPoint as="targetPoint" x="952" y="425" />
+            <mxPoint as="sourcePoint" x="193" y="265.0" />
+            <mxPoint as="targetPoint" x="952" y="265.0" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
         <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="952" y="425" />
-            <mxPoint as="targetPoint" x="952" y="390" />
+            <mxPoint as="sourcePoint" x="952" y="265.0" />
+            <mxPoint as="targetPoint" x="952" y="230.0" />
           </mxGeometry>
         </mxCell>
         <mxCell id="auto-edge-6" parent="1" value="timestamp" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="counter" target="compare">
@@ -104,21 +82,6 @@
           <mxGeometry as="geometry" relative="1">
             <mxPoint as="offset" x="0" y="-16" />
           </mxGeometry>
-        </mxCell>
-        <mxCell id="kinds" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="740" width="1504" height="196" />
-        </mxCell>
-        <mxCell id="kinds-label" parent="1" value="Apollo에서 구분할 세 종류의 감시" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="754" width="1464" height="32" />
-        </mxCell>
-        <mxCell id="platform" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;Platform HW watchdog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;5개 zena_watchdog · subsystem 단위&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="800" width="448" height="100" />
-        </mxCell>
-        <mxCell id="sbist" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SBISTC per-core watchdog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;STL 실행 시간 / DEADLOCK 감시&lt;br&gt;현재 QVP countdown은 미구현&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="576" y="800" width="448" height="100" />
-        </mxCell>
-        <mxCell id="pfdi" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;PFDI SW watchdog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SCP alarm · CPU별 heartbeat 감시&lt;br&gt;위 HW watchdog의 WRR과 별개&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="1080" y="800" width="448" height="100" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -256,119 +219,6 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="03-fvp-qvp" name="03-fvp-qvp">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1120" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1120" />
-        </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
-        </mxCell>
-        <mxCell id="num" parent="1" value="03" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
-        </mxCell>
-        <mxCell id="title" parent="1" value="Arm reference 계약과 현재 QVP 구현을 구분한다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="Zena TRM + arm-zena-css/design 문서·도면을 기준으로 비교한다. FVP 내부 engine이나 실제 timeout 파형은 측정하지 않았다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="1032" />
-            <mxPoint as="targetPoint" x="1552" y="1032" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="footer" parent="1" value="F1–F4 · SW 주소·driver 호환성과 reset / latency / safety mechanism의 동등성은 서로 다른 검증 항목이다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1047" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="lefttitle" parent="1" value="Arm Zena CSS / FVP reference" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=23;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="365" y="212" width="560" height="40" />
-        </mxCell>
-        <mxCell id="righttitle" parent="1" value="Apollo QVP · 현재 소스" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=23;fontColor=#147B79;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="975" y="212" width="560" height="40" />
-        </mxCell>
-        <mxCell id="row0" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;시간 기준&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="278" width="250" height="105" />
-        </mxCell>
-        <mxCell id="l0" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;System Counter timestamp 기반&lt;br&gt;Generic Watchdog programmer’s view&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="344" y="278" width="560" height="105" />
-        </mxCell>
-        <mxCell id="r0" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SystemC sc_time × 개별 CCI frequency&lt;br&gt;CSS counter mirror를 소비하지 않음&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="960" y="278" width="592" height="105" />
-        </mxCell>
-        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#52657A;fontColor=#52657A;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="918" y="330" />
-            <mxPoint as="targetPoint" x="946" y="330" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="row1" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;출력과 복구&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="418" width="250" height="105" />
-        </mxCell>
-        <mxCell id="l1" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 → interrupt / WS1 → 상위 대응&lt;br&gt;SoC wiring + firmware가 reset 정책 결정&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="344" y="418" width="560" height="105" />
-        </mxCell>
-        <mxCell id="r1" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP NS: AP·SI IRQ → SCP가 AP 복구&lt;br&gt;AP S: reset controller 직결&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="960" y="418" width="592" height="105" />
-        </mxCell>
-        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#52657A;fontColor=#52657A;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="918" y="470" />
-            <mxPoint as="targetPoint" x="946" y="470" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="row2" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SI / RSE&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="558" width="250" height="105" />
-        </mxCell>
-        <mxCell id="l2" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CL0 system watchdog · RSE S/NS&lt;br&gt;Secure watchdog / SLOWCLK의 NMI 계약&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="344" y="558" width="560" height="105" />
-        </mxCell>
-        <mxCell id="r2" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SI reset controller 출력 미연결&lt;br&gt;RSE Secure 출력·SLOWCLK 모델 미연결/부재&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="960" y="558" width="592" height="105" />
-        </mxCell>
-        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#52657A;fontColor=#52657A;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="918" y="610" />
-            <mxPoint as="targetPoint" x="946" y="610" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="row3" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;CPU별 감시&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="698" width="250" height="105" />
-        </mxCell>
-        <mxCell id="l3" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SBISTC chunk별 FREQ × 32 cycles&lt;br&gt;DEADLOCK → FMU&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="344" y="698" width="560" height="105" />
-        </mxCell>
-        <mxCell id="r3" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SBISTC register + 명시적 FAIL 주입&lt;br&gt;자율 countdown / DEADLOCK 미구현&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="960" y="698" width="592" height="105" />
-        </mxCell>
-        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#52657A;fontColor=#52657A;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="918" y="750" />
-            <mxPoint as="targetPoint" x="946" y="750" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="row4" parent="1" value="&lt;b style=&quot;font-size:21px&quot;&gt;SW health&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="838" width="250" height="105" />
-        </mxCell>
-        <mxCell id="l4" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP·CL1 agent → SCMI 0x90&lt;br&gt;CL0 monitor의 CPU별 watchdog alarm&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="344" y="838" width="560" height="105" />
-        </mxCell>
-        <mxCell id="r4" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;동일 계층의 PFDI SW 감시 구현&lt;br&gt;HW WRR feeding과 별도 경로&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="960" y="838" width="592" height="105" />
-        </mxCell>
-        <mxCell id="auto-line-6" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#52657A;fontColor=#52657A;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="918" y="890" />
-            <mxPoint as="targetPoint" x="946" y="890" />
-          </mxGeometry>
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
   <diagram id="04-qbox-model" name="04-qbox-model">
     <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1150" math="0" shadow="0">
       <root>
@@ -487,111 +337,6 @@
         </mxCell>
         <mxCell id="limits" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;구현 경계&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WCV write는 저장만 수행 · deadline scheduling은 WOR 기반 wait · 0 offset / 0 Hz는 delta-cycle 만료 · CSS epoch / clock gating 연동 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
           <mxGeometry as="geometry" x="48" y="950" width="1504" height="93" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-  <diagram id="05-cpu-wiring" name="05-cpu-wiring">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1210" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1210" />
-        </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
-        </mxCell>
-        <mxCell id="num" parent="1" value="05" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
-        </mxCell>
-        <mxCell id="title" parent="1" value="CPU별 timer가 아니라 subsystem별 공유 watchdog이다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="기본 full-system: AP A720AE ×4, CL0 R82 ×1, CL1 R82 ×4, RSE M55 ×1. CL1 전용 HW watchdog instance는 없다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="1122" />
-            <mxPoint as="targetPoint" x="1552" y="1122" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="footer" parent="1" value="P1–P6 · AP “SPI N”은 INTID=N+32, SI는 architectural INTID로 표기. RSE IRQn은 NVIC external 번호다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1137" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="ap" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="210" width="1504" height="300" />
-        </mxCell>
-        <mxCell id="ap-label" parent="1" value="PRIMARY COMPUTE · A720AE ×4 · 2개의 공유 watchdog" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="224" width="1464" height="32" />
-        </mxCell>
-        <mxCell id="apns" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;AP NS · 125MHz&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;control 0x1A420000 / refresh 0x1A430000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="268" width="450" height="90" />
-        </mxCell>
-        <mxCell id="apns-target" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 → AP SPI50 (INTID82)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WS1 → AP SPI51 (INTID83) + SI CL0 INTID321&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="700" y="268" width="828" height="90" />
-        </mxCell>
-        <mxCell id="aps" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;AP S · 125MHz&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;control 0x1A460000 / refresh 0x1A470000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="390" width="450" height="90" />
-        </mxCell>
-        <mxCell id="aps-target" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 → AP SPI47 (INTID79)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WS1 → host_reset_ctrl → AP cold-reset fanout&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="700" y="390" width="828" height="90" />
-        </mxCell>
-        <mxCell id="auto-edge-2" parent="1" value="WS0 / WS1" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="apns" target="apns-target">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-3" parent="1" value="WS0 / WS1" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="aps" target="aps-target">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="si" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="550" width="1504" height="185" />
-        </mxCell>
-        <mxCell id="si-label" parent="1" value="SAFETY ISLAND · CL0 R82 ×1 · CL1은 PFDI SW 감시" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="564" width="1464" height="32" />
-        </mxCell>
-        <mxCell id="siwd" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;CL0 · 125MHz&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;control 0x2A700000 / refresh 0x2A710000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="613" width="450" height="90" />
-        </mxCell>
-        <mxCell id="si-target" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 → CL0 INTID37&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;WS1 → controller EXP0RESETEN gate → si_reset 출력 미연결&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="700" y="613" width="828" height="90" />
-        </mxCell>
-        <mxCell id="auto-edge-4" parent="1" value="WS0 / WS1" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="siwd" target="si-target">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="rse" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="775" width="1504" height="300" />
-        </mxCell>
-        <mxCell id="rse-label" parent="1" value="ROOT SECURITY ENGINE · M55 ×1 · 2개의 timestamp watchdog" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="789" width="1464" height="32" />
-        </mxCell>
-        <mxCell id="rns" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;RSE NS · 32MHz&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;control 0x48040000 / refresh 0x48041000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="838" width="450" height="90" />
-        </mxCell>
-        <mxCell id="rns-target" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 → NVIC IRQn1 · WS1 → NVIC IRQn0&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;IRQn0는 host UART도 직접 bind · 별도 OR 결합 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="700" y="838" width="828" height="90" />
-        </mxCell>
-        <mxCell id="rs" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;RSE S · 32MHz&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;control 0x58040000 / refresh 0x58041000&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="958" width="450" height="90" />
-        </mxCell>
-        <mxCell id="rs-target" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;WS0 / WS1 미연결&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;Secure NMI 또는 RSE reset까지 이어진 경로 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="700" y="958" width="828" height="90" />
-        </mxCell>
-        <mxCell id="auto-edge-5" parent="1" value="WS0 / WS1" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="rns" target="rns-target">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-6" parent="1" value="unbound" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" source="rs" target="rs-target">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
         </mxCell>
       </root>
     </mxGraphModel>
@@ -804,220 +549,6 @@
       </root>
     </mxGraphModel>
   </diagram>
-  <diagram id="08-software" name="08-software">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1150" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1150" />
-        </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
-        </mxCell>
-        <mxCell id="num" parent="1" value="08" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
-        </mxCell>
-        <mxCell id="title" parent="1" value="Subsystem별 watchdog SW: 소비자와 복구 책임" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="장치 모델의 존재, driver 선택, 서비스가 실제 feeding하는지는 서로 다른 상태다. 본 도면은 현재 소스의 연결을 보여준다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="1062" />
-            <mxPoint as="targetPoint" x="1552" y="1062" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="footer" parent="1" value="L1–L4 · S1–S4 · R1–R4 · Z1 · Boot에서 실제 arm / keepalive / expiry가 발생했는지는 이번에 측정하지 않았다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1077" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="lane0" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="210" width="334" height="700" />
-        </mxCell>
-        <mxCell id="lane0-label" parent="1" value="AP · Linux / secure FW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="224" width="294" height="32" />
-        </mxCell>
-        <mxCell id="lane1" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="438" y="210" width="334" height="700" />
-        </mxCell>
-        <mxCell id="lane1-label" parent="1" value="SI CL0 · SCP" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="458" y="224" width="294" height="32" />
-        </mxCell>
-        <mxCell id="lane2" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="828" y="210" width="334" height="700" />
-        </mxCell>
-        <mxCell id="lane2-label" parent="1" value="SI CL1 · Zephyr" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="848" y="224" width="294" height="32" />
-        </mxCell>
-        <mxCell id="lane3" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="1218" y="210" width="334" height="700" />
-        </mxCell>
-        <mxCell id="lane3-label" parent="1" value="RSE · TF-M" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1238" y="224" width="294" height="32" />
-        </mxCell>
-        <mxCell id="apuser" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;감시 정책 / userspace&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;/dev/watchdog0 단일 owner&lt;br&gt;systemd / daemon / test tool&lt;br&gt;정책이 주기적 feeding 결정&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="66" y="276" width="298" height="120" />
-        </mxCell>
-        <mxCell id="apdriver" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;watchdog core → sbsa_gwdt&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;open/start · timeout · ping&lt;br&gt;기본 action=0&lt;br&gt;WS0 ISR 요청 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="66" y="455" width="298" height="120" />
-        </mxCell>
-        <mxCell id="apfw" parent="1" value="&lt;b style=&quot;font-size:18px&quot;&gt;TF-A / OP-TEE / U-Boot&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:16px&quot;&gt;TF-A S watchdog hook은 존재&lt;br&gt;BL1 생략 구성의 enable과 구분&lt;br&gt;OP-TEE automotive_rd WDT 미통합&lt;br&gt;U-Boot WDT 소비 경로 미확인&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="66" y="704" width="298" height="156" />
-        </mxCell>
-        <mxCell id="auto-edge-2" parent="1" value="ioctl / write" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="apuser" target="apdriver">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="apout" parent="1" value="NS WRR → platform watchdog&lt;br&gt;WS1 복구는 CL0가 담당" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=center;verticalAlign=middle;fontSize=17;fontColor=#147B79;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="66" y="605" width="298" height="58" />
-        </mxCell>
-        <mxCell id="scpisr" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;AP WS1 ISR&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;INTID321 / Group0 FIQ&lt;br&gt;IRQ mask + 중복 방지&lt;br&gt;복구 event enqueue&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="456" y="276" width="298" height="120" />
-        </mxCell>
-        <mxCell id="scpfw" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;si0_platform framework&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;RSE reset 준비 통지&lt;br&gt;PPU OFF/ON · boot CPU 복귀&lt;br&gt;100ms 한도 IRQ rearm&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="456" y="455" width="298" height="120" />
-        </mxCell>
-        <mxCell id="scppfdi" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;PFDI monitor&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP / CL1의 PE별 alarm&lt;br&gt;SCMI heartbeat에 갱신&lt;br&gt;timeout → fault bitmap·log&lt;br&gt;AP WS1 reset FSM과 별개&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="456" y="704" width="298" height="156" />
-        </mxCell>
-        <mxCell id="auto-edge-3" parent="1" value="deferred event" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="scpisr" target="scpfw">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="zepagent" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;PFDI agent&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;PE별 진단 / 상태 보고&lt;br&gt;SCMI 0x90 → CL0&lt;br&gt;heartbeat watchdog의 피감시자&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="846" y="276" width="298" height="120" />
-        </mxCell>
-        <mxCell id="zeplink" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SCMI / MHUv3&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;shared-memory mailbox&lt;br&gt;CL0 monitor가 deadline 소유&lt;br&gt;CL1은 WRR feeding 주체가 아님&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="846" y="455" width="298" height="120" />
-        </mxCell>
-        <mxCell id="zepnone" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;직접 HW WDT 소비 경계&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;Apollo CL1 board에&lt;br&gt;HW watchdog node / driver&lt;br&gt;활성 소비 경로 없음&lt;br&gt;kernel timer는 PFDI HW WD 아님&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="846" y="704" width="298" height="156" />
-        </mxCell>
-        <mxCell id="auto-edge-4" parent="1" value="report" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="zepagent" target="zeplink">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="tfm" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;timestamp watchdog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;startup IRQ vector는 존재&lt;br&gt;5개 모델 중 RSE 2개&lt;br&gt;현재 TF-M arm/feed 소비 미확인&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="1236" y="276" width="298" height="120" />
-        </mxCell>
-        <mxCell id="tfmslow" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;CMSDK slow watchdog&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;driver / device 정의는 존재&lt;br&gt;QVP device target 없음&lt;br&gt;활성 enable caller 미확인&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="1236" y="455" width="298" height="120" />
-        </mxCell>
-        <mxCell id="tfmsam" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;SAM / NMI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SAM fault response에&lt;br&gt;자체 watchdog 경로 존재&lt;br&gt;timestamp/SLOWCLK 모델과&lt;br&gt;동일 블록으로 합치지 않음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="1236" y="704" width="298" height="156" />
-        </mxCell>
-        <mxCell id="policy" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;소스 선택과 실행 증거의 구분&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;DT status=okay / driver built-in은 서비스 시작이나 feeding 성공을 뜻하지 않는다. Timeout 복구는 WS0→WS1→SCP→새 AP boot까지 확인해야 한다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="950" width="1504" height="90" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-  <diagram id="09-pfdi-sbistc" name="09-pfdi-sbistc">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1140" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1140" />
-        </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
-        </mxCell>
-        <mxCell id="num" parent="1" value="09" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
-        </mxCell>
-        <mxCell id="title" parent="1" value="CPU별 안전 감시: PFDI heartbeat와 SBISTC 실행 감시" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="Arm reference의 두 도면을 함께 읽어야 한다. 한쪽은 SW report 누락, 다른 쪽은 STL 실행 중 deadlock / fault를 감시한다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="1052" />
-            <mxPoint as="targetPoint" x="1552" y="1052" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="footer" parent="1" value="F1–F2 · S5–S6 · M6 · PFDI SW alarm을 WRR refresh로, 명시적 FAIL 주입을 자율 watchdog timeout으로 해석하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1067" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="pfdi" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="210" width="724" height="710" />
-        </mxCell>
-        <mxCell id="pfdi-label" parent="1" value="PFDI MONITOR · 현재 구현된 SW 감시" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="68" y="224" width="684" height="32" />
-        </mxCell>
-        <mxCell id="agents" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;AP Linux / CL1 Zephyr · CPU별 PFDI agent&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;진단 완료 / online 상태 → heartbeat report&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="278" width="676" height="110" />
-        </mxCell>
-        <mxCell id="ipc" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCMI vendor protocol 0x90&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;MHUv3 + shared memory · agent별 channel&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="449" width="676" height="100" />
-        </mxCell>
-        <mxCell id="monitor" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CL0 mod_pfdi_monitor&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;CPU별 상태 + SCP mod_timer alarm&lt;br&gt;report 수신 시 기대 상태·deadline 갱신&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="615" width="676" height="110" />
-        </mxCell>
-        <mxCell id="fault" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;기한 초과 → fault bitmap·log 기록&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;이 monitor 자체가 AP watchdog reset FSM을 호출하지 않음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="72" y="794" width="676" height="90" />
-        </mxCell>
-        <mxCell id="auto-edge-2" parent="1" value="report" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="agents" target="ipc">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="ipc" target="monitor">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-4" parent="1" value="alarm expiry" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="monitor" target="fault">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="sbist" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#BAC7D3;pointerEvents=0;" vertex="1">
-          <mxGeometry as="geometry" x="828" y="210" width="724" height="710" />
-        </mxCell>
-        <mxCell id="sbist-label" parent="1" value="SBISTC · Arm HW 계약과 QVP 구현 범위" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=19;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="848" y="224" width="684" height="32" />
-        </mxCell>
-        <mxCell id="ref" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;Reference: cluster당 controller / core당 chunk&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;FCTLR.FREQ × 32 cycles · 유효 STATUS에서 countdown&lt;br&gt;timeout → DEADLOCK → FMU&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="852" y="278" width="676" height="110" />
-        </mxCell>
-        <mxCell id="qvp" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;QVP: apollo_sbist register backing&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;FREQ / STATUS 저장 · countdown / DEADLOCK engine 없음&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="852" y="449" width="676" height="100" />
-        </mxCell>
-        <mxCell id="inject" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;명시적 FCTLR.FAIL(bit2) write&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;cpu_base + local core → FMU bank1&lt;br&gt;record 210 + CPU · IMPDEF fault injection&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="852" y="615" width="676" height="110" />
-        </mxCell>
-        <mxCell id="fmu" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;FMU → SCP SBIST fault 처리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;실행 실패 주입 경로 · 자동 deadline 만료가 아님&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="852" y="794" width="676" height="90" />
-        </mxCell>
-        <mxCell id="auto-edge-5" parent="1" value="scope gap" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#9A681E;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1" source="ref" target="qvp">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-6" parent="1" value="FAIL write" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="qvp" target="inject">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="auto-edge-7" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;endSize=9;strokeWidth=1.7;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;" edge="1" source="inject" target="fmu">
-          <mxGeometry as="geometry" relative="1">
-            <mxPoint as="offset" x="0" y="-16" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="ecpu" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;추가 per-core E_CPU_CSR WDT&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;SW_WDT_CLR / WDT_TIMEOUT 창은 현재 gs_memory이다. 주소가 존재해도 능동 watchdog 동작은 제공하지 않는다.&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="966" width="1504" height="78" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
   <diagram id="10-linux-sequence" name="10-linux-sequence">
     <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
       <root>
@@ -1147,127 +678,1161 @@
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="recovery" parent="1" value="&lt;b style=&quot;font-size:18px&quot;&gt;⑤ CL0 FIQ → deferred recovery&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:16px&quot;&gt;reset sequence는 다음 도면 참조&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
+        <mxCell id="recovery" parent="1" value="&lt;b style=&quot;font-size:18px&quot;&gt;⑤ CL0 FIQ → deferred recovery&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:16px&quot;&gt;AP recovery sequence: Chapter 4.3.2&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
           <mxGeometry as="geometry" x="1135" y="984" width="400" height="80" />
         </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
   <diagram id="11-recovery-sequence" name="11-recovery-sequence">
-    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1320" math="0" shadow="0">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="2070">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="canvas" parent="1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;" vertex="1">
-          <mxGeometry as="geometry" x="0" y="0" width="1600" height="1320" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="2070" />
         </mxCell>
-        <mxCell id="kicker" parent="1" value="PROJECT APOLLO / WATCHDOG ARCHITECTURE" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=14;fontColor=#235D86;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="26" width="1400" height="24" />
+        <mxCell id="title" value="SCP Watchdog Sequence" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
         </mxCell>
-        <mxCell id="num" parent="1" value="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=right;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="1485" y="23" width="65" height="30" />
+        <mxCell id="actor0" value="CL0 GIC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=21;fontStyle=1;">
+          <mxGeometry as="geometry" x="30" y="140" width="320" height="80" />
         </mxCell>
-        <mxCell id="title" parent="1" value="SCP recovery: interrupt 문맥에서 reset 작업을 분리한다" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=34;fontColor=#172C43;fontStyle=1;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="67" width="1504" height="54" />
-        </mxCell>
-        <mxCell id="sub" parent="1" value="SCP가 OFF·reload·ON을 조정하고, RSE는 BL2 재검증·재적재 후 ACK한다. WS1 source는 AP cold-reset에서 clear된다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=18;fontColor=#52657A;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="127" width="1504" height="50" />
-        </mxCell>
-        <mxCell id="auto-line-1" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="48" y="1232" />
-            <mxPoint as="targetPoint" x="1552" y="1232" />
+            <mxPoint as="sourcePoint" x="190" y="220" />
+            <mxPoint as="targetPoint" x="190" y="1910" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="footer" parent="1" value="S1–S4 · P5–P7 · reset-clear→CPU release 순서를 코드에서 확인했다. 새 AP boot / SI·RSE 유지 / IRQ 재사용은 runtime 검증 대상이다." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=none;fillColor=none;spacing=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#235D86;fontStyle=0;" vertex="1">
-          <mxGeometry as="geometry" x="48" y="1247" width="1504" height="50" />
+        <mxCell id="actor1" value="SCP ISR" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=21;fontStyle=1;">
+          <mxGeometry as="geometry" x="385" y="140" width="320" height="80" />
         </mxCell>
-        <mxCell id="isr" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;CL0 FIQ / ISR&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;AP watchdog INTID321&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="60" y="220" width="260" height="80" />
-        </mxCell>
-        <mxCell id="auto-line-2" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="190.0" y="300" />
-            <mxPoint as="targetPoint" x="190.0" y="1190" />
+            <mxPoint as="sourcePoint" x="545" y="220" />
+            <mxPoint as="targetPoint" x="545" y="1910" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="event" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;SCP framework&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;recovery event / alarm&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="460" y="220" width="260" height="80" />
+        <mxCell id="actor2" value="SCP Framework" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=21;fontStyle=1;">
+          <mxGeometry as="geometry" x="740" y="140" width="320" height="80" />
         </mxCell>
-        <mxCell id="auto-line-3" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="590.0" y="300" />
-            <mxPoint as="targetPoint" x="590.0" y="1190" />
+            <mxPoint as="sourcePoint" x="900" y="220" />
+            <mxPoint as="targetPoint" x="900" y="1910" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="rse" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;RSE TF-M&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;BL2 loader / SCMI ACK&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="860" y="220" width="260" height="80" />
+        <mxCell id="actor3" value="RSE TF-M" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=21;fontStyle=1;">
+          <mxGeometry as="geometry" x="1095" y="140" width="320" height="80" />
         </mxCell>
-        <mxCell id="auto-line-4" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="990.0" y="300" />
-            <mxPoint as="targetPoint" x="990.0" y="1190" />
+            <mxPoint as="sourcePoint" x="1255" y="220" />
+            <mxPoint as="targetPoint" x="1255" y="1910" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="model" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;PPU / QVP reset&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;AP power / fanout / CPU&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="1260" y="220" width="260" height="80" />
+        <mxCell id="actor4" value="PPU / AP Reset" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=21;fontStyle=1;">
+          <mxGeometry as="geometry" x="1450" y="140" width="320" height="80" />
         </mxCell>
-        <mxCell id="auto-line-5" parent="1" value="" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=none;endSize=8;strokeWidth=1.6;strokeColor=#BAC7D3;fontColor=#BAC7D3;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=1;" edge="1">
+        <mxCell id="life4" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1390.0" y="300" />
-            <mxPoint as="targetPoint" x="1390.0" y="1190" />
+            <mxPoint as="sourcePoint" x="1610" y="220" />
+            <mxPoint as="targetPoint" x="1610" y="1910" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="mask" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;① mask INTID321&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;중복 recovery 방지&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#147B79;" vertex="1">
-          <mxGeometry as="geometry" x="60" y="344" width="260" height="86" />
-        </mxCell>
-        <mxCell id="auto-line-6" parent="1" value="② event enqueue → ISR return" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg1" value="1. AP NS WS1 → INTID321 / FIQ" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="190" y="478" />
-            <mxPoint as="targetPoint" x="590" y="478" />
+            <mxPoint as="sourcePoint" x="190" y="300" />
+            <mxPoint as="targetPoint" x="545" y="300" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. IRQ mask · recovery latch 설정" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="545" y="415" />
+            <mxPoint as="targetPoint" x="545" y="460" />
+            <mxPoint as="offset" x="0" y="-17" />
+            <Array as="points">
+              <mxPoint x="775" y="415" />
+              <mxPoint x="775" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. AP_WATCHDOG event 게시 · ISR 반환" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="545" y="530" />
+            <mxPoint as="targetPoint" x="900" y="530" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. 모든 AP core / cluster OFF 요청" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="645" />
+            <mxPoint as="targetPoint" x="1610" y="645" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. OFF 상태 확인" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1610" y="760" />
+            <mxPoint as="targetPoint" x="900" y="760" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. BL2 reload 요청" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="875" />
+            <mxPoint as="targetPoint" x="1255" y="875" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. 검증·재적재 성공 ACK" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1255" y="990" />
+            <mxPoint as="targetPoint" x="900" y="990" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg8" value="8. AP context · mailbox 정리" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="1105" />
+            <mxPoint as="targetPoint" x="900" y="1150" />
+            <mxPoint as="offset" x="0" y="-17" />
+            <Array as="points">
+              <mxPoint x="1130" y="1105" />
+              <mxPoint x="1130" y="1150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg9" value="9. CPU0 ON 요청" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="1220" />
+            <mxPoint as="targetPoint" x="1610" y="1220" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg10" value="10. Watchdog clear → AP reset / CPU release" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1610" y="1335" />
+            <mxPoint as="targetPoint" x="1610" y="1380" />
+            <mxPoint as="offset" x="0" y="-17" />
+            <Array as="points">
+              <mxPoint x="1380" y="1335" />
+              <mxPoint x="1380" y="1380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg11" value="11. CPU0 ON 통지" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1610" y="1450" />
+            <mxPoint as="targetPoint" x="900" y="1450" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg12" value="12. Pending clear · readback" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="1565" />
+            <mxPoint as="targetPoint" x="190" y="1565" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg13" value="13. Recovery latch 해제" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="1680" />
+            <mxPoint as="targetPoint" x="900" y="1725" />
+            <mxPoint as="offset" x="0" y="-17" />
+            <Array as="points">
+              <mxPoint x="1130" y="1680" />
+              <mxPoint x="1130" y="1725" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg14" value="14. IRQ enable · pending / recovery 재확인" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=19;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="900" y="1795" />
+            <mxPoint as="targetPoint" x="190" y="1795" />
+            <mxPoint as="offset" x="0" y="-17" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="IRQ321은 WS1 source가 해제될 때까지 mask 유지 · IRQ rearm과 Linux boot 완료는 별도" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="70" y="1960" width="1660" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="00-system" name="00-system">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1120">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1120" />
+        </mxCell>
+        <mxCell id="title" value="Automotive AD / Watchdog System Architecture" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="app" value="Application / Firmware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="280" y="140" width="1240" height="85" />
+        </mxCell>
+        <mxCell id="sw" value="System SW" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="350" width="1660" height="300" />
+        </mxCell>
+        <mxCell id="os" value="OS / RTOS · Scheduler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="140" y="445" width="540" height="100" />
+        </mxCell>
+        <mxCell id="wd" value="Watchdog driver / Feeding service" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1000" y="445" width="650" height="100" />
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="840" width="1660" height="190" />
+        </mxCell>
+        <mxCell id="timer" value="Counter" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="130" y="925" width="300" height="70" />
+        </mxCell>
+        <mxCell id="wdi" value="Watchdog IP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="925" width="440" height="70" />
+        </mxCell>
+        <mxCell id="recovery" value="Interrupt / Reset control" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1300" y="925" width="370" height="70" />
+        </mxCell>
+        <mxCell id="a" source="app" target="wd" value="① HW watchdog API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="b" source="os" target="wd" value="② service scheduling" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c" source="wd" target="wdi" value="③ configure / refresh" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="d" source="timer" target="wdi" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e" source="wdi" target="recovery" value="④ WS0 / WS1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="01a-ap-hardware" name="01a-ap-hardware">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1300">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1300" />
+        </mxCell>
+        <mxCell id="title" value="AP Domain / Shared Watchdog Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="cl0" value="Cluster 0 / CPUs 0–3" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="70" y="160" width="410" height="110" />
+        </mxCell>
+        <mxCell id="cl1" value="Cluster 1 / CPUs 4–7" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="505" y="160" width="410" height="110" />
+        </mxCell>
+        <mxCell id="cl2" value="Cluster 2 / CPUs 8–11" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="940" y="160" width="410" height="110" />
+        </mxCell>
+        <mxCell id="cl3" value="Cluster 3 / CPUs 12–15" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1375" y="160" width="410" height="110" />
+        </mxCell>
+        <mxCell id="ns" value="Non-secure Watchdog&#10;Control / Refresh · WS0 / WS1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="100" y="480" width="600" height="130" />
+        </mxCell>
+        <mxCell id="sec" value="Secure Watchdog&#10;Control / Refresh · WS0 / WS1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="100" y="770" width="600" height="130" />
+        </mxCell>
+        <mxCell id="gic" value="AP GIC / CPU exception" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1100" y="440" width="600" height="90" />
+        </mxCell>
+        <mxCell id="si" value="Safety Island CL0&#10;AP watchdog interrupt inputs" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1100" y="670" width="600" height="90" />
+        </mxCell>
+        <mxCell id="reset" value="Reset control&#10;SoC integration policy" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1100" y="900" width="600" height="90" />
+        </mxCell>
+        <mxCell id="counter" value="System Counter / timestamp" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="100" y="1110" width="600" height="80" />
+        </mxCell>
+        <mxCell id="access" source="cl0" target="ns" value="MMIO configure / refresh" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="local" source="ns" target="gic" value="WS0 / WS1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="remote" source="ns" target="si" value="AP NS watchdog signals" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="secirq" source="sec" target="gic" value="Secure WS0" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.2;entryX=0;entryY=0.8;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="870" y="796" />
+              <mxPoint x="870" y="510" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="secrst" source="sec" target="reset" value="Secure WS1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="count" source="counter" target="sec" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="count2" source="counter" target="ns" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="40" y="1150" />
+              <mxPoint x="40" y="545" />
+            </Array>
+            <mxPoint as="offset" x="90" y="0" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="16 PE가 NS/S watchdog 2개를 공유 · QVP AP4 · 현재 QVP의 CL0 연결은 NS WS1 → INTID321" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="70" y="1220" width="1660" height="55" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="01b-si-hardware" name="01b-si-hardware">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1120">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1120" />
+        </mxCell>
+        <mxCell id="title" value="Safety Island / Hardware Watchdog" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="cl0" value="Cluster 0 / Cortex-R82 management PE" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="160" width="720" height="100" />
+        </mxCell>
+        <mxCell id="cl1" value="Cluster 1 / Cortex-R82 ×4&#10;HW watchdog instance 없음" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="990" y="160" width="720" height="100" />
+        </mxCell>
+        <mxCell id="wd" value="CL0 System Watchdog&#10;Control / Refresh · WS0 / WS1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="480" width="720" height="130" />
+        </mxCell>
+        <mxCell id="counter" value="System Counter" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="860" width="450" height="90" />
+        </mxCell>
+        <mxCell id="gic" value="CL0 GIC&#10;WS0 / INTID37" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="670" y="860" width="430" height="90" />
+        </mxCell>
+        <mxCell id="rst" value="Reset control&#10;WS1 / mask gate" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1270" y="860" width="440" height="90" />
+        </mxCell>
+        <mxCell id="a" source="cl0" target="wd" value="MMIO configure / refresh" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c" source="counter" target="wd" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="d" source="wd" target="gic" value="WS0" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e" source="wd" target="rst" value="WS1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.8;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="900" y="720" />
+              <mxPoint x="1490" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="CL0 watchdog: WS0 → INTID37 · WS1 → reset gate · 현재 QVP si_reset 출력 미연결" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="90" y="1030" width="1620" height="55" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="01c-rse-hardware" name="01c-rse-hardware">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1320">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1320" />
+        </mxCell>
+        <mxCell id="title" value="RSE Domain / Timestamp and SLOWCLK Watchdogs" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="cpu" value="Cortex-M55 / Secure · Non-secure" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="350" y="130" width="1100" height="100" />
+        </mxCell>
+        <mxCell id="ns" value="NS Timestamp Watchdog&#10;Control / Refresh" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="80" y="500" width="480" height="120" />
+        </mxCell>
+        <mxCell id="sec" value="Secure Timestamp Watchdog&#10;Control / Refresh" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="660" y="500" width="480" height="120" />
+        </mxCell>
+        <mxCell id="slow" value="SLOWCLK Watchdog&#10;Separate CMSDK IP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="500" width="480" height="120" />
+        </mxCell>
+        <mxCell id="counter" value="Local timestamp" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="80" y="830" width="480" height="90" />
+        </mxCell>
+        <mxCell id="nvic" value="NVIC&#10;NS IRQ / reset request IRQ" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="660" y="830" width="480" height="90" />
+        </mxCell>
+        <mxCell id="nmi" value="NMI / Reset integration&#10;Secure + SLOWCLK" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="830" width="480" height="90" />
+        </mxCell>
+        <mxCell id="a" source="cpu" target="ns" value="MMIO access" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.1;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="b" source="cpu" target="sec" value="MMIO access" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c" source="cpu" target="slow" value="MMIO access" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.9;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="d" source="counter" target="ns" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e" source="counter" target="sec" value="timestamp" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=0;entryX=0.2;entryY=1;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-30" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="f" source="ns" target="nvic" value="WS0 / WS1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.8;entryX=0;entryY=0.2;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="g" source="sec" target="nmi" value="Secure signals" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.8;entryX=0;entryY=0.2;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="h" source="slow" target="nmi" value="NMI / reset request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scope" value="QVP: Timestamp watchdog ×2 at 32MHz&#10;NS → NVIC IRQ1/0 · Secure outputs unbound · SLOWCLK watchdog model absent" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="150" y="1070" width="1500" height="140" />
+        </mxCell>
+        <mxCell id="note" value="Timestamp watchdog, SLOWCLK watchdog, SAM internal watchdog are separate blocks" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="80" y="1240" width="1640" height="45" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08a-linux-software" name="08a-linux-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1240">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1240" />
+        </mxCell>
+        <mxCell id="title" value="AP Linux / Watchdog Layered Architecture" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="client" value="Watchdog service / device owner" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="220" y="140" width="1360" height="90" />
+        </mxCell>
+        <mxCell id="sw" value="Software" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="350" width="1660" height="430" />
+        </mxCell>
+        <mxCell id="b0" value="/dev/watchdog*&#10;open · write · ioctl" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="140" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b1" value="Watchdog core&#10;policy · keepalive · nowayout" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="690" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b2" value="sbsa_gwdt driver&#10;start · timeout · keepalive" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="req" source="client" target="b0" value="1. service call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.1;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="s1" source="b0" target="b1" value="2. file operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2" source="b1" target="b2" value="3. watchdog_ops" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="950" width="1660" height="170" />
+        </mxCell>
+        <mxCell id="h" value="AP NS Watchdog / WCS · WOR · WRR → WS0 / WS1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="160" y="1020" width="1480" height="70" />
+        </mxCell>
+        <mxCell id="io" source="b2" target="h" value="4. MMIO configure / refresh" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.85;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08b-tfa-software" name="08b-tfa-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1240">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1240" />
+        </mxCell>
+        <mxCell id="title" value="AP TF-A / Secure Watchdog Helpers" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="client" value="Platform boot hooks / error handler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="220" y="140" width="1360" height="90" />
+        </mxCell>
+        <mxCell id="sw" value="Software" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="350" width="1660" height="430" />
+        </mxCell>
+        <mxCell id="b0" value="plat_arm_secure_wdt_*&#10;plat_arm_error_handler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="140" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b1" value="SBSA watchdog helpers&#10;start · stop · refresh" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="690" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b2" value="MMIO operations&#10;base address selects frame" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="req" source="client" target="b0" value="1. conditional call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.1;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="s1" source="b0" target="b1" value="2. helper API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2" source="b1" target="b2" value="3. write register" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="950" width="1660" height="170" />
+        </mxCell>
+        <mxCell id="h" value="AP Secure Watchdog / Control 0x1A460000 · Refresh 0x1A470000" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="160" y="1020" width="1480" height="70" />
+        </mxCell>
+        <mxCell id="io" source="b2" target="h" value="4. WCS / WOR / WRR" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.85;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08c-scp-software" name="08c-scp-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1240">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1240" />
+        </mxCell>
+        <mxCell id="title" value="SI CL0 SCP / AP Watchdog Recovery" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="client" value="AP NS WS1 → CL0 INTID321" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="220" y="140" width="1360" height="90" />
+        </mxCell>
+        <mxCell id="sw" value="Software" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="350" width="1660" height="430" />
+        </mxCell>
+        <mxCell id="b0" value="FIQ / ap_watchdog_isr&#10;mask IRQ · recovery latch" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="140" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b1" value="Framework event&#10;AP_WATCHDOG dispatch" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="690" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="b2" value="Control state machine&#10;AP OFF · RSE ACK · CPU0 ON" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="490" width="440" height="160" />
+        </mxCell>
+        <mxCell id="req" source="client" target="b0" value="1. exception entry" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.1;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="s1" source="b0" target="b1" value="2. fwk_put_event" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2" source="b1" target="b2" value="3. deferred recovery" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-28" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="950" width="1660" height="170" />
+        </mxCell>
+        <mxCell id="h" value="GIC · PPU · MHU · AP reset fanout / watchdog clear" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="160" y="1020" width="1480" height="70" />
+        </mxCell>
+        <mxCell id="io" source="b2" target="h" value="4. power / reload / reset" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.85;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08d-zephyr-software" name="08d-zephyr-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1190">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1190" />
+        </mxCell>
+        <mxCell id="title" value="Zephyr Watchdog Architecture" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="app" value="Application Thread" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="220" y="140" width="1360" height="85" />
+        </mxCell>
+        <mxCell id="sw" value="Zephyr" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="350" width="1660" height="410" />
+        </mxCell>
+        <mxCell id="sched" value="Scheduler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="140" y="445" width="450" height="90" />
+        </mxCell>
+        <mxCell id="api" value="Watchdog API / wdt_*" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="940" y="445" width="700" height="90" />
+        </mxCell>
+        <mxCell id="driver" value="IP-specific Watchdog Driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="940" y="625" width="700" height="85" />
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="930" width="1660" height="160" />
+        </mxCell>
+        <mxCell id="wd" value="Watchdog IP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="140" y="1000" width="700" height="65" />
+        </mxCell>
+        <mxCell id="out" value="Interrupt / Reset" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="1150" y="1000" width="490" height="65" />
+        </mxCell>
+        <mxCell id="a" source="sched" target="app" value="Thread scheduling" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.1;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="b" source="app" target="api" value="① install / setup / feed" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c" source="api" target="driver" value="② wdt_driver_api" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="d" source="driver" target="wd" value="③ MMIO configure / refresh" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.15;exitY=1;entryX=0.8;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e" source="wd" target="out" value="④ expiry" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="note" value="점선: Apollo CL1에 연결되지 않은 driver / HW 경로 · API와 출력 동작은 대상 IP의 지원 범위에 따름" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=19;">
+          <mxGeometry as="geometry" x="70" y="1120" width="1660" height="50" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08e-tfm-software" name="08e-tfm-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1220">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1220" />
+        </mxCell>
+        <mxCell id="title" value="TF-M Watchdog Architecture" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="sw" value="TF-M / RSE Platform" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="140" width="1660" height="560" />
+        </mxCell>
+        <mxCell id="cfg0" value="Timestamp watchdog configuration" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="130" y="260" width="470" height="90" />
+        </mxCell>
+        <mxCell id="drv0" value="Arm / feed service&#10;Not connected" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="130" y="490" width="470" height="100" />
+        </mxCell>
+        <mxCell id="cfgcall0" source="cfg0" target="drv0" value="Configuration" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="cfg1" value="SLOWCLK device configuration" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="680" y="260" width="470" height="90" />
+        </mxCell>
+        <mxCell id="drv1" value="arm_watchdog_* driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="680" y="490" width="470" height="100" />
+        </mxCell>
+        <mxCell id="cfgcall1" source="cfg1" target="drv1" value="Driver API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="cfg2" value="rse_sam_init / NMI handler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1230" y="260" width="470" height="90" />
+        </mxCell>
+        <mxCell id="drv2" value="SAM driver / watchdog policy" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1230" y="490" width="470" height="100" />
+        </mxCell>
+        <mxCell id="cfgcall2" source="cfg2" target="drv2" value="Driver API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="hw" value="Hardware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;">
+          <mxGeometry as="geometry" x="70" y="900" width="1660" height="190" />
+        </mxCell>
+        <mxCell id="h0" value="NS / Secure Timestamp WD" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="130" y="980" width="470" height="70" />
+        </mxCell>
+        <mxCell id="io0" source="drv0" target="h0" value="WCS / WOR / WRR" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="h1" value="CMSDK SLOWCLK Watchdog" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;dashed=1;">
+          <mxGeometry as="geometry" x="680" y="980" width="470" height="70" />
+        </mxCell>
+        <mxCell id="io1" source="drv1" target="h1" value="LOAD / CTRL / INTCLR" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="h2" value="SAM internal Watchdog" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1230" y="980" width="470" height="70" />
+        </mxCell>
+        <mxCell id="io2" source="drv2" target="h2" value="Counter / response config" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="note" value="Timestamp: feeding service 미연결 · SLOWCLK: QVP device 없음 · SAM: 별도 IP의 NMI response 감시" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="70" y="1140" width="1660" height="55" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10a-linux-init" name="10a-linux-init">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1170">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1170" />
+        </mxCell>
+        <mxCell id="title" value="AP Linux / Watchdog Initialization" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="DT / platform bus" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1030" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="sbsa_gwdt probe" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1030" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="Watchdog core" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1030" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Watchdog HW" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1030" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. arm,sbsa-gwdt match" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="300" />
+            <mxPoint as="targetPoint" x="670" y="300" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="auto-line-7" parent="1" value="③ 모든 AP core / cluster OFF 요청 · OFF 확인" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg2" value="2. map Control / Refresh · read IIDR / WCS" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="590" y="552" />
-            <mxPoint as="targetPoint" x="1390" y="552" />
+            <mxPoint as="sourcePoint" x="670" y="425" />
+            <mxPoint as="targetPoint" x="1600" y="425" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="auto-line-8" parent="1" value="④ AP BL2 reload 요청" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg3" value="3. CNTFRQ → timeout conversion" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="590" y="624" />
-            <mxPoint as="targetPoint" x="990" y="624" />
+            <mxPoint as="sourcePoint" x="670" y="550" />
+            <mxPoint as="targetPoint" x="670" y="595" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="930" y="550" />
+              <mxPoint x="930" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. WOR initialization" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="675" />
+            <mxPoint as="targetPoint" x="1600" y="675" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="auto-line-9" parent="1" value="⑤ load / decrypt / 검증 성공 후 ACK" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg5" value="5. register watchdog_device / operations" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="990" y="696" />
-            <mxPoint as="targetPoint" x="590" y="696" />
+            <mxPoint as="sourcePoint" x="670" y="800" />
+            <mxPoint as="targetPoint" x="1130" y="800" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="auto-line-10" parent="1" value="⑥ PFDI · context · mailbox 정리 후 CPU0 ON 요청" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg6" value="6. /dev/watchdog* available" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="590" y="770" />
-            <mxPoint as="targetPoint" x="1390" y="770" />
+            <mxPoint as="sourcePoint" x="1130" y="925" />
+            <mxPoint as="targetPoint" x="1130" y="970" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="925" />
+              <mxPoint x="1390" y="970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Probe is not a userspace feeding service · WCS.EN already set means hardware-running state" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="70" y="1080" width="1660" height="65" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10b-tfa-sequence" name="10b-tfa-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1045">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1045" />
+        </mxCell>
+        <mxCell id="title" value="AP TF-A / Error Handler Register Access" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Error path" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="905" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="SBSA helper" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="905" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="AP Secure WD" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="905" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Reset controller" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="905" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. sbsa_wdog_refresh(SBSA_SECURE_WDOG_BASE)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="300" />
+            <mxPoint as="targetPoint" x="670" y="300" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="resetorder" parent="1" value="&lt;b style=&quot;font-size:19px&quot;&gt;cold-reset fanout / PPU 순서&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:17px&quot;&gt;AP NS/S WD clear → WS0/1 low&lt;br&gt;reset_gpio / loader callback&lt;br&gt;→ CPU release → PPU ON&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#9A681E;" vertex="1">
-          <mxGeometry as="geometry" x="1060" y="818" width="470" height="128" />
-        </mxCell>
-        <mxCell id="auto-line-11" parent="1" value="⑦ CPU0 ON 통지 → rearm alarm 시작" style="html=1;whiteSpace=nowrap;edgeStyle=none;endArrow=block;endSize=8;strokeWidth=1.6;strokeColor=#147B79;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=16;labelBackgroundColor=#FFFFFF;dashed=0;" edge="1">
+        <mxCell id="msg2" value="2. write 1 at 0x1A460000 + 0" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
           <mxGeometry as="geometry" relative="1">
-            <mxPoint as="sourcePoint" x="1390" y="1000" />
-            <mxPoint as="targetPoint" x="590" y="1000" />
+            <mxPoint as="sourcePoint" x="670" y="425" />
+            <mxPoint as="targetPoint" x="1130" y="425" />
             <mxPoint as="offset" x="0" y="-18" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="rearm" parent="1" value="&lt;b style=&quot;font-size:20px&quot;&gt;⑧ pending clear·readback → recovery latch 해제 → enable → 재확인&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#52657A&quot; style=&quot;font-size:18px&quot;&gt;SCP alarm으로 retry · 100ms 한도 · enable 전 latch 해제 · 재진입 ISR 상태 보존 / 실패 시 mask 유지&lt;br&gt;IRQ rearm 성공은 Linux boot 완료 판정이 아님&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeWidth=1.5;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=12;fontColor=#172C43;strokeColor=#235D86;" vertex="1">
-          <mxGeometry as="geometry" x="60" y="1050" width="1460" height="130" />
+        <mxCell id="msg3" value="3. actual address is WCS: enable / stage clear" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="550" />
+            <mxPoint as="targetPoint" x="1130" y="595" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="550" />
+              <mxPoint x="1390" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. WFI loop" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="675" />
+            <mxPoint as="targetPoint" x="200" y="720" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="675" />
+              <mxPoint x="460" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. WS1 after expiry of current WOR" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="800" />
+            <mxPoint as="targetPoint" x="1600" y="800" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Function name says refresh; supplied base selects Control WCS · normal BL1 start is outside Apollo boot path" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;">
+          <mxGeometry as="geometry" x="70" y="955" width="1660" height="65" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10c-zephyr-watchdog-sequence" name="10c-zephyr-watchdog-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1600">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1600" />
+        </mxCell>
+        <mxCell id="title" value="Zephyr HW Watchdog Sequence" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Application Thread" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1460" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="Watchdog API" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1460" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="IP-specific Driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1460" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Watchdog HW" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1460" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. wdt_install_timeout(cfg)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="300" />
+            <mxPoint as="targetPoint" x="670" y="300" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. install_timeout → channel_id" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="425" />
+            <mxPoint as="targetPoint" x="1130" y="425" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. wdt_setup(options)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="550" />
+            <mxPoint as="targetPoint" x="670" y="550" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. setup" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="675" />
+            <mxPoint as="targetPoint" x="1130" y="675" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. timeout / action 설정 · enable" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="800" />
+            <mxPoint as="targetPoint" x="1600" y="800" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. wdt_feed(channel_id) 반복" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="925" />
+            <mxPoint as="targetPoint" x="670" y="925" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. feed" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1050" />
+            <mxPoint as="targetPoint" x="1130" y="1050" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg8" value="8. refresh register write" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1175" />
+            <mxPoint as="targetPoint" x="1600" y="1175" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg9" value="9. feeding 중단 → timeout → IRQ / reset" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1300" />
+            <mxPoint as="targetPoint" x="1600" y="1345" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="1300" />
+              <mxPoint x="1340" y="1345" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="HW driver 통합 시의 API 흐름 · 현재 Apollo CL1의 실행 경로가 아님 · IRQ / callback / reset은 IP별 지원 조건" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=19;">
+          <mxGeometry as="geometry" x="70" y="1490" width="1660" height="65" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10d-tfm-sequence" name="10d-tfm-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1830">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1830" />
+        </mxCell>
+        <mxCell id="title" value="TF-M HW Watchdog Sequence / CMSDK Driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Firmware caller" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1690" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="arm_watchdog driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1690" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="CMSDK Watchdog" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1690" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Interrupt / Reset" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1690" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. arm_watchdog_init(dev, timeout)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="300" />
+            <mxPoint as="targetPoint" x="670" y="300" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. LOCK · driver timeout 저장 / disabled" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="425" />
+            <mxPoint as="targetPoint" x="1130" y="425" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. arm_watchdog_unlock()" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="550" />
+            <mxPoint as="targetPoint" x="670" y="550" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. LOCK unlock key" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="675" />
+            <mxPoint as="targetPoint" x="1130" y="675" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. arm_watchdog_enable()" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="800" />
+            <mxPoint as="targetPoint" x="670" y="800" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. LOAD=timeout · CTRL.INTEN / RESEN" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="925" />
+            <mxPoint as="targetPoint" x="1130" y="925" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. arm_watchdog_feed() 반복" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1050" />
+            <mxPoint as="targetPoint" x="670" y="1050" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg8" value="8. LOAD=timeout 재기록" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1175" />
+            <mxPoint as="targetPoint" x="1130" y="1175" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg9" value="9. 1차 만료 → interrupt (미처리 시 reset)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1300" />
+            <mxPoint as="targetPoint" x="1600" y="1300" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg10" value="10. clear_interrupt_and_refresh_counter()" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1425" />
+            <mxPoint as="targetPoint" x="670" y="1425" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg11" value="11. INTCLR write / interrupt clear · reload" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1550" />
+            <mxPoint as="targetPoint" x="1130" y="1550" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Driver 호출 규약 · 현재 Apollo QVP에는 SLOWCLK device 없음 · INTCLR 처리는 reset 이전 대응 경로" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=19;">
+          <mxGeometry as="geometry" x="70" y="1730" width="1660" height="60" />
         </mxCell>
       </root>
     </mxGraphModel>
