@@ -2,6 +2,14 @@
 
 Initialized: 2026-05-20
 
+## AP-only gem5 performance experiments
+
+`run_gem5_linux.sh` uses the Apollo Yocto kernel/initramfs/WIC with an
+independent AP-only Ruby CHI model. Cortex-A720AE execution parameters,
+DSU cache topology, CMN mesh and LPDDR5X are uncalibrated proxies.
+This path does not establish QBox/FVP timing parity or execute RSE/SCP/SI.
+See [configuration, workloads and validation](apollo-gem5.md).
+
 ## Lua SoC / VP / Board structure
 
 The canonical full-system entry is now `apollo-qvp-saturn-v.lua`, with
