@@ -10,6 +10,14 @@ struct line {
 _Static_assert(sizeof(struct line) == 64, "64-bit benchmark required");
 static volatile uint64_t observed;
 
+static inline void
+roi_barrier(void)
+{
+#if defined(__aarch64__)
+    __asm__ volatile("dsb sy" : : : "memory");
+#endif
+}
+
 static __attribute__((noinline)) struct line *
 chase(struct line *p, size_t count)
 {
@@ -114,12 +122,17 @@ main(int argc, char **argv)
         observed = read_array(buffer, count);
     }
     uint64_t checksum = 0;
+    /* Serialize O3 requests around markers; inner barriers count in ROI time. */
+    roi_barrier();
     marker_begin(0);
+    roi_barrier();
     for (unsigned p = 0; p < passes; ++p) {
         checksum += cache ? chase(buffer, count) == buffer
                           : read_array(buffer, count);
     }
+    roi_barrier();
     marker_end();
+    roi_barrier();
     uint64_t expected = (uint64_t)passes * (cache ? 1 : count);
     int ok = checksum == expected;
     printf("APOLLO_BENCH_RESULT {\"mode\":\"%s\",\"result\":\"%s\","

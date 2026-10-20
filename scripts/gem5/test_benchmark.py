@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import tempfile
 import unittest
 
-from benchmark import summarize
+from benchmark import build_benchmark, summarize
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -57,6 +59,31 @@ class BenchmarkTests(unittest.TestCase):
                 [str(self.binary), "--host", *args],
                 capture_output=True,
             ).returncode, 2)
+
+    @unittest.skipUnless(
+        shutil.which("aarch64-linux-gnu-gcc") and
+        shutil.which("aarch64-linux-gnu-objdump"),
+        "AArch64 compiler and objdump required",
+    )
+    def test_aarch64_roi_markers_have_serializing_barriers(self):
+        root = Path(__file__).resolve().parents[2]
+        binary = build_benchmark(
+            root / "hsoc-stack/tools/gem5",
+            Path(self.temp.name) / "benchmark-aarch64",
+        )
+        assembly = subprocess.check_output(
+            ["aarch64-linux-gnu-objdump", "-d", "--disassemble=main",
+             str(binary)], text=True,
+        )
+        opcodes = re.findall(r"^\s*[0-9a-f]+:\s+([0-9a-f]{8})\s", assembly,
+                             re.MULTILINE)
+        # Switch remains unwrapped; both ROI markers have DSB SY on each side.
+        self.assertEqual(
+            [opcode for opcode in opcodes
+             if opcode in ("ff5a0110", "ff5b0110", "d5033f9f")],
+            ["ff5a0110", "d5033f9f", "ff5a0110", "d5033f9f",
+             "d5033f9f", "ff5b0110", "d5033f9f"],
+        )
 
     def test_roi_summary_requires_simulation_and_complete_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:
