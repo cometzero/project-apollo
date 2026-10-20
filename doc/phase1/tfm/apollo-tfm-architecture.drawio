@@ -1,0 +1,1412 @@
+<mxfile host="Electron" type="device">
+  <diagram id="01-stack" name="01-stack">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1450">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1450" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Trusted Firmware-M / RSE Software Stack" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_runtime" value="TF-M Runtime / tfm_s" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="960" />
+        </mxCell>
+        <mxCell id="tfm_agent" value="NS Agent Mailbox / SCMI Comms" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="760" height="110" />
+        </mxCell>
+        <mxCell id="tfm_services" value="Crypto · Storage · Attestation&lt;br&gt;Measured Boot · FWU · Platform" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="900" y="100" width="760" height="110" />
+        </mxCell>
+        <mxCell id="tfm_spm" value="Secure Partition Manager / IPC Backend&lt;br&gt;Service dispatch · Thread / Scheduler · IPC · Boundary" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="360" width="1620" height="120" />
+        </mxCell>
+        <mxCell id="tfm_hal" value="Platform HAL / PSA Crypto Driver Interface" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="620" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="tfm_driver" value="CMSIS / IP Drivers&lt;br&gt;NVIC · MPU · MHU · ATU · Flash · OTP · CC312" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="810" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="tfm_request" source="tfm_agent" target="tfm_spm" value="PSA / RPC request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.25;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_psa" source="tfm_services" target="tfm_spm" value="PSA Client / Partition API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.75;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_platform" source="tfm_spm" target="tfm_hal" value="Isolation / platform operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_backend" source="tfm_hal" target="tfm_driver" value="Device API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="1180" />
+            <mxPoint as="targetPoint" x="1750" y="1180" />
+            <mxPoint as="offset" x="-760" y="-12" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_hw" value="RSE Cortex-M55 · SRAM / ROM / OTP · NVIC · MHU / ATU · Flash · CryptoCell-312" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1260" width="1620" height="110" />
+        </mxCell>
+        <mxCell id="tfm_register" source="tfm_driver" target="tfm_hw" value="Register access / Interrupt" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="02-domains" name="02-domains">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1230">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1230" />
+        </mxCell>
+        <mxCell id="tfm_title" value="RSE / TF-M과 외부 Component 역할" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_ap" value="AP Linux / Trusted Services / Secure Proxy" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="150" width="740" height="120" />
+        </mxCell>
+        <mxCell id="tfm_scp" value="SI CL0 / SCP-firmware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1010" y="150" width="740" height="120" />
+        </mxCell>
+        <mxCell id="tfm_rse" value="RSE / TF-M" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="560" width="1700" height="390" />
+        </mxCell>
+        <mxCell id="tfm_psa" value="NS Agent → SPM → PSA Services" vertex="1" parent="tfm_rse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="120" width="760" height="140" />
+        </mxCell>
+        <mxCell id="tfm_scmi" value="SCMI Comms / Image Loader" vertex="1" parent="tfm_rse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="900" y="120" width="760" height="140" />
+        </mxCell>
+        <mxCell id="tfm_psalink" source="tfm_ap" target="tfm_psa" value="MHU / SFCP + PSA message" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_scmilink" source="tfm_scp" target="tfm_scmi" value="MHU / SCMI request · notification" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_boot" value="BL2 / SCP·Zephyr·AP BL2 적재 및 인증" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1060" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="tfm_bootinfo" source="tfm_boot" target="tfm_rse" value="Boot data / Measurements" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="03-source" name="03-source">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1340">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1340" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Source Architecture / Core · Platform · Dependencies" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_src" value="trusted-firmware-m / 로컬 Source" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="660" />
+        </mxCell>
+        <mxCell id="tfm_boot" value="bl1/ · bl2/&lt;br&gt;Boot stages / MCUboot integration" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_spm" value="secure_fw/spm/&lt;br&gt;Core · IPC · Thread · Isolation" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="610" y="110" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_part" value="secure_fw/partitions/&lt;br&gt;PSA Service implementation" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="110" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_api" value="interface/ · tools/&lt;br&gt;API · Manifest generation" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="380" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_platform" value="platform/ext/target/arm/rse/&lt;br&gt;common · automotive_rd/apollo-qvp" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="610" y="380" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_drivers" value="platform/ext/target/arm/drivers · accelerator&lt;br&gt;CMSIS / Crypto / IP support" vertex="1" parent="tfm_src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="380" width="480" height="140" />
+        </mxCell>
+        <mxCell id="tfm_deps" value="Yocto unpack / MCUboot · Mbed TLS · CMSIS&lt;br&gt;TF-M Extras · QCBOR · t_cose · PSA ADAC · Tests" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1020" width="1050" height="150" />
+        </mxCell>
+        <mxCell id="tfm_recipe" value="meta-hsoc-bsp&lt;br&gt;externalsrc / CMake options" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="1020" width="460" height="150" />
+        </mxCell>
+        <mxCell id="tfm_ext" source="tfm_deps" target="tfm_src" value="External libraries / Partitions" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.3;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_select" source="tfm_recipe" target="tfm_src" value="Platform 선택" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.85;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="04-build" name="04-build">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1480">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1480" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Build / Manifest에서 Firmware Package까지" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_config" value="Apollo config.cmake&lt;br&gt;IPC · Isolation 2 · Partition 선택" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_manifest" value="Partition Manifest&lt;br&gt;Model · Service · IRQ · Resource" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_generate" value="Generated Code&lt;br&gt;Load info · SID / PID · Linker" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_choose" source="tfm_config" target="tfm_manifest" value="선택" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_parse" source="tfm_manifest" target="tfm_generate" value="Parse" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_build" value="Separate Yocto Build / WORKDIR/build" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="540" width="1700" height="360" />
+        </mxCell>
+        <mxCell id="tfm_bl1" value="BL1_1 / BL1_2" vertex="1" parent="tfm_build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_bl2" value="BL2 / MCUboot" vertex="1" parent="tfm_build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="610" y="110" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_rt" value="tfm_s / SPM + Partitions" vertex="1" parent="tfm_build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="110" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_compile" source="tfm_generate" target="tfm_rt" value="Compile / Link" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_artifacts" value="ELF · BIN · MAP&lt;br&gt;Signed / encrypted image" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1090" width="700" height="130" />
+        </mxCell>
+        <mxCell id="tfm_package" value="Image Composition&lt;br&gt;rse-rom / rse-otp / rse-flash" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1010" y="1090" width="700" height="130" />
+        </mxCell>
+        <mxCell id="tfm_output" source="tfm_build" target="tfm_artifacts" value="Build / Post-process" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.25;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_assemble" source="tfm_artifacts" target="tfm_package" value="Package" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_note" value="BL1 / BL2 / Runtime은 별도 executable · Partition은 Runtime image에 정적으로 link." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1330" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="05-memory" name="05-memory">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1300">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1300" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Memory Architecture / Stage별 실행 영역과 Runtime Section" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_persistent" value="Persistent Image / Metadata" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="840" />
+        </mxCell>
+        <mxCell id="tfm_rom" value="ROM / BL1_1" vertex="1" parent="tfm_persistent" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_otp" value="OTP / BL1_2 · Hash · Provisioned data" vertex="1" parent="tfm_persistent" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="350" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_flash" value="Flash / BL2 · Runtime · Host images&lt;br&gt;PS / ITS storage region" vertex="1" parent="tfm_persistent" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="590" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_runtime" value="Runtime / Secure SRAM VM0 + VM1 / 512 KiB" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="840" />
+        </mxCell>
+        <mxCell id="tfm_code" value="Vector / SPM / PSA RoT / App RoT code" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_data" value="SPM data / Partition data / Message pools" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="350" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_stack" value="MSP / Partition PSP stack&lt;br&gt;Boot data / Shared buffers" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="590" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_load" source="tfm_flash" target="tfm_code" value="Load / Verify" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="900" y="805" />
+              <mxPoint x="900" y="325" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_itcm" value="ITCM code section / Driver·Runtime에서 선택한 코드" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1100" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="tfm_note" value="도식은 논리적 배치 · Stage별 SRAM 재사용 · Flash slot 크기와 전체 runtime memory 사용량은 별개." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1220" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="06-boot" name="06-boot">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1710">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1710" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Boot Chain / BL1_1 → BL1_2 → BL2 → Runtime" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_actor0" value="BL1_1 / ROM" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1570" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor1" value="BL1_2 / SRAM" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1570" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor2" value="BL2 / MCUboot" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1570" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor3" value="TF-M Runtime" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1570" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg1" value="1. Lifecycle 확인 / 필요 시 Provisioning" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="310" />
+            <mxPoint as="targetPoint" x="200" y="355" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="310" />
+              <mxPoint x="460" y="355" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg2" value="2. OTP image 복사 / Hash 검증 / 측정" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="480" />
+            <mxPoint as="targetPoint" x="670" y="480" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg3" value="3. BL2 copy / decrypt / signature·counter 검증" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="650" />
+            <mxPoint as="targetPoint" x="670" y="695" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="930" y="650" />
+              <mxPoint x="930" y="695" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg4" value="4. BL2 vector로 실행 인계" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="820" />
+            <mxPoint as="targetPoint" x="1130" y="820" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg5" value="5. CL1 → CL0 → AP BL2 → Runtime image 처리" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="990" />
+            <mxPoint as="targetPoint" x="1130" y="1035" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="990" />
+              <mxPoint x="1390" y="1035" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg6" value="6. SCP에 AP 기동 요청" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1160" />
+            <mxPoint as="targetPoint" x="1130" y="1205" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="1160" />
+              <mxPoint x="1390" y="1205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg7" value="7. Runtime vector / stack로 인계" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1330" />
+            <mxPoint as="targetPoint" x="1600" y="1330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg8" value="8. SPM / Partition 초기화" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1490" />
+            <mxPoint as="targetPoint" x="1600" y="1535" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="1490" />
+              <mxPoint x="1340" y="1535" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="BL1_1이 BL1_2의 OTP hash 검증 · BL2와 후속 image는 각 검증 정책 적용 · Measurement와 Authentication은 별도." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1600" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="07-handoff" name="07-handoff">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1740">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1740" />
+        </mxCell>
+        <mxCell id="tfm_title" value="BL2 / Host Firmware Handoff" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_actor0" value="RSE BL2" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1600" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor1" value="SI Memory" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1600" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor2" value="SCP / CL0" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1600" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor3" value="AP / CL1 CPUs" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1600" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg1" value="1. CL1 image load / decrypt / authenticate" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="310" />
+            <mxPoint as="targetPoint" x="670" y="310" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg2" value="2. CL0 image load / decrypt / authenticate" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="480" />
+            <mxPoint as="targetPoint" x="670" y="480" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg3" value="3. CL0 Core0 release" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="650" />
+            <mxPoint as="targetPoint" x="1130" y="650" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg4" value="4. CL1 Power-on / Core release" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="820" />
+            <mxPoint as="targetPoint" x="1600" y="820" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg5" value="5. SCMI service readiness 확인" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="990" />
+            <mxPoint as="targetPoint" x="1130" y="990" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg6" value="6. AP BL2·RSE Runtime 적재 / 검증" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1160" />
+            <mxPoint as="targetPoint" x="200" y="1205" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="1160" />
+              <mxPoint x="460" y="1205" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg7" value="7. AP Power Domain 요청" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1330" />
+            <mxPoint as="targetPoint" x="1130" y="1330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg8" value="8. AP boot CPU release" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1500" />
+            <mxPoint as="targetPoint" x="1600" y="1500" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="RSE는 image 준비·검증 · SCP는 요청에 따른 CPU 기동 · Runtime 진입과 원격 OS 준비 완료는 별도." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1630" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08-runtime-init" name="08-runtime-init">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1540">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1540" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Runtime Initialization / Core에서 Partition 실행까지" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_core" value="main() / tfm_core_init()" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="1100" />
+        </mxCell>
+        <mxCell id="tfm_backend" value="IPC Backend / SPM Init" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="1100" />
+        </mxCell>
+        <mxCell id="tfm_limits" value="MSPLIM / Architecture 준비" vertex="1" parent="tfm_core" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="100" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_bound" value="Static isolation boundaries" vertex="1" parent="tfm_core" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="295" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_plat" value="Platform init / Logging" vertex="1" parent="tfm_core" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="490" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_otpinit" value="OTP / Provisioning 상태 확인" vertex="1" parent="tfm_core" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="685" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_bootdata" value="Boot data / Exception priority" vertex="1" parent="tfm_core" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="880" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_core0" source="tfm_limits" target="tfm_bound" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_core1" source="tfm_bound" target="tfm_plat" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_core2" source="tfm_plat" target="tfm_otpinit" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_core3" source="tfm_otpinit" target="tfm_bootdata" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_pool" value="Pools / Runtime objects" vertex="1" parent="tfm_backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="100" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_load" value="Manifest load info / Service list" vertex="1" parent="tfm_backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="295" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_threads" value="Partition context / Stack / IRQ" vertex="1" parent="tfm_backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="490" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_post" value="Platform post init" vertex="1" parent="tfm_backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="685" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_scheduler" value="Scheduler 시작 / Partition entry" vertex="1" parent="tfm_backend" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="880" width="700" height="110" />
+        </mxCell>
+        <mxCell id="tfm_backend0" source="tfm_pool" target="tfm_load" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_backend1" source="tfm_load" target="tfm_threads" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_backend2" source="tfm_threads" target="tfm_post" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_backend3" source="tfm_post" target="tfm_scheduler" value="다음 단계" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_spminit" source="tfm_bootdata" target="tfm_pool" value="BACKEND_SPM_INIT" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="900" y="1080" />
+              <mxPoint x="900" y="305" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_wait" value="Service initialization → PSA signal 대기 / 요청 처리" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1370" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="tfm_run" source="tfm_scheduler" target="tfm_wait" value="Partition execution" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.75;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="09-manifest" name="09-manifest">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1270">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1270" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Partition Manifest / Model과 실제 실행 방식" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_sfn" value="SFN Manifest&lt;br&gt;Crypto · PS · ITS · IA · FWU · Platform · MB" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="140" />
+        </mxCell>
+        <mxCell id="tfm_ipc" value="IPC Manifest&lt;br&gt;NS Mailbox · SCMI" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="140" />
+        </mxCell>
+        <mxCell id="tfm_wrapper" value="Generated Load Info&lt;br&gt;SFN function references" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="570" width="790" height="130" />
+        </mxCell>
+        <mxCell id="tfm_entry" value="Custom IPC Entry&lt;br&gt;Signal / Request loop" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="960" y="570" width="790" height="130" />
+        </mxCell>
+        <mxCell id="tfm_gen" source="tfm_sfn" target="tfm_wrapper" value="Manifest parser" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_genipc" source="tfm_ipc" target="tfm_entry" value="Entry / IRQ metadata" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_runtime" value="IPC Backend&lt;br&gt;common_sfn_thread 또는 custom entry · Partition stack · Scheduler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="990" width="1620" height="140" />
+        </mxCell>
+        <mxCell id="tfm_sfnthread" source="tfm_wrapper" target="tfm_runtime" value="Thread wrapper" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.25;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_ipcthread" source="tfm_entry" target="tfm_runtime" value="IPC thread" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.75;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_note" value="IPC Backend 선택과 Manifest model은 별개 · Service body의 형식과 Backend 실행 방식을 구분." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1170" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10-ipc" name="10-ipc">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1780">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1780" />
+        </mxCell>
+        <mxCell id="tfm_title" value="PSA IPC / Client에서 Service Reply까지" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_actor0" value="Client Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1640" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor1" value="SPM / IPC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1640" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor2" value="Service Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1640" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor3" value="Platform Backend" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1640" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg1" value="1. psa_call(handle, type, in_vec, out_vec)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="310" />
+            <mxPoint as="targetPoint" x="670" y="310" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg2" value="2. 권한·buffer 확인 / message enqueue" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="480" />
+            <mxPoint as="targetPoint" x="670" y="525" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="930" y="480" />
+              <mxPoint x="930" y="525" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg3" value="3. Signal 설정 / 실행 대상 선택" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="650" />
+            <mxPoint as="targetPoint" x="1130" y="650" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg4" value="4. psa_wait → psa_get / psa_read" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="820" />
+            <mxPoint as="targetPoint" x="670" y="820" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg5" value="5. Service operation" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="990" />
+            <mxPoint as="targetPoint" x="1600" y="990" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg6" value="6. 결과 / output data" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1160" />
+            <mxPoint as="targetPoint" x="1130" y="1160" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg7" value="7. psa_write / psa_reply(status)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1330" />
+            <mxPoint as="targetPoint" x="670" y="1330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg8" value="8. Caller runnable / psa_call 반환" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1500" />
+            <mxPoint as="targetPoint" x="200" y="1500" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="SFN model은 common_sfn_thread가 IPC 루프 제공 · Remote NS Agent는 RPC 완료 경로로 응답." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1650" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="11-scheduler" name="11-scheduler">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1290">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1290" />
+        </mxCell>
+        <mxCell id="tfm_title" value="SPM Scheduling / Signal과 Context Switch" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_trigger" value="PSA API / Secure IRQ" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="150" width="740" height="110" />
+        </mxCell>
+        <mxCell id="tfm_state" value="Thread State / Ready · Blocked" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1010" y="150" width="740" height="110" />
+        </mxCell>
+        <mxCell id="tfm_event" source="tfm_trigger" target="tfm_state" value="Message / Signal 상태 변경" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_sched" value="IPC Backend / Scheduler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="520" width="1700" height="360" />
+        </mxCell>
+        <mxCell id="tfm_pick" value="Runnable Thread 선택&lt;br&gt;Priority / Ready state" vertex="1" parent="tfm_sched" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="480" height="120" />
+        </mxCell>
+        <mxCell id="tfm_boundary" value="Boundary / Privilege 확인" vertex="1" parent="tfm_sched" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="610" y="110" width="480" height="120" />
+        </mxCell>
+        <mxCell id="tfm_switch" value="Context Save / Restore&lt;br&gt;PSP · PSPLIM · Registers" vertex="1" parent="tfm_sched" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="110" width="480" height="120" />
+        </mxCell>
+        <mxCell id="tfm_schedule" source="tfm_state" target="tfm_pick" value="Scheduling point" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1380" y="400" />
+              <mxPoint x="330" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_check" source="tfm_pick" target="tfm_boundary" value="선택" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_ctx" source="tfm_boundary" target="tfm_switch" value="전환" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_thread" value="Selected Partition / Service code" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1060" width="1620" height="110" />
+        </mxCell>
+        <mxCell id="tfm_execute" source="tfm_switch" target="tfm_thread" value="PendSV / Exception return" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.8;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_note" value="일반 RTOS tick scheduling과 구분 · IPC wait/reply와 interrupt wakeup이 실행 전환을 유발." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1190" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="12-isolation" name="12-isolation">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1210">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1210" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Isolation Level 2 / PSA RoT와 Application RoT" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_psarot" value="PSA RoT / Privileged" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="700" />
+        </mxCell>
+        <mxCell id="tfm_spm" value="SPM / IPC / Scheduler" vertex="1" parent="tfm_psarot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="120" />
+        </mxCell>
+        <mxCell id="tfm_services" value="Crypto · ITS · Attestation · FWU&lt;br&gt;Platform · Mailbox · SCMI · Measured Boot" vertex="1" parent="tfm_psarot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="360" width="710" height="180" />
+        </mxCell>
+        <mxCell id="tfm_approt" value="Application RoT / Unprivileged" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="700" />
+        </mxCell>
+        <mxCell id="tfm_ps" value="Protected Storage" vertex="1" parent="tfm_approt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="120" />
+        </mxCell>
+        <mxCell id="tfm_api" value="PSA Client / Partition API" vertex="1" parent="tfm_approt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="360" width="710" height="120" />
+        </mxCell>
+        <mxCell id="tfm_invoke" source="tfm_ps" target="tfm_api" value="Service dependency" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_svc" source="tfm_api" target="tfm_spm" value="SVC / 검증된 API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="900" y="570" />
+              <mxPoint x="900" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_enforce" value="Platform HAL / MPU · SAU · MPC · PPC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1010" width="1620" height="110" />
+        </mxCell>
+        <mxCell id="tfm_isolation" source="tfm_spm" target="tfm_enforce" value="접근 경계 설정" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="25" y="320" />
+              <mxPoint x="25" y="1065" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="L2는 RoT domain 경계 · Partition별 독립 data/MMIO 보호를 제공하는 L3와 구분." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1140" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="13-services" name="13-services">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1420">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1420" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Secure Services / API에서 Backend까지" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_api0" value="PSA Crypto" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_svc0" value="Crypto Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="450" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_drv0" value="Mbed TLS / PSA Driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="750" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_hw0" value="CC312 / Entropy / Key HAL" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1050" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_api0edge" source="tfm_api0" target="tfm_svc0" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_svc0edge" source="tfm_svc0" target="tfm_drv0" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_drv0edge" source="tfm_drv0" target="tfm_hw0" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_api1" value="PSA Storage" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_svc1" value="PS / ITS Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="450" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_drv1" value="Storage Object / Flash FS" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="750" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_hw1" value="Flash / NV Counter HAL" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="1050" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_api1edge" source="tfm_api1" target="tfm_svc1" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_svc1edge" source="tfm_svc1" target="tfm_drv1" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_drv1edge" source="tfm_drv1" target="tfm_hw1" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_api2" value="Attestation / Measured Boot" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1210" y="150" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_svc2" value="IA / MB Partitions" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1210" y="450" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_drv2" value="Claims / Measurement slots" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1210" y="750" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_hw2" value="Crypto / Boot Data / OTP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1210" y="1050" width="500" height="120" />
+        </mxCell>
+        <mxCell id="tfm_api2edge" source="tfm_api2" target="tfm_svc2" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_svc2edge" source="tfm_svc2" target="tfm_drv2" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_drv2edge" source="tfm_drv2" target="tfm_hw2" value="API / Backend call" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_note" value="Partition 간 호출은 PSA / SPM 경유 · Driver 함수 호출과 별도 · Measurement 저장과 Token 발급도 별도 Service." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1340" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="14-service" name="14-service">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1570">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1570" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Secure Service / Storage 요청 처리 예" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_actor0" value="NS Agent / Client" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor1" value="SPM / IPC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor2" value="PS Service / Wrapper" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor3" value="ITS / Crypto / Flash" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg1" value="1. Storage service handle / request" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="310" />
+            <mxPoint as="targetPoint" x="670" y="310" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg2" value="2. Message / Service thread 실행" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="480" />
+            <mxPoint as="targetPoint" x="1130" y="480" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg3" value="3. Client ID·UID·size 확인" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="650" />
+            <mxPoint as="targetPoint" x="1130" y="695" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="650" />
+              <mxPoint x="1390" y="695" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg4" value="4. Storage operation / 필요 dependency 호출" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="820" />
+            <mxPoint as="targetPoint" x="1600" y="820" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg5" value="5. Result / Data" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="990" />
+            <mxPoint as="targetPoint" x="1130" y="990" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg6" value="6. psa_reply / status" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1160" />
+            <mxPoint as="targetPoint" x="670" y="1160" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg7" value="7. Completion / response" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1330" />
+            <mxPoint as="targetPoint" x="200" y="1330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="Service별 호출 경로는 상이 · 이 그림은 Protected Storage의 논리적 요청·응답 경로." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1460" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="15-drivers" name="15-drivers">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1330">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1330" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Platform HAL / Driver와 Hardware 경계" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_clients" value="SPM · Secure Services · Bootloader" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="150" width="1620" height="110" />
+        </mxCell>
+        <mxCell id="tfm_hal" value="Platform API / HAL" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="470" width="1700" height="270" />
+        </mxCell>
+        <mxCell id="tfm_isolation" value="Isolation / IRQ" vertex="1" parent="tfm_hal" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="330" height="100" />
+        </mxCell>
+        <mxCell id="tfm_comms" value="Mailbox / ATU" vertex="1" parent="tfm_hal" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="470" y="100" width="330" height="100" />
+        </mxCell>
+        <mxCell id="tfm_storage" value="Flash / OTP / NV Counter" vertex="1" parent="tfm_hal" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="900" y="100" width="330" height="100" />
+        </mxCell>
+        <mxCell id="tfm_crypto" value="Crypto / Entropy" vertex="1" parent="tfm_hal" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1330" y="100" width="330" height="100" />
+        </mxCell>
+        <mxCell id="tfm_halcall" source="tfm_clients" target="tfm_hal" value="Platform operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="850" />
+            <mxPoint as="targetPoint" x="1750" y="850" />
+            <mxPoint as="offset" x="-760" y="-12" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_memoryhw" value="NVIC · MPU · SAU&lt;br&gt;MPC · PPC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1040" width="330" height="130" />
+        </mxCell>
+        <mxCell id="tfm_mhuhw" value="MHUv3 / Address Window" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="520" y="1040" width="330" height="130" />
+        </mxCell>
+        <mxCell id="tfm_flashhw" value="Flash / LCM OTP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="950" y="1040" width="330" height="130" />
+        </mxCell>
+        <mxCell id="tfm_cryptohw" value="CryptoCell-312 / KMU" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1380" y="1040" width="330" height="130" />
+        </mxCell>
+        <mxCell id="tfm_isolationhw_edge" source="tfm_isolation" target="tfm_memoryhw" value="Driver / MMIO" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_commshw_edge" source="tfm_comms" target="tfm_mhuhw" value="Driver / MMIO" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_storagehw_edge" source="tfm_storage" target="tfm_flashhw" value="Driver / MMIO" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_cryptohw_edge" source="tfm_crypto" target="tfm_cryptohw" value="Driver / MMIO" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_note" value="HAL은 software contract · CMSIS / native driver는 register 제어 · ATU translation과 memory permission을 분리." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1220" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="16-mailbox" name="16-mailbox">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1550">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1550" />
+        </mxCell>
+        <mxCell id="tfm_title" value="AP → RSE / Mailbox와 PSA Service 경로" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_ap" value="AP Domain" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="1100" />
+        </mxCell>
+        <mxCell id="tfm_rse" value="RSE / TF-M" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="1100" />
+        </mxCell>
+        <mxCell id="tfm_app" value="Linux client / libts" vertex="1" parent="tfm_ap" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_ffa" value="FF-A / Trusted Services" vertex="1" parent="tfm_ap" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="400" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_proxy" value="SE Proxy / PSA client serialization" vertex="1" parent="tfm_ap" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="760" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_service" value="Secure Service / SPM" vertex="1" parent="tfm_rse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_agent" value="NS Agent Mailbox / RPC" vertex="1" parent="tfm_rse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="400" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_transport" value="SFCP / Legacy PSA Compatibility" vertex="1" parent="tfm_rse" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="760" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_request" source="tfm_app" target="tfm_ffa" value="Service request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_proxycall" source="tfm_ffa" target="tfm_proxy" value="RPC" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_mhulink" source="tfm_proxy" target="tfm_transport" value="MHUv3" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_decode" source="tfm_transport" target="tfm_agent" value="Deserialize / Mailbox signal" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_dispatch" source="tfm_agent" target="tfm_service" value="tfm_rpc_psa_call / Message" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_response" value="Reply: SPM → RPC completion → NS Agent → Serialize → MHU → AP client" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1380" width="1620" height="100" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="17-psa-sequence" name="17-psa-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1920">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1920" />
+        </mxCell>
+        <mxCell id="tfm_title" value="Remote PSA / IRQ에서 Partition 처리와 응답까지" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_actor0" value="AP Secure Proxy" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1780" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor1" value="MHU / SFCP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1780" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor2" value="NS Agent / RPC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1780" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_actor3" value="SPM / Service" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="tfm_life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1780" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg1" value="1. PSA request serialize / transport send" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="310" />
+            <mxPoint as="targetPoint" x="670" y="310" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg2" value="2. IRQ receive / enqueue → Mailbox signal" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="480" />
+            <mxPoint as="targetPoint" x="1130" y="480" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg3" value="3. Dequeue / Deserialize / Client identity" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="650" />
+            <mxPoint as="targetPoint" x="670" y="650" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg4" value="4. RPC PSA call / 요청 enqueue" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="820" />
+            <mxPoint as="targetPoint" x="1600" y="820" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg5" value="5. Partition dispatch / Service 처리" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="990" />
+            <mxPoint as="targetPoint" x="1600" y="1035" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="990" />
+              <mxPoint x="1340" y="1035" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg6" value="6. RPC completion / reply signal" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1160" />
+            <mxPoint as="targetPoint" x="1130" y="1160" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg7" value="7. Output / Status serialize" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1330" />
+            <mxPoint as="targetPoint" x="670" y="1330" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg8" value="8. Response transport" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1500" />
+            <mxPoint as="targetPoint" x="200" y="1500" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_msg9" value="9. Message resource 반환 / 다음 요청 대기" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1670" />
+            <mxPoint as="targetPoint" x="1130" y="1715" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="1670" />
+              <mxPoint x="1390" y="1715" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="Hardware ISR은 Service 본문을 실행하지 않음 · 외부 Client ID와 Service 권한 검증을 유지." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1810" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="18-scmi" name="18-scmi">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1420">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1420" />
+        </mxCell>
+        <mxCell id="tfm_title" value="RSE ↔ SCP / Boot와 Runtime 통신 Stack" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_boot" value="BL2 / Boot Context" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="850" />
+        </mxCell>
+        <mxCell id="tfm_bootclient" value="Boot coordination" vertex="1" parent="tfm_boot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="110" />
+        </mxCell>
+        <mxCell id="tfm_bootapi" value="bl2/scmi_comms.c&lt;br&gt;Readiness / Power Domain request" vertex="1" parent="tfm_boot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="360" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_boottransport" value="Polling transport / MHU + Shared Slot" vertex="1" parent="tfm_boot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="640" width="710" height="110" />
+        </mxCell>
+        <mxCell id="tfm_bootcall" source="tfm_bootclient" target="tfm_bootapi" value="Boot API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_bootpoll" source="tfm_bootapi" target="tfm_boottransport" value="Request / response" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_runtime" value="TF-M Runtime / SCMI Comms Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="850" />
+        </mxCell>
+        <mxCell id="tfm_signal" value="SCP doorbell → Partition signal" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="710" height="110" />
+        </mxCell>
+        <mxCell id="tfm_handler" value="psa_wait / Notification handler" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="360" width="710" height="130" />
+        </mxCell>
+        <mxCell id="tfm_operation" value="scmi_hal_sys_power_state&lt;br&gt;Platform / Runtime Image Loader" vertex="1" parent="tfm_runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="640" width="710" height="110" />
+        </mxCell>
+        <mxCell id="tfm_wake" source="tfm_signal" target="tfm_handler" value="Wakeup" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_handle" source="tfm_handler" target="tfm_operation" value="검증 후 dispatch" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_scp" value="SI CL0 / SCP SCMI Service" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1180" width="1620" height="110" />
+        </mxCell>
+        <mxCell id="tfm_request" source="tfm_boottransport" target="tfm_scp" value="SCMI A2P" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.25;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_notification" source="tfm_scp" target="tfm_signal" value="SCMI P2A notification" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1780" y="1235" />
+              <mxPoint x="1780" y="315" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tfm_note" value="Runtime transport의 busy wait와 response IRQ TODO는 BL2 polling timeout 구현과 별도로 기술." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1320" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="19-verification" name="19-verification">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1190">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="tfm_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1190" />
+        </mxCell>
+        <mxCell id="tfm_title" value="검증 단계 / Boot · Partition · PSA Round Trip" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="tfm_image" value="Image / Configuration" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="220" width="360" height="140" />
+        </mxCell>
+        <mxCell id="tfm_boot" value="Boot / Runtime init" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="510" y="220" width="360" height="140" />
+        </mxCell>
+        <mxCell id="tfm_partition" value="Manifest / Partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="930" y="220" width="360" height="140" />
+        </mxCell>
+        <mxCell id="tfm_service" value="PSA / SCMI round trip" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1350" y="220" width="360" height="140" />
+        </mxCell>
+        <mxCell id="tfm_s0" source="tfm_image" target="tfm_boot" value="확인" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_s1" source="tfm_boot" target="tfm_partition" value="확인" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_s2" source="tfm_partition" target="tfm_service" value="확인" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="tfm_result" value="Test Result / Evidence" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="620" width="1700" height="370" />
+        </mxCell>
+        <mxCell id="tfm_native" value="Native / Source checks" vertex="1" parent="tfm_result" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="130" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_runtime" value="Apollo QVP boot / API test" vertex="1" parent="tfm_result" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="610" y="130" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_record" value="Image hash / Test output / Log" vertex="1" parent="tfm_result" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="130" width="480" height="110" />
+        </mxCell>
+        <mxCell id="tfm_note" value="PASS / FAIL / NOT RUN을 test별 기록 · Boot banner와 Secure Service 왕복 성공을 구분." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1070" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
