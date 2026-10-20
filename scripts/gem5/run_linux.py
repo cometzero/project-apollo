@@ -39,7 +39,7 @@ def parser():
     p.add_argument("--passes", type=int, default=2)
     p.add_argument("--bootargs", help="replace Linux command line")
     p.add_argument("--out-dir", type=Path)
-    p.add_argument("--timeout", type=float, default=5400, help="host deadline in seconds (default: 5400)")
+    p.add_argument("--timeout", type=float, default=7200, help="host deadline in seconds (default: 7200)")
     p.add_argument("--max-ticks", type=int, default=10**15)
     p.add_argument("--headless", action="store_true", help="log UART without forwarding stdin")
     p.add_argument("--dry-run", action="store_true", help="print resolved inputs without building or running")
