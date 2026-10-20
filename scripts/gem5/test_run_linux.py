@@ -235,6 +235,7 @@ with socket.socket() as listener:
             ["--size-kib", "262145"],
             ["--max-ticks", "0"],
             ["--cpus", "3"],
+            ["--cpus", "8"],
         ):
             with self.subTest(arguments=arguments):
                 with patch("sys.argv", ["run_linux.py", *arguments]):

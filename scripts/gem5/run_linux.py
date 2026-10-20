@@ -30,7 +30,7 @@ def parser():
     p.add_argument("--rootfs", type=Path)
     p.add_argument("--bootloader", type=Path)
     p.add_argument("--bsp", action="store_true")
-    p.add_argument("--cpus", type=int, choices=(4, 8, 16), default=4)
+    p.add_argument("--cpus", type=int, choices=(4, 16), default=4)
     p.add_argument("--channels", type=int, choices=(4, 8, 16), default=16)
     p.add_argument("--profile", type=Path, default=SOURCE / "configs/zena_cmn/profiles/a720ae_documented.yaml")
     p.add_argument("--workload", choices=("boot", "smoke", "cache", "dram", "command"), default="boot")
