@@ -62,10 +62,10 @@ def sha256(path):
 
 
 def resolve(args):
-    deploy = args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp"
+    deploy = (args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp").resolve()
     image = "nexios-bsp-initramfs" if args.bsp else "nexios-image"
     initrd = "nexios-bsp-initramfs" if args.bsp else "nexios-initramfs-image"
-    native = deploy.parents[1] / "gem5-native"
+    native = deploy.parent.parent / "gem5-native"
     binary = args.gem5 or native / "gem5.opt"
     if not args.gem5 and not binary.is_file():
         binary = SOURCE / "build/ARM/gem5.opt"

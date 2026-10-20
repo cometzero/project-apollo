@@ -63,6 +63,14 @@ class LauncherTests(unittest.TestCase):
                 "--gem5", str(native / "gem5.opt"),
             ])
             self.assertIsNotNone(run_linux.resolve(args)["native_manifest"])
+            previous = Path.cwd()
+            try:
+                os.chdir(deploy)
+                args.deploy_dir = Path(".")
+                self.assertIsNotNone(run_linux.resolve(args)["native_manifest"])
+            finally:
+                os.chdir(previous)
+                args.deploy_dir = deploy
             args.gem5 = None
             (native / "gem5.opt").unlink()
             with patch("run_linux.SOURCE", source):
