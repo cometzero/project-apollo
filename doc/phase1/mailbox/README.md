@@ -16,15 +16,27 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 
 **MHU는 Domain 사이의 전송 상태를 알리고, 상위 protocol은 데이터 형식·소유권·서비스 완료를 결정한다.** 수신 flag clear로 발생하는 HW ACK와 명령의 성공 응답은 다르다.
 
-| Domain / SW | 상대 Domain | 주요 사용 방식 |
-|---|---|---|
-| AP / Linux | SI CL0 | SCMI performance 요청; shared slot + doorbell |
-| AP / Linux | SI CL1 | HIPC/RPMsg network; vring + doorbell |
-| AP / TF-A | SI CL0 | PSCI·PFDI SCMI; shared slot + 응답 polling |
-| AP / Secure client | RSE | PSA 요청; DBCH word stream 및 허용 shared buffer |
-| SI CL0 / SCP | AP·CL1·RSE | SCMI server, power/performance 제어, notification |
-| SI CL1 / Zephyr | AP·CL0 | HIPC endpoint, CPU별 SCMI transport |
-| RSE / BL2·TF-M | CL0·AP | Boot/power SCMI, Secure service request 처리 |
+방향별 PBX→MBX 연결을 Mailbox 이름(QVP Pair key)으로 나열한다. `Domain / SW`는 송신 측, `상대 Domain / 상대 SW`는 수신 측이다.
+
+| Mailbox 이름 | Domain | SW | 상대 Domain | 상대 SW | 주요 사용 방식 |
+|---|---|---|---|---|---|
+| `ap_to_si_cl0_ns` | AP | Linux SCMI | SI CL0 | SCP-firmware | Non-secure SCMI 요청; shared slot + doorbell |
+| `si_cl0_to_ap_ns` | SI CL0 | SCP-firmware | AP | Linux SCMI | SCMI 응답·notification |
+| `ap_to_si_cl0_scmi` | AP | TF-A PSCI | SI CL0 | SCP-firmware | Secure SCMI 전원 제어 요청; 응답은 shared slot polling |
+| `si_cl0_to_ap_scmi` | SI CL0 | SCP-firmware | AP | TF-A PSCI | Secure SCMI 역방향 frame; AP는 응답 polling 사용 |
+| `ap_to_si_cl0_pfdi` | AP | TF-A PFDI Caller | SI CL0 | SCP PFDI Monitor | CPU별 SCMI slot을 통한 PFDI 요청 |
+| `si_cl0_to_ap_pfdi` | SI CL0 | SCP PFDI Monitor | AP | TF-A PFDI Caller | PFDI 역방향 frame; AP는 응답 polling 사용 |
+| `apollo_ap_to_si_cl1` | AP | Linux remoteproc / RPMsg | SI CL1 | Zephyr HIPC / OpenAMP | HIPC vring notification·attach/detach |
+| `apollo_si_cl1_to_ap` | SI CL1 | Zephyr HIPC / OpenAMP | AP | Linux remoteproc / RPMsg | HIPC vring notification·software ACK |
+| `apollo_si_cl1_pfdi` | SI CL1 | Zephyr PFDI Caller | SI CL0 | SCP PFDI Monitor | CPU별 SCMI slot을 통한 PFDI 요청 |
+| `apollo_si_cl0_pfdi_reply` | SI CL0 | SCP PFDI Monitor | SI CL1 | Zephyr PFDI Caller | CL1 PFDI 역방향 frame; shared slot 응답 |
+| `ap_s_to_rse` | AP | Trusted Services SE Proxy | RSE | TF-M SFCP / NS Agent Mailbox | PSA 요청; DBCH stream·허용 shared buffer |
+| `rse_to_ap_s` | RSE | TF-M SFCP / NS Agent Mailbox | AP | Trusted Services SE Proxy | PSA 응답; AP 수신 polling |
+| `rse_to_si_cl0` | RSE | BL2 / TF-M | SI CL0 | SCP-firmware | Boot·power SCMI 요청, AP reload ACK |
+| `si_cl0_to_rse` | SI CL0 | SCP-firmware | RSE | BL2 / TF-M SCMI | SCMI 응답·System Power notification |
+| `rse_ap_monitor_local` | RSE | TF-M AP Monitor Link 정의 | AP（기본 QVP 미연결） | 미연결 | MHU0 local frame만 존재; 활성 AP 통신 경로 아님 |
+
+총 **15개 Pair key**이며, RSE MHU0 local 구성을 포함한다. PBX/MBX 모델 이름·주소·IRQ는 [방향별 연결 상세표](MAILBOX-MAP.md#pairs)에 정리했다.
 
 ### 1.3 Glossary
 
@@ -50,11 +62,24 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 
 ![Automotive AD Mailbox System Architecture](diagrams/00-system.drawio.svg)
 
-- **System:** AP와 Safety Island의 데이터 교환, 시스템 제어 요청, RSE 보안 서비스 호출.
-- **Hardware — MHU:** PBX SET·MBX status/clear와 interrupt 제공.
-- **Software — Mailbox driver:** Channel 송수신·IRQ 처리; SCMI·RPMsg·SFCP가 메시지와 응답 관리.
+- **Primary Compute Core:** 각 Core의 PFDI Caller가 SCMI Channel을 통해 상태를 전달한다.
+- **SI CL0:** PFDI Monitor가 MHUv3 Channel과 Shared Memory를 통해 각 Core를 모니터링한다.
+- **외부 vMCU:** SI CL0가 전달하는 Fault Notification을 수신한다.
 
-#### 2.1.1 MHU-320AE Hardware 구조
+[Arm PFDI Monitoring 원본](https://arm-auto-solutions.docs.arm.com/en/v2.1/_images/platform_fault_detection_interface_monitoring.svg)에 외부 vMCU 연결을 추가했다.
+
+### 2.2 Mailbox Hardware Architecture
+
+#### 2.2.1 Mailbox Hardware Topology
+
+![Domain별 Mailbox Hardware Topology](diagrams/01a-topology.drawio.svg)
+
+- 각 Domain 내부에 상대 Domain·서비스별 Mailbox를 배치했다. 각 박스는 해당 연결의 PBX와 MBX frame을 묶어 표시한다.
+- 화살표는 **PBX → 상대 MBX** 방향이다. 7개 양방향 경로를 14개 화살표로 표시한다.
+- RSE MHU0는 local frame만 존재하며, 기본 QVP의 AP peer 연결이 없어 점선으로 표시한다.
+- Hardware 연결은 응답 IRQ의 SW 사용 여부와 별개다. 주소·IRQ·Pair key는 [전체 연결표](MAILBOX-MAP.md#pairs)를 참조한다.
+
+#### 2.2.2 MHU-320AE Hardware 구조
 
 ![MHUv3 PBX MBX와 shared memory 데이터 경로](diagrams/01-hardware.drawio.svg)
 
@@ -63,7 +88,7 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 - SCMI·HIPC는 payload를 shared memory에 둔다. AP–RSE는 DBE register에 serialized words를 쓰는 SW framing도 사용한다.
 - MHU-320AE의 extension 구성과 실제 사용하는 DBE 경로를 구분한다. 현재 QVP는 FIFO·FastChannel engine을 구현하지 않는다.
 
-#### 2.1.2 Register / Interrupt 구조
+#### 2.2.3 Register / Interrupt 구조
 
 ![MHUv3 register와 수신 interrupt 및 transfer ACK](diagrams/02-registers.drawio.svg)
 
@@ -84,11 +109,11 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 
 [전체 register map](MAILBOX-MAP.md#registers)
 
-### 2.2 AP Domain Mailbox
+### 2.3 AP Domain Mailbox
 
-#### 2.2.1 Hardware 구조
+#### 2.3.1 Hardware 구조
 
-![AP Domain CPU clusters MHU shared memory GIC](diagrams/03-ap-hardware.drawio.svg)
+![AP Domain CPU GIC-720AE와 서비스별 Mailbox](diagrams/03-ap-hardware.drawio.svg)
 
 Arm Zena CSS AP는 **4 clusters × 4 Cortex-A720AE**, 기본 Apollo QVP는 AP 4 CPU 구성이다. MHU는 CPU마다 배치되지 않고 상대 Domain·보안 경로·서비스별로 공유한다.
 
@@ -97,7 +122,7 @@ Arm Zena CSS AP는 **4 clusters × 4 Cortex-A720AE**, 기본 Apollo QVP는 AP 4 
 - **AP↔RSE:** Secure MHU 경로로 PSA 요청·응답을 전달한다.
 - **IRQ:** AP의 수신·전송 ACK 출력은 GIC SPI로 연결한다. AP–RSE 응답은 현재 QVP에서 polling한다.
 
-#### 2.2.2 MMIO / Interrupt Map
+#### 2.3.2 MMIO / Interrupt Map
 
 | AP 경로 | AP guest PBX / MBX | QVP AP GIC INTID | 사용 |
 |---|---|---|---|
@@ -109,24 +134,24 @@ Arm Zena CSS AP는 **4 clusters × 4 Cortex-A720AE**, 기본 Apollo QVP는 AP 4 
 
 AP guest alias와 system-global decode 주소는 다르다. 예를 들어 NS SCMI PBX는 ATU를 거쳐 `0x400003B000000`에 도달한다. PFDI의 `0x40110000`은 QVP static bridge가 우선 처리한다. **IRQ 배선의 존재가 SW의 IRQ 사용을 뜻하지는 않는다.**
 
-#### 2.2.3 AP Domain QVP 구현
+#### 2.3.3 AP Domain QVP 구현
 
 - `system_mgmt/ap_si_mailbox.lua`: CL0 NS/Secure/PFDI 및 CL1 HIPC의 AP-facing frame.
 - `system_mgmt/ap_rse_mailbox.lua`: RSE Secure PBX/MBX, 마지막 notify write 기준 IRQ 갱신.
 - AP-facing frame은 총 10개이며 AP cold reset에 연결한다.
 - 기본 DBCH 수는 128, HIPC는 32다. Arm reference의 AP–CL0 16 DBCH 제약과 동일한 capacity로 해석하지 않는다.
 
-### 2.3 Safety Island Domain Mailbox
+### 2.4 Safety Island Domain Mailbox
 
-#### 2.3.1 Hardware 구조
+#### 2.4.1 Hardware 구조
 
-![Safety Island CL0 CL1 CPU MHU GIC와 상대 Domain](diagrams/04-si-hardware.drawio.svg)
+![SI CL0 CL1의 연결 대상별 독립 Mailbox와 GIC](diagrams/04-si-hardware.drawio.svg)
 
 - **CL0:** SCP가 AP·RSE·CL1 요청을 수신하고 시스템 제어 서비스를 제공한다.
 - **CL1:** Zephyr가 AP와 HIPC로 통신하고 CL0에는 별도 SCMI/PFDI 경로를 사용한다.
 - 각 cluster의 MHU interrupt는 해당 cluster의 GIC 경로로 전달한다. Shared memory와 MHU register는 독립된 주소 영역이다.
 
-#### 2.3.2 MMIO / Interrupt Map
+#### 2.4.2 MMIO / Interrupt Map
 
 주소는 SI local view, IRQ는 **GIC INTID**다.
 
@@ -140,7 +165,7 @@ AP guest alias와 system-global decode 주소는 다르다. 예를 들어 NS SCM
 | CL1 / AP HIPC | `0x39000000` / `0x39040000` | 72 / 73 |
 | CL1 / CL0 PFDI | `0x39200000` / `0x39240000` | 82 / 미연결 |
 
-#### 2.3.3 Shared Memory / Channel 구성
+#### 2.4.3 Shared Memory / Channel 구성
 
 | 용도 | SI 주소 | Channel / flag |
 |---|---|---|
@@ -151,17 +176,17 @@ AP guest alias와 system-global decode 주소는 다르다. 예를 들어 NS SCM
 | CL1↔CL0 PFDI | `0x48000000`, 4KiB backing | ch2..5 bit0; CPU별 40B slot |
 | CL0↔RSE SCMI | `0x40000000` | ch0 bit1 command, bit2 notification, bit3 reload ACK |
 
-#### 2.3.4 Safety Island QVP 구현
+#### 2.4.4 Safety Island QVP 구현
 
 `si_cl0/mailbox.lua`와 `si_cl1/mailbox.lua`가 pair·IRQ·channel 수를 설정한다. CL1 HIPC와 CL1↔CL0 경로는 32 DBCH이며 SCP ISR은 첫 32 channels의 bitmap을 처리한다.
 
 CL1→CL0 요청의 requester hold는 QEMU instance 간 진행을 맞추는 QVP 실행 정책이다. MHU HW의 전송 latency나 SW protocol의 완료 조건을 바꾸는 정의가 아니다.
 
-### 2.4 RSE Domain Mailbox
+### 2.5 RSE Domain Mailbox
 
-#### 2.4.1 Hardware 구조
+#### 2.5.1 Hardware 구조
 
-![RSE Cortex-M55 NVIC local MHU2와 SCP 연결](diagrams/05-rse-hardware.drawio.svg)
+![RSE AP Secure MHU2 AP Monitor MHU0 SI CL0 SCMI Mailbox 분리 구조](diagrams/05-rse-hardware.drawio.svg)
 
 RSE Cortex-M55는 **AP Secure service 경로**와 **CL0 boot/power SCMI 경로**를 분리한다. MHU2는 RSE local frame, RSE–CL0 frame은 system fabric과 ATU를 통해 접근한다.
 
@@ -169,7 +194,7 @@ RSE Cortex-M55는 **AP Secure service 경로**와 **CL0 boot/power SCMI 경로**
 - CL0 notification → RSE–SI MBX → NVIC139 → SCMI partition.
 - RSE MHU0는 QVP local frame으로 존재하지만 기본 구성에서 AP peer로 bridge하지 않는다.
 
-#### 2.4.2 MMIO / Interrupt Map
+#### 2.5.2 MMIO / Interrupt Map
 
 | 경로 | PBX / MBX view | RSE 수신 IRQ |
 |---|---|---|
@@ -179,14 +204,14 @@ RSE Cortex-M55는 **AP Secure service 경로**와 **CL0 boot/power SCMI 경로**
 
 NVIC 번호는 external IRQ이며 GIC SPI의 `+32` 변환을 적용하지 않는다. RSE–CL0 shared memory의 global base는 `0x4000040000000`이다.
 
-#### 2.4.3 RSE Domain QVP 구현
+#### 2.5.3 RSE Domain QVP 구현
 
 - `rse/system.lua`: MHU0 local 및 MHU2 AP-S frame, NVIC 연결.
 - `system_mgmt/rse_si_mailbox.lua`: RSE–CL0 bridge와 shared memory 접근.
 - MHU2는 DBCH word stream을 전달하고 PSA 의미·권한 검사는 TF-M이 처리한다.
 - RSE local SYS/RSS reset fanout에는 현재 MHU frame이 포함되지 않는다. CPU reset과 mailbox 상태 reset은 별개다.
 
-### 2.5 Subsystem별 HW 구성 요약
+### 2.6 Subsystem별 HW 구성 요약
 
 | Domain | 상대 / MHU 역할 | Payload 자원 | 수신 interrupt |
 |---|---|---|---|
