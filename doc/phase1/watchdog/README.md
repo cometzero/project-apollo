@@ -47,24 +47,13 @@ Apollo Hardware Watchdog의 register·출력 배선, QVP 모델, Domain별 drive
 - **Hardware:** Counter 기반 기한이 지나면 WS0·WS1을 출력한다.
 - **복구:** Interrupt handler·관리 firmware·reset controller가 설정된 복구 범위를 수행한다.
 
-### 2.2 AP Domain Watchdog
-
-AP의 NS·Secure watchdog은 CPU들이 공유하는 장치다. **HW AP 16 PE에도 platform watchdog은 2개**이며 CPU별 Timer PPI와 다르다.
-
-#### 2.2.1 Generic Watchdog Hardware
-
-![AP cluster와 공유 NS·Secure watchdog, interrupt·reset 경로](diagrams/01a-ap-hardware.drawio.svg)
+### 2.2 Watchdog Hardware
 
 Timestamp와 deadline을 비교하고, 첫 만료에서 WS0, 다음 구간 만료에서 WS1을 출력한다. Refresh는 감시 구간을 다시 시작한다. WS1의 최종 interrupt·reset 대상은 SoC 통합 정책을 따른다.
 
 ![Generic Watchdog comparator와 Control·Refresh frame](diagrams/01-hardware.drawio.svg)
 
-**Register map — AP shared watchdog**
-
-| 장치 | Control base | Refresh base | 용도 |
-|---|---|---|---|
-| Non-secure | `0x1A420000` | `0x1A430000` | Linux watchdog |
-| Secure | `0x1A460000` | `0x1A470000` | Secure firmware용 watchdog |
+**Control / Refresh Register 구조**
 
 | Frame / offset | Register | 역할 |
 |---|---|---|
@@ -72,6 +61,21 @@ Timestamp와 deadline을 비교하고, 첫 만료에서 WS0, 다음 구간 만�
 | Control +0x008 / +0x00C | WOR / WORU | Watch period offset; QVP 총 48-bit |
 | Control +0x010 / +0x014 | WCV / WCVU | 64-bit deadline |
 | Refresh +0x000 | WRR | Explicit refresh |
+
+### 2.3 AP Domain Watchdog
+
+AP의 NS·Secure watchdog은 CPU들이 공유하는 장치다. **HW AP 16 PE에도 platform watchdog은 2개**이며 CPU별 Timer PPI와 다르다.
+
+#### 2.3.1 AP Domain Watchdog Hardware
+
+![AP cluster와 공유 NS·Secure watchdog, interrupt·reset 경로](diagrams/01a-ap-hardware.drawio.svg)
+
+**Register map — AP shared watchdog**
+
+| 장치 | Control base | Refresh base | 용도 |
+|---|---|---|---|
+| Non-secure | `0x1A420000` | `0x1A430000` | Linux watchdog |
+| Secure | `0x1A460000` | `0x1A470000` | Secure firmware용 watchdog |
 
 **Interrupt / reset map — 현재 QVP**
 
@@ -82,18 +86,20 @@ Timestamp와 deadline을 비교하고, 첫 만료에서 WS0, 다음 구간 만�
 | AP Secure WS0 | AP INTID79 | Secure interrupt 경로 |
 | AP Secure WS1 | Host reset controller | AP reset 요청 |
 
-#### 2.2.2 Watch Period / Expiry Flow
+#### 2.3.2 Watch Period / Expiry Flow
 
-![두 단계 만료와 Linux timeout 환산](diagrams/02-stages.drawio.svg)
+![Watchdog 상태와 화살표로 표시한 만료 및 Refresh 흐름](diagrams/02-stages.drawio.svg)
 
 1. WOR·EN을 설정하면 감시를 시작한다.
 2. 정상 refresh가 없으면 첫 구간 뒤 WS0를 assert한다.
 3. 추가 한 구간이 지나면 WS1도 assert한다.
 4. Refresh 또는 disable/reset으로 source 상태를 해제한다. GIC EOI만으로 WS level은 내려가지 않는다.
 
+Refresh는 WRR·WOR 또는 WCS.EN=1 write로 수행한다. Linux의 WOR 설정은 `action=0`에서 `timeout × CNTFRQ / 2`, `action=1`에서 `timeout × CNTFRQ`다.
+
 Linux 기본 `action=0`은 두 구간을 합쳐 timeout을 구성한다. Counter와 watchdog frequency가 같을 때 timeout 20초는 WS0 약 10초·WS1 약 20초의 논리 기한이다. `action=1`은 한 구간 timeout과 WS0 panic을 사용한다.
 
-#### 2.2.3 AP Domain Watchdog QVP 구현
+#### 2.3.3 AP Domain Watchdog QVP 구현
 
 | 구성 | 구현 |
 |---|---|
@@ -105,11 +111,13 @@ Linux 기본 `action=0`은 두 구간을 합쳐 timeout을 구성한다. Counter
 
 ![AP reset 범위와 watchdog clear 순서](diagrams/06-reset-scope.drawio.svg)
 
+AP NS WS1은 SCP의 IRQ mask·Event 처리와 PPU 제어를 거쳐 복구한다. AP Secure WS1은 Reset Controller에 직접 연결된다. 전체 Apollo reset은 watchdog 5개를 clear하지만, RSE local SYS/RSS reset에는 watchdog이 포함되지 않는다.
+
 AP cold-reset fanout은 NS/S watchdog을 먼저 clear한 뒤 AP reset handshake를 진행한다. NS WS1을 reset controller에 직접 연결한 구성으로 설명하지 않는다.
 
-### 2.3 Safety Island Domain Watchdog
+### 2.4 Safety Island Domain Watchdog
 
-#### 2.3.1 CL0 System Watchdog Hardware
+#### 2.4.1 CL0 System Watchdog Hardware
 
 ![CL0 HW watchdog과 interrupt·reset 연결](diagrams/01b-si-hardware.drawio.svg)
 
@@ -126,7 +134,7 @@ CL0는 공유 system watchdog을 가진다. 현재 CL1에는 전용 HW watchdog 
 
 **Expiry Flow:** CL0 deadline → WS0 → 추가 구간 → WS1 → reset gate. 현재 QVP는 controller의 `si_reset` 출력이 미연결이므로 이 경로의 SI 재기동을 구현 완료로 간주하지 않는다.
 
-#### 2.3.2 Safety Island Domain Watchdog QVP 구현
+#### 2.4.2 Safety Island Domain Watchdog QVP 구현
 
 | 구성 | CL0 | CL1 |
 |---|---|---|
@@ -137,11 +145,13 @@ CL0는 공유 system watchdog을 가진다. 현재 CL1에는 전용 HW watchdog 
 
 CL0 local watchdog의 만료와 AP watchdog WS1의 수신·복구는 서로 다른 HW 경로다.
 
-### 2.4 RSE Domain Watchdog
+### 2.5 RSE Domain Watchdog
 
-#### 2.4.1 Timestamp Watchdog Hardware
+#### 2.5.1 Timestamp Watchdog Hardware
 
 ![M55·NS/S timestamp watchdog·SLOWCLK watchdog 및 interrupt 경로](diagrams/01c-rse-hardware.drawio.svg)
+
+QVP Timestamp watchdog 2개는 32MHz 설정이다. NS 출력만 NVIC IRQ1/IRQ0에 연결되며, Secure 출력은 미연결이다. Timestamp·SLOWCLK·SAM 내부 watchdog은 서로 다른 IP다.
 
 RSE timestamp watchdog은 NS·Secure 두 개이며 Local timestamp를 사용한다. SLOWCLK watchdog과 SAM 내부 watchdog은 다른 IP다.
 
@@ -155,9 +165,11 @@ RSE timestamp watchdog은 NS·Secure 두 개이며 Local timestamp를 사용한�
 
 Timestamp 장치는 Control·Refresh frame을 사용한다. CMSDK SLOWCLK의 LOAD·LOCK·INTCLR register 계약을 timestamp watchdog에 적용하지 않는다.
 
-#### 2.4.2 Reset / Security Integration
+#### 2.5.2 Reset / Security Integration
 
 ![RSE reference와 현재 QVP의 reset·access 경계](diagrams/07-rse-boundaries.drawio.svg)
+
+NS watchdog의 WS0/WS1은 NVIC IRQ1/IRQ0에 연결된다. Secure 출력과 NS reset mask 경로는 미연결이며, SLOWCLK device 모델은 없다. IRQ0는 Host UART와 NS WS1이 공유하고 명시적인 OR 모델이 없어 동시 신호 영향은 별도 확인 대상이다.
 
 - **HW 통합:** Timestamp watchdog의 PPC0·PD_AON·SYS/RSS reset 규칙을 따른다.
 - **NS 만료:** QVP는 IRQ0/1까지만 연결하며 `NSWDRSTREQEN` reset gate까지 연결하지 않는다.
@@ -166,7 +178,7 @@ Timestamp 장치는 Control·Refresh frame을 사용한다. CMSDK SLOWCLK의 LOA
 
 IRQ0에는 host UART도 직접 bind되어 있다. 명시적 OR 합성이 없으므로 독립 source의 동시 assert/deassert는 단일 source 시험과 구분한다.
 
-#### 2.4.3 RSE Domain Watchdog QVP 구현
+#### 2.5.3 RSE Domain Watchdog QVP 구현
 
 | 항목 | 구현 |
 |---|---|
@@ -178,7 +190,7 @@ IRQ0에는 host UART도 직접 bind되어 있다. 명시적 OR 합성이 없으�
 
 <a id="cpu"></a>
 
-### 2.5 Subsystem별 HW 구성 요약
+### 2.6 Subsystem별 HW 구성 요약
 
 | Domain | Watchdog 구성 | 감시 단위 | 대표 출력 |
 |---|---|---|---|
@@ -261,6 +273,8 @@ Linux는 NS watchdog을 `arm,sbsa-gwdt`로 probe하고 `/dev/watchdog*`를 제�
 
 ![Device Tree에서 watchdog_device 등록까지](diagrams/10a-linux-init.drawio.svg)
 
+Driver probe는 feeding service 시작과 다르다. Probe 시 WCS.EN이 설정되어 있으면 이미 동작 중인 Hardware로 처리한다.
+
 1. DT compatible로 `sbsa_gwdt` driver를 선택한다.
 2. Control·Refresh MMIO를 map하고 IIDR·WCS 상태를 읽는다.
 3. `arch_timer_get_cntfrq()`로 timeout 환산 기준을 얻는다.
@@ -287,6 +301,8 @@ Linux는 NS watchdog을 `arm,sbsa-gwdt`로 probe하고 `/dev/watchdog*`를 제�
 ##### 4.2.1.3 Feeding / Expiry Sequence
 
 ![Linux feeding 중단에서 WS0·WS1 및 SCP 통보까지](diagrams/10-linux-sequence.drawio.svg)
+
+이 흐름은 Linux `action=0` 기준이다. WS0 ISR은 등록하지 않으며, WS1은 CL0 INTID321로 전달된다. FD의 비정상 close 이후에도 watchdog core가 ping할 수 있으므로 프로세스 종료와 feeding 중단을 구분한다.
 
 1. 서비스가 timeout을 설정하고 watchdog을 시작한다.
 2. 정상 상태에서는 WRR write를 반복해 두 stage를 clear한다.
@@ -342,6 +358,8 @@ CL0 local watchdog을 주기적으로 feed하는 서비스와 AP NS 만료 복�
 #### 4.3.2 SCP Watchdog Sequence
 
 ![SCP Watchdog IRQ·event 처리·AP 복구·IRQ rearm Sequence](diagrams/11-recovery-sequence.drawio.svg)
+
+INTID321은 WS1 source가 해제될 때까지 mask를 유지한다. IRQ rearm과 Linux boot 완료는 별도 상태다.
 
 1. AP NS WS1이 CL0 INTID321/FIQ로 전달된다.
 2. ISR이 IRQ를 mask하고 recovery latch를 설정한다.
