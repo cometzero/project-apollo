@@ -136,3 +136,7 @@
 	path = hsoc-stack/components/system_mgmt/zephyrproject/zephyr_vmcu_src
 	url = git@github.com:cometzero/zephyr_vmcu_src.git
 	branch = main
+[submodule "hsoc-stack/tools/gem5"]
+	path = hsoc-stack/tools/gem5
+	url = git@github.com:cometzero/gem5.git
+	branch = apollo-qvp
