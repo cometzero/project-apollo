@@ -4,7 +4,7 @@
 
 Apollo QVP는 **QEMU의 Arm 명령어·장치 실행과 SystemC/TLM의 시스템 모델을 결합한 가상 플랫폼**이다. RSE·Safety Island·Primary Compute의 펌웨어를 함께 실행하고, 주소 변환·인터럽트·전원/reset·도메인 간 통신을 소스 수준에서 구성한다.
 
-[draw.io 전체 편집본 — 11페이지](apollo-qvp-architecture.drawio) · [모델·소스 연결표](MODEL-MAP.md) · [조사 근거와 검증 범위](SOURCES.md) · [관련 Build Architecture](../build/README.md)
+[draw.io 전체 편집본 — 13페이지](apollo-qvp-architecture.drawio) · [모델·소스 연결표](MODEL-MAP.md) · [조사 근거와 검증 범위](SOURCES.md) · [관련 Build Architecture](../build/README.md)
 
 도면은 **white 테마의 native draw.io**이며 본문의 SVG에도 편집 정보를 포함했다. 아래 설명은 현재 checkout과 canonical full-system runner의 구성을 기준으로 한다. 소스에서 확인한 구조와 실제 실행 시험의 결과를 구분한다.
 
@@ -12,12 +12,14 @@ Apollo QVP는 **QEMU의 Arm 명령어·장치 실행과 SystemC/TLM의 시스템
 |---|---|---|
 | 1. Simulation / Emulation | 무엇을 실행하고 무엇을 모델링하는가? | 01 |
 | 2. FVP / QVP | 무엇을 공통 계약으로 비교하는가? | 02 |
-| 3. QBox / libqemu | CPU 실행과 TLM transaction은 어떻게 연결되는가? | 03–04 |
+| 3. QBox / libqemu | CPU 실행과 TLM transaction은 어떻게 연결되는가? | 03, 03a, 04, 04a |
 | 4. Platform Lua | SoC·VP·Board가 무엇을 소유하는가? | 05 |
 | 5. Components | 어느 모델이 QEMU이고 어느 모델이 SystemC인가? | 06, 11 |
 | 6. Execution | 어떤 process·thread·clock·boot flow로 실행되는가? | 07–10 |
 
 ## 1. Simulation과 Emulation
+
+### 1.1 모델링 관점과 실행 방식
 
 ![Simulation과 Emulation의 역할](diagrams/01-modeling.drawio.svg)
 
@@ -32,6 +34,92 @@ Apollo QVP는 **QEMU의 Arm 명령어·장치 실행과 SystemC/TLM의 시스템
 QEMU TCG는 guest 명령어를 **Translation Block(TB)** 단위로 번역·캐시하여 host에서 실행한다. 이는 guest ISA 실행 방식이며 실제 A720AE의 pipeline·cache·분기 예측 지연을 그대로 계산한다는 뜻은 아니다. [QEMU TCG 설계](https://www.qemu.org/docs/master/devel/tcg.html)
 
 Arm FVP도 Fast Models 기반의 programmer’s-view 플랫폼이다. 따라서 **FVP를 cycle-accurate simulator, QVP를 단순한 고속 대체품으로 구분하면 부정확하다**. 비교는 기능과 시간 모델의 범위를 명시한 뒤 수행한다. [Arm Fast Models와 FVP](https://learn.arm.com/install-guides/fm_fvp/), [Arm Fast Models User Guide](https://documentation-service.arm.com/static/5f48df7d6e73485d721ea02e)
+
+### 1.2 Arm Fast Models
+
+**Arm CPU·System IP의 SW-visible 동작을 제공하는 모델 라이브러리와 플랫폼 구성 도구**다.
+
+- **모델 범위:** 명령어, Register, Exception, Memory 접근 등 Programmer’s View.
+- **구성:** 필요한 CPU·IP 모델을 조합해 사용자 SoC의 Virtual Platform을 만든다. SystemC/TLM 환경과도 연계할 수 있다.
+- **용도:** 실제 보드가 나오기 전 Bootloader·Firmware·OS 개발, Debug와 기능 검증.
+- **시간 해석:** 기능 중심 모델이다. 실제 CPU pipeline·cache latency를 그대로 재현하는 Cycle-accurate RTL 모델로 해석하지 않는다.
+
+Fast Models는 **플랫폼을 만드는 구성 요소**, FVP는 그 구성 요소로 만든 **실행 가능한 플랫폼**이다. [Arm Fast Models](https://www.arm.com/products/development-tools/simulation/fast-models), [Arm Fast Models / FVP 안내](https://learn.arm.com/install-guides/fm_fvp/)
+
+### 1.3 Arm Fixed Virtual Platform — FVP
+
+**Fast Models를 사용해 CPU·Memory·Peripheral을 미리 조립한 시스템 모델**이다.
+
+- **제공 형태:** 정해진 시스템 구성을 실행하는 모델과 설정 Parameter.
+- **사용 방식:** Firmware·Kernel·Disk Image를 적재하고 UART·Debugger로 실행을 관찰한다.
+- **Fixed의 의미:** 사용자가 IP를 자유롭게 조립하는 모델 라이브러리와 달리, 제공된 Topology를 기반으로 사용한다. 지원 Parameter까지 모두 고정이라는 뜻은 아니다.
+- **Apollo 관계:** RD-Aspen FVP는 Arm Zena CSS의 참조 SW Stack과 Hardware Interface를 확인하는 비교 대상이다.
+
+FVP는 기능 정확성을 목표로 하는 Programmer’s-view Platform이다. FVP 실행 시간 자체를 Silicon 성능 측정값으로 사용하지 않는다. [Arm FVP](https://www.arm.com/products/development-tools/simulation/fixed-virtual-platforms)
+
+### 1.4 QEMU
+
+**CPU와 주변장치를 모델링하고 대상 바이너리를 실행하는 오픈소스 Emulator / Virtualizer**다.
+
+| 실행 방식 | 역할 |
+|---|---|
+| System Emulation | CPU·Memory·Device를 구성해 Firmware와 OS 전체를 실행 |
+| User-mode Emulation | 대상 ISA의 사용자 프로그램을 Host OS 위에서 실행 |
+| TCG | Guest 명령어를 Host 코드로 변환하여 실행; 다른 ISA 사이에서도 사용 |
+| KVM 등 Accelerator | 지원되는 Host·Guest 조합에서 Hardware Virtualization 활용 |
+
+Apollo QVP는 QEMU의 **System Emulation / TCG**를 활용한다. CPU 명령어·예외와 일부 Device는 QEMU가 처리하고, 외부 SystemC 모델과의 접근은 QBox가 연결한다. QEMU의 실행 결과가 RTL 내부 신호나 Silicon의 Cycle별 지연까지 재현하는 것은 아니다. [QEMU System Emulation](https://www.qemu.org/docs/master/system/introduction.html), [QEMU User-mode](https://www.qemu.org/docs/master/user/index.html), [TCG](https://www.qemu.org/docs/master/devel/tcg.html)
+
+### 1.5 QBox
+
+**QEMU를 SystemC/TLM-2.0 환경에 통합하는 Co-simulation Framework**다.
+
+- **QEMU:** CPU 명령어 실행, CPU 상태·Exception, QEMU Device 모델.
+- **QBox Bridge:** QEMU Memory 접근·IRQ·Reset을 SystemC Transaction·Signal에 연결.
+- **SystemC/TLM:** Router·Memory·Peripheral 모델의 상태와 Event 실행.
+- **Platform 구성:** Apollo는 Lua/CCI로 Instance·주소·Socket·IRQ·Reset 연결을 정의한다.
+
+관계는 **QEMU = 실행 엔진**, **QBox = 통합 Framework**, **Apollo QVP = 이를 사용해 구성한 플랫폼**이다. QBox 자체가 완성된 Apollo Machine이거나 모든 모델의 Cycle Accuracy를 보장하는 것은 아니다. [QBox 공식 저장소](https://github.com/qualcomm/qbox), [Apollo checkout의 QBox 구성](../../../hsoc-stack/tools/qbox/README.md)
+
+### 1.6 Synopsys Virtual Platform / Virtualizer
+
+**Virtual Platform은 가상 Hardware 시스템이며, Virtualizer는 이를 제작·배포·Debug하는 Synopsys 도구군**이다.
+
+| 구분 | 역할 |
+|---|---|
+| Virtual Platform / Virtual Prototype | CPU·Memory·Peripheral 모델을 연결한 실행 가능한 시스템 |
+| Virtualizer / Virtualizer Studio | 모델 작성·통합, SystemC/TLM-2.0 기반 플랫폼 구성, 분석·Debug |
+| VDK — Virtualizer Development Kit | 가상 플랫폼과 SW 개발·시험 도구를 묶은 배포 단위 |
+
+Firmware·Driver·OS를 실제 Hardware 이전에 개발하고 반복 시험하는 데 사용한다. 실행·시간의 추상화 수준은 선택한 모델과 구성에 따라 달라진다. Virtualizer라는 제품명만으로 Cycle Accuracy를 판단하지 않는다. [Synopsys Virtualizer](https://www.synopsys.com/verification/virtual-prototyping/virtualizer.html)
+
+**Apollo와의 관계:** QBox와 Virtualizer는 모두 시스템 모델을 통합해 SW를 실행하는 환경이지만, 제공 모델·통합 API·Debug 도구·라이선스가 다르다. 이 문서의 Apollo 구성은 QBox 기반이다.
+
+### 1.7 Synopsys ZeBu
+
+**SoC RTL을 전용 Hardware에서 실행하는 Hardware Emulation 시스템**이다.
+
+- **입력:** 합성 가능한 RTL과 Clock·Reset·Memory·Interface 구성.
+- **실행:** RTL을 Emulator용으로 Compile·Mapping하고, Testbench·Host 또는 외부 환경과 연결한다.
+- **용도:** RTL 기능 검증, 긴 SW Workload를 이용한 HW/SW 통합, Boot·Driver·System 검증.
+- **시간 해석:** 모델링한 RTL의 Clock·Cycle 관계를 다룬다. Emulator의 실행 속도와 실제 Chip 주파수는 다르며 Analog·물리 Timing Sign-off를 대신하지 않는다.
+
+QEMU가 명령어·Device 동작을 SW 모델로 재현하는 것과 달리, ZeBu의 검증 대상은 **Emulator에 적재한 RTL 설계**다. [Synopsys ZeBu](https://www.synopsys.com/verification/emulation-prototyping/emulation/zebu-ep.html), [RTL과 Virtual Prototype의 Hybrid 구성 사례](https://www.synopsys.com/content/dam/synopsys/company/publications/advanced-verification-bulletin/advanced-verification-bulletin-issue2.pdf)
+
+**Hybrid Emulation:** Virtualizer의 CPU·시스템 모델과 ZeBu의 RTL Subsystem을 연결할 수 있다. 빠른 SW 실행과 RTL 검증을 분담하는 방식이며, 모든 Block이 동일한 추상화 수준으로 실행되는 것은 아니다. [Virtualizer Hybrid Emulation](https://www.synopsys.com/verification/virtual-prototyping/virtualizer.html)
+
+### 1.8 기술별 역할 비교
+
+| 기술 | 분류 / 구성 단위 | 주 실행 기반 | 주요 목적 |
+|---|---|---|---|
+| Arm Fast Models | Arm IP 모델·구성 도구 | Host에서 실행하는 Programmer’s-view 모델 | 사용자 SoC 모델 구성, 초기 SW 개발 |
+| Arm FVP | 사전 구성 Virtual Platform | Fast Models | 참조 Platform의 Firmware·OS 실행 |
+| QEMU | Emulator / Virtualizer | TCG 또는 지원 Accelerator | ISA·Device 모델 기반 Guest 실행 |
+| QBox | Co-simulation Framework | QEMU + SystemC/TLM | CPU와 사용자 시스템 모델 통합 |
+| Virtualizer / VDK | 상용 제작 도구 / 배포 Platform | Processor·Peripheral 모델, SystemC/TLM 등 | 초기 SW 개발·Debug·회귀 시험 |
+| ZeBu | Hardware Emulator | Compile·Mapping한 RTL | RTL 및 HW/SW 통합 검증 |
+
+**Apollo QVP의 위치:** QEMU가 CPU를 실행하고 QBox가 SystemC 모델을 연결한다. FVP와는 Firmware가 관측하는 기능 계약을 비교하며, RTL 기반 검증과 Silicon Timing 검증은 각각 다른 단계로 구분한다.
 
 ## 2. Arm Zena CSS FVP와 Apollo QVP
 
@@ -62,6 +150,8 @@ Arm 참조의 [Components](../../../arm-zena-css/documentation/design/components
 
 ![QBox와 libqemu의 내부 구조](diagrams/03-qbox-core.drawio.svg)
 
+Host 진입 순서는 `sc_main → ArgParser → GreenSocsPlatform("platform") → sc_start()`다. SystemC kernel은 event와 `run_on_sysc` 작업을 처리한다.
+
 | 계층 | 핵심 책임 | 소유 소스 |
 |---|---|---|
 | QBox 실행기 | `sc_main`, Lua/CLI 해석, CCI, model 생성, `sc_start()` | `qbox/platforms/`, `qbox/systemc-components/common/` |
@@ -76,7 +166,121 @@ QemuInstance는 기본적으로 **`-M none -m 0`**으로 초기화한다. 완성
 
 여러 QemuInstance는 한 `platforms-vp` process 안에서 독립된 QEMU 상태를 갖는다. 현재 Linux loader는 같은 library의 추가 instance에 임시 `.so` 사본과 `dlopen(RTLD_LOCAL)`을 사용한다. **instance 수와 OS process 수를 혼동하면 실행 구조를 잘못 읽게 된다.** [소스 S2](SOURCES.md#s2)
 
-### 3.2 MMIO와 DMI
+### 3.2 QBox Core Components
+
+QBox의 공통 구성은 **플랫폼 생성 → QEMU 통합 → 모델 연결 → 실행·시간 동기화**로 나뉜다. 아래 라이브러리 이름은 기능 계층을 나타내며, 각각이 별도 Process라는 뜻은 아니다.
+
+#### 3.2.1 플랫폼 생성과 실행 기반
+
+| Component | 역할 | 주요 입력 / 연결 |
+|---|---|---|
+| `platforms-vp` | 플랫폼 실행기. CLI·Lua 설정을 읽고 모듈을 생성한 뒤 SystemC 실행 시작 | `-l` Lua, `-p` CCI preset, `sc_start()` |
+| `ConfigurableBroker` / CCI | 모듈별 Parameter와 preset을 관리. CPU 옵션·주소·Socket 연결 설정 전달 | `platform.*` Parameter 경로 |
+| `ModuleFactory` / Container | `moduletype`에 대응하는 Constructor를 찾고 의존성에 따라 모듈 생성·연결. 필요 시 모델 Library 로드 | `moduletype`, `args`, `socket.bind` |
+| `libgsutils` | CCI 접근, 설정 해석, 공통 Port·Socket 등 모델 작성 기반 제공 | CCI helper, Signal / Biflow Socket |
+| SystemC kernel / TLM-2.0 | Process·Event·Simulation Time을 관리하고 모델 간 Transaction 인터페이스 제공 | `SC_THREAD`, `SC_METHOD`, TLM Socket |
+
+SystemC/TLM은 QBox가 사용하는 실행 기반이다. **CCI는 설정 전달**, **TLM은 실행 중 메모리 Transaction 전달**을 담당한다. [구성 API](../../../hsoc-stack/tools/qbox/docs/configuration.md), [공통 Utilities](../../../hsoc-stack/tools/qbox/docs/libgsutils.md)
+
+#### 3.2.2 QEMU 통합과 동기화
+
+| Component | 역할 | 연결 대상 |
+|---|---|---|
+| `libqemu-cxx` | libqemu를 로드하고 QEMU Object·Device·CPU·Memory·Timer API를 C++로 제공 | QEMU export / callback API |
+| `libqbox` | QEMU 객체를 SystemC Module로 감싸고 TLM·IRQ·Reset 연결 제공 | QEMU ↔ SystemC |
+| `QemuInstanceManager` | 생성한 QEMU Instance의 수명 관리 | 하나 이상의 `QemuInstance` |
+| `QemuInstance` | 독립된 QEMU 상태와 CPU·Device 집합 관리. Accelerator·TCG·시간 정책 설정 | libqemu, CPU / Device Wrapper |
+| CPU / Device Wrapper | QOM 객체 생성·속성 설정·realize 수행. CPU 메모리 접근과 Device MMIO·IRQ를 외부로 노출 | `QemuCpu`, `QemuDevice`, 개별 CPU·IP Wrapper |
+| `QemuInitiatorSocket` | QEMU가 시작한 CPU·DMA 접근을 TLM Transaction으로 변환. DMI 매핑 처리 | QEMU MemoryRegion → SystemC Target |
+| `QemuTargetSocket` | SystemC에서 들어온 접근을 QEMU Device의 주소 공간으로 전달 | SystemC Initiator → QEMU Device |
+| QEMU Signal Socket | QEMU GPIO와 SystemC Signal 연결. IRQ·Reset 등 제어 신호 전달 | QEMU GPIO ↔ SystemC Signal |
+| `libgssync` / Quantum Keeper | 외부 QEMU Thread와 SystemC 사이의 시간 진행·동기화 정책 제공 | QEMU virtual time, SystemC time |
+| `run_on_sysc()` / 작업 Queue | QEMU 측 요청을 SystemC 실행 문맥으로 전달하고 완료를 기다리는 경로 제공 | QEMU Thread → SystemC Kernel Thread |
+
+**Memory 접근은 Socket, IRQ·Reset은 Signal, 시간 진행은 동기화 정책**이 담당한다. Apollo의 기본 시간 정책은 6.2절에 정리한다. [QEMU 통합](../../../hsoc-stack/tools/qbox/docs/libqbox.md), [C++ Wrapper](../../../hsoc-stack/tools/qbox/docs/libqemu-cxx.md), [동기화](../../../hsoc-stack/tools/qbox/docs/libgssync.md)
+
+#### 3.2.3 기본 SystemC Components
+
+| Component | 역할 | 플랫폼에서의 사용 |
+|---|---|---|
+| `router` | 주소 범위에 따라 TLM 접근을 Target으로 전달 | CPU·DMA와 RAM·MMIO 연결 |
+| `gs_memory` | 메모리 저장 공간과 TLM 접근 제공. 허용 시 DMI Pointer 제공 | RAM·ROM 영역, 파일 기반 Memory |
+| `loader` | ELF·Binary 등의 내용을 지정된 메모리 경로로 적재 | Firmware·초기 데이터 적재; `gs_memory` 내부 Loader도 제공 |
+| `exclusive_monitor` | Exclusive 접근 상태를 추적하고 성공 여부 처리 | 해당 모델을 사용하는 TLM 경로의 Exclusive Access 지원 |
+| `memory_dumper` | 모델 메모리를 파일로 저장 | 메모리 상태 확인 |
+| Character Backend | UART 등의 양방향 Byte Stream을 Host I/O와 연결 | `char_backend_stdio`, `char_backend_socket`, `char_backend_file` |
+| Monitor | Simulation과 등록된 모델의 상태를 조회·관찰 | 실행 중 진단 |
+
+이들은 재사용 가능한 기반 모델이다. Apollo 고유 MHU·PPU·ATU 및 SoC 배선은 `qbox-platform/`에서 확장하며, 실제 선택되는 Device 모델은 5장에서 구분한다. [기본 Components](../../../hsoc-stack/tools/qbox/docs/base-components.md), [Character Backend](../../../hsoc-stack/tools/qbox/docs/backends.md), [Monitor](../../../hsoc-stack/tools/qbox/docs/monitor.md)
+
+### 3.3 QOM — QEMU Object Model
+
+**QOM은 QEMU의 CPU·Device 등 객체를 등록·생성·설정하는 C 기반 Object Framework**다. QBox는 QOM 객체를 SystemC Wrapper 안에 생성해 TLM·Signal과 연결한다.
+
+#### 3.3.1 Type, Class, Object와 Property
+
+![Apollo AP I2S의 QOM Type·QOM Tree·qdev 관계](diagrams/03a-qom.drawio.svg)
+
+Apollo full-system의 **`platform.ap_dw_i2s_0`·`platform.ap_dw_i2s_1`**을 예로 든다. `audio.connect()`는 두 장치를 `qemu_dw_apb_i2s` Wrapper로 구성하고 같은 `platform.ap_qemu_inst`에 연결한다.
+
+- **왼쪽 — Type 상속:** `dw-apb-i2s → sys-bus-device → device → object`. qdev의 장치 기능을 상속한 QOM Type이다.
+- **가운데 위 — 객체 소유:** 두 I2S QOM 객체는 해당 libqemu의 Root 아래 Child로 생성된다. `peer`는 상대 I2S를 참조하는 Link Property이며 Parent–Child 관계가 아니다.
+- **가운데 아래 — Wrapper:** `ap_dw_i2s_0`·`ap_dw_i2s_1`은 SystemC 객체다. 각 Wrapper의 `m_dev`가 해당 QOM 객체를 참조한다.
+- **오른쪽 — I2S0 초기화:** QOM 객체 생성 → `master-mode=true`·`peer` 설정 → Realize → MMIO Socket·IRQ 연결 순서다. I2S1의 `master-mode`는 false다.
+
+| 구분 | I2S0 | I2S1 |
+|---|---|---|
+| SystemC 경로 | `platform.ap_dw_i2s_0` | `platform.ap_dw_i2s_1` |
+| Wrapper Class / Lua moduletype | `qemu_dw_apb_i2s` | `qemu_dw_apb_i2s` |
+| QEMU Instance | `platform.ap_qemu_inst` | `platform.ap_qemu_inst` |
+| QOM Type | `dw-apb-i2s` | `dw-apb-i2s` |
+| QOM 경로 형식 | `/qbox-dw-apb-i2s[i]` | `/qbox-dw-apb-i2s[j]` |
+| `peer` Link | I2S1 QOM 객체 | I2S0 QOM 객체 |
+
+`libqemu-cxx`는 `qbox-<Type 이름 앞 10자>[*]` 형식으로 Root에 Child를 추가하고 QOM이 사용 가능한 인덱스를 할당한다. **`i`·`j`는 생성 순서에 따라 정해지는 인덱스**다. SystemC 이름의 `_0`·`_1`이 QOM 인덱스에 그대로 대응한다고 가정하지 않는다. 그림은 실제 소스의 구성 관계를 표현하며 실행 중 Tree를 캡처한 것은 아니다.
+
+[AP I2S 구성](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/vp/backends/audio.lua), [I2S Wrapper](../../../hsoc-stack/tools/qbox-platform/qemu-components/qemu_dw_apb_i2s/include/qemu_dw_apb_i2s.h), [QEMU I2S Type](../../../hsoc-stack/tools/qemu/hw/audio/dw-apb-i2s.c), [QOM Child 생성](../../../hsoc-stack/tools/qbox/qemu-components/common/src/libqemu-cxx/libqemu-cxx.cc)
+
+| 요소 | 역할 |
+|---|---|
+| `TypeInfo` | Type 이름, 부모 Type, Class·Instance 크기와 초기화 함수를 정의 |
+| `ObjectClass` | Type별 공통 동작을 정의. Virtual Method에 해당하는 함수 포인터 등을 보관 |
+| `Object` | 생성된 개별 Instance. 각 CPU·Device의 상태 보관 |
+| Property | 객체의 설정·상태를 이름으로 노출. 정수·문자열·Boolean 및 다른 객체에 대한 Link 등 지원 |
+| QOM Tree | 객체의 Parent–Child 소유 관계를 표현하는 Composition Tree |
+| `DeviceState` / `DeviceClass` | QOM 위에 장치 Lifecycle을 추가한 qdev 기반. `realize`·`unrealize` 등 제공 |
+
+QOM은 **단일 Type 상속과 여러 Stateless Interface 구현**을 지원한다. Type 상속 관계와 QOM Tree의 객체 소유 관계는 별개다. QOM Tree 자체가 MMIO Address Map이나 IRQ 배선을 정의하는 것은 아니다.
+
+#### 3.3.2 QBox에서의 객체 생성 순서
+
+일반 `QemuDevice` Wrapper의 생성 흐름은 다음과 같다.
+
+| 순서 | 단계 | 수행 내용 |
+|---|---|---|
+| 1 | QEMU Type 등록 | QEMU 초기화 과정에서 `TypeInfo`를 등록해 생성 가능한 Type 준비 |
+| 2 | SystemC Wrapper 생성 | ModuleFactory가 Lua의 `moduletype`에 해당하는 Wrapper 생성. 대상 `QemuInstance`와 QOM Type 지정 |
+| 3 | QOM Instance 생성 | `before_end_of_elaboration()`에서 `instantiate()` → `object_new()` 호출 |
+| 4 | Property 설정 | Wrapper가 CPU·Device 설정을 QOM Property에 반영 |
+| 5 | Device Realize | `end_of_elaboration()`에서 `realized=true` 설정. Device별 초기화·설정 검증 수행 |
+| 6 | 외부 연결·실행 | Wrapper별 순서에 따라 MMIO·GPIO를 TLM·Signal에 연결하고 Simulation 실행 |
+
+**Object 생성과 Device Realize는 다른 단계**다. 생성은 객체와 기본 상태를 준비하고, Realize는 설정을 바탕으로 장치를 사용할 수 있도록 초기화한다. 일반적인 장치 설정 Property는 Realize 전에 지정한다. Realize 자체가 Guest CPU의 부팅 시작을 뜻하지는 않는다.
+
+#### 3.3.3 ModuleFactory·CCI·QOM의 관계
+
+| 계층 | 생성 / 설정 대상 | 담당 범위 |
+|---|---|---|
+| ModuleFactory | SystemC Module / QBox Wrapper | Lua descriptor에 따른 모듈 생성과 Socket 연결 |
+| CCI | SystemC Module의 Parameter | 플랫폼 설정값 전달 |
+| QOM / qdev | libqemu 내부 CPU·Device 객체 | QEMU Type·Property·Device Lifecycle |
+| QBox Wrapper | SystemC Module과 QOM 객체 사이 | 필요한 CCI 값을 QOM Property에 반영하고 Memory·IRQ·Reset 연결 |
+
+Lua의 **`moduletype`는 QBox Constructor 이름**, **QOM Type은 QEMU 내부 객체 Type 이름**이다. 두 이름과 객체 경로가 반드시 같지는 않으며, CCI Parameter가 모두 QOM Property로 자동 변환되는 것도 아니다. `router`·`gs_memory` 같은 순수 SystemC 모델은 QOM 객체 없이 동작한다.
+
+[QEMU QOM 설계](../../../hsoc-stack/tools/qemu/docs/devel/qom.rst), [QBox QemuDevice Lifecycle](../../../hsoc-stack/tools/qbox/qemu-components/common/include/device.h)
+
+### 3.4 MMIO와 DMI
 
 ![MMIO sequence와 DMI 경로](diagrams/04-mmio-dmi.drawio.svg)
 
@@ -99,6 +303,181 @@ CPU callback의 최대 access size는 8 byte다. **모든 transaction이 1 byte 
 `gs_memory`는 DMI를 직접 제공하고 router·ATU·SMMU 경로는 범위와 권한을 제한한다. Flash는 read-array 상태와 허용 구간 등 조건이 붙는다. 변환·상태가 바뀌면 **DMI invalidation → CPU alias 제거 → TLB flush**가 필요하다. read-only DMI의 write는 원래 접근 경로로 돌아간다.
 
 현재 DMI 질의는 일반 `run_on_sysc` queue와 다른 직접 호출 경로다. Exclusive/reentrant 접근도 별도 분기가 있다. **DMI 지원, effective enable, 실제 hit rate를 구분**해야 하며 CPU invalidation 설명을 모든 DMA initiator로 확대하지 않는다. [소스 S3](SOURCES.md#s3)
+
+#### Apollo 예: AP vCPU → 두 Router → SystemC MHU
+
+![AP Mailbox MMIO의 Hardware View와 QBox View 비교](diagrams/04a-mmio-hardware-qbox.drawio.svg)
+
+왼쪽은 CPU–Bus–MHU의 하드웨어 기능 경로를 단순화한 그림이고, 오른쪽은 같은 접근을 처리하는 QBox 객체 구성이다. 점선은 기능 대응 관계이며 실제 연결선이 아니다. QEMU Instance와 SystemC 영역을 나누고, Bridge에서 TLM 실행 문맥으로 전환되는 위치를 표시했다.
+
+AP가 SI CL0에 알림을 보내는 **PFDI Mailbox의 PBX Register 접근**은 `ap_router`와 `system_router`를 모두 거친다. AP CPU를 활성화한 구성에서의 배선이며, 도착 모델은 순수 SystemC `mhu320ae`다.
+
+**경로:** `ap_cpu_N.mem → ap_router → ap_to_system_pfdi_monitor_mhu_bridge → system_router → host_ap_si_pfdi_monitor_mhu_pbx.target_socket`
+
+예를 들어 PBX Channel 0의 `DBCW_SET`에 32-bit Write를 수행하면 주소는 다음과 같이 전달된다.
+
+| 순서 | 구성 요소 | 전달 주소 | 처리 |
+|---|---|---|---|
+| 1 | AP vCPU / QBox Initiator | `0x4011100C` | Guest MMIO를 Write Payload로 변환하고 `run_on_sysc()`로 전달 |
+| 2 | `ap_router` | `0x4011100C` | AP Window `0x40110000`, 크기 `0x30000`에 해당하는 Bridge 선택 |
+| 3 | `ap_to_system_pfdi_monitor_mhu_bridge` (`addrtr`) | `0x400003B38100C` | AP View 주소를 System Fabric 주소로 변환 |
+| 4 | `system_router` | `0x100C` | PBX Base `0x400003B380000`을 Decode하고 Base를 뺀 Register Offset 전달 |
+| 5 | `host_ap_si_pfdi_monitor_mhu_pbx` (`mhu320ae`) | `DBCW_SET`, Channel 0 | Write Data를 Register 동작에 적용하고 연결된 Mailbox의 Doorbell 상태·IRQ 갱신 |
+
+주소 변환식은 **`System 주소 = 0x400003B380000 + (AP 주소 − 0x40110000)`**이다. `ap_router`의 Bridge Window는 `relative_addresses=false`이므로 AP 주소를 그대로 `addrtr`에 넘긴다. 반면 PBX Target은 Router의 기본 상대 주소 모드를 사용해 `0x100C`를 받는다.
+
+- **`ap_router`:** AP가 보는 주소 공간에서 목적지를 선택한다.
+- **`addrtr`:** AP View와 System Fabric 사이의 주소 차이를 변환한다.
+- **`system_router`:** 변환된 주소에서 실제 SystemC Component를 선택한다.
+- **응답:** 각 호출이 반환되며 주소를 복원하고 Response Status를 QEMU에 돌려준다. Read라면 Data도 같은 경로로 반환한다.
+
+Router마다 새로운 QEMU Thread나 SystemC 작업을 생성하는 구조는 아니다. 일반 MMIO에서는 Bridge가 SystemC 문맥으로 넘긴 뒤 **Router → Address Translator → Router → Target의 `b_transport()` 호출이 이어진다**. Mailbox IRQ 전달은 MMIO 응답과 별도 경로다. 이 예의 Doorbell Register는 Side Effect가 있으므로 RAM용 DMI Fast Path로 설명하지 않는다.
+
+모든 AP MMIO가 이 경로를 쓰는 것은 아니다. 5.2절의 AP I2C0처럼 `ap_router`에 직접 연결된 장치도 있다. Router 계층은 주소 View와 모델 배선을 표현하며 물리 Interconnect의 Hop별 지연을 자동 재현하지 않는다.
+
+[AP Router·주소 변환 배선](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/interconnect.lua), [PFDI MHU Target 배선](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/system_mgmt/ap_si_mailbox.lua), [Router 주소 처리](../../../hsoc-stack/tools/qbox/systemc-components/router/include/router.h), [Address Translator](../../../hsoc-stack/tools/qbox/systemc-components/addrtr/include/addrtr.h)
+
+### 3.5 QemuInstance 실행 모드와 Quantum
+
+QemuInstance의 실행 설정은 **Thread 구성**, **시간 계산 방식**, **동기화 정책**, **Quantum 크기**로 나뉜다. 각 설정은 서로 다른 역할을 갖는다.
+
+#### 3.5.1 설정 항목과 적용 범위
+
+| 설정 | 적용 범위 | 역할 | QBox Core 기본값 |
+|---|---|---|---|
+| `accel` | QemuInstance | CPU 실행 Accelerator 선택 | Apollo는 `tcg` 사용 |
+| `tcg_mode` | QemuInstance | TCG의 CPU 실행 Thread 구성 | `MULTI` |
+| `time_sync_strategy` | QemuInstance | CPU 실행 시간을 SystemC와 연결하는 방식 | `quantum_keeper` |
+| `sync_policy` | Quantum Keeper | 실행 허용 시간과 동기화 대기 방식 | `multithread-quantum` |
+| `quantum_ns` | `platforms-vp` 실행기 / Global Quantum | 동기화 기준 시간 간격, 단위 ns | `1000000` = 1 ms |
+| `insn_per_second` | CPU, MCIPS 사용 시 | 명령 수를 모델 시간으로 환산하는 실행률 | CPU별 설정 |
+
+`quantum_ns`는 QemuInstance마다 독립적으로 지정하는 CPU Timeslice가 아니라 **SystemC/TLM의 Global Quantum 설정**이다. OS Scheduler Tick, Generic Timer 주기, Host의 실제 경과 시간과도 별개다.
+
+#### 3.5.2 TCG Mode — CPU 실행 구조
+
+| Mode | CPU 실행 구조 | Quantum Keeper 구성 |
+|---|---|---|
+| `SINGLE` | Instance의 vCPU를 하나의 QEMU CPU Thread에서 순환 실행 | Instance 내 CPU들이 첫 Quantum Keeper 공유 |
+| `MULTI` | vCPU별 Host Thread에서 병렬 실행 | CPU별 Quantum Keeper 생성 |
+| `COROUTINE` | QBox의 Coroutine 실행 경로로 SystemC Thread와 협력 실행 | SystemC Thread형 Quantum Keeper 사용; `tlm2`와 조합 |
+
+위 Quantum Keeper 구성은 `time_sync_strategy=quantum_keeper` 경로에 해당한다. QEMU I/O Thread는 CPU 실행 Thread와 별개다. `MULTI`는 Host 병렬 실행을 제공하지만 CPU 간 동일한 진행 시간이나 실행 순서 재현성을 보장하지 않는다.
+
+현재 구현에서 **`tlm2`는 `COROUTINE`과 조합**하며, OS Thread형 정책과 `COROUTINE`의 조합은 거부한다. `MULTI`와 QEMU `icount`의 동시 사용도 거부한다. QBox의 `mcips`와 QEMU `icount`는 별도 기능이다.
+
+#### 3.5.3 Time Sync Strategy — 시간 계산 방식
+
+| Strategy | 동작 | 주요 설정 |
+|---|---|---|
+| `quantum_keeper` | QEMU Virtual Clock와 SystemC Time의 차이를 Local Time에 반영. CPU callback과 deadline timer에서 동기화 처리 | `sync_policy`, Global Quantum |
+| `mcips` | TCG Plugin이 실행 명령 수를 계수하고 `insn_per_second`로 시간 환산. CPU 진행과 Idle 시 시간 진행을 Plugin이 관리 | CPU별 실행률, Plugin의 동기화 Window |
+
+`quantum_keeper`의 Local Time은 개념적으로 **`max(QEMU Virtual Time − SystemC Time, 0)`**이다. Global Quantum은 CPU deadline timer의 재설정 간격에도 사용된다.
+
+`mcips`는 CPU의 일반 Quantum Keeper를 실행하지 않는 별도 경로다. 따라서 `sync_policy`만 보고 MCIPS의 대기 동작을 판단하면 안 된다. 명령 수 기반 시간은 설정한 실행률에 따른 모델이며 실제 CPU의 Pipeline·Cache 지연을 계산하는 Cycle-accurate 모델은 아니다.
+
+#### 3.5.4 Sync Policy — 실행 Budget과 대기
+
+아래에서 `Tsc`는 SystemC Time, `Tcpu`는 Quantum Keeper가 추적하는 CPU 진행 시간, `Q`는 Global Quantum이다. Budget은 외부 CPU Thread가 추가로 진행할 수 있는 모델 시간이다.
+
+| Policy | 소스에 구현된 기준 | 동작 요약 |
+|---|---|---|
+| `tlm2` | 표준 TLM Local Time / Quantum | SystemC Thread에서 시간만큼 `wait()`하는 협력 실행 |
+| `multithread` | Budget = `max(Tsc + 2Q − Tcpu, 0)` | 외부 Thread가 Budget 소진 시 SystemC 진행을 기다림 |
+| `multithread-quantum` | Budget = `max(Tsc + Q − Tcpu, 0)` | 한 Quantum 기준으로 실행 Budget 제한 |
+| `multithread-adaptive` | 진행 차이에 따라 Budget을 `2Q`, `Q`, `Q/2`, `0`으로 선택 | CPU와 SystemC 시간 차이에 따라 Budget 조절 |
+| `multithread-rolling` | Quantum 경계와 다음 SystemC Event를 함께 고려 | Pending Event 시점에 맞춰 Budget 축소 |
+| `multithread-unconstrained` | Budget은 항상 `Q`, `need_sync()`는 false | Quantum 소진에 따른 외부 Thread 대기를 적용하지 않음 |
+| `multithread-freerunning` | `need_sync()`는 false; 외부 `sync()`는 Tick Notify만 수행 | SystemC를 깨우고 외부 CPU Thread는 Budget을 기다리지 않음 |
+
+Budget 제한 정책의 기본 흐름은 다음과 같다.
+
+1. CPU 실행·메모리 접근 과정에서 진행 시간을 Quantum Keeper에 반영한다.
+2. 동기화가 필요하면 CPU 실행 Loop에서 빠져나와 `sync()`를 수행한다.
+3. 외부 CPU Thread는 Budget이 0인 동안 기다리고, SystemC가 Event·작업을 처리하며 진행한다.
+4. Budget이 생기면 CPU 실행을 재개한다.
+
+이는 **정책이 동기화 지점에서 적용하는 기준**이다. 표의 `Q`·`2Q`를 실제 IRQ Latency나 모든 CPU 간 시간차의 측정 상한으로 해석하지 않는다. `freerunning`에서도 MMIO 작업 완료 대기와 QEMU Lock은 유지된다.
+
+#### 3.5.5 Apollo 기본 설정과 해석
+
+| 대상 | TCG Mode | Sync Policy | Time Sync Strategy |
+|---|---|---|---|
+| AP | `MULTI` | `multithread-freerunning` | `quantum_keeper` |
+| SI CL0 | `MULTI` | `multithread-freerunning` | `quantum_keeper` |
+| SI CL1 | `MULTI` | `multithread-freerunning` | `quantum_keeper` |
+| RSE | `SINGLE` | `multithread-freerunning` | `quantum_keeper` |
+
+Apollo VP의 Global Quantum 기본값은 **`10000000 ns` = 10 ms**다. Domain별 `vp/*/qemu.lua`가 실행 정책을 지정하며 환경변수로 변경할 수 있다. QBox Core의 기본 정책·1 ms 값과 구분한다.
+
+- **10 ms의 의미:** 동기화 관련 기준 간격. CPU가 Host에서 정확히 10 ms씩 실행된다는 뜻은 아니다.
+- **Quantum 축소:** Budget 제한 정책에서는 앞서 실행할 수 있는 시간을 줄이지만 동기화 비용이 늘 수 있다. IRQ 정확도가 자동 보장되지는 않는다.
+- **Freerunning:** Quantum을 줄여도 Budget 대기 정책으로 바뀌지 않는다.
+- **설정 변경 비교:** 부팅 진행, Timer·IRQ 전달, Domain 간 통신, Host 실행 시간과 모델 시간의 진행률을 함께 확인한다.
+
+[QemuInstance 설정·조합](../../../hsoc-stack/tools/qbox/qemu-components/common/include/qemu-instance.h), [CPU 시간 동기화](../../../hsoc-stack/tools/qbox/qemu-components/common/include/cpu.h), [Sync Policy 구현](../../../hsoc-stack/tools/qbox/systemc-components/common/src/libgssync/qk_factory.cc), [Apollo Quantum 설정](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/vp/qvp.lua)
+
+### 3.6 CCI와 TLM / TLM-2.0
+
+**CCI는 모델의 설정·조회 인터페이스**, **TLM은 모델 간 통신을 Transaction으로 표현하는 방법**, **TLM-2.0은 그 통신 인터페이스와 규칙을 정의한 표준**이다.
+
+#### 3.6.1 CCI — Configuration, Control and Inspection
+
+CCI는 SystemC 모델과 도구가 이름·타입을 갖는 Parameter를 통해 설정 정보를 교환하도록 한다. QBox는 이를 Lua·CLI 설정과 모듈 생성에 사용한다. [Accellera CCI](https://www.accellera.org/activities/working-groups/systemc-cci)
+
+| 구성 | 역할 | QBox 예 |
+|---|---|---|
+| Parameter | 모델이 노출하는 타입 지정 설정값 | `tcg_mode`, `sync_policy`, `read_only` |
+| Broker | Parameter와 생성 전 Preset을 관리하고 접근 중개 | `gs::ConfigurableBroker` |
+| Preset | Parameter 생성 전에 준비하는 초기 설정 | Lua 값, CLI `-p` 설정 |
+| Parameter Handle | 이름으로 Parameter를 찾아 조회·변경 | 도구·모듈의 설정 접근 |
+| Callback / Lock | 값 접근·변경 처리와 변경 제한 | QemuInstance의 실행 모드 설정 잠금 |
+
+QBox의 설정 흐름은 **Lua / CLI → CCI Preset → ModuleFactory → Module의 Parameter**다. `moduletype`, `args`, `bind`를 해석해 객체를 생성·연결하는 것은 QBox의 기능이며 CCI 표준 자체의 플랫폼 생성 기능은 아니다.
+
+CCI 값의 변경 가능 여부는 모델의 Lock·Callback·Lifecycle에 달려 있다. 실행 중 Parameter를 변경한다고 이미 생성된 CPU나 주소 배선이 자동 재구성되지는 않는다. [QBox Configuration](../../../hsoc-stack/tools/qbox/docs/configuration.md)
+
+#### 3.6.2 TLM과 TLM-2.0
+
+TLM(Transaction-Level Modeling)은 개별 Bus Pin의 매 Cycle 변화 대신 **주소·데이터·명령을 담은 요청과 응답**으로 통신을 표현한다. 예를 들어 CPU의 Register Read를 하나의 Transaction으로 Device 모델에 전달한다.
+
+| 구분 | 의미 |
+|---|---|
+| TLM | Transaction 단위로 통신을 모델링하는 추상화 방법 |
+| TLM-2.0 | Socket, Payload, Transport, DMI, Debug 등 모델 간 상호운용 규칙 |
+| Loosely Timed — LT | 주요 동작 지점과 지연 중심의 모델링. 일반적으로 Blocking Transport 사용 |
+| Approximately Timed — AT | 요청·응답의 Phase와 Timing을 더 세분화. 일반적으로 Non-blocking Transport 사용 |
+
+TLM-2.0 사용만으로 AXI Handshake·Arbitration·Cache Coherency나 Cycle Accuracy가 구현되는 것은 아니다. 해당 동작은 각 모델이 별도로 표현해야 한다. [TLM-2.0 LRM](https://www.accellera.org/images/downloads/standards/systemc/TLM_2_0_LRM.pdf)
+
+#### 3.6.3 TLM-2.0의 주요 구성
+
+| 구성 / API | 역할 |
+|---|---|
+| Initiator / Target Socket | 요청을 시작하는 모델과 처리하는 모델 연결 |
+| `tlm_generic_payload` | Command, Address, Data Pointer·Length, Byte Enable, Streaming Width, Response Status 전달 |
+| Payload Extension | 공통 Payload에 없는 추가 문맥 전달. QBox에서는 보안 속성·Requester 정보 등에 사용 |
+| `b_transport(payload, delay)` | 요청·응답을 하나의 호출로 처리하는 Blocking Transport. 지연을 전달하거나 SystemC `wait()` 사용 |
+| `nb_transport_fw/bw` | 요청·응답을 Phase로 분리하는 Non-blocking Transport. 호출 안에서 `wait()`하지 않음 |
+| `get_direct_mem_ptr()` | 허용 주소·권한·지연과 Host Memory Pointer를 받아 직접 접근하는 DMI 경로 |
+| `invalidate_direct_mem_ptr()` | 기존 DMI 구간이 더 이상 유효하지 않음을 Initiator에 통보 |
+| `transport_dbg()` | Simulation Time을 진행시키지 않는 Debug 접근 인터페이스 |
+
+`delay`는 **모델 시간의 지연 정보**이며 Host Thread의 실제 Sleep 시간이 아니다. Quantum Keeper는 이 지연을 Local Time으로 누적해 동기화할 때 사용한다. 각 인터페이스의 표준 계약은 [TLM-2.0 LRM](https://www.accellera.org/images/downloads/standards/systemc/TLM_2_0_LRM.pdf)에 정의되어 있다.
+
+#### 3.6.4 QBox에서 CCI와 TLM이 만나는 지점
+
+| 단계 | 사용 인터페이스 | 예 |
+|---|---|---|
+| 플랫폼 구성 | Lua / CCI / ModuleFactory | Router에 MMIO 주소·크기를 지정하고 Socket Bind |
+| Guest 실행 | QEMU Bridge / TLM | CPU Load·Store → Payload → Router → Device |
+| 응답·시간 반영 | TLM Response / Delay | Read Data·성공 여부 반환, Local Time 반영 |
+| IRQ·Reset | QBox Signal Socket | Device 신호를 CPU·Interrupt Controller와 연결 |
+
+QBox의 일반 MMIO는 `b_transport`, 허용된 Memory 접근은 DMI를 사용한다. 현재 QEMU Bridge의 `nb_transport_fw/bw`는 미구현이므로 AT 경로로 사용할 수 없다. 또한 일부 Target의 `transport_dbg()`는 `b_transport()`를 재사용하므로 MMIO Side Effect 유무를 모델별로 확인해야 한다. 구체적인 접근 Flow는 **3.4절**, 시간 동기화는 **3.5절**에서 설명한다.
+
+[QBox Initiator Bridge](../../../hsoc-stack/tools/qbox/qemu-components/common/include/ports/initiator.h), [QBox Target Bridge](../../../hsoc-stack/tools/qbox/qemu-components/common/include/ports/target.h)
 
 ## 4. Apollo QVP Platform Lua
 
@@ -162,6 +541,8 @@ Backend 이름도 구현 클래스와 다를 수 있다. `systemc-mmu720ae`는 �
 
 ![AP I2C0의 주소 bus IRQ reset 경로](diagrams/11-i2c-path.drawio.svg)
 
+AP cold reset은 I2C reset의 ACK를 처리한 뒤 AP를 release한다. Reset 연결은 `soc/hw-block/fabric/reset.lua`, 외부 slave 연결은 `board/saturn-v.lua`가 담당한다.
+
 AP I2C0의 최종 경로는 **`ap_cpu_N.mem → ap_router → ap_dw_i2c_0.target_socket`**이다. SoC가 controller·주소·IRQ를 정의하고, Board가 I2C slave를 연결한다.
 
 - MMIO: `0x30100000`, 크기 `0x10000`; 모델 `dw_apb_i2c`, library `dw-apb-i2c`.
@@ -193,7 +574,13 @@ AP I2C0의 최종 경로는 **`ap_cpu_N.mem → ap_router → ap_dw_i2c_0.target
 
 ### 6.2 시간 진행과 동기화
 
+TCG Mode·Sync Policy·Quantum의 동작과 조합은 **3.5절**에 정리했다. 아래는 Apollo full-system 설정 요약이다.
+
 ![QEMU SystemC host 시간의 차이](diagrams/08-time-model.drawio.svg)
+
+- **Host Wall Clock:** Host OS scheduling과 CPU 부하의 영향을 받는 실제 경과 시간.
+- **QEMU Virtual Clock:** 각 QemuInstance의 virtual timer 기준 시간.
+- **SystemC Simulation Time:** `sc_time_stamp()`와 timed event의 기준 시간.
 
 | 설정 축 | 현재 full-system 기본 | 의미 |
 |---|---|---|
