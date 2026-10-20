@@ -1,0 +1,1739 @@
+<mxfile host="app.diagrams.net" version="28.2.5">
+  <diagram id="01-stack" name="01-stack">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1260">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1260" />
+        </mxCell>
+        <mxCell id="title" value="AP Domain / Linux Kernel Software Stack" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="user" value="Userspace" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="140" width="1700" height="235" />
+        </mxCell>
+        <mxCell id="app" value="AD Application" vertex="1" parent="user" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="75" width="500" height="90" />
+        </mxCell>
+        <mxCell id="svc" value="System Services / systemd" vertex="1" parent="user" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="600" y="75" width="520" height="90" />
+        </mxCell>
+        <mxCell id="api" value="libc / Device API" vertex="1" parent="user" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="75" width="470" height="90" />
+        </mxCell>
+        <mxCell id="linux" value="Linux Kernel" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="485" width="1700" height="450" />
+        </mxCell>
+        <mxCell id="core" value="Scheduler · Memory · IRQ / Time" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="95" width="480" height="100" />
+        </mxCell>
+        <mxCell id="io" value="VFS · Block · Network" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="600" y="95" width="480" height="100" />
+        </mxCell>
+        <mxCell id="dev" value="Device Model · Driver Framework" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="95" width="480" height="100" />
+        </mxCell>
+        <mxCell id="drv" value="ARM64 / GIC · Timer · DMA · Peripheral Drivers" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="285" width="1040" height="95" />
+        </mxCell>
+        <mxCell id="fw" value="PSCI · SCMI · FF-A" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1180" y="285" width="480" height="95" />
+        </mxCell>
+        <mxCell id="syscall" source="user" target="linux" value="syscall / ioctl / socket" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="corehw" source="core" target="drv" value="architecture operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="iohw" source="io" target="drv" value="I/O request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.75;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="devfw" source="dev" target="fw" value="firmware request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="1000" />
+            <mxPoint as="targetPoint" x="1750" y="1000" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="CPU · RAM · GIC · Counter / Timer · Device IP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1070" width="1040" height="110" />
+        </mxCell>
+        <mxCell id="firmware" value="CPU / MHU / Secure interface" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1230" y="1070" width="480" height="110" />
+        </mxCell>
+        <mxCell id="mmio" source="drv" target="hw" value="MMIO / DMA / IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="fwi" source="fw" target="firmware" value="SMC / shared memory + doorbell" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="02-interfaces" name="02-interfaces">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1110">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1110" />
+        </mxCell>
+        <mxCell id="title" value="Linux / Firmware and Remote Software Interfaces" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="linux" value="AP Domain / Linux Kernel" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="140" width="1700" height="280" />
+        </mxCell>
+        <mxCell id="psci" value="PSCI Driver" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="330" height="95" />
+        </mxCell>
+        <mxCell id="scmi" value="SCMI + MHU" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="470" y="110" width="330" height="95" />
+        </mxCell>
+        <mxCell id="rpmsg" value="RPMsg + remoteproc" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="900" y="110" width="330" height="95" />
+        </mxCell>
+        <mxCell id="ffa" value="TEE / FF-A" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1330" y="110" width="330" height="95" />
+        </mxCell>
+        <mxCell id="tfa" value="TF-A / EL3" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="620" width="330" height="110" />
+        </mxCell>
+        <mxCell id="scp" value="SCP / SI CL0" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="520" y="620" width="330" height="110" />
+        </mxCell>
+        <mxCell id="zephyr" value="Zephyr / SI CL1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="950" y="620" width="330" height="110" />
+        </mxCell>
+        <mxCell id="tee" value="SE-Proxy / Secure partition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1380" y="620" width="330" height="110" />
+        </mxCell>
+        <mxCell id="p" source="psci" target="tfa" value="PSCI / SMC" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="s" source="scmi" target="scp" value="SCMI shared slot + MHU" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="r" source="rpmsg" target="zephyr" value="Shared vring + MHU" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="f" source="ffa" target="tee" value="FF-A message" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="rse" value="RSE / TF-M PSA service" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1380" y="900" width="330" height="95" />
+        </mxCell>
+        <mxCell id="proxy" source="tee" target="rse" value="RSE communication" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="policy" value="Linux owns task scheduling and device access&lt;br&gt;Firmware owns the requested platform / secure operation" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="900" width="1190" height="95" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="03-source" name="03-source">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1130">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1130" />
+        </mxCell>
+        <mxCell id="title" value="Linux Source / Component Ownership" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="src" value="hsoc-stack / components / primary_compute / linux" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="140" width="1700" height="550" />
+        </mxCell>
+        <mxCell id="arch" value="arch/arm64/&lt;br&gt;Entry · MMU · DTS · Defconfig" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="500" height="130" />
+        </mxCell>
+        <mxCell id="core" value="init/ · kernel/ · mm/&lt;br&gt;Boot · Scheduler · IRQ · Memory" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="600" y="110" width="500" height="130" />
+        </mxCell>
+        <mxCell id="driver" value="drivers/ · sound/&lt;br&gt;Device · Firmware · ASoC" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1160" y="110" width="500" height="130" />
+        </mxCell>
+        <mxCell id="service" value="fs/ · net/ · security/&lt;br&gt;Filesystem · Network · LSM" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="325" width="500" height="130" />
+        </mxCell>
+        <mxCell id="interface" value="include/ · scripts/&lt;br&gt;UAPI · Kbuild · Kconfig" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="600" y="325" width="500" height="130" />
+        </mxCell>
+        <mxCell id="test" value="Documentation/ · tools/testing/&lt;br&gt;Contracts · Selftests" vertex="1" parent="src" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1160" y="325" width="500" height="130" />
+        </mxCell>
+        <mxCell id="bsp" value="meta-hsoc-bsp&lt;br&gt;Kernel recipe · DTB · Module signing" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="875" width="500" height="135" />
+        </mxCell>
+        <mxCell id="image" value="meta-hsoc-auto-solutions&lt;br&gt;Distro · Initramfs · Rootfs / UKI" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="875" width="500" height="135" />
+        </mxCell>
+        <mxCell id="external" value="sw-ref-stack / linux_drivers&lt;br&gt;arm_si_rproc · rpmsg_net" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1210" y="875" width="500" height="135" />
+        </mxCell>
+        <mxCell id="build" source="src" target="bsp" value="externalsrc / defconfig" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.17;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="package" source="src" target="image" value="Image / DTB / module packages" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="abi" source="src" target="external" value="generated headers / symbol ABI" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.83;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="04-build" name="04-build">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1190">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1190" />
+        </mxCell>
+        <mxCell id="title" value="Kernel Build / Source to Deploy" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="distro" value="auto-ad-nexios&lt;br&gt;virtual/kernel = linux-yocto-rt" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="60" y="155" width="500" height="110" />
+        </mxCell>
+        <mxCell id="recipe" value="Apollo kernel recipe&lt;br&gt;externalsrc" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="155" width="500" height="110" />
+        </mxCell>
+        <mxCell id="source" value="Linux source&lt;br&gt;apollo_qvp_defconfig" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="155" width="500" height="110" />
+        </mxCell>
+        <mxCell id="provider" source="distro" target="recipe" value="provider" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="src" source="source" target="recipe" value="local source" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="build" value="Separate output / ${WORKDIR}/build" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="60" y="430" width="1680" height="430" />
+        </mxCell>
+        <mxCell id="config" value="configme / olddefconfig&lt;br&gt;.config" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="105" width="440" height="110" />
+        </mxCell>
+        <mxCell id="compile" value="Kbuild&lt;br&gt;Image · DTB · modules" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="105" width="440" height="110" />
+        </mxCell>
+        <mxCell id="shared" value="Shared kernel build&lt;br&gt;Headers · Module.symvers" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1195" y="105" width="440" height="110" />
+        </mxCell>
+        <mxCell id="cfgbuild" source="config" target="compile" value="resolved config" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="headers" source="compile" target="shared" value="build metadata" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="external" value="External module build / sign" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1195" y="290" width="440" height="85" />
+        </mxCell>
+        <mxCell id="modbuild" source="shared" target="external" value="ABI / signing inputs" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="configure" source="recipe" target="config" value="1. configure" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.2;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="750" y="350" />
+              <mxPoint x="325" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="deploy" value="Deploy / Image · DTB · modules archive" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="100" y="1010" width="740" height="100" />
+        </mxCell>
+        <mxCell id="package" value="Package / kernel-module-* → image rootfs" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="960" y="1010" width="740" height="100" />
+        </mxCell>
+        <mxCell id="deployedge" source="compile" target="deploy" value="2. deploy" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.2;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="768" y="930" />
+              <mxPoint x="470" y="930" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="pkgedge" source="external" target="package" value="3. package / install" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="05-artifacts" name="05-artifacts">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1290">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1290" />
+        </mxCell>
+        <mxCell id="title" value="Build Artifacts / Kernel and Image Composition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="kb" value="Kernel Build" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="690" height="800" />
+        </mxCell>
+        <mxCell id="payload" value="Image + OS DTB" vertex="1" parent="kb" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="110" width="600" height="100" />
+        </mxCell>
+        <mxCell id="ko" value="*.ko / Module packages" vertex="1" parent="kb" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="360" width="600" height="100" />
+        </mxCell>
+        <mxCell id="debug" value="vmlinux / System.map&lt;br&gt;.config / Module.symvers" vertex="1" parent="kb" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="610" width="600" height="110" />
+        </mxCell>
+        <mxCell id="ib" value="Image Composition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="800" />
+        </mxCell>
+        <mxCell id="initrd" value="Initramfs / *.cpio.gz" vertex="1" parent="ib" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="110" width="320" height="100" />
+        </mxCell>
+        <mxCell id="rootfs" value="Product rootfs" vertex="1" parent="ib" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="425" y="360" width="320" height="100" />
+        </mxCell>
+        <mxCell id="uki" value="A/B UKI / *.efi&lt;br&gt;Stub + Image + DTB&lt;br&gt;+ Initrd + Cmdline" vertex="1" parent="ib" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="360" width="320" height="160" />
+        </mxCell>
+        <mxCell id="wic" value="WIC / Boot + slot rootfs + writable partitions" vertex="1" parent="ib" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="680" width="700" height="85" />
+        </mxCell>
+        <mxCell id="install" source="ko" target="rootfs" value="Install modules" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="850" y="560" />
+              <mxPoint x="850" y="400" />
+              <mxPoint x="1545" y="400" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="payload-in" source="payload" target="uki" value="Kernel boot payload" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.25;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="800" y="310" />
+              <mxPoint x="800" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="archive" source="initrd" target="uki" value="Early userspace" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="uki-wic" source="uki" target="wic" value="EFI partition" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.23;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="rootfs-wic" source="rootfs" target="wic" value="Root partitions" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.77;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="bsp" value="BSP WIC / Boot + misc&lt;br&gt;Initramfs 내 shell · disk rootfs 없음" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="1080" width="790" height="125" />
+        </mxCell>
+        <mxCell id="product" value="Product WIC / Boot + misc + rootro A/B + rootrw + data" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="960" y="1080" width="790" height="125" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="06-boot-sequence" name="06-boot-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1390">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1390" />
+        </mxCell>
+        <mxCell id="title" value="Boot Sequence / Firmware to Linux Userspace" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="TF-A / U-Boot" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1250" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="UEFI / UKI" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1250" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="Linux Kernel" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1250" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="PID 1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1250" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. BL31 → BL33 / slot 선택" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="315" />
+            <mxPoint as="targetPoint" x="200" y="360" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="315" />
+              <mxPoint x="460" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. systemd-boot → selected UKI" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="470" />
+            <mxPoint as="targetPoint" x="670" y="470" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. EFI stub → Image entry / DTB · initrd" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="620" />
+            <mxPoint as="targetPoint" x="1130" y="620" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. ARM64 / Kernel core 초기화" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="770" />
+            <mxPoint as="targetPoint" x="1130" y="815" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="770" />
+              <mxPoint x="1390" y="815" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. kernel_init / initcalls · initramfs 준비" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="930" />
+            <mxPoint as="targetPoint" x="1600" y="930" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. exec /init → shell 또는 systemd" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1090" />
+            <mxPoint as="targetPoint" x="1600" y="1135" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="1090" />
+              <mxPoint x="1340" y="1135" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="U-Boot direct UKI fallback도 EFI stub로 합류 · systemd-boot와 systemd PID 1은 별도 프로그램." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1280" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="07-kernel-init" name="07-kernel-init">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1330">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1330" />
+        </mxCell>
+        <mxCell id="title" value="ARM64 Entry / Kernel Initialization" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="arch" value="Architecture entry / boot CPU" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="245" />
+        </mxCell>
+        <mxCell id="entry" value="primary_entry" vertex="1" parent="arch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="90" width="440" height="90" />
+        </mxCell>
+        <mxCell id="mmu" value="__cpu_setup / __primary_switch" vertex="1" parent="arch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="90" width="440" height="90" />
+        </mxCell>
+        <mxCell id="switch" value="__primary_switched" vertex="1" parent="arch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="90" width="440" height="90" />
+        </mxCell>
+        <mxCell id="a" source="entry" target="mmu" value="1. entry state / mapping" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="b" source="mmu" target="switch" value="2. MMU / stack" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="kernel" value="start_kernel() / Generic core" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="510" width="1700" height="350" />
+        </mxCell>
+        <mxCell id="mem" value="setup_arch / mm_core_init" vertex="1" parent="kernel" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="sched" value="sched_init / init_IRQ" vertex="1" parent="kernel" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="time" value="Timer / timekeeping / time_init" vertex="1" parent="kernel" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="c" source="switch" target="mem" value="3. C entry" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1470" y="450" />
+              <mxPoint x="310" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="d" source="mem" target="sched" value="4. scheduler / IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="e" source="sched" target="time" value="5. time subsystem" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="enable" value="local_irq_enable → Console / VFS → rest_init" vertex="1" parent="kernel" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="250" width="1600" height="65" />
+        </mxCell>
+        <mxCell id="f" source="time" target="enable" value="6. enable / prepare" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="pid1" value="PID 1 / kernel_init&lt;br&gt;SMP → initcalls → userspace exec" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1040" width="1030" height="150" />
+        </mxCell>
+        <mxCell id="thread" value="kthreadd&lt;br&gt;Kernel thread creation" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1230" y="1040" width="460" height="150" />
+        </mxCell>
+        <mxCell id="g" source="enable" target="pid1" value="7. user_mode_thread(kernel_init)" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.3;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="h" source="enable" target="thread" value="8. create kthreadd" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.85;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="08-smp-sequence" name="08-smp-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1430">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1430" />
+        </mxCell>
+        <mxCell id="title" value="SMP / Secondary CPU Bring-up" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Boot CPU / Linux" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1290" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="PSCI interface" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1290" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="TF-A / Platform" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1290" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Secondary CPU" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1290" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. DT CPU enumeration / possible mask" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="315" />
+            <mxPoint as="targetPoint" x="200" y="360" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="315" />
+              <mxPoint x="460" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. __cpu_up → cpu_psci_cpu_boot" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="470" />
+            <mxPoint as="targetPoint" x="670" y="470" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. CPU_ON(MPIDR, secondary_entry)" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="610" />
+            <mxPoint as="targetPoint" x="1130" y="610" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. Power / release entry" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="750" />
+            <mxPoint as="targetPoint" x="1600" y="750" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. secondary_start_kernel()" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="900" />
+            <mxPoint as="targetPoint" x="1600" y="945" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="900" />
+              <mxPoint x="1340" y="945" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. CPU-start callbacks / GIC · Timer" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1060" />
+            <mxPoint as="targetPoint" x="1600" y="1105" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="1060" />
+              <mxPoint x="1340" y="1105" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. online / completion → idle" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1220" />
+            <mxPoint as="targetPoint" x="200" y="1220" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="CPU enumeration과 CPU online은 별도 단계 · NR_CPUS는 compile-time 상한." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1320" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="09-pid1-sequence" name="09-pid1-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1510">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1510" />
+        </mxCell>
+        <mxCell id="title" value="Kernel Initramfs / PID 1 Transition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Kernel initcalls" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="Initramfs unpack" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="PID 1 / kernel_init" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Early userspace" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. populate_rootfs → async unpack 예약" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="320" />
+            <mxPoint as="targetPoint" x="670" y="320" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. cpio archive → rootfs" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="470" />
+            <mxPoint as="targetPoint" x="670" y="515" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="930" y="470" />
+              <mxPoint x="930" y="515" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. wait_for_initramfs()" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="640" />
+            <mxPoint as="targetPoint" x="670" y="640" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. archive 준비 완료" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="790" />
+            <mxPoint as="targetPoint" x="1130" y="790" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. rdinit 또는 /init 확인" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="940" />
+            <mxPoint as="targetPoint" x="1130" y="985" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="940" />
+              <mxPoint x="1390" y="985" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. run_init_process → kernel_execve" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1100" />
+            <mxPoint as="targetPoint" x="1600" y="1100" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. /init 실행 / PID 1 유지" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1250" />
+            <mxPoint as="targetPoint" x="1600" y="1295" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1340" y="1250" />
+              <mxPoint x="1340" y="1295" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="/init 부재 시 prepare_namespace → init= / 기본 init 후보 · initcalls와 unpack은 일부 병렬." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1410" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="10-rt-irq" name="10-rt-irq">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1460">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1460" />
+        </mxCell>
+        <mxCell id="title" value="PREEMPT_RT / Interrupt Execution Context" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="irq" value="Hard IRQ context" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="270" />
+        </mxCell>
+        <mxCell id="entry" value="GIC acknowledge / IRQ entry" vertex="1" parent="irq" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="handler" value="Primary handler / IRQ flow" vertex="1" parent="irq" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="percpu" value="Per-CPU Timer handler&lt;br&gt;request_percpu_irq" vertex="1" parent="irq" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="normal" source="entry" target="handler" value="Device IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="timer" source="entry" target="percpu" value="Timer PPI" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="310" y="220" />
+              <mxPoint x="1470" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="task" value="Schedulable thread context" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="610" width="1700" height="410" />
+        </mxCell>
+        <mxCell id="wake" value="IRQ thread wakeup" vertex="1" parent="task" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="scheduler" value="Scheduler" vertex="1" parent="task" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="thread" value="irq/&amp;lt;IRQ&amp;gt;-&amp;lt;name&amp;gt;&lt;br&gt;Device handler / completion" vertex="1" parent="task" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="100" width="440" height="100" />
+        </mxCell>
+        <mxCell id="wakeirq" source="handler" target="wake" value="IRQ_WAKE_THREAD / forced threading" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="890" y="520" />
+              <mxPoint x="310" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rq" source="wake" target="scheduler" value="Runnable" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="dispatch" source="scheduler" target="thread" value="Priority / affinity" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="defer" value="ktimers/&amp;lt;CPU&amp;gt; · ksoftirqd/&amp;lt;CPU&amp;gt; · workqueue&lt;br&gt;Callback mode와 작업 종류에 따른 deferred processing" vertex="1" parent="task" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="265" width="1600" height="95" />
+        </mxCell>
+        <mxCell id="boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="1110" />
+            <mxPoint as="targetPoint" x="1750" y="1110" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="gic" value="GIC" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1210" width="440" height="100" />
+        </mxCell>
+        <mxCell id="device" value="Device IP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="670" y="1210" width="440" height="100" />
+        </mxCell>
+        <mxCell id="timerhw" value="Generic Timer" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="1210" width="440" height="100" />
+        </mxCell>
+        <mxCell id="irqwire" source="device" target="gic" value="IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="timerwire" source="timerhw" target="gic" value="PPI" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1470" y="1380" />
+              <mxPoint x="310" y="1380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cpu-irq" source="gic" target="entry" value="IRQ exception" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" x="-0.8">
+            <Array as="points">
+              <mxPoint x="25" y="1260" />
+              <mxPoint x="25" y="300" />
+            </Array>
+            <mxPoint as="offset" x="100" y="0" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Per-CPU IRQ / NO_THREAD는 강제 threading 예외 · ONESHOT은 thread 완료까지 line masking을 관리." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1035" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="11-rt-lock" name="11-rt-lock">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1420">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1420" />
+        </mxCell>
+        <mxCell id="title" value="PREEMPT_RT / Priority Inheritance" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Low-priority Task" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1280" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="PI Lock / rtmutex" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1280" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="High-priority Task" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1280" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Scheduler" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1280" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. lock acquire / owner = Low" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="320" />
+            <mxPoint as="targetPoint" x="670" y="320" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. lock acquire / contention" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="475" />
+            <mxPoint as="targetPoint" x="670" y="475" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. block / wait queue" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="625" />
+            <mxPoint as="targetPoint" x="1130" y="625" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. owner에 waiter priority 상속" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="775" />
+            <mxPoint as="targetPoint" x="1600" y="775" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. boosted owner 실행" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="925" />
+            <mxPoint as="targetPoint" x="200" y="925" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. unlock / priority 복원" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1070" />
+            <mxPoint as="targetPoint" x="670" y="1070" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. wakeup → lock acquire" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="1220" />
+            <mxPoint as="targetPoint" x="1130" y="1220" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="PI 대상 lock 경합의 개념 흐름 · raw_spinlock과 모든 semaphore에 PI가 적용되는 것은 아님." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1320" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="12-scheduling" name="12-scheduling">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1080">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1080" />
+        </mxCell>
+        <mxCell id="title" value="PREEMPT_RT / Event to Application Execution" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="event" value="Device IRQ / Timer expiry" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="60" y="160" width="500" height="110" />
+        </mxCell>
+        <mxCell id="wakeup" value="Completion / Wakeup" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="160" width="500" height="110" />
+        </mxCell>
+        <mxCell id="runqueue" value="Task → Runnable" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1240" y="160" width="500" height="110" />
+        </mxCell>
+        <mxCell id="eventw" source="event" target="wakeup" value="event 처리" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="ready" source="wakeup" target="runqueue" value="wake_up / try_to_wake_up" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scheduler" value="Scheduler / Runqueue selection" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="60" y="460" width="1680" height="300" />
+        </mxCell>
+        <mxCell id="policy" value="Policy / Priority&lt;br&gt;FIFO · RR · Deadline · Fair" vertex="1" parent="scheduler" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="480" height="100" />
+        </mxCell>
+        <mxCell id="affinity" value="CPU affinity / Online CPUs" vertex="1" parent="scheduler" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="600" y="110" width="480" height="100" />
+        </mxCell>
+        <mxCell id="dispatch" value="Eligible task selection&lt;br&gt;Bandwidth / runnable state" vertex="1" parent="scheduler" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1160" y="110" width="480" height="100" />
+        </mxCell>
+        <mxCell id="enqueue" source="runqueue" target="dispatch" value="enqueue / reschedule" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="prio" source="policy" target="affinity" value="candidate constraints" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="choose" source="affinity" target="dispatch" value="allowed CPU" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="task" value="Application Job / Running" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="650" y="910" width="500" height="100" />
+        </mxCell>
+        <mxCell id="switchtask" source="dispatch" target="task" value="context switch" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1460" y="840" />
+              <mxPoint x="900" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="13-drivers" name="13-drivers">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1390">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1390" />
+        </mxCell>
+        <mxCell id="title" value="Linux BSP / Framework and Driver Layers" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="user" value="Application / Service" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="140" width="1700" height="90" />
+        </mxCell>
+        <mxCell id="linux" value="Linux Kernel" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="380" width="1700" height="640" />
+        </mxCell>
+        <mxCell id="time" value="IRQ · Time · Power" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="360" height="100" />
+        </mxCell>
+        <mxCell id="ipc" value="Firmware · IPC" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="460" y="100" width="360" height="100" />
+        </mxCell>
+        <mxCell id="io" value="TTY · GPIO · I2C · SPI" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="880" y="100" width="360" height="100" />
+        </mxCell>
+        <mxCell id="data" value="Block · Net · ALSA" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1300" y="100" width="360" height="100" />
+        </mxCell>
+        <mxCell id="a" value="GIC / ITS&lt;br&gt;arch_timer / SBSA WDT" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="300" width="360" height="125" />
+        </mxCell>
+        <mxCell id="b" value="PSCI / SCMI&lt;br&gt;MHUv3 / remoteproc" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="460" y="300" width="360" height="125" />
+        </mxCell>
+        <mxCell id="c" value="PL011 / DW UART&lt;br&gt;PL061 / DW I2C / DW SPI" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="880" y="300" width="360" height="125" />
+        </mxCell>
+        <mxCell id="d" value="VirtIO / NVMe / AHCI&lt;br&gt;RPMsg net / DW I2S" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1300" y="300" width="360" height="125" />
+        </mxCell>
+        <mxCell id="etime" source="time" target="a" value="driver operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="eipc" source="ipc" target="b" value="driver operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="eio" source="io" target="c" value="driver operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="edata" source="data" target="d" value="driver operations" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="dma" value="Common resources / DMA API · DMAengine · IOMMU · Clock · Pinctrl" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="505" width="1620" height="85" />
+        </mxCell>
+        <mxCell id="api" source="user" target="linux" value="syscall / subsystem API" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="1090" />
+            <mxPoint as="targetPoint" x="1750" y="1090" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="CPU · GIC / Timer / Watchdog · MHU · Peripheral IP · PCIe / VirtIO" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1190" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="hwops" source="linux" target="hw" value="MMIO / IRQ / DMA" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="14-dt-probe" name="14-dt-probe">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1220">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1220" />
+        </mxCell>
+        <mxCell id="title" value="Device Tree / Resource to Driver Binding" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="dt" value="Device Tree" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="640" height="810" />
+        </mxCell>
+        <mxCell id="node" value="dw_spi0: spi@30160000 {&lt;br&gt;  compatible = &quot;snps,dw-apb-ssi&quot;;&lt;br&gt;  reg = &amp;lt;0 0x30160000 0 0x10000&amp;gt;;&lt;br&gt;  interrupts = &amp;lt;GIC_SPI 326&lt;br&gt;                         IRQ_TYPE_LEVEL_HIGH&amp;gt;;&lt;br&gt;  dmas = &amp;lt;&amp;amp;dma350_0 0&amp;gt;,&lt;br&gt;             &amp;lt;&amp;amp;dma350_0 1&amp;gt;;&lt;br&gt;};&lt;br&gt;&lt;br&gt;&amp;amp;dw_spi0 { status = &quot;okay&quot;; };" vertex="1" parent="dt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;align=left;spacing=20;fontSize=21;">
+          <mxGeometry as="geometry" x="40" y="120" width="560" height="460" />
+        </mxCell>
+        <mxCell id="supplier" value="Suppliers&lt;br&gt;IRQ domain / Clock / DMA provider" vertex="1" parent="dt" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="650" width="560" height="100" />
+        </mxCell>
+        <mxCell id="model" value="Kernel Device Model / Platform bus example" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="830" y="150" width="920" height="810" />
+        </mxCell>
+        <mxCell id="of" value="OF populate / platform_device" vertex="1" parent="model" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="70" y="100" width="780" height="90" />
+        </mxCell>
+        <mxCell id="match" value="compatible ↔ of_match_table" vertex="1" parent="model" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="70" y="290" width="780" height="90" />
+        </mxCell>
+        <mxCell id="probe" value="probe() / resource acquisition" vertex="1" parent="model" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="70" y="480" width="780" height="90" />
+        </mxCell>
+        <mxCell id="register" value="Subsystem registration" vertex="1" parent="model" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="70" y="670" width="780" height="90" />
+        </mxCell>
+        <mxCell id="dtdev" source="node" target="of" value="1. instantiate" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.1;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="matchdrv" source="of" target="match" value="2. match" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="bind" source="match" target="probe" value="3. bind" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="reg" source="probe" target="register" value="4. register" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="deps" source="supplier" target="probe" value="supplier not ready → EPROBE_DEFER" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="755" y="850" />
+              <mxPoint x="755" y="675" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="GIC / Generic Timer는 early OF init · PCI / VirtIO는 bus enumeration 후 device ID match." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1070" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="15-ipc" name="15-ipc">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1400">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1400" />
+        </mxCell>
+        <mxCell id="title" value="Linux IPC / Shared Data and Doorbell" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="scmi" value="SCMI / System Control" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="790" height="890" />
+        </mxCell>
+        <mxCell id="hipc" value="HIPC / Network over RPMsg" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="150" width="790" height="890" />
+        </mxCell>
+        <mxCell id="cpufreq" value="CPUfreq / SCMI consumer" vertex="1" parent="scmi" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="110" width="700" height="100" />
+        </mxCell>
+        <mxCell id="protocol" value="SCMI protocol / Mailbox transport" vertex="1" parent="scmi" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="320" width="700" height="100" />
+        </mxCell>
+        <mxCell id="scmicall" source="cpufreq" target="protocol" value="Request / response" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="net" value="Socket / Netdev / rpmsg_net" vertex="1" parent="hipc" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="110" width="700" height="100" />
+        </mxCell>
+        <mxCell id="rpmsg" value="VirtIO RPMsg / remoteproc attach" vertex="1" parent="hipc" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="320" width="700" height="100" />
+        </mxCell>
+        <mxCell id="hipccall" source="net" target="rpmsg" value="Request / response" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="slot" value="SCMI shared SRAM" vertex="1" parent="scmi" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="600" width="320" height="120" />
+        </mxCell>
+        <mxCell id="mhu" value="arm_mhuv3&lt;br&gt;Mailbox doorbell" vertex="1" parent="scmi" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="425" y="600" width="320" height="120" />
+        </mxCell>
+        <mxCell id="vring" value="Shared vring&lt;br&gt;Resource table / buffers" vertex="1" parent="hipc" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="600" width="320" height="120" />
+        </mxCell>
+        <mxCell id="rproc" value="arm_si_rproc&lt;br&gt;MHU kick / IRQ" vertex="1" parent="hipc" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="425" y="600" width="320" height="120" />
+        </mxCell>
+        <mxCell id="protocoldata" source="protocol" target="slot" value="Payload" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.23;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="protocolnotify" source="protocol" target="mhu" value="Notify" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.77;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="rpmsgdata" source="rpmsg" target="vring" value="Payload" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.23;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="rpmsgnotify" source="rpmsg" target="rproc" value="Notify" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.77;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scp" value="SI CL0 / SCP / SCMI server" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="95" y="1190" width="700" height="110" />
+        </mxCell>
+        <mxCell id="zephyr" value="SI CL1 / Zephyr / RPMsg endpoint" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1005" y="1190" width="700" height="110" />
+        </mxCell>
+        <mxCell id="slotremote" source="slot" target="scp" value="Shared data" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.23;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="mhuremote" source="mhu" target="scp" value="Doorbell" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.77;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="vringremote" source="vring" target="zephyr" value="Shared buffers" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.23;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="rprocremote" source="rproc" target="zephyr" value="Kick / IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.77;entryY=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="note" value="HIPC: RPROC_DETACHED → attach · 실행 중인 Zephyr에 연결하며 firmware를 load/start하지 않음." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1320" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="16-dma" name="16-dma">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1530">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1530" />
+        </mxCell>
+        <mxCell id="title" value="Linux DMA / DMAengine and PCIe IOMMU Paths" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="linux" value="Linux Kernel" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="650" />
+        </mxCell>
+        <mxCell id="driver" value="Peripheral client driver" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="500" height="100" />
+        </mxCell>
+        <mxCell id="buffer" value="CPU buffer / Virtual address&lt;br&gt;Reserved-memory는 별도 소유권으로 관리" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="640" y="100" width="1020" height="100" />
+        </mxCell>
+        <mxCell id="dmaapi" value="DMA mapping API&lt;br&gt;dma_map_* → dma_addr_t" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="310" width="500" height="100" />
+        </mxCell>
+        <mxCell id="iommu" value="DMA API / IOMMU domain&lt;br&gt;IOVA mapping" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="640" y="310" width="1020" height="100" />
+        </mxCell>
+        <mxCell id="dmaengine" value="DMAengine / DMA-350 driver" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="510" width="500" height="90" />
+        </mxCell>
+        <mxCell id="pcidriver" value="PCI function driver" vertex="1" parent="linux" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="640" y="510" width="1020" height="90" />
+        </mxCell>
+        <mxCell id="map-buffer" source="driver" target="dmaapi" value="1. map buffer" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="submit" source="dmaapi" target="dmaengine" value="2. prepare / submit descriptor" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="pcimap" source="pcidriver" target="iommu" value="dma_map_* / mapping result" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="880" />
+            <mxPoint as="targetPoint" x="1750" y="880" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ip" value="DMA-350" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1040" width="500" height="100" />
+        </mxCell>
+        <mxCell id="ram" value="System RAM" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="690" y="1040" width="440" height="100" />
+        </mxCell>
+        <mxCell id="smmu" value="SMMUv3" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="1040" width="460" height="100" />
+        </mxCell>
+        <mxCell id="pci" value="PCIe DMA master" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="1260" width="460" height="100" />
+        </mxCell>
+        <mxCell id="program" source="dmaengine" target="ip" value="3. descriptor / command" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="memory" source="ip" target="ram" value="DMA access" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-80" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="translate-dma" source="smmu" target="ram" value="Translated address" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-80" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="stream" source="pci" target="smmu" value="Stream ID / IOVA" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="pciprogram" source="pcidriver" target="pci" value="DMA address / command" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1770" y="705" />
+              <mxPoint x="1770" y="1310" />
+            </Array>
+            <mxPoint as="offset" x="-110" y="-60" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="DMA-350과 PCI function의 programming 경로는 별개 · PCI host의 iommu-map이 SMMU 연결을 기술." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1430" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="17-modules" name="17-modules">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1140">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1140" />
+        </mxCell>
+        <mxCell id="title" value="Kernel Modules / Build to Runtime Load" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="build" value="Build / Packaging" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="300" />
+        </mxCell>
+        <mxCell id="kernel" value="Kernel headers / Module.symvers" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="module" value="External source → .ko" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="sign" value="Sign / Package / Install" vertex="1" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="abi" source="kernel" target="module" value="same release / ABI" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="signmod" source="module" target="sign" value="module binary" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="runtime" value="Runtime / Module loader" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="640" width="1700" height="310" />
+        </mxCell>
+        <mxCell id="modprobe" value="modprobe / dependency lookup" vertex="1" parent="runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="validate" value="Signature · vermagic · symbols" vertex="1" parent="runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="620" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="init" value="module_init → Driver register" vertex="1" parent="runtime" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1200" y="110" width="460" height="100" />
+        </mxCell>
+        <mxCell id="install" source="sign" target="modprobe" value="/lib/modules/&amp;lt;release&amp;gt;" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1480" y="540" />
+              <mxPoint x="320" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="load" source="modprobe" target="validate" value="finit_module" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="accepted" source="validate" target="init" value="accepted module" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="note" value="CONFIG_MODULE_SIG_FORCE=y · 유효 서명과 Kernel ABI가 모두 필요 · built-in driver는 Image의 initcall로 등록." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1030" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="18-userspace-compare" name="18-userspace-compare">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1220">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1220" />
+        </mxCell>
+        <mxCell id="title" value="Userspace Boot / BSP and Product Images" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="kernel" value="Linux Kernel / PID 1 exec /init" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="50" y="140" width="1700" height="90" />
+        </mxCell>
+        <mxCell id="bsp" value="nexios-bsp-initramfs" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="390" width="790" height="660" />
+        </mxCell>
+        <mxCell id="product" value="nexios-image + nexios-initramfs-image" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="960" y="390" width="790" height="660" />
+        </mxCell>
+        <mxCell id="devices" value="Mounts / mdev / Modules" vertex="1" parent="bsp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="100" width="700" height="100" />
+        </mxCell>
+        <mxCell id="selftest" value="BSP selftest / DHCP / SSH" vertex="1" parent="bsp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="290" width="700" height="100" />
+        </mxCell>
+        <mxCell id="shell" value="Console shell / Initramfs 유지" vertex="1" parent="bsp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="480" width="700" height="100" />
+        </mxCell>
+        <mxCell id="bsp0" source="devices" target="selftest" value="prepare" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="bsp1" source="selftest" target="shell" value="exec / continue" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="root" value="Device discovery / dm-verity" vertex="1" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="100" width="700" height="100" />
+        </mxCell>
+        <mxCell id="switch" value="switch_root / Overlay preinit" vertex="1" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="290" width="700" height="100" />
+        </mxCell>
+        <mxCell id="systemd" value="systemd PID 1 / Services" vertex="1" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="480" width="700" height="100" />
+        </mxCell>
+        <mxCell id="product0" source="root" target="switch" value="prepare" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="product1" source="switch" target="systemd" value="exec / continue" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="bspinit" source="kernel" target="devices" value="BSP /init" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.23;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="prodinit" source="kernel" target="root" value="Initramfs framework" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.77;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="note" value="Kernel Component는 공통 기반 · 두 image의 PID 1 프로그램과 root filesystem 수명은 다름." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1110" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="19-bsp-sequence" name="19-bsp-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1510">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1510" />
+        </mxCell>
+        <mxCell id="title" value="BSP Initramfs / Initialization Sequence" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="/init / PID 1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="Kernel / Modules" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="BSP Selftest" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Network / Console" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1370" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. Mount /proc · /sys · /dev · /run" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="315" />
+            <mxPoint as="targetPoint" x="670" y="315" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. mdev / depmod / modprobe" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="455" />
+            <mxPoint as="targetPoint" x="670" y="455" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. Optional clients / PFDI application" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="600" />
+            <mxPoint as="targetPoint" x="200" y="645" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="460" y="600" />
+              <mxPoint x="460" y="645" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. nexios-bsp-selftest" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="760" />
+            <mxPoint as="targetPoint" x="1130" y="760" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. selftest result" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="905" />
+            <mxPoint as="targetPoint" x="200" y="905" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. DHCP / Dropbear startup" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1050" />
+            <mxPoint as="targetPoint" x="1600" y="1050" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. READY marker → exec console shell" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1200" />
+            <mxPoint as="targetPoint" x="1600" y="1200" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Selftest / network / SSH 실패 → FAILED marker + failure shell · systemd를 시작하는 경로가 아님." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1400" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="20-rootfs-sequence" name="20-rootfs-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1570">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1570" />
+        </mxCell>
+        <mxCell id="title" value="Product Initramfs / Root Filesystem Transition" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="Initramfs /init" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="Device / dm-verity" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="Rootfs / Overlay" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="systemd PID 1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1430" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. Device discovery / selected root partition" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="320" />
+            <mxPoint as="targetPoint" x="670" y="320" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. dm-verity.env / veritysetup create rootfs" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="475" />
+            <mxPoint as="targetPoint" x="670" y="475" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. /dev/mapper/rootfs → read-only mount" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="630" />
+            <mxPoint as="targetPoint" x="1130" y="630" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. Move /dev · /proc · /sys" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="785" />
+            <mxPoint as="targetPoint" x="1130" y="785" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. exec switch_root /sbin/init" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="940" />
+            <mxPoint as="targetPoint" x="1130" y="940" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. rootrw mount / /etc overlay" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1100" />
+            <mxPoint as="targetPoint" x="1130" y="1145" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="1100" />
+              <mxPoint x="1390" y="1145" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. exec real init → unit transaction" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1270" />
+            <mxPoint as="targetPoint" x="1600" y="1270" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="APOLLO_DM_VERITY=1 기준 · /init → switch_root → preinit → systemd의 exec로 PID 1 유지." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1450" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="21-systemd" name="21-systemd">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="1290">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1290" />
+        </mxCell>
+        <mxCell id="title" value="systemd / Targets and Device-Service Dependencies" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="manager" value="systemd / PID 1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="260" />
+        </mxCell>
+        <mxCell id="units" value="Units / Generators / Default target" vertex="1" parent="manager" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="40" y="100" width="720" height="100" />
+        </mxCell>
+        <mxCell id="jobs" value="Dependency graph / Job transaction" vertex="1" parent="manager" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="940" y="100" width="720" height="100" />
+        </mxCell>
+        <mxCell id="transaction" source="units" target="jobs" value="Wants / Requires / ordering" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="device" value="Device discovery / udev" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="560" width="460" height="110" />
+        </mxCell>
+        <mxCell id="mount" value="rootrw.mount / data.mount" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="670" y="560" width="460" height="110" />
+        </mxCell>
+        <mxCell id="localfs" value="local-fs.target" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="560" width="460" height="110" />
+        </mxCell>
+        <mxCell id="unitsjobs" source="jobs" target="mount" value="Start required mount jobs" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="devready" source="device" target="mount" value="Device ready" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="mounted" source="mount" target="localfs" value="Mount ordering" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="sysinit" value="sysinit.target" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="850" width="460" height="100" />
+        </mxCell>
+        <mxCell id="basic" value="basic.target" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="670" y="850" width="460" height="100" />
+        </mxCell>
+        <mxCell id="multi" value="multi-user.target" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="1250" y="850" width="460" height="100" />
+        </mxCell>
+        <mxCell id="localinit" source="localfs" target="sysinit" value="Filesystem prerequisites" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.5;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="1480" y="755" />
+              <mxPoint x="320" y="755" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sysbasic" source="sysinit" target="basic" value="Basic boot prerequisites" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="basicmulti" source="basic" target="multi" value="System services" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="service" value="Application Services / ExecStart / readiness" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="670" y="1100" width="1040" height="95" />
+        </mxCell>
+        <mxCell id="start" source="service" target="multi" value="Required services ordered before target" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="legend" value="After = 실행 순서&lt;br&gt;Wants / Requires = 기동 의존성" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1090" width="460" height="115" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
