@@ -1,0 +1,41 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08c-tfa-delay-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Firmware caller" as p0
+participant "Delay / Timeout API" as p1
+participant "Generic delay timer" as p2
+participant "CPU Counter register" as p3
+
+p0 -> p1 : 1. udelay(usec)
+p1 -> p2 : 2. get_timer_value()
+p2 -> p3 : 3. MRS CNTPCT · ~count의 low 32-bit
+p1 -> p1 : 4. target = ceil(usec × div / mult) + 1
+p1 -> p3 : 5. 반복 read · start − current ≥ target까지
+p1 -> p0 : 6. delay 완료 후 반환
+note over p0, p3
+Timeout API: deadline 생성과 만료 확인은 별도 호출
+end note
+p0 -> p1 : 7. timeout_init_us(usec)
+p1 -> p3 : 8. CNTPCT + floor(usec × CNTFRQ / 1,000,000)
+p0 -> p1 : 9. timeout_elapsed(deadline)
+p1 -> p3 : 10. CNTPCT > deadline 비교 → bool 반환
+
+@enduml

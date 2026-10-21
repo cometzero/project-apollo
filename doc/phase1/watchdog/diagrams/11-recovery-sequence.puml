@@ -1,0 +1,43 @@
+@startuml
+' Source: ../apollo-watchdog-architecture.drawio (page 11-recovery-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "CL0 GIC" as p0
+participant "SCP ISR" as p1
+participant "SCP Framework" as p2
+participant "RSE TF-M" as p3
+participant "PPU / AP Reset" as p4
+
+p0 -> p1 : 1. AP NS WS1 → INTID321 / FIQ
+p1 -> p1 : 2. IRQ mask · recovery latch 설정
+p1 -> p2 : 3. AP_WATCHDOG event 게시 · ISR 반환
+p2 -> p4 : 4. 모든 AP core / cluster OFF 요청
+p4 -> p2 : 5. OFF 상태 확인
+p2 -> p3 : 6. BL2 reload 요청
+p3 -> p2 : 7. 검증·재적재 성공 ACK
+p2 -> p2 : 8. AP context · mailbox 정리
+p2 -> p4 : 9. CPU0 ON 요청
+p4 -> p4 : 10. Watchdog clear → AP reset / CPU release
+p4 -> p2 : 11. CPU0 ON 통지
+p2 -> p0 : 12. Pending clear · readback
+p2 -> p2 : 13. Recovery latch 해제
+p2 -> p0 : 14. IRQ enable · pending / recovery 재확인
+
+@enduml

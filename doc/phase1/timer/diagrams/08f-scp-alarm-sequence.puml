@@ -1,0 +1,38 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08f-scp-alarm-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Module client" as p0
+participant "timer HAL / ISR" as p1
+participant "gtimer / MMIO Timer" as p2
+participant "GIC / CL0 CPU" as p3
+
+p0 -> p1 : 1. start(id, usec, type, callback)
+p1 -> p1 : 2. 현재 count + period · timestamp 저장
+p1 -> p2 : 3. disable → set_timer(head) → enable
+p2 -> p2 : 4. CVAL = max(deadline, now + 2000)
+p2 -> p3 : 5. comparator expiry → INTID34 / FIQ
+p3 -> p1 : 6. IAR0 → ISR dispatch
+p1 -> p2 : 7. disable / mask (이후 GIC pending clear)
+p1 -> p0 : 8. queue head 제거 → callback(param)
+p1 -> p2 : 9. periodic 재삽입 → 다음 head 설정
+p1 -> p3 : 10. ISR 반환 → EOIR0
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 11-scmi-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Linux SCMI" as p0
+participant "Shared slot / MHU" as p1
+participant "SCP ISR / Transport" as p2
+participant "SCP SCMI service" as p3
+
+p0 -> p1 : 1. Publish request / SET
+p1 -> p2 : 2. CL0 IRQ97
+p2 -> p1 : 3. CLR → HW ACK
+p2 -> p2 : 4. Validate / Copy request
+p2 -> p3 : 5. Framework event
+p3 -> p1 : 6. Response → barrier → FREE
+p3 -> p1 : 7. Reverse SET if IRQ requested
+p1 -> p0 : 8. AP IRQ145 / Response callback
+p0 -> p1 : 9. Check FREE / token → CLR
+
+@enduml

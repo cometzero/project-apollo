@@ -1,0 +1,38 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08g-zephyr-timeout-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Application / Thread" as p0
+participant "Kernel timeout /\nScheduler" as p1
+participant "Timer driver / ISR" as p2
+participant "Timer / GIC / CPU" as p3
+
+p0 -> p1 : 1. k_timer_start / k_sleep
+p1 -> p1 : 2. timeout 등록 · sleep이면 thread block
+p1 -> p2 : 3. sys_clock_set_timeout(next_ticks)
+p2 -> p3 : 4. CNTV_CVAL 설정 / unmask
+p3 -> p2 : 5. PPI27 → IRQ wrapper → compare ISR
+p2 -> p2 : 6. elapsed ticks 계산 / mask
+p2 -> p1 : 7. sys_clock_announce(delta_ticks)
+p1 -> p0 : 8. timer: expiry callback / sleep: ready 전환
+p1 -> p2 : 9. 다음 timeout 재설정
+p1 -> p0 : 10. IRQ 완료 후 Scheduler가 실행 thread 선택
+
+@enduml

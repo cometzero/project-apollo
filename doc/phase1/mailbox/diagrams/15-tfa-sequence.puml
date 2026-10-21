@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 15-tfa-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "PSCI / SCMI caller" as p0
+participant "SCMI channel" as p1
+participant "Shared slot / MHU" as p2
+participant "SCP" as p3
+
+p0 -> p1 : 1. scmi_get_channel() / Lock
+p1 -> p2 : 2. Header / Payload / BUSY
+p1 -> p2 : 3. dmbst → SET → dmbsy
+p2 -> p3 : 4. CL0 MHU interrupt
+p3 -> p2 : 5. CLR / Service / Response / FREE
+p1 -> p2 : 6. Poll FREE → dmbld → Read response
+p1 -> p0 : 7. scmi_put_channel() / Unlock
+
+@enduml

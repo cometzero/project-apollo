@@ -120,6 +120,8 @@ AP의 timer는 **CPU system-register timer**와 **MMIO timer**로 나뉜다. 두
 
 ![ARM Generic Timer interrupt 발생 및 Linux 처리 흐름 — 번호 01–09](diagrams/01-irq-flow.drawio.svg)
 
+[PlantUML 원본](diagrams/01-irq-flow.puml)
+
 <details>
 <summary>도면 상세 설명</summary>
 
@@ -711,6 +713,8 @@ LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. �
 
 ![Counter 상태 변경부터 QEMU snapshot 적용까지의 Sequence](diagrams/03a-counter-propagation.drawio.svg)
 
+[PlantUML 원본](diagrams/03a-counter-propagation.puml)
+
 1. Counter control 쓰기가 count·rate·running 상태를 변경한다.
 2. SystemC Counter의 state-change event가 mirror의 publish loop를 깨운다. 초기 publish는 별도로 수행한다.
 3. Mirror가 현재 SystemC 시각의 snapshot을 요청한다.
@@ -732,6 +736,8 @@ Running 상태의 기본 계산은 `count = anchor_count + floor(Δvirtual_ns ×
 ### 3.3 Timer Expiry and Interrupt Delivery
 
 ![QEMU Timer와 SystemC CL0 Timer의 만료·interrupt 전달 Sequence](diagrams/03b-timer-expiry.drawio.svg)
+
+[PlantUML 원본](diagrams/03b-timer-expiry.puml)
 
 | 단계 | QEMU CPU / AP MMIO — 그림 1–6 | SystemC CL0 — 그림 7–12 |
 |---|---|---|
@@ -950,6 +956,8 @@ Timer source 해제와 GIC EOI/deactivate는 별도의 완료 단계다. Callbac
 
 ![Device Tree 매칭부터 CPU별 Timer와 clocksource 등록까지의 초기화 순서](diagrams/08b-linux-init-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/08b-linux-init-sequence.puml)
+
 1. **Driver 진입:** `time_init()` → `timer_probe()` → compatible 매칭 → `arch_timer_of_init()` 호출.
 2. **IRQ mapping:** DT의 `interrupts`를 `of_irq_get()`으로 읽고 GIC IRQ domain을 통해 Linux IRQ 번호 확보.
 3. **설정 해석:** CNTFRQ·DT 속성으로 주파수와 capability를 설정하고, 실행 EL·HYP 가용성에 따라 Timer PPI 선택. 선택 IRQ가 없으면 초기화 중단.
@@ -1034,6 +1042,8 @@ vDSO를 사용하지 않거나 요청한 clock/mode가 지원되지 않으면 sy
 
 ![Linux Timekeeping API의 Counter 조회·시간 환산과 vDSO fast path](diagrams/08b-linux-timekeeping.drawio.svg)
 
+[PlantUML 원본](diagrams/08b-linux-timekeeping.puml)
+
 <details>
 <summary>도면 상세 설명</summary>
 
@@ -1094,6 +1104,8 @@ Timer/Sleep API는 **미래의 deadline을 등록하고 만료 후 대기 해제
 
 ![clock_nanosleep 등록·Timer IRQ·Task wakeup 및 다음 deadline 설정 순서](diagrams/08b-linux-timer-api-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/08b-linux-timer-api-sequence.puml)
+
 `clock_nanosleep(CLOCK_MONOTONIC, …)`이 **정상 만료하는 대표 경로**다. 그림의 2–3은 새 timer가 다음 HW expiry를 변경하는 경우를 표시한다.
 
 1. **Sleep 요청:** syscall → clock별 `nsleep` 연산 → `hrtimer_nanosleep()`으로 sleeper를 만든다.
@@ -1143,6 +1155,8 @@ Apollo는 Device Tree timer node를 탐색하는 대신 **platform 함수와 정
 
 ![BL31의 Generic delay timer 초기화와 timer operations 등록 순서](diagrams/08c-tfa-init.drawio.svg)
 
+[PlantUML 원본](diagrams/08c-tfa-init.puml)
+
 1. **초기화 호출:** `bl31_platform_setup()`에서 `generic_delay_timer_init()`을 호출한다.
 2. **주파수 조회:** `plat_get_syscnt_freq2()`가 Apollo의 `SYS_COUNTER_FREQ_IN_TICKS`를 반환한다.
 3. **설정값 전달:** 현재 platform 상수는 **125,000,000Hz**다.
@@ -1176,6 +1190,8 @@ TF-A의 이 경로는 Linux처럼 wall-clock·monotonic clock을 관리하지 �
 ##### 4.2.2.3 Delay / Timeout Sequence
 
 ![TF-A udelay polling과 timeout deadline 생성·만료 확인 순서](diagrams/08c-tfa-delay-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08c-tfa-delay-sequence.puml)
 
 **Delay — 그림 1–6**
 
@@ -1228,6 +1244,8 @@ TF-A의 `timer_ops_t` 등록과 달리 ARMv8 구현은 `get_ticks()`·`get_tbclk
 
 ![U-Boot 기본 Timer 초기화와 Counter·frequency 조회 순서](diagrams/08d-uboot-init.drawio.svg)
 
+[PlantUML 원본](diagrams/08d-uboot-init.puml)
+
 그림의 **1–2는 초기화**, **3–7은 이후 caller의 시간 조회**다. 초기화 함수가 이어서 모든 시간 API를 호출한다는 의미는 아니다.
 
 1. **초기화 호출:** `board_init_f()`의 초기화 목록에서 `timer_init()`을 호출한다.
@@ -1265,6 +1283,8 @@ DTS의 Linux용 `arm,armv8-timer` 노드를 U-Boot이 같은 probe/IRQ 등록 �
 ##### 4.2.3.3 Delay API Sequence
 
 ![U-Boot udelay의 서비스 호출·Event stream WFE·tail polling 순서](diagrams/08d-uboot-delay-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08d-uboot-delay-sequence.puml)
 
 1. **지연 요청:** Caller가 `udelay(usec)`를 호출한다.
 2. **공통 처리:** 각 구간 시작 시 `schedule()`로 watchdog·cyclic 등의 서비스를 수행하고, 남은 요청에서 최대 `CFG_WD_PERIOD`만큼을 선택한다.
@@ -1337,6 +1357,8 @@ OP-TEE는 **Counter 기반 시간 조회**와 **RPC 기반 대기**를 제공한
 
 ![OP-TEE Secure Time 조회 Sequence](diagrams/08e-optee-time-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/08e-optee-time-sequence.puml)
+
 1. TA가 `TEE_GetSystemTime()`을 호출하고 `_utee_get_time(SYSTEM)`으로 진입한다.
 2. `syscall_get_time()`이 `tee_time_get_sys_time()`을 호출한다.
 3. Time source가 **CNTPCT count·CNTFRQ frequency**를 읽는다.
@@ -1350,6 +1372,8 @@ Counter 기반 시간은 달력 시각이나 재부팅 후 영속 시간을 뜻�
 ##### 4.2.4.3 Wait API Sequence
 
 ![OP-TEE TEE_Wait의 RPC 대기 및 재개 Sequence](diagrams/08e-optee-wait-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08e-optee-wait-sequence.puml)
 
 1. `TEE_Wait(timeout)`이 `_utee_wait()`를 통해 `syscall_wait()`에 진입한다.
 2. 시작 시간을 한 번 저장하고, 반복마다 현재 시간을 `tee_time_get_sys_time()`으로 조회한다.
@@ -1409,6 +1433,8 @@ Linux의 Device Tree probe 대신 **정적 element 설정과 framework의 init �
 
 ![SCP Timer의 element 구성·driver bind·Counter 초기화·ISR 등록 Sequence](diagrams/08f-scp-init.drawio.svg)
 
+[PlantUML 원본](diagrams/08f-scp-init.puml)
+
 1. **Element 구성:** Framework가 timer context와 alarm pool을 구성한다. Gtimer element에도 MMIO 주소와 frequency 설정을 연결한다.
 2. **Bind 진입:** `timer_bind()`가 `config_timer.c`의 driver element ID를 확인한다.
 3. **Driver 연결:** `fwk_module_bind()`로 gtimer API를 받아 필수 함수들을 검사한다.
@@ -1449,6 +1475,8 @@ Linux의 Device Tree probe 대신 **정적 element 설정과 framework의 init �
 | 호출 문맥 | `start()`는 interrupt 문맥이거나 문맥 확인에 실패하면 `FWK_E_ACCESS` |
 
 ![SCP Alarm 등록부터 FIQ·callback·periodic 재설정까지의 Sequence](diagrams/08f-scp-alarm-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08f-scp-alarm-sequence.puml)
 
 1. **요청:** Client가 alarm ID·기간·type·callback을 전달한다.
 2. **Timestamp:** `alarm_start()`가 callback과 `now + period_ticks`를 저장한다. 실제 queue 삽입은 다음 단계의 timer disable 후 수행한다.
@@ -1516,6 +1544,8 @@ Zephyr는 **Kernel timeout queue**와 **CPU별 Virtual Timer(CNTV)**를 연결�
 
 ![Zephyr Timer driver 초기화와 PPI 연결 Sequence](diagrams/08g-zephyr-init.drawio.svg)
 
+[PlantUML 원본](diagrams/08g-zephyr-init.puml)
+
 1. `SYS_INIT`의 `PRE_KERNEL_2` 단계에서 `sys_clock_driver_init()`을 실행한다.
 2. `IRQ_CONNECT`로 Virtual Timer IRQ와 compare ISR을 연결한다.
 3. `arm_arch_timer_init()`을 실행한다. Runtime frequency 옵션이 활성일 때 CNTFRQ를 읽고 환산 기준을 준비한다. 그렇지 않으면 설정 frequency를 사용한다.
@@ -1541,6 +1571,8 @@ Tickless의 `sys_clock_elapsed()`는 마지막 announce 이후 **완료된 tick 
 #### 4.4.3 Timer / Sleep Expiry Sequence
 
 ![Zephyr timeout 등록·Virtual Timer IRQ·callback 또는 Thread 재개 Sequence](diagrams/08g-zephyr-timeout-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08g-zephyr-timeout-sequence.puml)
 
 1. Application이 `k_timer_start()` 또는 `k_sleep()`을 요청한다.
 2. Kernel이 timeout queue에 등록한다. Sleep 경로는 현재 Thread를 unready로 만들고 context switch한다.
@@ -1624,6 +1656,8 @@ RSE는 **BL2 SCMI timeout의 Counter polling**과 **조건부 TIMER0 interrupt �
 
 ![RSE BL2 SCMI의 Counter 조회와 timeout 판단 Sequence](diagrams/08h-tfm-poll-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/08h-tfm-poll-sequence.puml)
+
 1. `transport_exchange()`가 frequency와 시작 count를 요청한다.
 2. HAL이 `systimer_armv8_m_get_counter_value()`를 호출한다.
 3. Driver가 TIMER0 count를 안정적으로 읽는다.
@@ -1637,6 +1671,8 @@ RSE는 **BL2 SCMI timeout의 Counter polling**과 **조건부 TIMER0 interrupt �
 #### 4.5.3 Conditional Timer Test / Interrupt Sequence
 
 ![조건부 TIMER0 초기화·AIVAL 만료·SPM 처리 Sequence](diagrams/08h-tfm-test-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/08h-tfm-test-sequence.puml)
 
 1. IRQ 할당 초기화가 `tfm_timer0_irq_init()`에 partition·IRQ 정보를 전달한다.
 2. Platform은 NVIC priority·Secure target을 설정하고 IRQ를 disable 상태로 둔다.

@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 09e-scp-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "MHU / GIC / CPU" as p0
+participant "FIQ / irq_global" as p1
+participant "MHU3 / Transport" as p2
+participant "SCMI / Framework" as p3
+
+p0 -> p1 : 1. Group0 FIQ → IAR0
+p1 -> p2 : 2. handler table dispatch
+p2 -> p0 : 3. MDBCW_CLR / source clear
+p2 -> p3 : 4. transport notification → fwk_put_event
+p2 -> p1 : 5. ISR 반환
+p1 -> p0 : 6. EOIR0 / exception return
+p3 -> p3 : 7. event dispatcher → scmi_process_event
+
+@enduml

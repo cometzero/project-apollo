@@ -1,0 +1,45 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 11-rse-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "MHU / NVIC" as p0
+participant "M55 platform ISR" as p1
+participant "TF-M SPM" as p2
+participant "Mailbox partition" as p3
+
+p0 -> p1 : 1  vector entry / NVIC active
+note over p1
+2  tfm_multi_core_hal_receive
+end note
+p1 -> p2 : 3  spm_handle_interrupt
+note over p2
+IRQ disable → signal assert
+end note
+p2 -> p3 : 4  partition의 psa_wait 해제
+p3 -> p2 : 5  psa_eoi(signal)
+p2 -> p0 : 6  signal clear · NVIC pending clear · IRQ\nre-enable
+note over p3
+7  tfm_rpc_client_call_handler
+end note
+note over p0, p3
+M-profile의 하드웨어 완료
+end note
+
+@enduml

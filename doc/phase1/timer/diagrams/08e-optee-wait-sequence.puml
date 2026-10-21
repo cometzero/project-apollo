@@ -1,0 +1,36 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08e-optee-wait-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Trusted Application" as p0
+participant "syscall_wait" as p1
+participant "Secure Time Source" as p2
+participant "RPC Service" as p3
+
+p0 -> p1 : 1. TEE_Wait(timeout) → _utee_wait
+p1 -> p2 : 2. 시작 시간 / 현재 시간 조회
+p2 -> p1 : 3. Counter 기반 TEE_Time
+p1 -> p1 : 4. cancellation / elapsed 확인
+p1 -> p3 : 5. tee_time_wait(remaining) → RPC SUSPEND
+p3 -> p1 : 6. RPC 반환 / 실행 재개
+p1 -> p2 : 7. 현재 시간 재조회 (②~⑥ 반복)
+p1 -> p0 : 8. timeout 충족: SUCCESS / 취소: ERROR_CANCEL
+
+@enduml

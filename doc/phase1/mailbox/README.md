@@ -426,6 +426,8 @@ Mailbox에는 scheduler 기능이 없다. SCP framework event, Zephyr workqueue,
 
 ![Linux SCMI에서 SCP까지 HW SW sequence](diagrams/11-scmi-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/11-scmi-sequence.puml)
+
 1. Linux가 shared request를 준비하고 AP PBX ch0 bit0을 SET한다.
 2. CL0 IRQ에서 SCP가 flag를 CLR한 뒤 request를 내부 buffer로 복사한다.
 3. SCMI framework event가 서비스를 실행한다.
@@ -450,6 +452,8 @@ Arm HIPC reference의 Linux remoteproc/RPMsg와 Zephyr OpenAMP/veth 계층을 �
 
 ![HIPC Attach와 Packet Sequence](diagrams/13-hipc-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/13-hipc-sequence.puml)
+
 1. Linux는 CL1을 `RPROC_DETACHED`로 등록하고 attach flag를 보낸다.
 2. Zephyr가 resource table을 준비하고 software ACK를 보낸다.
 3. VirtIO negotiation·RPMsg name service로 endpoint를 연결한다.
@@ -473,6 +477,8 @@ TF-A는 mailbox framework 대신 platform SCMI channel과 synchronous transport�
 ##### 4.2.2.2 SCMI API / Sequence
 
 ![TF-A synchronous SCMI Sequence](diagrams/15-tfa-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/15-tfa-sequence.puml)
 
 1. `scmi_get_channel()`로 lock을 얻고 기존 channel FREE를 확인한다.
 2. 요청 header/payload를 기록하고 `scmi_send_sync_command()`가 BUSY로 전환한다.
@@ -519,6 +525,8 @@ MMIO는 Device, payload는 Normal Non-cacheable memory attribute를 사용한다
 
 ![SCP ISR Transport Framework Service Sequence](diagrams/18-scp-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/18-scp-sequence.puml)
+
 1. `mhu3_isr()`가 IRQ에 해당하는 device와 pending channel/flag를 찾는다.
 2. 해당 flag를 W1C로 clear하고 `signal_message()`를 호출한다.
 3. Transport가 readiness·소유권을 검사하고 request를 내부 buffer로 복사한다.
@@ -553,6 +561,8 @@ CLR 시점의 HW ACK는 3–5보다 먼저 발생한다. Logical channel이 같�
 
 ![Zephyr IRQ Callback Workqueue RPMsg Sequence](diagrams/20-zephyr-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/20-zephyr-sequence.puml)
+
 1. AP의 doorbell이 CL1 GIC INTID73을 발생시킨다.
 2. MHU ISR이 client callback을 호출한다.
 3. Veth callback이 atomic event를 기록하고 `k_work_submit()`을 호출한다.
@@ -579,6 +589,8 @@ SMP에서는 worker가 ISR 종료 전에 다른 CPU에서 실행될 수 있다. 
 
 ![RSE BL2 및 TF-M과 SCP SCMI Sequence](diagrams/22-rse-scmi-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/22-rse-scmi-sequence.puml)
+
 1. BL2가 SCP protocol/version 준비를 polling으로 확인한다.
 2. RSE가 SCMI power 요청을 보내 AP primary core 기동을 진행한다.
 3. Runtime에서 RSE가 system power notification을 구독한다.
@@ -590,6 +602,8 @@ RSE→SCP ch0 bit3 reload ACK는 shared SCMI packet을 동반하지 않는 전�
 #### 4.5.3 SFCP / PSA Request Sequence
 
 ![AP Secure와 RSE의 DBCH Batch 및 PSA Sequence](diagrams/23-sfcp-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/23-sfcp-sequence.puml)
 
 1. AP client가 요청을 serialize한다. 첫 batch는 **ch0 길이, ch1..126 data, ch127 notify=1234**다.
 2. RSE NVIC45 → SFCP handler가 batch를 읽고 channel을 clear한다.

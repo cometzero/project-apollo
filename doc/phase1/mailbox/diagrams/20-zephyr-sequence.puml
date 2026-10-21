@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 20-zephyr-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "AP / MHU" as p0
+participant "CL1 MHU ISR" as p1
+participant "Veth callback" as p2
+participant "Workqueue / OpenAMP" as p3
+
+p0 -> p1 : 1. Doorbell → GIC INTID73
+p1 -> p2 : 2. RX callback
+p2 -> p3 : 3. Atomic event / k_work_submit()
+p2 -> p1 : 4. Callback return
+p1 -> p0 : 5. MBX CLR / Transfer ACK
+p3 -> p3 : 6. Vring processing / RPMsg receive
+p3 -> p3 : 7. Network packet delivery
+
+@enduml

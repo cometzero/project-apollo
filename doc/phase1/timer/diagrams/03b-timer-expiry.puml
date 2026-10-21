@@ -1,0 +1,46 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 03b-timer-expiry)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Guest driver" as p0
+participant "Timer model" as p1
+participant "Event scheduler" as p2
+participant "Interrupt controller" as p3
+
+note over p0, p3
+QEMU: CPU-local / AP MMIO (RSE는 별도 SSE 모델)
+end note
+p0 -> p1 : 1. CVAL/TVAL · CTL 설정
+p1 -> p2 : 2. QEMU virtual time 기준 expiry 예약
+p2 -> p1 : 3. QEMUTimer callback
+p1 -> p3 : 4. compare / ENABLE / IMASK → IRQ level
+p3 -> p0 : 5. CPU exception → ISR
+p0 -> p1 : 6. mask / disable / next deadline → 재계산
+note over p0, p3
+SystemC: CL0 host_gtimer / MMIO CVAL
+end note
+p0 -> p1 : 7. CVAL · CTL 쓰기 → rearm event
+p1 -> p2 : 8. SystemC count 기준 wait(delay, events)
+p2 -> p1 : 9. deadline 또는 Counter / register 변경
+p1 -> p3 : 10. 조건 재평가 → signal socket IRQ level
+p3 -> p0 : 11. GIC → CL0 FIQ → timer_isr
+p0 -> p1 : 12. mask / next CVAL → 재계산
+
+@enduml

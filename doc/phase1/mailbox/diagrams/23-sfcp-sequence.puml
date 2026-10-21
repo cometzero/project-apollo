@@ -1,0 +1,37 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 23-sfcp-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "AP Secure client" as p0
+participant "MHU2 DBCH" as p1
+participant "RSE SFCP ISR" as p2
+participant "Agent / PSA service" as p3
+
+p0 -> p1 : 1. Length / Words / ch127 notify=1234
+p1 -> p2 : 2. NVIC45 / Receive batch
+p2 -> p1 : 3. Read words / CLR channels
+p0 -> p1 : 4. If needed: Next data batch / Notify
+p2 -> p3 : 5. Complete message / Queue / Signal
+p3 -> p3 : 6. psa_wait() → psa_eoi() → RPC
+p3 -> p3 : 7. Decode / Permissions / PSA call
+p3 -> p1 : 8. Serialized reply / Reverse pair
+p1 -> p0 : 9. Poll / Read / Decode response
+
+@enduml

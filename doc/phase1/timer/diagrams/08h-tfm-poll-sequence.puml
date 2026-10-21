@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08h-tfm-poll-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "SCMI transport" as p0
+participant "SCMI HAL" as p1
+participant "Systimer driver" as p2
+participant "TIMER0 Counter" as p3
+
+p0 -> p1 : 1. frequency / start count 요청
+p1 -> p2 : 2. get_counter_value(TIMER0)
+p2 -> p3 : 3. high → low → high · 안정될 때까지 재조회
+p1 -> p0 : 4. 125MHz 환산값 / 64-bit count
+p0 -> p0 : 5. budget = frequency × timeout_s
+p0 -> p1 : 6. doorbell 상태와 elapsed를 반복 확인
+p0 -> p0 : 7. 응답 성공 / 오류 / timeout 종료
+
+@enduml

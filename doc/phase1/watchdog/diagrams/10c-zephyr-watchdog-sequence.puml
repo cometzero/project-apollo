@@ -1,0 +1,37 @@
+@startuml
+' Source: ../apollo-watchdog-architecture.drawio (page 10c-zephyr-watchdog-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Application Thread" as p0
+participant "Watchdog API" as p1
+participant "IP-specific Driver" as p2
+participant "Watchdog HW" as p3
+
+p0 -> p1 : 1. wdt_install_timeout(cfg)
+p1 -> p2 : 2. install_timeout → channel_id
+p0 -> p1 : 3. wdt_setup(options)
+p1 -> p2 : 4. setup
+p2 -> p3 : 5. timeout / action 설정 · enable
+p0 -> p1 : 6. wdt_feed(channel_id) 반복
+p1 -> p2 : 7. feed
+p2 -> p3 : 8. refresh register write
+p3 -> p3 : 9. feeding 중단 → timeout → IRQ / reset
+
+@enduml

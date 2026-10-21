@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 09a-linux-init)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Boot / DT" as p0
+participant "GIC driver /\nirq_domain" as p1
+participant "Device driver" as p2
+participant "GIC / CPU" as p3
+
+p0 -> p1 : 1. irqchip init · GIC DT 매칭
+p1 -> p3 : 2. Distributor / Redistributor / CPU interface
+p1 -> p1 : 3. irq_domain 생성 / CPU IRQ entry 연결
+p2 -> p1 : 4. DT interrupt → Linux virq mapping
+p2 -> p1 : 5. request_irq / request_threaded_irq
+p1 -> p3 : 6. type / priority / routing / unmask
+p2 -> p2 : 7. device interrupt source enable
+
+@enduml

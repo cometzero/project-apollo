@@ -1,0 +1,39 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08h-tfm-test-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Test / Partition" as p0
+participant "Systimer / Platform" as p1
+participant "TIMER0 / NVIC" as p2
+participant "SPM" as p3
+
+p3 -> p1 : 1. tfm_timer0_irq_init(partition, irq_info)
+p1 -> p2 : 2. priority / Secure target / NVIC disable
+p0 -> p1 : 3. secure_timer_start()
+p1 -> p2 : 4. init → RELOAD → AIVALEN → unmask
+p0 -> p2 : 5. 별도 IRQ enable (partition 설정 필요)
+p2 -> p1 : 6. expiry → IRQ3 → TIMER0 handler
+p1 -> p3 : 7. spm_handle_interrupt()
+p3 -> p0 : 8. SLIH: signal / FLIH: handler 호출
+p0 -> p1 : 9. clear_intr() → AIVAL CLR bit = 0
+p0 -> p3 : 10. SLIH 경로: psa_eoi(signal)
+p0 -> p1 : 11. stop() → uninit / clear
+
+@enduml

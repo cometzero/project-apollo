@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08d-uboot-init)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Boot / Caller" as p0
+participant "Common time API" as p1
+participant "ARMv8 Generic Timer" as p2
+participant "CPU Counter register" as p3
+
+p0 -> p1 : 1. board_init_f() → timer_init()
+p1 -> p1 : 2. 기본 weak 구현: return 0
+p0 -> p1 : 3. get_timer(base) / timer_get_boot_us()
+p1 -> p2 : 4. get_ticks() / get_tbclk()
+p2 -> p3 : 5. ISB + CNTPCT read / CNTFRQ read
+p3 -> p1 : 6. count / frequency 반환
+p1 -> p0 : 7. CONFIG_SYS_HZ 단위 / μs 환산 결과
+
+@enduml

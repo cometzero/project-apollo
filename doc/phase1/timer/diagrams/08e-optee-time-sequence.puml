@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08e-optee-time-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Trusted Application" as p0
+participant "Core syscall" as p1
+participant "CNTPCT time source" as p2
+participant "System Counter" as p3
+
+p0 -> p1 : 1. TEE_GetSystemTime → _utee_get_time(SYSTEM)
+p1 -> p2 : 2. syscall_get_time → tee_time_get_sys_time
+p2 -> p3 : 3. read CNTPCT / CNTFRQ
+p3 -> p2 : 4. count / frequency
+p2 -> p2 : 5. seconds / millis 환산
+p2 -> p1 : 6. TEE_Time 반환
+p1 -> p0 : 7. copy_to_user_private → TA
+
+@enduml

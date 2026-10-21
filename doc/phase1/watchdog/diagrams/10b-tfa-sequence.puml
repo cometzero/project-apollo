@@ -1,0 +1,33 @@
+@startuml
+' Source: ../apollo-watchdog-architecture.drawio (page 10b-tfa-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Error path" as p0
+participant "SBSA helper" as p1
+participant "AP Secure WD" as p2
+participant "Reset controller" as p3
+
+p0 -> p1 : 1. sbsa_wdog_refresh(SBSA_SECURE_WDOG_BASE)
+p1 -> p2 : 2. write 1 at 0x1A460000 + 0
+p2 -> p2 : 3. actual address is WCS: enable / stage clear
+p0 -> p0 : 4. WFI loop
+p2 -> p3 : 5. WS1 after expiry of current WOR
+
+@enduml

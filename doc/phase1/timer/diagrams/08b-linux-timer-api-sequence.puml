@@ -1,0 +1,42 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08b-linux-timer-api-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Application / Task" as p0
+participant "hrtimer" as p1
+participant "Tick / Timer driver" as p2
+participant "Timer / GIC / CPU" as p3
+participant "Scheduler" as p4
+
+p0 -> p1 : 1. clock_nanosleep() → hrtimer_nanosleep()
+p1 -> p2 : 2. queue 등록 → 가장 이른 expiry
+p2 -> p3 : 3. CVAL / CTL 설정
+p0 -> p4 : 4. schedule() · 호출 Task 대기
+p3 -> p2 : 5. deadline → PPI → IRQ handler
+p2 -> p1 : 6. event_handler → hrtimer_interrupt()
+p1 -> p4 : 7. hrtimer_wakeup() → wake_up_process()
+p1 -> p2 : 8. 다음 expiry 재설정
+p2 -> p3 : 9. 다음 CVAL / CTL
+p4 -> p0 : 10. 실행 조건 충족 시 Task 재개
+note over p0
+clock_nanosleep() 반환
+end note
+
+@enduml

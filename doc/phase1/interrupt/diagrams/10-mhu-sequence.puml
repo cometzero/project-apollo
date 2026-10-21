@@ -1,0 +1,43 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 10-mhu-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "AP Linux" as p0
+participant "AP PBX / CL1 MBX" as p1
+participant "CL1 ISR / callback" as p2
+participant "Zephyr workqueue" as p3
+
+p0 --> p3 : 0  shared memory 기록 / ordering (수신측은 이후 읽음)
+p0 -> p1 : 1  PBX doorbell SET
+p1 -> p2 : 2  MBX → CL1 SPI41 / INTID73
+p2 -> p3 : 3  atomic event + k_work_submit
+p2 -> p1 : 4  rx_complete → MBX CLEAR
+p1 -> p0 : 5  sender ACK 가능: AP INTID152
+note over p2
+CL1: DSB → ICC_EOIR1
+end note
+note over p3
+pending event 소비
+end note
+note over p0, p3
+응답은 반대 방향의 별도 pair
+end note
+
+@enduml

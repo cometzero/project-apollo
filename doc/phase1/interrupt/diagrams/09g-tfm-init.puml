@@ -1,0 +1,34 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 09g-tfm-init)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Partition manifest" as p0
+participant "SPM / Platform init" as p1
+participant "NVIC" as p2
+participant "Partition service" as p3
+
+p0 -> p1 : 1. IRQn / signal / SLIH 연결
+p1 -> p2 : 2. priority / Secure target / disable
+p1 -> p3 : 3. partition 시작 / IRQ 정보 연결
+p3 -> p1 : 4. psa_irq_enable(signal)
+p1 -> p2 : 5. IRQ enable
+p3 -> p3 : 6. psa_wait(signal)
+
+@enduml

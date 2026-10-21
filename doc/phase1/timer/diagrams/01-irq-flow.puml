@@ -1,0 +1,41 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 01-irq-flow)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "System Counter" as p0
+participant "CPU n Timer" as p1
+participant "AP GIC" as p2
+participant "CPU n" as p3
+participant "Timer driver" as p4
+
+p0 -> p1 : 01  count → compare
+p1 -> p2 : 02  PPI assert · INTID27
+p2 -> p3 : 03  IRQ exception
+p3 -> p2 : 04  IAR1 read · ACK
+p3 -> p4 : 05  Timer ISR dispatch
+p4 -> p1 : 06  ISTATUS 확인 → IMASK=1 · Timer source IRQ 낮춤
+p4 -> p3 : 07  event_handler()
+p3 -> p1 : 08  다음 event가 있으면 CVAL 설정 → ENABLE=1 / IMASK=0
+p3 -> p2 : 09  GIC deactivate
+note over p0, p4
+Count ≥ CVAL · ENABLE · !IMASK
+end note
+
+@enduml

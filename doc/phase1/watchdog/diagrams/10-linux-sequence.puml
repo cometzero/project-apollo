@@ -1,0 +1,42 @@
+@startuml
+' Source: ../apollo-watchdog-architecture.drawio (page 10-linux-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Watchdog Service" as p0
+participant "sbsa_gwdt" as p1
+participant "Watchdog" as p2
+participant "AP GIC" as p3
+participant "SI CL0 / SCP" as p4
+
+p0 -> p1 : ① open / SETTIMEOUT
+p1 -> p2 : WOR = timeout × CNTFRQ / 2; EN=1
+p0 -> p1 : ② write / KEEPALIVE
+p1 -> p2 : WRR write → clear stages / rearm
+note over p0, p4
+Feeding 중단
+end note
+p2 -> p3 : ③ τ 후 WS0 → INTID82
+p2 -> p3 : ④ 추가 τ 후 WS1 → INTID83
+p2 -> p4 : 같은 WS1 → fanout → SI INTID321
+note over p4
+CL0 Recovery
+end note
+
+@enduml

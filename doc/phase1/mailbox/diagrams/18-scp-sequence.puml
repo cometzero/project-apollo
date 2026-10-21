@@ -1,0 +1,36 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 18-scp-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "MHU / GIC" as p0
+participant "mhu3 ISR" as p1
+participant "Transport" as p2
+participant "SCMI / Framework" as p3
+
+p0 -> p1 : 1. RX IRQ / Device selection
+p1 -> p0 : 2. Read channel / flag → CLR
+p1 -> p2 : 3. signal_message()
+p2 -> p2 : 4. Readiness / Request copy
+p2 -> p3 : 5. SCMI framework event
+p3 -> p3 : 6. Protocol service execution
+p3 -> p2 : 7. Response payload / status
+p2 -> p0 : 8. Barrier → FREE → optional reverse SET
+
+@enduml

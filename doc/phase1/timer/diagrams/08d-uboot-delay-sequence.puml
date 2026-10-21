@@ -1,0 +1,36 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08d-uboot-delay-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Firmware caller" as p0
+participant "Common udelay" as p1
+participant "ARMv8 __udelay" as p2
+participant "CPU Counter / Event" as p3
+
+p0 -> p1 : 1. udelay(usec)
+p1 -> p1 : 2. schedule() · 대기 구간 분할
+p1 -> p2 : 3. __udelay(kv) · UTHREAD 비활성 경로
+p2 -> p3 : 4. CNTPCT + usec_to_tick() → target
+p2 -> p3 : 5. [옵션 활성 / EL2+] CNTHCTL 저장 · event enable
+p2 -> p3 : 6. [남은 구간 충분] WFE / count 재확인
+p2 -> p3 : 7. CNTHCTL 복원 → 마지막 구간 polling
+p2 -> p0 : 8. count > target이면 반환 · 남은 분할 구간 반복
+
+@enduml

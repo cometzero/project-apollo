@@ -569,6 +569,8 @@ Group1NS는 Linux, Group1S는 Secure EL1, Group0는 EL3 처리 경로로 구분�
 
 ![DT와 GIC irq_domain에서 device handler 등록까지](diagrams/09a-linux-init.drawio.svg)
 
+[PlantUML 원본](diagrams/09a-linux-init.puml)
+
 1. IRQ chip 초기화가 DT의 GIC node와 driver를 연결한다.
 2. GIC driver가 Distributor와 boot CPU의 Redistributor·CPU interface를 설정한다.
 3. `irq_domain`을 만들고 CPU IRQ entry를 연결한다. Secondary CPU는 CPU별 초기화 경로를 따른다.
@@ -590,6 +592,8 @@ Group1NS는 Linux, Group1S는 Secure EL1, Group0는 EL3 처리 경로로 구분�
 ##### 4.2.1.3 Level Interrupt Sequence
 
 ![I2C level IRQ의 acknowledge·source clear·완료 Sequence](diagrams/09-level-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/09-level-sequence.puml)
 
 <details>
 <summary>도면 상세 설명</summary>
@@ -643,6 +647,8 @@ TF-A는 GIC security·EL routing을 설정하고, EL3 handler와 Secure EL1 SPMC
 
 ![Non-secure 실행 중 G1S를 SPMD 경유로 Secure EL1에 전달](diagrams/09b-tfa-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/09b-tfa-sequence.puml)
+
 1. Non-secure 실행 중 G1S가 발생하면 routing에 따라 EL3 FIQ로 진입한다.
 2. EL3 interrupt management가 Secure EL1 interrupt handler를 선택한다.
 3. SPMD가 `FFA_INTERRUPT`로 S-EL1 SPMC context에 진입한다.
@@ -678,6 +684,8 @@ G0의 EHF dispatch와 G1NS의 Linux 처리는 이 Sequence에 포함하지 않�
 ##### 4.2.3.2 Polling / Exception Sequence
 
 ![정상 polling과 예기치 않은 IRQ/FIQ의 대체 경로](diagrams/09c-uboot-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/09c-uboot-sequence.puml)
 
 1. Boot command가 driver에 I/O를 요청한다.
 2. Polling driver는 device status와 timeout을 확인한다.
@@ -716,6 +724,8 @@ OP-TEE는 native IRQ를 등록된 Secure handler에 전달한다. 현재 ARM64 �
 ##### 4.2.4.2 Native IRQ Sequence
 
 ![OP-TEE IAR1·등록 handler·EOIR1 처리](diagrams/09d-optee-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/09d-optee-sequence.puml)
 
 1. S-EL1 native IRQ entry가 `interrupt_main_handler()`를 호출한다.
 2. `gic_native_itr_handler()`가 IAR1에서 INTID를 읽는다.
@@ -762,6 +772,8 @@ CL0는 single-security GIC의 **Group0/FIQ**를 사용한다. `irq_global()`이�
 #### 4.3.3 MHU Interrupt Sequence
 
 ![SCP FIQ에서 MHU clear·SCMI event 처리까지](diagrams/09e-scp-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/09e-scp-sequence.puml)
 
 1. MHU interrupt가 GIC Group0/FIQ로 들어가 `irq_global()`에서 IAR0를 읽는다.
 2. Handler table이 MHU3 ISR을 호출한다.
@@ -811,6 +823,8 @@ Zephyr는 GICv3 IRQ를 `_sw_isr_table`로 dispatch한다. MHU callback은 workqu
 
 ![Zephyr MHU callback과 비동기 workqueue 처리](diagrams/09f-zephyr-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/09f-zephyr-sequence.puml)
+
 1. IRQ wrapper가 IAR1을 읽고 MHU ISR을 dispatch한다.
 2. Driver가 수신 callback을 호출한다.
 3. Callback이 pending event를 저장하고 work를 submit한다.
@@ -822,6 +836,8 @@ Zephyr는 GICv3 IRQ를 `_sw_isr_table`로 dispatch한다. MHU callback은 workqu
 SMP에서는 6–7이 5 이전에도 실행될 수 있다. Pending bitset은 여러 통지를 합칠 수 있으므로 IRQ 횟수와 packet 수를 1:1로 비교하지 않는다. [Zephyr·적용 패치](SOURCES.md#s6)
 
 ![AP·CL1의 payload 공개와 수신·ACK interrupt 구분](diagrams/10-mhu-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/10-mhu-sequence.puml)
 
 <details>
 <summary>도면 상세 설명</summary>
@@ -856,6 +872,8 @@ TF-M은 NVIC security attribution과 partition IRQ 할당을 연결한다. Apoll
 
 ![Manifest·Secure target·partition IRQ enable 순서](diagrams/09g-tfm-init.drawio.svg)
 
+[PlantUML 원본](diagrams/09g-tfm-init.puml)
+
 1. Manifest가 IRQn·signal·SLIH handler 정보를 지정한다.
 2. Platform init이 priority·Secure target을 설정하고 IRQ를 disable한다.
 3. SPM이 partition과 IRQ 정보를 연결한다.
@@ -878,6 +896,8 @@ TF-M은 NVIC security attribution과 partition IRQ 할당을 연결한다. Apoll
 #### 4.5.3 Secure Mailbox Sequence
 
 ![RSE Secure MHU에서 SLIH signal·RPC 처리까지](diagrams/11-rse-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/11-rse-sequence.puml)
 
 <details>
 <summary>도면 상세 설명</summary>

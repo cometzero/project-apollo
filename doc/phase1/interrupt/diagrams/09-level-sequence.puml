@@ -1,0 +1,40 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 09-level-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "I2C model" as p0
+participant "GIC + CPU interface" as p1
+participant "Linux IRQ core" as p2
+participant "I2C ISR / caller" as p3
+
+p0 -> p1 : 1  drive_irq → spi_in_320 → INTID352
+p1 -> p2 : 2  enable / route / priority → CPU IRQ
+p2 -> p1 : 3  IAR1 acknowledge (split: 이어서 EOIR1)
+p2 -> p3 : 4  irq_domain → device handler
+p3 -> p0 : 5  read-to-clear · FIFO service
+p0 -> p1 : 6  IRQ level deassert
+p3 -> p2 : 7  complete() · ISR 반환
+p2 -> p1 : 8  deactivate: EOIR 또는 DIR
+p2 -> p1 : 9  exception 복귀 (eret)
+note over p0, p3
+EOImode=1: IAR 직후 EOIR로 priority drop,
+end note
+
+@enduml

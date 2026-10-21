@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08g-zephyr-init)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Zephyr init" as p0
+participant "arm_arch_timer" as p1
+participant "CPU Timer registers" as p2
+participant "GIC / IRQ" as p3
+
+p0 -> p1 : 1. PRE_KERNEL_2 · sys_clock_driver_init
+p1 -> p3 : 2. IRQ_CONNECT · compare ISR 연결
+p1 -> p1 : 3. arm_arch_timer_init · frequency 준비
+p1 -> p2 : 4. enable · CNTVCT 조회 · last_tick/cycle 설정
+p1 -> p2 : 5. CVAL = last_cycle + CYC_PER_TICK
+p1 -> p3 : 6. irq_enable(virtual timer PPI)
+p1 -> p2 : 7. CNTV_CTL.IMASK = 0
+
+@enduml

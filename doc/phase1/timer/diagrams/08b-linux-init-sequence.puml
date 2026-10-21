@@ -1,0 +1,37 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08b-linux-init-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Boot / Device Tree" as p0
+participant "arm_arch_timer" as p1
+participant "IRQ / CPU hotplug" as p2
+participant "Clockevent /\nClocksource" as p3
+
+p0 -> p1 : 1. timer_probe() → compatible match
+p1 -> p2 : 2. of_irq_get() · PPI mapping
+p1 -> p1 : 3. CNTFRQ / DT 해석 · Timer 선택
+p1 -> p2 : 4. request_percpu_irq()
+p1 -> p2 : 5. cpuhp_setup_state()
+p2 -> p1 : 6. arch_timer_starting_cpu()
+p1 -> p3 : 7. __arch_timer_setup() · clockevent 등록
+p1 -> p2 : 8. enable_percpu_irq() · 이후 user access 설정
+p1 -> p3 : 9. arch_counter_register() · clocksource /\nsched_clock
+
+@enduml

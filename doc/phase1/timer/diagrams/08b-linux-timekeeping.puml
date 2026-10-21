@@ -1,0 +1,37 @@
+@startuml
+' Source: ../apollo-timer-architecture.drawio (page 08b-linux-timekeeping)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "Application / libc" as p0
+participant "Linux Timekeeping" as p1
+participant "arm_arch_timer" as p2
+participant "CPU Counter register" as p3
+
+p0 -> p1 : 1. clock_gettime(CLOCK_MONOTONIC) · syscall
+p1 -> p2 : 2. ktime_get_ts64() → clocksource read
+p2 -> p3 : 3. MRS · CNTPCT / CNTVCT
+p3 -> p1 : 4. Counter 값 반환
+p1 -> p1 : 5. cycle 차이 → ns 환산 · 일관성 확인
+p1 -> p0 : 6. timespec 반환 (sec / nsec)
+note over p1, p2
+vDSO fast path (지원 시)
+end note
+
+@enduml

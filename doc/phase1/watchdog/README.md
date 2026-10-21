@@ -282,6 +282,8 @@ Linux는 NS watchdog을 `arm,sbsa-gwdt`로 probe하고 `/dev/watchdog*`를 제�
 
 ![Device Tree에서 watchdog_device 등록까지](diagrams/10a-linux-init.drawio.svg)
 
+[PlantUML 원본](diagrams/10a-linux-init.puml)
+
 Driver probe는 feeding service 시작과 다르다. Probe 시 WCS.EN이 설정되어 있으면 이미 동작 중인 Hardware로 처리한다.
 
 1. DT compatible로 `sbsa_gwdt` driver를 선택한다.
@@ -311,6 +313,8 @@ Driver probe는 feeding service 시작과 다르다. Probe 시 WCS.EN이 설정�
 
 ![Linux feeding 중단에서 WS0·WS1 및 SCP 통보까지](diagrams/10-linux-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/10-linux-sequence.puml)
+
 이 흐름은 Linux `action=0` 기준이다. WS0 ISR은 등록하지 않으며, WS1은 CL0 INTID321로 전달된다. FD의 비정상 close 이후에도 watchdog core가 ping할 수 있으므로 프로세스 종료와 feeding 중단을 구분한다.
 
 1. 서비스가 timeout을 설정하고 watchdog을 시작한다.
@@ -338,6 +342,8 @@ Driver probe는 feeding service 시작과 다르다. Probe 시 WCS.EN이 설정�
 ##### 4.2.2.2 Error Handler Sequence
 
 ![TF-A error handler의 실제 주소 접근과 WS1 경로](diagrams/10b-tfa-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/10b-tfa-sequence.puml)
 
 1. Error handler가 `sbsa_wdog_refresh(SBSA_SECURE_WDOG_BASE)`를 호출한다.
 2. Helper가 전달된 base+0에 1을 쓴다.
@@ -367,6 +373,8 @@ CL0 local watchdog을 주기적으로 feed하는 서비스와 AP NS 만료 복�
 #### 4.3.2 SCP Watchdog Sequence
 
 ![SCP Watchdog IRQ·event 처리·AP 복구·IRQ rearm Sequence](diagrams/11-recovery-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/11-recovery-sequence.puml)
 
 INTID321은 WS1 source가 해제될 때까지 mask를 유지한다. IRQ rearm과 Linux boot 완료는 별도 상태다.
 
@@ -423,6 +431,8 @@ CMSDK watchdog driver의 존재만으로 Apollo의 Generic Watchdog을 사용할
 
 ![Zephyr timeout 설치·활성화·반복 feeding·HW 만료 Sequence](diagrams/10c-zephyr-watchdog-sequence.drawio.svg)
 
+[PlantUML 원본](diagrams/10c-zephyr-watchdog-sequence.puml)
+
 1. Application이 timeout window·callback·reset action을 설치한다.
 2. API가 driver의 `install_timeout`을 호출하고 channel ID를 반환한다.
 3. Application이 `wdt_setup()`을 호출한다.
@@ -468,6 +478,8 @@ NS Timestamp watchdog vector는 기본 weak handler다. CMSDK driver를 Timestam
 #### 4.5.3 HW Watchdog Sequence
 
 ![TF-M CMSDK driver의 초기화·enable·feed·만료·interrupt clear Sequence](diagrams/10d-tfm-sequence.drawio.svg)
+
+[PlantUML 원본](diagrams/10d-tfm-sequence.puml)
 
 1. Firmware가 `arm_watchdog_init()`에 timeout을 전달한다.
 2. Driver가 timeout을 보관하고 locked·disabled 상태로 초기화한다.

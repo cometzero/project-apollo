@@ -1,0 +1,35 @@
+@startuml
+' Source: ../apollo-interrupt-architecture.drawio (page 09f-zephyr-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "MHU / GIC / CPU" as p0
+participant "IRQ wrapper / ISR" as p1
+participant "Veth callback" as p2
+participant "Workqueue" as p3
+
+p0 -> p1 : 1. IAR1 → _sw_isr_table
+p1 -> p2 : 2. mailbox callback
+p2 -> p3 : 3. atomic pending / k_work_submit
+p2 -> p1 : 4. callback 반환
+p1 -> p0 : 5. rx_complete clear → DSB → EOIR1
+p3 -> p3 : 6. pending 처리 → rproc_virtio_notified
+p3 -> p3 : 7. vring / RPMsg endpoint 처리
+
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+' Source: ../apollo-mailbox-architecture.drawio (page 22-rse-scmi-sequence)
+hide footbox
+skinparam backgroundColor white
+skinparam defaultFontName Noto Sans CJK KR
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ParticipantBackgroundColor white
+  ParticipantBorderColor #235D86
+  ParticipantFontColor #172C43
+  LifeLineBorderColor #94A3B8
+  ArrowColor #235D86
+  ArrowFontColor #172C43
+  MessageAlign center
+  ParticipantPadding 10
+}
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #94A3B8
+scale max 790 width
+
+participant "RSE BL2 / TF-M" as p0
+participant "Shared slot / MHU" as p1
+participant "SCP" as p2
+participant "RSE SCMI partition" as p3
+
+p0 -> p1 : 1. BL2: Query protocol readiness
+p1 -> p2 : 2. ch0 bit1 / CL0 IRQ105
+p2 -> p1 : 3. SCMI response / FREE
+p0 -> p1 : 4. Poll response / Request AP power-on
+p0 -> p2 : 5. Runtime: Subscribe power notification
+p2 -> p1 : 6. Notification page / ch0 bit2 SET
+p1 -> p3 : 7. NVIC139 → Partition signal
+p3 -> p1 : 8. psa_wait() / Read notification / Complete
+
+@enduml
