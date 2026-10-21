@@ -603,54 +603,48 @@ Embed 방식은 payload를 DBCH로 전달한다. Pointer 방식은 pointer/lengt
 
 <a id="validation"></a>
 
-## 5. Test and Verification
+## 5. SW Test and Verification
 
-현재 Apollo에 있는 full-system runner·profile·debug 관찰 경로를 기준으로 한다. **NOT RUN은 이번 문서 개정에서 실행하지 않은 항목**이다. 실행 결과는 image/ELF revision·build 설정과 profile JSON·Domain별 log에 연결한다.
+실제 Guest SW가 실행하며 출력하는 UART 로그·shell 명령 결과·Guest 시험 프로그램 결과로 판정한다. Host runner는 실행과 로그 수집에 사용하며, 소스 분석·GDB 관찰·QVP 모델 trace만으로 PASS를 부여하지 않는다.
 
-**판정:** PASS는 기대 결과 충족, FAIL은 불충족, NOT RUN은 미수행, BLOCKED는 image·symbol 등 선행 조건 문제, N/A는 해당 구성에 미적용이다. 초기화 breakpoint는 해당 boot stage 진입 전에 설정한다.
+**결과 기록:** image 식별값, 실행 명령, Domain별 Guest 로그 경로와 관찰값을 함께 남긴다. `PASS`는 기대 결과 충족, `FAIL`은 불충족, `NOT RUN`은 실행 결과 미수집, `BLOCKED`는 실행·로그 수집 불가, `N/A`는 시험 기능 미포함이다. 아래 표는 시험 항목이며 이번 개정에서 새 Runtime 결과를 수집하지 않았으므로 `NOT RUN`으로 기록한다.
 
 ### 5.1 AP Domain — Linux
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| MBX-101 | SCMI performance: `cpufreq` profile; policy·frequency 전환과 protocol 응답 | SCMI policy 등록·주파수 요청 성공 | — | NOT RUN | — |
-| MBX-102 | MHU IRQ: Full guest `/proc/interrupts` 전후와 MHU trace; RX/ACK 구분 | 선택 RX/ACK IRQ 증가와 flag clear 일치 | — | NOT RUN | — |
-| MBX-103 | HIPC 연결·payload: `hipc` profile; DT·stack·memory layout, ICMP·UDP·TCP 양방향 | HIPC assertions 통과·양방향 payload 수신 | — | NOT RUN | — |
+| MBX-101 | BSP `cpufreq` profile의 Guest policy·frequency 요청 및 응답 출력 수집 | SCMI policy 등록, 지원 frequency 요청 성공 및 Guest readback 확인 | — | NOT RUN | — |
+| MBX-102 | MHU를 사용하는 요청 전후 Guest `/proc/interrupts` 수집 | 선택 MHU IRQ count 증가 | — | NOT RUN | — |
+| MBX-103 | AP Guest에서 기존 `scripts/autosd_demo/hipc_ping.py` 실행; 결과 JSON 수집 | 지정 HIPC interface에서 ICMP request에 대한 SI reply와 payload 검사 PASS | — | NOT RUN | — |
 
-Frequency 상태만으로 MHU 전송 횟수를 판정하지 않는다. Driver cache 또는 fast path 여부를 trace와 함께 확인한다.
+Frequency readback은 실제 CPU 처리 속도나 MHU 전송 횟수의 증거가 아니다. MBX-102는 Guest에서 해당 IRQ가 식별되는 구성에 적용한다. `hipc` profile은 현재 FVP product 전용이며 QVP 실행 항목으로 사용하지 않는다. MBX-103은 AP가 시작한 ICMP 왕복만 판정한다.
 
-### 5.2 AP Domain — TF-A / Secure Services
+### 5.2 AP Domain — Secure Services
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| MBX-201 | PSCI SCMI: Full boot의 AP secondary-core 기동 + TF-A/SCP log 또는 SCMI 함수 breakpoint | PSCI 요청·SCP 응답 후 secondary core online | — | NOT RUN | — |
-| MBX-202 | RSE 보안 서비스: `trusted-services` profile의 PSA crypto·PS·ITS·IAT 결과 및 secure console | Suite별 PASS/SKIP 집계 일치·secure error 없음 | — | NOT RUN | — |
-| MBX-203 | TF-A boot-time RSE client: Measured-boot 활성 image에서 RSE communication 함수·reply 관찰 | 활성 consumer의 RSE 요청과 reply 확인 | — | NOT RUN | — |
+| MBX-202 | Product `trusted-services` profile에서 Guest PSA 시험 출력 수집 | 실행한 crypto·PS·ITS·IAT suite의 실제 PASS/FAIL/SKIP 집계 확인 | — | NOT RUN | — |
 
-단순 WFI 진입은 PSCI→SCMI 증거가 아니다. PSA suite의 지원 제외 항목은 runner의 SKIP 판정을 유지한다.
+해당 image에서 제공되는 suite만 판정한다. SKIP은 PASS로 합산하지 않는다. 서비스 응답은 end-to-end 결과이며 TF-A 초기화·MHU flag clear를 개별 입증하지 않는다.
 
 ### 5.3 Safety Island CL0 — SCP
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| MBX-301 | Linux SCMI 처리: `cpufreq` traffic + `mhu3_isr`·transport·SCMI event 관찰 | IRQ→transport→SCMI 처리·FREE 반환 | — | NOT RUN | — |
-| MBX-302 | Boot/power SCMI: Full boot의 RSE readiness·AP power-on 요청과 응답 | SCP readiness 응답·AP power-on 성공 | — | NOT RUN | — |
-| MBX-303 | 채널 분리: MHU trace의 device/channel/flag와 SCP config 대조 | 다른 flag를 지우지 않고 대상 channel 처리 | — | NOT RUN | — |
+Linux SCMI 요청·응답은 MBX-101에서 확인한다. 현재 Guest 출력으로 MHU ISR·transport event·channel flag 처리를 각각 판정하는 별도 시험은 배정하지 않는다. AP 부팅 완료만으로 SCP mailbox 시험을 PASS 처리하지 않는다.
 
 ### 5.4 Safety Island CL1 — Zephyr
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| MBX-401 | HIPC 초기화: `hipc` profile의 Linux stack·shared-memory·attach 결과 | Resource table·VirtIO·RPMsg endpoint 연결 | — | NOT RUN | — |
-| MBX-402 | Packet 송수신: 동일 profile의 ICMP·UDP·TCP 및 payload/multistream 항목 | 양방향 packet 및 boundary assertions 통과 | — | NOT RUN | — |
-| MBX-403 | IRQ→worker: CL1 console/GDB에서 MHU callback과 veth worker 관찰 | IRQ callback→workqueue→RPMsg 수신 확인 | — | NOT RUN | — |
+| MBX-402 | MBX-103과 동일한 실행의 AP Guest 결과 및 제공되는 CL1 console 수집 | SI 응답을 포함한 ICMP 왕복·payload 검사 성공 | — | NOT RUN | — |
+
+MBX-103과 같은 end-to-end 시험이며 별도 실행 건수로 중복 집계하지 않는다. CL1 ISR·worker 순서나 SI가 먼저 시작하는 통신은 이 결과에 포함하지 않는다.
 
 ### 5.5 RSE Domain — TF-M
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| MBX-501 | SCP boot readiness: Full boot RSE/SCP log와 BL2 SCMI 응답 | BL2 protocol version 응답·boot 진행 | — | NOT RUN | — |
-| MBX-502 | SFCP→PSA round trip: `trusted-services` profile + RSE handler/partition 관찰 | SFCP 요청·PSA dispatch·reply 확인 | — | NOT RUN | — |
-| MBX-503 | Runtime notification: 기존 power lifecycle 실행 시 NVIC139·SCMI signal·response 관찰 | NVIC139→partition→notification 처리 확인 | — | NOT RUN | — |
+| MBX-502 | AP↔RSE 경로를 사용하는 image에서 MBX-202 Guest 시험 결과와 RSE console 수집 | RSE-backed PSA 서비스의 요청·응답 시험 성공 | — | NOT RUN | — |
+
+MBX-202와 같은 실행 결과를 연결한다. RSE-backed service가 아닌 항목은 제외한다. RSE 로그에 개별 dispatch가 없으면 SFCP handler·partition 내부 단계까지 PASS로 확장하지 않는다. Boot readiness·runtime notification은 별도 Guest 시험 출력이 없어 제외한다.
 
 [검증 runner·profile](SOURCES.md#validation) · [소스 참조](SOURCES.md) · [draw.io 원본](apollo-mailbox-architecture.drawio)

@@ -496,69 +496,42 @@ SAM watchdog은 application이 WRR을 주기적으로 갱신하는 Timestamp wat
 
 <a id="test-verification"></a>
 
-## 5. Test and Verification
+## 5. SW Test and Verification
 
-### 5.1 Verification Overview
+실제 Guest SW가 실행하며 출력하는 UART 로그·shell 명령 결과·Guest 시험 프로그램 결과로 판정한다. Host runner는 실행과 로그 수집에 사용하며, 소스 분석·GDB 관찰·QVP 모델 trace만으로 PASS를 부여하지 않는다.
 
-기존 Apollo 장치·service·시험 도구로 확인 가능한 항목을 Domain별로 기록한다. `PASS/FAIL`은 실행 결과, `NOT RUN`은 미실행, `N/A`는 해당 image에 기능·producer가 없는 경우다.
+**결과 기록:** image 식별값, 실행 명령, Domain별 Guest 로그 경로와 관찰값을 함께 남긴다. `PASS`는 기대 결과 충족, `FAIL`은 불충족, `NOT RUN`은 실행 결과 미수집, `BLOCKED`는 실행·로그 수집 불가, `N/A`는 시험 기능 미포함이다. 아래 표는 시험 항목이며 이번 개정에서 새 Runtime 결과를 수집하지 않았으므로 `NOT RUN`으로 기록한다.
 
-만료 시험은 AP를 재기동할 수 있으므로 독립 QVP 시험 세션에서 수행한다. 결과에는 image 식별값·boot ID·UART·platform trace를 함께 남긴다.
+### 5.1 AP Domain — Linux
 
-### 5.2 AP Domain — Linux
-
-**실행 환경:** Watchdog device가 있는 AP guest. 기존 `scripts/autosd_demo/watchdog_guest.py`의 inspect·keepalive·expiry 기능을 사용한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| LIN-01 | `inspect`로 sysfs·systemd policy 조회 | Device를 열지 않고 identity·state·timeout·owner 정책 확인 | — | NOT RUN | — |
-| LIN-02 | `keepalive`로 timeout 설정·반복 ping | 실행 유지, timeleft 범위 유효, 종료 후 inactive 확인 | — | NOT RUN | — |
-| LIN-03 | `expiry`에서 FD 유지·feeding 중단 | Platform trace의 WS0→WS1 관찰 | — | NOT RUN | — |
-| LIN-04 | Full-system WD04 recovery evidence 수집 | 새 AP boot ID·SCP rearm·서비스 복귀 확인 | — | NOT RUN | — |
+| LIN-01 | Guest에서 `watchdog_guest.py inspect` 실행 | sysfs identity·state·timeout 및 owner 정책 출력 | — | NOT RUN | — |
+| LIN-02 | Guest에서 `watchdog_guest.py keepalive` 실행; events.jsonl·result.json 수집 | timeout readback 일치, 반복 keepalive·timeleft 범위 확인, 종료 후 inactive 및 PASS | — | NOT RUN | — |
+| LIN-04 | Full-system에서 `expiry --acknowledge-reset` 실행 전후 Guest boot ID·부팅 로그·서비스 상태 수집 | SCP WS1 recovery 로그와 새 AP boot ID, AP shell 및 지정 서비스 복귀 확인 | — | NOT RUN | — |
 
-`expiry` 도구의 `ws0-expected`는 예상 시각 기록이며 관측값이 아니다. Guest 연결 종료만으로 reset 성공을 판정하지 않는다. `linux-direct`는 CL0 recovery가 없어 LIN-04 대상이 아니다.
+기존 도구는 `scripts/autosd_demo/watchdog_guest.py`다. 만료 시험은 독립 세션에서 수행하고 실행 전 `/proc/sys/kernel/random/boot_id`와 확인할 서비스 이름을 기록한다. `ws0-expected`는 예측값이므로 WS0 발생 증거가 아니다. 연결 종료만으로 reset을 판정하지 않는다. `linux-direct`는 SCP recovery 시험 대상이 아니다.
 
-### 5.3 AP Domain — TF-A / U-Boot / OP-TEE
+### 5.2 AP Domain — TF-A / U-Boot / OP-TEE
 
-**실행 환경:** TF-A ELF·AP GDB와 독립 QVP 세션.
+현재 Guest 출력으로 watchdog arm·feed·expiry를 개별 판정할 기존 시험이 없어 항목을 배정하지 않는다.
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+### 5.3 Safety Island CL0 — SCP
+
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| TFA-01 | 기존 error path 재현 시 helper와 MMIO 접근 관찰 | Control base+0 write 및 WCS.EN 반영 | — | NOT RUN | — |
-| TFA-02 | 같은 경로에서 Secure WS1·AP reset 관찰 | 현재 WOR에 따른 만료와 AP reset 경로 확인 | — | NOT RUN | — |
+| SCP-01 | AP expiry 실행과 연계한 SCP UART 수집 | `AP watchdog WS1: requesting coordinated warm reset` 출력 | — | NOT RUN | — |
+| SCP-03 | 동일 recovery의 SCP UART 수집 | `AP watchdog IRQ ... snapshot: enabled=1 pending=0 recovery=0`와 `AP watchdog recovery: boot CPU on, IRQ rearmed` 출력 | — | NOT RUN | — |
 
-기존 error path를 재현할 수 없는 image는 N/A다. U-Boot·OP-TEE에는 확인된 Apollo watchdog 소비 경로가 없어 정상 feeding 시험을 배정하지 않는다.
+AP HW watchdog의 recovery 처리 시험이다. CL0 local watchdog feeding 시험은 아니다. 최종 AP 복귀는 LIN-04 결과와 함께 판정한다.
 
-### 5.4 Safety Island CL0 — SCP
+### 5.4 Safety Island CL1 — Zephyr
 
-**실행 환경:** Full-system AP expiry 시나리오·SCP UART·GDB. CL0 local watchdog의 직접 feeding 시험은 포함하지 않는다.
+현재 CL1에는 실행 가능한 전용 HW watchdog 시험 대상이 없어 시험 항목을 배정하지 않는다.
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| SCP-01 | AP NS expiry 시 `ap_watchdog_isr()` 관찰 | IRQ321 mask·latch·event 게시 | — | NOT RUN | — |
-| SCP-02 | Recovery log·PPU 상태 순서 확인 | AP OFF→RSE ACK→CPU0 ON | — | NOT RUN | — |
-| SCP-03 | IRQ rearm log·platform WS trace 비교 | WS clear 후 enabled=1·pending=0·recovery=0 | — | NOT RUN | — |
+### 5.5 RSE Domain — TF-M
 
-기존 WD04 host evidence 수집은 WS0·WS1·reset-clear와 SCP rearm을 확인한다. 새 AP boot ID·서비스 복귀는 추가 완료 조건이다.
-
-### 5.5 Safety Island CL1 — Zephyr
-
-현재 Apollo CL1에는 전용 HW watchdog DT node·driver binding·QVP instance가 없어 HW feeding·expiry 시험을 실행할 대상이 없다.
-
-| Test ID | 검증 항목 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| ZEP-01 | HW watchdog setup / feed / expiry | 대상 IP 통합 후 register 갱신·timeout 출력 확인 | 현재 CL1 연결 대상 없음 | N/A | — |
-
-### 5.6 RSE Domain — TF-M
-
-**실행 환경:** TF-M ELF·RSE GDB. 현재 HW 연결과 SW 소비 경로에 맞춰 판정한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| TFM-01 | `rse_sam_init()`의 watchdog 설정 호출·반환 확인 | Counter 0xFF·NMI response 설정 성공 | — | NOT RUN | — |
-| TFM-02 | Timestamp watchdog 주기적 feeding·만료 처리 | Arm/feed 서비스와 ISR 동작 확인 | 현재 소비 서비스 미확인 | N/A | — |
-| TFM-03 | CMSDK SLOWCLK enable / feed / expiry | LOAD 갱신·interrupt/reset 출력 확인 | QVP device 모델 없음 | N/A | — |
-
-TFM-01은 설정 경로 확인이며 SAM의 실제 만료·cold-reset 동작을 입증하지 않는다.
+현재 Guest 출력으로 RSE HW watchdog의 설정·feeding·만료를 판정할 기존 시험이 없어 항목을 배정하지 않는다. SAM 초기화 완료나 AP recovery 성공을 RSE watchdog 시험으로 대체하지 않는다.
 
 다이어그램 원본: [draw.io 전체 20페이지](apollo-watchdog-architecture.drawio).
 

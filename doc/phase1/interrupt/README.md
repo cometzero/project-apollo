@@ -905,82 +905,43 @@ CL0에서 오는 IRQn139는 별도 SCMI partition source다. Source clear·NVIC 
 
 <a id="test-verification"></a>
 
-## 5. Test and Verification
+## 5. SW Test and Verification
 
-### 5.1 Verification Overview
+실제 Guest SW가 실행하며 출력하는 UART 로그·shell 명령 결과·Guest 시험 프로그램 결과로 판정한다. Host runner는 실행과 로그 수집에 사용하며, 소스 분석·GDB 관찰·QVP 모델 trace만으로 PASS를 부여하지 않는다.
 
-기존 Apollo image의 IRQ 경로를 Domain별로 확인한다. 결과에는 image·ELF 식별값, 실행 명령, UART/GDB log를 함께 기록한다.
+**결과 기록:** image 식별값, 실행 명령, Domain별 Guest 로그 경로와 관찰값을 함께 남긴다. `PASS`는 기대 결과 충족, `FAIL`은 불충족, `NOT RUN`은 실행 결과 미수집, `BLOCKED`는 실행·로그 수집 불가, `N/A`는 시험 기능 미포함이다. 아래 표는 시험 항목이며 이번 개정에서 새 Runtime 결과를 수집하지 않았으므로 `NOT RUN`으로 기록한다.
 
-| 판정 | 의미 |
-|---|---|
-| PASS / FAIL | 실행 결과가 기대 조건 충족 / 불충족 |
-| NOT RUN | 아직 실행하지 않음 |
-| N/A | 해당 image에 필요한 driver·service·시험 기능이 없음 |
+### 5.1 AP Domain — Linux
 
-Breakpoint는 처리 경로 확인에 사용한다. IRQ latency·응답 시간은 breakpoint를 제거한 별도 측정으로 구분한다. IRQ 횟수는 packet·request 수와 일치하지 않을 수 있다.
-
-### 5.2 AP Domain — Linux
-
-**실행 환경:** AP shell, `/proc/interrupts`, 필요 시 Linux ELF와 AP GDB. Device 시험은 현재 image에서 probe된 장치를 선택한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| LIN-01 | `/proc/interrupts`의 GIC·arch_timer·사용 중 device IRQ 확인 | 등록 handler와 CPU별 IRQ count 표시 | — | NOT RUN | — |
-| LIN-02 | Console 입력 전후 UART IRQ count 비교 | 실제 입력에 따라 해당 IRQ count 증가 | — | NOT RUN | — |
-| LIN-03 | 동작 중 device handler에서 status 처리·source clear 관찰 | 등록 ISR 수행, source 해제 후 지속적인 재진입 없음 | — | NOT RUN | — |
-| LIN-04 | `/proc/irq/<virq>/smp_affinity_list`와 CPU별 count 비교 | 해당 SPI의 유효 affinity CPU에서 처리 | — | NOT RUN | — |
+| LIN-01 | `cat /proc/interrupts` | GIC·arch_timer·시험 장치의 IRQ 행과 CPU별 count 출력 | — | NOT RUN | — |
+| LIN-02 | Console 입력 전후 UART IRQ count 수집 | 해당 UART IRQ count 증가 | — | NOT RUN | — |
+| LIN-03 | 반복 sleep 전후 `arch_timer` IRQ count 수집 | 하나 이상의 CPU에서 Timer IRQ count 증가 | — | NOT RUN | — |
+| LIN-04 | 장치 traffic 전후 IRQ count와 `/proc/irq/<virq>/effective_affinity_list` 수집 | 선택 SPI가 유효 affinity CPU에서 처리됨 | — | NOT RUN | — |
 
-LIN-04는 SPI에 적용한다. Timer PPI와 managed IRQ의 affinity 제약을 일반 device SPI와 혼동하지 않는다. UART polling console만 사용하는 image에서는 LIN-02를 N/A로 기록한다.
+Polling UART는 LIN-02 대상에서 제외한다. LIN-04는 유효 affinity 파일이 제공되는 SPI에 적용하며 Timer PPI에는 적용하지 않는다. Count 증가만으로 source clear·EOI 순서는 판정하지 않는다.
 
-### 5.3 AP Domain — TF-A / U-Boot / OP-TEE
+### 5.2 AP Domain — TF-A / U-Boot / OP-TEE
 
-**실행 환경:** 각 firmware ELF·AP GDB·UART. Secure interrupt는 image에 실제 등록된 producer와 handler가 있을 때 확인한다.
+현재 개별 interrupt 초기화·dispatch 결과를 판정할 Guest 시험 출력이 없어 항목을 배정하지 않는다. Boot 완료나 polling I/O 성공을 IRQ 처리 결과로 사용하지 않는다.
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+### 5.3 Safety Island CL0 — SCP
+
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| TFA-01 | BL31 platform setup과 GIC 초기화 함수 관찰 | AP GIC runtime view 및 CPU interface 초기화 | — | NOT RUN | — |
-| TFA-02 | 기존 G1S source 발생 시 SPMD handler 관찰 | NS context에서 Secure context로 전달 및 복귀 | — | NOT RUN | — |
-| UBT-01 | Console·기존 device 명령 실행, polling driver 경로 관찰 | 정상 I/O 완료, `do_irq()` / `do_fiq()` 진입 없음 | — | NOT RUN | — |
-| OPT-01 | `boot_primary_init_intc()` → `gic_init_v3()` 관찰 | OP-TEE GIC chip 초기화 | — | NOT RUN | — |
-| OPT-02 | 등록된 Secure source 발생 시 native handler 관찰 | IAR1 → 등록 handler → EOIR1 실행 | — | NOT RUN | — |
+| SCP-01 | AP HW watchdog expiry 후 SCP UART의 `AP watchdog WS1: requesting coordinated warm reset` 수집 | Watchdog interrupt를 받은 SCP가 recovery event를 처리 | — | NOT RUN | — |
+| SCP-02 | 같은 실행의 `AP watchdog IRQ ... snapshot` 및 `boot CPU on, IRQ rearmed` 수집 | enabled=1·pending=0·recovery=0 snapshot과 rearm 완료 출력 | — | NOT RUN | — |
 
-UBT-01은 boot 단계의 정상 I/O 경로 확인이다. IRQ handler 등록·dispatch 시험으로 판정하지 않는다. TFA-02·OPT-02는 해당 Secure source가 없는 image에서 N/A다.
+Full-system의 독립 시험 세션에서 수행한다. Guest firmware가 출력한 처리 결과만 판정하며 전체 GIC interrupt 경로에 일반화하지 않는다.
 
-### 5.4 Safety Island CL0 — SCP
+### 5.4 Safety Island CL1 — Zephyr
 
-**실행 환경:** SCP ELF·CL0 GDB·UART와 기존 SCMI 요청 경로.
+기존 HIPC 통신 결과는 payload 전달을 확인하지만 MHU ISR·workqueue 실행을 개별 판정하지 못한다. 해당 시험은 Mailbox 보고서에 두며 별도 IRQ PASS 항목을 만들지 않는다.
 
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| SCP-01 | GIC 초기화 및 `irq_global()` 관찰 | Group0 enable, IAR0 INTID에 해당하는 등록 ISR 진입 | — | NOT RUN | — |
-| SCP-02 | 기존 SCMI 요청 중 MHU ISR·transport notification 관찰 | Doorbell source clear 및 framework event 게시 | — | NOT RUN | — |
-| SCP-03 | 같은 요청의 `scmi_process_event()`와 응답 관찰 | ISR 밖에서 요청 처리 후 requester에 응답 | — | NOT RUN | — |
+### 5.5 RSE Domain — TF-M
 
-SCMI client의 기존 정상 요청을 사용한다. `EOIR0` 실행만으로 SCMI 응답 완료를 판정하지 않는다.
-
-### 5.5 Safety Island CL1 — Zephyr
-
-**실행 환경:** Zephyr ELF·CL1 GDB·UART. MHU 시험에는 현재 image의 AP↔CL1 HIPC/RPMsg 통신을 사용한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| ZEP-01 | `arm_gic_init()`와 secondary CPU 초기화 관찰 | 활성 CPU별 Redistributor·CPU interface 초기화 | — | NOT RUN | — |
-| ZEP-02 | 기존 AP↔CL1 traffic에서 MHU ISR·callback 관찰 | 등록 callback 실행, pending 기록 및 work 제출 | — | NOT RUN | — |
-| ZEP-03 | 같은 traffic의 workqueue·RPMsg 수신 관찰 | Worker에서 vring 처리 및 endpoint로 전달 | — | NOT RUN | — |
-
-MHU callback·workqueue를 사용하는 veth 구성이 필요하다. SMP에서는 worker가 ISR 종료 전에 실행될 수 있으므로 둘의 완료 순서를 고정 조건으로 두지 않는다.
-
-### 5.6 RSE Domain — TF-M
-
-**실행 환경:** TF-M runtime ELF·RSE GDB·UART와 기존 AP↔RSE Secure mailbox 요청.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| TFM-01 | Platform IRQ 초기화와 partition enable 관찰 | 해당 MHU IRQ의 Secure target·priority·enable 설정 | — | NOT RUN | — |
-| TFM-02 | 기존 mailbox 요청 중 MHU ISR·SLIH 관찰 | NVIC exception 진입, IRQ disable 및 partition signal 게시 | — | NOT RUN | — |
-| TFM-03 | `psa_wait()` 복귀 → `psa_eoi()` → RPC 처리 관찰 | Signal 소비·IRQ 재활성화 및 mailbox 응답 완료 | — | NOT RUN | — |
-
-NVIC pending bit만으로 ISR·partition 실행을 판정하지 않는다. Timer self-test의 pending 관찰 결과는 이 mailbox 시험 결과에 포함하지 않는다.
+현재 Guest 출력만으로 MHU exception·SLIH·partition signal 처리 단계를 개별 판정할 시험은 배정하지 않는다. PSA 서비스 응답과 Timer self-test의 NVIC pending 결과를 IRQ handler 실행 증거로 사용하지 않는다.
 
 다이어그램 원본: [draw.io 전체 32페이지](apollo-interrupt-architecture.drawio).
 

@@ -1661,85 +1661,59 @@ RSE는 **BL2 SCMI timeout의 Counter polling**과 **조건부 TIMER0 interrupt �
 
 <a id="test-verification"></a>
 
-## 5. Test and Verification
+## 5. SW Test and Verification
 
-현재 Apollo의 guest 명령, 기존 firmware 실행 경로, GDB와 Timer 시험 도구로 확인 가능한 항목을 정리한다. 전용 시험 프로그램의 신규 구현이 필요한 기능은 제외한다.
+실제 Guest SW가 실행하며 출력하는 UART 로그·shell 명령 결과·Guest 시험 프로그램 결과로 판정한다. Host runner는 실행과 로그 수집에 사용하며, 소스 분석·GDB 관찰·QVP 모델 trace만으로 PASS를 부여하지 않는다.
 
-**판정:** `PASS`는 기대 결과 충족, `FAIL`은 불충족, `NOT RUN`은 미수행, `BLOCKED`는 선행 조건 문제, `N/A`는 해당 구성에 적용되지 않음을 뜻한다. 결과는 시험한 image·ELF revision과 build 설정에 연결해 기록한다.
-
-**실행 조건:** QVP boot/login 후 해당 Domain console 또는 GDB에 연결한다. GDB 시험에는 image와 일치하는 symbol ELF가 필요하다. 초기화 함수는 해당 stage 진입 전에 breakpoint를 설정한다. Optimized-out symbol 등으로 관찰할 수 없으면 `BLOCKED`로 기록한다.
-
-OP-TEE 전용 TA 시험은 현재 표에 포함하지 않는다. 각 항목의 `로그 / 측정값`에는 console log 또는 GDB transcript 경로와 관찰값을 기록한다.
+**결과 기록:** image 식별값, 실행 명령, Domain별 Guest 로그 경로와 관찰값을 함께 남긴다. `PASS`는 기대 결과 충족, `FAIL`은 불충족, `NOT RUN`은 실행 결과 미수집, `BLOCKED`는 실행·로그 수집 불가, `N/A`는 시험 기능 미포함이다. 아래 표는 시험 항목이며 이번 개정에서 새 Runtime 결과를 수집하지 않았으므로 `NOT RUN`으로 기록한다.
 
 ### 5.1 AP Domain — Linux
 
-**실행 환경:** QVP Linux console. Clocksource sysfs와 `/proc/interrupts`가 제공되는 image를 사용한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| LNX-01 | Boot log의 `arch_timer`·clocksource 등록과 `/sys/devices/system/clocksource/clocksource0/current_clocksource` 확인 | Architectural Timer 초기화·clocksource 선택 확인 | — | NOT RUN | — |
-| LNX-02 | `/proc/uptime`을 `sleep 1` 전후로 조회 | Uptime 증가, sleep 후 shell 실행 재개 | — | NOT RUN | — |
-| LNX-03 | `/proc/interrupts`의 `arch_timer` 행을 반복 sleep 전후 비교 | 하나 이상의 CPU에서 Timer interrupt 누적값 증가 | — | NOT RUN | — |
+| LNX-01 | Boot log의 `arch_timer`·clocksource 메시지와 `cat /sys/devices/system/clocksource/clocksource0/current_clocksource` | Timer 등록 메시지와 현재 clocksource 확인 | — | NOT RUN | — |
+| LNX-02 | `cat /proc/uptime; sleep 1; cat /proc/uptime` | Uptime 증가, sleep 후 명령 실행 재개 | — | NOT RUN | — |
+| LNX-03 | 반복 sleep 전후 `cat /proc/interrupts` | 하나 이상의 CPU에서 `arch_timer` count 증가 | — | NOT RUN | — |
 
-LNX-02는 기본 sleep·uptime 기능을 확인한다. Host stopwatch로 guest 1초의 정확도를 판정하지 않는다. LNX-03은 모든 CPU의 IRQ 수가 동일하게 증가할 것을 요구하지 않는다.
+Guest 시간의 진행과 timeout 동작을 확인한다. Host 경과 시간으로 Timer 정확도를 판정하지 않는다.
 
 ### 5.2 AP Domain — TF-A
 
-**실행 환경:** BL31 ELF symbol과 AP GDB 연결. 초기화 breakpoint는 BL31 진입 전 설정한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
-|---|---|---|---|---|---|
-| TFA-01 | Boot 중 `generic_delay_timer_init_args()` 인수와 `timer_init()` 반환 후 ops 확인 | 125MHz platform 설정에서 mult=1, div=125; Counter·timeout callback 연결 | — | NOT RUN | — |
-| TFA-02 | 기존 firmware caller의 `udelay()` 진입·반환 관찰 | 유효한 ops로 polling을 수행하고 caller로 복귀 | — | NOT RUN | — |
-
-TFA-02는 실제 호출 지점을 사용한다. 실행 경로에 호출이 없으면 `BLOCKED`로 기록하며, boot 완료만으로 PASS를 부여하지 않는다. Breakpoint로 정지한 실행은 지연 시간 측정에 사용하지 않는다.
+현재 Timer 초기화·delay 동작을 개별 판정할 Guest 시험 출력이 없어 시험 항목을 배정하지 않는다. BL31 부팅 완료는 Timer 시험 결과로 사용하지 않는다.
 
 ### 5.3 AP Domain — U-Boot
 
-**실행 환경:** U-Boot console와 AP GDB. `sleep` 명령은 `help sleep`으로 제공 여부를 확인한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| UBT-01 | 기존 시간 API 호출의 `get_ticks()`·`get_tbclk()` 반환값 관찰 | Count가 진행하고 frequency가 0이 아니며 해당 image의 환산 설정과 일치 | — | NOT RUN | — |
-| UBT-02 | Console에서 `sleep 1` 실행, 필요 시 `__udelay()` 진입·반환 관찰 | 대기 후 prompt 복귀; UTHREAD 비활성 구성에서는 architecture delay 경로 진입 | — | NOT RUN | — |
+| UBT-02 | `help sleep` 확인 후 `echo TIMER_BEGIN; sleep 1; echo TIMER_END` | 대기 후 TIMER_END 출력 및 prompt 복귀 | — | NOT RUN | — |
 
-`sleep` 명령은 `get_timer()`로 경과 시간을 확인하며 `udelay(100)`을 반복한다. 명령이 포함되지 않은 image에서는 UBT-02를 `N/A`로 기록한다. WFE 사용 여부는 event-stream 설정과 실행 EL을 함께 기록한다.
+명령이 포함된 image에서 수행한다. 결과는 sleep 명령의 완료이며 Counter frequency·정확한 지연 시간 측정은 포함하지 않는다.
 
 ### 5.4 Safety Island CL0 — SCP
 
-**실행 환경:** SCP ELF symbol·CL0 GDB·SCP UART. 기존 debugger CLI의 periodic UART polling alarm을 사용한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| SCP-01 | `timer_start()`의 반환과 `timer_isr()` 진입 관찰 | INTID34 ISR 등록 성공 및 Timer 만료 처리 진입 | — | NOT RUN | — |
-| SCP-02 | Debugger CLI `alarm_callback()`을 관찰한 뒤 resume하여 재진입 확인 | Periodic alarm callback 반복 실행 | — | NOT RUN | — |
-| SCP-03 | SCP UART에서 Ctrl-E 입력 | Alarm callback이 입력을 받아 framework event를 게시하고 CLI 진입 | — | NOT RUN | — |
+| SCP-03 | SCP UART에서 Ctrl-E 입력 후 CLI 응답 수집 | 기존 periodic polling alarm을 통한 CLI 진입 확인 | — | NOT RUN | — |
 
-`debugger_cli` module과 alarm 구성이 포함된 image에서 수행한다. SCP-02는 반복 동작 확인이며 breakpoint 간 host 경과 시간으로 alarm 주기를 계산하지 않는다.
+`debugger_cli`와 polling alarm이 포함된 image에서 수행한다. CLI 응답으로 기능 완료를 확인하며 Timer IRQ 번호·alarm 주기 정확도는 판정하지 않는다.
 
 ### 5.5 Safety Island CL1 — Zephyr
 
-**실행 환경:** CL1 shell과 Zephyr ELF symbol·CL1 GDB. ZEP-02는 `CONFIG_KERNEL_SHELL=y`와 `kernel uptime` 명령이 필요하다. 명령 미포함 image는 해당 항목을 `N/A`로 기록한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| ZEP-01 | `sys_clock_driver_init()`과 `smp_timer_init()` 관찰 | Primary 초기화 성공, 활성 secondary CPU별 Timer 초기화 | — | NOT RUN | — |
-| ZEP-02 | `kernel uptime`을 간격을 두고 반복 조회 | Uptime이 감소하지 않고 증가 | — | NOT RUN | — |
-| ZEP-03 | 기존 workload 실행 중 `arm_arch_timer_compare_isr()` → `sys_clock_announce()` 관찰 | Timer ISR에서 경과 tick 전달 및 Kernel timeout 처리 | — | NOT RUN | — |
+| ZEP-02 | CL1 shell에서 `kernel uptime` 반복 조회 | 시간을 두고 조회한 uptime 값 증가 | — | NOT RUN | — |
 
-Tickless 구성에서는 idle 상태의 고정 주기 IRQ를 기대하지 않는다. ZEP-03은 실제 timeout이 발생하는 workload에서 수행하며, 임의의 새 `k_timer` 시험은 포함하지 않는다.
+`CONFIG_KERNEL_SHELL=y`와 해당 명령이 제공되는 image에서 수행한다. 미포함이면 N/A로 기록한다. Timer ISR·secondary CPU 초기화는 이 출력으로 판정하지 않는다.
 
 ### 5.6 RSE Domain — TF-M
 
-**실행 환경:** 기존 `APOLLO_TIMER_TEST` 옵션을 활성화해 재빌드한 firmware와 RSE boot log. BL1_1·BL1_2·BL2·RUNTIME 각 stage에서 시험한다.
-
-| Test ID | 검증 항목 / 방법 | 기대 결과 | 실제 결과 | 판정 | 로그 / 측정값 |
+| Test ID | Guest 실행 / 수집 출력 | 판정 기준 | 실제 결과 | 판정 | Guest 로그 |
 |---|---|---|---|---|---|
-| TFM-01 | 기존 self-test의 SysTick 결과 수집 | Count 변화·COUNTFLAG 관찰, core_hz=100000000, stage별 PASS | — | NOT RUN | — |
-| TFM-02 | 기존 self-test의 TIMER0–3 결과 수집 | Count 진행·ISTATUS·NVIC pending=1, CNTFRQ readback=125000000, stage별 PASS | — | NOT RUN | — |
-| TFM-03 | `validate_tfm_timer_stages.py`로 RSE log 검사 | 4 stages × 5 timers = 20개 결과가 중복·누락 없이 통과 | — | NOT RUN | — |
+| TFM-01 | `APOLLO_TIMER_TEST` 활성 image의 RSE UART에서 stage별 SysTick 결과 수집 | 각 stage의 SysTick 결과 PASS, core_hz=100000000 | — | NOT RUN | — |
+| TFM-02 | 같은 UART에서 TIMER0–3 결과 수집 | 각 stage·timer 결과 PASS, CNTFRQ=125000000 및 시험이 출력한 count·ISTATUS·pending 조건 충족 | — | NOT RUN | — |
+| TFM-03 | `validate_tfm_timer_stages.py`로 위 Guest UART 로그 집계 | 4 stages × 5 timers의 PASS 결과가 누락·중복 없이 존재 | — | NOT RUN | — |
 
-Repository root에서 실제 RSE log 경로를 지정한다.
+기존 `APOLLO_TIMER_TEST`는 기본 OFF이며 활성화한 firmware가 필요하다. 일반 boot log에 결과가 없으면 PASS로 처리하지 않는다.
 
 ```sh
 python3 scripts/test/validate_tfm_timer_stages.py \
@@ -1747,6 +1721,6 @@ python3 scripts/test/validate_tfm_timer_stages.py \
   --output build/qbox-apollo-qvp/timer/tfm-stage-result.json
 ```
 
-TFM-01은 SysTick polling, TFM-02는 NVIC delivery를 disable한 상태의 pending 관찰이다. 따라서 결과에 ISR 실행·partition signal 처리·AIVAL 주기 검증을 포함하지 않는다. `APOLLO_TIMER_TEST`는 기본 OFF이므로 일반 boot log에 시험 결과가 없는 것은 FAIL이 아니다.
+SysTick은 polling, TIMER0–3은 NVIC delivery를 disable한 pending 관찰 시험이다. Guest self-test의 PASS는 ISR 실행·partition signal 처리를 뜻하지 않는다.
 
 관련 문서: [Interrupt Architecture](../interrupt/README.md) · [QVP Architecture](../qbox/README.md).
