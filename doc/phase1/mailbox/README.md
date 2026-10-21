@@ -74,6 +74,28 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 
 ![Domain별 Mailbox Hardware Topology](diagrams/01a-topology.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **NS SCMI**: NS SCMI / PBX / MBX
+- **Secure SCMI / PSCI**: Secure SCMI / PSCI / PBX / MBX
+- **PFDI**: PFDI / PBX / MBX
+- **CL1 HIPC**: CL1 HIPC / PBX / MBX
+- **RSE Secure**: RSE Secure / PBX / MBX
+- **AP NS SCMI**: AP NS SCMI / PBX / MBX
+- **AP Secure SCMI**: AP Secure SCMI / PBX / MBX
+- **AP PFDI**: AP PFDI / PBX / MBX
+- **CL1 PFDI**: CL1 PFDI / PBX / MBX
+- **RSE SCMI**: RSE SCMI / PBX / MBX
+- **AP HIPC**: AP HIPC / PBX / MBX
+- **CL0 PFDI**: CL0 PFDI / PBX / MBX
+- **AP Secure / MHU2**: AP Secure / MHU2 / PBX / MBX
+- **CL0 SCMI**: CL0 SCMI / PBX / MBX
+- **AP Monitor / MHU0 · 미연결**: AP Monitor / MHU0 / PBX / MBX · AP peer 미연결
+- **각 박스는 해당 Domain의 PBX**: 각 박스는 해당 Domain의 PBX / MBX frame을 묶어 표시 · 화살표 1개 = 한 방향 PBX → 상대 MBX 연결
+
+</details>
+
 - 각 Domain 내부에 상대 Domain·서비스별 Mailbox를 배치했다. 각 박스는 해당 연결의 PBX와 MBX frame을 묶어 표시한다.
 - 화살표는 **PBX → 상대 MBX** 방향이다. 7개 양방향 경로를 14개 화살표로 표시한다.
 - RSE MHU0는 local frame만 존재하며, 기본 QVP의 AP peer 연결이 없어 점선으로 표시한다.
@@ -115,6 +137,17 @@ Apollo의 MHUv3 Mailbox HW, QVP 모델·배선, Domain별 driver와 메시지 �
 
 ![AP Domain CPU GIC-720AE와 서비스별 Mailbox](diagrams/03-ap-hardware.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **NS SCMI**: NS SCMI / PBX / MBX
+- **Secure SCMI**: Secure SCMI / PBX / MBX
+- **PFDI**: PFDI / PBX / MBX
+- **HIPC**: HIPC / PBX / MBX
+- **RSE Secure**: RSE Secure / PBX / MBX
+
+</details>
+
 Arm Zena CSS AP는 **4 clusters × 4 Cortex-A720AE**, 기본 Apollo QVP는 AP 4 CPU 구성이다. MHU는 CPU마다 배치되지 않고 상대 Domain·보안 경로·서비스별로 공유한다.
 
 - **AP↔CL0:** Non-secure SCMI, Secure PSCI, CPU별 PFDI transport를 분리한다.
@@ -146,6 +179,19 @@ AP guest alias와 system-global decode 주소는 다르다. 예를 들어 NS SCM
 #### 2.4.1 Hardware 구조
 
 ![SI CL0 CL1의 연결 대상별 독립 Mailbox와 GIC](diagrams/04-si-hardware.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **AP NS SCMI**: AP NS SCMI / PBX / MBX
+- **AP Secure SCMI**: AP Secure SCMI / PBX / MBX
+- **AP PFDI**: AP PFDI / PBX / MBX
+- **RSE SCMI**: RSE SCMI / PBX / MBX
+- **CL1 PFDI**: CL1 PFDI / PBX / MBX
+- **AP HIPC**: AP HIPC / PBX / MBX
+- **CL0 PFDI**: CL0 PFDI / PBX / MBX
+
+</details>
 
 - **CL0:** SCP가 AP·RSE·CL1 요청을 수신하고 시스템 제어 서비스를 제공한다.
 - **CL1:** Zephyr가 AP와 HIPC로 통신하고 CL0에는 별도 SCMI/PFDI 경로를 사용한다.
@@ -187,6 +233,15 @@ CL1→CL0 요청의 requester hold는 QEMU instance 간 진행을 맞추는 QVP 
 #### 2.5.1 Hardware 구조
 
 ![RSE AP Secure MHU2 AP Monitor MHU0 SI CL0 SCMI Mailbox 분리 구조](diagrams/05-rse-hardware.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **AP Secure / MHU2**: AP Secure / MHU2 / PBX / MBX
+- **AP Monitor / MHU0**: AP Monitor / MHU0 / PBX / MBX
+- **SI CL0 SCMI**: SI CL0 SCMI / PBX / MBX
+
+</details>
 
 RSE Cortex-M55는 **AP Secure service 경로**와 **CL0 boot/power SCMI 경로**를 분리한다. MHU2는 RSE local frame, RSE–CL0 frame은 system fabric과 ATU를 통해 접근한다.
 
@@ -255,6 +310,15 @@ Assert 갱신은 `SC_ZERO_TIME` event를 사용한다. 이미 올라간 IRQ의 d
 
 ![SCMI HIPC SFCP 데이터 위치와 소유권](diagrams/07-shared-memory.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Shared slot**: Shared slot / Header / Token / Payload
+- **512KiB SRAM**: 512KiB SRAM / Resource table / Vring / Buffer
+- **DBCH words**: DBCH words / or permitted shared buffer
+
+</details>
+
 | Protocol | 데이터 경로 | 완료 조건 |
 |---|---|---|
 | SCMI | Header·token·payload를 shared slot에 기록 | 응답 header/token/status와 `FREE` 확인 |
@@ -305,6 +369,13 @@ Mailbox에는 scheduler 기능이 없다. SCP framework event, Zephyr workqueue,
 
 ![Linux SCMI Mailbox Layered Architecture](diagrams/09-linux-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Shared Memory**: Shared Memory / SCMI Payload
+
+</details>
+
 - `arm_mhuv3`: DBCH별 flag를 mailbox channel로 노출하는 controller driver.
 - Mailbox core: client/controller 연결, TX queue·completion, RX callback 전달.
 - SCMI mailbox transport: shared slot 준비, channel lock, 응답 header/token 확인.
@@ -313,6 +384,18 @@ Mailbox에는 scheduler 기능이 없다. SCP framework event, Zephyr workqueue,
 ##### 4.2.1.1 Mailbox Initialization
 
 ![실제 Linux DT 노드와 driver 초기화](diagrams/10-linux-init.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **mailbox@40020000**: mailbox@40020000 / arm,mhuv3 / SPI112 / #mbox-cells = <3>
+- **mailbox@40050000**: mailbox@40050000 / arm,mhuv3 / SPI113 / #mbox-cells = <3>
+- **sram@180000**: sram@180000 / TX +0x0 / RX +0x100 / arm,scmi-shmem
+- **firmware / scmi**: firmware / scmi / tx &lt;0 0 0> · tx_reply &lt;0 0 0> / rx &lt;0 0 2> · shmem
+- **arm_mhuv3 probe**: arm_mhuv3 probe / MMIO / IRQ / Controller
+- **SCMI transport**: SCMI transport / Request channels / Map shmem
+
+</details>
 
 1. `hsoc/apollo-qvp-saturn-v.dts` → `apollo.dtsi`의 MHU·SCMI·shared SRAM 노드를 사용한다.
 2. `arm_mhuv3`가 MMIO frame·DBE capacity를 읽고 controller와 IRQ를 등록한다.

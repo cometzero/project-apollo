@@ -64,6 +64,16 @@ Apollo의 Interrupt Controller HW, QVP 전달 경로, Domain별 SW 초기화·IS
 
 ![AP 16 CPU topology와 GIC SPI·PPI·ITS 전달 구조](diagrams/01a-ap-hardware.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **PE interfaces ×4**: PE interfaces ×4 / SGI / PPI · priority
+- **GICD / shared SPI**: GICD / shared SPI / Enable · Group · Priority · Affinity
+- **ITS / LPI translation**: ITS / LPI translation / DeviceID · EventID → target PE
+- **CPU-local Timer**: CPU-local Timer / PMU / RAS → same PE PPI · SGI: CPU system register → target PE
+
+</details>
+
 - **Distributor:** 공유 SPI의 enable·pending·group·priority·target affinity를 관리한다.
 - **PE별 상태:** SGI/PPI는 CPU별로 독립적이다. 같은 Timer PPI 번호라도 각 CPU가 별도의 pending·active 상태를 가진다.
 - **CPU interface:** Priority mask·group enable을 적용하고 IRQ/FIQ 전달, acknowledge, priority drop·deactivate를 담당한다.
@@ -106,6 +116,22 @@ GICR의 PE 선택은 affinity와 frame 식별값을 확인한다. 위 stride는 
 
 ![INTx wire와 MSI write, ITS table, LPI의 비교](diagrams/12-its.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **PCIe endpoint**: PCIe endpoint / INTA..D / swizzle
+- **ap_gpex_0.irq_out_0..3**: ap_gpex_0.irq_out_0..3 / SPI300..303 → INTID332..335
+- **AP GIC → CPU**: AP GIC → CPU / level / device cause clear
+- **PCIe endpoint**: PCIe endpoint / MSI address / EventID data / requester_id = DeviceID
+- **AP ITS / GITS_TRANSLATER**: AP ITS / GITS_TRANSLATER / base 0x20840000 / TRANSLATER 0x20850040
+- **Guest RAM tables**: Guest RAM tables / Device / ITT / Collection / MAPD · MAPC · MAPTI
+- **GIC Redistributor LPI**: GIC Redistributor LPI / LPI ID ≥ 8192 · target PE / PROPBASER / PENDBASER
+- **CPU → Linux MSI handler**: CPU → Linux MSI handler / IAR → LPI pending bit clear / EOIR priority drop
+- **MSI는 spi_in_N을**: MSI는 spi_in_N을 / 통과하지 않는다.
+- **LPI state는 일반 SPI와 다르다**: LPI state는 일반 SPI와 다르다 / LPI acknowledge는 pending table bit를 지운다. SPI의 active bitmap / DIR 설명을 그대로 적용하지 않는다.
+
+</details>
+
 INTx는 `ap_gpex_0 → SPI300..303`을 사용한다. MSI/MSI-X는 **requester DeviceID + EventID → ITS translation → target PE LPI** 경로다. Guest가 RAM의 Device/ITT/Collection과 LPI property/pending table을 설정한다.
 
 LPI acknowledge는 pending-table bit를 clear한다. 일반 SPI의 active bitmap·DIR 설명을 그대로 적용하지 않는다. PCIe endpoint·MSI capability·guest ITS 설정이 함께 필요하다. [ITS 소스·범위](SOURCES.md#s8)
@@ -145,6 +171,19 @@ SI QVP는 CL0·CL1에 별도 QEMU GIC backend를 사용한다. 이 모델 구성
 ##### FMU — GIC-720AE 내부 오류 수집·보고
 
 ![GIC-720AE Distributor 내부 FMU와 AXI5-Stream·오류 신호·APB5·CRI/ERI 연결](diagrams/01c-ap-fmu.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **FMU**: FMU / Error records · Protection control / Fault injection / clear
+- **SoC safety handling**: SoC safety handling / Critical error
+- **SoC safety handling**: SoC safety handling / Non-critical error
+- **AXI5-Stream interconnect**: AXI5-Stream interconnect / Fault report
+- **OR per block type**: OR per block type / critical / non-critical
+- **GCI blocks**: GCI blocks / Protection mechanisms / fault collator
+- **ITS blocks**: ITS blocks / Protection mechanisms / fault collator
+
+</details>
 
 **FMU는 GIC Distributor(GICD) 내부 블록**이다. GIC의 보호 회로가 검출한 오류를 수집하며, 정상 device SPI/PPI 전달과는 별도 경로로 동작한다.
 
@@ -186,6 +225,18 @@ Arm 설계의 SI는 **한 GIC의 여러 programming view**로 CL0와 CL1을 분�
 #### 2.3.1 GIC-720AE Hardware
 
 ![Safety Island 단일 GIC의 View0 관리·CL0 View1·CL1 View2 구조](diagrams/01b-si-hardware.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Cortex-R82 / management PE**: Cortex-R82 / management PE / DCLS pair는 하나의 논리 실행 PE
+- **View1 / CL0**: View1 / CL0 / PE-local SGI / PPI · assigned SPI
+- **View2 / CL1**: View2 / CL1 / PE-local SGI / PPI · assigned SPI
+- **View0 / configuration**: View0 / configuration / Interrupt and Redistributor assignment
+- **MMIO Timer · Watchdog · MHU**: MMIO Timer · Watchdog · MHU / FMU · PPU · RAS
+- **MHU · UART**: MHU · UART / CPU-local Timer → PPI
+
+</details>
 
 - **View0:** SCP가 interrupt와 Redistributor의 실행 view를 할당한다.
 - **View1 / View2:** 각각 CL0 / CL1이 자신의 interrupt 상태를 설정·처리한다.
@@ -230,6 +281,18 @@ CL0↔CL1 MHU interrupt와 각 cluster 내부 SGI를 구분한다. PPI19/20의 �
 
 ![Safety Island의 View0·View1·View2와 FMU 오류 전달 경로](diagrams/01si-d-automotive.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **View0 / SCP 관리**: View0 / SCP 관리 / Interrupt / Redistributor 할당
+- **View1 / CL0**: View1 / CL0 / CPU-local PPI / MMIO timer INTID34
+- **View2 / CL1**: View2 / CL1 / CPU 0…3의 local timer PPI / Virtual INTID27
+- **SI GIC FMU**: SI GIC FMU / 0x32020000 / zena_device_fmu
+- **SI root FMU**: SI root FMU / 0x2A510000 / 오류 record 수집
+- **CL0 IRQ + SSU**: CL0 IRQ + SSU / INTID128 / 129 / critical / non-critical
+
+</details>
+
 ##### Multiview
 
 | View | 소유·용도 | Interrupt 연결 |
@@ -270,6 +333,18 @@ RSE는 **Cortex-M55 ×1과 NVIC**를 사용한다. 외부 peripheral IRQ와 CPU 
 #### 2.4.1 Cortex-M55 / NVIC Hardware
 
 ![RSE 외부 IP·NVIC·Secure/Non-secure M55 exception 구조](diagrams/01d-rse-hardware.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Secure / Non-secure execution**: Secure / Non-secure execution / Vector fetch · exception entry / return
+- **External IRQn**: External IRQn / Enable · Pending · Active · Priority
+- **Security attribution / ITNS**: Security attribution / ITNS / Priority arbitration · nesting
+- **CPU-local SysTick**: CPU-local SysTick / S / NS · exception 15
+- **MHU · UART · GPIO**: MHU · UART · GPIO / Timestamp TIMER0–3 · Watchdog
+- **Vector table**: Vector table / VTOR_S / VTOR_NS
+
+</details>
 
 - **외부 IRQ:** Source별 enable·pending·active·priority를 관리한다.
 - **Security attribution:** ITNS로 외부 IRQ의 Secure/Non-secure target을 선택한다. Peripheral 보안 접근 설정과 IRQ enable은 별도다.
@@ -334,6 +409,21 @@ RSE는 **Cortex-M55 ×1과 NVIC**를 사용한다. 외부 peripheral IRQ와 CPU 
 
 ![GIC-720AE 물리 블록과 RSE NVIC](diagrams/01-hardware.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Peripheral / SPI Collator**: Peripheral / SPI Collator / UART · MHU · watchdog · GPIO / 공유 IRQ 입력
+- **Distributor / GICD**: Distributor / GICD / SPI routing · LPI state / GICR의 non-SGI page 기능 포함
+- **GIC Cluster Interface**: GIC Cluster Interface / PE별 SGI·PPI / 우선순위 선택 / GICR SGI page 기능
+- **PCIe / MSI-X**: PCIe / MSI-X / DeviceID + EventID
+- **ITS**: ITS / GITS_TRANSLATER / message → LPI / target PE
+- **CPU interface / PE**: CPU interface / PE / ICC_* system registers / IRQ / FIQ · IAR / EOIR / DIR
+- **SSE timer · GPIO · MHU**: SSE timer · GPIO · MHU / external IRQn
+- **NVIC**: NVIC / priority · pending · active · ITNS
+- **M55 exception entry**: M55 exception entry / vector fetch / stacking / EXC_RETURN
+
+</details>
+
 | 블록 | 소유하는 상태·역할 | SW 접점 |
 |---|---|---|
 | GIC Distributor | 공유 SPI의 enable·pending·priority·target affinity; GIC-720AE의 LPI 기능 | `GICD_*`, `GICD_IROUTER` |
@@ -349,6 +439,20 @@ RSE는 **Cortex-M55 ×1과 NVIC**를 사용한다. 외부 peripheral IRQ와 CPU 
 ### 3.1 Implementation Overview
 
 ![QEMU 내부 신호와 SystemC 경계를 넘는 IRQ 전달](diagrams/04-qbox-delivery.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **QEMU device**: QEMU device / qemu_set_irq(level)
+- **QBox GPIO direct binding**: QBox GPIO direct binding / 같은 instance의 Qemu signal socket
+- **arm_gicv3 backend**: arm_gicv3 backend / input handler → pending / update
+- **SystemC / other QEMU**: SystemC / other QEMU / IP event → IRQ level
+- **QBox signal bridge**: QBox signal bridge / QEMU output은 SystemC queue로 defer / input 측은 target QEMU BQL 확보
+- **QEMU GPIO input**: QEMU GPIO input / qemu_set_irq / gicv3_set_irq / enable · priority · affinity 판정
+- **CPU exception request**: CPU exception request / GIC irq_out / fiq_out → CPU irq_in / fiq_in / ARM_CPU interrupt request → guest vector
+- **ISR의 device CLEAR**: ISR의 device CLEAR / → IP 출력 LOW / → 같은 전달 경로로 반영
+
+</details>
 
 | 계층 | 실제 책임 | 대표 소스 / 함수 |
 |---|---|---|
@@ -390,6 +494,23 @@ QVP의 bool 신호는 논리 assert/deassert이다. TRM의 active-low 전기 신
 
 ![SI 단일 GIC 설계와 QVP의 별도 backend 구성](diagrams/03-multiview.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **CL0 / SCP boot**: CL0 / SCP boot / View0에서 SPI·PE의 view 배정
+- **GIC View0 · configuration**: GIC View0 · configuration / GICD_IVIEWR / GICR_VIEWR / View0 group enable은 상위 mask
+- **View1**: View1 / CL0 / SCP runtime
+- **View2**: View2 / CL1 / Zephyr SMP
+- **SPI → assigned view → target PE**: SPI → assigned view → target PE / 실제 ownership·routing은 동일 GIC 자원 안에서 결정
+- **si_gic_multiview**: si_gic_multiview / CFGID · IVIEWR · 일부 View0 보조 창 / backend_redist_count = 0
+- **si_cl0_gic**: si_cl0_gic / QEMU backend / 1 PE / GICD 0x30100000 / View0 alias 0x30000000
+- **si_cl1_gic**: si_cl1_gic / QEMU backend / 4 PE / GICD 0x30200000 / GICR 0x30260000 + stride
+- **CL0 IP outputs**: CL0 IP outputs / MHU · FMU · PPU · timer
+- **CL1 IP outputs**: CL1 IP outputs / HIPC MHU · UART
+- **AP는 별도 구성**: AP는 별도 구성 / ap_gic_multiview의 View0는 AP backend_socket으로 연결된다. / SI의 분리 구현을 AP에 그대로 일반화하지 않는다.
+
+</details>
+
 | 항목 | Apollo QVP 구현 |
 |---|---|
 | AP | 단일 QEMU GIC·ITS와 View0 관리 overlay; backend forwarding 연결 |
@@ -427,6 +548,15 @@ Group1NS는 Linux, Group1S는 Secure EL1, Group0는 EL3 처리 경로로 구분�
 
 ![Linux driver·generic IRQ·GIC와 CPU 계층 구조](diagrams/08a-linux-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Device driver / IRQ thread**: Device driver / IRQ thread / completion · wait queue
+- **Generic IRQ / irq_domain**: Generic IRQ / irq_domain / virq → registered action
+- **ARM64 vector / GICv3 driver**: ARM64 vector / GICv3 driver / IAR1 · EOIR1 / DIR
+
+</details>
+
 | 계층 | 역할 |
 |---|---|
 | Device driver | DT IRQ 조회, handler 등록, device status 처리·source clear |
@@ -461,6 +591,17 @@ Group1NS는 Linux, Group1S는 Secure EL1, Group0는 EL3 처리 경로로 구분�
 
 ![I2C level IRQ의 acknowledge·source clear·완료 Sequence](diagrams/09-level-sequence.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **I2C model**: I2C model / raw status & mask
+- **GIC + CPU interface**: GIC + CPU interface / pending · active · priority
+- **Linux IRQ core**: Linux IRQ core / vector / irq_domain
+- **I2C ISR / caller**: I2C ISR / caller / driver state / completion
+- **EOImode=1: IAR 직후 EOIR로 priority drop,**: EOImode=1: IAR 직후 EOIR로 priority drop, / handler 종료 후 DIR로 deactivate. / EOImode=0: handler 종료 EOIR가 둘 다 처리.
+
+</details>
+
 1. I2C status와 mask가 조건을 만족하면 source level을 assert한다.
 2. GIC가 enable·group·priority·routing 조건을 평가하여 CPU에 IRQ를 전달한다.
 3. `gic_handle_irq()`가 IAR1을 읽고 INTID를 acknowledge한다.
@@ -474,6 +615,15 @@ Group1NS는 Linux, Group1S는 Secure EL1, Group0는 EL3 처리 경로로 구분�
 #### 4.2.2 TF-A Interrupt Architecture
 
 ![TF-A EL3의 EHF·SPMD와 Secure interrupt 구조](diagrams/08b-tfa-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Group0 / EHF**: Group0 / EHF / priority handler
+- **Group1S / SPMD**: Group1S / SPMD / FFA_INTERRUPT / context switch
+- **EL3 vector / Interrupt management**: EL3 vector / Interrupt management / plat_ic_get_pending_interrupt_type()
+
+</details>
 
 TF-A는 GIC security·EL routing을 설정하고, EL3 handler와 Secure EL1 SPMC로 interrupt를 분배한다. Apollo의 `spmd` 구성은 과거 `opteed` 경로와 구분한다.
 
@@ -506,6 +656,14 @@ G0의 EHF dispatch와 G1NS의 Linux 처리는 이 Sequence에 포함하지 않�
 
 ![U-Boot polling과 예외 처리 구조](diagrams/08c-uboot-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Polling driver**: Polling driver / status read / timeout
+- **do_irq / do_fiq**: do_irq / do_fiq / register dump → panic
+
+</details>
+
 현재 AArch64 generic 구현은 **일반 IRQ 등록·dispatch 서비스를 제공하지 않는다.** `enable_interrupts()`는 no-op이며 `do_irq()`·`do_fiq()`는 register 정보를 출력하고 panic한다.
 
 ##### 4.2.3.1 Initialization / Driver Operation
@@ -533,6 +691,15 @@ EFI·다른 architecture의 interrupt 구현을 Apollo의 이 generic 경로에 
 #### 4.2.4 OP-TEE Interrupt Architecture
 
 ![OP-TEE native IRQ와 Secure handler 계층](diagrams/08d-optee-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Registered interrupt handler**: Registered interrupt handler / source service / clear
+- **interrupt_call_handlers**: interrupt_call_handlers / itr_chip handler list
+- **Native IRQ entry / GIC driver**: Native IRQ entry / GIC driver / interrupt_main_handler → IAR1 / EOIR1
+
+</details>
 
 OP-TEE는 native IRQ를 등록된 Secure handler에 전달한다. 현재 ARM64 설정에서 IRQ는 native, FIQ는 foreign이며 두 처리 경로는 다르다.
 
@@ -562,6 +729,15 @@ TA 실행과 ISR은 다른 문맥이다. 특정 Secure device의 handler 등록�
 ### 4.3 Safety Island CL0 — SCP Interrupt Architecture
 
 ![SCP FIQ·MHU ISR·framework event 계층](diagrams/08e-scp-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Framework event queue**: Framework event queue / scmi_process_event
+- **MHU3 ISR / registered ISR**: MHU3 ISR / registered ISR / clear · transport notification
+- **FIQ vector / irq_global**: FIQ vector / irq_global / IAR0 → handler table → EOIR0
+
+</details>
 
 CL0는 single-security GIC의 **Group0/FIQ**를 사용한다. `irq_global()`이라는 함수명은 IRQ vector를 뜻하지 않는다.
 
@@ -601,6 +777,15 @@ EOIR0는 SCMI 응답 payload의 완료가 아니다. [SCP 소스](SOURCES.md#s5)
 
 ![Zephyr ISR·mailbox callback·workqueue 계층](diagrams/08f-zephyr-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Workqueue**: Workqueue / RPMsg / vring processing
+- **MHU ISR / callback**: MHU ISR / callback / atomic pending · k_work_submit
+- **ARM64 IRQ wrapper / GICv3**: ARM64 IRQ wrapper / GICv3 / IAR1 → _sw_isr_table → DSB / EOIR1
+
+</details>
+
 Zephyr는 GICv3 IRQ를 `_sw_isr_table`로 dispatch한다. MHU callback은 workqueue에 작업을 게시하고, Timer IRQ는 Kernel timeout 처리를 호출한다.
 
 #### 4.4.1 Interrupt Initialization
@@ -638,11 +823,32 @@ SMP에서는 6–7이 5 이전에도 실행될 수 있다. Pending bitset은 여
 
 ![AP·CL1의 payload 공개와 수신·ACK interrupt 구분](diagrams/10-mhu-sequence.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **AP Linux**: AP Linux / shared memory / virtqueue
+- **AP PBX / CL1 MBX**: AP PBX / CL1 MBX / apollo_ap_to_si_cl1
+- **CL1 ISR / callback**: CL1 ISR / callback / GIC INTID73
+- **Zephyr workqueue**: Zephyr workqueue / OpenAMP / RPMsg
+- **pending event 소비**: pending event 소비 / rproc_virtio_notified / → endpoint callback
+- **응답은 반대 방향의 별도 pair**: 응답은 반대 방향의 별도 pair / CL1 PBX → AP MBX: AP 수신 INTID153 / CL1 송신 ACK INTID72 / ACK interrupt는 sender enable 조건에 따르며, protocol 응답 메시지와 구분한다.
+
+</details>
+
 Doorbell SET 전에 payload/vring을 공개한다. Receiver CLEAR가 sender ACK 조건을 만들며 sender IRQ는 별도 enable/mask를 따른다. **Doorbell ACK와 protocol 응답 payload는 다른 완료**다.
 
 ### 4.5 RSE Domain — TF-M Interrupt Architecture
 
 ![TF-M NVIC·SPM·Secure Partition 계층](diagrams/08g-tfm-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **psa_wait / signal handling**: psa_wait / signal handling / psa_eoi · RPC service
+- **SPM interrupt dispatcher**: SPM interrupt dispatcher / SLIH disable / signal
+- **Platform vector handler / CMSIS**: Platform vector handler / CMSIS / NVIC target · priority · enable
+
+</details>
 
 TF-M은 NVIC security attribution과 partition IRQ 할당을 연결한다. Apollo mailbox는 **SLIH**를 사용하며 Secure target 설정과 IRQ enable은 별도 단계다.
 
@@ -672,6 +878,20 @@ TF-M은 NVIC security attribution과 partition IRQ 할당을 연결한다. Apoll
 #### 4.5.3 Secure Mailbox Sequence
 
 ![RSE Secure MHU에서 SLIH signal·RPC 처리까지](diagrams/11-rse-sequence.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **MHU / NVIC**: MHU / NVIC / IRQ45 · Secure target
+- **M55 platform ISR**: M55 platform ISR / CMU_MHU2_Receiver_Handler
+- **TF-M SPM**: TF-M SPM / SLIH / scheduler
+- **Mailbox partition**: Mailbox partition / ns_agent_mailbox_entry
+- **2  tfm_multi_core_hal_receive**: 2  tfm_multi_core_hal_receive / SFCP receive / doorbell ACK
+- **IRQ disable → signal assert**: IRQ disable → signal assert / 필요 시 scheduling 요청
+- **7  tfm_rpc_client_call_handler**: 7  tfm_rpc_client_call_handler / Secure service dispatch
+- **M-profile의 하드웨어 완료**: M-profile의 하드웨어 완료 / exception return이 NVIC active 상태를 종료한다. 일반 GIC IAR/EOIR sequence를 적용하지 않는다. / IRQ45는 AP secure pair, IRQ139는 CL0 SCMI partition의 별도 source다.
+
+</details>
 
 1. AP Secure MHU가 RSE IRQn45, exception61로 전달된다.
 2. `CMU_MHU2_Receiver_Handler()`가 SFCP 수신 처리를 수행한다.

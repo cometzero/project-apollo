@@ -90,6 +90,15 @@ AP의 NS·Secure watchdog은 CPU들이 공유하는 장치다. **HW AP 16 PE에�
 
 ![Watchdog 상태와 화살표로 표시한 만료 및 Refresh 흐름](diagrams/02-stages.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **EN=1**: EN=1 / WS0=0 · WS1=0
+- **WOR / fWD 경과**: WOR / fWD 경과 / WS0 assert · 다음 deadline 설정
+- **WOR / fWD 추가 경과**: WOR / fWD 추가 경과 / WS1 assert · WS0 유지
+
+</details>
+
 1. WOR·EN을 설정하면 감시를 시작한다.
 2. 정상 refresh가 없으면 첫 구간 뒤 WS0를 assert한다.
 3. 추가 한 구간이 지나면 WS1도 assert한다.

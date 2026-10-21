@@ -120,6 +120,18 @@ AP의 timer는 **CPU system-register timer**와 **MMIO timer**로 나뉜다. 두
 
 ![ARM Generic Timer interrupt 발생 및 Linux 처리 흐름 — 번호 01–09](diagrams/01-irq-flow.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **System Counter**: System Counter / 공통 count
+- **CPU n Timer**: CPU n Timer / CNTV_* / comparator
+- **AP GIC**: AP GIC / PPI / CPU interface
+- **CPU n**: CPU n / IRQ core / OS
+- **Timer driver**: Timer driver / arch_timer_handler_virt
+- **만료 조건: virtual count ≥ CNTV_CVAL · ENABLE=1 · IMASK=0**: 만료 조건: virtual count ≥ CNTV_CVAL · ENABLE=1 · IMASK=0 / 전달 조건: GIC enable / group / priority 및 CPU exception mask가 허용
+
+</details>
+
 CPU n의 **EL1 virtual timer(INTID27)**를 예로 든다. 실제 Linux timer 선택은 별도이며, Secure/EL2 timer의 handler는 해당 firmware/hypervisor가 담당한다.
 
 | 번호 | 경로 | 처리 |
@@ -139,6 +151,20 @@ CPU n의 **EL1 virtual timer(INTID27)**를 예로 든다. 실제 Linux timer 선
 #### 2.2.2 ARM Generic Timer MMIO Frame
 
 ![AP Cluster0의 CPU 0–3과 Cluster1–3 개요, MMIO timer frame·Counter·GIC SPI 연결](diagrams/01a-mmio-frames.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Cluster1**: Cluster1 / CPU 4–7
+- **Cluster2**: Cluster2 / CPU 8–11
+- **Cluster3**: Cluster3 / CPU 12–15
+- **CNTCTLBase**: CNTCTLBase / 0x1A810000 · Frame 제어
+- **CNTBase1 · Secure**: CNTBase1 · Secure / 0x1A820000 / SPI48 → INTID80
+- **CNTBase0 · Non-secure**: CNTBase0 · Non-secure / 0x1A830000 / SPI49 → INTID81
+- **AP GIC**: AP GIC / SPI 라우팅
+- **각 Frame: 64KiB**: 각 Frame: 64KiB · CPU와 Frame은 1:1 관계 아님 · Cluster1–3 연결 생략 · QVP: physical timer만 구현
+
+</details>
 
 CPU-local timer가 `MRS/MSR + PPI`를 사용하는 반면, MMIO timer는 **load/store + SPI**를 사용한다. Frame은 CPU 번호에 종속되지 않으며 CPU마다 frame 하나가 배정되는 구조는 아니다.
 
@@ -176,6 +202,18 @@ Architecture의 optional virtual timer·CNTVOFF·별도 CNTEL0Base frame은 현�
 
 ![Arm Zena CSS의 REFCLK System Counter, control/read frame과 AP count 배포 구조](diagrams/01b-ap-counter.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **CNTControlBase**: CNTControlBase / 0x02_0000_D010_0000 / Counter 제어
+- **CNTRead**: CNTRead / 0x02_0000_D011_0000 / Count 조회
+- **REFCLK · 125 MHz**: REFCLK / Clock frequency: 125 MHz
+- **System Counter**: System Counter / Increment logic + 64-bit count
+- **AP CPU-local Timers**: AP CPU-local Timers / Cluster0–3 / CPU0–15
+- **AP MMIO Timer Frames**: AP MMIO Timer Frames / CNTBase0 / CNTBase1
+
+</details>
+
 **Arm Zena CSS Hardware 구조** — AP의 시간값 소비 경로를 중심으로 표시했다.
 
 - **시간값 생성:** REFCLK **125MHz** → increment logic → 64-bit System Counter. CPU별 timer와 MMIO timer가 공통 count를 사용한다.
@@ -198,6 +236,20 @@ Multiview·FMU 구조는 [Interrupt Architecture — AP Domain](../interrupt/REA
 #### 2.2.4 AP Domain Timer / Counter QVP 구현
 
 ![AP Domain Timer QVP — SystemC/TLM 영역과 AP QEMU instance 경계](diagrams/01d-ap-qvp.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **css_system_counter**: css_system_counter / 공통 count · frequency · running
+- **host_gtimer**: host_gtimer / Counter control / read / sync
+- **CPU counter mirror ×4**: CPU counter mirror ×4 / ap_cpu_counter_mirror_0…3
+- **MMIO counter mirror**: MMIO counter mirror / ap_timer_counter_mirror
+- **system_router**: system_router / TLM address routing
+- **ap_cpu_0…3**: ap_cpu_0…3 / A720AE · CPU-local timer / CNT* / comparator / expiry
+- **ap_timer_mem**: ap_timer_mem / arm_arch_timer_mmio / Physical frame0 / frame1
+- **ap_gic**: ap_gic / GIC backend
+
+</details>
 
 - **SystemC/TLM 영역:** 공통 Counter·mirror·MMIO router.
 - **QEMU instance:** `ap_qemu_inst` 내부의 CPU-local timer·MMIO timer·GIC backend.
@@ -284,6 +336,15 @@ CL0 MMIO timer는 CPU system register timer와 별도의 comparator다. CPU는 l
 
 ![Safety Island CL0 전용 MMIO timer frame과 Counter·GIC 연결](diagrams/01si-b-mmio.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **CNTCTLBase**: CNTCTLBase / 0x2A6F0000 / Frame 제어
+- **CNTBase**: CNTBase / 0x2A720000 / Physical timer
+- **SI GIC / View1**: SI GIC / View1 / SPI2 → INTID34
+
+</details>
+
 | Frame | SI local base / 크기 | 역할 |
 |---|---|---|
 | CNTCTLBase | `0x2A6F0000` / 64KiB | Timer frame 관리 공간; QVP에서는 `host_gtimer` register 저장 영역 |
@@ -302,6 +363,18 @@ QVP IRQ 조건은 `ENABLE && count >= CVAL && !IMASK`다. CVAL을 미래로 변�
 #### 2.3.3 System Counter
 
 ![Arm Zena CSS의 System Counter와 Safety Island Timer 연결](diagrams/01si-c-counter.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **CNTControlBase**: CNTControlBase / 0x02_0000_D010_0000 / Counter 제어
+- **CNTRead**: CNTRead / 0x02_0000_D011_0000 / Count 조회
+- **REFCLK · 125 MHz**: REFCLK / Clock frequency: 125 MHz
+- **System Counter**: System Counter / Increment logic + 64-bit count
+- **SI CPU-local Timers**: SI CPU-local Timers / CL0 CPU0 / CL1 CPU0–3
+- **CL0 MMIO Timer**: CL0 MMIO Timer / CNTBase
+
+</details>
 
 HW는 **AP와 같은 System Counter를 공유**한다. 그림은 Zena CSS의 HW 구조이며, 아래 표는 QVP의 `css_system_counter` 연결을 나타낸다. CSS Counter 제어 공간과 CL0 timer frame은 주소·역할이 다르다.
 
@@ -323,6 +396,19 @@ Multiview·FMU 구조는 [Interrupt Architecture — Safety Island](../interrupt
 #### 2.3.4 Safety Island Domain Timer / Counter QVP 구현
 
 ![상단 CL0·CL1 QEMU instance와 하단 SystemC/TLM Timer 구조](diagrams/01si-e-qvp.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **si_cl0_cpu_0**: si_cl0_cpu_0 / R82 · CPU-local timer
+- **si_cl0_gic**: si_cl0_gic / GIC backend
+- **si_cl1_cpu_0…3**: si_cl1_cpu_0…3 / R82 · CPU-local timer
+- **si_cl1_gic**: si_cl1_gic / GIC backend
+- **CL0 MMIO timer**: CL0 MMIO timer / si_cl0_timer_cntbase / host_gtimer · 만료 event
+- **si_cl0_router**: si_cl0_router / TLM MMIO
+- **css_system_counter**: css_system_counter / 공통 count · frequency · running
+
+</details>
 
 **CL0 MMIO timer는 SystemC에서 만료를 계산하고, CPU-local timer는 각 QEMU instance에서 만료를 계산한다.**
 
@@ -361,6 +447,13 @@ RSE는 **Cortex-M55 ×1 + NVIC** 구조다. CPU 내부의 SysTick과, CPU 밖에
 
 ![RSE M55·Timestamp Timer·Local System Counter·NVIC 구조](diagrams/01rse-a-hardware.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **NVIC**: NVIC / IRQn 3 / 4 / 5 / 27
+
+</details>
+
 - **Counter:** LSC 하나가 TIMER0–3에 같은 64-bit count를 배포한다.
 - **Timer:** 각 IP가 독립적인 compare value·enable·mask·auto-increment 상태를 가진다. CPU와 Timer는 1:1 관계가 아니다.
 - **접근:** M55의 load/store → peripheral interconnect → PPC0 → Timer register. Secure/Non-secure 주소는 같은 IP의 alias다.
@@ -390,6 +483,18 @@ AIVAL 모드에서는 일반 CVAL/TVAL 비교 경로를 사용하지 않는다. 
 #### 2.4.2 Timestamp Timer MMIO Frame
 
 ![RSE PPC를 통한 네 Timestamp Timer MMIO frame 접근](diagrams/01rse-b-mmio.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **TIMER0**: TIMER0 / S: 0x58000000 / NS: 0x48000000
+- **TIMER1**: TIMER1 / S: 0x58001000 / NS: 0x48001000
+- **TIMER2**: TIMER2 / S: 0x58002000 / NS: 0x48002000
+- **TIMER3**: TIMER3 / S: 0x58003000 / NS: 0x48003000
+- **NVIC**: NVIC / IRQn 3 / 4 / 5 / 27
+- **별도 IP: SOC_TIMER0 / 1**: 별도 IP: SOC_TIMER0 / 1 / S: 0x50158000 / 0x50159000 / NS: 0x40158000 / 0x40159000 / IRQn 59 / 60
+
+</details>
 
 **Address map — RSE local address, 각 window 4KiB**
 
@@ -424,6 +529,16 @@ AP의 `CNTCTLBase + CNTBaseN` discovery 구조와 달리 RSE는 네 Timer IP의 
 
 ![RSE Local System Counter의 제어·읽기 frame과 CNTVALUEB 배포](diagrams/01rse-c-counter.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Control Base**: Control Base / 0x5015A000 · S_PPC
+- **Read Base**: Read Base / 0x5015B000 · Secure
+- **LSC input clock**: LSC input clock / HW integration clock
+- **Local System Counter**: Local System Counter / 64-bit count / Scaling logic
+
+</details>
+
 LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. 내부 fractional 상태를 이용한 rate scaling과 clock 전환 기능을 제공하며, TIMER0–3는 출력 `CNTVALUEB[63:0]`를 공유한다. SysTick과 SLOWCLK Timer는 이 배포 경로에 포함되지 않는다.
 
 | Frame / offset | Register | 역할 |
@@ -446,6 +561,16 @@ LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. �
 
 ![M55 SysTick과 외부 SLOWCLK Timer의 clock·interrupt 경로](diagrams/01rse-d-systick.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Secure SysTick**: Secure SysTick / 24-bit down-counter
+- **Non-secure SysTick**: Non-secure SysTick / 24-bit down-counter
+- **NVIC / Exception control**: NVIC / Exception control / S / NS exception 15
+- **SLOWCLK Timer**: SLOWCLK Timer / 32-bit down-counter
+
+</details>
+
 **SysTick:** M55 내부의 24-bit down-counter다. Security Extension에서는 Secure·Non-secure 상태별 SysTick을 가지며, 각 상태의 **exception 15**를 발생시킨다. TIMER0–3의 외부 NVIC IRQn과 구분한다. [Arm Cortex-M55 문서](https://documentation-service.arm.com/static/6622c155fabc8c11c7b534b4)
 
 | SCS 주소 | Register | 기능 |
@@ -464,6 +589,19 @@ LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. �
 #### 2.4.5 RSE Domain Timer / Counter QVP 구현
 
 ![상단 RSE QEMU instance와 하단 SystemC/TLM Counter·MMIO 연결](diagrams/01rse-e-qvp.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **M55 / NVIC**: M55 / NVIC / cpu_0.cpu
+- **rse_timer_0…3**: rse_timer_0…3 / SSE Timer ×4
+- **S / NS SysTick**: S / NS SysTick / CPU clock 100MHz
+- **rse_lsc_counter**: rse_lsc_counter / SSE counter backend
+- **css_system_counter**: css_system_counter / full-system 기본 source
+- **SSE counter mirror / clock**: SSE counter mirror / clock / snapshot publication
+- **rse_router / PPC**: rse_router / PPC / Container / LocalPass
+
+</details>
 
 **TIMER0–3·LSC·M55/NVIC·SysTick backend는 `rse_cpu_pass.qemu_inst`에 속한다.** SystemC는 Counter source·snapshot 전달·MMIO routing/PPC를 담당한다. QBox wrapper는 SystemC 객체이며, 그림의 QEMU 경계는 backend 소속을 표시한다.
 
@@ -508,6 +646,21 @@ LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. �
 
 ![CSS counter control, AP timer frame, CL0 timer frame](diagrams/06-mmio-frames.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **CNTControlBase**: CNTControlBase / 0x02_0000_D010_0000 / CNTCR · count · CNTFID0 · CNTINCR
+- **CNTReadBase**: CNTReadBase / 0x02_0000_D011_0000 / 현재 CSS count read
+- **Sync frame**: Sync frame / 0x02_0000_D012_0000 / sync control / status register 모델
+- **CNTCTLBase · 0x1A810000**: CNTCTLBase · 0x1A810000 / frame 접근 / frequency metadata
+- **Frame1 · Secure**: Frame1 · Secure / 0x1A820000 / CVAL / TVAL / CTL / SPI48 → INTID80
+- **Frame0 · Non-secure**: Frame0 · Non-secure / 0x1A830000 / CVAL / TVAL / CTL / SPI49 → INTID81
+- **CNTCTLBase · 0x2A6F0000**: CNTCTLBase · 0x2A6F0000 / 현재 host_gtimer는 register 저장 창으로 구성
+- **CNTBase · 0x2A720000**: CNTBase · 0x2A720000 / CNTPCT / CVAL / CTL 동작 · TVAL은 저장만 / SCP alarm driver → SPI2 → INTID34
+- **CNTBase architectural offset / 구현 차이**: CNTBase architectural offset / 구현 차이 / 0x00/04 CNTPCT  ·  0x10 CNTFRQ  ·  0x20/24 CVAL  ·  0x28 TVAL  ·  0x2C CTL / AP MMIO는 signed TVAL 동작 구현 · CL0 host_gtimer는 TVAL 상대 deadline 미구현 · access-control register 저장과 gating은 별개
+
+</details>
+
 - **CNTControlBase**: CSS count·enable·increment 제어. SCP는 SMD physical 주소를 SI ATW window로 접근한다.
 - **CNTCTLBase**: timer frame의 설정·접근 register 공간. QVP에서 register 저장과 실제 access gating은 구분해야 한다.
 - **CNTBaseN**: count read와 CVAL/CTL. AP는 frame1 Secure/INTID80, frame0 NS/INTID81; CL0는 INTID34.
@@ -523,6 +676,26 @@ LSC는 **64-bit up-counter와 scaling logic**으로 timestamp를 생성한다. �
 ### 3.1 Implementation Overview
 
 ![SystemC 공통 Counter와 Domain별 QEMU Timer 연결](diagrams/03-time-distribution.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **SystemC time**: SystemC time / sc_time_stamp()
+- **platform.css_system_counter**: platform.css_system_counter / arm_system_counter / anchor count · fractional state · generation
+- **host_gtimer**: host_gtimer / CSS control / read / sync / CL0 MMIO timer · sc_event deadline
+- **ARM CPU + MMIO mirror**: ARM CPU + MMIO mirror / count / running / effective Hz
+- **QEMU virtual clock**: QEMU virtual clock / A720AE ×4 · per-PE timer / AP MMIO timer ×2 frame
+- **ARM CPU mirror**: ARM CPU mirror / count / running / effective Hz
+- **QEMU virtual clock**: QEMU virtual clock / Cortex-R82 ×1 · per-PE timer / SCP MMIO timer는 SystemC 측
+- **QEMU virtual clock**: QEMU virtual clock / Cortex-R82 ×4 · per-PE timer / Zephyr virtual timer
+- **SSE counter mirror**: SSE counter mirror / count / running / effective Hz
+- **QEMU virtual clock**: QEMU virtual clock / M55 ×1 · LSC → TIMER0–3 / SSE timer IRQ는 같은 instance
+- **Host monotonic**: Host monotonic / 실행 중 elapsed time
+- **QEMU virtual ns**: QEMU virtual ns / VM 정지 시 offset 유지
+- **Quantum keeper**: Quantum keeper / CPU local time ↔ kernel 조정
+- **SystemC kernel**: SystemC kernel / quantum 10ms ≠ skew 상한
+
+</details>
 
 | 구현 영역 | 소유 상태 | 책임 |
 |---|---|---|
@@ -577,6 +750,21 @@ Running 상태의 기본 계산은 `count = anchor_count + floor(Δvirtual_ns ×
 
 ![Counter rate와 SW frequency metadata](diagrams/04-frequency.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **INPUT FREQUENCY**: INPUT FREQUENCY / CSS 초기 125,000,000 Hz
+- **EFFECTIVE INCREMENT**: EFFECTIVE INCREMENT / 초기 1 · 내부 unsigned 8.24 / 32-bit CNTINCR 쓰기일 때 변경
+- **EFFECTIVE RATE**: EFFECTIVE RATE / input × increment / CPU / AP MMIO / RSE mirror로 전달
+- **config_gtimer: 값 8**: config_gtimer: 값 8 / gtimer_control_init / *(volatile uintptr_t *) = value
+- **AArch64 → 8-byte TLM**: AArch64 → 8-byte TLM / QEMU store / QBox bridge / data_length=8 유지
+- **host_gtimer: OK / no-op**: host_gtimer: OK / no-op / aligned64-bit implementation-defined write / 0xC0..0xF8: increment 변경 안 함
+- **32-bit 쓰기를 별도로 적용한 계산 예 · 125MHz**: 32-bit 쓰기를 별도로 적용한 계산 예 / CNTINCR=8 → 125MHz ×8 = 1GHz / virtual time 1ms → 1,000,000 count
+- **CNTFRQ / CNTFID0 metadata · 125MHz**: CNTFRQ / CNTFID0 metadata / rate 변경이 보고값을 자동 갱신하지 않음 / 1,000,000 count를 125MHz로 환산하면 8ms
+- **같은 0xD0도 다르다: CSS host_gtimer는 정수 CNTINCR**: 같은 0xD0도 다르다: CSS host_gtimer는 정수 CNTINCR · RSE SSE counter는 8.24 CNTSCR0
+
+</details>
+
 | 값 | 초기값 / 현재 소스 경로 | 의미 |
 |---|---|---|
 | CSS input Hz | 125MHz | counter 입력 기준 |
@@ -617,6 +805,21 @@ RSE timer의 CNTFRQ도 guest가 저장하는 metadata다. RSE native SCEN/CNTSCR
 **Counter는 시간 조회, Timer는 만료 통보를 제공하고, Scheduler는 실행 가능한 Task 중 다음 Task를 선택한다.** 주기 Job은 timer로 실행 시점을 요청하며, 실제 실행 시각은 우선순위·CPU 부하·interrupt 지연의 영향을 받는다.
 
 ![Timer API·Kernel Timer Service·Driver·HW와 Scheduler의 관계](diagrams/08a-software-overview.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Application / AD Job**: Application / AD Job / 주기 작업 · sleep · timeout · 시간 조회
+- **Scheduler**: Scheduler / Ready queue · 우선순위 / 정책 / 실행 Task 선택 · 필요 시 context switch
+- **OS / RTOS Timer API**: OS / RTOS Timer API / 시간 조회 · 대기 · timer 등록 / 취소
+- **Kernel Time / Timer Service**: Kernel Time / Timer Service / Timekeeping · timeout queue · tick / tickless / 만료 callback · 다음 deadline 선택
+- **Scheduling 연계**: Scheduling 연계 / 대기 Task → Ready (해당 timeout) / Tick 기반 실행 시간 / time slice 처리
+- **Timer Driver**: Timer Driver / Counter read · deadline 설정 · IRQ 처리 / rearm
+- **Interrupt Dispatch**: Interrupt Dispatch / GIC / NVIC → CPU exception → ISR
+- **Timer / Counter HW**: Timer / Counter HW / Counter: 시간값 제공 · Comparator: 만료 interrupt 생성
+- **Timer 만료 ≠ 즉시 실행 / 완료 보장**: Timer 만료 ≠ 즉시 실행 / 완료 보장 / Tick ≠ 매번 context switch / 시간 조회 / busy wait는 IRQ 없이 가능
+
+</details>
 
 그림은 Linux·Zephyr의 공통 개념도다. 01–10은 timer를 통한 Task wakeup의 대표 경로이며, 모든 timer callback이 Scheduler를 거치는 것은 아니다.
 
@@ -672,6 +875,13 @@ AP의 공통 Counter를 **TF-A·U-Boot는 부트 과정의 시간 조회·delay�
 
 ![Application·Linux Kernel과 CPU·Timer·Counter·GIC의 SW/HW 연결](diagrams/08b-linux-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **arm_arch_timer driver**: arm_arch_timer driver / Clocksource / Clockevent / Timer IRQ handler
+
+</details>
+
 그림 위쪽은 **Application과 Linux Kernel**, 아래쪽은 **한 PE의 CPU·Timer·Counter·GIC 경로**다. 시간 조회는 Counter read, deadline 처리는 Timer interrupt로 구분한다.
 
 ##### Software 구성
@@ -714,6 +924,16 @@ Timer source 해제와 GIC EOI/deactivate는 별도의 완료 단계다. Callbac
 ##### 4.2.1.1 Timer Initialization
 
 ![AP Device Tree에서 arm_arch_timer 초기화와 CPU별 clockevent 설정까지](diagrams/08b-linux-dt-init.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **timer { arm,armv8-timer }**: timer { /     compatible = "arm,armv8-timer"; /     interrupts = /         &lt;GIC_PPI 13 IRQ_TYPE_LEVEL_LOW>, /         &lt;GIC_PPI 14 IRQ_TYPE_LEVEL_LOW>, /         &lt;GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>, /         &lt;GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>, /         &lt;GIC_PPI 12 IRQ_TYPE_LEVEL_LOW>; / };
+- **arm_arch_timer 초기화**: arm_arch_timer 초기화 / compatible 매칭 → arch_timer_of_init()
+- **Timer 설정**: Timer 설정 / IRQ · 주파수 확인 / 사용할 Timer 선택
+- **Kernel에 등록**: Kernel에 등록 / CPU별 IRQ · Clockevent / Clocksource · sched_clock
+
+</details>
 
 그림은 CPU-local `arm,armv8-timer`의 성공 경로다. `timer_probe()`가 `TIMER_OF_DECLARE`의 compatible과 매칭하여 초기화 함수를 호출한다. 일반 platform driver의 probe 경로와 구분한다.
 
@@ -767,6 +987,20 @@ Timekeeping API는 **현재 Counter 값을 읽어 OS 시간으로 환산**한다
 
 ![User Space·Kernel·Hardware 계층별 vDSO와 syscall 시간 조회 경로](diagrams/08b-linux-vdso-layers.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Application / libc**: Application / libc / clock_gettime()
+- **vDSO code**: vDSO code / Counter 조회 · 시간 환산
+- **VVAR / 공유 시간 정보**: VVAR / 공유 시간 정보 / User read-only
+- **Timekeeping**: Timekeeping / 공유 시간 정보 갱신
+- **System call / Timekeeping**: System call / Timekeeping / clock_gettime → ktime_get_ts64()
+- **arm_arch_timer**: arm_arch_timer / Clocksource read
+- **CPU Counter register**: CPU Counter register / CNTVCT
+- **CPU Counter register**: CPU Counter register / CNTPCT / CNTVCT
+
+</details>
+
 그림은 같은 `clock_gettime(CLOCK_MONOTONIC)` 요청을 **왼쪽 vDSO 경로**와 **오른쪽 syscall 경로**로 비교한다. 두 경로 모두 HW Counter를 사용하며, 시간 환산을 수행하는 계층이 다르다.
 
 | 계층 | 왼쪽: vDSO 사용 | 오른쪽: vDSO 미사용 / fallback |
@@ -800,6 +1034,13 @@ vDSO를 사용하지 않거나 요청한 clock/mode가 지원되지 않으면 sy
 
 ![Linux Timekeeping API의 Counter 조회·시간 환산과 vDSO fast path](diagrams/08b-linux-timekeeping.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **vDSO fast path (지원 시)**: vDSO fast path (지원 시) / Application → vDSO → CNTVCT read + 공유 시간 정보 → 시간 환산 / Kernel 진입 생략 · 지원하지 않는 경우 syscall 경로 사용
+
+</details>
+
 그림의 1–6은 위 Layered Diagram **오른쪽의 syscall 경로**다. 하단 점선 상자는 왼쪽 vDSO 경로의 요약이다.
 
 1. **시간 요청:** `clock_gettime(CLOCK_MONOTONIC)`이 syscall로 진입하면 `clockid_to_kclock()`으로 해당 clock 연산을 선택한다.
@@ -820,6 +1061,19 @@ Timer/Sleep API는 **미래의 deadline을 등록하고 만료 후 대기 해제
 ###### Timer / Sleep API Layered Architecture
 
 ![Application Timer·Sleep API에서 hrtimer·Scheduler·Timer HW까지의 계층 구조](diagrams/08b-linux-timer-api.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Sleep API**: Sleep API / clock_nanosleep() / nanosleep()
+- **Timer FD**: Timer FD / timerfd_settime() / read・epoll
+- **POSIX Timer**: POSIX Timer / timer_create() / timer_settime()
+- **hrtimer**: hrtimer / Deadline queue / 만료 callback
+- **Scheduler**: Scheduler / Task 대기 / runnable / 실행 선택
+- **만료 통보**: 만료 통보 / timerfd readiness / POSIX signal
+- **Tick / Clockevent → arm_arch_timer**: Tick / Clockevent → arm_arch_timer / 다음 expiry 설정 / Timer IRQ handler
+
+</details>
 
 | API | 요청 | 만료 후 동작 |
 |---|---|---|
@@ -862,6 +1116,15 @@ Timer/Sleep API는 **미래의 deadline을 등록하고 만료 후 대기 해제
 Apollo TF-A의 BL31은 **Generic Timer의 Physical Counter를 polling**하여 firmware delay와 timeout을 처리한다. 이 경로에는 Linux의 hrtimer queue·Scheduler·Timer PPI 처리가 없다.
 
 ![TF-A firmware·Delay API·Generic delay driver·Counter의 계층 구조](diagrams/08c-tfa-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Delay API**: Delay API / udelay() / mdelay()
+- **Timeout API**: Timeout API / timeout_init_us() / timeout_elapsed()
+- **Generic delay timer**: Generic delay timer / CNTPCT read / clk_mult・clk_div / timeout deadline
+
+</details>
 
 | 계층 / Component | 역할 | 연결 |
 |---|---|---|
@@ -937,6 +1200,16 @@ TF-A의 이 경로는 Linux처럼 wall-clock·monotonic clock을 관리하지 �
 Apollo U-Boot은 **ARMv8 Generic Timer의 CNTPCT/CNTFRQ**로 시간 조회와 부트·장치 초기화 지연을 처리한다. Linux의 clocksource/clockevent 등록·hrtimer queue·Timer ISR 구조와 구분한다.
 
 ![U-Boot 시간 조회·Delay API와 ARMv8 Counter·Event stream 계층 구조](diagrams/08d-uboot-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **시간 조회 API**: 시간 조회 API / get_timer() / timer_get_boot_us()
+- **Delay API**: Delay API / udelay() → __udelay()
+- **ARMv8 Generic Timer**: ARMv8 Generic Timer / get_ticks() / get_tbclk() / timer_read_counter()
+- **Delay 대기 방식**: Delay 대기 방식 / EL2+ / 옵션 활성: event stream + WFE 후 polling / EL1 또는 옵션 비활성: polling
+
+</details>
 
 | 계층 / Component | 역할 | 연결 |
 |---|---|---|
@@ -1016,6 +1289,19 @@ OP-TEE는 **Counter 기반 시간 조회**와 **RPC 기반 대기**를 제공한
 
 ![OP-TEE의 시간 조회·RPC 대기와 Timer HW 계층 구조](diagrams/08e-optee-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **tee_time_get_sys_time()**: tee_time_get_sys_time() / CNTPCT → seconds / millis
+- **tee_time_wait(remaining)**: tee_time_wait(remaining) / OPTEE_RPC_CMD_SUSPEND
+- **RPC Service**: RPC Service / 대기 / 실행 재개
+- **Generic Timer Callout**: Generic Timer Callout / 플랫폼 초기화 호출 미확인
+- **System Counter**: System Counter / CNTPCT_EL0 / CNTFRQ_EL0
+- **Secure Physical Timer**: Secure Physical Timer / CNTPS_CVAL / CNTPS_CTL
+- **GIC → CPU**: GIC → CPU / PPI 29
+
+</details>
+
 | 계층 / Component | 역할 | 연결 |
 |---|---|---|
 | Trusted Application (S-EL0) | 시간 조회·대기 요청 | `TEE_GetSystemTime()` / `TEE_Wait()` |
@@ -1093,6 +1379,18 @@ Counter 기반 시간은 달력 시각이나 재부팅 후 영속 시간을 뜻�
 SCP는 **`timer` HAL의 SW alarm queue**와 **`gtimer`의 MMIO Timer 제어**로 구성된다. 가장 이른 deadline을 하나의 comparator에 설정하고, 만료 callback은 ISR에서 직접 실행한다.
 
 ![SCP Timer API·alarm queue·gtimer와 MMIO Timer·GIC 계층 구조](diagrams/08f-scp-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Timer API**: Timer API / get_counter / delay / wait
+- **Alarm API / timer HAL**: Alarm API / timer HAL / start / stop · deadline queue
+- **gtimer driver**: gtimer driver / MMIO count / CVAL / CTL
+- **Framework interrupt / timer_isr**: Framework interrupt / timer_isr / Group0 FIQ · direct callback
+- **CL0 MMIO Timer**: CL0 MMIO Timer / CNTBase · P_CVAL / P_CTL
+- **GIC / CL0 CPU**: GIC / CL0 CPU / SPI2 = INTID34 · FIQ
+
+</details>
 
 | 계층 / Component | 역할 | 연결 |
 |---|---|---|
@@ -1180,6 +1478,19 @@ Zephyr는 **Kernel timeout queue**와 **CPU별 Virtual Timer(CNTV)**를 연결�
 
 ![Zephyr Timer API·timeout queue·Scheduler와 CNTV·GIC 계층 구조](diagrams/08g-zephyr-software.drawio.svg)
 
+<details>
+<summary>도면 상세 설명</summary>
+
+- **Timer / Sleep API**: Timer / Sleep API / k_timer_start / k_sleep
+- **Timeout queue**: Timeout queue / z_add_timeout / sys_clock_announce
+- **Scheduler**: Scheduler / Thread ready / dispatch
+- **arm_arch_timer driver**: arm_arch_timer driver / sys_clock_set_timeout / compare ISR
+- **System Counter**: System Counter / CNTVCT
+- **CPU-local Virtual Timer × 4**: CPU-local Virtual Timer × 4 / CNTV_CVAL / CNTV_CTL
+- **GIC / CL1 CPU × 4**: GIC / CL1 CPU × 4 / Virtual PPI 27
+
+</details>
+
 | 계층 / Component | 역할 | 연결 |
 |---|---|---|
 | Application | 주기 작업·timeout·Thread sleep 요청 | `k_timer_start()` / `k_sleep()` |
@@ -1259,6 +1570,20 @@ Tickless의 `sys_clock_elapsed()`는 마지막 announce 이후 **완료된 tick 
 RSE는 **BL2 SCMI timeout의 Counter polling**과 **조건부 TIMER0 interrupt 시험 경로**를 구분한다. 공통 `systimer_armv8-m` driver가 Timestamp Timer의 MMIO register를 제어하며, Cortex-M55의 SysTick은 별도 장치다.
 
 ![TF-M BL2 polling·조건부 test partition·Systimer·NVIC 계층 구조](diagrams/08h-tfm-software.drawio.svg)
+
+<details>
+<summary>도면 상세 설명</summary>
+
+- **BL2 / SCMI transport**: BL2 / SCMI transport / Counter polling timeout
+- **Secure test partition (조건부)**: Secure test partition (조건부) / Timer start / clear / stop
+- **SCMI HAL**: SCMI HAL / scmi_hal_counter_ticks / frequency
+- **Platform test hooks / SPM**: Platform test hooks / SPM / TIMER0 handler · partition signal
+- **systimer_armv8-m driver**: systimer_armv8-m driver / Count read / CNTFRQ / CVAL / AIVAL / CTL
+- **CMSIS / NVIC**: CMSIS / NVIC / IRQ configuration
+- **SSE TIMER0**: SSE TIMER0 / CNTBase / AIVAL
+- **NVIC / Cortex-M55**: NVIC / Cortex-M55 / TIMER0 IRQ3
+
+</details>
 
 | 계층 / Component | 역할 | 연결 / 적용 범위 |
 |---|---|---|
