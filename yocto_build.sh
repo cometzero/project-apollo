@@ -16,6 +16,7 @@ APOLLO_MACHINE="${MACHINE:-${DEFAULT_APOLLO_MACHINE}}"
 DRY_RUN=0
 KEEP_CONF=0
 BSP_ONLY=0
+GEM5_ONLY=0
 BITBAKE_TASK=""
 REQUESTED_TARGETS=()
 
@@ -29,6 +30,7 @@ Options:
   --machine apollo-fvp|apollo-qvp
                           Select the Apollo Yocto machine.
   --bsp                   Build only nexios-bsp-initramfs.
+  --gem5                  Build nexios-gem5-initramfs and gem5 artifacts.
   -c TASK                 Run a BitBake task for the explicit targets.
   --keep-conf             Preserve the existing BUILD_DIR/conf directory.
   --dry-run               Print the BitBake command without running it.
@@ -77,6 +79,10 @@ while (($#)); do
             BSP_ONLY=1
             shift
             ;;
+        --gem5)
+            GEM5_ONLY=1
+            shift
+            ;;
         -c)
             [[ $# -ge 2 ]] || {
                 echo "error: -c requires a BitBake task" >&2
@@ -106,6 +112,11 @@ while (($#)); do
 done
 
 APOLLO_MACHINE="$(normalize_machine "${APOLLO_MACHINE}")"
+
+if [[ "${GEM5_ONLY}" == "1" && ( "${BSP_ONLY}" == "1" || ${#REQUESTED_TARGETS[@]} -gt 0 || "${APOLLO_MACHINE}" != "apollo-qvp" ) ]]; then
+    echo "error: --gem5 requires apollo-qvp and cannot be combined with --bsp or explicit targets" >&2
+    exit 2
+fi
 
 if [[ -n "${BITBAKE_TASK}" && ${#REQUESTED_TARGETS[@]} -eq 0 ]]; then
     echo "error: -c requires at least one explicit target" >&2
@@ -204,6 +215,8 @@ BITBAKE_ARGS=()
 BITBAKE_TASK_ARGS=()
 if ((${#REQUESTED_TARGETS[@]})); then
     BITBAKE_TARGETS=("${REQUESTED_TARGETS[@]}")
+elif [[ "${GEM5_ONLY}" == "1" ]]; then
+    BITBAKE_TARGETS=("nexios-gem5-initramfs")
 elif [[ "${BSP_ONLY}" == "1" ]]; then
     BITBAKE_TARGETS=("nexios-bsp-initramfs")
 else
