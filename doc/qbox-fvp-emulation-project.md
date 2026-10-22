@@ -820,9 +820,10 @@ For each IP:
 
 Use these before claiming progress:
 
-The native provider runs platform unit tests and selected QBox core suites
-by default in `do_check`, between compilation and installation. Core suites
-are selected with the space-separated `QBOX_CORE_TEST_DIRS`; execution can
+The native provider runs only qbox-platform unit tests by default in
+`do_check`, between compilation and installation. `QBOX_CORE_TEST_DIRS`
+defaults to empty; core suites can be enabled with this space-separated list.
+Core execution can
 be narrowed further with `QBOX_CORE_TEST_REGEX` in `build/conf/local.conf`.
 See the Apollo platform README for defaults and examples.
 
