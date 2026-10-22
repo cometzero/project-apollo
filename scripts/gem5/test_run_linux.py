@@ -4,6 +4,7 @@
 import contextlib
 import gzip
 import io
+import json
 import os
 from pathlib import Path
 import socket
@@ -44,6 +45,25 @@ def entries(data):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_command_file_preserves_snapshot_initrd(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = bytearray()
+            run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+            base = root / "base"
+            base.write_bytes(archive)
+            script = root / "command.sh"
+            script.write_text("echo 'literal $value'\nprintf '%s\\n' done\n")
+            args = run_linux.parser().parse_args([
+                "--workload", "command", "--command-file", str(script)])
+            output = run_linux.prepare_initrd(base, root, args)
+            self.assertEqual(output.read_bytes(), bytes(archive))
+            self.assertIn(script.read_text(), (root / "guest-init.sh").read_text())
+            with contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    run_linux.parser().parse_args([
+                        "--command", "true", "--command-file", str(script)])
+
     def test_native_environment_follows_selected_binary(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -52,9 +72,11 @@ class LauncherTests(unittest.TestCase):
             source = root / "source"
             for folder in (deploy, native, source / "build/ARM"):
                 folder.mkdir(parents=True)
-            for name in ("Image", "nexios-initramfs-image-apollo-qvp.cpio.gz",
-                         "nexios-image-apollo-qvp.wic", "profile"):
+            for name in ("Image", "nexios-gem5-initramfs-apollo-qvp.cpio.gz",
+                         "profile"):
                 (deploy / name).touch()
+            (deploy / "gem5").mkdir()
+            (deploy / "gem5/zena_css4.elf").touch()
             (native / "gem5.opt").touch()
             (native / "gem5-native.json").write_text("{}")
             (source / "build/ARM/gem5.opt").touch()
@@ -63,6 +85,7 @@ class LauncherTests(unittest.TestCase):
                 "--gem5", str(native / "gem5.opt"),
             ])
             self.assertIsNotNone(run_linux.resolve(args)["native_manifest"])
+            self.assertIsNone(run_linux.resolve(args)["rootfs"])
             previous = Path.cwd()
             try:
                 os.chdir(deploy)
@@ -95,7 +118,7 @@ with socket.socket() as listener:
                 peer.sendall(b" test\\n")
             time.sleep(30)
         elif mode == "boot":
-            peer.sendall(b"nexios login: ")
+            peer.sendall(b"NEXIOS_GEM5_INITRAMFS_READY\\n nexios-gem5# ")
             time.sleep(30)
         elif mode == "timeout":
             time.sleep(30)
@@ -137,6 +160,7 @@ with socket.socket() as listener:
                 if mode == "panic":
                     self.assertIn(b"not syncing: test\n",
                                   (Path(directory) / "uart.log").read_bytes())
+                self.assertTrue((Path(directory) / "boot-timings.json").is_file())
                 self.assertEqual(len(children), 1)
                 self.assertIsNotNone(children[0].returncode)
                 with self.assertRaises(ChildProcessError):
@@ -166,8 +190,9 @@ with socket.socket() as listener:
                              for name, mode, content in entries(data)}
                     self.assertEqual(files["init"][1], b"#!/bin/sh\noriginal\n")
                     self.assertEqual(files["odd-length"][1], b"abcde")
-                    self.assertEqual(files["apollo-init"][0], 0o100755)
-                    script = files["apollo-init"][1].decode()
+                    self.assertEqual(data, archive)
+                    self.assertNotIn("etc/gem5-workload.sh", files)
+                    script = (root / "guest-init.sh").read_text()
                     self.assertIn(args.command, script)
                     self.assertIn("APOLLO_WORKLOAD_EXIT=$status", script)
 
@@ -197,27 +222,92 @@ with socket.socket() as listener:
             args = run_linux.parser().parse_args([
                 "--workload", "dram", "--size-kib", "65536", "--passes", "4",
             ])
-            with patch("benchmark.build_benchmark", return_value=binary):
-                output = run_linux.prepare_initrd(base, root, args)
+            with patch("run_linux.subprocess.run", side_effect=AssertionError("runtime build")):
+                output = run_linux.prepare_initrd(base, root, args, binary)
             files = {name: content for name, _, content
                      in entries(output.read_bytes())}
-            self.assertEqual(files["apollo-bench"], binary.read_bytes())
+            self.assertEqual(files["usr/bin/apollo-bench"], binary.read_bytes())
             self.assertIn(
-                b"/apollo-bench --mode dram --passes 4 --size-kib 65536",
-                files["apollo-init"],
+                b"/usr/bin/apollo-bench --mode dram --passes 4 --size-kib 65536",
+                (root / "guest-init.sh").read_bytes(),
             )
+
+    def test_checkpoint_contract_rejects_changed_inputs_and_partial_save(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = {}
+            for name in ("gem5", "kernel", "bootloader", "profile", "initrd"):
+                path = root / name
+                path.write_bytes(name.encode())
+                inputs[name] = str(path)
+            args = run_linux.parser().parse_args([])
+            contract = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
+            (root / "m5.cpt").touch()
+            (root / "apollo-checkpoint.json").write_text('{"status":"COMPLETE"}')
+            (root / "launcher.json").write_text(json.dumps(contract))
+            run_linux.validate_checkpoint(root, contract)
+            (root / "kernel").write_bytes(b"changed")
+            changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
+            with self.assertRaisesRegex(ValueError, "inputs changed"):
+                run_linux.validate_checkpoint(root, changed)
+            (root / "m5.cpt").unlink()
+            with self.assertRaisesRegex(ValueError, "incomplete"):
+                run_linux.validate_checkpoint(root, contract)
+
+    def test_legacy_bsp_still_overlays_init(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = bytearray()
+            run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+            (root / "base").write_bytes(archive)
+            args = run_linux.parser().parse_args(["--bsp", "--workload", "smoke"])
+            result = run_linux.prepare_initrd(root / "base", root, args)
+            files = {name: content for name, _, content in entries(result.read_bytes())}
+            self.assertIn(b"APOLLO_SMOKE=PASS", files["apollo-init"])
+
+    def test_workload_shutdown_with_and_without_poweroff(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = bytearray()
+            run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+            (root / "base").write_bytes(archive)
+            args = run_linux.parser().parse_args(["--workload", "smoke"])
+            run_linux.prepare_initrd(root / "base", root, args)
+            script = (root / "guest-init.sh").read_text()
+            shutdown = script[script.index("shutdown_guest() {"):script.index("echo APOLLO_ONLINE=")]
+            shutdown = shutdown.replace("/proc/sysrq-trigger", str(root / "sysrq"))
+            for name, body in (("sync", "echo sync >> calls"), ("poweroff", "echo poweroff \"$@\" >> calls")):
+                tool = root / name
+                tool.write_text("#!/bin/sh\n" + body + "\n")
+                tool.chmod(0o755)
+            for available in (True, False):
+                if not available:
+                    (root / "poweroff").unlink()
+                subprocess.run(["/bin/sh", "-c", shutdown + "\nshutdown_guest"],
+                               cwd=root, env={"PATH": str(root)}, check=True)
+                self.assertEqual((root / "calls").read_text(),
+                                 "sync\npoweroff -f\n" if available else "sync\n")
+                (root / "calls").unlink()
+                if not available:
+                    self.assertEqual((root / "sysrq").read_text(), "o\n")
 
     def test_explicit_inputs_and_missing_file(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            argv = []
-            for name in ("gem5", "kernel", "initrd", "rootfs", "profile"):
+            argv = ["--deploy-dir", str(root)]
+            for name in ("gem5", "kernel", "initrd", "rootfs", "profile", "bootloader"):
                 target = root / f"{name} with spaces"
                 target.write_bytes(b"fixture")
                 argv.extend([f"--{name}", str(target)])
             inputs = run_linux.resolve(run_linux.parser().parse_args(argv))
             self.assertEqual(Path(inputs["kernel"]), root / "kernel with spaces")
             self.assertIsNone(inputs["native_manifest"])
+            args = run_linux.parser().parse_args(argv + ["--workload", "cache"])
+            self.assertIsNone(run_linux.resolve(args)["benchmark"])
+            args.benchmark = root / "benchmark with spaces"
+            args.benchmark.write_bytes(b"prebuilt benchmark")
+            with patch("run_linux.subprocess.run", side_effect=AssertionError("runtime build")):
+                self.assertEqual(run_linux.resolve(args)["benchmark"], str(args.benchmark))
             (root / "kernel with spaces").unlink()
             with self.assertRaisesRegex(ValueError, "missing file"):
                 run_linux.resolve(run_linux.parser().parse_args(argv))
@@ -236,6 +326,10 @@ with socket.socket() as listener:
             ["--max-ticks", "0"],
             ["--cpus", "3"],
             ["--cpus", "8"],
+            ["--checkpoint", "/new", "--workload", "smoke"],
+            ["--checkpoint", "/new", "--bsp"],
+            ["--resume", "/saved", "--rootfs", "/disk"],
+            ["--checkpoint", "/new", "--resume", "/saved"],
         ):
             with self.subTest(arguments=arguments):
                 with patch("sys.argv", ["run_linux.py", *arguments]):

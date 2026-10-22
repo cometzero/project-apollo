@@ -1,29 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Build and summarize the AP-only Linux benchmark using simulated ROI ticks."""
+"""Summarize the AP-only Linux benchmark using simulated ROI ticks."""
 
 import json
 import math
 from pathlib import Path
-import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] /
                        "hsoc-stack/tools/gem5/scripts/zena_cmn"))
 from summarize_roi import stats_blocks
 from analyze_roofline import cache_metrics, cache_paths
-
-
-def build_benchmark(gem5_source, output, compiler="aarch64-linux-gnu-gcc"):
-    output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [compiler, "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror",
-         "-static", "-pthread", "-march=armv8-a", "-mno-outline-atomics",
-         "-I", str(Path(gem5_source) / "workloads/zena_cmn"),
-         str(Path(__file__).with_suffix(".c")), "-o", str(output)],
-        check=True,
-    )
-    return output
 
 
 def summarize(outdir, serial_log):

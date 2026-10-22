@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
-from benchmark import build_benchmark, summarize
+from benchmark import summarize
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -67,10 +67,13 @@ class BenchmarkTests(unittest.TestCase):
     )
     def test_aarch64_roi_markers_have_serializing_barriers(self):
         root = Path(__file__).resolve().parents[2]
-        binary = build_benchmark(
-            root / "hsoc-stack/tools/gem5",
-            Path(self.temp.name) / "benchmark-aarch64",
-        )
+        binary = Path(self.temp.name) / "benchmark-aarch64"
+        subprocess.run([
+            "aarch64-linux-gnu-gcc", "-O2", "-static", "-pthread",
+            "-march=armv8-a", "-mno-outline-atomics", "-I",
+            str(root / "hsoc-stack/tools/gem5/workloads/zena_cmn"),
+            str(Path(__file__).with_name("benchmark.c")), "-o", str(binary),
+        ], check=True)
         assembly = subprocess.check_output(
             ["aarch64-linux-gnu-objdump", "-d", "--disassemble=main",
              str(binary)], text=True,
