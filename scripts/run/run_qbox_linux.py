@@ -292,6 +292,7 @@ def start_tmux(
     args: argparse.Namespace, out: Path, *, script: Path | None = None,
     program: str = "QBox", log_name: str = "qbox.log", key_prefix: str = "qbox-linux-",
     bottom_command: list[str] | None = None,
+    console_command: list[str] | None = None,
 ) -> None:
     def tmux(*values: str) -> str:
         return subprocess.check_output(["tmux", *values], text=True).strip()
@@ -322,7 +323,7 @@ def start_tmux(
         "50",
         "-c",
         str(ROOT),
-        shlex.join([sys.executable, str(script), "console", str(out)]),
+        shlex.join(console_command or [sys.executable, str(script), "console", str(out)]),
     )
     try:
         # Key bindings are server-wide; copy root into a session-private table
@@ -355,19 +356,25 @@ def start_tmux(
             shlex.join(bottom_command or ["tail", "-n", "+1", "-F", str(out / log_name)]),
         )
         tmux("split-window", "-h", "-l", "50%", "-t", bottom, "-c", str(ROOT))
+        if console_command is not None:
+            tmux("set-window-option", "-t", top, "remain-on-exit", "on")
+            tmux("set-window-option", "-t", top, "pane-border-status", "top")
+            tmux("select-pane", "-t", top, "-T", f"{program} UART")
+            tmux("select-pane", "-t", bottom, "-T", f"{program} platform log")
         tmux("select-pane", "-t", top)
-        command = shlex.join(
-            [
-                sys.executable,
-                str(script),
-                "supervise",
-                str(out),
-                str(args.timeout),
-                str(int(args.exit_after_pass)),
-            ]
-        )
-        # Keep the supervisor in the session so killing that session stops its child.
-        tmux("new-window", "-d", "-t", args.session, "-n", "supervisor", command)
+        if console_command is None:
+            command = shlex.join(
+                [
+                    sys.executable,
+                    str(script),
+                    "supervise",
+                    str(out),
+                    str(args.timeout),
+                    str(int(args.exit_after_pass)),
+                ]
+            )
+            # Keep the supervisor in the session so killing that session stops its child.
+            tmux("new-window", "-d", "-t", args.session, "-n", "supervisor", command)
     except (OSError, subprocess.CalledProcessError):
         # new-session succeeded here; never clean up a pre-existing session.
         subprocess.run(

@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import select
 import shlex
+import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -48,6 +50,9 @@ def parser():
     p.add_argument("--timeout", type=float, default=7200, help="host deadline in seconds (default: 7200)")
     p.add_argument("--max-ticks", type=int, default=10**15)
     p.add_argument("--headless", action="store_true", help="log UART without forwarding stdin")
+    p.add_argument("--session", default="apollo-gem5", help="tmux session name")
+    p.add_argument("--no-attach", action="store_true", help="create tmux session without attaching")
+    p.add_argument("--direct", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--dry-run", action="store_true", help="print resolved inputs without building or running")
     return p
 
@@ -288,6 +293,19 @@ def main():
         print(json.dumps({"inputs": inputs, "cpus": args.cpus, "channels": args.channels, "workload": args.workload}, indent=2))
         return 0
     out = (args.out_dir or ROOT / "build/qbox-apollo-qvp/gem5" / time.strftime("%Y%m%d-%H%M%S")).resolve()
+    if not args.headless and not args.direct:
+        if not shutil.which("tmux"):
+            raise ValueError("tmux is required; use --headless otherwise")
+        if out.exists():
+            raise ValueError(f"output directory already exists: {out}")
+        sys.path.insert(0, str(ROOT / "scripts/run"))
+        from run_qbox_linux import start_tmux
+        start_tmux(
+            args, out, program="gem5", log_name="gem5.log", key_prefix="gem5-linux-",
+            console_command=[sys.executable, str(Path(__file__).resolve()),
+                             *sys.argv[1:], "--direct", "--out-dir", str(out)],
+        )
+        return 0
     out.mkdir(parents=True, exist_ok=False)
     print(f"gem5 output: {out}", flush=True)
     firmware = Path(inputs["bootloader"])
@@ -363,7 +381,14 @@ def main():
     return 0 if result["status"] in ("PASS", "BOOT_OBSERVED", "CHECKPOINT_SAVED") else 1
 
 
+def stop_requested(signum, frame):
+    # Unwind run() so tmux session teardown also reaps the simulator.
+    raise KeyboardInterrupt
+
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGHUP, stop_requested)
+    signal.signal(signal.SIGTERM, stop_requested)
     try:
         sys.exit(main())
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
