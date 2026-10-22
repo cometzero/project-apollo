@@ -4,7 +4,7 @@
 
 Apollo QVP는 **QEMU의 Arm 명령어·장치 실행과 SystemC/TLM의 시스템 모델을 결합한 가상 플랫폼**이다. RSE·Safety Island·Primary Compute의 펌웨어를 함께 실행하고, 주소 변환·인터럽트·전원/reset·도메인 간 통신을 소스 수준에서 구성한다.
 
-[draw.io 전체 편집본 — 13페이지](apollo-qvp-architecture.drawio) · [모델·소스 연결표](MODEL-MAP.md) · [조사 근거와 검증 범위](SOURCES.md) · [관련 Build Architecture](../build/README.md)
+[draw.io 전체 편집본 — 15페이지](apollo-qvp-architecture.drawio) · [모델·소스 연결표](MODEL-MAP.md) · [조사 근거와 검증 범위](SOURCES.md) · [관련 Build Architecture](../build/README.md)
 
 도면은 **white 테마의 native draw.io**이며 본문의 SVG에도 편집 정보를 포함했다. 아래 설명은 현재 checkout과 canonical full-system runner의 구성을 기준으로 한다. 소스에서 확인한 구조와 실제 실행 시험의 결과를 구분한다.
 
@@ -12,7 +12,7 @@ Apollo QVP는 **QEMU의 Arm 명령어·장치 실행과 SystemC/TLM의 시스템
 |---|---|---|
 | 1. Simulation / Emulation | 무엇을 실행하고 무엇을 모델링하는가? | 01 |
 | 2. FVP / QVP | 무엇을 공통 계약으로 비교하는가? | 02 |
-| 3. QBox / libqemu | CPU 실행과 TLM transaction은 어떻게 연결되는가? | 03, 03a, 04, 04a |
+| 3. QBox / libqemu | CPU 실행과 TLM transaction은 어떻게 연결되는가? | 03, 03a–03c, 04, 04a |
 | 4. Platform Lua | SoC·VP·Board가 무엇을 소유하는가? | 05 |
 | 5. Components | 어느 모델이 QEMU이고 어느 모델이 SystemC인가? | 06, 11 |
 | 6. Execution | 어떤 process·thread·clock·boot flow로 실행되는가? | 07–10 |
@@ -204,6 +204,7 @@ SystemC/TLM은 QBox가 사용하는 실행 기반이다. **CCI는 설정 전달*
 | Component | 역할 | 플랫폼에서의 사용 |
 |---|---|---|
 | `router` | 주소 범위에 따라 TLM 접근을 Target으로 전달 | CPU·DMA와 RAM·MMIO 연결 |
+| `addrtr` | Window offset을 유지하며 주소를 변환 | AP View ↔ System View 연결 |
 | `gs_memory` | 메모리 저장 공간과 TLM 접근 제공. 허용 시 DMI Pointer 제공 | RAM·ROM 영역, 파일 기반 Memory |
 | `loader` | ELF·Binary 등의 내용을 지정된 메모리 경로로 적재 | Firmware·초기 데이터 적재; `gs_memory` 내부 Loader도 제공 |
 | `exclusive_monitor` | Exclusive 접근 상태를 추적하고 성공 여부 처리 | 해당 모델을 사용하는 TLM 경로의 Exclusive Access 지원 |
@@ -212,6 +213,115 @@ SystemC/TLM은 QBox가 사용하는 실행 기반이다. **CCI는 설정 전달*
 | Monitor | Simulation과 등록된 모델의 상태를 조회·관찰 | 실행 중 진단 |
 
 이들은 재사용 가능한 기반 모델이다. Apollo 고유 MHU·PPU·ATU 및 SoC 배선은 `qbox-platform/`에서 확장하며, 실제 선택되는 Device 모델은 5장에서 구분한다. [기본 Components](../../../hsoc-stack/tools/qbox/docs/base-components.md), [Character Backend](../../../hsoc-stack/tools/qbox/docs/backends.md), [Monitor](../../../hsoc-stack/tools/qbox/docs/monitor.md)
+
+##### 3.2.3.1 Router 구조와 Socket Binding
+
+**`bind`는 연결을 만들고, Router는 주소로 목적지를 선택한다.** `target_socket`은 요청을 받는 입구, `initiator_socket`은 요청을 내보내는 출구다. 이름은 각 모듈을 기준으로 읽는다.
+
+![AP CPU의 mem 소켓과 Router의 입출력 binding](diagrams/03b-router-binding.drawio.svg)
+
+그림의 화살표는 **실행 중 요청 방향**이다. ①·②는 아래 Lua의 binding과 대응한다. `PFDI addrtr`는 `ap_to_system_pfdi_monitor_mhu_bridge`의 축약 표기다.
+
+| 객체 / Socket | 역할 |
+|---|---|
+| `ap_cpu_0.mem` | CPU wrapper 안의 `QemuInitiatorSocket`. QEMU MMIO callback을 TLM 요청으로 전달 |
+| `ap_router.target_socket` | 여러 CPU·DMA initiator의 요청을 받는 Router 입력 |
+| Router address map | 연결된 Target의 `address`·`size`·`priority`로 목적지 선택 |
+| `ap_router.initiator_socket` | 선택한 Target으로 요청을 전달하는 Router 출력 |
+| 장치의 `target_socket` | Router가 전달한 요청을 받는 장치 입력 |
+
+**Apollo Lua 예제 — 실제 배선에서 필요한 부분만 발췌**
+
+```lua
+platform.ap_router = {
+    moduletype = "router";
+}
+
+-- ① CPU initiator → Router target
+platform.ap_cpu_0.mem = {
+    bind = "&ap_router.target_socket";
+}
+
+-- ② Router initiator → 주소 변환 Bridge target
+platform.ap_to_system_pfdi_monitor_mhu_bridge = {
+    moduletype = "addrtr";
+    mapped_base_addr = AP_HOST_PFDI_MONITOR_MHU_PBX_BASE;
+    target_socket = {
+        address = AP_PFDI_MONITOR_MHU_PBX_BASE;
+        size = AP_PFDI_MONITOR_MHU_SIZE;
+        bind = "&ap_router.initiator_socket";
+        relative_addresses = false;
+        priority = 0;
+    };
+    initiator_socket = {bind = "&system_router.target_socket"};
+}
+```
+
+②는 **Target 쪽 설정에 상대 Initiator를 적은 것**이다. 설정을 적는 위치가 요청 방향을 결정하지 않는다. 실제 전달 방향은 항상 `ap_router.initiator_socket → Bridge.target_socket`이다.
+
+**연결 시점과 실행 시점**
+
+1. **플랫폼 생성:** Lua의 `bind`가 CCI 설정으로 전달된다. Module Factory는 `&ap_router.target_socket` 같은 객체 참조를 해석해 실제 TLM 소켓을 연결한다.
+2. **주소 맵 구성:** Router가 연결된 Target의 주소 설정을 읽는다. 이 예제의 AP Window는 `0x40110000`, 크기는 `0x30000`이다.
+3. **MMIO 실행:** `ap_cpu_0.mem`이 이미 연결된 Router 입력에 `b_transport()`를 호출한다. 접근마다 Router 이름을 검색하지 않는다.
+4. **목적지 선택:** 주소 `0x4011100C`에 해당하는 Bridge를 골라 `initiator_socket[index]`로 전달한다. 여기서는 `relative_addresses=false`이므로 원래 AP 주소를 유지한다.
+5. **후속 전달:** `addrtr`가 System 주소로 변환해 `system_router`로 보낸다. 이후 MHU 도착 경로는 3.4절의 두 Router 예제를 따른다.
+
+`relative_addresses`의 기본값은 `true`다. 이 경우 Router는 Target 호출 전에 base address를 빼고, 반환 후 원래 주소를 복원한다. 매칭되는 주소가 없으면 `TLM_ADDRESS_ERROR_RESPONSE`를 반환한다. 응답 상태와 read 데이터는 같은 `b_transport()` 호출의 반환 경로로 돌아온다.
+
+**Initiator bridge의 위치:** CPU C++ 멤버는 `QemuCpu::socket`이며 생성 이름이 `mem`이다. 따라서 `platform.ap_cpu_0.mem` 자체가 QEMU↔TLM bridge이고, 주소 변환용 `addrtr`와는 별개다.
+
+[AP Lua 배선](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/interconnect.lua) · [CPU wrapper](../../../hsoc-stack/tools/qbox/qemu-components/common/include/cpu.h) · [Initiator bridge](../../../hsoc-stack/tools/qbox/qemu-components/common/include/ports/initiator.h) · [Router 구현](../../../hsoc-stack/tools/qbox/systemc-components/router/include/router.h)
+
+##### 3.2.3.2 addrtr — Address Translation Bridge
+
+**`addrtr`는 한 주소 Window를 다른 주소 Window로 옮기는 SystemC 모듈**이다. 입력 `target_socket` 하나와 출력 `initiator_socket` 하나를 가지며, Window 안의 offset을 유지해 같은 Transaction을 전달한다.
+
+![AP 주소를 System 주소로 변환하는 addrtr](diagrams/03c-addrtr.drawio.svg)
+
+Router가 여러 Target 중 목적지를 선택한다면, `addrtr`는 **이미 선택된 경로에서 주소를 변환**한다. CPU의 가상주소를 변환하는 MMU나 페이지 테이블 모델은 아니다.
+
+| 설정 | 의미 | AP PFDI Mailbox 예 |
+|---|---|---|
+| `target_socket.address` | 입력 Window의 시작 주소 | `0x40110000` |
+| `target_socket.size` | 입력 Window 크기 | `0x30000` |
+| `mapped_base_addr` | 출력 Window의 시작 주소 | `0x400003B380000` |
+| `target_socket.relative_addresses` | 앞단 Router가 base를 뺄지 결정 | `false`: AP 주소 그대로 전달 |
+
+**예제 — 앞 절의 Lua 설정을 실제 주소 값으로 풀어 쓴 형태**
+
+```lua
+platform.ap_to_system_pfdi_monitor_mhu_bridge = {
+    moduletype = "addrtr";
+    mapped_base_addr = 0x400003B380000;
+    target_socket = {
+        address = 0x40110000;
+        size = 0x30000;
+        relative_addresses = false;
+        bind = "&ap_router.initiator_socket";
+    };
+    initiator_socket = {bind = "&system_router.target_socket"};
+}
+```
+
+`relative_addresses=false`는 **앞단 Router가 읽는 설정**이다. `addrtr`는 입력 주소를 `target_socket.address`와 비교하므로, 앞단에서 이미 base를 뺀 offset만 전달하면 이 예제의 입력 Window에 맞지 않는다.
+
+**32-bit Register Write가 지나가는 순서**
+
+1. AP가 `0x4011100C`에 쓰면 `ap_router`가 위 Bridge Window를 선택한다.
+2. `addrtr`가 접근 주소와 길이 4바이트가 입력 Window 안에 들어오는지 확인한다.
+3. 아래 식으로 Transaction 주소만 바꾸고 출력 소켓의 `b_transport()`를 호출한다.
+4. `system_router`는 System 주소로 MHU PBX를 선택하고, 장치에는 상대 주소 `0x100C`를 전달한다.
+5. 호출이 반환되면 `addrtr`가 Transaction 주소를 원래 AP 주소로 복원한다. Read 데이터·응답 상태는 같은 Transaction으로 돌아온다.
+
+```text
+offset = 0x4011100C - 0x40110000 = 0x100C
+output = 0x400003B380000 + 0x100C = 0x400003B38100C
+```
+
+`addrtr`는 데이터 내용을 바꾸거나 자체 대기 시간을 추가하지 않는다. 입력 범위를 벗어난 요청은 현재 구현에서 fatal report 대상이다. Debug 접근에도 같은 변환을 적용하며, DMI가 허용되는 Target에서는 DMI 주소 범위와 invalidation도 입력 View로 변환한다. MHU의 일반 Register 접근은 위 MMIO 전달 경로로 이해하면 된다.
+
+[addrtr 구현](../../../hsoc-stack/tools/qbox/systemc-components/addrtr/include/addrtr.h) · [Apollo Bridge 배선](../../../hsoc-stack/tools/qbox-platform/platforms/apollo/soc/hw-block/ap_compute/interconnect.lua)
 
 ### 3.3 QOM — QEMU Object Model
 
