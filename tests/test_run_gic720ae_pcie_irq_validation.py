@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import hashlib
 import json
 import subprocess
@@ -256,6 +258,20 @@ def test_same_json_with_different_bytes_fails_before_qbox(
     assert result.returncode != 0
     assert "frozen_provenance_bytes" in result.stderr
     assert not run_root.exists()
+
+
+def test_validation_error_preserves_traceback_through_context_manager() -> None:
+    @contextmanager
+    def scope():
+        yield
+
+    error = validation_contract.ValidationError("input_path:missing")
+    with pytest.raises(validation_contract.ValidationError) as caught:
+        with scope():
+            raise error
+    assert caught.value is error
+    assert str(caught.value) == "input_path:missing"
+
 
 
 def test_failed_build_records_missing_binary_without_claiming_pass(

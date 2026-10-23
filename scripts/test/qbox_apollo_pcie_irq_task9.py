@@ -49,7 +49,7 @@ GUEST_BASE64_PATH: Final = "/tmp/apollo-qbox-pcie-irq-task9.b64"
 RUNNER: Final = "./run_qbox_yocto.sh"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Task9Error(Exception):
     reason: str
 
@@ -57,7 +57,7 @@ class Task9Error(Exception):
         return self.reason
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Task9Signal(Exception):
     signum: int
 

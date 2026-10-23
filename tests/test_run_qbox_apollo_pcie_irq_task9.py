@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+import pytest
+
 import importlib.util
 import os
 import subprocess
@@ -204,6 +207,26 @@ def test_signal_handler_converts_term_into_cleanup_unwind() -> None:
         assert error.signum == 15
     else:
         raise AssertionError("TERM did not unwind through cleanup")
+
+
+@pytest.mark.parametrize(
+    ("exception_name", "argument"),
+    [("Task9Error", "run_root"), ("Task9Signal", 15)],
+)
+def test_task9_exceptions_preserve_traceback_through_context_manager(
+    exception_name: str, argument: str | int,
+) -> None:
+    @contextmanager
+    def scope():
+        yield
+
+    task9 = load_task9_module()
+    error = getattr(task9, exception_name)(argument)
+    with pytest.raises(type(error)) as caught:
+        with scope():
+            raise error
+    assert caught.value is error
+
 
 
 def test_interrupted_mode_cleanup_removes_uart_fifo(tmp_path: Path) -> None:

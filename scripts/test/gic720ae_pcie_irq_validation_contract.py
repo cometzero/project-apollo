@@ -35,7 +35,7 @@ JsonValue = None | bool | int | float | str | list["JsonValue"] | dict[str, "Jso
 JsonObject = dict[str, JsonValue]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class ValidationError(Exception):
     reason: str
 
