@@ -21,7 +21,7 @@ from board_io import LOGS, clean, fields, load, log_page, records, save, tail
 from vmcu import Vmcu, UnknownOutcome
 from qbox_monitor import QBoxMonitorCollector, process_identity
 from qbox_diagnostics import QBoxDiagnostics
-from qbox_validation.registry import canonical_matrix_path, enabled_profile_ids, resolve_profile
+from scripts.run.qbox_validation.registry import canonical_matrix_path, enabled_profile_ids, resolve_profile
 from run_qbox_apollo_fvp_full import CHILD_REQUIRED_MARKERS, SI_CL0_REQUIRED_MARKERS, SI_CL1_REQUIRED_MARKERS
 
 

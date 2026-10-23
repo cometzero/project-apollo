@@ -74,6 +74,6 @@
 | 항목 | Source |
 |---|---|
 | QVP reuse validation profiles | [scripts/run/qbox_validation](../../../scripts/run/qbox_validation) |
-| Non-Xen validation matrix | [qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml](../../../qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml) |
+| Non-Xen validation matrix | [scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml](../../../scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml) |
 | Runtime OEQA cases | [hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases](../../../hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases) |
 | AutoSD RT tooling | [autosd/customization/rt](../../../autosd/customization/rt) |

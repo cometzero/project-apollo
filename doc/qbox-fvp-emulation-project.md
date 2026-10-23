@@ -351,7 +351,7 @@ The repository now has a public non-Xen validation matrix for the Arm Zena CSS
 v2.2 run-time integration scope:
 
 - matrix source:
-  `qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml`
+  `scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml`
 - 15 non-Xen validation areas
 - 14 public profiles
 - 100 mapped actions

@@ -360,6 +360,21 @@ The higher-level validation wrapper selects categorized FVP suites:
 It writes a structured result under `build/tests/<timestamp>/` and exits with
 `0` for PASS, `1` for FAIL, or `2` for BLOCKED.
 
+## QBox runtime pytest
+
+The [Apollo runtime suite](qa-tests/README.md) boots QBox and checks AP, RSE,
+SI CL0 and SI CL1 using UART logs, console commands and guest SSH:
+
+```bash
+python3 -m pytest -c qa-tests/pyproject.toml qa-tests/tests --image=bsp -v
+python3 -m pytest -c qa-tests/pyproject.toml qa-tests/tests --image=product -v
+```
+
+Each invocation automatically writes domain/category reports, per-test
+durations, failure logs and JUnit XML under `build/qbox-apollo-qvp/`.
+Host tests remain separate: `python3 scripts/test/run_pytest.py -q`.
+The existing profile/OEQA tooling now lives in `scripts/validation/`.
+
 ## Evidence and Troubleshooting
 
 - Keep QVP runtime evidence under `build/qbox-apollo-qvp/`.

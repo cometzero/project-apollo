@@ -668,7 +668,7 @@ Worker 상태 갱신은 시간 정확도나 worst-case scheduling latency의 측
 | ZEP-IPC-01 | CL1/AP의 DT·reserved-memory·endpoint 상태 대조 | 양쪽 resource와 transport 설정 일치 | — | NOT RUN |
 | ZEP-IPC-02 | 준비된 CL1/AP console에서 양방향 ping·Zperf UDP/TCP | Payload 송수신 성공 | — | NOT RUN |
 
-기존 `test_31_si_cl1_hipc.py`는 packet·boundary·multistream 검증 내용을 제공한다. 다만 `qa-tests/profiles/hipc.yaml`은 FVP product 전용이며, QVP 자동 실행 profile로 간주하지 않는다. 위 QVP 항목은 각 console과 통신 도구를 사용한 기능 검증 범위다.
+기존 `test_31_si_cl1_hipc.py`는 packet·boundary·multistream 검증 내용을 제공한다. 다만 `scripts/validation/profiles/hipc.yaml`은 FVP product 전용이며, QVP 자동 실행 profile로 간주하지 않는다. 위 QVP 항목은 각 console과 통신 도구를 사용한 기능 검증 범위다.
 
 Reattach patch의 존재는 반복 attach 실행 결과가 아니다. Reattach 결과를 추가할 때는 각 cycle의 transport 재생성·packet 성공을 함께 기록한다.
 

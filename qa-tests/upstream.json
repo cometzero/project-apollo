@@ -1,0 +1,51 @@
+{
+  "repository": "sw-ref-stack",
+  "revision": "a42c7d9dee23dc929f1656d681845956dbc7d13b",
+  "files": [
+    {
+      "source": "test_automation/test_automation/__init__.py",
+      "destination": "test_automation/__init__.py",
+      "sha256": "271d377b341051b81deeaa4444384597424baef4fbc6d5e1131db9a299c302da"
+    },
+    {
+      "source": "test_automation/test_automation/configs/__init__.py",
+      "destination": "test_automation/configs/__init__.py",
+      "sha256": "271d377b341051b81deeaa4444384597424baef4fbc6d5e1131db9a299c302da"
+    },
+    {
+      "source": "test_automation/test_automation/configs/config.py",
+      "destination": "test_automation/configs/config.py",
+      "sha256": "b4864234c10408052d1dee15f5611bd74a5782884eb5b0caee61e8b20275394c"
+    },
+    {
+      "source": "test_automation/test_automation/targets/__init__.py",
+      "destination": "test_automation/targets/__init__.py",
+      "sha256": "271d377b341051b81deeaa4444384597424baef4fbc6d5e1131db9a299c302da"
+    },
+    {
+      "source": "test_automation/test_automation/targets/registry.py",
+      "destination": "test_automation/targets/registry.py",
+      "sha256": "6ba9dbb661fb01955ed9c8dcef647481d192126e237466332621d3f6afcc5149"
+    },
+    {
+      "source": "test_automation/test_automation/utils/__init__.py",
+      "destination": "test_automation/utils/__init__.py",
+      "sha256": "271d377b341051b81deeaa4444384597424baef4fbc6d5e1131db9a299c302da"
+    },
+    {
+      "source": "test_automation/test_automation/utils/device.py",
+      "destination": "test_automation/utils/device.py",
+      "sha256": "981472d95909a072072f9aa31bbdba0529feebffe9d3e6bd9eee1fe8ef730bca"
+    },
+    {
+      "source": "test_automation/test_automation/utils/auto_platform_base.py",
+      "destination": "test_automation/utils/auto_platform_base.py",
+      "sha256": "61bbcfbfc1825c0d729c52697f1bddb9ef15565679a9beae922c59c92dd13e09"
+    },
+    {
+      "source": "test_automation/test_automation/utils/networking_base.py",
+      "destination": "test_automation/utils/networking_base.py",
+      "sha256": "9fc072a477703ce514042ecd380d4a5658c1c9cd745128ff3d5d4840eba63784"
+    }
+  ]
+}

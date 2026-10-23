@@ -65,6 +65,7 @@ Options:
   --monitor                   Enable the QBox web dashboard (default port: 18080)
   --monitor-port PORT         Enable the dashboard on the selected TCP port
   --keep-running-after-pass   Keep QBox alive after the pass condition (default)
+  --foreground-runtime       Wait for the runtime lifetime (for supervisors)
   --exit-after-pass           Stop QBox after the pass condition
   --debug TARGET              Run GDB in the interactive pane; TARGET is one of
                               qbox, rse, si_cl0, si_cl1, tf-a, u-boot, or linux
@@ -1005,6 +1006,11 @@ while (($#)); do
             ;;
         --keep-running-after-pass)
             KEEP_RUNNING_AFTER_PASS=1
+            shift
+            ;;
+        --foreground-runtime)
+            KEEP_RUNNING_AFTER_PASS=1
+            EXTRA_CHILD_ARGS+=(--foreground-runtime)
             shift
             ;;
         --exit-after-pass)

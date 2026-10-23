@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Final
 
 from .reuse_common import NoopCleanup, PRIMARY_PROMPT, SI1_PROMPT, contains_all, status
@@ -47,14 +48,14 @@ BSP_HOTPLUG_PROBE: Final = (
 
 
 def si1_boot_complete(text: str) -> bool:
-    return contains_all(
-        text,
-        (
-            "Booting Zephyr OS build",
-            "Secondary CPU core 1 (MPID:0x10100) is up",
-            "Secondary CPU core 2 (MPID:0x10200) is up",
-            "Secondary CPU core 3 (MPID:0x10300) is up",
-        ),
+    observed = tuple((int(cpu), int(mpid, 16)) for cpu, mpid in re.findall(
+        r"(?m)^Secondary CPU core (\d+) \(MPID:(0x[0-9a-fA-F]+)\) is up\r*$", text
+    ))
+    # Zephyr's reset voting can elect any physical core as logical CPU 0.
+    mpids = (0x10000, 0x10100, 0x10200, 0x10300)
+    return "Booting Zephyr OS build" in text and any(
+        observed == tuple(enumerate((mpid for mpid in mpids if mpid != primary), 1))
+        for primary in mpids
     )
 
 

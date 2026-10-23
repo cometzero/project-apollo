@@ -4461,7 +4461,7 @@ def run_platform(
     if args.validation_profile is not None:
         profile_spec = resolve_profile(
             args.validation_profile,
-            root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml",
+            root / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml",
         )
         pipes = profile_pipes(profile_spec, out_dir)
         profile_context = managed_profile_writers(pipes, WriterOwner.RUNTIME)
@@ -6291,7 +6291,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = workspace_root()
     parser = build_parser()
     args = parser.parse_args(argv)
-    matrix_path = root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+    matrix_path = root / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
     try:
         selection = select_profile(
             ProfileSelectionRequest(

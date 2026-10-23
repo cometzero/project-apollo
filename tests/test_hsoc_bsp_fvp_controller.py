@@ -11,7 +11,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 for module_path in (
-    ROOT / "qa-tests",
+    ROOT / "scripts/validation",
     ROOT / "hsoc-stack/yocto/meta-hsoc-auto-solutions/lib",
     ROOT / "layers/meta-arm/meta-arm/lib",
     ROOT / "layers/poky/meta/lib",

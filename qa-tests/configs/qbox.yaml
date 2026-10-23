@@ -1,0 +1,17 @@
+platforms:
+  qbox_apollo_qvp:
+    type: qbox
+    target: qbox
+    image: bsp
+    boot_timeout: 600
+    command_timeout: 60
+    run_timeout: 14400
+    ssh_port: 0
+    port_map:
+      rse: rse
+      scp: si_cl0
+      default_console: ap
+      secure_world_ap_console: secure
+      si_cl0: si_cl0
+      si_cl1: si_cl1
+      ssh: ssh

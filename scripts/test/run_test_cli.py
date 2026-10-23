@@ -20,7 +20,7 @@ USAGE = "\n".join(
         "  --qbox                    Select the apollo-qvp backend and machine",
         "  --bsp                     Select the nexios-bsp-initramfs image",
         "  --headless                Use the default non-TUI progress display",
-        "  --test-profile NAME       Resolve qa-tests/profiles/NAME.yaml",
+        "  --test-profile NAME       Resolve scripts/validation/profiles/NAME.yaml",
         "  --out-dir PATH            Run output directory (default: build/tests/<stamp>)",
         "  --stamp STAMP             Run stamp (default: date +%Y%m%d-%H%M%S)",
         "  --category CATEGORY       Select category for run/list; default: basic",

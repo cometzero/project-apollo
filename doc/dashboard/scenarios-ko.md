@@ -59,7 +59,7 @@ cleanup 순서로 진행한다. Fresh-run job은 변경되는 image/profile을 �
 
 기준은 [registry](../../scripts/run/qbox_validation/registry.py),
 [등록 구현](../../scripts/run/qbox_validation/builtins.py),
-[공식 matrix](../../qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml)다.
+[공식 matrix](../../scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml)다.
 구현된 11개 profile을 아래와 같이 dashboard job으로 연결한다. 기존 `identical`/
 `semantic` coverage 의미와 assertion 결과를 보존한다. 단순 exit code로 PASS를 만들지 않는다.
 

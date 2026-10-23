@@ -103,7 +103,7 @@
 | [hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_00_si_cl0_boot.py](../../../hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_00_si_cl0_boot.py) |
 | [hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_70_power_scmi.py](../../../hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_70_power_scmi.py) |
 | [hsoc-stack/yocto/meta-hsoc-bsp/lib/oeqa/runtime/cases/test_20_si_cl0_diagnostics.py](../../../hsoc-stack/yocto/meta-hsoc-bsp/lib/oeqa/runtime/cases/test_20_si_cl0_diagnostics.py) |
-| [qa-tests/profiles/pfdi-si-cl1.yaml](../../../qa-tests/profiles/pfdi-si-cl1.yaml) |
+| [scripts/validation/profiles/pfdi-si-cl1.yaml](../../../scripts/validation/profiles/pfdi-si-cl1.yaml) |
 | [scripts/test/measure_scp_idle.py](../../../scripts/test/measure_scp_idle.py) |
 | [scripts/test/verify_qbox_si_pmic.py](../../../scripts/test/verify_qbox_si_pmic.py) |
 

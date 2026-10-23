@@ -108,7 +108,7 @@ def test_outer_si0_evaluator_error_serializes_blocked_result(
         full_runner.resolve_profile(
             "safety-diagnostics-tests",
             full_runner.workspace_root()
-            / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml",
+            / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml",
         ).evaluator
     )
 

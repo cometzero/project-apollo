@@ -15,7 +15,7 @@ ProfileRegistryError = SpecError
 def canonical_matrix_path() -> Path:
     return (
         Path(__file__).resolve().parents[3]
-        / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+        / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
     )
 
 

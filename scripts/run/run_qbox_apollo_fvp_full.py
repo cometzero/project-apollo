@@ -1361,7 +1361,7 @@ def validation_profile_evidence(
         return None
     matrix_path = (
         workspace_root()
-        / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+        / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
     )
     spec = resolve_profile(args.validation_profile, matrix_path)
     outer_result = getattr(args, "validation_profile_result", None)
@@ -1868,7 +1868,7 @@ def run_child_with_live_si0_profile(
     spec = resolve_profile(
         args.validation_profile,
         workspace_root()
-        / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml",
+        / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml",
     )
     pipes = profile_pipes(spec, args.out_dir)
     fifo_path = si_cl0_uart_fifo_path(args)
@@ -2859,7 +2859,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--si-cl1-image", type=Path)
     parser.add_argument("--si-cl1-symbols", type=Path)
     args = parser.parse_args(argv)
-    matrix_path = root / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+    matrix_path = root / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
     try:
         selection = select_profile(
             ProfileSelectionRequest(

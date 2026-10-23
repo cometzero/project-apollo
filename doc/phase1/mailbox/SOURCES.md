@@ -111,9 +111,9 @@ Linux mailbox의 client/controller 분리와 IRQ·polling 완료 모델은 [공�
 
 | 경로 | 제공 기능 |
 |---|---|
-| [Validation matrix](../../../qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml) | cpufreq·HIPC·Trusted Services의 profile/assertion 정의 |
+| [Validation matrix](../../../scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml) | cpufreq·HIPC·Trusted Services의 profile/assertion 정의 |
 | [CPUfreq profile](../../../scripts/run/qbox_validation/reuse_cpufreq.py) | SCMI performance consumer 검증 |
-| [HIPC profile](../../../qa-tests/profiles/hipc.yaml) | DT·memory·양방향 packet·boundary traffic |
+| [HIPC profile](../../../scripts/validation/profiles/hipc.yaml) | DT·memory·양방향 packet·boundary traffic |
 | [Trusted Services profile](../../../scripts/run/qbox_validation/reuse_trusted_services.py) | PSA suite 실행·PASS/FAIL/SKIP 집계 |
 | [Domain debugger](../../../scripts/debug) | TF-A·SCP·Zephyr·TF-M 함수와 IRQ 경로 관찰 |
 

@@ -7,7 +7,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-QA_ROOT = ROOT / "qa-tests"
+QA_ROOT = ROOT / "scripts/validation"
 
 
 def test_run_test_runner_is_importable_from_qa_tests() -> None:

@@ -3,18 +3,26 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "apollo-validation"
+name = "apollo-runtime-tests"
 version = "0.1.0"
-description = "Apollo validation orchestration for Arm Auto Solutions"
-requires-python = ">=3.10"
+description = "Apollo SoC runtime pytest on QBox"
+requires-python = ">=3.12"
+dependencies = ["pytest>=8", "PyYAML>=6", "paramiko>=3", "jsonschema>=4"]
 readme = "README.md"
+license = {file = "LICENSES/MIT.txt"}
 
 [tool.setuptools.packages.find]
-include = ["apollo_validation*"]
-
-[tool.setuptools.package-data]
-apollo_validation = ["suites/*.json"]
+include = ["test_automation*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "..", "../scripts/run", "../scripts/validation"]
+addopts = "--import-mode=importlib -ra"
+log_level = "INFO"
+junit_family = "xunit1"
+markers = [
+    "domain(name): Apollo execution domain",
+    "category(name): Runtime feature category",
+    "image(scope): Image applicability (bsp-only, product-only, any; default any)",
+    "destructive: Restart QBox before the next runtime test",
+]

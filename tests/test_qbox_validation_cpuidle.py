@@ -20,7 +20,7 @@ from scripts.run.qbox_cpuidle_guest import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MATRIX = ROOT / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+MATRIX = ROOT / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
 ASSERTIONS = (
     "cpuidle-ensure",
     "cpuidle-c-states",

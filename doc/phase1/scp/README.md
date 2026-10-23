@@ -679,7 +679,7 @@ Idle 측정의 host vCPU 사용률은 물리 CL0 CPU 사용률이나 소비전�
 | Console·기본 boot | CL0 OEQA boot case와 SCP UART log |
 | Debugger CLI | `test_20_si_cl0_diagnostics.py`의 SSU/FMU command |
 | PMIC | `scripts/test/verify_qbox_si_pmic.py` |
-| PFDI channel | `qa-tests/profiles/pfdi-si-cl1.yaml` — BSP, FVP/QBox |
+| PFDI channel | `scripts/validation/profiles/pfdi-si-cl1.yaml` — BSP, FVP/QBox |
 | Exception | Failure log의 register·symbol dump 확인 |
 
 Boot/login launcher와 post-login test runner를 구분한다. `run_qbox_yocto.sh`의 boot 성공만으로 위 검증을 완료 처리하지 않는다.

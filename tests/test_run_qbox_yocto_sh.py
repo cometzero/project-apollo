@@ -421,6 +421,15 @@ def test_run_qbox_yocto_dry_run_maps_yocto_artifacts(tmp_path: Path) -> None:
     assert "type=user,hostfwd=tcp::" in result.stdout
 
 
+def test_run_qbox_yocto_forwards_foreground_runtime(tmp_path: Path) -> None:
+    result = run_qvp_dry_run(tmp_path, extra_args=["--foreground-runtime"])
+    assert result.returncode == 0, result.stderr
+    argv = dry_run_command_argv(result.stdout)
+    assert "--foreground-runtime" in argv
+    assert "--keep-running-after-pass" in argv
+    assert "--no-post-login-probe" in argv
+
+
 def test_run_qbox_yocto_forwards_pfdi_probe(tmp_path: Path) -> None:
     # Given: a headless QBox launch requesting the fixed PFDI probe.
     result = run_qvp_dry_run(tmp_path, extra_args=["--pfdi-probe"])

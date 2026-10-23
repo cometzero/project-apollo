@@ -13,7 +13,7 @@ from scripts.run.qbox_validation.types import Console, ConsoleSnapshot
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MATRIX = ROOT / "qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml"
+MATRIX = ROOT / "scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml"
 ASSERTIONS = (
     "cpufreq-policy",
     "cpufreq-default-governors",

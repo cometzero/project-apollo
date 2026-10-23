@@ -72,6 +72,6 @@
 | QVP PFDI / CL0 checks | [scripts/run/qbox_validation/reuse_si.py](../../../scripts/run/qbox_validation/reuse_si.py) |
 | PFDI command catalog | [scripts/run/qbox_si_cl1_pfdi_catalog.py](../../../scripts/run/qbox_si_cl1_pfdi_catalog.py) |
 | PFDI result evaluation | [scripts/run/qbox_si_cl1_pfdi_probe.py](../../../scripts/run/qbox_si_cl1_pfdi_probe.py) |
-| Validation mapping | [qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml](../../../qa-tests/validation/arm-zena-css-v2.2-non-xen.yaml) |
-| HIPC profile backend restrictions | [qa-tests/profiles/hipc.yaml](../../../qa-tests/profiles/hipc.yaml) |
+| Validation mapping | [scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml](../../../scripts/validation/validation/arm-zena-css-v2.2-non-xen.yaml) |
+| HIPC profile backend restrictions | [scripts/validation/profiles/hipc.yaml](../../../scripts/validation/profiles/hipc.yaml) |
 | HIPC OEQA cases | [hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_31_si_cl1_hipc.py](../../../hsoc-stack/yocto/meta-hsoc-auto-solutions/lib/oeqa/runtime/cases/test_31_si_cl1_hipc.py) |

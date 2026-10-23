@@ -69,7 +69,7 @@ QBOX_APOLLO_MONITOR=true QBOX_APOLLO_RUNTIME_INJECTION=true \
 
 ```bash
 python3 scripts/run/qbox_inject.py capabilities
-python3 scripts/run/qbox_inject.py inject --file qa-tests/qbox-runtime-injection/i2c5-force-low.json
+python3 scripts/run/qbox_inject.py inject --file scripts/validation/qbox-runtime-injection/i2c5-force-low.json
 python3 scripts/run/qbox_inject.py status 1
 python3 scripts/run/qbox_inject.py cancel 1
 python3 scripts/test/verify_qbox_event_injection.py \
