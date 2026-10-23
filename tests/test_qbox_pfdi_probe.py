@@ -88,6 +88,18 @@ def test_pfdi_probe_accepts_reordered_scp_markers() -> None:
     assert result["failed_checks"] == []
 
 
+@pytest.mark.parametrize("marker,failed_check", [
+    ("pfdi_service_rc", "service"),
+    ("pfdi_online_rc", "online"),
+    ("pfdi_force_error_cpu0_rc", "cpu0_force_error"),
+])
+def test_pfdi_probe_preserves_command_failures(marker: str, failed_check: str) -> None:
+    primary = pfdi_primary_log().replace(f"{marker}:0", f"{marker}:1")
+    result = evaluate_pfdi_probe(primary, pfdi_scp_log())
+    assert not result["passed"]
+    assert failed_check in result["failed_checks"]
+
+
 @pytest.mark.parametrize("interval_ms", [60, 600, 900])
 def test_pfdi_probe_uses_configured_interval(interval_ms: int) -> None:
     commands = pfdi_probe_commands(expected_interval_ms=interval_ms)

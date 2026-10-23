@@ -8,6 +8,11 @@ PFDI_CPU_COUNT: Final = 4
 PFDI_MAX_INTERVAL_MS: Final = (1 << 32) - 1
 PFDI_PROBE_DONE_MARKER: Final = "__QBOX_PFDI_PROBE_DONE__"
 QBOX_PROBE_DONE_MARKER: Final = "__QBOX_PROBE_DONE__"
+PFDI_LOG_COMMAND: Final = (
+    "if [ -d /run/systemd/system ]; then "
+    "journalctl --no-pager -b -u pfdi-app.service -o cat; "
+    "else cat /run/pfdi-sample-app.log; fi"
+)
 
 
 class PFDICpuResult(TypedDict):
@@ -38,11 +43,12 @@ def _force_error_command(cpu: int) -> str:
     return (
         f"rc=0; pfdi-cli --force_error {cpu} RUN ERROR || rc=1; "
         "attempt=0; "
-        f"until grep -Fq '{failure}' /run/pfdi-sample-app.log; do "
+        f"until pfdi_log=$({PFDI_LOG_COMMAND}) && "
+        f"printf '%s\\n' \"$pfdi_log\" | grep -Fq '{failure}'; do "
         "attempt=$((attempt + 1)); "
         "if [ \"$attempt\" -ge 180 ]; then rc=1; break; fi; "
         "sleep 1; done; "
-        f"grep -F '{failure}' /run/pfdi-sample-app.log || true; "
+        f"printf '%s\\n' \"$pfdi_log\" | grep -F '{failure}' || true; "
         f"echo pfdi_force_error_cpu{cpu}_rc:$rc"
     )
 
@@ -80,6 +86,8 @@ def pfdi_probe_commands(expected_interval_ms: int | None = None) -> list[str]:
         ),
         (
             "pidof pfdi-sample-app; rc=$?; "
+            "if [ -d /run/systemd/system ]; then "
+            "systemctl is-active --quiet pfdi-app.service || rc=1; fi; "
             # The pack stores a little-endian uint64 after its 16-byte version.
             # The guest is little-endian; the app timer accepts unsigned int ms.
             "interval_ms=$(od -An -tu8 -j16 -N8 "
@@ -89,22 +97,32 @@ def pfdi_probe_commands(expected_interval_ms: int | None = None) -> list[str]:
             f"&& test \"$interval_ms\" -le {PFDI_MAX_INTERVAL_MS} || rc=1;; esac; "
             "printf 'pfdi_interval_ms:%s\\n' \"$interval_ms\"; "
             f"{interval_check}"
+            f"pfdi_log=$({PFDI_LOG_COMMAND}) && "
+            "printf '%s\\n' \"$pfdi_log\" | "
             'grep -F "Loading config V1.0: running 4 tasks every $interval_ms ms" '
-            "/run/pfdi-sample-app.log || rc=1; "
+            "|| rc=1; "
             "echo pfdi_service_rc:$rc"
         ),
         "; ".join(cli_commands),
         (
-            "rc=0; pids=$(pidof pfdi-sample-app) || rc=1; "
+            # Stop the unit so Restart=on-failure cannot race the single-shot app.
+            "rc=0; if [ -d /run/systemd/system ]; then "
+            "systemctl stop pfdi-app.service || rc=1; else "
+            "pids=$(pidof pfdi-sample-app) || rc=1; "
             "test -n \"$pids\" && kill $pids || rc=1; "
             "attempt=0; while pidof pfdi-sample-app >/dev/null; do "
             "attempt=$((attempt + 1)); "
             "if [ \"$attempt\" -ge 30 ]; then rc=1; break; fi; "
-            "sleep 1; done; "
+            "sleep 1; done; fi; "
+            'if [ "$rc" -eq 0 ]; then '
             "pfdi-sample-app -ivc /etc/pfdi/pfdi_test_config_0.pack "
-            "-m single || rc=1; "
+            "-m single || rc=1; fi; "
+            "if [ -d /run/systemd/system ]; then "
+            "systemctl start pfdi-app.service || rc=1; "
+            "systemctl is-active --quiet pfdi-app.service || rc=1; else "
             "pfdi-sample-app -ivc /etc/pfdi/pfdi_test_config_0.pack "
             ">/run/pfdi-sample-app.log 2>&1 & "
+            "fi; "
             "attempt=0; until pidof pfdi-sample-app >/dev/null; do "
             "attempt=$((attempt + 1)); "
             "if [ \"$attempt\" -ge 30 ]; then rc=1; break; fi; "
