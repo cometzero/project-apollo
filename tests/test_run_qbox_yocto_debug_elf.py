@@ -161,6 +161,7 @@ def test_linux_debug_uses_packaged_vmlinux_when_build_output_is_absent(
             "--build-dir",
             str(yocto_build),
             "--bsp",
+            "--no-vmcu",
             "--debug",
             "linux",
             "--multi-session",

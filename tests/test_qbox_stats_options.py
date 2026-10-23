@@ -6,6 +6,8 @@ import sys
 
 import pytest
 
+from test_run_qbox_yocto_sh import run_qvp_dry_run
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts/run"))
 import run_qbox_apollo_fvp_full as full
@@ -37,12 +39,18 @@ def test_full_runner_forwards_stats_to_runtime_child(options, interval, tmp_path
     ([], None), (["--stats"], "5"),
     (["--stats-interval=2.5"], "2.5"),
 ])
-def test_shell_dry_run_forwards_stats(script, options, interval):
-    result = subprocess.run(
-        ["bash", str(ROOT / script), "--dry-run", *options,
-         "--", "--foreground-runtime"],
-        cwd=ROOT, capture_output=True, text=True, check=True,
-    )
+def test_shell_dry_run_forwards_stats(script, options, interval, tmp_path):
+    if script == "run_qbox_yocto.sh":
+        result = run_qvp_dry_run(
+            tmp_path, [*options, "--", "--foreground-runtime"], headless=False,
+        )
+        assert result.returncode == 0, result.stderr
+    else:
+        result = subprocess.run(
+            ["bash", str(ROOT / script), "--dry-run", *options,
+             "--", "--foreground-runtime"],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        )
     assert "--foreground-runtime" in result.stdout
     if interval is None:
         assert "--stats-interval" not in result.stdout
