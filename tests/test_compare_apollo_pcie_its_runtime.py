@@ -11,6 +11,9 @@ from types import ModuleType
 
 import jsonschema
 import pytest
+from pcie_irq_test_support import (
+    gate_fixture, profile_fixture, qbox_comparator, require_archived_evidence,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPARATOR = ROOT / "scripts/test/compare_apollo_pcie_its_runtime.py"
@@ -55,8 +58,7 @@ def invoke(tmp_path: Path, *, fvp: Path = FVP, profile: Path = PROFILE, run: Pat
 
 
 def relocated_run_root(tmp_path: Path) -> Path:
-    if not F3_RUN.is_dir():
-        pytest.fail(f"planned F3 Task11 run root is missing: {F3_RUN}")
+    require_archived_evidence(FVP, PROFILE, F3_RUN)
     copied = tmp_path / "relocated" / "task9"
     copied.mkdir(parents=True)
     for name in ("qualification.json", "pcie-runtime-validation.json", "spi-runtime-validation.json"):
@@ -81,6 +83,7 @@ def module() -> ModuleType:
 
 
 def test_boundary_comparator_emits_only_supported_boundary_rows(tmp_path: Path) -> None:
+    require_archived_evidence(FVP, PROFILE, F3_RUN)
     # Given: the canonical profile binds a concrete MSI-X input manifest.
     expected_msix_input_sha256 = msix_input_sha256_from_profile(PROFILE)
 
@@ -138,43 +141,38 @@ def test_boundary_comparator_accepts_relocated_authoritative_f3_root(tmp_path: P
 
 
 def test_boundary_comparator_fails_closed_when_run_binding_is_stale(tmp_path: Path) -> None:
-    stale = relocated_run_root(tmp_path)
-    qualification = stale / "qualification.json"
-    payload = json.loads(qualification.read_text(encoding="utf-8"))
-    payload["run_id"] = "forged-run"
-    qualification.write_text(json.dumps(payload), encoding="utf-8")
-    returncode, report = invoke(tmp_path, run=stale)
-    assert returncode == 1
-    assert report["status"] == "FAIL"
-    assert report["reason"] == "run_id"
+    comparator = qbox_comparator()
+    (tmp_path / "qualification.json").write_text('{"run_id": "forged-run"}', encoding="utf-8")
+    with pytest.raises(comparator.BoundaryError, match="^run_id$"):
+        comparator.qbox_rows(profile_fixture(tmp_path), tmp_path)
 
 
 def test_boundary_comparator_rejects_forged_fvp_positive_claim(tmp_path: Path) -> None:
-    forged = tmp_path / "fvp.json"
-    payload = json.loads(FVP.read_text(encoding="utf-8"))
+    payload = gate_fixture()
     payload["claims"]["physical_its_delivery"] = True
-    forged.write_text(json.dumps(payload), encoding="utf-8")
-    returncode, report = invoke(tmp_path, fvp=forged)
-    assert returncode == 1
-    assert report["status"] == "FAIL"
-    assert report["reason"] in {"fvp_hash", "fvp_claims"}
+    comparator = module()
+    with pytest.raises(comparator.BoundaryError, match="fvp_claims"):
+        comparator.rows_for_fvp(payload)
 
 
 def test_boundary_comparator_rejects_unbound_rootfs_and_nested_ap_map_mutant(
     tmp_path: Path,
 ) -> None:
-    copied = relocated_run_root(tmp_path)
-    coverage = copied / "msix-coverage-audit.json"
-    payload = json.loads(coverage.read_text(encoding="utf-8"))
-    payload["ap_9_1_1_memory_map"]["passed"] = False
-    coverage.write_text(json.dumps(payload), encoding="utf-8")
-    qualification = copied / "qualification.json"
-    payload = json.loads(qualification.read_text(encoding="utf-8"))
-    payload["modes"]["msix"]["rootfs_sha256"] = "0" * 64
-    qualification.write_text(json.dumps(payload), encoding="utf-8")
-    comparator = module()
-    with pytest.raises(comparator.BoundaryError):
-        comparator.qbox_rows(json.loads(PROFILE.read_text(encoding="utf-8")), copied)
+    comparator = qbox_comparator()
+    disk = tmp_path / "disk.img"
+    disk.write_bytes(b"unit-test-only")
+    with pytest.raises(comparator.BoundaryError, match="msix_rootfs"):
+        comparator.artifact({"path": str(disk), "sha256": "0" * 64}, "msix_rootfs")
+    result = tmp_path / "result.json"
+    result.write_text("{}", encoding="utf-8")
+    audit = tmp_path / "ap-map.json"
+    audit.write_text('{"passed": true}', encoding="utf-8")
+    (tmp_path / "msix-coverage-audit.json").write_text(json.dumps({
+        "passed": True, "runtime_result": str(result),
+        "ap_9_1_1_memory_map": {"passed": False, "audit_passed": True, "audit_path": str(audit)},
+    }), encoding="utf-8")
+    with pytest.raises(comparator.BoundaryError, match="msix_ap_map"):
+        comparator.coverage_binding(tmp_path, "msix", result)
 
 
 @pytest.mark.parametrize("input_name", ["fvp", "profile"])
@@ -191,11 +189,15 @@ def test_boundary_comparator_fails_closed_for_malformed_or_wrong_input_classes(
     cases["scalar"].write_text("1", encoding="utf-8")
     cases["array"].write_text("[]", encoding="utf-8")
     cases["malformed"].write_text("{", encoding="utf-8")
-    wrong_version = json.loads(FVP.read_text(encoding="utf-8"))
+    wrong_version = gate_fixture() if input_name == "fvp" else profile_fixture(tmp_path)
     wrong_version["schema_version"] = 99
     cases["wrong_version"].write_text(json.dumps(wrong_version), encoding="utf-8")
+    comparator = module()
+    qbox = qbox_comparator()
     for path in cases.values():
-        arguments = {input_name: path}
-        returncode, report = invoke(tmp_path, **arguments)
-        assert returncode == 1
-        assert report["status"] == "FAIL"
+        with pytest.raises((comparator.boundary_io.BoundaryError, comparator.BoundaryError, qbox.BoundaryError)):
+            payload = comparator.boundary_io.load_json(path, f"{input_name}_json")
+            if input_name == "fvp":
+                comparator.rows_for_fvp(payload)
+            else:
+                qbox.qbox_rows(payload, tmp_path)

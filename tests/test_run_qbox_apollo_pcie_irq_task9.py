@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-import pytest
-
 import importlib.util
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 QUALIFIER = ROOT / "scripts/test/run_qbox_apollo_pcie_irq_task9.py"
@@ -54,11 +54,11 @@ def load_cleanup_module():
     return module
 
 
-def test_cli_fails_before_qbox_when_reference_gate_is_copied(
+def test_cli_fails_before_qbox_when_reference_gate_is_not_canonical(
     tmp_path: Path,
 ) -> None:
     copied_gate = tmp_path / "copied-gate.json"
-    copied_gate.write_bytes(GATE.read_bytes())
+    copied_gate.write_text("{}\n", encoding="utf-8")
     run_root = tmp_path / "run"
 
     result = subprocess.run(
@@ -226,7 +226,6 @@ def test_task9_exceptions_preserve_traceback_through_context_manager(
         with scope():
             raise error
     assert caught.value is error
-
 
 
 def test_interrupted_mode_cleanup_removes_uart_fifo(tmp_path: Path) -> None:

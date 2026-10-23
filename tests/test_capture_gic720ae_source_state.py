@@ -1,102 +1,134 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/test/capture_gic720ae_source_state.py"
-PRISTINE = Path("/tmp/gic720ae-pristine-axqumhu0")
-DRIFT = ROOT / "tests/fixtures/gic720ae/source-state-drift.json"
+
+
+@pytest.fixture
+def capture_inputs(tmp_path: Path) -> tuple[Path, Path]:
+    # An isolated host fixture exercises the CLI without historical build inputs.
+    script = tmp_path / "workspace/scripts/test" / SCRIPT.name
+    script.parent.mkdir(parents=True)
+    shutil.copyfile(SCRIPT, script)
+    config = tmp_path / "workspace/build/conf"
+    config.mkdir(parents=True)
+    for name in ("local.conf", "bblayers.conf", "templateconf.cfg"):
+        (config / name).write_text(f"# host test fixture: {name}\n", encoding="utf-8")
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    records = b""
+    for field in ("head", "index", "status"):
+        value = f"host test fixture: {field}\n".encode()
+        records += b"\0".join((
+            b"meta", b"qemu", field.encode(), str(len(value)).encode(),
+            hashlib.sha256(value).hexdigest().encode(),
+        )) + b"\0"
+    (snapshot / "snapshot.records").write_bytes(records)
+    (snapshot / "manifest.sha256").write_text(
+        f"{hashlib.sha256(records).hexdigest()}  snapshot.records\n", encoding="ascii"
+    )
+    return script, snapshot
+
+
+def run_capture(script: Path, snapshot: Path, output: Path, *args: str):
+    return subprocess.run(
+        [sys.executable, str(script), "--pristine-snapshot", str(snapshot),
+         "--output", str(output), *args],
+        cwd=script.parents[2],
+        env={**os.environ, "PATH": ""},
+        check=False, text=True, capture_output=True,
+    )
 
 
 def test_capture_records_verified_pristine_repository_inputs_when_snapshot_is_valid(
-    tmp_path: Path,
+    tmp_path: Path, capture_inputs: tuple[Path, Path],
 ) -> None:
-    # Given: the controller-owned immutable pristine snapshot.
+    script, snapshot = capture_inputs
     output = tmp_path / "source-state.json"
     archive = tmp_path / "pristine-archive"
 
-    # When: the source-state producer is invoked through its CLI.
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--pristine-snapshot",
-            str(PRISTINE),
-            "--archive-pristine-to",
-            str(archive),
-            "--output",
-            str(output),
-        ],
-        cwd=ROOT,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    result = run_capture(script, snapshot, output, "--archive-pristine-to", str(archive))
 
-    # Then: the verified baseline is emitted and faithfully archived.
     assert result.returncode == 0, result.stderr
-    assert output.is_file()
-    assert (archive / "snapshot.records").read_bytes() == (PRISTINE / "snapshot.records").read_bytes()
-    assert (archive / "manifest.sha256").read_bytes() == (PRISTINE / "manifest.sha256").read_bytes()
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["pristine"]["record_count"] == 3
+    assert set(report["repositories"]["qemu"]) == {"head", "index", "status"}
+    for name in ("snapshot.records", "manifest.sha256"):
+        assert (archive / name).read_bytes() == (snapshot / name).read_bytes()
+        assert (archive / name).stat().st_mode & 0o777 == 0o400
 
 
 def test_capture_rejects_symlinked_pristine_manifest_when_snapshot_is_untrusted(
-    tmp_path: Path,
+    tmp_path: Path, capture_inputs: tuple[Path, Path],
 ) -> None:
-    # Given: a snapshot directory with a symlink instead of an immutable manifest.
-    snapshot = tmp_path / "snapshot"
-    snapshot.mkdir()
-    (snapshot / "snapshot.records").write_bytes(b"")
-    (snapshot / "manifest.sha256").symlink_to(PRISTINE / "manifest.sha256")
+    script, snapshot = capture_inputs
+    manifest = snapshot / "manifest.sha256"
+    original = tmp_path / "manifest.sha256"
+    manifest.rename(original)
+    manifest.symlink_to(original)
     output = tmp_path / "rejected.json"
 
-    # When: the CLI consumes the untrusted snapshot.
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--pristine-snapshot", str(snapshot), "--output", str(output)],
-        cwd=ROOT,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    result = run_capture(script, snapshot, output)
 
-    # Then: it fails closed with a machine-readable invalid-input reason.
     assert result.returncode == 2
-    assert '"reason": "invalid_input"' in output.read_text(encoding="utf-8")
+    assert json.loads(output.read_text(encoding="utf-8"))["reason"] == "invalid_input"
 
 
 def test_verify_reports_only_qemu_head_when_canonical_fixture_has_that_drift(
-    tmp_path: Path,
+    tmp_path: Path, capture_inputs: tuple[Path, Path],
 ) -> None:
-    # Given: the canonical source state with only the QEMU head deliberately changed.
+    script, snapshot = capture_inputs
+    expected_path = tmp_path / "baseline.json"
+    baseline = run_capture(script, snapshot, expected_path)
+    assert baseline.returncode == 0, baseline.stderr
+    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    expected["repositories"]["qemu"]["head"] = "0" * 64
+    expected["expected_changed_fields"] = ["repositories.qemu.head"]
+    expected_path.write_text(json.dumps(expected), encoding="utf-8")
     output = tmp_path / "negative.json"
 
-    # When: verify-only compares it to the current pristine source inputs.
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--pristine-snapshot",
-            str(PRISTINE),
-            "--verify-only",
-            "--expected-input",
-            str(DRIFT),
-            "--assert-only-changed-field",
-            "repositories.qemu.head",
-            "--output",
-            str(output),
-        ],
-        cwd=ROOT,
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+    result = run_capture(
+        script, snapshot, output, "--verify-only", "--expected-input", str(expected_path),
+        "--assert-only-changed-field", "repositories.qemu.head",
     )
 
-    # Then: it returns the specified drift and no unrelated field.
     assert result.returncode == 1
-    assert '"changed_fields": ["repositories.qemu.head"]' in result.stderr
+    assert json.loads(output.read_text(encoding="utf-8"))["changed_fields"] == [
+        "repositories.qemu.head"
+    ]
+
+
+def test_capture_rejects_modified_snapshot_records(
+    tmp_path: Path, capture_inputs: tuple[Path, Path],
+) -> None:
+    script, snapshot = capture_inputs
+    (snapshot / "snapshot.records").write_bytes(b"tampered\0")
+    output = tmp_path / "tampered.json"
+
+    result = run_capture(script, snapshot, output)
+
+    assert result.returncode == 2
+    assert json.loads(output.read_text(encoding="utf-8"))["reason"] == "input_changed"
+
+
+def test_capture_rejects_missing_snapshot(
+    tmp_path: Path, capture_inputs: tuple[Path, Path],
+) -> None:
+    script, _ = capture_inputs
+    output = tmp_path / "missing.json"
+
+    result = run_capture(script, tmp_path / "absent", output)
+
+    assert result.returncode == 2
+    assert json.loads(output.read_text(encoding="utf-8"))["reason"] == "missing_input"

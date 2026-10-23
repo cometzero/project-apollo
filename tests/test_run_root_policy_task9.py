@@ -23,13 +23,16 @@ def load_qualifier_module() -> ModuleType:
     return module
 
 
-def test_run_root_parser_accepts_direct_and_verifier_roots() -> None:
+def test_run_root_parser_accepts_direct_and_verifier_roots(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
     qualifier = load_qualifier_module()
-    direct = ROOT / ".omo/evidence/apollo-gic-its/task-9/run-20990101T010101Z"
-    verifier = (
-        ROOT
-        / ".omo/evidence/apollo-gic-its/task-9/verifier/fresh-run-20990101T010101Z"
-    )
+    evidence = tmp_path / "task-9"
+    (evidence / "verifier").mkdir(parents=True)
+    monkeypatch.setattr(qualifier.task9, "ROOT", tmp_path)
+    monkeypatch.setattr(qualifier.task9_process, "EVIDENCE_ROOT", evidence)
+    direct = evidence / "run-20990101T010101Z"
+    verifier = evidence / "verifier/fresh-run-20990101T010101Z"
 
     direct_policy = qualifier.parse_run_root(direct)
     verifier_policy = qualifier.parse_run_root(verifier)

@@ -5,10 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from scripts.test import gic720ae_pcie_irq_validation_contract as contract
 from scripts.test import gic720ae_pcie_irq_validation_execution as execution
-from scripts.test import gic720ae_pcie_irq_validation_provenance as provenance
-from scripts.test import gic720ae_pcie_irq_validation_workflow as workflow
+
+contract = execution.contract
+provenance = execution.provenance
+workflow = execution.workflow
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE = (

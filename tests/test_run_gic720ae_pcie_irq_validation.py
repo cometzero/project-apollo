@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-
 import hashlib
+from contextlib import contextmanager
 import json
 import subprocess
 import sys
@@ -12,9 +11,13 @@ from typing import Literal, assert_never
 import jsonschema
 import pytest
 
-from scripts.test import gic720ae_pcie_irq_validation_contract as validation_contract
+from scripts.test import gic720ae_pcie_irq_validation_execution as execution
 from scripts.test import gic720ae_pcie_irq_validation_negative as negative
-from scripts.test import gic720ae_pcie_irq_validation_provenance as provenance
+from gic720ae_frozen_ap_map_support import provenance_base
+
+validation_contract = execution.contract
+provenance = execution.provenance
+workflow = execution.workflow
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/test/run_gic720ae_pcie_irq_validation.py"
@@ -35,10 +38,7 @@ FrozenVariant = Literal[
 @pytest.fixture(scope="module")
 def current_frozen(tmp_path_factory: pytest.TempPathFactory) -> Path:
     path = tmp_path_factory.mktemp("frozen") / "provenance.json"
-    config = validation_contract.RunConfig(
-        GATE.resolve(), PROFILE.resolve(), path.parent / "unused", None, None, 1800
-    )
-    provenance.atomic_write(path, provenance.build(config))
+    provenance.atomic_write(path, provenance_base(path.parent / "missing-platforms-vp"))
     return path
 
 
@@ -80,25 +80,15 @@ def str_field(payload: validation_contract.JsonObject, key: str) -> str:
     return value
 
 
-def test_dry_run_reports_exact_phase_order_without_writes(tmp_path: Path) -> None:
-    # Given: canonical immutable FVP and QBox profile inputs.
+def test_workflow_reports_exact_phase_order_without_writes(tmp_path: Path) -> None:
+    # Plan construction is a host unit test; provenance needs archived inputs.
     run_root = tmp_path / "run-20260829T000000Z"
-
-    # When: the complete orchestrator is planned in dry-run mode.
-    result = run_cli(
-        "--dry-run",
-        "--fvp-reference-gate",
-        str(GATE),
-        "--qbox-profile-manifest",
-        str(PROFILE),
-        "--run-root",
-        str(run_root),
-        "--timeout",
-        "1800",
+    config = validation_contract.RunConfig(
+        GATE, PROFILE, run_root, None, None, 1800,
     )
+    output = "\n".join(workflow.display_plan(config))
 
     # Then: every process boundary is ordered and no evidence is created.
-    assert result.returncode == 0, result.stderr
     phases = [
         "01 parse_hash_inputs",
         "02 validate_fvp_gate",
@@ -110,21 +100,19 @@ def test_dry_run_reports_exact_phase_order_without_writes(tmp_path: Path) -> Non
         "08 cleanup_audit",
         "09 atomic_final_result",
     ]
-    positions = [result.stdout.index(phase) for phase in phases]
+    positions = [output.index(phase) for phase in phases]
     assert positions == sorted(positions)
-    assert "./yocto_build.sh --bsp" in result.stdout
-    assert "audit_qbox_apollo_ap_memory_map.py" in result.stdout
-    assert "run_gic720ae_pcie_irq_validation_task9.py" in result.stdout
-    assert "run_gic720ae_pcie_irq_validation_task10.py" in result.stdout
+    assert "./yocto_build.sh --bsp" in output
+    assert "audit_qbox_apollo_ap_memory_map.py" in output
+    assert "run_gic720ae_pcie_irq_validation_task9.py" in output
+    assert "run_gic720ae_pcie_irq_validation_task10.py" in output
     assert not run_root.exists()
 
 
 def test_changed_gate_fails_before_build_or_qbox_start(tmp_path: Path) -> None:
     # Given: a schema-shaped gate whose content no longer matches the hard pin.
     gate = tmp_path / "changed-gate.json"
-    payload = json.loads(GATE.read_text(encoding="utf-8"))
-    payload["reason"] = "changed"
-    gate.write_text(json.dumps(payload), encoding="utf-8")
+    gate.write_text('{"reason": "changed"}\n', encoding="utf-8")
     run_root = tmp_path / "run-20260829T000001Z"
 
     # When: full mode reaches immutable-input preflight.
@@ -148,14 +136,18 @@ def test_changed_gate_fails_before_build_or_qbox_start(tmp_path: Path) -> None:
     )
 
 
-def test_negative_self_test_rejects_semantic_success_mutants() -> None:
-    # Given: the repository-owned immutable inputs and negative matrix.
-    # When: the isolated negative self-test is executed.
-    result = run_cli("--self-test-negative")
+def test_negative_self_test_rejects_semantic_success_mutants(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Exercise the negative matrix independently of live source capture.
+    gate, profile = tmp_path / "gate.json", tmp_path / "profile.json"
+    gate.write_text('{"schema_version": 1}', encoding="utf-8")
+    profile.write_text('{"schema_version": 2}', encoding="utf-8")
+    config = validation_contract.RunConfig(gate, profile, tmp_path / "run", None, None, 10)
+    monkeypatch.setattr(negative.provenance, "build", lambda _: provenance_base(tmp_path / "missing"))
+    payload = negative.run(config)
 
     # Then: every mutant is rejected without starting FVP or QBox.
-    assert result.returncode == 0, result.stderr
-    payload = json.loads(result.stdout)
     assert payload["status"] == "PASS"
     assert payload["fvp_started"] is False
     assert payload["qbox_started"] is False
@@ -205,17 +197,10 @@ def test_identical_frozen_provenance_bytes_are_accepted(
     frozen.write_bytes(current_frozen.read_bytes())
     run_root = tmp_path / "run-identical"
 
-    # When: dry-run validates the frozen closure before any child boundary.
-    result = run_cli(
-        "--dry-run",
-        "--frozen-provenance",
-        str(frozen),
-        "--run-root",
-        str(run_root),
-    )
+    # Compare the host fixture directly; no archived runtime closure is needed.
+    provenance.compare_frozen(json.loads(current_frozen.read_bytes()), frozen, run_root)
 
     # Then: the exact bytes pass and no run child is created.
-    assert result.returncode == 0, result.stderr
     assert not run_root.exists()
 
 
@@ -245,18 +230,9 @@ def test_same_json_with_different_bytes_fails_before_qbox(
     frozen.write_bytes(mutated)
     run_root = tmp_path / f"run-{variant}"
 
-    # When: the preflight compares the frozen provenance.
-    result = run_cli(
-        "--dry-run",
-        "--frozen-provenance",
-        str(frozen),
-        "--run-root",
-        str(run_root),
-    )
-
-    # Then: byte drift is nonzero before QBox/build/result creation.
-    assert result.returncode != 0
-    assert "frozen_provenance_bytes" in result.stderr
+    # Byte validation is independent of source capture or model startup.
+    with pytest.raises(validation_contract.ValidationError, match="frozen_provenance_bytes"):
+        provenance.compare_frozen(payload, frozen, run_root)
     assert not run_root.exists()
 
 
@@ -273,7 +249,6 @@ def test_validation_error_preserves_traceback_through_context_manager() -> None:
     assert str(caught.value) == "input_path:missing"
 
 
-
 def test_failed_build_records_missing_binary_without_claiming_pass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -287,12 +262,19 @@ def test_failed_build_records_missing_binary_without_claiming_pass(
     config = validation_contract.RunConfig(
         GATE, PROFILE, tmp_path / "run", None, None, 10, binary
     )
-    monkeypatch.setattr(validation_contract, "ROOT", tmp_path)
+    # Patch the contract consumed by the child launcher, including legacy imports.
+    monkeypatch.setattr(execution.workflow.contract, "ROOT", tmp_path)
+    popen = subprocess.Popen
+
+    def isolated_build(command, *args, **kwargs):
+        if command[0] == "./yocto_build.sh":
+            assert kwargs.get("cwd") == tmp_path, "host test must not build the workspace"
+        return popen(command, *args, **kwargs)
+
+    monkeypatch.setattr(execution.workflow.subprocess, "Popen", isolated_build)
 
     # When: the execution boundary observes qbox_build rc=17.
-    returncode = __import__(
-        "scripts.test.gic720ae_pcie_irq_validation_execution", fromlist=["execute"]
-    ).execute(config, closure)
+    returncode = execution.execute(config, closure)
 
     # Then: an atomic schema-valid FAIL result identifies the missing binary.
     payload = json.loads((tmp_path / "run/result.json").read_text(encoding="utf-8"))
@@ -301,6 +283,7 @@ def test_failed_build_records_missing_binary_without_claiming_pass(
     )
     assert returncode == 1
     assert payload["overall"] == "FAIL"
+    assert payload["children"]["qbox_build"]["returncode"] == 17
     assert payload["qbox"] == {
         "started": False,
         "build": "FAIL",

@@ -14,10 +14,36 @@ OVERLAY = (
     / "hsoc-stack/tools/qbox-platform/platforms/apollo/test-profile"
     / "apollo-qvp-pcie-irq-overlay.dtso"
 )
-TASK9_BASE_DTB = (
-    ROOT
-    / ".omo/evidence/apollo-gic-its/task-9/remediation-2/base/apollo-qvp.dtb"
-)
+def base_dtb(tmp_path: Path) -> Path:
+    """Compile the minimal GIC/ITS contract needed by the overlay unit tests."""
+    source = tmp_path / "base.dts"
+    source.write_text(
+        """/dts-v1/;
+/ {
+    #address-cells = <2>; #size-cells = <2>;
+    soc {
+        #address-cells = <2>; #size-cells = <2>; ranges;
+        interrupt-controller@20800000 {
+            compatible = "arm,gic-v3";
+            reg = <0 0x20800000 0 0x10000>;
+            phandle = <1>; interrupt-controller;
+            #address-cells = <2>; #size-cells = <2>; #interrupt-cells = <3>;
+            ranges;
+            msi-controller@20840000 {
+                compatible = "arm,gic-v3-its";
+                reg = <0 0x20840000 0 0x20000>; msi-controller; #msi-cells = <1>;
+            };
+        };
+    };
+};
+""", encoding="utf-8",
+    )
+    output = tmp_path / "base.dtb"
+    subprocess.run(
+        ["dtc", "-I", "dts", "-O", "dtb", "-o", str(output), str(source)],
+        check=True, capture_output=True,
+    )
+    return output
 
 
 def run_fdtget(dtb: Path, node: str, property_name: str) -> list[int]:
@@ -92,8 +118,7 @@ def test_overlay_maps_only_the_opt_in_endpoint() -> None:
 
 
 def test_irq_overlay_is_warning_clean_and_gic_bound(tmp_path: Path) -> None:
-    assert TASK9_BASE_DTB.is_file()
-    compile_and_check_irq_overlay(OVERLAY, TASK9_BASE_DTB, tmp_path)
+    compile_and_check_irq_overlay(OVERLAY, base_dtb(tmp_path), tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -107,7 +132,7 @@ def test_irq_overlay_rejects_invalid_gic_bindings(
     mutated = tmp_path / "mutated.dtso"
     mutated.write_text(source.replace(old, new), encoding="utf-8")
     with pytest.raises(AssertionError):
-        compile_and_check_irq_overlay(mutated, TASK9_BASE_DTB, tmp_path)
+        compile_and_check_irq_overlay(mutated, base_dtb(tmp_path), tmp_path)
 
 
 def test_irq_overlay_rejects_stale_base_dtb(tmp_path: Path) -> None:
@@ -145,7 +170,7 @@ def test_gic_symbol_base_rejects_invalid_gic_contract(
 ) -> None:
     builder = load_module(BUILDER_PATH, f"qbox_profile_invalid_{property_name}")
     base = tmp_path / "invalid-base.dtb"
-    base.write_bytes(TASK9_BASE_DTB.read_bytes())
+    base.write_bytes(base_dtb(tmp_path).read_bytes())
     subprocess.run(
         ["fdtput", "-p", "-t", "x", str(base), node, property_name, value],
         check=True,
@@ -158,7 +183,7 @@ def test_gic_symbol_base_rejects_invalid_gic_contract(
 def test_gic_symbol_base_rejects_conflicting_symbol(tmp_path: Path) -> None:
     builder = load_module(BUILDER_PATH, "qbox_profile_conflicting_symbol")
     base = tmp_path / "conflicting-base.dtb"
-    base.write_bytes(TASK9_BASE_DTB.read_bytes())
+    base.write_bytes(base_dtb(tmp_path).read_bytes())
     subprocess.run(
         [
             "fdtput",

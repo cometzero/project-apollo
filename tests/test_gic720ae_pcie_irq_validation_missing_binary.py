@@ -5,9 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from scripts.test import gic720ae_pcie_irq_validation_contract as contract
 from scripts.test import gic720ae_pcie_irq_validation_execution as execution
-from scripts.test import gic720ae_pcie_irq_validation_provenance as provenance
+
+contract = execution.contract
+provenance = execution.provenance
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE = (
@@ -43,6 +44,7 @@ def test_successful_build_without_qbox_binary_records_atomic_fail(
     contract.validate_schema(payload, contract.RESULT_SCHEMA, "result_schema")
     assert returncode == 1
     assert payload["overall"] == "FAIL"
+    assert payload["children"]["qbox_build"]["returncode"] == 0
     assert payload["reason"] == "qbox_binary_missing"
     assert payload["qbox"] == {
         "started": False,

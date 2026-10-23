@@ -10,6 +10,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+import pytest
+from pcie_irq_test_support import profile_fixture, qbox_comparator, require_archived_evidence
+
 ROOT = Path(__file__).resolve().parents[1]
 COMPARATOR = ROOT / "scripts/test/compare_apollo_pcie_its_runtime.py"
 ADAPTER = ROOT / "scripts/test/run_gic720ae_pcie_irq_validation_task10.py"
@@ -69,13 +72,26 @@ def comparator_module() -> ComparatorModule:
     return loaded
 
 
-def test_task10_adapter_uses_explicit_comparator_inputs(tmp_path: Path) -> None:
-    returncode, payload = invoke(ADAPTER, tmp_path / "adapter.json", TASK9)
-    assert returncode == 0
-    assert payload["status"] == "PASS"
+def test_task10_adapter_uses_explicit_comparator_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    spec = importlib.util.spec_from_file_location("task10_adapter_unit", ADAPTER)
+    assert spec is not None and spec.loader is not None
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+    paths = tuple(tmp_path / name for name in ("gate.json", "profile.json", "run", "output.json"))
+    calls = []
+    monkeypatch.setattr(adapter.comparator, "compare", lambda *args: calls.append(args) or 17)
+    monkeypatch.setattr(sys, "argv", [str(ADAPTER),
+        "--fvp-reference-gate", str(paths[0]), "--qbox-profile-manifest", str(paths[1]),
+        "--qbox-run-root", str(paths[2]), "--output", str(paths[3]),
+    ])
+    assert adapter.main() == 17
+    assert calls == [paths]
 
 
 def test_comparator_binds_each_relocated_root_without_cross_run_leak(tmp_path: Path) -> None:
+    require_archived_evidence(PROFILE, TASK9)
     comparator = comparator_module()
     profile = json.loads(PROFILE.read_text(encoding="utf-8"))
     roots = tuple(
@@ -102,6 +118,7 @@ def test_comparator_binds_each_relocated_root_without_cross_run_leak(tmp_path: P
 
 
 def test_comparator_accepts_relocated_bound_root(tmp_path: Path) -> None:
+    require_archived_evidence(FVP, PROFILE, TASK9)
     relocated = tmp_path / "relocated" / "task9"
     copy_root(TASK9, relocated)
     returncode, payload = invoke(COMPARATOR, tmp_path / "relocated.json", relocated)
@@ -110,43 +127,58 @@ def test_comparator_accepts_relocated_bound_root(tmp_path: Path) -> None:
 
 
 def test_comparator_rejects_symlink_root(tmp_path: Path) -> None:
+    comparator = qbox_comparator()
+    target = tmp_path / "target"
+    target.mkdir()
     symlink = tmp_path / "task9"
-    symlink.symlink_to(TASK9, target_is_directory=True)
-    returncode, payload = invoke(COMPARATOR, tmp_path / "symlink.json", symlink)
-    assert returncode == 1
-    assert payload["reason"] == "qbox_run_root"
+    symlink.symlink_to(target, target_is_directory=True)
+    with pytest.raises(comparator.BoundaryError, match="qbox_run_root"):
+        comparator.run_root(symlink)
 
 
 def test_comparator_rejects_missing_root_and_symlinked_artifact(tmp_path: Path) -> None:
-    returncode, payload = invoke(COMPARATOR, tmp_path / "missing.json", tmp_path / "missing")
-    assert returncode == 1
-    assert payload["reason"] == "qbox_run_root"
+    comparator = qbox_comparator()
+    with pytest.raises(comparator.BoundaryError, match="qbox_run_root"):
+        comparator.run_root(tmp_path / "missing")
     copied = tmp_path / "copied" / "task9"
-    copy_root(TASK9, copied)
+    (copied / "msix").mkdir(parents=True)
+    target = tmp_path / "result.json"
+    target.write_text("{}", encoding="utf-8")
     result = copied / "msix/result.json"
-    result.unlink()
-    result.symlink_to(TASK9 / "msix/result.json")
-    returncode, payload = invoke(COMPARATOR, tmp_path / "artifact-symlink.json", copied)
-    assert returncode == 1
-    assert payload["reason"] == "msix_result"
+    result.symlink_to(target)
+    with pytest.raises(comparator.BoundaryError, match="msix_result"):
+        comparator.contained_file(copied, "msix/result.json", "msix_result")
 
 
 def test_comparator_rejects_coverage_escape_and_cross_run_mix(tmp_path: Path) -> None:
+    comparator = qbox_comparator()
     escaped = tmp_path / "escaped" / "task9"
-    copy_root(TASK9, escaped)
+    escaped.mkdir(parents=True)
     coverage_path = escaped / "msix-coverage-audit.json"
-    coverage = json.loads(coverage_path.read_text(encoding="utf-8"))
-    coverage["runtime_result"] = "/tmp/escaped-result.json"
+    coverage = {"passed": True, "runtime_result": str(tmp_path / "another-run/result.json")}
     coverage_path.write_text(json.dumps(coverage), encoding="utf-8")
-    returncode, payload = invoke(COMPARATOR, tmp_path / "escaped.json", escaped)
-    assert returncode == 1
-    assert payload["reason"] == "msix_coverage"
-    mixed = tmp_path / "mixed" / TASK9.name
-    copy_root(TASK9, mixed)
+    with pytest.raises(comparator.BoundaryError, match="msix_coverage"):
+        comparator.coverage_binding(escaped, "msix", escaped / "msix/result.json")
+
+    # Minimal inputs reach the result binding gate, then deliberately fail there.
+    mixed = tmp_path / "mixed" / "task9"
+    (mixed / "msix").mkdir(parents=True)
     result_path = mixed / "msix/result.json"
-    result = json.loads(result_path.read_text(encoding="utf-8"))
-    result["status"] = "forged"
-    result_path.write_text(json.dumps(result), encoding="utf-8")
-    returncode, payload = invoke(COMPARATOR, tmp_path / "mixed.json", mixed)
-    assert returncode == 1
-    assert payload["reason"] == "msix_runner_binding"
+    result_path.write_text('{"status": "original"}', encoding="utf-8")
+    log = mixed / "msix/qbox-primary-console.log"
+    log.write_text("host fixture only", encoding="utf-8")
+    (mixed / "qualification.json").write_text(json.dumps({
+        "run_id": mixed.name, "schema_version": 1, "status": "pass",
+        "pins": {"fvp_reference_gate_sha256": comparator.FVP_SHA256,
+                 "profile_manifest_sha256": comparator.PROFILE_SHA256},
+        "process_cleanup": {"status": "PASS", "residual_pids": []},
+        "modes": {"msix": {"result_sha256": hashlib.sha256(result_path.read_bytes()).hexdigest(),
+                           "primary_log_sha256": hashlib.sha256(log.read_bytes()).hexdigest()}},
+    }), encoding="utf-8")
+    (mixed / "pcie-runtime-validation.json").write_text(json.dumps({
+        "schema_version": 2, "status": "pass",
+        "profile_manifest": {"sha256": comparator.PROFILE_SHA256},
+    }), encoding="utf-8")
+    result_path.write_text('{"status": "forged"}', encoding="utf-8")
+    with pytest.raises(comparator.BoundaryError, match="msix_runner_binding"):
+        comparator.qbox_rows(profile_fixture(tmp_path), mixed)

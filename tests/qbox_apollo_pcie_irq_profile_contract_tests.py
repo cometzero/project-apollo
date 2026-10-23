@@ -12,6 +12,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 from qbox_apollo_pcie_irq_profile_support import ROOT, load_module
+from pcie_irq_test_support import require_archived_evidence
 
 BUILDER_PATH = ROOT / "scripts/test/prepare_qbox_apollo_pcie_irq_profile.py"
 VALIDATOR_PATH = ROOT / "scripts/test/validate_qbox_apollo_pcie_irq_runtime.py"
@@ -76,6 +77,7 @@ def test_cli_requires_canonical_fvp_reference_gate(tmp_path: Path) -> None:
 
 
 def test_reference_gate_is_schema_and_hash_bound(tmp_path: Path) -> None:
+    require_archived_evidence(GATE)
     builder = load_module(BUILDER_PATH, "qbox_profile_gate")
     receipt = builder.verify_reference_gate(GATE)
     assert receipt["reference_gate"] == "PASS"
