@@ -125,12 +125,18 @@ def test_platform_device_evaluator_accepts_complete_evidence() -> None:
     ("index", "old", "new", "assertion_id"),
     (
         (0, "transport_dsu_counter=23", "transport_dsu_counter=none", "primary-ssh"),
+        (0, "transport_possible=0-3", "transport_possible=0-31", "primary-ssh"),
+        (0, "transport_nproc=4", "transport_nproc=40", "primary-ssh"),
+        (0, "transport_dt_cpu_count=4", "transport_dt_cpu_count=40", "primary-ssh"),
         (1, "APOLLO_QBOX_NET_OK", "WRONG", "platform-device-networking"),
         (1, "network_driver=virtio_net", "network_driver=none", "platform-device-networking"),
+        (1, "network_driver=virtio_net", "network_driver=virtio_net_wrong", "platform-device-networking"),
         (1, "network_route_interface=ovsbr0", "network_route_interface=brsi1", "platform-device-networking"),
         (2, "rtc_driver=rtc-pl031", "rtc_driver=none", "platform-device-rtc"),
         (3, "hotplug_restored=0-3", "hotplug_restored=0-2", "platform-device-cpu-hotplug"),
+        (3, "hotplug_restored=0-3", "hotplug_restored=0-31", "platform-device-cpu-hotplug"),
         (4, "rng_bytes=32", "rng_bytes=0", "platform-device-virtiorng"),
+        (4, "rng_bytes=32", "rng_bytes=320", "platform-device-virtiorng"),
         (5, "watchdog_driver=sbsa-gwdt", "watchdog_driver=none", "platform-device-watchdog"),
     ),
 )
@@ -144,6 +150,35 @@ def test_platform_device_evaluator_rejects_malformed_output(
     outputs[index] = outputs[index].replace(old, new)
 
     assert _statuses(_snapshot(), tuple(outputs))[assertion_id] == "FAIL"
+
+
+@pytest.mark.parametrize("duplicate_value", ("32", "0"))
+def test_platform_device_evaluator_rejects_duplicate_records(
+    duplicate_value: str,
+) -> None:
+    outputs = list(_outputs())
+    outputs[4] += f"rng_bytes={duplicate_value}\n"
+
+    assert _statuses(_snapshot(), tuple(outputs))["platform-device-virtiorng"] == "FAIL"
+
+
+def test_platform_device_evaluator_accepts_uart_echo_and_crlf() -> None:
+    spec = resolve_profile("platform-devices", canonical_matrix_path())
+    outputs = tuple(
+        (f"root@apollo-qvp:~# {step.command}\n{output}\nroot@apollo-qvp:~# ")
+        .replace("\n", "\r\n")
+        for step, output in zip(spec.steps, _outputs(), strict=True)
+    )
+
+    assert all(value == "PASS" for value in _statuses(_snapshot(), outputs).values())
+
+
+@pytest.mark.parametrize("available", ("virtio_rng.0 ", "other virtio_rng.0 another "))
+def test_platform_device_evaluator_accepts_available_rng_list(available: str) -> None:
+    outputs = list(_outputs())
+    outputs[4] = outputs[4].replace("rng_available=virtio_rng.0", f"rng_available={available}")
+
+    assert _statuses(_snapshot(), tuple(outputs))["platform-device-virtiorng"] == "PASS"
 
 
 def test_platform_device_evaluator_requires_actual_systemd_boot_marker() -> None:

@@ -101,8 +101,14 @@ WATCHDOG_COMMAND: Final = (
 )
 
 
-def _all(output: str, patterns: tuple[str, ...]) -> bool:
-    return all(re.search(pattern, output) is not None for pattern in patterns)
+def _records_match(output: str, patterns: tuple[str, ...]) -> bool:
+    lines = output.splitlines()
+    for pattern in patterns:
+        prefix = pattern.partition("=")[0] + "="
+        records = [line.rstrip() for line in lines if line.startswith(prefix)]
+        if len(records) != 1 or re.fullmatch(pattern, records[0]) is None:
+            return False
+    return True
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,10 +123,10 @@ class PlatformDevicesEvaluator:
         padded = (*outputs, "", "", "", "", "", "")[:6]
         transport, network, rtc, hotplug, rng, watchdog = padded
         checks = {
-            "primary-ssh": _all(
+            "primary-ssh": _records_match(
                 transport,
                 (
-                    r"transport_uname=Linux apollo-qvp .+ aarch64",
+                    r"transport_uname=Linux apollo-qvp .+ aarch64(?: GNU/Linux)?",
                     r"transport_possible=0-3",
                     r"transport_present=0-3",
                     r"transport_online=0-3",
@@ -132,7 +138,7 @@ class PlatformDevicesEvaluator:
                     r"transport_rc=0",
                 ),
             ),
-            "platform-device-networking": _all(
+            "platform-device-networking": _records_match(
                 network,
                 (
                     r"network_interface=[^\s]+",
@@ -141,14 +147,14 @@ class PlatformDevicesEvaluator:
                     r"network_ipv4=10\.0\.2\.[0-9]+/[0-9]+",
                     r"network_default_route=10\.0\.2\.2",
                     r"network_http_status=0",
-                    r"(?m)^network_http_body=APOLLO_QBOX_NET_OK\r?$",
+                    r"network_http_body=APOLLO_QBOX_NET_OK",
                 ),
             ),
-            "platform-device-rtc": _all(
+            "platform-device-rtc": _records_match(
                 rtc,
                 (r"rtc_device=rtc[0-9]+", r"rtc_driver=rtc-pl031", r"rtc_hwclock_status=0"),
             ),
-            "platform-device-cpu-hotplug": _all(
+            "platform-device-cpu-hotplug": _records_match(
                 hotplug,
                 (
                     r"hotplug_initial=0-3",
@@ -162,17 +168,17 @@ class PlatformDevicesEvaluator:
                     r"hotplug_status=0",
                 ),
             ),
-            "platform-device-virtiorng": _all(
+            "platform-device-virtiorng": _records_match(
                 rng,
-                (r"rng_available=.*virtio_rng\.0", r"rng_current=virtio_rng\.0", r"rng_bytes=32", r"rng_status=0"),
+                (r"rng_available=(?:\S+\s+)*virtio_rng\.0(?:\s+\S+)*", r"rng_current=virtio_rng\.0", r"rng_bytes=32", r"rng_status=0"),
             ),
-            "platform-device-watchdog": _all(
+            "platform-device-watchdog": _records_match(
                 watchdog,
                 (r"watchdog_device=watchdog[0-9]+", r"watchdog_driver=(?:sp805-wdt|sbsa-gwdt)", r"watchdog_status=0"),
             ),
-            "systemd-boot-message": _all(
-                snapshot.primary,
-                (r"chainloading systemd-boot for slot [AB]", r"Boot in [0-9]+"),
+            "systemd-boot-message": all(
+                re.search(pattern, snapshot.primary) is not None
+                for pattern in (r"chainloading systemd-boot for slot [AB]", r"Boot in [0-9]+")
             ),
         }
         return tuple(
