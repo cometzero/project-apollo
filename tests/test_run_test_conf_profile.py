@@ -61,7 +61,32 @@ def _bitbake_value(machine: str, image: str, variable: str) -> str:
         text=True,
         timeout=300,
     )
-    return result.stdout.strip()
+    # Server reconnection notes can reach stdout even with --value/--quiet.
+    values = [line.strip() for line in result.stdout.splitlines()
+              if line.strip() and not line.startswith("NOTE: ")]
+    assert len(values) == 1, f"ambiguous BitBake value for {variable}: {result.stdout!r}"
+    return values[0]
+
+
+@pytest.mark.parametrize("output", (
+    "HSOCBSPFVPTarget\n",
+    "NOTE: Reconnecting to bitbake server...\n"
+    "NOTE: Retrying server connection (#1)...\nHSOCBSPFVPTarget\n",
+))
+def test_bitbake_value_ignores_connection_notes(monkeypatch: MonkeyPatch, output: str) -> None:
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0, output, ""))
+    assert _bitbake_value("apollo-qvp", "nexios-bsp-initramfs", "TEST_TARGET") == "HSOCBSPFVPTarget"
+
+
+@pytest.mark.parametrize("output", ("", "NOTE: Reconnecting...\n", "first\nsecond\n"))
+def test_bitbake_value_rejects_missing_or_ambiguous_result(
+    monkeypatch: MonkeyPatch, output: str,
+) -> None:
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs:
+                        subprocess.CompletedProcess(args[0], 0, output, ""))
+    with pytest.raises(AssertionError, match="ambiguous BitBake value"):
+        _bitbake_value("apollo-qvp", "nexios-bsp-initramfs", "TEST_TARGET")
 
 
 def test_profile_target_overrides_functional_fvp_target(
