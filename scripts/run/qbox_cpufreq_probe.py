@@ -191,8 +191,8 @@ def evaluate_cpufreq_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
         _records(padded[9], "CPUFREQ_NEGATIVE"),
         frozenset(
             {
-                "policy", "rejected_min", "rejected_max", "before_min",
-                "before_max", "after_min", "after_max",
+                "policy", "requested_min", "requested_max", "before_min",
+                "before_max", "high_min", "high_max", "low_min", "low_max",
             }
         ),
         policies,
@@ -261,12 +261,14 @@ def evaluate_cpufreq_probe(outputs: tuple[str, ...]) -> tuple[bool, ...]:
         and _restored(padded[8], policies),
         negative is not None
         and all(
-            item.value("rejected_min") == "1"
-            and item.value("rejected_max") == "1"
+            item.value("requested_min") == "2600000"
+            and item.value("requested_max") == "1700000"
             and item.value("before_min") == "1800000"
             and item.value("before_max") == "2500000"
-            and item.value("after_min") == item.value("before_min")
-            and item.value("after_max") == item.value("before_max")
+            and item.value("high_min") == "2500000"
+            and item.value("high_max") == "2500000"
+            and item.value("low_min") == "1800000"
+            and item.value("low_max") == "1800000"
             for item in negative.values()
         )
         and _restored(padded[9], policies),

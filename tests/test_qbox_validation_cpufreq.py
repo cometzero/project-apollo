@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+import shlex
 import subprocess
 
 import pytest
 
-from scripts.run.qbox_cpufreq_commands import cpufreq_probe_commands
+from scripts.run.qbox_cpufreq_commands import CPUFREQ_ROOT, cpufreq_probe_commands
 from scripts.run.qbox_validation.registry import resolve_profile
 from scripts.run.qbox_validation.result import evaluate_profile_result
 from scripts.run.qbox_validation.types import Console, ConsoleSnapshot
@@ -99,9 +100,9 @@ def _passing_outputs(cpu_count: int) -> tuple[str, ...]:
         for frequency in OPPS
     )
     negative = "\n".join(
-        f"CPUFREQ_NEGATIVE policy={policy} rejected_min=1 rejected_max=1 "
+        f"CPUFREQ_NEGATIVE policy={policy} requested_min=2600000 requested_max=1700000 "
         "before_min=1800000 before_max=2500000 "
-        "after_min=1800000 after_max=2500000"
+        "high_min=2500000 high_max=2500000 low_min=1800000 low_max=1800000"
         for policy in policies
     )
     restored = _restore(policies)
@@ -147,8 +148,12 @@ def test_cpufreq_evaluator_accepts_cluster_aligned_contract(cpu_count: int) -> N
         ),
         (2, "actual=ondemand", "actual=powersave", "cpufreq-set-governors"),
         (6, "rejected=1", "rejected=0", "cpufreq-invalid-governor"),
-        (9, "rejected_max=1", "rejected_max=0", "cpufreq-min-max-negative"),
-        (9, "after_max=2500000", "after_max=2400000", "cpufreq-min-max-negative"),
+        (9, "requested_max=1700000", "requested_max=1800000", "cpufreq-min-max-negative"),
+        (9, "requested_min=2600000", "requested_min=2500000", "cpufreq-min-max-negative"),
+        (9, "high_min=2500000", "high_min=2600000", "cpufreq-min-max-negative"),
+        (9, "high_max=2500000", "high_max=2400000", "cpufreq-min-max-negative"),
+        (9, "low_min=1800000", "low_min=1700000", "cpufreq-min-max-negative"),
+        (9, "low_max=1800000", "low_max=2500000", "cpufreq-min-max-negative"),
         (9, "restored=1", "restored=0", "cpufreq-min-max-negative"),
     ),
 )
@@ -175,12 +180,48 @@ def test_cpufreq_commands_are_ten_primary_console_steps() -> None:
         assert subprocess.run(["sh", "-n", "-c", command], check=False).returncode == 0
 
 
-def test_cpufreq_negative_command_proves_exact_state_is_unchanged() -> None:
+@pytest.mark.parametrize("cpu_count,actual_cpu_count", ((4, 4), (16, 16), (4, 16), (16, 4)))
+def test_cpufreq_policy_command_quotes_lists_and_reports_mismatches(
+    tmp_path: Path, cpu_count: int, actual_cpu_count: int,
+) -> None:
+    for policy in _policies(actual_cpu_count):
+        path = tmp_path / policy
+        path.mkdir()
+        first = int(policy.removeprefix("policy"))
+        values = {
+            "scaling_available_governors": " ".join(GOVERNORS),
+            "scaling_available_frequencies": " ".join(map(str, OPPS)),
+            "affected_cpus": " ".join(map(str, range(first, first + 4))),
+            "scaling_driver": "scmi",
+            "scaling_min_freq": "1800000",
+            "scaling_max_freq": "2500000",
+            "scaling_cur_freq": "2500000",
+        }
+        for name, value in values.items():
+            (path / name).write_text(value + "\n")
+    command = (cpufreq_probe_commands()[0]
+               .replace(f"root={CPUFREQ_ROOT}", f"root={shlex.quote(str(tmp_path))}")
+               .replace("nproc --all", f"printf '%s\\n' {cpu_count}"))
+    result = subprocess.run(["sh", "-c", command], capture_output=True, text=True)
+    matches = cpu_count == actual_cpu_count
+    assert result.returncode == (0 if matches else 1), result.stderr
+    assert (
+        f"CPUFREQ_TOPOLOGY cpu_count={cpu_count} "
+        f"actual=[{' '.join(_policies(actual_cpu_count))}] "
+        f"expected=[{' '.join(_policies(cpu_count))}]"
+    ) in result.stdout
+    if matches:
+        outputs = (result.stdout, *_passing_outputs(cpu_count)[1:])
+        assert set(_statuses(outputs).values()) == {"PASS"}
+    else:
+        assert "CPUFREQ_META" not in result.stdout
+        assert "CPUFREQ_POLICY" not in result.stdout
+
+
+def test_cpufreq_negative_command_waits_for_exact_clamped_limits() -> None:
     negative = cpufreq_probe_commands()[-1]
 
-    assert "then exit 1; else rejected_min=1; fi" in negative
-    assert "then exit 1; else rejected_max=1; fi" in negative
-    assert "test x$after_min = x$before_min" in negative
-    assert "test x$after_max = x$before_max" in negative
-    assert "before_min=%s before_max=%s after_min=%s after_max=%s" in negative
-    assert "unchanged=1" not in negative
+    assert "wait_limits $before_max $before_max" in negative
+    assert "wait_limits $before_min $before_min" in negative
+    assert "wait_limits $before_min $before_max" in negative
+    assert "requested_min=%s requested_max=%s" in negative
