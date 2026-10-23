@@ -26,16 +26,16 @@ import sys
 import time
 import tempfile
 
-from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args, read_stat
-from qbox_monitor_manifest import monitor_plan
-from qbox_vmcu_boot import prepare_vmcu_rootfs
+from scripts.run.qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args, read_stat
+from scripts.run.qbox_monitor_manifest import monitor_plan
+from scripts.run.qbox_vmcu_boot import prepare_vmcu_rootfs
 
-from gic720ae_operation_manifest import load_operations, serialize_operation
-from qbox_validation.registry import (
+from scripts.run.gic720ae_operation_manifest import load_operations, serialize_operation
+from scripts.run.qbox_validation.registry import (
     ProfileRegistryError,
     resolve_profile,
 )
-from qbox_validation.live import (
+from scripts.run.qbox_validation.live import (
     LiveProfileSession,
     abort_live_profile,
     drive_live_profile,
@@ -43,13 +43,13 @@ from qbox_validation.live import (
     profile_pipes,
     start_live_profile,
 )
-from qbox_validation.selection import ProfileSelectionRequest, select_profile
-from qbox_validation.transport import (
+from scripts.run.qbox_validation.selection import ProfileSelectionRequest, select_profile
+from scripts.run.qbox_validation.transport import (
     ProfileWriters,
     WriterOwner,
     managed_profile_writers,
 )
-from qbox_validation.types import Console, ConsoleSnapshot
+from scripts.run.qbox_validation.types import Console, ConsoleSnapshot
 
 
 REQUIRED_TARGETS = [

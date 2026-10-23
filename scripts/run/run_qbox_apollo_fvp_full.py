@@ -31,13 +31,13 @@ if str(SCRIPT_DIR) not in sys.path:
 WORKSPACE_DIR = SCRIPT_DIR.parents[1]
 if str(WORKSPACE_DIR) not in sys.path:
     sys.path.insert(0, str(WORKSPACE_DIR))
-import qbox_apollo_runtime as runtime_engine  # noqa: E402
+from scripts.run import qbox_apollo_runtime as runtime_engine  # noqa: E402
 import qbox_load_stats  # noqa: E402
-from qbox_validation.result import (  # noqa: E402
+from scripts.run.qbox_validation.result import (  # noqa: E402
     blocked_profile_result,
     safety_diagnostics_compatibility,
 )
-from qbox_validation.live import (  # noqa: E402
+from scripts.run.qbox_validation.live import (  # noqa: E402
     LiveProfileSession,
     abort_live_profile,
     drive_live_profile,
@@ -45,19 +45,19 @@ from qbox_validation.live import (  # noqa: E402
     profile_pipes,
     start_live_profile,
 )
-from qbox_validation.registry import (  # noqa: E402
+from scripts.run.qbox_validation.registry import (  # noqa: E402
     ProfileRegistryError,
     resolve_profile,
 )
-from qbox_validation.selection import (  # noqa: E402
+from scripts.run.qbox_validation.selection import (  # noqa: E402
     ProfileSelectionRequest,
     select_profile,
 )
-from qbox_validation.transport import (  # noqa: E402
+from scripts.run.qbox_validation.transport import (  # noqa: E402
     WriterOwner,
     managed_profile_writers,
 )
-from qbox_validation.types import (  # noqa: E402
+from scripts.run.qbox_validation.types import (  # noqa: E402
     Console,
     ConsoleSnapshot,
     NormalizedResultJson,

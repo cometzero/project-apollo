@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from dataclasses import replace
 import json
 import os
@@ -11,9 +10,7 @@ import time
 import pytest
 
 from scripts.run import run_qbox_apollo_fvp_full as full_runner
-
-
-evaluation_types = importlib.import_module("qbox_validation.types")
+from scripts.run.qbox_validation import types as evaluation_types
 
 
 def fake_si0_profile_child(out_dir: Path) -> list[str]:

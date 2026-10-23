@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 from typing import Callable
 
-from autosd_uki import inspect_uki
+from scripts.run.autosd_uki import inspect_uki
 
 
 VMCU_BOOTARG = "apollo.vmcu=1"
