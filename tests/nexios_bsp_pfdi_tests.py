@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from nexios_bsp_workflow_support import ROOT
 
 
@@ -35,8 +37,17 @@ def test_qvp_pfdi_agent_enables_tx_completion_irq() -> None:
         "files/pfdi-tx-irq/pfdi_agent_tx_irq.c"
     ).read_text(encoding="utf-8")
 
-    assert 'SRC_URI:append:apollo-qvp = " file://pfdi-tx-irq"' in common
+    src_uri = re.search(r'SRC_URI:append:apollo-qvp\s*=\s*"([^"]*)"', common)
+    assert src_uri is not None
+    assert "file://pfdi-tx-irq" in src_uri.group(1).split()
     assert 'PFDI_TX_IRQ_MODULE = "${UNPACKDIR}/pfdi-tx-irq"' in common
+    assert 'ZEPHYR_MODULES:append:apollo-qvp = "${PFDI_TX_IRQ_MODULE}\\;"' in common
+    cmake = (
+        ROOT / "hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/zephyr-kernel/"
+        "files/pfdi-tx-irq/CMakeLists.txt"
+    ).read_text(encoding="utf-8")
+    assert "if(CONFIG_PFDI_AGENT)" in cmake
+    assert "zephyr_library_sources(pfdi_agent_tx_irq.c)" in cmake
     assert "mbox_set_enabled_dt(&channels[channel], true)" in module
     assert "SYS_INIT(pfdi_tx_irq_init, APPLICATION," in module
 

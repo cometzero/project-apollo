@@ -165,9 +165,21 @@ def test_qvp_si_period_reaches_zephyr_without_changing_fvp_defaults() -> None:
     # the external Kconfig default intact preserves FVP and reference builds.
     recipe = QBOX_YOCTO_ZEPHYR_BUILD.read_text(encoding="utf-8")
     assert (
-        'EXTRA_OECMAKE:append:apollo-qvp = '
+        'EXTRA_OECMAKE:append = '
         '" -DCONFIG_PFDI_MGMT_PERIOD_MS=${PFDI_SI_CL1_PERIOD_MS}"'
     ) in recipe
+    selection = QBOX_YOCTO_ZEPHYR_BUILD.with_name("zephyr-demos-cl1.bbappend").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        'ZEPHYR_DEMOS_CL1_HSOC_APOLLO_REQUIRE:apollo-qvp = '
+        '"zephyr-demos-cl1-apollo-qvp.inc"'
+    ) in selection
+    assert "require ${ZEPHYR_DEMOS_CL1_HSOC_APOLLO_REQUIRE}" in selection
+    fvp_recipe = QBOX_YOCTO_ZEPHYR_BUILD.with_name(
+        "zephyr-demos-cl1-apollo-fvp.inc"
+    ).read_text(encoding="utf-8")
+    assert "CONFIG_PFDI_MGMT_PERIOD_MS" not in fvp_recipe
     assert qbox_pfdi_policy_value("PFDI_SI_CL1_PERIOD_MS") == 3000
     assert qbox_pfdi_policy_value("PFDI_AP_INTERVAL_MS") == 3000
     default = re.search(
