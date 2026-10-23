@@ -474,6 +474,7 @@ local expected = {
     {"si_cl1_uart", "irq", 1, 39},
     {"si_cl0_vmcu_uart", "irq", 0, 41},
     {"si_cl0_vmcu_gpio", "irq", 0, 42},
+    {"si_cl0_vmcu_spi", "irq", 0, 43},
     {"si_cl1_hipc_mhu_pbx", "irq", 1, 72},
     {"si_cl1_hipc_mhu_mbx", "irq", 1, 73},
     {"si_cl1_pfdi_mhu_pbx", "irq", 1, 82},
@@ -552,13 +553,16 @@ def test_si_irq_connections(sources, external_vmcu):
     evaluate_contract(sources, SI_IRQ_CONTRACT, environment=environment)
 
 
-@pytest.mark.parametrize("target", [
-    "&si_cl1_gic.spi_in_8", "&si_cl0_gic.spi_in_7",
+@pytest.mark.parametrize(("device", "target"), [
+    ("si_cl1_uart", "&si_cl1_gic.spi_in_8"),
+    ("si_cl1_uart", "&si_cl0_gic.spi_in_7"),
+    ("si_cl0_vmcu_spi", "&si_cl0_gic.spi_in_12"),
+    ("si_cl0_vmcu_spi", "&si_cl1_gic.spi_in_11"),
 ])
-def test_si_irq_contract_rejects_wrong_index_or_owner(sources, target):
-    mutation = f'platform.si_cl1_uart.irq.bind = "{target}"\n'
+def test_si_irq_contract_rejects_wrong_index_or_owner(sources, device, target):
+    mutation = f'platform.{device}.irq.bind = "{target}"\n'
     body = SI_IRQ_CONTRACT.replace('local expected = {', mutation + 'local expected = {', 1)
-    with pytest.raises(DESCRIPTOR.DescriptorError, match="SI IRQ mismatch: si_cl1_uart"):
+    with pytest.raises(DESCRIPTOR.DescriptorError, match=f"SI IRQ mismatch: {device}"):
         evaluate_contract(sources, body)
 
 
