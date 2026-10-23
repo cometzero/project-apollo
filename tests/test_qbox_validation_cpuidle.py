@@ -425,3 +425,22 @@ def test_cpuidle_guest_accepts_sysfs_governor_whitespace(tmp_path: Path) -> None
                             capture_output=True, text=True, check=True)
     assert result.stdout.strip() == (
         "CPUIDLE_GOVERNORS available=menu current=menu current_ro=menu")
+
+
+@pytest.mark.parametrize("present,passes", [("0-3", True), ("0-15", False)])
+def test_cpuidle_ensure_uses_kernel_cpu_population_without_bsp_file(tmp_path, present, passes):
+    cpu_root, _dt_root, probe, env = _guest_capabilities(tmp_path)
+    (cpu_root / "present").write_text(present + "\n")
+    for name, value in (("current_driver", "psci"), ("available_governors", "menu"),
+                        ("current_governor", "menu"), ("current_governor_ro", "menu")):
+        (cpu_root / "cpuidle" / name).write_text(value + "\n")
+    for cpu in range(4):
+        for state in range(3):
+            base = cpu_root / f"cpu{cpu}/cpuidle/state{state}"
+            base.mkdir(parents=True)
+            for node in ("name", "residency", "latency", "usage", "time", "disable"):
+                (base / node).write_text("0\n")
+    result = subprocess.run(["sh", str(probe), "ensure"], env=env,
+                            capture_output=True, text=True, timeout=5)
+    assert (result.returncode == 0) == passes, result.stderr
+    assert ("CPUIDLE_ENSURE cpu_count=4 states=12" in result.stdout) == passes

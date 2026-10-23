@@ -49,7 +49,7 @@ ensure)
     test -r $idle_root/current_governor_ro
     test -r $idle_root/current_governor
     test "$(cat "$cpu_root/online")" = 0-3
-    test $(cat /etc/nexios-bsp-cpus) -eq 4
+    test "$(cat "$cpu_root/present")" = 0-3
     count=0
     for cpu in $cpus; do
         for entry in $entries; do
