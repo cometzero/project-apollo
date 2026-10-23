@@ -229,6 +229,12 @@ def test_evaluator_error_and_cleanup_failure_become_blockers() -> None:
     )
     assert cleanup_state.blocker == "cleanup_failed:cleanup_receipt"
     assert cleanup_state.cleanup == CleanupReceipt(False, "cleanup_receipt")
+    assert cleanup_state.result is not None
+    assert cleanup_state.result["verdict"] == "BLOCKED"
+    assert all(
+        item["status"] == "BLOCKED"
+        for item in cleanup_state.result["assertions"]
+    )
 
 
 def test_evaluator_error_preserves_cleanup_failure_precedence() -> None:
@@ -250,7 +256,16 @@ def test_evaluator_error_preserves_cleanup_failure_precedence() -> None:
     assert all(item["status"] == "BLOCKED" for item in state.result["assertions"])
 
 
-def _completed_state(spec: ProfileProbeSpec):
+def test_cleanup_failure_preserves_failed_assertion_evidence() -> None:
+    spec = spec_for((Console.PRIMARY,), cleanup=FixedCleanup(False))
+    state = _completed_state(spec, output="wrong-output")
+    assert state.blocker == "cleanup_failed:cleanup_receipt"
+    assert state.result is not None
+    assert state.result["verdict"] == "FAIL"
+    assert state.result["assertions"][0]["status"] == "FAIL"
+
+
+def _completed_state(spec: ProfileProbeSpec, output: str = "assert-0"):
     state = new_profile_state(spec, spec.required_consoles, now=0.0)
     sent = advance_profile(
         spec,
@@ -261,7 +276,7 @@ def _completed_state(spec: ProfileProbeSpec):
     return advance_profile(
         spec,
         sent,
-        ConsoleSnapshot(primary="READY> output\nassert-0\nREADY> "),
+        ConsoleSnapshot(primary=f"READY> output\n{output}\nREADY> "),
         now=1.0,
     ).state
 

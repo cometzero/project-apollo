@@ -152,7 +152,7 @@ def _finalize(
             phase="blocked",
             blocker=f"cleanup_failed:{cleanup.detail}",
             cleanup=cleanup,
-            result=result,
+            result=blocked_profile_result(spec) if result["verdict"] == "PASS" else result,
         )
     phase: Phase = "passed" if result["verdict"] == "PASS" else "blocked"
     return replace(state, phase=phase, cleanup=cleanup, result=result)
