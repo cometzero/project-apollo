@@ -79,11 +79,11 @@ def drive_live_profile(
     if advanced.dispatch is not None:
         try:
             session.writers.write(advanced.dispatch)
-        except TransportError:
+        except TransportError as error:
             state = block_profile(
                 session.spec,
                 state,
-                f"fifo_eof:{advanced.dispatch.console.value}",
+                error.reason,
             )
     return replace(session, state=state)
 

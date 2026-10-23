@@ -62,7 +62,14 @@ class ProfileWriters:
         payload = dispatch.payload.encode("utf-8")
         if dispatch.console == Console.SI0:
             payload = b"\x05" + payload + b"\x04"
-        os.write(writer.fd, payload)
+        try:
+            written = os.write(writer.fd, payload)
+        except OSError as error:
+            raise TransportError(
+                f"fifo_write_failed:{dispatch.console.value}:{error.errno}"
+            ) from error
+        if written != len(payload):
+            raise TransportError(f"fifo_short_write:{dispatch.console.value}")
 
 
 @contextmanager

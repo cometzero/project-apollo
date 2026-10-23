@@ -100,3 +100,16 @@ def test_fifo_eof_is_observable_on_real_pipe(tmp_path: Path) -> None:
 
     # Then: the actual FIFO seam reports EOF as an empty read.
     assert observed == b""
+
+
+@pytest.mark.parametrize("written", (0, 2))
+def test_partial_command_write_is_not_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, written: int,
+) -> None:
+    path = tmp_path / "primary.fifo"
+    binding = ConsolePipe(Console.PRIMARY, path, WriterOwner.RUNTIME)
+    with managed_profile_writers((binding,)) as writers:
+        monkeypatch.setattr(os, "write", lambda fd, payload: written)
+        with pytest.raises(TransportError, match="^fifo_short_write:primary$"):
+            writers.write(Dispatch(Console.PRIMARY, "command\n", 0))
+    assert not path.exists()

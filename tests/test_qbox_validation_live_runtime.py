@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import errno
 import os
 from pathlib import Path
 
@@ -197,6 +198,29 @@ def test_live_runtime_rejects_unbound_owner_before_process() -> None:
     # Then: preflight blocks before a platform process can be launched.
     assert session.state.phase == "blocked"
     assert session.state.blocker == "unbound_console:si0"
+
+
+def test_full_fifo_blocks_dispatch_and_preserves_cleanup(tmp_path: Path) -> None:
+    spec = live_spec(tmp_path, (Console.PRIMARY,))
+    pipes = profile_pipes(spec, tmp_path)
+    with managed_profile_writers(pipes) as writers:
+        fd = writers.fd(Console.PRIMARY)
+        assert fd is not None
+        while True:
+            try:
+                os.write(fd, b"x" * 4096)
+            except BlockingIOError:
+                break
+        session = start_live_profile(spec, writers, now=0.0)
+        session = runtime.drive_runtime_validation_profile(
+            session, ConsoleSnapshot(primary="READY> "), 0.0
+        )
+        assert session.state.phase == "blocked"
+        assert session.state.blocker == f"fifo_write_failed:primary:{errno.EAGAIN}"
+        assert session.state.result is not None
+        assert session.state.result["verdict"] == "BLOCKED"
+        assert (tmp_path / "cleanup.txt").read_text() == "cleanup-called\n"
+    assert all(not item.path.exists() for item in pipes)
 
 
 @pytest.mark.parametrize(
