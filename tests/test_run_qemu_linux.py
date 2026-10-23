@@ -168,6 +168,34 @@ def test_saturn_input_is_unchanged_and_cpu_count_is_forwarded(tmp_path, saturn_d
     args.bootargs = "console=ttyAMA0 custom=1"
     assert runner.make_plan(args, tmp_path / "out")["bootargs"] == args.bootargs
 
+
+@pytest.mark.parametrize("bsp", [True, False])
+@pytest.mark.parametrize("cpus", [4, 16])
+def test_plan_uses_manifest_population_without_legacy_dtb(tmp_path, saturn_dtb, bsp, cpus):
+    image = "nexios-bsp-initramfs" if bsp else "nexios-image"
+    initrd = "nexios-bsp-initramfs" if bsp else "nexios-initramfs-image"
+    for name in ("Image", "qemu", f"{image}-apollo-qvp.wic", f"{initrd}-apollo-qvp.cpio.gz"):
+        (tmp_path / name).touch()
+    saturn_dtb.unlink()
+    selected = tmp_path / f"selected-{cpus}.dtb"
+    source = '/dts-v1/; / { chosen { bootargs = "console=ttyAMA0 nr_cpus=4"; }; cpus { '
+    source += " ".join(f'cpu@{cpu:x} {{ device_type = "cpu"; }};' for cpu in range(cpus))
+    source += ' }; };'
+    subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", str(selected)],
+                   input=source, text=True, capture_output=True, check=True)
+    (tmp_path / f"{image}-apollo-qvp.qboxconf").write_text(json.dumps({
+        "images": {"dtb": selected.name}, "env": {"QBOX_APOLLO_NUM_CPUS": str(cpus)},
+    }))
+    args = runner.parser().parse_args([
+        "--qemu", str(tmp_path / "qemu"), "--deploy-dir", str(tmp_path),
+        *(["--bsp"] if bsp else []),
+    ])
+    plan = runner.make_plan(args, tmp_path / "out")
+    assert plan["source_dtb"] == str(selected)
+    assert plan["cpus"] == cpus
+    assert f"nr_cpus={cpus}" in plan["bootargs"]
+    assert not (tmp_path / "out").exists()
+
 @pytest.mark.parametrize("option", ['--autosd', '--uki', '--uboot', '--ukiboot-dir', '--native-autosd-disk', '--native-autosd-mode', '--reuse-autosd-disk'])
 def test_removed_autosd_options_are_rejected(option):
     with pytest.raises(SystemExit) as error:

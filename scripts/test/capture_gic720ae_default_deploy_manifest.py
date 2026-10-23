@@ -8,8 +8,13 @@ import json
 import os
 from pathlib import Path
 import stat
+import sys
 
 import jsonschema
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.run.qbox_dtb import deployment_dtb
 
 
 STABLE_ROLES = {
@@ -78,7 +83,8 @@ def capture(root: Path, mode: str) -> dict[str, object]:
         ]
     else:
         entries = [
-            entry(root / relative, role, False)
+            entry(deployment_dtb(root, "nexios-bsp-initramfs")
+                  if role == "dtb" else root / relative, role, False)
             for role, relative in STABLE_ROLES.items()
         ]
     exclusions = package_exclusion(root)

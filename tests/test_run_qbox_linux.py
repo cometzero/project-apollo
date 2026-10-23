@@ -269,6 +269,38 @@ def test_dtb_selection_preserves_override_and_manifest_priority(
     assert selected == str({"canonical": canonical, "manifest": legacy, "explicit": explicit}[selection])
 
 
+@pytest.mark.parametrize("configured,requested,explicit", [
+    (4, None, None), (16, None, None), (4, 16, None), (4, 16, 16), (4, 16, 4),
+])
+def test_direct_model_and_selected_dtb_populations_must_match(
+    monkeypatch, tmp_path, capsys, configured, requested, explicit,
+):
+    argv = make_deploy(monkeypatch, tmp_path)
+    population = explicit if explicit is not None else configured
+    dtb = tmp_path / "selected.dtb"
+    source = '/dts-v1/; / { cpus { ' + " ".join(
+        f'cpu@{cpu:x} {{ device_type = "cpu"; }};' for cpu in range(population)
+    ) + ' }; };'
+    subprocess.run(["dtc", "-I", "dts", "-O", "dtb", "-o", str(dtb)],
+                   input=source, text=True, capture_output=True, check=True)
+    environment = runner.provider_environment(None, None)
+    environment.update(QBOXCONF_IMAGE_AP_DTB=str(dtb), QBOXCONF_APOLLO_NUM_CPUS=str(configured))
+    monkeypatch.setattr(runner, "provider_environment", lambda *args: environment)
+    if requested is not None:
+        argv += ["--cpus", str(requested)]
+    if explicit is not None:
+        argv += ["--dtb", str(dtb)]
+    monkeypatch.setattr(sys, "argv", argv)
+    expected = requested or configured
+    if expected != population:
+        with pytest.raises(ValueError, match="image manifest selects|describes .* CPUs"):
+            runner.main()
+    else:
+        assert runner.main() == 0
+        plan = json.loads(capsys.readouterr().out)
+        assert plan["environment"]["QBOX_APOLLO_NUM_CPUS"] == str(expected)
+
+
 def test_dashboard_ssh_is_pinned_to_loopback(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "argv", make_deploy(monkeypatch, tmp_path) + ["--ssh-port", "2245"])
     assert runner.main() == 0

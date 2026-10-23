@@ -19,6 +19,10 @@ from typing import Final
 
 import jsonschema
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.run.qbox_dtb import LEGACY_DTB, read_dtb_config
+
 try:
     import qbox_apollo_pcie_irq_artifacts as artifact_io
     import qbox_apollo_pcie_irq_contract as profile_contract
@@ -69,10 +73,7 @@ validate_warning_clean_overlay = gic_overlay.validate_warning_clean_overlay
 
 
 def artifact_map(items: dict[str, Artifact]) -> JsonObject:
-    payload: JsonObject = {}
-    for name, item in items.items():
-        payload[name] = item
-    return payload
+    return dict(items)
 
 
 def prepare(
@@ -236,16 +237,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--fvp-reference-gate", required=True, type=Path)
     parser.add_argument("--base-disk", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.wic")
     parser.add_argument(
-        "--base-dtb", type=Path, default=DEFAULT_DEPLOY / "apollo-qvp-saturn-v.dtb"
+        "--base-dtb", type=Path,
+        help="override the base disk's image-manifest DTB",
     )
     parser.add_argument("--base-initramfs", type=Path, default=DEFAULT_DEPLOY / "nexios-bsp-initramfs-apollo-qvp.cpio.gz")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUT)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.base_dtb is None:
+        selected, _ = read_dtb_config(args.base_disk.with_suffix(".qboxconf"))
+        args.base_dtb = selected or args.base_disk.parent / LEGACY_DTB
+    return args
 
 
 def main() -> int:
-    args = parse_args()
     try:
+        args = parse_args()
         manifest = prepare(
             args.fvp_reference_gate,
             args.base_disk,
@@ -254,12 +260,7 @@ def main() -> int:
             args.output_dir,
             [sys.executable, *sys.argv],
         )
-    except (
-        ProfileError,
-        OSError,
-        json.JSONDecodeError,
-        jsonschema.ValidationError,
-    ) as error:
+    except (ProfileError, OSError, ValueError, jsonschema.ValidationError) as error:
         print(error)
         return 1
     print(manifest)

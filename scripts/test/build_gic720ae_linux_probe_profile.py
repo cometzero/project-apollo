@@ -186,11 +186,17 @@ def write_override(
     )
     lines.append('INSANE_SKIP:openvswitch-src += "buildpaths"')
     lines.append(f'IMAGE_INSTALL:append = " {args.package}"')
-    lines.append(
-        f'KERNEL_DEVICETREE:pn-{args.image} = "apollo-qvp-saturn-v.dtb"'
-    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def kernel_dtb_path(args, include, workspace, environment, logs) -> Path:
+    selected = bitbake_value(
+        "linux-yocto-rt", "KERNEL_DEVICETREE", include, workspace, environment, logs,
+    ).split()
+    if len(selected) != 1:
+        fail("ambiguous_kernel_dtb", " ".join(selected))
+    return args.deploy_dir_image / Path(selected[0]).name
 
 
 def one(paths: list[Path], role: str) -> Path:
@@ -385,8 +391,8 @@ def main() -> int:
             bitbake + ["linux-yocto-rt", "-c", "deploy"],
             workspace, environment, logs / "kernel-deploy.log", args.timeout,
         )
-        base_dtb = args.deploy_dir_image / "apollo-qvp-saturn-v.dtb"
-        base_copy = args.output_root / "base-apollo-qvp-saturn-v.dtb"
+        base_dtb = kernel_dtb_path(args, include, workspace, environment, logs)
+        base_copy = args.output_root / ("base-" + base_dtb.name)
         copy_artifact(base_dtb, base_copy)
         interrupt_parent = run(
             ["fdtget", "-t", "x", str(base_copy), "/", "interrupt-parent"],

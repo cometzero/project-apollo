@@ -30,6 +30,27 @@ AP_COMPUTE = (
 )
 
 
+@pytest.mark.parametrize("selected", [None, "apollo-qvp-saturn-v-4cpus.dtb", "apollo-qvp-saturn-v.dtb"])
+def test_default_dtb_follows_base_disk_manifest(tmp_path, monkeypatch, selected):
+    builder = load_module(BUILDER_PATH, "qbox_profile_dtb")
+    disk = tmp_path / "bsp-image.wic"
+    if selected:
+        disk.with_suffix(".qboxconf").write_text(json.dumps({"images": {"dtb": selected}}))
+    monkeypatch.setattr(sys, "argv", [str(BUILDER_PATH), "--base-disk", str(disk),
+                                    "--fvp-reference-gate", str(GATE)])
+    assert builder.parse_args().base_dtb == tmp_path / (selected or "apollo-qvp-saturn-v.dtb")
+
+
+def test_explicit_base_dtb_preserves_override(tmp_path, monkeypatch):
+    builder = load_module(BUILDER_PATH, "qbox_profile_explicit_dtb")
+    disk = tmp_path / "bsp-image.wic"
+    disk.with_suffix(".qboxconf").write_text("invalid and unused manifest")
+    override = tmp_path / "profile.dtb"
+    monkeypatch.setattr(sys, "argv", [str(BUILDER_PATH), "--base-disk", str(disk),
+                                    "--base-dtb", str(override), "--fvp-reference-gate", str(GATE)])
+    assert builder.parse_args().base_dtb == override
+
+
 def test_cli_requires_canonical_fvp_reference_gate(tmp_path: Path) -> None:
     result = subprocess.run(
         [

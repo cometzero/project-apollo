@@ -13,6 +13,7 @@ import re
 import shutil
 import struct
 import subprocess
+import sys
 import threading
 import time
 import wave
@@ -20,6 +21,10 @@ import wave
 from qbox_audio_health import apply_audio_checks
 from verify_qemu_i2s import ROOT, assess
 from verify_qemu_i2s_wav import digest, guest_script, pcm
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.run.qbox_dtb import deployment_dtb
 
 
 def guest_suite(port):
@@ -169,15 +174,22 @@ def run_mode(args, output, serve, mode, port):
     return result
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out-dir', type=Path, required=True)
     parser.add_argument('--conf', type=Path, help='Linux Lua entry, including an installed provider copy')
-    parser.add_argument('--dtb', type=Path, default=ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp/apollo-qvp-saturn-v.dtb')
+    parser.add_argument('--dtb', type=Path, help='override the BSP image-manifest DTB')
     parser.add_argument('--timeout', type=float, default=900)
     parser.add_argument('--mode', choices=('dma', 'pio', 'both'), default='both')
     parser.add_argument('--tests', choices=('all', 'memory', 'wav'), default='all')
     args = parser.parse_args()
+    args.dtb = args.dtb or deployment_dtb(
+        ROOT / 'build/tmp_baremetal/deploy/images/apollo-qvp', 'nexios-bsp-initramfs')
+    return args
+
+
+def main():
+    args = parse_args()
     output = args.out_dir.absolute()
     output.mkdir(parents=True, exist_ok=False)
     serve = output / 'http'

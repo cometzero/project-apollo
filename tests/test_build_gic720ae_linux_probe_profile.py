@@ -76,3 +76,30 @@ def test_force_clean_removes_only_isolated_deploy_children(
 
     assert list(deploy.iterdir()) == []
     assert sibling.read_text(encoding="utf-8") == "preserve"
+
+
+@pytest.mark.parametrize("name", ["apollo-qvp-saturn-v-4cpus.dtb", "apollo-qvp-saturn-v.dtb"])
+def test_probe_uses_kernel_selected_cpu_population(tmp_path, monkeypatch, name):
+    builder = load_builder()
+    args = arguments(tmp_path / "profile")
+    args.package = "gic720ae-selftest"
+    args.image = "nexios-bsp-initramfs"
+    include = tmp_path / "override.conf"
+    builder.write_override(args, include, ROOT)
+    assert "KERNEL_DEVICETREE" not in include.read_text()
+
+    def selected(recipe, variable, *unused):
+        assert (recipe, variable) == ("linux-yocto-rt", "KERNEL_DEVICETREE")
+        return f"hsoc/{name}"
+
+    monkeypatch.setattr(builder, "bitbake_value", selected)
+    assert builder.kernel_dtb_path(args, include, ROOT, {}, tmp_path) == args.deploy_dir_image / name
+
+
+@pytest.mark.parametrize("value", ["", "hsoc/first.dtb hsoc/second.dtb"])
+def test_probe_refuses_ambiguous_kernel_dt_selection(tmp_path, monkeypatch, value):
+    builder = load_builder()
+    monkeypatch.setattr(builder, "bitbake_value", lambda *args: value)
+    with pytest.raises(builder.BuildError) as error:
+        builder.kernel_dtb_path(arguments(tmp_path), tmp_path / "override.conf", ROOT, {}, tmp_path)
+    assert error.value.reason == "ambiguous_kernel_dtb"

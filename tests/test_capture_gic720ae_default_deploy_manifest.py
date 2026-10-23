@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -30,7 +31,7 @@ def populate(root: Path, suffix: str) -> None:
     (root / "nexios-bsp-initramfs-apollo-qvp.wic").symlink_to(
         f"nexios-bsp-initramfs-{suffix}.wic"
     )
-    (root / f"nexios-bsp-initramfs-{suffix}.qboxconf").write_bytes(b"conf")
+    (root / f"nexios-bsp-initramfs-{suffix}.qboxconf").write_text("{}")
     (root / "nexios-bsp-initramfs-apollo-qvp.qboxconf").symlink_to(
         f"nexios-bsp-initramfs-{suffix}.qboxconf"
     )
@@ -82,3 +83,31 @@ def test_stable_contract_ignores_datetime_names_and_symlink_text(
     payload = json.loads(output.read_text())
     assert payload["verdict"] == "PASS"
     assert "20260730" not in json.dumps(payload)
+
+
+def test_stable_contract_captures_selected_population_without_legacy_dtb(tmp_path):
+    deploy = tmp_path / "deploy"
+    populate(deploy, "fixture")
+    (deploy / "apollo-qvp-saturn-v.dtb").unlink()
+    selected = deploy / "apollo-qvp-saturn-v-4cpus.dtb"
+    selected.write_bytes(b"selected-four-cpu-tree")
+    (deploy / "nexios-bsp-initramfs-apollo-qvp.qboxconf").write_text(
+        json.dumps({"images": {"dtb": selected.name}})
+    )
+    output = tmp_path / "stable.json"
+    result = run_capture(
+        "--root", str(deploy), "--mode", "stable-contract",
+        "--schema", str(SCHEMA), "--output", str(output),
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(output.read_text())
+    tree = next(entry for entry in payload["entries"] if entry["role"] == "dtb")
+    assert tree["sha256"] == hashlib.sha256(selected.read_bytes()).hexdigest()
+    selected.unlink()
+    (deploy / "apollo-qvp-saturn-v.dtb").write_bytes(b"stale-sixteen-cpu-tree")
+    result = run_capture(
+        "--root", str(deploy), "--mode", "stable-contract",
+        "--schema", str(SCHEMA), "--output", str(output),
+    )
+    assert result.returncode == 1
+    assert json.loads(output.read_text())["verdict"] == "FAIL"

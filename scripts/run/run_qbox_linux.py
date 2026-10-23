@@ -21,6 +21,7 @@ import tty
 ROOT = Path(__file__).resolve().parents[2]
 from qbox_load_stats import LoadStats, add_arguments as add_stats_arguments, interval_from_args, drain_output
 from qbox_monitor_manifest import monitor_plan, monitor_environment, preflight as monitor_preflight, update_runtime, prepare_qmp
+from qbox_dtb import resolve_cpu_count
 
 
 def parser() -> argparse.ArgumentParser:
@@ -40,7 +41,8 @@ def parser() -> argparse.ArgumentParser:
                    help="copy the disk into the run directory (default: use the source disk)")
     p.add_argument("--ssh-port", type=int,
                    help="forward loopback TCP port to guest SSH through user networking")
-    p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
+    p.add_argument("--cpus", type=int, choices=range(1, 17),
+                   help="AP CPUs (default: image manifest, or 4 for legacy inputs)")
     p.add_argument("--monitor", action="store_true", help="enable read-only loopback monitor")
     p.add_argument("--monitor-port", type=int, help="monitor TCP port (implies --monitor)")
     p.add_argument("--qmp", action="store_true", help="opt in to AP QMP biflow (implies monitor)")
@@ -415,6 +417,11 @@ def main() -> int:
         args.dtb or Path(env.get("QBOXCONF_IMAGE_AP_DTB") or deploy / "apollo-qvp-saturn-v.dtb"),
         "Linux DTB",
     )
+    configured_cpus = env.get("QBOXCONF_APOLLO_NUM_CPUS")
+    args.cpus = resolve_cpu_count(
+        args.cpus, int(configured_cpus) if configured_cpus else None,
+        dtb, explicit_dtb=args.dtb is not None,
+    )
     initrd_image = "nexios-bsp-initramfs" if args.bsp else "nexios-initramfs-image"
     initrd = required(
         args.initrd or deploy / f"{initrd_image}-apollo-qvp.cpio.gz",
@@ -440,7 +447,7 @@ def main() -> int:
         ).strip()
         if not args.bsp:
             bootargs += " rootwait root=PARTLABEL=rootro_a ro"
-        # CPU population is a runtime choice; preserve the DT topology.
+        # The selected DT and model population were checked above.
         bootargs = re.sub(r"\bnr_cpus=\d+\b", f"nr_cpus={args.cpus}", bootargs)
     stats_enabled = interval_from_args(args) is not None
     monitor = monitor_plan(args.monitor or args.qmp or stats_enabled, args.monitor_port, out, cpus=args.cpus)

@@ -18,6 +18,7 @@ import sys
 import time
 
 from run_qbox_linux import ROOT, console, required, start_tmux
+from qbox_dtb import LEGACY_DTB, read_dtb_config, resolve_cpu_count
 
 
 def parser() -> argparse.ArgumentParser:
@@ -26,6 +27,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--build-dir", type=Path, default=ROOT / "build")
     p.add_argument("--deploy-dir", type=Path)
     p.add_argument("--provider", type=Path, help="qemu-apollo-native deployment manifest")
+    p.add_argument("--qboxconf", type=Path, help="image DT/CPU metadata (QBox provider not required)")
     p.add_argument("--qemu", type=Path, help="override standalone qemu-system-aarch64")
     p.add_argument("--kernel", type=Path)
     p.add_argument("--initrd", type=Path)
@@ -33,7 +35,8 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--dtb", type=Path, help="override the deployed Saturn device tree")
     p.add_argument("--i2s-mode", choices=("dma", "pio"), default="dma",
                    help="I2S transfer mode configured by QEMU (default: dma)")
-    p.add_argument("--cpus", type=int, choices=range(1, 17), default=4)
+    p.add_argument("--cpus", type=int, choices=range(1, 17),
+                   help="AP CPUs (default: image manifest, or 4 for legacy inputs)")
     p.add_argument("--memory", default="4080M", help="Apollo DRAM size, default 4080M")
     p.add_argument("--bootargs", help="replace the default Linux command line")
     p.add_argument("--netdev", default="user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22",
@@ -67,19 +70,24 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
     kernel = required(args.kernel or deploy / "Image", "Linux Image")
     initrd = required(args.initrd or deploy / f"{initrd_name}-apollo-qvp.cpio.gz", "initramfs")
     disk = required(args.rootfs or deploy / f"{image}-apollo-qvp.wic", "rootfs disk")
-    dtb = required(args.dtb or deploy / "apollo-qvp-saturn-v.dtb", "Saturn DTB")
+    selected_dtb, configured_cpus = read_dtb_config(
+        args.qboxconf or deploy / f"{image}-apollo-qvp.qboxconf"
+    )
+    dtb = required(args.dtb or selected_dtb or deploy / LEGACY_DTB, "Saturn DTB")
+    cpus = resolve_cpu_count(args.cpus, configured_cpus, dtb,
+                             explicit_dtb=args.dtb is not None)
     bootargs = args.bootargs
     if not bootargs:
         bootargs = subprocess.check_output(
             ["fdtget", str(dtb), "/chosen", "bootargs"], text=True,
         ).strip()
-        bootargs = re.sub(r"\bnr_cpus=\d+\b", f"nr_cpus={args.cpus}", bootargs)
+        bootargs = re.sub(r"\bnr_cpus=\d+\b", f"nr_cpus={cpus}", bootargs)
         if not args.bsp:
             bootargs += " rootwait root=PARTLABEL=rootro_a ro"
     bootargs = bootargs or ""
     machine = "apollo-qvp" + (",i2s-dma=off" if args.i2s_mode == "pio" else "")
     command = [str(executable), "-machine", machine, "-accel", "tcg",
-               "-smp", str(args.cpus), "-m", args.memory, "-display", "none",
+               "-smp", str(cpus), "-m", args.memory, "-display", "none",
                "-chardev", "socket,id=hmp,fd=@MONITOR_FD@",
                "-mon", "chardev=hmp,mode=readline",
                "-chardev", "stdio,id=uart,signal=off",
@@ -93,7 +101,7 @@ def make_plan(args: argparse.Namespace, out: Path) -> dict:
     command += ["-dtb", str(dtb)]
     return {"command": command, "environment": environment, "bsp": args.bsp,
             "boot_method": "direct-linux", "disk_path": str(out / "rootfs.wic"),
-            "cpus": args.cpus, "source_rootfs": str(disk), "kernel": str(kernel),
+            "cpus": cpus, "source_rootfs": str(disk), "kernel": str(kernel),
             "source_dtb": str(dtb), "bootargs": bootargs,
             "initrd": str(initrd) if initrd else None, "provider": str(provider) if not args.qemu else None,
             "layout": "Linux UART 70%; QEMU monitor and interactive shell 15% each"}
