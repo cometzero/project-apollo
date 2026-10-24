@@ -10,7 +10,7 @@ import pytest
 
 from scripts.test.apollo_lua_descriptor import (
     DescriptorError, descriptor_differences, evaluate_modules, normalize_file_paths,
-    plain_descriptor,
+    plain_descriptor, evaluate_source,
 )
 from scripts.test.apollo_ap_map_lua import load_module_graph
 from scripts.test.apollo_lua_contracts import contracts
@@ -97,6 +97,107 @@ def test_every_migrated_full_map_check_has_a_semantic_predicate():
              if path == "APOLLO_DESCRIPTOR"}
     assert names <= result.keys()
     assert all(result[name] for name in names)
+
+
+@pytest.mark.parametrize("cpu_count", ["4", "16"])
+def test_ae_mailbox_peers_and_fmu_fault_reset_routes(cpu_count):
+    platform = plain_descriptor(evaluate_source(
+        APOLLO, entrypoint="apollo-qvp-saturn-v.lua",
+        environment={"QBOX_APOLLO_NUM_CPUS": cpu_count},
+    )["descriptor"])
+    peers = {}
+    for name, device in platform.items():
+        if isinstance(device, dict) and device.get("moduletype") == "mhu320ae":
+            peers.setdefault(device["pair"], {})[device["frame"]] = device
+    assert peers
+    for pair in peers.values():
+        assert set(pair) == {"pbx", "mbx"}
+        for parameter, expected in (("fast_channel_count", 64),
+                                    ("fast_channels_per_group", 32),
+                                    ("fast_channel_word_bits", 32)):
+            assert pair["pbx"][parameter] == pair["mbx"][parameter] == expected
+    for name in ("ap_to_si_cl0_ns", "si_cl0_to_ap_ns"):
+        assert all(peer["ras_enable"] for peer in peers[name].values())
+
+    gic = platform["ap_gic_multiview"]
+    assert gic["backend_multi_view"] and platform["ap_gic"]["has_multi_view"]
+    assert gic["backend_socket"]["bind"] == "&ap_gic_backend_router.target_socket"
+    assert platform["ap_gic"]["dist_iface"]["bind"] == "&ap_gic_backend_router.initiator_socket"
+    assert platform["ap_gic"]["dist_iface"]["address"] == gic["backend_dist_base"] == 0x60000000
+    assert gic["view0_dist"]["address"] == 0x20000000
+    assert gic["view1_dist"]["address"] == 0x20800000
+    assert gic["view1_dist"]["bind"] == "&ap_router.initiator_socket"
+    assert gic["view_redist_stride"] == 0x40000
+    assert gic["view1_redists"] == {
+        "address": 0x20880000, "size": int(cpu_count) * 0x40000,
+        "bind": "&ap_router.initiator_socket", "priority": 0,
+    }
+    for cpu in range(int(cpu_count)):
+        raw = platform["ap_gic"][f"redist_iface_{cpu}"]
+        assert raw["bind"] == "&ap_gic_backend_router.initiator_socket"
+        assert raw["address"] == gic["backend_redist_base"] + cpu * 0x40000
+        assert raw["address"] >= 0x61000000
+        assert raw["size"] == 0x40000
+        assert f"view1_redist_{cpu}" not in gic
+        assert gic[f"view0_redist_{cpu}"]["address"] == 0x20080000 + cpu * 0x40000
+
+    assert "mem" not in platform["ap_gic_its"]
+    assert gic["its"]["address"] == 0x20840000
+    assert gic["its"]["bind"] == "&ap_router.initiator_socket"
+    assert gic["backend_its_socket"]["bind"] == "&ap_gic_its.mem"
+    assert gic["internal_spi"]["bind"] == "&ap_gic.internal_spi"
+    si = platform["si_gic_multiview"]
+    assert si["backend_socket"]["bind"] == "&si_gic_backend_router.target_socket"
+    assert si["fmu_error_socket"]["bind"] == "&si_cl0_gic_fmu.error_socket"
+    for cluster in (0, 1):
+        raw = platform[f"si_cl{cluster}_gic"]
+        assert raw["has_multi_view"]
+        assert raw["dist_iface"]["bind"] == "&si_gic_backend_router.initiator_socket"
+    assert platform["si_cl0_ap_ns_mhu_mbx"]["fmu_fault_socket"]["bind"] == "&si_cl0_pc0_cl0_mhu_fmu.error_socket"
+    assert platform["host_ap_si_ns_scmi_mhu_mbx"]["fmu_fault_socket"]["bind"] == "&si_cl0_cl0_pc0_mhu_fmu.error_socket"
+
+    leaves = {name: device for name, device in platform.items()
+              if isinstance(device, dict) and device.get("moduletype") == "zena_device_fmu"}
+    assert len(leaves) == 11
+    reset_bindings = [value["bind"] for device in platform.values()
+                      if isinstance(device, dict) for value in device.values()
+                      if isinstance(value, dict) and "bind" in value
+                      and "&si_cl0_fmu.reset_in" in value["bind"]]
+    assert reset_bindings
+    assert "&ap_gic_multiview.reset" not in platform["ap_cold_reset_fanout"]["reset_out"]["bind"]
+    assert all("&ap_gic_multiview.reset" in binding for binding in reset_bindings)
+    records = set()
+    for name, device in leaves.items():
+        assert device["clock_period_ns"] == 8
+        assert device["mhu_profile"] == (name != "si_cl0_gic_fmu")
+        assert device["fault_socket"]["bind"] == "&si_cl0_fmu.device_fault_socket"
+        for key in ("parent_critical_record", "parent_non_critical_record"):
+            record = (device["parent_bank"], device[key])
+            assert record not in records
+            records.add(record)
+        for binding in reset_bindings:
+            assert binding.index("&" + name + ".reset_in") < binding.index("&si_cl0_fmu.reset_in")
+
+    critical_records = {tuple(map(int, record.split(":")))
+                        for record in platform["si_cl0_fmu"]["critical_records"].split(",")}
+    assert {(0, record) for record in (0, 2, 4, 6)} <= critical_records
+    ni_leaves = {name: device for name, device in platform.items()
+                 if isinstance(device, dict) and device.get("moduletype") == "zena_ni710ae_fmu"}
+    assert len(ni_leaves) == 6
+    for name, device in {**leaves, **ni_leaves}.items():
+        assert (device["parent_bank"], device["parent_critical_record"]) in critical_records
+        assert (device["parent_bank"], device["parent_non_critical_record"]) not in critical_records
+    for name, device in ni_leaves.items():
+        assert device["fault_socket"]["bind"] == "&si_cl0_fmu.device_fault_socket"
+        assert device.get("critical_vector", 0) == 0
+        assert device["parent_bank"] == 1
+        assert device["parent_fault_record"] == device["parent_non_critical_record"] + 1
+        for key in ("parent_critical_record", "parent_non_critical_record", "parent_fault_record"):
+            record = (device["parent_bank"], device[key])
+            assert record not in records
+            records.add(record)
+        for binding in reset_bindings:
+            assert binding.index("&" + name + ".reset_in") < binding.index("&si_cl0_fmu.reset_in")
 
 
 def test_full_map_rejects_wrong_effective_irq_after_component_split(tmp_path):

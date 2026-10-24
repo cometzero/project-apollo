@@ -78,7 +78,10 @@ def contracts(source_root: Path) -> dict[str, bool]:
         "platform:live-ap-rse-default": eq("host_ap_rse_mhu_pbx.protocol", "doorbell-bridge")
                                        and eq("host_ap_rse_mhu_mbx.protocol", "doorbell-bridge"),
         "platform:ap-dram-in-ap-view": ap_bound("host_ap_dram1", "target_socket"),
-        "platform:ap-gic-in-ap-view": ap_bound("ap_gic", "dist_iface"),
+        "platform:ap-gic-in-ap-view": ap_bound("ap_gic_multiview", "view0_dist")
+            and eq("ap_gic_multiview.view1_dist.address", 0x20800000)
+            and bind("ap_gic_multiview", "backend_socket", "&ap_gic_backend_router.target_socket")
+            and bind("ap_gic", "dist_iface", "&ap_gic_backend_router.initiator_socket"),
         "platform:ap-gpex-in-ap-view": ap_bound("ap_gpex_0", "ecam_iface"),
         "platform:gpex-systemc-smmu-tbu": bind("ap_gpex_0", "bus_master", "&ap_smmu_lti00.upstream_socket")
                                          and exists("ap_smmu_lti00", "smmuv3_tbu"),

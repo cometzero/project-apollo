@@ -43,6 +43,11 @@ local boot_address = platform.linux_loader[1].address
 local sram = platform.host_ap_shared_sram.target_socket
 assert(boot_address == platform.ap_cpu_0.rvbar)
 assert(boot_address >= sram.address and boot_address + 0x10000 <= sram.address + sram.size)
+for _, entry in ipairs(platform.linux_loader) do
+    -- GIC MMIO belongs to the boot payload, after SystemC elaboration.
+    assert(entry.bin_file and not entry.data)
+end
+assert(platform.ap_gic_multiview.view_redist_stride == 0x40000)
 assert(not platform.qemu_inst and not platform.si_cl0_qemu_inst)
 assert(not platform.si_cl1_qemu_inst and not platform.ap_bl2_reset_loader)
 local first_empty = os.getenv("QBOX_RDASPEN_ROOTFS") == "" and 0 or 1
