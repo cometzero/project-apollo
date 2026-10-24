@@ -41,11 +41,16 @@ def parser():
     p.add_argument("--interleave-bytes", type=int, choices=(64, 512, 1024), default=64,
                    help="DRAM channel stripe; Home-node stripe remains 64 bytes")
     p.add_argument("--profile", type=Path, default=SOURCE / "configs/zena_cmn/profiles/a720ae_documented.yaml")
-    p.add_argument("--workload", choices=("boot", "smoke", "cache", "dram", "command"), default="boot")
+    p.add_argument("--workload", choices=("boot", "smoke", "cache", "dram", "dram-multicore", "command"), default="boot")
+    p.add_argument("--workers", type=int, choices=(1, 4, 8, 16),
+                   help="dram-multicore pinned workers (default: --cpus)")
+    p.add_argument("--memory-mode", choices=("read", "copy", "triad"),
+                   help="dram-multicore operation (default: read)")
     commands = p.add_mutually_exclusive_group()
     commands.add_argument("--command", help="guest shell command for --workload command (runs in initramfs)")
     commands.add_argument("--command-file", type=Path, help="host shell script for --workload command, delivered through readfile")
-    p.add_argument("--size-kib", type=int)
+    p.add_argument("--size-kib", type=int,
+                   help="working set in KiB; dram-multicore uses this size per array (read 1, copy 2, triad 3)")
     p.add_argument("--passes", type=int, default=2)
     p.add_argument("--bootargs", help="replace Linux command line")
     p.add_argument("--out-dir", type=Path)
@@ -129,6 +134,15 @@ def prepare_initrd(base, out, args, benchmark=None):
             if args.size_kib:
                 command += ["--size-kib", str(args.size_kib)]
             command = shlex.join(command)
+        elif args.workload == "dram-multicore":
+            mode = args.memory_mode or "read"
+            command = shlex.join([
+                "/usr/bin/apollo-memory-bench", "--mode", "stream" if mode == "triad" else mode,
+                "--kernel", "neon" if mode == "read" else "scalar",
+                "--workers", str(args.workers or args.cpus), "--passes", str(args.passes),
+                "--array-mib", str((args.size_kib or 65536) // 1024),
+                "--initialize-before-switch",
+            ])
         elif args.workload == "smoke":
             command = "echo APOLLO_SMOKE=PASS"
         else:
@@ -281,6 +295,15 @@ def main():
         p.error("timeout and max-ticks must be finite and positive")
     if not 1 <= args.passes <= 1024 or (args.size_kib is not None and not 1 <= args.size_kib <= 262144):
         p.error("passes must be 1..1024 and size-kib must be 1..262144")
+    if args.workers is not None and (args.workload != "dram-multicore" or args.workers > args.cpus):
+        p.error("--workers requires dram-multicore and must not exceed --cpus")
+    if args.memory_mode is not None and args.workload != "dram-multicore":
+        p.error("--memory-mode requires --workload dram-multicore")
+    if args.workload == "dram-multicore":
+        if args.bsp or args.benchmark:
+            p.error("dram-multicore requires the gem5 initramfs without a benchmark override")
+        if args.passes not in (1, 2, 4, 8) or (args.size_kib is not None and args.size_kib % 1024):
+            p.error("dram-multicore requires passes 1|2|4|8 and size-kib in whole MiB")
     if (args.workload == "command") != bool(args.command or args.command_file):
         p.error("--workload command requires --command or --command-file, and vice versa")
     if args.command_file and not args.command_file.is_file():
@@ -294,7 +317,9 @@ def main():
     inputs = resolve(args)
     if args.dry_run:
         print(json.dumps({"inputs": inputs, "cpus": args.cpus, "channels": args.channels,
-                          "interleave_bytes": args.interleave_bytes, "workload": args.workload}, indent=2))
+                          "interleave_bytes": args.interleave_bytes, "workload": args.workload,
+                          "memory_mode": (args.memory_mode or "read") if args.workload == "dram-multicore" else None,
+                          "workers": args.workers or args.cpus if args.workload == "dram-multicore" else None}, indent=2))
         return 0
     out = (args.out_dir or ROOT / "build/qbox-apollo-qvp/gem5" / time.strftime("%Y%m%d-%H%M%S")).resolve()
     if not args.headless and not args.direct:
@@ -346,6 +371,7 @@ def main():
         env["PYTHONHOME"] = metadata["python_home"]
     manifest = {"inputs": inputs, "command": command, "workload": args.workload,
                 "interleave_bytes": args.interleave_bytes,
+                "memory_mode": (args.memory_mode or "read") if args.workload == "dram-multicore" else None,
                 "model": "UNCALIBRATED_PROXY", "rootfs_access": "read-only base with in-memory COW" if inputs["rootfs"] else "none",
                 "gem5_sha256": sha256(inputs["gem5"]),
                 "guest_initrd_sha256": sha256(initrd),
@@ -371,10 +397,22 @@ def main():
                 temporary.write_text(json.dumps(contract, indent=2) + "\n")
                 temporary.replace(args.checkpoint / "launcher.json")
                 result.update(status="CHECKPOINT_SAVED", checkpoint=str(args.checkpoint.resolve()))
+    elif args.workload == "dram-multicore" and rc == 0 and not timed_out and "APOLLO_WORKLOAD_EXIT=0" in text:
+        from benchmark import summarize_multicore
+        try:
+            result["measurement"] = summarize_multicore(
+                out / "m5out", serial, workers=args.workers or args.cpus,
+                size_bytes=(args.size_kib or 65536) * 1024,
+                passes=args.passes, channels=args.channels, mode=args.memory_mode or "read")
+            result["status"] = "PASS"
+        except (ValueError, KeyError, OSError) as exc:
+            result["measurement_error"] = str(exc)
     elif args.workload in ("cache", "dram") and rc == 0 and not timed_out:
         from benchmark import summarize
         try:
-            result["measurement"] = summarize(out / "m5out", serial)
+            result["measurement"] = summarize(
+                out / "m5out", serial, mode=args.workload, passes=args.passes,
+                size_bytes=(args.size_kib or (32 if args.workload == "cache" else 65536)) * 1024)
             result["status"] = "PASS"
         except (ValueError, KeyError, OSError) as exc:
             result["measurement_error"] = str(exc)

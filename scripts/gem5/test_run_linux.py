@@ -45,6 +45,33 @@ def entries(data):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_multicore_command_preserves_snapshot_initrd(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = bytearray()
+            run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+            (root / "base").write_bytes(archive)
+            args = run_linux.parser().parse_args([
+                "--workload", "dram-multicore", "--cpus", "16", "--passes", "1",
+                "--interleave-bytes", "512"])
+            output = run_linux.prepare_initrd(root / "base", root, args)
+            self.assertEqual(output.read_bytes(), archive)
+            self.assertIn(
+                "/usr/bin/apollo-memory-bench --mode read --kernel neon "
+                "--workers 16 --passes 1 --array-mib 64 --initialize-before-switch",
+                (root / "guest-init.sh").read_text())
+            for mode, guest_mode, kernel in (
+                ("read", "read", "neon"), ("copy", "copy", "scalar"),
+                ("triad", "stream", "scalar"),
+            ):
+                args.memory_mode, args.size_kib = mode, 32768
+                output = run_linux.prepare_initrd(root / "base", root, args)
+                self.assertEqual(output.read_bytes(), archive)
+                self.assertIn(
+                    f"--mode {guest_mode} --kernel {kernel} "
+                    "--workers 16 --passes 1 --array-mib 32 --initialize-before-switch",
+                    (root / "guest-init.sh").read_text())
+
     def test_command_file_preserves_snapshot_initrd(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -332,6 +359,14 @@ with socket.socket() as listener:
             ["--cpus", "3"],
             ["--cpus", "8"],
             ["--interleave-bytes", "128"],
+            ["--workers", "4"],
+            ["--memory-mode", "read"],
+            ["--workload", "cache", "--memory-mode", "copy"],
+            ["--workload", "dram-multicore", "--memory-mode", "stream"],
+            ["--workload", "dram-multicore", "--workers", "16"],
+            ["--workload", "dram-multicore", "--passes", "3"],
+            ["--workload", "dram-multicore", "--size-kib", "1025"],
+            ["--workload", "dram-multicore", "--bsp"],
             ["--checkpoint", "/new", "--workload", "smoke"],
             ["--checkpoint", "/new", "--bsp"],
             ["--resume", "/saved", "--rootfs", "/disk"],
