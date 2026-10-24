@@ -3,6 +3,7 @@
 
 import json
 import math
+import re
 from pathlib import Path
 import sys
 
@@ -36,8 +37,15 @@ def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, chan
         if type(guest.get(key)) is not type(value) or guest[key] != value:
             raise ValueError(f"guest workload mismatch: {key}")
     stats = stats_blocks(stats_text)[result["roi"]["stats_block_index"]]
-    instructions = {str(cpu): stats.get(f"system.roi_cpu{cpu}.commitStats0.numInsts")
-                    for cpu in range(workers)}
+    committed = {}
+    for name, value in stats.items():
+        match = re.fullmatch(r"system\.roi_cpu(\d+)\.commitStats0\.numInsts", name)
+        if match:
+            cpu = int(match[1])
+            if cpu in committed:
+                raise ValueError("ambiguous O3 committed instruction counters")
+            committed[cpu] = value
+    instructions = {str(cpu): committed.get(cpu) for cpu in range(workers)}
     if any(value is None or value <= 0 for value in instructions.values()):
         raise ValueError("missing O3 committed instructions for a pinned worker")
     traffic = result["dram"]["channels"]

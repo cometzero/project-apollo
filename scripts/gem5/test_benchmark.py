@@ -56,6 +56,17 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["cache_counters"]["L3"]["hits"], 16)
             self.assertEqual(summary["cache_counters"]["SLC_proxy"]["hits"], 32)
             self.assertTrue((out / "roi-summary.json").is_file())
+            padded = re.sub(r"system\.roi_cpu(\d+)\.",
+                            lambda m: f"system.roi_cpu{int(m[1]):02d}.", stats)
+            (out / "stats.txt").write_text(padded)
+            self.assertEqual(collect()["worker_committed_instructions"],
+                             summary["worker_committed_instructions"])
+            (out / "stats.txt").write_text(padded.replace(
+                "finalTick 3000\n",
+                "finalTick 3000\nsystem.roi_cpu0.commitStats0.numInsts 100\n"))
+            with self.assertRaisesRegex(ValueError, "ambiguous"):
+                collect()
+            (out / "stats.txt").write_text(stats)
             for key, value in (("checksum", 1), ("workers", 4), ("kernel", "scalar")):
                 serial.write_text("CMN_RESULT " + json.dumps({**guest, key: value}) + "\n")
                 with self.assertRaises(ValueError):
