@@ -80,7 +80,7 @@ build/
 ├── conf/                         local build inputs; generated resource conf 포함
 ├── tmp_baremetal/
 │   ├── work/
-│   │   ├── x86_64-linux/gem5-native/1.0/
+│   │   ├── x86_64-linux/gem5-native/26.0.0.0/
 │   │   │   ├── build/ARM/gem5.opt
 │   │   │   ├── recipe-sysroot-native/
 │   │   │   └── temp/log.do_*, run.do_*
