@@ -1,12 +1,14 @@
 # Apollo gem5 기술 문서
 
-Apollo의 **AP domain에서 Linux와 memory workload를 실행하는 gem5 구성**을 설명한다.
+Apollo의 **AP domain Linux** 및 **standalone SI CL1 Zephyr** gem5 구성을 설명한다.
 문서 기준일은 **2026-10-24**다. 현재 checkout의 코드·Yocto metadata, v26 build/boot 검증과 보존된 v4
 benchmark 실행 증거를 기준으로 작성했다. 기술 용어와 실제 API·파일·CLI 이름은 English로 유지한다.
 
-이 구성은 Cortex-A720AE·DSU·CMN-S3AE·LPDDR5X의 **uncalibrated proxy**다.
+AP 구성은 Cortex-A720AE·DSU·CMN-S3AE·LPDDR5X의 **uncalibrated proxy**다.
 RSE·SCP·Safety Island를 포함하는 Apollo full-system QBox 구성이나 silicon의
-cycle accuracy를 제공한다고 해석하지 않는다. `PASS`는 명시된 모델·실행 조건에 대한 판정이다.
+cycle accuracy를 제공한다고 해석하지 않는다. standalone SI CL1은 AP와 별도 process에서
+실행하며 자세한 범위는 [SI CL1 guide](si-cl1-zephyr-guide.md)를 따른다.
+`PASS`는 명시된 모델·실행 조건에 대한 판정이다.
 
 ## 읽는 순서
 
@@ -22,6 +24,8 @@ cycle accuracy를 제공한다고 해석하지 않는다. `PASS`는 명시된 �
 | [Orin hardware 비교](orin-validation-results.md) | 같은 benchmark의 실제 보드 실행, clock·affinity·prefetch 비교 조건 | hardware/model 정합성 담당자 |
 | [Orin bandwidth 개선](orin-bandwidth-tuning.md) | 공개 STREAM/BabelStream 실측값 재현, OpenMP·cluster affinity·working set 비교 | hardware memory 성능 측정 담당자 |
 | [Orin 기반 gem5 재측정](orin-informed-benchmark-results.md) | random cache sweep, multicore read/copy/triad, prefetch A/B와 ROI 검증 | benchmark/model 개발 담당자 |
+| [SI CL1 측정 결과](si-cl1-benchmark-results.md) | memory 12 cases, IRQ 48 samples, realtime 32 jobs, exact ROI replay | 성능 분석 담당자 |
+| [SI CL1 Zephyr](si-cl1-zephyr-guide.md) | standalone Cortex-R82AE, Yocto/QBox/gem5, memory/realtime 측정 | Safety Island 개발 담당자 |
 | [Power/thermal model](power-model-guide.md) | Offline energy, SCMI/DVFS, online RC 및 ROI accounting | power/model 개발 담당자 |
 | [v26 stable rebase](stable-rebase-validation.md) | upstream stable 이력, 호환성 수정과 build/boot 검증 | 모델 유지보수 담당자 |
 | [검증 및 유지보수](validation.md) | evidence 수준, 확인 명령, provenance, 변경 시 검증 범위 | 리뷰·회귀 시험 담당자 |

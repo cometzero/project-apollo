@@ -13,6 +13,20 @@ accepts a new workload through gem5 readfile. Block-device and O3 snapshots
 are unsupported.
 See [configuration, workloads and validation](apollo-gem5.md).
 
+## Standalone SI CL1 Zephyr
+
+`run_qbox_zephyr.sh` composes the existing CL1 QBox CPU/GIC/PL011/LLRAM
+primitives without AP/RSE/SCP release. Its dedicated non-MPU boot image is
+separate from production HIPC/PFDI firmware and gem5 benchmarks. The existing
+QBox Cortex-R82 backend does not implement AArch64 PMSA; a successful boot
+must not be interpreted as MPU or private TCM qualification.
+
+`run_gem5_zephyr.sh` uses an independent four-PE PMSA64/private-TCM model with
+Zephyr memory and timer/realtime benchmarks. Both standalone profiles use a
+100 MHz counter and CNTP PPI29; production platform timer settings are unchanged.
+The gem5 Minor pipeline and SRAM/TCM latencies are uncalibrated proxies.
+See [build, execution and validation](gem5/si-cl1-zephyr-guide.md).
+
 ## Lua SoC / VP / Board structure
 
 The canonical full-system entry is now `apollo-qvp-saturn-v.lua`, with
