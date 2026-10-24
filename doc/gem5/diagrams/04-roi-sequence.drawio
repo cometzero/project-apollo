@@ -1,0 +1,122 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="04-roi-sequence" name="04  Guest-controlled O3 / ROI protocol">
+    <mxGraphModel dx="1440" dy="1080" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1440" pageHeight="1080" background="#FFFFFF" adaptiveColors="auto" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c1" value="04  Guest-controlled O3 / ROI protocol" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=26;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="18" width="1370" height="40" />
+        </mxCell>
+        <mxCell id="c2" value="gem5-control run COMMAND의 whole-command ROI. apollo-bench의 명시적 warmup loop는 별도 경로다." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=14;fontColor=#475569;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="65" width="1370" height="45" />
+        </mxCell>
+        <mxCell id="c3" value="Guest wrapper" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="125" width="220" height="60" />
+        </mxCell>
+        <mxCell id="c4" value="" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=none;strokeColor=#9EADBB;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="185" />
+            <mxPoint as="targetPoint" x="145" y="925" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c5" value="RoiControl" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="320" y="125" width="220" height="60" />
+        </mxCell>
+        <mxCell id="c6" value="" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=none;strokeColor=#9EADBB;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="430" y="185" />
+            <mxPoint as="targetPoint" x="430" y="925" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c7" value="CPU model" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="605" y="125" width="220" height="60" />
+        </mxCell>
+        <mxCell id="c8" value="" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=none;strokeColor=#9EADBB;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="715" y="185" />
+            <mxPoint as="targetPoint" x="715" y="925" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c9" value="Statistics" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="890" y="125" width="220" height="60" />
+        </mxCell>
+        <mxCell id="c10" value="" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=none;strokeColor=#9EADBB;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1000" y="185" />
+            <mxPoint as="targetPoint" x="1000" y="925" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c11" value="① CPU0 pin · DSB · workbegin(0x5a535743)" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="230" />
+            <mxPoint as="targetPoint" x="430" y="230" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c12" value="② switchCpus(boot CPU → roi_cpu) / 모든 core" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="430" y="310" />
+            <mxPoint as="targetPoint" x="715" y="310" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c13" value="③ phase=warmup · guest 재개" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="430" y="390" />
+            <mxPoint as="targetPoint" x="145" y="390" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c14" value="④ DSB · workbegin(0)" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="470" />
+            <mxPoint as="targetPoint" x="430" y="470" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c15" value="⑤ stats.reset() · phase=roi_begin" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="430" y="550" />
+            <mxPoint as="targetPoint" x="1000" y="550" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c16" value="⑥ fork / exec / kernel / allocation / calibration / 측정" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="630" />
+            <mxPoint as="targetPoint" x="715" y="630" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c17" value="⑦ waitpid 완료 · DSB · workend(0)" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="710" />
+            <mxPoint as="targetPoint" x="430" y="710" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" value="⑧ stats.dump() · phase=roi_end" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="430" y="790" />
+            <mxPoint as="targetPoint" x="1000" y="790" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" value="⑨ exit status → workload wrapper → poweroff" edge="1" parent="1" style="html=1;fontFamily=Noto Sans CJK KR;fontSize=14;strokeColor=#47647F;strokeWidth=1.5;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="145" y="870" />
+            <mxPoint as="targetPoint" x="430" y="870" />
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c20" value="ROI 경계 검증&lt;br&gt;simTicks = end − begin&lt;br&gt;finalTick = roi_end.tick&lt;br&gt;roi-events.json ↔ stats.txt" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;align=left;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1135" y="470" width="260" height="235" />
+        </mxCell>
+        <mxCell id="c21" value="whole-command 경로는 warmup phase 직후 ROI를 시작한다. tool 자체 warmup이 추가된 것은 아니다.&lt;br&gt;내장 apollo-bench: Atomic allocation → O3 switch → 1 pass warmup → begin → 반복 loop → end → checksum." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;align=left;fontSize=14;strokeColor=#D5AD59;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="965" width="1370" height="80" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

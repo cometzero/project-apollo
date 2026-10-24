@@ -62,7 +62,7 @@ The root entrypoints are the stable user interface:
 | `./run_qemu_linux.sh` | Boot the Apollo Yocto Linux image on standalone QEMU. |
 | `./run_qemu_linux.sh --bsp` | Boot the BSP initramfs with its WIC on standalone QEMU. |
 | `./yocto_build.sh --gem5` | Build the gem5 benchmark initramfs, kernel and simulator artifacts. |
-| `./run_gem5_linux.sh --workload cache` | Run the Apollo Linux cache benchmark on gem5; see [model limits and options](doc/apollo-gem5.md). |
+| `./run_gem5_linux.sh --workload cache` | Run the Apollo Linux cache benchmark on gem5; see [architecture, build and run guides](doc/gem5/README.md). |
 | `./run_gem5_linux.sh --checkpoint PATH` / `--resume PATH` | Save the booted gem5 initramfs once, then resume it with a selected workload. |
 | `./run_fvp.sh` | Run the Yocto `apollo-fvp` product image in an interactive FVP tmux session. |
 | `./run_fvp.sh --machine apollo-qvp --bsp` | Run the QVP BSP initramfs artifacts on FVP. |

@@ -1,0 +1,106 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="02-memory-hierarchy" name="02  Memory hierarchy — 논리 경로와 network 연결">
+    <mxGraphModel dx="1440" dy="1120" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1440" pageHeight="1120" background="#FFFFFF" adaptiveColors="auto" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c1" value="02  Memory hierarchy — 논리 경로와 network 연결" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=26;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="18" width="1370" height="40" />
+        </mxCell>
+        <mxCell id="c2" value="기본 4 CPU / 1 cluster · Ruby CHI controller topology · silicon microarchitecture의 cycle 정확도 미보장" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=14;fontColor=#475569;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="65" width="1370" height="45" />
+        </mxCell>
+        <mxCell id="c3" value="TIMING MODE  |  O3 전환 이후의 downstream 논리 관계" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="125" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c4" value="O3 CPU ×4&lt;br&gt;instruction / data ports" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="190" width="300" height="80" />
+        </mxCell>
+        <mxCell id="c5" value="L1I / L1D&lt;br&gt;64KiB/core 각각" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="380" y="190" width="300" height="80" />
+        </mxCell>
+        <mxCell id="c6" value="Private L2&lt;br&gt;512KiB/core" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="715" y="190" width="300" height="80" />
+        </mxCell>
+        <mxCell id="c7" value="DSU L3 proxy&lt;br&gt;4MiB / cluster" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1050" y="190" width="300" height="80" />
+        </mxCell>
+        <mxCell id="c8" value="" source="c4" target="c5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c9" value="" source="c5" target="c6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c10" value="" source="c6" target="c7" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c11" value="RN-F cluster local router&lt;br&gt;private controllers 12 + DSU L3 1&lt;br&gt;4 CPU 기본값: local router 1개" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="370" width="410" height="95" />
+        </mxCell>
+        <mxCell id="c12" value="Garnet mesh&lt;br&gt;&lt;b&gt;6 rows × 4 columns = 24 routers&lt;/b&gt;&lt;br&gt;REQ / SNP / RSP / DAT vnets" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="370" width="390" height="95" />
+        </mxCell>
+        <mxCell id="c13" value="HNF ×8&lt;br&gt;SLC proxy 512KiB/home&lt;br&gt;총 4MiB · directory / home" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="370" width="385" height="95" />
+        </mxCell>
+        <mxCell id="c14" value="cluster attach = [5]" source="c11" target="c12" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c15" value="home selection" source="c12" target="c13" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c16" value="각 cache controller도 local router에 연결" source="c4" target="c11" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c17" value="L3 miss downstream" source="c7" target="c13" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0.5;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c18" value="SNF ×16&lt;br&gt;home에서 memory destination 선택&lt;br&gt;channel range interleave" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="555" width="385" height="90" />
+        </mxCell>
+        <mxCell id="c19" value="MemCtrl ×16&lt;br&gt;LPDDR5X documented proxy&lt;br&gt;part = null" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="555" width="390" height="90" />
+        </mxCell>
+        <mxCell id="c20" value="RAM 2GiB&lt;br&gt;&lt;b&gt;0x80000000–0xffffffff&lt;/b&gt;&lt;br&gt;channel 수: 4 / 8 / 16" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="555" width="410" height="90" />
+        </mxCell>
+        <mxCell id="c21" value="miss / writeback" source="c13" target="c18" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c22" value="memory controller port" source="c18" target="c19" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c23" value="address ranges" source="c19" target="c20" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c24" value="BOOT MODE  |  Atomic noncaching" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="720" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c25" value="AtomicSimpleCPU&lt;br&gt;kernel init / buffer 초기화" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="785" width="410" height="80" />
+        </mxCell>
+        <mxCell id="c26" value="RubyPort::recvAtomic()&lt;br&gt;bypassCaches() → MemCtrl&lt;br&gt;timing network queue 우회" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="785" width="390" height="80" />
+        </mxCell>
+        <mxCell id="c27" value="atomic_noncaching" source="c25" target="c26" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c28" value="atomic memory access" source="c26" target="c20" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="720" y="685" />
+              <mxPoint x="250" y="685" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c29" value="기타 network endpoint&lt;br&gt;MN ×1 · IO RNI ×1&lt;br&gt;기본 NPU 없음" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="785" width="385" height="80" />
+        </mxCell>
+        <mxCell id="c30" value="화살표 위쪽은 cache controller의 downstream 관계다. 별도 hardwired cache bus를 나타내지 않는다.&lt;br&gt;실제 기본 config: routers 25, external links 39, internal links 78. Atomic boot 시간은 cache 성능 측정값이 아니다." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;align=left;fontSize=14;strokeColor=#D5AD59;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="950" width="1370" height="85" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,5 +1,7 @@
 # Apollo AP 전용 gem5
 
+현재 구성의 상세 기술 문서는 [Apollo gem5 문서 모음](gem5/README.md)을 참고한다. 이 문서는 초기 통합과 검증 기록을 보존한다.
+
 최신 이미지·snapshot 재생성과 도구별 O3 측정은
 [벤치마크 실행 결과](apollo-gem5-benchmark-results.md)에 기록한다.
 아래 검증 이력의 이미지 크기와 snapshot 경로는 각 실행 당시의 값이다.

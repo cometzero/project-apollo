@@ -1,0 +1,110 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="01-system-context" name="01  Apollo gem5 — 실행 경계와 연결">
+    <mxGraphModel dx="1440" dy="1020" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1440" pageHeight="1020" background="#FFFFFF" adaptiveColors="auto" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c1" value="01  Apollo gem5 — 실행 경계와 연결" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=26;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="18" width="1370" height="40" />
+        </mxCell>
+        <mxCell id="c2" value="기본 사례: 4 CPUs · 16 channels · diskless initramfs · NPU disabled" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=14;fontColor=#475569;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="65" width="1370" height="45" />
+        </mxCell>
+        <mxCell id="c3" value="HOST  |  Linux process / local files" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="125" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c4" value="사용자&lt;br&gt;&lt;b&gt;run_gem5_linux.sh&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="180" width="240" height="70" />
+        </mxCell>
+        <mxCell id="c5" value="Python launcher&lt;br&gt;&lt;b&gt;run_linux.py&lt;/b&gt;&lt;br&gt;resolve · hash · timeout" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="360" y="180" width="290" height="85" />
+        </mxCell>
+        <mxCell id="c6" value="tmux UI&lt;br&gt;UART / platform log / shell&lt;br&gt;&lt;b&gt;F12 → session 종료&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="760" y="180" width="290" height="85" />
+        </mxCell>
+        <mxCell id="c7" value="CLI" source="c4" target="c5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c8" value="start_tmux()" source="c5" target="c6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c9" value="UART pane&lt;br&gt;내부 --direct launcher&lt;br&gt;child 생명주기 관리" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="760" y="330" width="290" height="85" />
+        </mxCell>
+        <mxCell id="c10" value="Python 재실행" source="c6" target="c9" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c11" value="gem5.opt process&lt;br&gt;&lt;b&gt;run_fs.py → SimObjects&lt;/b&gt;&lt;br&gt;simulator event queue" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="360" y="330" width="290" height="85" />
+        </mxCell>
+        <mxCell id="c12" value="child" source="c9" target="c11" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c13" value="run directory&lt;br&gt;launch.json · uart.log&lt;br&gt;gem5.log · result.json" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1110" y="330" width="280" height="85" />
+        </mxCell>
+        <mxCell id="c14" value="logs" source="c9" target="c13" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c15" value="UART endpoint&lt;br&gt;&lt;b&gt;localhost TCP&lt;/b&gt;&lt;br&gt;gem5 Terminal server" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="330" width="240" height="85" />
+        </mxCell>
+        <mxCell id="c16" value="TCP" source="c11" target="c15" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c17" value="UART bytes / stdin" source="c15" target="c9" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0;entryY=0.5;exitX=0.5;exitY=1;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="165" y="445" />
+              <mxPoint x="905" y="445" />
+            </Array>
+            <mxPoint as="offset" x="0" y="16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c18" value="SIMULATED AP  |  ArmSystem 안의 객체와 guest software" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="475" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c19" value="Atomic boot CPU → O3 CPU&lt;br&gt;GICv3 · timer · PL011&lt;br&gt;VirtIO RNG" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="540" width="390" height="95" />
+        </mxCell>
+        <mxCell id="c20" value="Ruby CHI / Garnet&lt;br&gt;L1 → L2 → DSU L3&lt;br&gt;HNF/SLC → SNF → LPDDR5X" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="540" width="390" height="95" />
+        </mxCell>
+        <mxCell id="c21" value="Linux + initramfs /init&lt;br&gt;gem5-control · benchmark&lt;br&gt;CPU0 workload" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="540" width="385" height="95" />
+        </mxCell>
+        <mxCell id="c22" value="" source="c11" target="c19" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c23" value="timing" source="c19" target="c20" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c25" value="Yocto deploy inputs&lt;br&gt;Image · zena_css4.elf&lt;br&gt;nexios-gem5-initramfs CPIO" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="735" width="390" height="85" />
+        </mxCell>
+        <mxCell id="c26" value="snapshot + host readfile&lt;br&gt;boot state 복원&lt;br&gt;새 workload 전달" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="735" width="390" height="85" />
+        </mxCell>
+        <mxCell id="c27" value="m5out/&lt;br&gt;config.json · stats.txt&lt;br&gt;roi-events.json · exit.json" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="735" width="385" height="85" />
+        </mxCell>
+        <mxCell id="c28" value="boot inputs" source="c25" target="c19" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c29" value="readfile / restore" source="c26" target="c21" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" x="0.3">
+            <Array as="points">
+              <mxPoint x="960" y="775" />
+              <mxPoint x="960" y="685" />
+              <mxPoint x="1195" y="685" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c31" value="경계: QBox/SystemC/QEMU는 이 simulation에 참여하지 않는다. tmux helper만 재사용한다.&lt;br&gt;RSE · SCP · Safety Island · TF-A/U-Boot product boot chain은 범위 밖이다." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;align=left;fontSize=14;strokeColor=#D5AD59;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="900" width="1370" height="65" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

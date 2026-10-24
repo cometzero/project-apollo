@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="05-build-pipeline" name="05  Yocto build / deploy / runtime consumers">
+    <mxGraphModel dx="1440" dy="1080" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1440" pageHeight="1080" background="#FFFFFF" adaptiveColors="auto" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="c1" value="05  Yocto build / deploy / runtime consumers" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=26;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="18" width="1370" height="40" />
+        </mxCell>
+        <mxCell id="c2" value="MACHINE=apollo-qvp · DISTRO=auto-ad-nexios · native host executable과 AArch64 target artifact를 분리한다." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;text;align=left;fontSize=14;fontColor=#475569;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="65" width="1370" height="45" />
+        </mxCell>
+        <mxCell id="c3" value="yocto_build.sh --gem5&lt;br&gt;&lt;b&gt;nexios-gem5-initramfs&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="135" width="390" height="75" />
+        </mxCell>
+        <mxCell id="c4" value="BUILD  |  BitBake dependency graph의 개념도" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="250" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c5" value="gem5-native&lt;br&gt;inherit native + externalsrc&lt;br&gt;SCons: ARM / CHI" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="315" width="390" height="95" />
+        </mxCell>
+        <mxCell id="c6" value="gem5-apollo-guest&lt;br&gt;externalsrc · target CC/LD&lt;br&gt;firmware + benchmark + control" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="315" width="390" height="95" />
+        </mxCell>
+        <mxCell id="c7" value="Linux + benchmark packages&lt;br&gt;virtual/kernel · lmbench&lt;br&gt;tinymembench · STREAM variants" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="315" width="385" height="95" />
+        </mxCell>
+        <mxCell id="c8" value="do_build" source="c3" target="c5" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c9" value="PACKAGE_INSTALL / dependency" source="c3" target="c6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c10" value="packages / kernel deploy" source="c3" target="c7" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c11" value="do_build → do_deploy" source="c5" target="c6" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;dashed=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c12" value="deploy/gem5-native/&lt;br&gt;gem5.opt · gem5-native.json&lt;br&gt;runtime library / Python paths" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="45" y="530" width="390" height="100" />
+        </mxCell>
+        <mxCell id="c13" value="deploy/images/apollo-qvp/gem5/&lt;br&gt;zena_css4.elf / zena_css16.elf&lt;br&gt;apollo-bench · gem5-control" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="525" y="530" width="390" height="100" />
+        </mxCell>
+        <mxCell id="c14" value="Kernel deploy + image CPIO&lt;br&gt;Image / initramfs cpio.gz&lt;br&gt;별도 /init · tools · guest binaries" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="1005" y="530" width="385" height="100" />
+        </mxCell>
+        <mxCell id="c15" value="host deploy" source="c5" target="c12" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c16" value="target deploy" source="c6" target="c13" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c17" value="package install" source="c7" target="c14" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c18" value="guest package" source="c6" target="c14" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.8;entryX=0.35;entryY=0;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="955" y="460" />
+              <mxPoint x="1140" y="460" />
+            </Array>
+            <mxPoint as="offset" x="0" y="-16" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="c19" value="RUNTIME  |  compiler를 실행하지 않고 deploy artifact를 소비" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#F2F4F7;align=left;fontSize=15;fontStyle=1;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="705" width="1370" height="34" />
+        </mxCell>
+        <mxCell id="c20" value="run_linux.py&lt;br&gt;manifest 환경 설정 · inputs 검증&lt;br&gt;압축 해제 CPIO / host readfile" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#EAF2FC;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="285" y="775" width="410" height="100" />
+        </mxCell>
+        <mxCell id="c21" value="gem5.opt + run_fs.py&lt;br&gt;PSCI firmware · kernel · generated DTB&lt;br&gt;initramfs → workload" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#E8F4ED;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="820" y="775" width="480" height="100" />
+        </mxCell>
+        <mxCell id="c22" value="host binary" source="c12" target="c20" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c23" value="matching firmware" source="c13" target="c21" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c24" value="initramfs / Image" source="c14" target="c21" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c25" value="Popen" source="c20" target="c21" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontFamily=Noto Sans CJK KR;fontSize=13;strokeColor=#47647F;strokeWidth=1.6;endArrow=block;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c26" value="공유 BitBake build는 직렬화한다. EXTERNALSRC 변경은 build 중 수행하지 않는다.&lt;br&gt;gem5-native manifest는 local sysroot 경로를 포함한다. deploy directory만 다른 host로 복사해 standalone 배포됐다고 간주하지 않는다." style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Noto Sans CJK KR;fontSize=15;fontColor=#14283F;strokeColor=#6683A1;strokeWidth=1.4;spacing=10;fillColor=#FFF3D9;align=left;fontSize=14;strokeColor=#D5AD59;" vertex="1" parent="1">
+          <mxGeometry as="geometry" x="35" y="965" width="1370" height="75" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
