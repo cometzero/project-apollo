@@ -1,8 +1,10 @@
 # QBox MHU-320AE SystemC Component Spec
 
 작성일: 2026-06-09
+갱신일: 2026-10-23
 
-상태: 구현 완료, Apollo full-system boot validated
+상태: doorbell 기반 구현·부팅 검증 완료. 2026-10-23 FCE/AE 확장의
+구현 및 실행 결과는 [AE 검증 기록](qbox-ae-gic720-mhu320-validation-ko.md) 참조.
 
 관련 문서:
 
@@ -28,7 +30,7 @@ PFDI monitor, AP-SI/RSE doorbell bridge를 QEMU 없이 SystemC component에서
 
 이번 구현의 완료 지점은 다음이며 2026-06-09 기준 모두 만족했다.
 
-- Lua-visible component `mhu320ae`가 `tools/qbox/systemc-components/mhu320ae/`
+- Lua-visible component `mhu320ae`가 `hsoc-stack/tools/qbox-platform/systemc-components/mhu320ae/`
   아래에 생성되고 dynamic module로 빌드된다.
 - 기존 MHUv3 compatibility path에 있던 reusable PBX/MBX register frame behavior와
   Apollo/RD-Aspen boot에 필요한 service hooks가 `mhu320ae`로 이동된다.
@@ -57,8 +59,8 @@ Unit을 포함한다고 명시한다. Linux와 Zephyr에서 보이는 device-tre
 | CL1 PFDI monitor | PBX | `0x39200000` | `0x20000` | CL1 SPI 50 |
 | RSE local CMU MHU2 | PBX/MBX | `0x501a0000`-class secure PPC view | `0x10000` each | TF-M IRQ 44/45 |
 
-The AP DTS exposes `mhu@40020000`, `mhu@40050000`, `mhu@400b0000`, and
-`mhu@400e0000` as `compatible = "arm,mhuv3"`. The Safety Island CL1 DTS exposes
+The AP DTS exposes `mailbox@40020000`, `mailbox@40050000`, `mailbox@400b0000`, and
+`mailbox@400e0000` as `compatible = "arm,mhuv3"`. The Safety Island CL1 DTS exposes
 local HIPC and PFDI MHU nodes with the same compatible string.
 
 ## 범위
@@ -77,11 +79,18 @@ local HIPC and PFDI MHU nodes with the same compatible string.
 - AP/SI CL1 doorbell bridge behavior needed for HIPC resource table seeding,
   RPMsg name-service injection, and synthetic TX completion.
 - Trace hooks and log files compatible with existing `mhuv3-trace.log` tools.
+- 2026-10-23 확장: configurable 32/64-bit fast channel, 그룹별 IRQ,
+  read-clear 및 latest-value 의미, pair/reset 격리.
+- 선택적 SRAS/RRAS error record, CE/UC insertion 및 W1C acknowledge.
+- 별도 `zena_device_fmu` MHU profile의 보호 메커니즘 설정, injection,
+  criticality, parent FMU 전파 및 lock/key 규약.
+- 실제 `apollo-qvp` SCP MHU3 driver 수정 및 SI0 FCE IRQ echo 진단.
 
 ## 비범위
 
 - Full MHU-320AE TRM parity for every optional register and safety/RAS feature.
-- Linux, Zephyr, TF-M, SCP-firmware driver workaround patches.
+- Linux/Zephyr/TF-M의 새 FCE API. 현재 제품의 FCE 진단은 SCP MHU3
+  driver와 AP MMIO를 사용한다.
 - Modeling analog timing or interconnect arbitration delay.
 
 ## 기능 요구사항
@@ -111,6 +120,22 @@ ACK bit를 paired MBX에 signal한다.
 
 Trace file은 기존 `mhuv3-trace.log` 소비 도구와 호환되어야 한다. Component
 이름은 `mhu320ae`여도 event token은 `mhu_trace`를 유지할 수 있다.
+
+### FR6. Fast Channel Extension
+
+PBX payload write는 같은 pair의 MBX payload와 pending bit를 갱신한다.
+미수신 payload를 덮어쓰면 최신 값 하나를 유지한다. MBX payload read는
+해당 채널의 pending을 지우며 그룹/combined IRQ도 갱신한다. 64-bit 채널은
+정렬된 64-bit 및 두 번의 32-bit 접근을 지원한다. Apollo 기본 geometry는
+64채널, 그룹당 32채널, 32-bit이며 실제 실리콘 구성값을 의미하지 않는다.
+
+### FR7. Functional safety programming model
+
+RAS를 켠 endpoint는 기능과 record 수를 광고하고 CE count, overflow,
+W1C 및 error summary를 일관되게 제공한다. RAM ERRINS는 payload를
+훼손하지 않는 소프트웨어 진단이며 물리 ECC 검출 또는 FMU hardware event와
+동일시하지 않는다. FMU에는 Secure access, one-shot KEY, criticality,
+record queue, interrupt enable, reset과 parent acknowledge 의미를 적용한다.
 
 ## 검증 기준
 

@@ -345,6 +345,54 @@ retain critical/non-critical classification during SCP-firmware traversal.
 The final run passed the SSU test and all 20 FMU tests. Evidence is under
 `build/tests/20260820-145753-qbox-bsp-safety-diagnostics-tests/`.
 
+The 2026-10-23 GIC-720AE/MHU-320AE extension adds functional AE register
+behavior and MHU hardware fast channels. GIC SPI and local-interrupt error
+states inhibit the backing GIC enable state until software performs recovery
+and explicitly re-enables the interrupt. AP View0 and View1 MMIO now pass
+through the SystemC wrapper and a private backend router; QEMU MemoryRegion
+hints cannot install an alias that bypasses containment. The actual A720AE
+test acknowledges INTID 105, observes spurious 1023 while contained, and
+acknowledges 105 after recovery. SI CL0/CL1 retain their two independent GIC
+backends; their source containment is not established by this AP test.
+
+MHU FCE implements paired 32/64-bit payloads, group interrupt masks,
+read-clear pending state and reset isolation. Apollo configures 64 32-bit
+channels in groups of 32; this is a QVP choice, not a silicon synthesis claim.
+Local RAS is enabled for the four AP/SI0 non-secure endpoints and tested by
+polling. GIC/MHU leaf FMUs add profile-specific records, protection controls,
+one-shot keys, overflow/recovery and level propagation to the System FMU.
+The active QVP SCP MHU3 and FMU drivers are updated, with an IRQ-driven
+channel-32 echo diagnostic; SCMI performance fast-channel polling stays off.
+The AP4 full-system run passed basic Linux post-login checks, SSU 1/1 and FMU
+20/20 diagnostics, FCE IRQ echo/read-clear, and local RAS CE/UC record recovery
+with payload preservation. The provider CTest suite passed 70/70 tests.
+Current execution results, exact TRM references and remaining unsupported
+features are in [the AE validation record](qbox-ae-gic720-mhu320-validation-ko.md).
+Evidence is retained under `build/qbox-apollo-qvp/ae-20261023/`.
+
+The subsequent [TRM gap investigation](qbox-ae-trm-gap-analysis-ko.md) records
+two additional failing FMU probes: a fully enabled byte-enable KEY write is
+rejected, and MHU errors from different mechanisms omit OF. GIC uses a
+different OF/OFB rule, so that correction must preserve the profile contract.
+The investigation also traces remaining detector inputs, SI containment,
+RAS/IRQ routes and software recovery gaps. Earlier PASS results cover their
+listed scenarios and do not establish complete AE or FMU conformance.
+
+The [AE follow-up implementation](qbox-ae-followup-validation-ko.md) fixes
+both reproduced FMU defects and adds timed command completion/timeout,
+independent error wires, block-aware ERRUPDATE, libqemu view-aware routing,
+SI backend containment wiring, GIC RAM diagnostics/GICT IRQs, MHU actual
+RAM-fault containment and receiver-to-FMU reporting. SCP preserves fault
+identity through partial ACK, refresh and notification-queue failure and
+provides repeated FCE, mixed-fault and actual-RAM diagnostics. The installed
+provider passes 73/73 CTests and the focused SCP host checks total 94 passes.
+Full-system `ae-followup-20261023/guest-7` boots AP4 and SI CL1's four R82
+CPUs, passes SSU 1/1, FMU 20/20, mixed-fault/recovery 3/3 and actual MHU RAM
+faults 3/3. Eight FCE round trips cover operation before and after recovery;
+31 concurrent Linux SCMI frequency queries complete without read errors or
+new timeout warnings. The report separates these scenarios from remaining
+CRC/PING/BIST, virtualization, physical protection and software-consumer gaps.
+
 ## Runtime Validation Profile Status
 
 The repository now has a public non-Xen validation matrix for the Arm Zena CSS
@@ -773,7 +821,7 @@ and are not synthesized in QBox.
 | --- | --- | --- | --- |
 | Cortex-A720AE Primary Compute | QEMU/libqemu CPU model with default four-core SMP and opt-in sixteen-core/four-cluster PSCI/SCMI lifecycle; AArch64-only EL0 and supported QARMA3/FGT/ECV/PAN/WFxT profile | Preserve the verified 1..16 topology and exception/timer routing; keep unsupported MTE/AMU/MPAM explicit | `.config.yaml`, FVP DTS, `arm-zena-css/documentation/overview.rst`, FVP/QBox 16-core logs |
 | DSU-120AE / DSU PMU | Aff2-shared six-counter A720AE system-register bank; four Linux PMU sources and events `0x2a`/`0x2b` are schedulable | Add traffic-driven counting and overflow SPI behavior without regressing the verified programming model | `arm-zena-css/documentation/design/components.rst`, FVP/QBox `perf stat` logs |
-| GIC-720AE / GICv3 / ITS | libqemu-backed GICv3/ITS plus sixteen-frame SystemC multiview discovery, two-byte collection entries, and an opt-in QBox PCIe IRQ profile | Preserve distributor, redistributor, ITS, IRQ numbering, and multi-view behavior. PCIe MSI-X/LPI and INTx evidence is QBox-only; FVP PCIe/ITS qualification is `UNSUPPORTED` and Task10 device equivalence is `NOT_COMPARABLE`. | FVP DTS, machine config, Linux `/proc/interrupts`, F3 r5 result SHA `db8e74ebdc13c27eb9ba61bde2b2f3d0e2ae181cd93f94c5f477e763817ff8e5`, Task10 boundary SHA `131f94749f1aa39243e19d8605c6b32b019a0e65cf5348a3f261754bf0cf676f` |
+| GIC-720AE / GICv3 / ITS | libqemu view-aware SPI/SGI routing, SystemC containment, GICT diagnostic IRQs and SI split-backend routing; actual A720AE view isolation and INTID 105/106 recovery tests | SI native fixture uses A720AE CPUs; SI firmware error recovery, virtual AE, physical detectors and FVP PCIe/ITS equivalence need separate evidence. | [AE follow-up](qbox-ae-followup-validation-ko.md), FVP DTS, prior F3 r5 and Task10 evidence |
 | CMN-CYPRUS | SystemC CFG2 r3p0 6x4 XP and child-node discovery graph | Preserve FVP-visible revision and topology discovery | SI0 firmware logs, FVP/QBox differential, component tests |
 | SMMUv3 | SystemC MMU-720AE profile with 52-bit internal PA walk and 32-bit SID advertisement | Maintain PCI bus, memory links, IRQs, Linux driver behavior, and FVP discovery signature | FVP DTS, Linux runtime driver probe, component tests |
 | PL011 UART | Reusable QBox UART configured as revision 3 on Apollo | Console compatibility, interrupt behavior, backend behavior, stop semantics | FVP config, QBox backend docs, Linux console logs |
@@ -781,7 +829,7 @@ and are not synthesized in QBox.
 | PL031 RTC | QEMU model | Linux RTC behavior and IRQ compatibility | FVP DTS, Linux probe logs, Arm PL031 docs |
 | Virtio block/net/rng | QEMU virtio-mmio models; unused block placeholders enumerate with zero capacity | Preserve FVP device count, address/IRQ, and Linux driver behavior | FVP config, generated image artifacts, Linux probe logs |
 | DesignWare APB I2C/SSI/UART | Functional SystemC/TLM models in the QVP AP RoS expansion window: six `dw_apb_i2c` controllers with AT24-style EEPROM targets, four `dw_apb_ssi` loopback-capable SPI controllers, and four paired `dw_apb_uart` controllers | Support Linux `i2c-designware-platform`, AT24 EEPROM sysfs access, `dw_spi_mmio` with `spi-loopback-test`, and `8250_dw` paired UART traffic; DMA, target-mode I2C, advanced SSI protocols, modem pins, and complete RTL timing remain unmodeled | `doc/dwc/`, Linux bindings/drivers, QBox component tests, AP map audit, opt-in `--dwc-peripheral-probe` runtime result |
-| MHUv3 | Reusable PBX/MBX SystemC frames with live AP/RSE/SI peers, shared-memory doorbells, ordered combined IRQ updates, explicit frame reset, peer-offline hold, and post-reset retry | Continue TRM-based channel and exhaustive fault semantics | Zena HIPC/SCMI docs, Arm MHUv3 docs, Linux/Zephyr/RSE evidence |
+| MHUv3 / MHU-320AE | Paired doorbells/FCE, group/read-clear IRQs, latent RAM fault containment and receiver-to-FMU events, functional scrub/Q-channel, optional local RAS | FIFO/security banking, physical ECC/lockstep/CRC, power-controller Q-channel wiring and local RAS guest IRQ routing remain unsupported | [AE follow-up](qbox-ae-followup-validation-ko.md), MHU-320AE r0p1 TRM, Linux/Zephyr/RSE evidence |
 | Safety Island CL0/CL1 | Live SI0 SCP and SI1 Zephyr CPUs with PFDI and guest-owned HIPC/RPMsg endpoint | Preserve boot, shared memory, MHU, OpenAMP, reset, and peer-failure behavior | Zena Safety Island docs, Zephyr DTS, remoteproc logs |
 | RSE / System Management Block | Skeleton starts RSE ROM through RemoteCPU; limited CC3XX, DTCM/ITCM alias, DMA350 fill and ID registers, RSE system-control, ATU translation/DMI, LCM/OTP, KMU, Integrity Checker, RSE Strata boot flash, AP/SI host windows, host PPU, AP-RSE/RSE-SI/AP-SI MHUv3 frames, and RSE-SI/AP-SI SCMI service remove the previous `0x501541c4` Data Abort, BL1_1 DMA erase/fill timeout, `0x58021100` reset-syndrome fault, first ATU programming gap, untyped KMU/Integrity Checker placeholders, BL2 decrypt/validate gaps, first BL2 host-window gap, PPU polling loop, SI CL0 AES-KW unwrap failure, host ATU placeholder gap, RSE-SI MHU init failure, AP reset-release blocker, AP-RSE MHU channel-count failure, AP SDS warning, AP image-authentication blockers, AP timer abort, AP-SI SCMI MHU abort, the RSE VM DMI encrypted-IV mismatch, TF-M `tfm_core_init()` static-boundary/DMA init failures, the ITS/PS storage blockers in the storage-safe path, and the TF-M NS mailbox local-MHU fault. Current defaults enable RSE-local KMU/CC3XX, RSE-local boot flash, and RSE ITCM/DTCM/VM DMI. The AP-RSE secure mailbox now uses real AP/RSE doorbell peers and the RSE-ATU/AP-flash route, reaches the FVP RSE runtime SCMI subscription marker plus measured-boot markers through `BL_33`, reports FWU ABI 1.0, and boots in regular state. | Add secure-service userspace tests and preserve host SCR/PPU/MHU/shared-memory semantics before any further ATU or host-SRAM co-location. | Zena RSE docs, TF-M artifacts, FVP logs, `doc/spec/rse-qbox/evidence.md` |
 | FMU / SSU / SBISTC / SMCF / RAS | AP CPU CE/DE/UC injection, TF-A CPER publication, Linux estatus decode, SI0 per-core UC records, cluster fault IRQs, FMU/SSU propagation, and SBISTC records 210 through 213 are modeled | Extend remaining documented safety-IP records and fault classes | `arm-zena-css/documentation/design/fmu.rst`, `ssu.rst`, `sbistc.rst`, `smcf.rst`, `ras.rst` |
