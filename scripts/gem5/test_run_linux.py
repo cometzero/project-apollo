@@ -45,6 +45,34 @@ def entries(data):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_power_arguments_reject_incomplete_or_invalid_inputs(self):
+        for argv in (["--power-profile", "missing"],
+                     ["--power-profile", "a", "--thermal-profile", "b"],
+                     ["--power-interval-us", "nan"],
+                     ["--power-interval-us", "0"],
+                     ["--temperature-mc", "150001"],
+                     ["--power-control", "--bsp"],
+                     ["--power-control", "--workload", "cache"]):
+            with self.subTest(argv=argv), patch.object(sys, "argv", ["run_linux.py", *argv]):
+                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                    run_linux.main()
+                self.assertEqual(caught.exception.code, 2)
+
+    def test_power_contract_binds_profiles_and_sampling(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory) / "profile.json"
+            profile.write_text('{"qualification":"SYNTHETIC"}')
+            args = run_linux.parser().parse_args([
+                "--power-control", "--power-profile", str(profile),
+                "--thermal-profile", str(profile)])
+            original = run_linux.power_contract(args)
+            args.power_interval_us = 50
+            self.assertNotEqual(original, run_linux.power_contract(args))
+            args.power_interval_us = 100
+            self.assertEqual(original, run_linux.power_contract(args))
+            profile.write_text('{"qualification":"UNCALIBRATED"}')
+            self.assertNotEqual(original, run_linux.power_contract(args))
+
     def test_multicore_command_preserves_snapshot_initrd(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -41,6 +41,11 @@ def parser():
     p.add_argument("--interleave-bytes", type=int, choices=(64, 512, 1024), default=64,
                    help="DRAM channel stripe; Home-node stripe remains 64 bytes")
     p.add_argument("--profile", type=Path, default=SOURCE / "configs/zena_cmn/profiles/a720ae_documented.yaml")
+    p.add_argument("--power-control", action="store_true", help="enable synthetic AP cluster SCMI/DVFS and sensors")
+    p.add_argument("--power-profile", type=Path, help="explicit activity energy coefficients (online)")
+    p.add_argument("--thermal-profile", type=Path, help="explicit RC thermal profile (online)")
+    p.add_argument("--power-interval-us", type=float, default=100.0)
+    p.add_argument("--temperature-mc", type=int, default=40000, help="synthetic initial SCMI sensor temperature")
     p.add_argument("--workload", choices=("boot", "smoke", "cache", "dram", "dram-multicore", "command"), default="boot")
     p.add_argument("--workers", type=int, choices=(1, 4, 8, 16),
                    help="dram-multicore pinned workers (default: --cpus)")
@@ -190,6 +195,20 @@ while :; do sleep 1; done
     return target
 
 
+def power_contract(args):
+    return {
+        "control": args.power_control,
+        "temperature_mc": args.temperature_mc,
+        "interval_us": args.power_interval_us,
+        "profiles": {name: sha256(required(getattr(args, name)))
+                     if getattr(args, name) else None
+                     for name in ("power_profile", "thermal_profile")},
+        "analysis_sha256": {name: sha256(SOURCE / "scripts/zena_cmn" / name)
+                            for name in ("analyze_power.py", "thermal_replay.py")}
+        if args.power_profile else {},
+    }
+
+
 def checkpoint_contract(inputs, initrd, args, bootargs):
     return {
         "schema": 1,
@@ -198,6 +217,7 @@ def checkpoint_contract(inputs, initrd, args, bootargs):
         "configuration_sha256": {path.name: sha256(path) for path in sorted((SOURCE / "configs/zena_cmn").glob("*.py"))},
         "cpus": args.cpus, "channels": args.channels,
         "interleave_bytes": args.interleave_bytes, "bootargs": bootargs,
+        "power": power_contract(args),
     }
 
 
@@ -314,9 +334,22 @@ def main():
         p.error("--checkpoint requires --workload boot; select a workload with --resume")
     if args.checkpoint and args.checkpoint.exists():
         p.error("checkpoint destination already exists; choose a new directory")
+    if bool(args.power_profile) != bool(args.thermal_profile):
+        p.error("--power-profile and --thermal-profile must be supplied together")
+    if args.power_profile and not args.power_control:
+        p.error("online power requires --power-control")
+    if not math.isfinite(args.power_interval_us) or args.power_interval_us <= 0:
+        p.error("--power-interval-us must be finite and positive")
+    if not -40000 <= args.temperature_mc <= 150000:
+        p.error("--temperature-mc must be -40000..150000")
+    if args.power_control and not args.power_profile and args.workload in ("cache", "dram", "dram-multicore"):
+        p.error("SCMI benchmarks require online power profiles to retain DVFS stats epochs")
+    if args.power_control and args.bsp:
+        p.error("power control requires the dedicated gem5 initramfs")
+    power = power_contract(args)
     inputs = resolve(args)
     if args.dry_run:
-        print(json.dumps({"inputs": inputs, "cpus": args.cpus, "channels": args.channels,
+        print(json.dumps({"inputs": inputs, "power": power, "cpus": args.cpus, "channels": args.channels,
                           "interleave_bytes": args.interleave_bytes, "workload": args.workload,
                           "memory_mode": (args.memory_mode or "read") if args.workload == "dram-multicore" else None,
                           "workers": args.workers or args.cpus if args.workload == "dram-multicore" else None}, indent=2))
@@ -352,6 +385,12 @@ def main():
                f"--profile={inputs['profile']}", f"--cpus={args.cpus}", f"--channels={args.channels}", f"--terminal-port={port}",
                f"--interleave-bytes={args.interleave_bytes}",
                f"--max-ticks={args.max_ticks}", f"--command-line={bootargs}"]
+    if args.power_control:
+        command += ["--power-control", f"--temperature-mc={args.temperature_mc}"]
+    if args.power_profile:
+        command += [f"--power-profile={args.power_profile.resolve()}",
+                    f"--thermal-profile={args.thermal_profile.resolve()}",
+                    f"--power-interval-us={args.power_interval_us}"]
     if inputs["rootfs"]:
         command.append(f"--disk-image={inputs['rootfs']}")
     if not args.bsp:
@@ -370,6 +409,7 @@ def main():
         env["LD_LIBRARY_PATH"] = os.pathsep.join(metadata["library_path"])
         env["PYTHONHOME"] = metadata["python_home"]
     manifest = {"inputs": inputs, "command": command, "workload": args.workload,
+                "power": power,
                 "interleave_bytes": args.interleave_bytes,
                 "memory_mode": (args.memory_mode or "read") if args.workload == "dram-multicore" else None,
                 "model": "UNCALIBRATED_PROXY", "rootfs_access": "read-only base with in-memory COW" if inputs["rootfs"] else "none",
@@ -420,6 +460,12 @@ def main():
         result["status"] = "PASS"
     elif args.workload == "boot" and (rc == 0 or timed_out or (args.headless and rc == -15)) and ("login:" in text or "nexios-bsp#" in text or "nexios-gem5#" in text) and "Kernel panic" not in text:
         result["status"] = "BOOT_OBSERVED"
+    if args.power_profile and result["status"] == "PASS":
+        from benchmark import summarize_power
+        try:
+            result["power"] = summarize_power(out / "m5out")
+        except (ValueError, KeyError, OSError) as exc:
+            result.update(status="FAIL", power_error=str(exc))
     (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps({"output": str(out), **result}, indent=2))
     return 0 if result["status"] in ("PASS", "BOOT_OBSERVED", "CHECKPOINT_SAVED") else 1

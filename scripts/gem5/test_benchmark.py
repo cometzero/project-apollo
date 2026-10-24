@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
+import copy
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from benchmark import summarize, summarize_multicore
+from benchmark import roi_statistics, summarize, summarize_multicore, summarize_power
 
 
 class BenchmarkTests(unittest.TestCase):
@@ -56,6 +58,23 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["cache_counters"]["L3"]["hits"], 16)
             self.assertEqual(summary["cache_counters"]["SLC_proxy"]["hits"], 32)
             self.assertTrue((out / "roi-summary.json").is_file())
+            online = [dict(epoch=i, begin_tick=1000 + i * 1000,
+                           end_tick=2000 + i * 1000, phase="roi_begin", frequency_hz=1e12)
+                      for i in range(2)]
+            (out / "online-activity.jsonl").write_text(
+                "".join(json.dumps(epoch) + "\n" for epoch in online))
+            (out / "stats.txt").write_text(
+                stats.replace("finalTick 3000", "finalTick 2000").replace("simTicks 2000", "simTicks 1000")
+                + stats.replace("simTicks 2000", "simTicks 1000"))
+            merged = collect()
+            self.assertEqual(merged["dram"]["read_bytes"], 2 * 67108864)
+            self.assertEqual(merged["worker_committed_instructions"]["0"], 200)
+            self.assertEqual(merged["cache_counters"]["L1"]["hits"], 128)
+            self.assertEqual(merged["cache_counters"]["L1"]["hit_fraction"], 0.8)
+            self.assertEqual(merged["roi"]["stats_block_indices"], [0, 1])
+            self.assertIsNone(merged["roi"]["stats_block_index"])
+            (out / "online-activity.jsonl").unlink()
+
             padded = re.sub(r"system\.roi_cpu(\d+)\.",
                             lambda m: f"system.roi_cpu{int(m[1]):02d}.", stats)
             (out / "stats.txt").write_text(padded)
@@ -250,6 +269,123 @@ class BenchmarkTests(unittest.TestCase):
                 broken = {**instructions, address: ("d503201f", "nop", "")}
                 with self.assertRaises(AssertionError):
                     check_barriers(broken)
+
+    def test_power_summary_uses_only_exact_roi_epochs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            events = [dict(phase="warmup", tick=100), dict(phase="roi_begin", tick=1000),
+                      dict(phase="roi_end", tick=3000)]
+            activity, energy, thermal = [], [], []
+            for i in range(4):
+                row = dict(epoch=i, begin_tick=i * 1000, end_tick=(i + 1) * 1000,
+                           phase="roi_begin" if i in (1, 2) else "warmup",
+                           seconds=1e-9)
+                activity.append(dict(row, frequency_hz=1e12, actors=[dict(actor="cpu0")]))
+                value = i if i in (1, 2) else 1000
+                energy.append(dict(row, qualification="SYNTHETIC", coverage="COMPLETE_LEDGER",
+                                   total_j=value, unconfigured_actors=[], actors=[
+                                       dict(actor="cpu0", dynamic_j=value, leakage_j=0, total_j=value)]))
+                thermal.append(dict(row, temperature_c={"core0": 40 + i}))
+            (out / "roi-events.json").write_text(json.dumps(events))
+            (out / "stats.txt").write_text("".join(self.stats((i + 1) * 1000, 1000)
+                                                  for i in range(4)))
+            (out / "online-power-summary.json").write_text(json.dumps(
+                dict(thermal_qualification="ASSUMED_RC", activity_energy_j=2003)))
+            def collect(a=activity, e=energy, t=thermal):
+                for name, rows in (("activity", a), ("energy", e), ("thermal", t)):
+                    (out / f"online-{name}.jsonl").write_text(
+                        "".join(json.dumps(row) + "\n" for row in rows))
+                return summarize_power(out)
+            summary = collect()
+            self.assertEqual(summary["energy_j"], 3)
+            self.assertEqual(summary["roi_seconds"], 2e-9)
+            self.assertEqual(summary["average_w"], 1.5e9)
+            self.assertEqual(summary["temperature_c"], {"core0": 42})
+            self.assertEqual(summary["stats_block_indices"], [1, 2])
+            self.assertEqual(summary["epochs"], 2)
+            for key, value in (("total_j", float("nan")), ("total_j", 5),
+                               ("coverage", "PARTIAL"), ("phase", "warmup"),
+                               ("qualification", "UNKNOWN"), ("seconds", 2e-9),
+                               ("unconfigured_actors", ["cpu0"]), ("actors", [])):
+                broken = copy.deepcopy(energy)
+                broken[1][key] = value
+                with self.subTest(key=key), self.assertRaises(ValueError):
+                    collect(e=broken)
+            for broken in (energy[:2] + energy[3:], energy[:2] + energy[1:]):
+                with self.assertRaises(ValueError):
+                    collect(e=broken)
+            overflowing = copy.deepcopy(energy)
+            for row in overflowing[1:3]:
+                row["total_j"] = row["actors"][0]["total_j"] = 1e308
+                row["actors"][0]["dynamic_j"] = 1e308
+            with self.assertRaisesRegex(ValueError, "nonfinite"):
+                collect(e=overflowing)
+            broken = copy.deepcopy(thermal)
+            broken[2]["temperature_c"] = {"core0": float("inf")}
+            with self.assertRaises(ValueError):
+                collect(t=broken)
+            (out / "roi-events.json").write_text(json.dumps(events[:1]))
+            with self.assertRaises(ValueError):
+                collect()
+
+    def test_online_epoch_coverage_and_additive_counter_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            epochs = [dict(epoch=i, begin_tick=1000 + i * 1000,
+                           end_tick=2000 + i * 1000, phase="roi_begin", frequency_hz=1e12)
+                      for i in range(2)]
+            def block(end):
+                return self.stats(end, 1000).replace(
+                    f"finalTick {end}\n", f"finalTick {end}\n"
+                    "system.mem_ctrls0.dram.dramBytesRead 64\n"
+                    "system.cpu0.l1d.cache.m_demand_hits 4\n"
+                    "system.cpu0.l1d.cache.m_demand_misses 1\n"
+                    "system.cpu0.l1d.cache.m_demand_miss_rate 0.2\n"
+                    "system.mem_ctrls0.dram.avgQLat 12\n")
+            original = block(2000) + block(3000)
+            def collect(records=epochs, stats=original):
+                (out / "stats.txt").write_text(stats)
+                (out / "online-activity.jsonl").write_text(
+                    "".join(json.dumps(epoch) + "\n" for epoch in records))
+                return roi_statistics(out, 1000, 3000)
+            read_text = Path.read_text
+            def bounded_read(path, *args, **kwargs):
+                if path.name == "stats.txt":
+                    self.fail("statistics must be streamed, not read_text()")
+                return read_text(path, *args, **kwargs)
+            with patch.object(Path, "read_text", bounded_read):
+                stats, indices, online = collect()
+            self.assertTrue(online)
+            self.assertEqual(indices, [0, 1])
+            self.assertEqual(stats["system.mem_ctrls0.dram.dramBytesRead"], 128)
+            self.assertNotIn("system.mem_ctrls0.dram.avgQLat", stats)
+            self.assertNotIn("system.cpu0.l1d.cache.m_demand_miss_rate", stats)
+            one_active_epoch = original.replace(
+                "finalTick 2000\n", "finalTick 2000\nsystem.roi_cpu0.commitStats0.numInsts 12\n")
+            self.assertEqual(collect(stats=one_active_epoch)[0][
+                "system.roi_cpu0.commitStats0.numInsts"], 12)
+            with self.assertRaises(ValueError):
+                collect(stats=one_active_epoch.replace(
+                    "finalTick 3000\n", "finalTick 3000\nsystem.roi_cpu0.commitStats0.numInsts nan\n"))
+            for records in (epochs[:1], epochs[1:], epochs + [epochs[-1]],
+                            [epochs[0], {**epochs[1], "begin_tick": 2100}],
+                            [epochs[0], {**epochs[1], "begin_tick": 1900}],
+                            [epochs[0], {**epochs[1], "phase": "warmup"}],
+                            [epochs[0], {**epochs[1], "frequency_hz": 2e9}],
+                            [epochs[0], {**epochs[1], "epoch": 4}]):
+                with self.subTest(records=records), self.assertRaises(ValueError):
+                    collect(records)
+            for broken in (
+                           original + "---------- Begin Simulation Statistics ----------\n",
+                           original + "---------- End Simulation Statistics ----------\n",
+                           original.replace("simFreq 1000000000000", "simFreq invalid", 1),
+                           original.replace("simFreq 1000000000000", "simFreq 1\nsimFreq 1000000000000", 1),
+                           original.replace("simFreq 1000000000000", "---------- Begin Simulation Statistics ----------", 1),
+                           original + block(3000), block(3000) + block(2000),
+                           original.replace("dramBytesRead 64", "dramBytesRead nan", 1),
+                           original.replace("system.mem_ctrls0.dram.dramBytesRead 64\n", "", 1)):
+                with self.subTest(stats=broken), self.assertRaises(ValueError):
+                    collect(stats=broken)
 
     def test_roi_summary_requires_simulation_and_complete_lifecycle(self):
         with tempfile.TemporaryDirectory() as directory:
