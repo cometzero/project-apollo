@@ -393,6 +393,24 @@ faults 3/3. Eight FCE round trips cover operation before and after recovery;
 new timeout warnings. The report separates these scenarios from remaining
 CRC/PING/BIST, virtualization, physical protection and software-consumer gaps.
 
+The [System/Root/NI FMU follow-up](qbox-system-root-ni-fmu-validation-ko.md)
+extends the same hierarchy with fixed System input classes, detection/IRQ
+gating, internal fault causes, counter escalation and one-shot SYS_KEY checks.
+The NI model separates ERI/FHI/CRI, keeps per-node enables and RAS records,
+and propagates both asserted and cleared levels to the System FMU. Its
+firmware consumer distinguishes leaf source classes from parent escalation.
+It also gives pending critical records priority over older queued noncritical
+work, preventing a shared NI ERI/FHI snapshot from losing its critical report.
+The installed provider passes 74/74 CTests and the SCP host checks pass 72 cases.
+Full-system `fmu-hierarchy-20261024/guest-2` confirms all 20 individual legacy
+FMU cases and two new hierarchy cases, with six unique fault notifications and
+drained GSRs. Existing AE recovery and three actual MHU RAM faults pass; eight
+FCE round trips and 42 concurrent SCMI queries complete without new timeout
+warnings. The first runtime's two classification failures and their host
+reproduction are retained with the final passing evidence.
+The report records the executed tests and the unverified physical input/FHI
+mapping and detector-network boundaries.
+
 ## Runtime Validation Profile Status
 
 The repository now has a public non-Xen validation matrix for the Arm Zena CSS
