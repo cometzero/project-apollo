@@ -246,6 +246,11 @@ with socket.socket() as listener:
             (root / "apollo-checkpoint.json").write_text('{"status":"COMPLETE"}')
             (root / "launcher.json").write_text(json.dumps(contract))
             run_linux.validate_checkpoint(root, contract)
+            args.interleave_bytes = 512
+            changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
+            with self.assertRaisesRegex(ValueError, "inputs changed"):
+                run_linux.validate_checkpoint(root, changed)
+            args.interleave_bytes = 64
             (root / "kernel").write_bytes(b"changed")
             changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
             with self.assertRaisesRegex(ValueError, "inputs changed"):
@@ -326,6 +331,7 @@ with socket.socket() as listener:
             ["--max-ticks", "0"],
             ["--cpus", "3"],
             ["--cpus", "8"],
+            ["--interleave-bytes", "128"],
             ["--checkpoint", "/new", "--workload", "smoke"],
             ["--checkpoint", "/new", "--bsp"],
             ["--resume", "/saved", "--rootfs", "/disk"],

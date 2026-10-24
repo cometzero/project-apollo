@@ -38,6 +38,8 @@ def parser():
     snapshot.add_argument("--resume", type=Path, help="resume a saved initramfs snapshot and run the selected workload")
     p.add_argument("--cpus", type=int, choices=(4, 16), default=4)
     p.add_argument("--channels", type=int, choices=(4, 8, 16), default=16)
+    p.add_argument("--interleave-bytes", type=int, choices=(64, 512, 1024), default=64,
+                   help="DRAM channel stripe; Home-node stripe remains 64 bytes")
     p.add_argument("--profile", type=Path, default=SOURCE / "configs/zena_cmn/profiles/a720ae_documented.yaml")
     p.add_argument("--workload", choices=("boot", "smoke", "cache", "dram", "command"), default="boot")
     commands = p.add_mutually_exclusive_group()
@@ -180,7 +182,8 @@ def checkpoint_contract(inputs, initrd, args, bootargs):
         "sha256": {name: sha256(inputs[name]) for name in ("gem5", "kernel", "bootloader", "profile")},
         "initrd_sha256": sha256(initrd),
         "configuration_sha256": {path.name: sha256(path) for path in sorted((SOURCE / "configs/zena_cmn").glob("*.py"))},
-        "cpus": args.cpus, "channels": args.channels, "bootargs": bootargs,
+        "cpus": args.cpus, "channels": args.channels,
+        "interleave_bytes": args.interleave_bytes, "bootargs": bootargs,
     }
 
 
@@ -290,7 +293,8 @@ def main():
         p.error("checkpoint destination already exists; choose a new directory")
     inputs = resolve(args)
     if args.dry_run:
-        print(json.dumps({"inputs": inputs, "cpus": args.cpus, "channels": args.channels, "workload": args.workload}, indent=2))
+        print(json.dumps({"inputs": inputs, "cpus": args.cpus, "channels": args.channels,
+                          "interleave_bytes": args.interleave_bytes, "workload": args.workload}, indent=2))
         return 0
     out = (args.out_dir or ROOT / "build/qbox-apollo-qvp/gem5" / time.strftime("%Y%m%d-%H%M%S")).resolve()
     if not args.headless and not args.direct:
@@ -321,6 +325,7 @@ def main():
     command = [inputs["gem5"], "--listener-mode=on", f"--outdir={out / 'm5out'}", str(SOURCE / "configs/zena_cmn/run_fs.py"),
                f"--kernel={inputs['kernel']}", f"--bootloader={firmware}", f"--initrd={initrd}",
                f"--profile={inputs['profile']}", f"--cpus={args.cpus}", f"--channels={args.channels}", f"--terminal-port={port}",
+               f"--interleave-bytes={args.interleave_bytes}",
                f"--max-ticks={args.max_ticks}", f"--command-line={bootargs}"]
     if inputs["rootfs"]:
         command.append(f"--disk-image={inputs['rootfs']}")
@@ -340,6 +345,7 @@ def main():
         env["LD_LIBRARY_PATH"] = os.pathsep.join(metadata["library_path"])
         env["PYTHONHOME"] = metadata["python_home"]
     manifest = {"inputs": inputs, "command": command, "workload": args.workload,
+                "interleave_bytes": args.interleave_bytes,
                 "model": "UNCALIBRATED_PROXY", "rootfs_access": "read-only base with in-memory COW" if inputs["rootfs"] else "none",
                 "gem5_sha256": sha256(inputs["gem5"]),
                 "guest_initrd_sha256": sha256(initrd),
