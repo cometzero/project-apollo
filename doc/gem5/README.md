@@ -21,6 +21,7 @@ cycle accuracy를 제공한다고 해석하지 않는다. `PASS`는 명시된 �
 | [Interleave / 16-core 시험](interleave-16core-results.md) | 64/512/1024 B channel stripe와 multicore workload 검증 | memory 성능 분석 담당자 |
 | [Orin hardware 비교](orin-validation-results.md) | 같은 benchmark의 실제 보드 실행, clock·affinity·prefetch 비교 조건 | hardware/model 정합성 담당자 |
 | [Orin bandwidth 개선](orin-bandwidth-tuning.md) | 공개 STREAM/BabelStream 실측값 재현, OpenMP·cluster affinity·working set 비교 | hardware memory 성능 측정 담당자 |
+| [Orin 기반 gem5 재측정](orin-informed-benchmark-results.md) | random cache sweep, multicore read/copy/triad, prefetch A/B와 ROI 검증 | benchmark/model 개발 담당자 |
 | [검증 및 유지보수](validation.md) | evidence 수준, 확인 명령, provenance, 변경 시 검증 범위 | 리뷰·회귀 시험 담당자 |
 
 ## 현재 기본 구성

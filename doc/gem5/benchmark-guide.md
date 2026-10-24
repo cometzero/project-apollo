@@ -310,3 +310,28 @@ Copy 약 82 GB/s, Triad 약 73 GB/s를 확인했다. `spread`만으로 cluster�
 균등해지는 것은 아니다. Native/Yocto compiler, 큰 working set, 기존 Apollo
 copy/triad와의 교차 시험 및 재현 명령은
 [Orin bandwidth 개선 보고서](orin-bandwidth-tuning.md)를 따른다.
+
+## 10. Orin 측정에 맞춘 gem5 재측정
+
+Cache latency는 `--workload cache`의 shuffled pointer chain을 사용하고,
+working set뿐 아니라 dependent-load 수와 실제 L1/L2/L3/SLC demand hit/miss를 기록한다.
+Fixed-stride lmbench 결과 하나를 L3 hit latency로 간주하지 않는다.
+32 KiB–1 MiB sweep은 65,536 loads를 시작 조건으로 사용할 수 있지만,
+Orin의 4 MiB 시험은 짧은 ROI에서 분산이 커 16 passes / 1,048,576 loads로 늘렸다.
+
+Single-core collector도 요청 mode/size/passes/checksum을 대조하고 정확한 ROI
+begin/end tick에 맞는 statistics block 하나만 사용한다. 중간 SIGUSR1 dump와 exit
+dump는 합산하지 않으며, 일치하는 ROI가 없거나 중복되면 결과를 거부한다.
+Multicore 결과에는 전체 core/DSU/Home의 cache counters도 포함한다. 이 counter에는
+benchmark 이외의 OS traffic이 포함될 수 있다.
+
+Memory 재측정은 read/copy/triad, array당 64 MiB, 16 workers, warmup 1 pass와
+measurement 2 passes를 사용한다. Orin은 12 workers로 같은 byte/반복 조건을
+측정하므로 CPU·cache·DRAM이 같은 플랫폼이라고 해석하지 않는다.
+Copy/triad는 기본 host timeout 7,200초를 넘길 수 있으므로 재현 명령은
+`--timeout 86400`을 명시한다. ROI 이후의 전체 출력 배열 검증과 정상 종료까지 기다린다.
+L2 prefetch `off`/`stride`는 지원되는 별도 profile로 A/B 측정하며 기본 profile을
+임의로 바꾸지 않는다. Profile이 다르면 별도 snapshot을 생성한다.
+
+구현, 완료한 실행 및 남은 검증 상태는
+[Orin 기반 재측정 보고서](orin-informed-benchmark-results.md)에 기록한다.
