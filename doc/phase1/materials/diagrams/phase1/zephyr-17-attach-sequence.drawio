@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="28.2.5" pages="1" compressed="false">
+  <diagram id="17-attach-sequence" name="17-attach-sequence">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1800" pageHeight="2020">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="2020" />
+        </mxCell>
+        <mxCell id="title" value="HIPC / Apollo Attach and Reattach Sequence" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="actor0" value="AP Linux / remoteproc" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="25" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life0" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="220" />
+            <mxPoint as="targetPoint" x="200" y="1880" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor1" value="MHU ISR / Workqueue" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="495" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life1" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="220" />
+            <mxPoint as="targetPoint" x="670" y="1880" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor2" value="CL1 Veth Link Worker" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="955" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life2" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="220" />
+            <mxPoint as="targetPoint" x="1130" y="1880" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="actor3" value="Shared State / OpenAMP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontStyle=1;fontSize=21;">
+          <mxGeometry as="geometry" x="1425" y="140" width="350" height="80" />
+        </mxCell>
+        <mxCell id="life3" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#94A3B8;strokeWidth=1.5;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="220" />
+            <mxPoint as="targetPoint" x="1600" y="1880" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg1" value="1. ATTACH doorbell" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="320" />
+            <mxPoint as="targetPoint" x="670" y="320" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg2" value="2. Pending event / k_work_submit" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="670" y="490" />
+            <mxPoint as="targetPoint" x="1130" y="490" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg3" value="3. Link lock / previous vdev cleanup" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="660" />
+            <mxPoint as="targetPoint" x="1130" y="705" />
+            <mxPoint as="offset" x="0" y="-18" />
+            <Array as="points">
+              <mxPoint x="1390" y="660" />
+              <mxPoint x="1390" y="705" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg4" value="4. Restore resource-table template&lt;br&gt;Zero shared buffers" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="830" />
+            <mxPoint as="targetPoint" x="1600" y="830" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg5" value="5. Memory barrier → attach ACK" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1000" />
+            <mxPoint as="targetPoint" x="200" y="1000" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg6" value="6. Set vring descriptors / addresses" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1170" />
+            <mxPoint as="targetPoint" x="1600" y="1170" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg7" value="7. VQ notify → link worker" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="200" y="1340" />
+            <mxPoint as="targetPoint" x="670" y="1340" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg8" value="8. Create vdev / vrings / RPMsg endpoint" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1130" y="1510" />
+            <mxPoint as="targetPoint" x="1600" y="1510" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="msg9" value="9. RPMsg handshake → Ethernet payload" edge="1" parent="1" style="edgeStyle=none;html=1;endArrow=block;endFill=1;strokeColor=#235D86;strokeWidth=2;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=20;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1600" y="1680" />
+            <mxPoint as="targetPoint" x="200" y="1680" />
+            <mxPoint as="offset" x="0" y="-18" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" value="Owned reattach patch 기준 · Link lock으로 lifecycle 직렬화 · ATTACHED marker와 실제 packet 성공은 별도." vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=20;align=left;">
+          <mxGeometry as="geometry" x="60" y="1880" width="1680" height="60" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

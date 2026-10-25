@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device" pages="1">
+  <diagram id="component-linux" name="C01 · Linux · AP 실행 환경">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1974.0079999999998" pageHeight="1180">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="0" y="0" width="1974.0079999999998" height="1180" />
+        </mxCell>
+        <mxCell id="kicker" value="APOLLO / COMPONENT ARCHITECTURE · C01" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="40" y="22" width="1894.0079999999998" height="28" />
+        </mxCell>
+        <mxCell id="title" value="Linux · AP 실행 환경" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=29;fontColor=#172C43;fontStyle=1;">
+          <mxGeometry as="geometry" x="40" y="65" width="1894.0079999999998" height="44" />
+        </mxCell>
+        <mxCell id="subtitle" value="PREEMPT_RT · firmware ABI · HIPC · device drivers" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=16;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="40" y="117" width="1894.0079999999998" height="40" />
+        </mxCell>
+        <mxCell id="sw" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;container=1;pointerEvents=0;">
+          <mxGeometry as="geometry" x="40" y="185" width="1064.0079999999998" height="800" />
+        </mxCell>
+        <mxCell id="sw-title" value="01  Component SW Architecture" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=18;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="20" y="12" width="1024.0079999999998" height="32" />
+        </mxCell>
+        <mxCell id="source" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;container=1;pointerEvents=0;">
+          <mxGeometry as="geometry" x="1144.0079999999998" y="185" width="790" height="800" />
+        </mxCell>
+        <mxCell id="source-title" value="02  Source Architecture" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=18;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="20" y="12" width="750" height="32" />
+        </mxCell>
+        <mxCell id="sw-entry" value="&lt;b&gt;UKI / OS device tree&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;Image + board DTB&lt;br&gt;Apollo 주소·IRQ·CPU topology&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="550.0039999999999" y="97.4992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-core" value="&lt;b&gt;arm64 / PREEMPT_RT&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;scheduler · MM · CPU bring-up&lt;br&gt;cpu_&lt;wbr&gt;psci_&lt;wbr&gt;cpu_&lt;wbr&gt;boot()&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="550.0039999999999" y="259.4992000000001" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-scmi" value="&lt;b&gt;CPUFreq / SCMI&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;scmi_&lt;wbr&gt;cpufreq_&lt;wbr&gt;set_&lt;wbr&gt;target()&lt;br&gt;perf_&lt;wbr&gt;ops-&amp;gt;freq_&lt;wbr&gt;set()&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="31.999999999999943" y="421.4992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-ffa" value="&lt;b&gt;FF-A transport&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;ffa_&lt;wbr&gt;sync_&lt;wbr&gt;send_&lt;wbr&gt;receive()&lt;br&gt;SMCCC direct request&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="550.0039999999999" y="421.4992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-hipc" value="&lt;b&gt;remoteproc / RPMsg&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;arm_&lt;wbr&gt;si_&lt;wbr&gt;rproc_&lt;wbr&gt;attach()&lt;br&gt;vring + MHUv3 doorbell&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="290.99839999999995" y="421.4992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-io" value="&lt;b&gt;DMA / PCI / Audio&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;DMA-350 · QBox EPC&lt;br&gt;DW I2S / DMAengine&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="808.9808" y="421.4992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-tfa" value="&lt;b&gt;TF-A / Secure world&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;PSCI CPU_&lt;wbr&gt;ON · FF-A dispatch&lt;br&gt;별도 firmware 실행 영역&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="762.9728" y="583.49992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-cl0" value="&lt;b&gt;SI CL0 / SCP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;SCMI performance server&lt;br&gt;별도 관리 firmware&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="31.999999999999943" y="583.49992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-cl1" value="&lt;b&gt;SI CL1 / Zephyr&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;OpenAMP · RPMsg endpoint&lt;br&gt;독립 부팅 후 Linux attach&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="290.99839999999995" y="583.49992" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="edge-0" source="sw-entry" target="sw-core" value="kernel entry" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="661.5" y="216.86" />
+              <mxPoint x="661.5" y="249.38" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-1" source="sw-core" target="sw-scmi" value="CPUFreq" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="549.74" y="299.5" />
+              <mxPoint x="397.46" y="299.5" />
+              <mxPoint x="143.5" y="299.5" />
+              <mxPoint x="143.5" y="411.32" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-2" source="sw-core" target="sw-ffa" value="보안 요청" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="661.5" y="378.86" />
+              <mxPoint x="661.5" y="411.38" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-3" source="sw-core" target="sw-hipc" value="HIPC" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="549.78" y="339.5" />
+              <mxPoint x="479.68" y="339.5" />
+              <mxPoint x="402.5" y="339.5" />
+              <mxPoint x="402.5" y="411.4" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-4" source="sw-core" target="sw-io" value="driver API" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="773.24" y="339.5" />
+              <mxPoint x="843.3" y="339.5" />
+              <mxPoint x="920.48" y="339.5" />
+              <mxPoint x="920.48" y="411.4" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-5" source="sw-core" target="sw-tfa" value="PSCI SMC" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="773.24" y="299.5" />
+              <mxPoint x="784.04" y="299.5" />
+              <mxPoint x="791.02" y="299.5" />
+              <mxPoint x="791.02" y="573.17" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-6" source="sw-ffa" target="sw-tfa" value="FF-A" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="767.98" y="540.86" />
+              <mxPoint x="767.98" y="573.38" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-7" source="sw-scmi" target="sw-cl0" value="mailbox / shmem" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="143.5" y="540.86" />
+              <mxPoint x="143.5" y="573.38" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-8" source="sw-hipc" target="sw-cl1" value="vring / doorbell" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="402.5" y="540.86" />
+              <mxPoint x="402.5" y="573.38" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="source-root" value="&lt;b&gt;기준 저장소&lt;/b&gt;  hsoc-stack/components/primary_compute/linux/" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="24" y="52" width="742" height="50" />
+        </mxCell>
+        <mxCell id="src-0" value="&lt;b&gt;01 · Apollo DT / Kconfig&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;arch/arm64/boot/dts/hsoc/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;apollo.dtsi → qvp.dtsi → saturn-v.dts&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="113.0" width="742" height="114.0" />
+        </mxCell>
+        <mxCell id="src-1" value="&lt;b&gt;02 · CPU / firmware transport&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;drivers/firmware/{arm_ffa,arm_scmi}/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;PSCI · FF-A · SCMI / MHUv3&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="245.0" width="742" height="114.0" />
+        </mxCell>
+        <mxCell id="src-2" value="&lt;b&gt;03 · 장치 드라이버&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;drivers/dma/arm-dma350.c&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;PCI: pcie-qbox-ep.c · Audio: dwc-i2s.c&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="377.0" width="742" height="114.0" />
+        </mxCell>
+        <mxCell id="src-3" value="&lt;b&gt;04 · 외부 HIPC / PFDI modules&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;[외부] sw-ref-stack/components/primary_compute/linux_drivers/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;arm_si_rproc · rpmsg_net · pfdi_misc&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="509.0" width="742" height="114.0" />
+        </mxCell>
+        <mxCell id="src-4" value="&lt;b&gt;05 · Yocto 설정 소유&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;[외부] hsoc-stack/yocto/meta-hsoc-bsp/recipes-kernel/linux/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;externalsrc · local defconfig/fragment&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="641.0" width="742" height="114.0" />
+        </mxCell>
+        <mxCell id="contract" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="40" y="1010" width="1894.0079999999998" height="108" />
+        </mxCell>
+        <mxCell id="config" value="&lt;b&gt;BUILD INPUT&lt;/b&gt;  linux-yocto-rt · apollo_qvp_defconfig · apollo-qvp-saturn-v.dtb" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=15;fontColor=#172C43;">
+          <mxGeometry as="geometry" x="60" y="1019" width="1854.0079999999998" height="46" />
+        </mxCell>
+        <mxCell id="artifact" value="&lt;b&gt;ARTIFACT / CONSUMER&lt;/b&gt;  Image / DTB → UKI; modules → 제품 rootfs 또는 BSP initramfs" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=15;fontColor=#172C43;">
+          <mxGeometry as="geometry" x="60" y="1068" width="1854.0079999999998" height="38" />
+        </mxCell>
+        <mxCell id="note" value="기본 idle=WFI. HIPC/PFDI 외부 모듈은 sw-ref-stack 소유; PMIC는 CL0 소유." parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=14;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="40" y="1132" width="1894.0079999999998" height="32" />
+        </mxCell>
+        <mxCell id="number" value="C01" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="1889.0079999999998" y="24" width="45" height="24" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

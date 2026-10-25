@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Apollo Project Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box} body{margin:0;padding:32px 24px;background:#f5f5f5;color:#2d3142;font-family:'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif} .frame{width:100%;max-width:1328px;min-width:0;margin:auto} .eyebrow{font-family:'Geist Mono', ui-monospace, monospace;font-size:12px;letter-spacing:.08em;color:#5a6580;margin:0 0 12px} .diagram-container{width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px} svg{width:100%;height:auto;min-width:1280px;display:block} .footer{font-size:14px;line-height:1.8;max-width:1100px;margin-top:20px} a{color:#2e5aa8} @media print{body{padding:0}.diagram-container{overflow-x:visible;border:none}svg{min-width:0}}</style></head><body><main class="frame"><p class="eyebrow">APOLLO SEMINAR / ARCHITECTURE / 2026-10-25</p><div class="diagram-container">
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="01-project-overview-title 01-project-overview-desc">
+<title id="01-project-overview-title">Apollo Project Overview</title>
+<desc id="01-project-overview-desc">QBox와 FVP는 비교 목적에 맞는 machine/config/artifact를 각각 선택합니다. 이 그림은 현재 source 구조이며 runtime PASS를 나타내지 않습니다.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">Apollo Project Overview</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">Reference와 owned source를 조립하고, 선택한 platform에서 실행 결과를 확인합니다.</text>
+<path d="M 320,212 L 416,212" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 736,212 L 928,212" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 1000,264 L 1000,308 Q 1000,316 992,316 L 584,316 Q 576,316 576,324 L 576,384" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 1160,264 L 1160,384" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 416,448 L 320,448" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 1080,504 L 1080,572 Q 1080,580 1072,580 L 192,580 Q 184,580 184,572 L 184,504" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+<rect x="328" y="188" width="80" height="16" fill="#f5f5f5"/>
+<text x="368" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">CONTRACT</text>
+<rect x="802" y="188" width="60" height="16" fill="#f5f5f5"/>
+<text x="832" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">BUILD</text>
+<rect x="762" y="292" width="44" height="16" fill="#f5f5f5"/>
+<text x="784" y="304" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">QVP</text>
+<rect x="1168" y="320" width="44" height="16" fill="#f5f5f5"/>
+<text x="1190.0" y="332" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">FVP</text>
+<rect x="334" y="424" width="68" height="16" fill="#f5f5f5"/>
+<text x="368" y="436" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">RESULT</text>
+<rect x="602" y="556" width="76" height="16" fill="#f5f5f5"/>
+<text x="640" y="568" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">COMPARE</text>
+<g data-node="Arm reference">
+<rect x="48" y="160" width="272" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="172" width="64" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">REFERENCE</text>
+<text x="68" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Arm reference</text>
+<text x="68" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Zena CSS / RD-Aspen</text>
+</g>
+<g data-node="Apollo implementation">
+<rect x="416" y="160" width="320" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="432" y="172" width="48" height="16" rx="2" fill="#f5f5f5"/>
+<text x="440" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SOURCE</text>
+<text x="436" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Apollo implementation</text>
+<text x="436" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Firmware / OS / models</text>
+</g>
+<g data-node="Yocto integration">
+<rect x="928" y="160" width="304" height="104" rx="6" fill="#f4e7e3" stroke="#bf4520" stroke-width="2"/>
+<rect x="944" y="172" width="44" height="16" rx="2" fill="#f5f5f5"/>
+<text x="952" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">BUILD</text>
+<text x="948" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Yocto integration</text>
+<text x="948" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">MACHINE + recipes + config</text>
+</g>
+<g data-node="QBox QVP">
+<rect x="416" y="384" width="320" height="120" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="432" y="396" width="64" height="16" rx="2" fill="#f5f5f5"/>
+<text x="440" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">EXECUTION</text>
+<text x="436" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">QBox QVP</text>
+<text x="436" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SystemC / TLM / libqemu</text>
+</g>
+<g data-node="Arm FVP">
+<rect x="928" y="384" width="304" height="120" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="944" y="396" width="84" height="16" rx="2" fill="#f5f5f5"/>
+<text x="952" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">REFERENCE RUN</text>
+<text x="948" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Arm FVP</text>
+<text x="948" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">matching artifacts / config</text>
+</g>
+<g data-node="Validation evidence">
+<rect x="48" y="384" width="272" height="120" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="396" width="56" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">EVIDENCE</text>
+<text x="68" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Validation evidence</text>
+<text x="68" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">logs / named cases / hashes</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">실선: 구성/실행 · 점선: reference 결과 비교 · 길이는 latency를 나타내지 않습니다</text>
+</svg>
+</div><p class="footer">QBox와 FVP는 비교 목적에 맞는 machine/config/artifact를 각각 선택합니다. 이 그림은 현재 source 구조이며 runtime PASS를 나타내지 않습니다.<br><a href="../01-project-overview.md">설명과 Source 근거</a> · <a href="../README.md">세미나 목차</a></p></main></body></html>

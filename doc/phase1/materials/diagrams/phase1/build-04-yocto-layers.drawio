@@ -1,0 +1,198 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device" pages="1">
+  <diagram id="04-yocto-layers" name="04 · Yocto Layer Dependency: Arm 참조 + HSOC 확장">
+    <mxGraphModel dx="-774" dy="-307" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" background="#FFFFFF" math="0" shadow="0" adaptiveColors="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="1180" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="top" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CBD5E1;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="2" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1673A5;fontFamily=Arial;fontSize=13;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="APOLLO  /  PHASE 1     ·     04" vertex="1">
+          <mxGeometry height="25" width="1420" x="40" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=29;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="Yocto Layer Dependency: Arm 참조 + HSOC 확장" vertex="1">
+          <mxGeometry height="45" width="1420" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=15;spacing=0;align=left;verticalAlign=middle;" value="화살표는 소비 레이어 → 의존 레이어. 현재 layer.conf의 직접 의존 중 핵심 경로를 표시한다." vertex="1">
+          <mxGeometry height="35" width="1420" x="40" y="112" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=11;spacing=0;align=left;verticalAlign=middle;" value="PROJECT APOLLO     /     BUILD ARCHITECTURE" vertex="1">
+          <mxGeometry height="24" width="1100" x="40" y="1143" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=12;spacing=0;align=left;verticalAlign=middle;" value="04" vertex="1">
+          <mxGeometry height="24" width="60" x="1390" y="1143" as="geometry" />
+        </mxCell>
+        <mxCell id="hs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="200" width="440" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="hsh" parent="hs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="hsoc-stack/yocto" vertex="1">
+          <mxGeometry height="42" width="440" as="geometry" />
+        </mxCell>
+        <mxCell id="hp" parent="hs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-hsoc-auto-solutions&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + meta-arm-auto-solutions&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="408" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="hb" parent="hs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-hsoc-bsp&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + Zena BSP + Zena SI&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="408" x="16" y="133" as="geometry" />
+        </mxCell>
+        <mxCell id="sw" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="155" width="390" x="550" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="swh" parent="sw" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="sw-ref-stack/yocto" vertex="1">
+          <mxGeometry height="42" width="390" as="geometry" />
+        </mxCell>
+        <mxCell id="auto" parent="sw" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-arm-auto-solutions&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;BSP / SI / meta-arm / EWAOL / BlueChi&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="358" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="zena" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="285" width="440" x="40" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="zenah" parent="zena" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="arm-zena-css/yocto" vertex="1">
+          <mxGeometry height="42" width="440" as="geometry" />
+        </mxCell>
+        <mxCell id="si" parent="zena" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-zena-css-safety-island&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + Zena BSP + zephyrcore&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="408" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="bsp" parent="zena" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-zena-css-bsp&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + meta-arm + OE/Python/Perl + PTX&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="408" x="16" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="zena" source="si" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="bsp" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="215" width="420" x="1040" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="armh" parent="arm" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="layers/meta-arm" vertex="1">
+          <mxGeometry height="42" width="420" as="geometry" />
+        </mxCell>
+        <mxCell id="ma" parent="arm" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-arm&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + arm-toolchain&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="388" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="tc" parent="arm" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-arm-toolchain&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;Arm cross toolchain&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="388" x="16" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="arm" source="ma" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="tc" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="product" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="285" width="390" x="550" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="producth" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="layers/ · 제품 기반" vertex="1">
+          <mxGeometry height="42" width="390" as="geometry" />
+        </mxCell>
+        <mxCell id="ewa" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-ewaol&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;image feature 통합&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="358" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="cas" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-cassini-distro&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + yocto + virtualization&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="358" x="16" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="blue" parent="product" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-bluechi&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + meta-oe&lt;/font&gt;" vertex="1">
+          <mxGeometry height="52" width="358" x="16" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="product" source="ewa" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="cas" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zeph" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="155" width="420" x="1040" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="zephh" parent="zeph" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="layers/meta-zephyr" vertex="1">
+          <mxGeometry height="42" width="420" as="geometry" />
+        </mxCell>
+        <mxCell id="zc" parent="zeph" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-zephyr-core&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;core + meta-python&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="388" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="base" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="225" width="1420" x="40" y="825" as="geometry" />
+        </mxCell>
+        <mxCell id="baseh" parent="base" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="layers/ · 공통 기반과 패키지" vertex="1">
+          <mxGeometry height="42" width="1420" as="geometry" />
+        </mxCell>
+        <mxCell id="oe" parent="base" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-openembedded&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;meta-oe / python / perl&lt;br&gt;networking / filesystems&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="410" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="virt" parent="base" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;meta-virtualization&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;OE / networking / filesystems / Python&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="420" x="480" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="core" parent="base" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;Poky / OE-Core + 기타&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;meta · meta-poky · meta-ptx&lt;br&gt;security / secure-core / signing-key&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="450" x="950" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="hp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0;entryY=0.25;" target="auto" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="hb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=1;entryX=0.8;entryY=0;" target="si" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="382" y="410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="hb" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.7;entryX=0;entryY=0.5;" target="bsp" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="24" y="365" />
+              <mxPoint x="24" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="auto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.4;entryX=0;entryY=0.5;" target="ma" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="auto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.8;entryX=0.5;entryY=0;" target="si" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="514" y="295" />
+              <mxPoint x="514" y="490" />
+              <mxPoint x="260" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="auto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.95;entryX=1;entryY=0.6;" target="bsp" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="310" />
+              <mxPoint x="500" y="670" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="auto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0.85;exitY=1;entryX=0.85;entryY=0;" target="ewa" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="auto" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.85;entryX=1;entryY=0.5;" target="blue" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="978" y="310" />
+              <mxPoint x="978" y="675" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="si" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.25;entryX=0.5;entryY=0;" target="zc" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="488" y="525" />
+              <mxPoint x="488" y="412" />
+              <mxPoint x="1240" y="412" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="bsp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=1;entryX=0.8;entryY=0;" target="oe" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="cas" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=0.6;entryY=0;" target="virt" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="964" y="607" />
+              <mxPoint x="964" y="800" />
+              <mxPoint x="730" y="800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sel" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;" value="Apollo 선택 축   MACHINE=apollo-qvp   ·   DISTRO=auto-ad-nexios   ·   target=nexios-image / nexios-bsp-initramfs" vertex="1">
+          <mxGeometry height="48" width="1420" x="40" y="1080" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

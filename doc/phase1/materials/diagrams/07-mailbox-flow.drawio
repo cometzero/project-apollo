@@ -1,0 +1,178 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mxfile host="app.diagrams.net" type="device" compressed="false">
+  <diagram id="07-mailbox-flow" name="Mailbox: payload and notification">
+    <mxGraphModel dx="1280" dy="720" grid="1" gridSize="8" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0" background="#f5f5f5" adaptiveColors="none" sourceFile="07-mailbox-flow.html" description="논리적 request/response를 요약한 그림입니다. Response IRQ는 IENABLED flag에 따라 생략되며 polling도 가능합니다. 방향별 실제 PBX/MBX와 IRQ가 있으며, ACK만으로 SCMI service 완료를 판단하지 않습니다. HIPC/RPMsg는 별도 shared vring protocol이므로 이 SCMI sequence와 동일시하지 않습니다.">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rect_033" value="" style="shape=rectangle;rounded=0;absoluteArcSize=1;arcSize=0;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="0" y="0" width="1280" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="text_034" value="Mailbox: payload and notification" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif;fontSize=40;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="Mailbox: payload and notification">
+          <mxGeometry x="48" y="22.66666668" width="1208" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="text_035" value="SCMI 요청/응답: payload는 SRAM, notification은 MHU · response IRQ는 선택적이며 polling도 가능합니다." style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=14;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="SCMI 요청/응답: payload는 SRAM, notification은 MHU · response IRQ는 선택적이며 polling도 가능합니다.">
+          <mxGeometry x="48" y="86.93333334" width="1208" height="16.8" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_001" value="WRITE REQ" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_017" target="port_018" sourceText="WRITE REQ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="152" y="264" as="sourcePoint" />
+            <mxPoint x="504" y="264" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_002" value="DOORBELL" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_019" target="port_020" sourceText="DOORBELL">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="152" y="312" as="sourcePoint" />
+            <mxPoint x="856" y="312" as="targetPoint" />
+            <mxPoint x="-176" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_003" value="IRQ" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=open;endFill=0;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=5 4;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_021" target="port_022" sourceText="IRQ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="856" y="360" as="sourcePoint" />
+            <mxPoint x="1136" y="360" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_004" value="READ REQ" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_023" target="port_024" sourceText="READ REQ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1136" y="408" as="sourcePoint" />
+            <mxPoint x="504" y="408" as="targetPoint" />
+            <mxPoint x="-140" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_005" value="WRITE RESP" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_025" target="port_026" sourceText="WRITE RESP">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1136" y="456" as="sourcePoint" />
+            <mxPoint x="504" y="456" as="targetPoint" />
+            <mxPoint x="-140" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_006" value="NOTIFY" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=open;endFill=0;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=5 4;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_027" target="port_028" sourceText="NOTIFY">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1136" y="504" as="sourcePoint" />
+            <mxPoint x="856" y="504" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_007" value="OPTIONAL IRQ" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=open;endFill=0;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=5 4;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_029" target="port_030" sourceText="OPTIONAL IRQ">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="856" y="552" as="sourcePoint" />
+            <mxPoint x="152" y="552" as="targetPoint" />
+            <mxPoint x="-176" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_008" value="READ RESP" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="port_031" target="port_032" sourceText="READ RESP">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="152" y="600" as="sourcePoint" />
+            <mxPoint x="504" y="600" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="node_009" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="AP SCMI client" semanticNode="AP SCMI client">
+          <mxGeometry x="48" y="144" width="208" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="text_036" value="&lt;span style=&quot;font-weight:600&quot;&gt;AP SCMI client&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="AP SCMI client">
+          <mxGeometry x="20" y="17.06666667" width="176" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_037" value="Linux" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="Linux">
+          <mxGeometry x="20" y="44.8" width="176" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="lifeline_013" value="" style="shape=line;direction=south;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;dashed=1;dashPattern=3 3;html=1;" parent="node_009" vertex="1" tooltip="AP SCMI client lifeline" semanticLifeline="AP SCMI client lifeline">
+          <mxGeometry x="103.5" y="80" width="1" height="408" as="geometry" />
+        </mxCell>
+        <mxCell id="port_017" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_013" vertex="1" tooltip="AP SCMI client lifeline @ y=264" semanticPort="AP SCMI client lifeline @ y=264">
+          <mxGeometry x="-0.5" y="39" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_019" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_013" vertex="1" tooltip="AP SCMI client lifeline @ y=312" semanticPort="AP SCMI client lifeline @ y=312">
+          <mxGeometry x="-0.5" y="87" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_030" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_013" vertex="1" tooltip="AP SCMI client lifeline @ y=552" semanticPort="AP SCMI client lifeline @ y=552">
+          <mxGeometry x="-0.5" y="327" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_031" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_013" vertex="1" tooltip="AP SCMI client lifeline @ y=600" semanticPort="AP SCMI client lifeline @ y=600">
+          <mxGeometry x="-0.5" y="375" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="node_010" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Shared memory" semanticNode="Shared memory">
+          <mxGeometry x="400" y="144" width="208" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="text_038" value="&lt;span style=&quot;font-weight:600&quot;&gt;Shared memory&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_010" vertex="1" connectable="0" sourceText="Shared memory">
+          <mxGeometry x="20" y="17.06666667" width="176" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_039" value="request / response" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_010" vertex="1" connectable="0" sourceText="request / response">
+          <mxGeometry x="20" y="44.8" width="176" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="lifeline_014" value="" style="shape=line;direction=south;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;dashed=1;dashPattern=3 3;html=1;" parent="node_010" vertex="1" tooltip="Shared memory lifeline" semanticLifeline="Shared memory lifeline">
+          <mxGeometry x="103.5" y="80" width="1" height="408" as="geometry" />
+        </mxCell>
+        <mxCell id="port_018" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_014" vertex="1" tooltip="Shared memory lifeline @ y=264" semanticPort="Shared memory lifeline @ y=264">
+          <mxGeometry x="-0.5" y="39" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_024" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_014" vertex="1" tooltip="Shared memory lifeline @ y=408" semanticPort="Shared memory lifeline @ y=408">
+          <mxGeometry x="-0.5" y="183" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_026" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_014" vertex="1" tooltip="Shared memory lifeline @ y=456" semanticPort="Shared memory lifeline @ y=456">
+          <mxGeometry x="-0.5" y="231" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_032" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_014" vertex="1" tooltip="Shared memory lifeline @ y=600" semanticPort="Shared memory lifeline @ y=600">
+          <mxGeometry x="-0.5" y="375" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="node_011" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="MHU + GIC" semanticNode="MHU + GIC">
+          <mxGeometry x="752" y="144" width="208" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="text_040" value="&lt;span style=&quot;font-weight:600&quot;&gt;MHU + GIC&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_011" vertex="1" connectable="0" sourceText="MHU + GIC">
+          <mxGeometry x="20" y="17.06666667" width="176" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_041" value="PBX / MBX / IRQ" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_011" vertex="1" connectable="0" sourceText="PBX / MBX / IRQ">
+          <mxGeometry x="20" y="44.8" width="176" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="lifeline_015" value="" style="shape=line;direction=south;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;dashed=1;dashPattern=3 3;html=1;" parent="node_011" vertex="1" tooltip="MHU + GIC lifeline" semanticLifeline="MHU + GIC lifeline">
+          <mxGeometry x="103.5" y="80" width="1" height="408" as="geometry" />
+        </mxCell>
+        <mxCell id="port_020" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_015" vertex="1" tooltip="MHU + GIC lifeline @ y=312" semanticPort="MHU + GIC lifeline @ y=312">
+          <mxGeometry x="-0.5" y="87" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_021" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_015" vertex="1" tooltip="MHU + GIC lifeline @ y=360" semanticPort="MHU + GIC lifeline @ y=360">
+          <mxGeometry x="-0.5" y="135" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_028" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_015" vertex="1" tooltip="MHU + GIC lifeline @ y=504" semanticPort="MHU + GIC lifeline @ y=504">
+          <mxGeometry x="-0.5" y="279" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_029" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_015" vertex="1" tooltip="MHU + GIC lifeline @ y=552" semanticPort="MHU + GIC lifeline @ y=552">
+          <mxGeometry x="-0.5" y="327" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="node_012" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="SCP service" semanticNode="SCP service">
+          <mxGeometry x="1040" y="144" width="192" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="text_042" value="&lt;span style=&quot;font-weight:600&quot;&gt;SCP service&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_012" vertex="1" connectable="0" sourceText="SCP service">
+          <mxGeometry x="20" y="17.06666667" width="160" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_043" value="SI CL0" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_012" vertex="1" connectable="0" sourceText="SI CL0">
+          <mxGeometry x="20" y="44.8" width="160" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="lifeline_016" value="" style="shape=line;direction=south;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;dashed=1;dashPattern=3 3;html=1;" parent="node_012" vertex="1" tooltip="SCP service lifeline" semanticLifeline="SCP service lifeline">
+          <mxGeometry x="95.5" y="80" width="1" height="408" as="geometry" />
+        </mxCell>
+        <mxCell id="port_022" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_016" vertex="1" tooltip="SCP service lifeline @ y=360" semanticPort="SCP service lifeline @ y=360">
+          <mxGeometry x="-0.5" y="135" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_023" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_016" vertex="1" tooltip="SCP service lifeline @ y=408" semanticPort="SCP service lifeline @ y=408">
+          <mxGeometry x="-0.5" y="183" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_025" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_016" vertex="1" tooltip="SCP service lifeline @ y=456" semanticPort="SCP service lifeline @ y=456">
+          <mxGeometry x="-0.5" y="231" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="port_027" value="" style="shape=rectangle;fillColor=none;strokeColor=none;opacity=0;perimeter=none;port=1;html=1;" parent="lifeline_016" vertex="1" tooltip="SCP service lifeline @ y=504" semanticPort="SCP service lifeline @ y=504">
+          <mxGeometry x="-0.5" y="279" width="2" height="2" as="geometry" />
+        </mxCell>
+        <mxCell id="rule_044" value="" style="shape=line;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="48" y="656" width="1184" height="0" as="geometry" />
+        </mxCell>
+        <mxCell id="text_045" value="실선: buffer / MMIO 접근 · 점선·빈 화살표: notification · IRQ ACK와 service 완료는 다릅니다" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="실선: buffer / MMIO 접근 · 점선·빈 화살표: notification · IRQ ACK와 service 완료는 다릅니다">
+          <mxGeometry x="48" y="676.8" width="1208" height="14.4" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

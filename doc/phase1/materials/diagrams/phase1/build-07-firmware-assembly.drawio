@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device" pages="1">
+  <diagram id="07-firmware-assembly" name="07 · Firmware Assembly: SP → OP-TEE → FIP → Flash">
+    <mxGraphModel dx="-774" dy="-300" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" background="#FFFFFF" math="0" shadow="0" adaptiveColors="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="1150" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="top" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CBD5E1;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="2" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1673A5;fontFamily=Arial;fontSize=13;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="APOLLO  /  PHASE 1     ·     07" vertex="1">
+          <mxGeometry height="25" width="1420" x="40" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=29;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="Firmware Assembly: SP → OP-TEE → FIP → Flash" vertex="1">
+          <mxGeometry height="45" width="1420" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=15;spacing=0;align=left;verticalAlign=middle;" value="파일이 포함되는 방향을 표시한다. 펌웨어 recipe의 recipe-sysroot는 component 산출물을 모으는 접점이다." vertex="1">
+          <mxGeometry height="35" width="1420" x="40" y="112" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=11;spacing=0;align=left;verticalAlign=middle;" value="PROJECT APOLLO     /     BUILD ARCHITECTURE" vertex="1">
+          <mxGeometry height="24" width="1100" x="40" y="1113" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=12;spacing=0;align=left;verticalAlign=middle;" value="07" vertex="1">
+          <mxGeometry height="24" width="60" x="1390" y="1113" as="geometry" />
+        </mxCell>
+        <mxCell id="sp" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="175" width="390" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="sph" parent="sp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="Trusted Services" vertex="1">
+          <mxGeometry height="42" width="390" as="geometry" />
+        </mxCell>
+        <mxCell id="tsp" parent="sp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;SE Proxy / SMM Gateway / RAS SP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;fetch/patch → SP binary&lt;br&gt;TF-M FWU interface header 의존&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="358" x="16" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="op" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;OP-TEE (BL32)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;SP_PATHS로 SP를 embed&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="360" x="520" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="ub" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;U-Boot (BL33)&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;u-boot.bin&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="390" x="40" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="tf" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;TF-A&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;BL31 + BL32 + BL33 + HW_CONFIG&lt;br&gt;→ fip.bin / bl2.bin&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="360" x="520" y="405" as="geometry" />
+        </mxCell>
+        <mxCell id="others" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="370" width="390" x="40" y="570" as="geometry" />
+        </mxCell>
+        <mxCell id="othersh" parent="others" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="System Management firmware" vertex="1">
+          <mxGeometry height="42" width="390" as="geometry" />
+        </mxCell>
+        <mxCell id="tfm" parent="others" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;TF-M&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;bl1_1 / bl2_signed / tfm_s_signed&lt;br&gt;keys / provisioning / OTP config&lt;/font&gt;" vertex="1">
+          <mxGeometry height="95" width="358" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="scp" parent="others" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;SCP-firmware&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;si0_ramfw.bin&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="358" x="16" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="z" parent="others" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;Zephyr CL1&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;zephyr-demos-cl1.bin&lt;/font&gt;" vertex="1">
+          <mxGeometry height="65" width="358" x="16" y="275" as="geometry" />
+        </mxCell>
+        <mxCell id="agg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="760" width="470" x="990" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="aggh" parent="agg" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="firmware-apollo-qvp · Arm firmware recipe 재사용" vertex="1">
+          <mxGeometry height="42" width="470" as="geometry" />
+        </mxCell>
+        <mxCell id="sys" parent="agg" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;do_prepare_recipe_sysroot&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;TF-M / SCP / TF-A / CL1 + native tools&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="430" x="20" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="sign" parent="agg" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;do_sign_images&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;AP BL2 / SI0 / SI1 서명&lt;br&gt;fiptool --tb-fw → fip_with_bl2.bin&lt;/font&gt;" vertex="1">
+          <mxGeometry height="105" width="430" x="20" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="meta" parent="agg" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;FWU metadata + QVP OTP&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;metadata init / OTP 별도 생성&lt;/font&gt;" vertex="1">
+          <mxGeometry height="80" width="430" x="20" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="gen" parent="agg" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;do_genimage → do_deploy&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;firmware.cfg → ROM / RSE Flash / AP Flash&lt;br&gt;QVP OTP는 생성 후 함께 복사·배포&lt;/font&gt;" vertex="1">
+          <mxGeometry height="125" width="430" x="20" y="535" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="agg" source="sys" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="sign" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="agg" source="sys" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.6;entryX=0;entryY=0.5;" target="meta" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="10" y="110" />
+              <mxPoint x="10" y="425" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="agg" source="sign" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0.5;" target="gen" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="270" />
+              <mxPoint x="460" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="agg" source="meta" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="gen" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="tsp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="op" value="SP binaries">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="op" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="tf" value="BL32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="ub" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="tf" value="BL33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="tf" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.5;" target="sys" value="FIP / BL2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="940" y="455" />
+              <mxPoint x="940" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="tfm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.75;" target="sys" value="RSE firmware">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="920" y="680" />
+              <mxPoint x="920" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="scp" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.7;" target="sign" value="SI0">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="790" />
+              <mxPoint x="900" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="z" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.9;" target="sign" value="SI1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="875" />
+              <mxPoint x="880" y="490" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;" value="firmware.cfg의 bank: RSE primary/secondary + AP FIP_A/FIP_B.  Nexios rootro_a/rootro_b는 별도 OS 업데이트 단위다." vertex="1">
+          <mxGeometry height="62" width="1420" x="40" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="t17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=14;spacing=0;align=left;verticalAlign=middle;" value="서명과 metadata/OTP 준비는 각각 genimage 이전의 선행 작업이다. 모든 산출물이 하나의 직렬 task는 아니다." vertex="1">
+          <mxGeometry height="30" width="1420" x="40" y="1070" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

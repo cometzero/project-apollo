@@ -1,0 +1,166 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mxfile host="app.diagrams.net" type="device" compressed="false">
+  <diagram id="01-project-overview" name="Apollo Project Overview">
+    <mxGraphModel dx="1280" dy="720" grid="1" gridSize="8" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0" background="#f5f5f5" adaptiveColors="none" sourceFile="01-project-overview.html" description="QBox와 FVP는 비교 목적에 맞는 machine/config/artifact를 각각 선택합니다. 이 그림은 현재 source 구조이며 runtime PASS를 나타내지 않습니다.">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rect_013" value="" style="shape=rectangle;rounded=0;absoluteArcSize=1;arcSize=0;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="0" y="0" width="1280" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="text_014" value="Apollo Project Overview" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif;fontSize=40;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="Apollo Project Overview">
+          <mxGeometry x="48" y="22.66666668" width="1208" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="text_015" value="Reference와 owned source를 조립하고, 선택한 platform에서 실행 결과를 확인합니다." style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=14;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="Reference와 owned source를 조립하고, 선택한 platform에서 실행 결과를 확인합니다.">
+          <mxGeometry x="48" y="86.93333334" width="1208" height="16.8" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_001" value="CONTRACT" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_007" target="node_008" sourceText="CONTRACT">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="212" as="sourcePoint" />
+            <mxPoint x="416" y="212" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_002" value="BUILD" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_008" target="node_009" sourceText="BUILD">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="736" y="212" as="sourcePoint" />
+            <mxPoint x="928" y="212" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_003" value="QVP" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.23684211;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_009" target="node_010" sourceText="QVP">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1000" y="264" as="sourcePoint" />
+            <mxPoint x="576" y="384" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1000" y="316" />
+              <mxPoint x="576" y="316" />
+            </Array>
+            <mxPoint x="4" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_004" value="FVP" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.76315789;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.76315789;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_009" target="node_011" sourceText="FVP">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1160" y="264" as="sourcePoint" />
+            <mxPoint x="1160" y="384" as="targetPoint" />
+            <mxPoint x="30" y="4" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_005" value="RESULT" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0;exitY=0.53333333;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.53333333;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_010" target="node_012" sourceText="RESULT">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="416" y="448" as="sourcePoint" />
+            <mxPoint x="320" y="448" as="targetPoint" />
+            <mxPoint x="0" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_006" value="COMPARE" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;dashed=1;dashPattern=5 4;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_011" target="node_012" sourceText="COMPARE">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1080" y="504" as="sourcePoint" />
+            <mxPoint x="184" y="504" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1080" y="580" />
+              <mxPoint x="184" y="580" />
+            </Array>
+            <mxPoint x="8" y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="node_007" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Arm reference" semanticNode="Arm reference">
+          <mxGeometry x="48" y="160" width="272" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_016" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_007" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="64" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_017" value="&lt;span style=&quot;font-weight:500&quot;&gt;REFERENCE&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="REFERENCE">
+          <mxGeometry x="24" y="16.53333334" width="236" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_018" value="&lt;span style=&quot;font-weight:600&quot;&gt;Arm reference&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="Arm reference">
+          <mxGeometry x="20" y="37.06666667" width="240" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_019" value="Zena CSS / RD-Aspen" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="Zena CSS / RD-Aspen">
+          <mxGeometry x="20" y="64.8" width="240" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_008" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Apollo implementation" semanticNode="Apollo implementation">
+          <mxGeometry x="416" y="160" width="320" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_020" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_008" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="48" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_021" value="&lt;span style=&quot;font-weight:500&quot;&gt;SOURCE&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="SOURCE">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_022" value="&lt;span style=&quot;font-weight:600&quot;&gt;Apollo implementation&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="Apollo implementation">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_023" value="Firmware / OS / models" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="Firmware / OS / models">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_009" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#f4e7e3;strokeColor=#bf4520;strokeWidth=2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Yocto integration" semanticNode="Yocto integration">
+          <mxGeometry x="928" y="160" width="304" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_024" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_009" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="44" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_025" value="&lt;span style=&quot;font-weight:500&quot;&gt;BUILD&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="BUILD">
+          <mxGeometry x="24" y="16.53333334" width="268" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_026" value="&lt;span style=&quot;font-weight:600&quot;&gt;Yocto integration&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="Yocto integration">
+          <mxGeometry x="20" y="37.06666667" width="272" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_027" value="MACHINE + recipes + config" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="MACHINE + recipes + config">
+          <mxGeometry x="20" y="64.8" width="272" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_010" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="QBox QVP" semanticNode="QBox QVP">
+          <mxGeometry x="416" y="384" width="320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_028" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_010" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="64" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_029" value="&lt;span style=&quot;font-weight:500&quot;&gt;EXECUTION&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_010" vertex="1" connectable="0" sourceText="EXECUTION">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_030" value="&lt;span style=&quot;font-weight:600&quot;&gt;QBox QVP&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_010" vertex="1" connectable="0" sourceText="QBox QVP">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_031" value="SystemC / TLM / libqemu" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_010" vertex="1" connectable="0" sourceText="SystemC / TLM / libqemu">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_011" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Arm FVP" semanticNode="Arm FVP">
+          <mxGeometry x="928" y="384" width="304" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_032" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_011" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="84" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_033" value="&lt;span style=&quot;font-weight:500&quot;&gt;REFERENCE RUN&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_011" vertex="1" connectable="0" sourceText="REFERENCE RUN">
+          <mxGeometry x="24" y="16.53333334" width="268" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_034" value="&lt;span style=&quot;font-weight:600&quot;&gt;Arm FVP&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_011" vertex="1" connectable="0" sourceText="Arm FVP">
+          <mxGeometry x="20" y="37.06666667" width="272" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_035" value="matching artifacts / config" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_011" vertex="1" connectable="0" sourceText="matching artifacts / config">
+          <mxGeometry x="20" y="64.8" width="272" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_012" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Validation evidence" semanticNode="Validation evidence">
+          <mxGeometry x="48" y="384" width="272" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_036" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_012" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="56" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_037" value="&lt;span style=&quot;font-weight:500&quot;&gt;EVIDENCE&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_012" vertex="1" connectable="0" sourceText="EVIDENCE">
+          <mxGeometry x="24" y="16.53333334" width="236" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_038" value="&lt;span style=&quot;font-weight:600&quot;&gt;Validation evidence&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_012" vertex="1" connectable="0" sourceText="Validation evidence">
+          <mxGeometry x="20" y="37.06666667" width="240" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_039" value="logs / named cases / hashes" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_012" vertex="1" connectable="0" sourceText="logs / named cases / hashes">
+          <mxGeometry x="20" y="64.8" width="240" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="rule_040" value="" style="shape=line;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="48" y="656" width="1184" height="0" as="geometry" />
+        </mxCell>
+        <mxCell id="text_041" value="실선: 구성/실행 · 점선: reference 결과 비교 · 길이는 latency를 나타내지 않습니다" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="실선: 구성/실행 · 점선: reference 결과 비교 · 길이는 latency를 나타내지 않습니다">
+          <mxGeometry x="48" y="676.8" width="1208" height="14.4" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,110 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.6 Chrome/140.0.7339.249 Electron/38.8.0 Safari/537.36" scale="1" border="0" version="29.3.6">
+  <diagram name="Page-1" id="a9dLLRwXG1rfgYLpW3GK">
+    <mxGraphModel dx="1868" dy="748" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;verticalAlign=top;fontSize=24;fontStyle=1;strokeColor=none;" value="Platform Fault Detection Interface (PFDI) Monitoring" vertex="1">
+          <mxGeometry height="460" width="800" x="-240" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-2" edge="1" parent="1" source="usAz_-R-6_nzXyp9ROPS-7" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#CC0066;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" target="usAz_-R-6_nzXyp9ROPS-13" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points" />
+            <mxPoint x="30" y="258.05" as="sourcePoint" />
+            <mxPoint x="220" y="327.4400000000001" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="60" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="50" y="168.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="190" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="180" y="168.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-170" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-180" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="Shared Memory" vertex="1">
+          <mxGeometry height="40" width="100" x="170" y="181" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="MHUv3 Channel" vertex="1">
+          <mxGeometry height="40" width="100" x="40" y="181" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-190" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-12" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="128.5" width="200" x="320" y="178.25" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-13" parent="usAz_-R-6_nzXyp9ROPS-12" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fillColor=none;strokeColor=#FFC700;strokeWidth=3;" value="Safety Island Cluster 0" vertex="1">
+          <mxGeometry height="128.5" width="200" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-14" parent="usAz_-R-6_nzXyp9ROPS-12" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=none;" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;PFDI Monitor&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="41.64" width="145.83" x="27.08" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-15" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;align=center;verticalAlign=top;" value="Primary Compute Core" vertex="1">
+          <mxGeometry height="125" width="180" x="-200" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-16" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=none;" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;PFDI Agent&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="34.91" width="130" x="-175" y="262.54" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-17" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="SCMI Channel (per core)" vertex="1">
+          <mxGeometry height="30" width="140" x="100" y="240.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-170" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-19" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-180" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-20" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;" value="" vertex="1">
+          <mxGeometry height="125" width="180" x="-190" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-21" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=2;strokeColor=#FF6B00;align=center;verticalAlign=top;" value="Safety Island Cluster 1 Core" vertex="1">
+          <mxGeometry height="125" width="180" x="-200" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-22" parent="1" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fillColor=none;" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;PFDI Agent&lt;/span&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="34.91" width="130" x="-175" y="452.54" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-23" edge="1" parent="1" source="usAz_-R-6_nzXyp9ROPS-18" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=2;strokeColor=#CC0066;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=1.006;exitY=0.56;exitDx=0;exitDy=0;exitPerimeter=0;" target="usAz_-R-6_nzXyp9ROPS-13" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="440" />
+            </Array>
+            <mxPoint x="230" y="420" as="sourcePoint" />
+            <mxPoint x="540" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-24" parent="1" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" value="SCMI Channel (per core)" vertex="1">
+          <mxGeometry height="30" width="140" x="100" y="437.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-25" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="65" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-26" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="55" y="368.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-27" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="195" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-28" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="" vertex="1">
+          <mxGeometry height="40" width="100" x="185" y="368.5" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-29" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="Shared Memory" vertex="1">
+          <mxGeometry height="40" width="100" x="175" y="381" as="geometry" />
+        </mxCell>
+        <mxCell id="usAz_-R-6_nzXyp9ROPS-30" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#0091BD;fillColor=default;strokeWidth=2;" value="MHUv3 Channel" vertex="1">
+          <mxGeometry height="40" width="100" x="45" y="381" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

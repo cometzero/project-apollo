@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device" pages="1">
+  <diagram id="05-source-provenance" name="05 · Source Architecture: 세 가지 소스 공급 경로">
+    <mxGraphModel dx="-774" dy="-282" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="0" page="0" pageScale="1" pageWidth="850" pageHeight="1100" background="#FFFFFF" math="0" shadow="0" adaptiveColors="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="1080" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="top" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CBD5E1;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="" vertex="1">
+          <mxGeometry height="2" width="1500" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#1673A5;fontFamily=Arial;fontSize=13;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="APOLLO  /  PHASE 1     ·     05" vertex="1">
+          <mxGeometry height="25" width="1420" x="40" y="25" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#14283F;fontFamily=Arial;fontSize=29;spacing=0;fontStyle=1;align=left;verticalAlign=middle;" value="Source Architecture: 세 가지 소스 공급 경로" vertex="1">
+          <mxGeometry height="45" width="1420" x="40" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=15;spacing=0;align=left;verticalAlign=middle;" value="HSOC externalsrc, fetch/patch, CMake 하위 의존성을 구분해야 재현 가능한 소스 집합이 된다." vertex="1">
+          <mxGeometry height="35" width="1420" x="40" y="112" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=11;spacing=0;align=left;verticalAlign=middle;" value="PROJECT APOLLO     /     BUILD ARCHITECTURE" vertex="1">
+          <mxGeometry height="24" width="1100" x="40" y="1043" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=12;spacing=0;align=left;verticalAlign=middle;" value="05" vertex="1">
+          <mxGeometry height="24" width="60" x="1390" y="1043" as="geometry" />
+        </mxCell>
+        <mxCell id="local" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="230" width="600" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="localh" parent="local" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="① HSOC 로컬 개발 코드" vertex="1">
+          <mxGeometry height="42" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="pc" parent="local" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;components/primary_compute&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;Linux · U-Boot · TF-A · OP-TEE&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="568" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="sm" parent="local" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1673A5;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;components/system_mgmt&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;TF-M · SCP · Zephyr + zephyr_hsoc_src&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="568" x="16" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="fetch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="210" width="600" x="40" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="fetchh" parent="fetch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="② BitBake fetch / patch 소스" vertex="1">
+          <mxGeometry height="42" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="ts" parent="fetch" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;Trusted Services + 일반 패키지&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;meta-arm TS recipe + Arm platform .inc&lt;br&gt;보조 dependency: CMSIS / mbedTLS / OpenAMP 등&lt;/font&gt;" vertex="1">
+          <mxGeometry height="110" width="568" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="host" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="200" width="600" x="40" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="hosth" parent="host" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="③ 가상 플랫폼 소스" vertex="1">
+          <mxGeometry height="42" width="600" as="geometry" />
+        </mxCell>
+        <mxCell id="core" parent="host" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#7154A4;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;tools/qemu + qbox + qbox-platform&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;externalsrc + QBOX_CORE_SOURCE_DIR&lt;br&gt;CMake / CPM 의존성은 별도 추적&lt;/font&gt;" vertex="1">
+          <mxGeometry height="100" width="568" x="16" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="meta" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="420" width="700" x="760" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="metah" parent="meta" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="Yocto 통합 규칙 · hsoc-stack/yocto" vertex="1">
+          <mxGeometry height="42" width="700" as="geometry" />
+        </mxCell>
+        <mxCell id="ex" parent="meta" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;HSOC_APOLLO_*_SRC → EXTERNALSRC&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;로컬 checkout을 S로 선택 / B는 WORKDIR/build&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="660" x="20" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="cfg" parent="meta" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;component append / *-apollo-*.inc&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;defconfig · board · DT overlay · SP_PATHS&lt;br&gt;reference SRC_URI / config의 선택적 유지·제거&lt;/font&gt;" vertex="1">
+          <mxGeometry height="90" width="660" x="20" y="185" as="geometry" />
+        </mxCell>
+        <mxCell id="abi" parent="meta" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#AB7418;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;cross / native recipe class&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;타깃 ABI와 호스트 실행 ABI를 별도 빌드&lt;/font&gt;" vertex="1">
+          <mxGeometry height="75" width="660" x="20" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="meta" source="ex" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="cfg" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="meta" source="cfg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="abi" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="build" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;container=1;pointerEvents=0;" value="" vertex="1">
+          <mxGeometry height="240" width="700" x="760" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="buildh" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=17;spacing=10;fontStyle=1;align=left;spacingLeft=15;" value="TMPDIR · recipe별 작업과 sysroot" vertex="1">
+          <mxGeometry height="42" width="700" as="geometry" />
+        </mxCell>
+        <mxCell id="stage" parent="build" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#087F80;fontColor=#14283F;fontFamily=Arial;fontSize=16;spacing=10;" value="&lt;b&gt;configure → compile → install&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:13px&quot;&gt;recipe-sysroot[-native] = 이 recipe의 의존 입력&lt;br&gt;do_populate_sysroot = 다른 recipe에 제공&lt;/font&gt;" vertex="1">
+          <mxGeometry height="110" width="660" x="20" y="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="pc" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="ex" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="sm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.85;exitX=1;exitY=0.5;" target="ex" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="355" />
+              <mxPoint x="720" y="308" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="ts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;entryX=0;entryY=0.8;" target="cfg" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="590" />
+              <mxPoint x="720" y="435" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="stage" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="abi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endSize=8;strokeWidth=1.5;strokeColor=#53677E;fontColor=#53677E;fontSize=13;fontFamily=Arial;labelBackgroundColor=#FFFFFF;" target="stage" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="t13" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#53677E;fontFamily=Arial;fontSize=18;spacing=0;align=left;verticalAlign=middle;" value="소스 provenance = Git revision / SRCREV + 적용 metadata + toolchain / config + 추가 fetch/CMake dependency" vertex="1">
+          <mxGeometry height="35" width="1420" x="40" y="983" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

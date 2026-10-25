@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="07-mailbox-flow-title 07-mailbox-flow-desc" id="d-07-mailbox-flow-root">
+<title id="07-mailbox-flow-title">Mailbox: payload and notification</title>
+<desc id="07-mailbox-flow-desc">논리적 request/response를 요약한 그림입니다. Response IRQ는 IENABLED flag에 따라 생략되며 polling도 가능합니다. 방향별 실제 PBX/MBX와 IRQ가 있으며, ACK만으로 SCMI service 완료를 판단하지 않습니다. HIPC/RPMsg는 별도 shared vring protocol이므로 이 SCMI sequence와 동일시하지 않습니다.</desc>
+<defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #d-07-mailbox-flow-root { color: #2d3142; font-family: 'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif; }
+      #d-07-mailbox-flow-root .diagram-container { width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px }
+      #d-07-mailbox-flow-root a { color:#2e5aa8 }
+      @media print {
+#d-07-mailbox-flow-root .diagram-container { overflow-x:visible;border:none }
+}</style><marker id="d-07-mailbox-flow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="d-07-mailbox-flow-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="d-07-mailbox-flow-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">Mailbox: payload and notification</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">SCMI 요청/응답: payload는 SRAM, notification은 MHU · response IRQ는 선택적이며 polling도 가능합니다.</text>
+<line x1="152" y1="224" x2="152" y2="632" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="504" y1="224" x2="504" y2="632" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="856" y1="224" x2="856" y2="632" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="3,3"/>
+<line x1="1136" y1="224" x2="1136" y2="632" stroke="#bfc0c0" stroke-width="1" stroke-dasharray="3,3"/>
+<path d="M 152,264 L 504,264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-07-mailbox-flow-arrow)"/>
+<path d="M 152,312 L 856,312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-07-mailbox-flow-arrow)"/>
+<path d="M 856,360 L 1136,360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#d-07-mailbox-flow-arrow-open)"/>
+<path d="M 1136,408 L 504,408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-07-mailbox-flow-arrow)"/>
+<path d="M 1136,456 L 504,456" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-07-mailbox-flow-arrow)"/>
+<path d="M 1136,504 L 856,504" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#d-07-mailbox-flow-arrow-open)"/>
+<path d="M 856,552 L 152,552" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#d-07-mailbox-flow-arrow-open)"/>
+<path d="M 152,600 L 504,600" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-07-mailbox-flow-arrow)"/>
+<rect x="284" y="240" width="88" height="16" fill="#f5f5f5"/>
+<text x="328" y="252" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">WRITE REQ</text>
+<rect x="288" y="288" width="80" height="16" fill="#f5f5f5"/>
+<text x="328" y="300" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">DOORBELL</text>
+<rect x="974" y="336" width="44" height="16" fill="#f5f5f5"/>
+<text x="996" y="348" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">IRQ</text>
+<rect x="640" y="384" width="80" height="16" fill="#f5f5f5"/>
+<text x="680" y="396" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">READ REQ</text>
+<rect x="632" y="432" width="96" height="16" fill="#f5f5f5"/>
+<text x="680" y="444" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">WRITE RESP</text>
+<rect x="962" y="480" width="68" height="16" fill="#f5f5f5"/>
+<text x="996" y="492" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">NOTIFY</text>
+<rect x="272" y="528" width="112" height="16" fill="#f5f5f5"/>
+<text x="328" y="540" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">OPTIONAL IRQ</text>
+<rect x="284" y="576" width="88" height="16" fill="#f5f5f5"/>
+<text x="328" y="588" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">READ RESP</text>
+<g data-node="AP SCMI client">
+<rect x="48" y="144" width="208" height="80" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="68" y="176" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">AP SCMI client</text>
+<text x="68" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Linux</text>
+</g>
+<g data-node="Shared memory">
+<rect x="400" y="144" width="208" height="80" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="420" y="176" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Shared memory</text>
+<text x="420" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">request / response</text>
+</g>
+<g data-node="MHU + GIC">
+<rect x="752" y="144" width="208" height="80" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="772" y="176" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">MHU + GIC</text>
+<text x="772" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">PBX / MBX / IRQ</text>
+</g>
+<g data-node="SCP service">
+<rect x="1040" y="144" width="192" height="80" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="1060" y="176" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">SCP service</text>
+<text x="1060" y="200" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SI CL0</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">실선: buffer / MMIO 접근 · 점선·빈 화살표: notification · IRQ ACK와 service 완료는 다릅니다</text>
+</svg>

@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" version="28.2.0" pages="1">
+  <diagram id="08f-scp-software" name="08f-scp-software">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="800" pageHeight="1320">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sw" value="SCP Firmware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;container=1;collapsible=0;verticalAlign=top;fontStyle=1;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="12.0" y="12.0" width="740.0" height="322.12" />
+        </mxCell>
+        <mxCell id="client" value="Module clients / Alarm callback" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="68.59" y="53.35" width="626.82" height="34.82" />
+        </mxCell>
+        <mxCell id="poll" value="Timer API" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="59.88" y="131.71" width="261.18" height="43.53" />
+        </mxCell>
+        <mxCell id="alarm" value="Alarm API / timer HAL" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="425.53" y="131.71" width="269.88" height="43.53" />
+        </mxCell>
+        <mxCell id="drv" value="gtimer driver" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="59.88" y="238.35" width="261.18" height="43.53" />
+        </mxCell>
+        <mxCell id="isr" value="Framework interrupt / timer_isr" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="425.53" y="238.35" width="269.88" height="43.53" />
+        </mxCell>
+        <mxCell id="a" source="client" target="poll" value="① read / polling" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0.2;exitY=1;entryX=0.5;entryY=0;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="b" source="client" target="alarm" value="② alarm request" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0.8;exitY=1;entryX=0.5;entryY=0;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="c" source="poll" target="drv" value="③ counter read" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="d" source="alarm" target="drv" value="④ earliest deadline" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0;exitY=0.6;entryX=0.8;entryY=0;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="373.29" y="157.82" />
+              <mxPoint x="373.29" y="207.88" />
+              <mxPoint x="268.82" y="207.88" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e" source="isr" target="alarm" value="⑤ pop / rearm" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="f" source="isr" target="client" value="⑥ callback (ISR)" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;entryX=1;entryY=0.5;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="725.88" y="260.12" />
+              <mxPoint x="725.88" y="70.76" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hw" value="Hardware / QVP" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;container=1;collapsible=0;verticalAlign=top;fontStyle=1;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="12.0" y="382.0" width="740.0" height="102.29" />
+        </mxCell>
+        <mxCell id="counter" value="System Counter" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="38.12" y="425.53" width="165.41" height="37.0" />
+        </mxCell>
+        <mxCell id="timer" value="CL0 MMIO Timer" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="273.18" y="425.53" width="217.65" height="37.0" />
+        </mxCell>
+        <mxCell id="gic" value="GIC / CL0 CPU" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;;fontSize=12;spacing=3;whiteSpace=wrap;">
+          <mxGeometry as="geometry" x="564.82" y="425.53" width="161.06" height="37.0" />
+        </mxCell>
+        <mxCell id="g" source="counter" target="timer" value="count" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="h" source="timer" target="gic" value="expiry IRQ" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="i" source="drv" target="timer" value="⑦ MMIO" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=1;entryX=0.3;entryY=0;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="j" source="gic" target="isr" value="⑧ ISR dispatch" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.8;entryY=1;;fontSize=12;spacing=3;;whiteSpace=nowrap;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

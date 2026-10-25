@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device" compressed="false" pages="1">
+  <diagram id="08-time-model" name="08-time-model">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="wall" value="Host Wall Clock" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#BAC7D3;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="48" y="205" width="440" height="140" />
+        </mxCell>
+        <mxCell id="qclock" value="QEMU Virtual Clock" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="568" y="205" width="464" height="140" />
+        </mxCell>
+        <mxCell id="sctime" value="SystemC Simulation Time" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#147B79;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="1112" y="205" width="440" height="140" />
+        </mxCell>
+        <mxCell id="qclock-sctime" edge="1" parent="1" value="QK sync" source="qclock" target="sctime" style="html=1;whiteSpace=nowrap;rounded=0;edgeStyle=none;endArrow=block;endFill=1;endSize=9;strokeColor=#147B79;strokeWidth=1.8;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;startArrow=block;startFill=1;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="offset" x="0" y="-20" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cpu-label" value="QEMU worker" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=19;fontColor=#172C43;fontStyle=1;">
+          <mxGeometry as="geometry" x="48" y="482" width="245" height="42" />
+        </mxCell>
+        <mxCell id="sysc-label" value="SystemC kernel" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=19;fontColor=#172C43;fontStyle=1;">
+          <mxGeometry as="geometry" x="48" y="625" width="245" height="42" />
+        </mxCell>
+        <mxCell id="cpu-axis" edge="1" parent="1" value="" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=9;strokeColor=#235D86;strokeWidth=1.6;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="320" y="503" />
+            <mxPoint as="targetPoint" x="1505" y="503" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sysc-axis" edge="1" parent="1" value="" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=9;strokeColor=#147B79;strokeWidth=1.6;fontColor=#147B79;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="320" y="646" />
+            <mxPoint as="targetPoint" x="1505" y="646" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="chunk0" value="guest 실행" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="420" y="468" width="235" height="69" />
+        </mxCell>
+        <mxCell id="chunk1" value="guest 실행" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="760" y="468" width="235" height="69" />
+        </mxCell>
+        <mxCell id="chunk2" value="guest 실행" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="1110" y="468" width="235" height="69" />
+        </mxCell>
+        <mxCell id="event0" value="event / jobs" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#147B79;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="555" y="612" width="180" height="68" />
+        </mxCell>
+        <mxCell id="tick0" edge="1" parent="1" value="" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=9;strokeColor=#9A681E;strokeWidth=1.6;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;dashed=1;dashPattern=6 4;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="580" y="545" />
+            <mxPoint as="targetPoint" x="580" y="603" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="event1" value="event / jobs" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#147B79;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="905" y="612" width="180" height="68" />
+        </mxCell>
+        <mxCell id="tick1" edge="1" parent="1" value="" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=9;strokeColor=#9A681E;strokeWidth=1.6;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;dashed=1;dashPattern=6 4;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="930" y="545" />
+            <mxPoint as="targetPoint" x="930" y="603" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="event2" value="event / jobs" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#147B79;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;spacing=14;">
+          <mxGeometry as="geometry" x="1265" y="612" width="180" height="68" />
+        </mxCell>
+        <mxCell id="tick2" edge="1" parent="1" value="" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=9;strokeColor=#9A681E;strokeWidth=1.6;fontColor=#9A681E;fontFamily=Noto Sans CJK KR;fontSize=15;labelBackgroundColor=#FFFFFF;dashed=1;dashPattern=6 4;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="1290" y="545" />
+            <mxPoint as="targetPoint" x="1290" y="603" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

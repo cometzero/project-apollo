@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="03-build-pipeline-title 03-build-pipeline-desc" id="d-03-build-pipeline-root">
+<title id="03-build-pipeline-title">Build to runtime contract</title>
+<desc id="03-build-pipeline-desc">화살표는 주요 입력 및 artifact 의존 관계입니다. BitBake task의 직렬 실행 순서가 아닙니다. .qboxconf는 경로와 실행 조합을 기록하며 파일 전체를 포장하지 않습니다.</desc>
+<defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #d-03-build-pipeline-root { color: #2d3142; font-family: 'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif; }
+      #d-03-build-pipeline-root .diagram-container { width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px }
+      #d-03-build-pipeline-root a { color:#2e5aa8 }
+      @media print {
+#d-03-build-pipeline-root .diagram-container { overflow-x:visible;border:none }
+}</style><marker id="d-03-build-pipeline-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="d-03-build-pipeline-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="d-03-build-pipeline-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">Build to runtime contract</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">Guest firmware, OS image, host provider는 서로 다른 compiler와 dependency graph를 가집니다.</text>
+<path d="M 320,196 L 480,196" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 800,196 L 960,196" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 1008,248 L 1008,280 Q 1008,288 1000,288 L 192,288 Q 184,288 184,296 L 184,376" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 1096,248 L 1096,316 Q 1096,324 1088,324 L 648,324 Q 640,324 640,332 L 640,376" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 1184,248 L 1184,376" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 184,480 L 184,512 Q 184,520 192,520 L 544,520 Q 552,520 552,528 L 552,552" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 640,480 L 640,552" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<path d="M 1096,480 L 1096,512 Q 1096,520 1088,520 L 736,520 Q 728,520 728,528 L 728,552" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-03-build-pipeline-arrow)"/>
+<rect x="366" y="172" width="68" height="16" fill="#f5f5f5"/>
+<text x="400" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">SELECT</text>
+<rect x="850" y="172" width="60" height="16" fill="#f5f5f5"/>
+<text x="880" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">PARSE</text>
+<g data-node="yocto_build.sh">
+<rect x="48" y="144" width="272" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="156" width="44" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="168" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">ENTRY</text>
+<text x="68" y="196" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">yocto_build.sh</text>
+<text x="68" y="220" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">target / --bsp / --keep-conf</text>
+</g>
+<g data-node="Configuration">
+<rect x="480" y="144" width="320" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="496" y="156" width="56" height="16" rx="2" fill="#f5f5f5"/>
+<text x="504" y="168" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">METADATA</text>
+<text x="500" y="196" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Configuration</text>
+<text x="500" y="220" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">MACHINE / DISTRO / layers</text>
+</g>
+<g data-node="BitBake">
+<rect x="960" y="144" width="272" height="104" rx="6" fill="#f4e7e3" stroke="#bf4520" stroke-width="2"/>
+<rect x="976" y="156" width="44" height="16" rx="2" fill="#f5f5f5"/>
+<text x="984" y="168" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">BUILD</text>
+<text x="980" y="196" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">BitBake</text>
+<text x="980" y="220" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">tasks / signatures / sstate</text>
+</g>
+<g data-node="Firmware">
+<rect x="48" y="376" width="272" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="388" width="48" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="400" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">TARGET</text>
+<text x="68" y="428" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Firmware</text>
+<text x="68" y="452" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">RSE / SI0 / SI1 / AP</text>
+</g>
+<g data-node="OS image">
+<rect x="480" y="376" width="320" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="496" y="388" width="48" height="16" rx="2" fill="#f5f5f5"/>
+<text x="504" y="400" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">TARGET</text>
+<text x="500" y="428" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">OS image</text>
+<text x="500" y="452" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">kernel / DTB / UKI / WIC</text>
+</g>
+<g data-node="Native provider">
+<rect x="960" y="376" width="272" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="976" y="388" width="36" height="16" rx="2" fill="#f5f5f5"/>
+<text x="984" y="400" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">HOST</text>
+<text x="980" y="428" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Native provider</text>
+<text x="980" y="452" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">platforms-vp / modules / Lua</text>
+</g>
+<g data-node="Deploy + .qboxconf">
+<rect x="480" y="552" width="320" height="80" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="500" y="584" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Deploy + .qboxconf</text>
+<text x="500" y="608" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">selected by canonical runner</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">실선: 구성 또는 전달 관계 · 크기와 거리는 성능을 나타내지 않습니다</text>
+</svg>

@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mxfile host="app.diagrams.net" type="device" compressed="false">
+  <diagram id="07-smcf-monitor" name="SMCF monitor data path">
+    <mxGraphModel dx="1280" dy="720" grid="1" gridSize="8" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1280" pageHeight="720" math="0" shadow="0" background="#f5f5f5" adaptiveColors="none" sourceFile="07-smcf-monitor.html" description="Arm design/smcf.rst에는 원본 diagram이 없어 reference 설명과 현재 source를 바탕으로 작성했습니다. Reference의 DMA sampling과 SI0 IRQ 흐름은 위에, 현재 QVP model의 구현 범위는 아래에 표시했습니다. Feature flag 노출만으로 DMA나 IRQ가 동작하지는 않습니다.">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rect_010" value="" style="shape=rectangle;rounded=0;absoluteArcSize=1;arcSize=0;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="0" y="0" width="1280" height="720" as="geometry" />
+        </mxCell>
+        <mxCell id="text_011" value="SMCF monitor data path" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif;fontSize=40;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="SMCF monitor data path">
+          <mxGeometry x="48" y="22.66666668" width="1208" height="48" as="geometry" />
+        </mxCell>
+        <mxCell id="text_012" value="Reference의 measurement 경로와 현재 QVP의 register model을 분리해서 읽습니다." style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=14;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="Reference의 measurement 경로와 현재 QVP의 register model을 분리해서 읽습니다.">
+          <mxGeometry x="48" y="86.93333334" width="1208" height="16.8" as="geometry" />
+        </mxCell>
+        <mxCell id="text_013" value="REFERENCE / SCP DESIGNED PATH" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=14;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="REFERENCE / SCP DESIGNED PATH">
+          <mxGeometry x="48" y="134.93333334" width="1208" height="16.8" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_001" value="" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" edge="1" source="node_004" target="node_005">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="368" y="256" as="sourcePoint" />
+            <mxPoint x="480" y="256" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_002" value="" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" edge="1" source="node_005" target="node_006">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="256" as="sourcePoint" />
+            <mxPoint x="912" y="256" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_003" value="DONE" style="edgeStyle=none;noEdgeStyle=1;orthogonalLoop=1;jettySize=auto;rounded=1;arcSize=16;curved=0;html=1;strokeColor=#4f5d75;strokeWidth=1.6;endArrow=block;endFill=1;endSize=6;startArrow=none;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=center;verticalAlign=middle;labelBackgroundColor=#f5f5f5;labelBorderColor=none;" parent="1" edge="1" source="node_006" target="node_007" sourceText="DONE">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1072" y="324" as="sourcePoint" />
+            <mxPoint x="1072" y="384" as="targetPoint" />
+            <mxPoint x="34" y="2" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="node_004" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Monitor + MLI" semanticNode="Monitor + MLI">
+          <mxGeometry x="48" y="188" width="320" height="136" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_014" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_004" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="84" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_015" value="&lt;span style=&quot;font-weight:500&quot;&gt;SAMPLE SOURCE&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_004" vertex="1" connectable="0" sourceText="SAMPLE SOURCE">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_016" value="&lt;span style=&quot;font-weight:600&quot;&gt;Monitor + MLI&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_004" vertex="1" connectable="0" sourceText="Monitor + MLI">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_017" value="sensor / AMU monitor values" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_004" vertex="1" connectable="0" sourceText="sensor / AMU monitor values">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="text_018" value="MLI: Monitor Local Interface" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_004" vertex="1" connectable="0" sourceText="MLI: Monitor Local Interface">
+          <mxGeometry x="20" y="88.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_005" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="MGI sampling control" semanticNode="MGI sampling control">
+          <mxGeometry x="480" y="188" width="320" height="136" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_019" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_005" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="92" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_020" value="&lt;span style=&quot;font-weight:500&quot;&gt;TRIGGER + GROUP&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_005" vertex="1" connectable="0" sourceText="TRIGGER + GROUP">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_021" value="&lt;span style=&quot;font-weight:600&quot;&gt;MGI sampling control&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_005" vertex="1" connectable="0" sourceText="MGI sampling control">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_022" value="internal / external / periodic" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_005" vertex="1" connectable="0" sourceText="internal / external / periodic">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="text_023" value="MGI: Monitor Group Interface" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_005" vertex="1" connectable="0" sourceText="MGI: Monitor Group Interface">
+          <mxGeometry x="20" y="88.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_006" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="DMA buffer" semanticNode="DMA buffer">
+          <mxGeometry x="912" y="188" width="320" height="136" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_024" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_006" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="36" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_025" value="&lt;span style=&quot;font-weight:500&quot;&gt;DATA&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_006" vertex="1" connectable="0" sourceText="DATA">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_026" value="&lt;span style=&quot;font-weight:600&quot;&gt;DMA buffer&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_006" vertex="1" connectable="0" sourceText="DMA buffer">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_027" value="sample data in SRAM" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_006" vertex="1" connectable="0" sourceText="sample data in SRAM">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="text_028" value="one group result per sample" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_006" vertex="1" connectable="0" sourceText="one group result per sample">
+          <mxGeometry x="20" y="88.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_007" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="SI0 interrupt" semanticNode="SI0 interrupt">
+          <mxGeometry x="912" y="384" width="320" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_029" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_007" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="76" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_030" value="&lt;span style=&quot;font-weight:500&quot;&gt;NOTIFICATION&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="NOTIFICATION">
+          <mxGeometry x="24" y="16.53333334" width="284" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_031" value="&lt;span style=&quot;font-weight:600&quot;&gt;SI0 interrupt&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="SI0 interrupt">
+          <mxGeometry x="20" y="37.06666667" width="288" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_032" value="SCP SMCF driver -&amp;gt; consumer" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_007" vertex="1" connectable="0" sourceText="SCP SMCF driver -&gt; consumer">
+          <mxGeometry x="20" y="64.8" width="288" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_008" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#f4e7e3;strokeColor=#bf4520;strokeWidth=2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="Current QVP: register behavior" semanticNode="Current QVP: register behavior">
+          <mxGeometry x="48" y="384" width="736" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="rect_033" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=4;fillColor=#f5f5f5;strokeColor=none;strokeWidth=1;" parent="node_008" vertex="1" connectable="0">
+          <mxGeometry x="16" y="12" width="72" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="text_034" value="&lt;span style=&quot;font-weight:500&quot;&gt;IMPLEMENTED&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=8;fontColor=#5a6580;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="IMPLEMENTED">
+          <mxGeometry x="24" y="16.53333334" width="700" height="9.6" as="geometry" />
+        </mxCell>
+        <mxCell id="text_035" value="&lt;span style=&quot;font-weight:600&quot;&gt;Current QVP: register behavior&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="Current QVP: register behavior">
+          <mxGeometry x="20" y="37.06666667" width="704" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_036" value="MON_REQ / MON_STAT, configuration and feature flags" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_008" vertex="1" connectable="0" sourceText="MON_REQ / MON_STAT, configuration and feature flags">
+          <mxGeometry x="20" y="64.8" width="704" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="node_009" value="" style="shape=rectangle;rounded=1;absoluteArcSize=1;arcSize=12;fillColor=#ffffff;strokeColor=#4f5d75;strokeWidth=1.2;container=1;collapsible=0;recursiveResize=1;html=1;" parent="1" vertex="1" tooltip="DMA / periodic sampling / SI0 IRQ output are not connected" semanticNode="DMA / periodic sampling / SI0 IRQ output are not connected">
+          <mxGeometry x="48" y="544" width="1184" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="text_037" value="&lt;span style=&quot;font-weight:600&quot;&gt;DMA / periodic sampling / SI0 IRQ output are not connected&lt;/span&gt;" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=16;fontColor=#2d3142;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="DMA / periodic sampling / SI0 IRQ output are not connected">
+          <mxGeometry x="20" y="17.06666667" width="1152" height="19.2" as="geometry" />
+        </mxCell>
+        <mxCell id="text_038" value="Feature capability bits do not establish an end-to-end measurement path." style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist Mono', ui-monospace, monospace;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="node_009" vertex="1" connectable="0" sourceText="Feature capability bits do not establish an end-to-end measurement path.">
+          <mxGeometry x="20" y="44.8" width="1152" height="14.4" as="geometry" />
+        </mxCell>
+        <mxCell id="rule_039" value="" style="shape=line;fillColor=none;strokeColor=#bfc0c0;strokeWidth=1;" parent="1" vertex="1" connectable="0">
+          <mxGeometry x="48" y="656" width="1184" height="0" as="geometry" />
+        </mxCell>
+        <mxCell id="text_040" value="위: reference data path · 아래: current QVP scope · 원본 topology 그림이 아닌 source 기반 해설도" style="text;strokeColor=none;fillColor=none;html=1;whiteSpace=nowrap;overflow=visible;spacing=0;fontFamily='Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;fontSize=12;fontColor=#4f5d75;fontStyle=0;align=left;verticalAlign=middle;" parent="1" vertex="1" connectable="0" sourceText="위: reference data path · 아래: current QVP scope · 원본 topology 그림이 아닌 source 기반 해설도">
+          <mxGeometry x="48" y="676.8" width="1208" height="14.4" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

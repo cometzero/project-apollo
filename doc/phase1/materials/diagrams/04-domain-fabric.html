@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QBox domain address views</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box} body{margin:0;padding:32px 24px;background:#f5f5f5;color:#2d3142;font-family:'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif} .frame{width:100%;max-width:1328px;min-width:0;margin:auto} .eyebrow{font-family:'Geist Mono', ui-monospace, monospace;font-size:12px;letter-spacing:.08em;color:#5a6580;margin:0 0 12px} .diagram-container{width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px} svg{width:100%;height:auto;min-width:1280px;display:block} .footer{font-size:14px;line-height:1.8;max-width:1100px;margin-top:20px} a{color:#2e5aa8} @media print{body{padding:0}.diagram-container{overflow-x:visible;border:none}svg{min-width:0}}</style></head><body><main class="frame"><p class="eyebrow">APOLLO SEMINAR / ARCHITECTURE / 2026-10-25</p><div class="diagram-container">
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="04-domain-fabric-title 04-domain-fabric-desc">
+<title id="04-domain-fabric-title">QBox domain address views</title>
+<desc id="04-domain-fabric-desc">각 Domain box는 CPU에서 해당 egress까지의 경로를 요약합니다. AP/RSE/CL0는 설정된 ATU 또는 명시적 bridge로 system_router에 접근합니다. SI1 HIPC shared-memory access는 고정 bridge로 AP view에 연결됩니다. 그 밖의 local device, mailbox와 반대 방향 window는 본문 표에서 구분합니다.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">QBox domain address views</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">Local router와 system_router는 서로 다른 decode view입니다. 실제로 연결된 경로만 따라갑니다.</text>
+<path d="M 448,180 L 512,180 Q 520,180 520,188 L 520,288 Q 520,296 528,296 L 608,296" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 448,308 L 544,308 Q 552,308 552,316 L 552,344 Q 552,352 560,352 L 608,352" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 448,436 L 512,436 Q 520,436 520,428 L 520,416 Q 520,408 528,408 L 608,408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 896,360 L 1008,360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 448,564 L 824,564" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+<rect x="930" y="336" width="44" height="16" fill="#f5f5f5"/>
+<text x="952" y="348" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">SMD</text>
+<rect x="592" y="540" width="96" height="16" fill="#f5f5f5"/>
+<text x="640" y="552" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">FIXED HIPC</text>
+<g data-node="AP memory view">
+<rect x="48" y="128" width="400" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="140" width="84" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="152" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">CORTEX-A720AE</text>
+<text x="68" y="180" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">AP memory view</text>
+<text x="68" y="204" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">ap_router -&gt; host_ap_atu</text>
+</g>
+<g data-node="RSE memory view">
+<rect x="48" y="256" width="400" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="268" width="68" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="280" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">CORTEX-M55</text>
+<text x="68" y="308" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">RSE memory view</text>
+<text x="68" y="332" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">rse_router -&gt; rse_atu_regs</text>
+</g>
+<g data-node="SI CL0 memory view">
+<rect x="48" y="384" width="400" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="396" width="68" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">CORTEX-R82</text>
+<text x="68" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">SI CL0 memory view</text>
+<text x="68" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">protected NCI / router / ATU</text>
+</g>
+<g data-node="SI CL1 memory view">
+<rect x="48" y="512" width="400" height="104" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="524" width="84" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="536" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">CORTEX-R82 x4</text>
+<text x="68" y="564" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">SI CL1 memory view</text>
+<text x="68" y="588" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">si_cl1_router / fixed HIPC</text>
+</g>
+<g data-node="system_router">
+<rect x="608" y="244" width="288" height="240" rx="6" fill="#f4e7e3" stroke="#bf4520" stroke-width="2"/>
+<rect x="624" y="256" width="72" height="16" rx="2" fill="#f5f5f5"/>
+<text x="632" y="268" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">ROOT FABRIC</text>
+<text x="628" y="296" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">system_router</text>
+<text x="628" y="320" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">explicit global targets</text>
+<text x="628" y="344" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">AP / RSE / SI exported windows</text>
+<text x="628" y="368" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">ATU output + explicit bridges</text>
+<text x="628" y="392" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Local map is not global map</text>
+</g>
+<g data-node="smd_router">
+<rect x="1008" y="288" width="224" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="1024" y="300" width="32" height="16" rx="2" fill="#f5f5f5"/>
+<text x="1032" y="312" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SMD</text>
+<text x="1028" y="340" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">smd_router</text>
+<text x="1028" y="364" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">selector 0x2</text>
+<text x="1028" y="388" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">CSS counter / reset</text>
+<text x="1028" y="412" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SRAM / ATU registers</text>
+</g>
+<g data-node="AP shared SRAM">
+<rect x="824" y="512" width="408" height="128" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="840" y="524" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="848" y="536" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">HIPC BACKING</text>
+<text x="844" y="564" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">AP shared SRAM</text>
+<text x="844" y="588" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">host_ap_bl2_header_sram</text>
+<text x="844" y="612" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">AP 0x00100000 .. 0x0017ffff</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">실선: 설정된 global access 경로 · 점선: SI1의 fixed HIPC alias · 전체 aperture forwarding을 뜻하지 않습니다</text>
+</svg>
+</div><p class="footer">각 Domain box는 CPU에서 해당 egress까지의 경로를 요약합니다. AP/RSE/CL0는 설정된 ATU 또는 명시적 bridge로 system_router에 접근합니다. SI1 HIPC shared-memory access는 고정 bridge로 AP view에 연결됩니다. 그 밖의 local device, mailbox와 반대 방향 window는 본문 표에서 구분합니다.<br><a href="../04-qbox-runtime-and-lua.md">설명과 Source 근거</a> · <a href="../README.md">세미나 목차</a></p></main></body></html>

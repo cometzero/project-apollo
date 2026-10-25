@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" type="device" compressed="false" pages="1">
+  <diagram id="04a-mmio-hardware-qbox" name="04a-mmio-hardware-qbox">
+    <mxGraphModel background="#FFFFFF" page="0" grid="0" adaptiveColors="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="hardware" value="Hardware View" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;verticalAlign=top;align=left;spacing=16;fontStyle=1;strokeColor=#BAC7D3;">
+          <mxGeometry as="geometry" x="20" y="20" width="530" height="840" />
+        </mxCell>
+        <mxCell id="qbox" value="QBox View" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;verticalAlign=top;align=left;spacing=16;fontStyle=1;strokeColor=#BAC7D3;">
+          <mxGeometry as="geometry" x="730" y="20" width="730" height="840" />
+        </mxCell>
+        <mxCell id="instance" value="ap_qemu_inst" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;verticalAlign=top;align=left;spacing=12;strokeColor=#BAC7D3;fontSize=16;">
+          <mxGeometry as="geometry" x="760" y="70" width="670" height="125" />
+        </mxCell>
+        <mxCell id="sysc" value="SystemC / TLM" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;verticalAlign=top;align=left;spacing=12;strokeColor=#BAC7D3;fontSize=16;">
+          <mxGeometry as="geometry" x="760" y="210" width="670" height="625" />
+        </mxCell>
+        <mxCell id="cpu" value="AP CPU" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="115" y="110" width="340" height="65" />
+        </mxCell>
+        <mxCell id="bus" value="Bus / Interconnect" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="115" y="375" width="340" height="265" />
+        </mxCell>
+        <mxCell id="mhu" value="MHU-320AE&lt;br&gt;PBX" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="115" y="745" width="340" height="65" />
+        </mxCell>
+        <mxCell id="vcpu" value="QEMU vCPU" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="110" width="390" height="65" />
+        </mxCell>
+        <mxCell id="bridge" value="QBox Initiator Bridge" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="265" width="390" height="50" />
+        </mxCell>
+        <mxCell id="aprouter" value="ap_router" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="375" width="390" height="55" />
+        </mxCell>
+        <mxCell id="addrtr" value="addrtr&lt;br&gt;PFDI MHU Bridge" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="475" width="390" height="65" />
+        </mxCell>
+        <mxCell id="sysrouter" value="system_router" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="585" width="390" height="55" />
+        </mxCell>
+        <mxCell id="target" value="mhu320ae&lt;br&gt;PBX" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=18;">
+          <mxGeometry as="geometry" x="900" y="745" width="390" height="65" />
+        </mxCell>
+        <mxCell id="hw-read" parent="1" edge="1" source="cpu" target="bus" value="MMIO Read / Write" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="hw-target" parent="1" edge="1" source="bus" target="mhu" value="Register Access" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="q-read" parent="1" edge="1" source="vcpu" target="bridge" value="MemoryRegion Callback" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="cross" parent="1" edge="1" source="bridge" target="aprouter" value="run_on_sysc() / b_transport" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="ap-route" parent="1" edge="1" source="aprouter" target="addrtr" value="0x4011100C" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="translate" parent="1" edge="1" source="addrtr" target="sysrouter" value="0x400003B38100C" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="register" parent="1" edge="1" source="sysrouter" target="target" value="Offset 0x100C" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="map-cpu" parent="1" edge="1" source="cpu" target="vcpu" value="CPU 실행" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=open;strokeColor=#8999A9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="map-bus" parent="1" edge="1" source="bus" target="addrtr" value="주소 Decode / 변환" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=open;strokeColor=#8999A9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="map-mhu" parent="1" edge="1" source="mhu" target="target" value="Register 동작" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#235D86;strokeWidth=1.5;fontSize=15;fontColor=#172C43;fontFamily=Noto Sans CJK KR;labelBackgroundColor=#FFFFFF;dashed=1;endArrow=open;strokeColor=#8999A9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

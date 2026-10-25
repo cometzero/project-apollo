@@ -1,0 +1,173 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" compressed="false" type="device" pages="1">
+  <diagram id="component-tf-a" name="C03 · TF-A · AP boot / EL3">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="0" grid="0" pageWidth="1974.0079999999998" pageHeight="1262.016">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="canvas" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="0" y="0" width="1974.0079999999998" height="1262.016" />
+        </mxCell>
+        <mxCell id="kicker" value="APOLLO / COMPONENT ARCHITECTURE · C03" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="40" y="22" width="1894.0079999999998" height="28" />
+        </mxCell>
+        <mxCell id="title" value="TF-A · AP boot / EL3" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=29;fontColor=#172C43;fontStyle=1;">
+          <mxGeometry as="geometry" x="40" y="65" width="1894.0079999999998" height="44" />
+        </mxCell>
+        <mxCell id="subtitle" value="BL2 authentication · BL31 runtime · PSCI / SPMD / PFDI" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=16;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="40" y="117" width="1894.0079999999998" height="40" />
+        </mxCell>
+        <mxCell id="sw" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;container=1;pointerEvents=0;">
+          <mxGeometry as="geometry" x="40" y="185" width="1064.0079999999998" height="882.0160000000001" />
+        </mxCell>
+        <mxCell id="sw-title" value="01  Component SW Architecture" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=18;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="20" y="12" width="1024.0079999999998" height="32" />
+        </mxCell>
+        <mxCell id="source" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;container=1;pointerEvents=0;">
+          <mxGeometry as="geometry" x="1144.0079999999998" y="185" width="790" height="882.0160000000001" />
+        </mxCell>
+        <mxCell id="source-title" value="02  Source Architecture" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=18;fontColor=#235D86;fontStyle=1;">
+          <mxGeometry as="geometry" x="20" y="12" width="750" height="32" />
+        </mxCell>
+        <mxCell id="sw-fip" value="&lt;b&gt;FIP / dynamic config&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;BL31 · BL32 · BL33&lt;br&gt;FW / HW / TOS config&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="290.99839999999995" y="90.01440000000005" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-bl2" value="&lt;b&gt;BL2 image loader&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;bl2_&lt;wbr&gt;main() → bl2_&lt;wbr&gt;load_&lt;wbr&gt;images()&lt;br&gt;load_&lt;wbr&gt;auth_&lt;wbr&gt;image()&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="290.99839999999995" y="252.01440000000005" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-auth" value="&lt;b&gt;인증 / 측정&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;Trusted Board Boot&lt;br&gt;plat_&lt;wbr&gt;mboot_&lt;wbr&gt;measure_&lt;wbr&gt;image()&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="97.00159999999994" y="414.01440000000014" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-rse" value="&lt;b&gt;RSE measurement&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;rse_&lt;wbr&gt;mboot_&lt;wbr&gt;measure_&lt;wbr&gt;and_&lt;wbr&gt;record()&lt;br&gt;AP–RSE MHUv3&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="31.999999999999943" y="576.0144" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-bl31" value="&lt;b&gt;BL31 platform runtime&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;GICR · timer · RAS 초기화&lt;br&gt;OP-TEE 초기화 후 BL33&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="485.0024000000001" y="414.01440000000014" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-psci" value="&lt;b&gt;PSCI power policy&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;apollo_&lt;wbr&gt;qvp_&lt;wbr&gt;pwr_&lt;wbr&gt;domain_&lt;wbr&gt;on()&lt;br&gt;PFDI 결과 gate&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="290.99839999999995" y="576.0144" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-scmi" value="&lt;b&gt;SCMI / CL0 관리&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;css_&lt;wbr&gt;scp_&lt;wbr&gt;on()&lt;br&gt;scmi_&lt;wbr&gt;pwr_&lt;wbr&gt;state_&lt;wbr&gt;set()&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="550.0039999999999" y="738.01512" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-spmd" value="&lt;b&gt;FF-A SPMD&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;spmd_&lt;wbr&gt;smc_&lt;wbr&gt;handler()&lt;br&gt;OP-TEE S-EL1 SPMC로 전달&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="550.0039999999999" y="576.0144" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="sw-safety" value="&lt;b&gt;PFDI / RAS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;pfdi_&lt;wbr&gt;smc_&lt;wbr&gt;handler()&lt;br&gt;CPU 오류 · CPER 기록&lt;/font&gt;" parent="sw" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="808.9808" y="576.0144" width="222.9984" height="119.0016" />
+        </mxCell>
+        <mxCell id="edge-0" source="sw-fip" target="sw-bl2" value="image IDs" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="402.5" y="209.38" />
+              <mxPoint x="402.5" y="241.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-1" source="sw-bl2" target="sw-auth" value="인증 / 측정" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="305.5" y="371.38" />
+              <mxPoint x="305.5" y="403.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-2" source="sw-auth" target="sw-rse" value="measurement" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="176.0" y="533.38" />
+              <mxPoint x="176.0" y="565.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-3" source="sw-bl2" target="sw-bl31" value="handoff" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="499.5" y="371.38" />
+              <mxPoint x="499.5" y="403.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-4" source="sw-bl31" target="sw-psci" value="PSCI callback" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="499.5" y="533.38" />
+              <mxPoint x="499.5" y="565.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-5" source="sw-psci" target="sw-scmi" value="전원 요청" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="402.5" y="695.1" />
+              <mxPoint x="402.5" y="741.48" />
+              <mxPoint x="402.5" y="798.02" />
+              <mxPoint x="539.78" y="798.02" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-6" source="sw-bl31" target="sw-spmd" value="FF-A SMC" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="629.0" y="533.38" />
+              <mxPoint x="629.0" y="565.9" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-7" source="sw-bl31" target="sw-safety" value="PFDI / RAS" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="708.0" y="474.02" />
+              <mxPoint x="801.75" y="474.02" />
+              <mxPoint x="920.48" y="474.02" />
+              <mxPoint x="920.48" y="565.84" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-8" source="sw-safety" target="sw-scmi" value="CL0 monitor" parent="sw" edge="1" style="html=1;rounded=0;edgeStyle=none;endArrow=block;endSize=7;strokeColor=#53677E;strokeWidth=1.4;fontColor=#53677E;fontFamily=Arial;fontSize=13;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="920.48" y="695.1" />
+              <mxPoint x="920.48" y="741.48" />
+              <mxPoint x="920.48" y="798.02" />
+              <mxPoint x="783.25" y="798.02" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="source-root" value="&lt;b&gt;기준 저장소&lt;/b&gt;  hsoc-stack/components/primary_compute/trusted-firmware-a/" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="24" y="52" width="742" height="50" />
+        </mxCell>
+        <mxCell id="src-0" value="&lt;b&gt;01 · Apollo QVP platform&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;plat/arm/board/automotive_rd/platform/apollo_qvp/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;platform.mk · topology · memory / GICR&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="113.0" width="742" height="130.40320000000003" />
+        </mxCell>
+        <mxCell id="src-1" value="&lt;b&gt;02 · BL2 image descriptors&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;plat/arm/board/automotive_rd/platform/apollo_qvp/&lt;br&gt;apollo_qvp_bl2_mem_params_desc.c&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;적재 주소 · entry · handoff image&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="261.4032" width="742" height="130.40320000000003" />
+        </mxCell>
+        <mxCell id="src-2" value="&lt;b&gt;03 · EL3 / power&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;plat/arm/board/automotive_rd/platform/apollo_qvp/&lt;br&gt;apollo_qvp_bl31_setup.c&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;PSCI override → drivers/arm/css/scp/&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="409.80640000000005" width="742" height="130.40320000000003" />
+        </mxCell>
+        <mxCell id="src-3" value="&lt;b&gt;04 · Security / RSE&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;services/std_svc/spmd/&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;SPMD + apollo_qvp_measured_boot.c&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="558.2096000000001" width="742" height="130.40320000000003" />
+        </mxCell>
+        <mxCell id="src-4" value="&lt;b&gt;05 · PFDI / RAS&lt;/b&gt;&lt;br&gt;&lt;font color=&quot;#235D86&quot; style=&quot;font-size:13px&quot;&gt;services/std_svc/pfdi_svc.c&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#53677E&quot; style=&quot;font-size:14px&quot;&gt;Apollo ras/ · CPER · safety monitor&lt;/font&gt;" parent="source" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;align=left;spacingLeft=18;">
+          <mxGeometry as="geometry" x="24" y="706.6128000000001" width="742" height="130.40320000000003" />
+        </mxCell>
+        <mxCell id="contract" value="" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#B9C6D3;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;">
+          <mxGeometry as="geometry" x="40" y="1092.016" width="1894.0079999999998" height="108" />
+        </mxCell>
+        <mxCell id="config" value="&lt;b&gt;BUILD INPUT&lt;/b&gt;  TFA_PLATFORM=apollo_qvp · cfg2 · RESET_TO_BL2=1 · SPD=spmd" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=15;fontColor=#172C43;">
+          <mxGeometry as="geometry" x="60" y="1101.016" width="1854.0079999999998" height="46" />
+        </mxCell>
+        <mxCell id="artifact" value="&lt;b&gt;ARTIFACT / CONSUMER&lt;/b&gt;  bl2.bin / fip.bin → firmware 조립; bl2.elf → QVP reset loader" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=15;fontColor=#172C43;">
+          <mxGeometry as="geometry" x="60" y="1150.016" width="1854.0079999999998" height="38" />
+        </mxCell>
+        <mxCell id="note" value="AP BL1은 실행하지 않는다. SDS warm-reset syndrome에서는 measured boot를 생략한다." parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=14;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="40" y="1214.016" width="1894.0079999999998" height="32" />
+        </mxCell>
+        <mxCell id="number" value="C03" parent="1" vertex="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1;fontColor=#172C43;fontFamily=Arial;fontSize=17;spacing=12;fillColor=none;align=left;verticalAlign=middle;spacing=0;fontSize=13;fontColor=#53677E;">
+          <mxGeometry as="geometry" x="1889.0079999999998" y="24" width="45" height="24" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

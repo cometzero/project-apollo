@@ -1,0 +1,121 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/27.0.9 Chrome/134.0.6998.205 Electron/35.4.0 Safari/537.36" version="27.0.9" scale="1" border="0">
+  <diagram name="Page-1" id="rQMScsDAyi6cwFyzjDmT">
+    <mxGraphModel dx="1018" dy="748" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="XFb2MwMf2w-9vKqaau7--40" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="160" y="80" width="590" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--38" value="" style="group" vertex="1" connectable="0" parent="XFb2MwMf2w-9vKqaau7--40">
+          <mxGeometry x="360" width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--33" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--38">
+          <mxGeometry width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--34" value="Data Flow" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--38">
+          <mxGeometry x="70" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--35" value="Hardware Register Access" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--38">
+          <mxGeometry x="69" y="33" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--36" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=1;" edge="1" parent="XFb2MwMf2w-9vKqaau7--38">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="10" y="24.5" as="sourcePoint" />
+            <mxPoint x="50" y="24.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--37" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;strokeWidth=1;strokeColor=#B5739D;" edge="1" parent="XFb2MwMf2w-9vKqaau7--38">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="10" y="48" as="sourcePoint" />
+            <mxPoint x="50" y="48" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--39" value="" style="group" vertex="1" connectable="0" parent="XFb2MwMf2w-9vKqaau7--40">
+          <mxGeometry width="320" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--1" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry width="320" height="710" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--2" value="&lt;b&gt;RD-Aspen&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="7" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--3" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeWidth=3;strokeColor=#7EA6E0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="30" y="50" width="260" height="570" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--5" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="50" y="83" width="220" height="187" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--6" value="&lt;b&gt;PFDI Subsystem&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="47" y="81" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--7" value="PFDI Shell" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="80" y="113" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--8" value="PFDI Mgmt" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="80" y="196" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--9" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="XFb2MwMf2w-9vKqaau7--39" source="XFb2MwMf2w-9vKqaau7--8" target="XFb2MwMf2w-9vKqaau7--7">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="100" y="213" as="sourcePoint" />
+            <mxPoint x="150" y="163" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--12" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="50" y="283" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--13" value="PFDI Driver" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="80" y="317" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--14" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="XFb2MwMf2w-9vKqaau7--39" source="XFb2MwMf2w-9vKqaau7--13" target="XFb2MwMf2w-9vKqaau7--8">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="240" y="313" as="sourcePoint" />
+            <mxPoint x="290" y="263" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--18" value="&lt;b&gt;PFDI Driver&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="7" y="281" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--19" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="50" y="419" width="220" height="181" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--20" value="Platform Firmware" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="80" y="529" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--21" value="&lt;b&gt;Library&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="30" y="417" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--22" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="XFb2MwMf2w-9vKqaau7--39" source="XFb2MwMf2w-9vKqaau7--23" target="XFb2MwMf2w-9vKqaau7--13">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="240" y="313" as="sourcePoint" />
+            <mxPoint x="290" y="263" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--23" value="PFDI Wrapper Layer" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="80" y="450" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--24" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="XFb2MwMf2w-9vKqaau7--39" source="XFb2MwMf2w-9vKqaau7--20" target="XFb2MwMf2w-9vKqaau7--23">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="240" y="363" as="sourcePoint" />
+            <mxPoint x="290" y="313" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--25" value="&lt;b&gt;Software Built-In Self Test (SBIST) Controller&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#FFCE9F;strokeWidth=3;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="20" y="643" width="280" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--26" value="" style="endArrow=classic;startArrow=classic;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#B5739D;" edge="1" parent="XFb2MwMf2w-9vKqaau7--39" source="XFb2MwMf2w-9vKqaau7--25" target="XFb2MwMf2w-9vKqaau7--20">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="160" y="705" as="sourcePoint" />
+            <mxPoint x="290" y="543" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--27" value="&lt;b&gt;Safety Island Cluster 1 (Zephyr RTOS)&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="XFb2MwMf2w-9vKqaau7--39">
+          <mxGeometry x="29" y="48" width="230" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="XFb2MwMf2w-9vKqaau7--41" value="&lt;b&gt;Safety Island Cluster 1 - Platform Fault Detection Interface&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="40" width="480" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

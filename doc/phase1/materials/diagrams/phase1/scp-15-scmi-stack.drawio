@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="Electron" type="device" pages="1" compressed="false">
+  <diagram id="15-scmi-stack" name="15-scmi-stack">
+    <mxGraphModel page="0" background="#FFFFFF" adaptiveColors="none" grid="0" pageWidth="1800" pageHeight="1470">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="scp_canvas" value="" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="0" y="0" width="1800" height="1470" />
+        </mxCell>
+        <mxCell id="scp_title" value="SCMI Stack / Receive Context와 Protocol Dispatch" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;fontSize=32;align=left;">
+          <mxGeometry as="geometry" x="50" y="30" width="1700" height="65" />
+        </mxCell>
+        <mxCell id="scp_scp" value="SCP-firmware" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;container=1;collapsible=0;verticalAlign=top;fontStyle=1;spacingTop=16;align=left;">
+          <mxGeometry as="geometry" x="50" y="150" width="1700" height="990" />
+        </mxCell>
+        <mxCell id="scp_protocol" value="Protocol Handler&lt;br&gt;Power Domain · System Power · Performance · PFDI" vertex="1" parent="scp_scp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="100" width="1610" height="110" />
+        </mxCell>
+        <mxCell id="scp_scmi" value="SCMI Core / Service Context&lt;br&gt;Service / Transport 연결 · Header / Token · Protocol table" vertex="1" parent="scp_scp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="360" width="1610" height="110" />
+        </mxCell>
+        <mxCell id="scp_transport" value="OUT_BAND Transport&lt;br&gt;Slot ownership · Length check · Local payload buffer" vertex="1" parent="scp_scp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="620" width="1610" height="110" />
+        </mxCell>
+        <mxCell id="scp_mhu" value="MHUv3 Driver / Doorbell channel" vertex="1" parent="scp_scp" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#235D86;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="45" y="840" width="1610" height="100" />
+        </mxCell>
+        <mxCell id="scp_dispatch" source="scp_scmi" target="scp_protocol" value="Main Loop: process_event" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scp_event" source="scp_transport" target="scp_scmi" value="FIQ: signal_message → Event enqueue" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scp_receive" source="scp_mhu" target="scp_transport" value="FIQ: signal_message / SHMEM copy" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#235D86;fontColor=#235D86;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="scp_boundary" value="SW / HW" edge="1" parent="1" style="endArrow=none;dashed=1;strokeColor=#64748B;strokeWidth=2;fontSize=18;fontColor=#64748B;labelBackgroundColor=#FFFFFF;">
+          <mxGeometry as="geometry" relative="1">
+            <mxPoint as="sourcePoint" x="50" y="1200" />
+            <mxPoint as="targetPoint" x="1750" y="1200" />
+            <mxPoint as="offset" x="-760" y="-12" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="scp_peer" value="Shared SRAM / Channel Slot + MHU Doorbell" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#00838A;strokeWidth=1.5;fontColor=#172C43;fontFamily=Noto Sans CJK KR;fontSize=22;spacing=10;">
+          <mxGeometry as="geometry" x="90" y="1290" width="1620" height="100" />
+        </mxCell>
+        <mxCell id="scp_doorbell" source="scp_peer" target="scp_mhu" value="Payload publish / interrupt" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#00838A;fontColor=#00838A;fontFamily=Noto Sans CJK KR;fontSize=18;labelBackgroundColor=#FFFFFF;exitX=0.5;exitY=0;entryX=0.5;entryY=1;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

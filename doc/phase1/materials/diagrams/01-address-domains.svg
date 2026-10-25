@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="01-address-domains-title 01-address-domains-desc" id="d-01-address-domains-root">
+<title id="01-address-domains-title">Address domains and translation</title>
+<desc id="01-address-domains-desc">위는 Arm reference의 system-wide region 구분, 아래는 RSE host-access data window의 translation 개념입니다. ATU 설정으로 address를 만들고, 최종 router가 해당 target과 permission을 제공해야 access가 완료됩니다. Domain selector와 Secure/Non-secure PAS는 별개입니다.</desc>
+<defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #d-01-address-domains-root { color: #2d3142; font-family: 'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif; }
+      #d-01-address-domains-root .diagram-container { width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px }
+      #d-01-address-domains-root a { color:#2e5aa8 }
+      @media print {
+#d-01-address-domains-root .diagram-container { overflow-x:visible;border:none }
+}</style><marker id="d-01-address-domains-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="d-01-address-domains-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="d-01-address-domains-arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">Address domains and translation</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">52-bit system address의 [51:48]은 region selector, [47:0]은 region 내부 주소입니다.</text>
+<text x="48" y="364" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">RSE의 32-bit local window에서 다른 Domain의 system address로 접근하는 방식</text>
+<text x="48" y="612" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">QVP 예: system_router의 selector 0x2 경로 → system_to_smd_nci → smd_router</text>
+<path d="M 400,488 L 464,488" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-01-address-domains-arrow)"/>
+<path d="M 816,488 L 880,488" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#d-01-address-domains-arrow)"/>
+<g data-node="Primary Compute">
+<rect x="48" y="160" width="272" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="172" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SELECTOR 0x0</text>
+<text x="68" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Primary Compute</text>
+<text x="68" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">0x0_0000_0000_0000</text>
+<text x="68" y="260" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">AP physical address region</text>
+</g>
+<g data-node="System Management">
+<rect x="352" y="160" width="272" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="368" y="172" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="376" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SELECTOR 0x2</text>
+<text x="372" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">System Management</text>
+<text x="372" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">0x2_0000_0000_0000</text>
+<text x="372" y="260" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SMD shared SRAM / controls</text>
+</g>
+<g data-node="RSE">
+<rect x="656" y="160" width="272" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="672" y="172" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="680" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SELECTOR 0x3</text>
+<text x="676" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">RSE</text>
+<text x="676" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">0x3_0000_0000_0000</text>
+<text x="676" y="260" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">RSE exported address region</text>
+</g>
+<g data-node="Safety Island">
+<rect x="960" y="160" width="272" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="976" y="172" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="984" y="184" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SELECTOR 0x4</text>
+<text x="980" y="212" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Safety Island</text>
+<text x="980" y="236" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">0x4_0000_0000_0000</text>
+<text x="980" y="260" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SI exported address region</text>
+</g>
+<g data-node="RSE data window">
+<rect x="48" y="416" width="352" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="428" width="88" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="440" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">LOCAL CPU VIEW</text>
+<text x="68" y="468" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">RSE data window</text>
+<text x="68" y="492" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">NS: 0x60000000..0x6fffffff</text>
+<text x="68" y="516" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">S: 0x70000000..0x7fffffff</text>
+</g>
+<g data-node="RSE-owned ATU config">
+<rect x="464" y="416" width="352" height="144" rx="6" fill="#f4e7e3" stroke="#bf4520" stroke-width="2"/>
+<rect x="480" y="428" width="72" height="16" rx="2" fill="#f5f5f5"/>
+<text x="488" y="440" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">TRANSLATION</text>
+<text x="484" y="468" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">RSE-owned ATU config</text>
+<text x="484" y="492" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">window + offset + attributes</text>
+<text x="484" y="516" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">global = target base + local offset</text>
+</g>
+<g data-node="System-global access">
+<rect x="880" y="416" width="352" height="144" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="896" y="428" width="48" height="16" rx="2" fill="#f5f5f5"/>
+<text x="904" y="440" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">DECODE</text>
+<text x="900" y="468" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">System-global access</text>
+<text x="900" y="492" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">selector + domain address</text>
+<text x="900" y="516" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">route + permission + target</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Region selector는 CPU 번호가 아닙니다 · Aperture 크기와 실제 memory backing 크기를 구분합니다</text>
+</svg>

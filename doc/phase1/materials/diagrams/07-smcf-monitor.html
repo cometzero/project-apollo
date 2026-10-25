@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SMCF monitor data path</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Serif:ital@0;1&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box} body{margin:0;padding:32px 24px;background:#f5f5f5;color:#2d3142;font-family:'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif} .frame{width:100%;max-width:1328px;min-width:0;margin:auto} .eyebrow{font-family:'Geist Mono', ui-monospace, monospace;font-size:12px;letter-spacing:.08em;color:#5a6580;margin:0 0 12px} .diagram-container{width:100%;overflow-x:auto;border:1px solid #bfc0c0;border-radius:8px} svg{width:100%;height:auto;min-width:1280px;display:block} .footer{font-size:14px;line-height:1.8;max-width:1100px;margin-top:20px} a{color:#2e5aa8} @media print{body{padding:0}.diagram-container{overflow-x:visible;border:none}svg{min-width:0}}</style></head><body><main class="frame"><p class="eyebrow">APOLLO SEMINAR / ARCHITECTURE / 2026-10-25</p><div class="diagram-container">
+<svg width="1280" height="720" viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="07-smcf-monitor-title 07-smcf-monitor-desc">
+<title id="07-smcf-monitor-title">SMCF monitor data path</title>
+<desc id="07-smcf-monitor-desc">Arm design/smcf.rst에는 원본 diagram이 없어 reference 설명과 현재 source를 바탕으로 작성했습니다. Reference의 DMA sampling과 SI0 IRQ 흐름은 위에, 현재 QVP model의 구현 범위는 아래에 표시했습니다. Feature flag 노출만으로 DMA나 IRQ가 동작하지는 않습니다.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#4f5d75"/></marker><marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#bf4520"/></marker><marker id="arrow-open" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polyline points="0 0,8 3,0 6" fill="none" stroke="#4f5d75" stroke-width="1.2"/></marker></defs>
+<rect width="1280" height="720" fill="#f5f5f5"/>
+<text x="48" y="60" font-family="'Instrument Serif', 'Noto Serif', 'Noto Serif KR', 'Noto Serif CJK KR', serif" font-size="40" font-weight="400" fill="#2d3142" text-anchor="start">SMCF monitor data path</text>
+<text x="48" y="100" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">Reference의 measurement 경로와 현재 QVP의 register model을 분리해서 읽습니다.</text>
+<text x="48" y="148" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="14" font-weight="400" fill="#4f5d75" text-anchor="start">REFERENCE / SCP DESIGNED PATH</text>
+<path d="M 368,256 L 480,256" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 800,256 L 912,256" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<path d="M 1072,324 L 1072,384" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#arrow)"/>
+<rect x="1080" y="348" width="52" height="16" fill="#f5f5f5"/>
+<text x="1106.0" y="360" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="middle">DONE</text>
+<g data-node="Monitor + MLI">
+<rect x="48" y="188" width="320" height="136" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="64" y="200" width="84" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="212" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">SAMPLE SOURCE</text>
+<text x="68" y="240" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Monitor + MLI</text>
+<text x="68" y="264" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">sensor / AMU monitor values</text>
+<text x="68" y="288" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">MLI: Monitor Local Interface</text>
+</g>
+<g data-node="MGI sampling control">
+<rect x="480" y="188" width="320" height="136" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="496" y="200" width="92" height="16" rx="2" fill="#f5f5f5"/>
+<text x="504" y="212" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">TRIGGER + GROUP</text>
+<text x="500" y="240" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">MGI sampling control</text>
+<text x="500" y="264" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">internal / external / periodic</text>
+<text x="500" y="288" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">MGI: Monitor Group Interface</text>
+</g>
+<g data-node="DMA buffer">
+<rect x="912" y="188" width="320" height="136" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="928" y="200" width="36" height="16" rx="2" fill="#f5f5f5"/>
+<text x="936" y="212" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">DATA</text>
+<text x="932" y="240" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">DMA buffer</text>
+<text x="932" y="264" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">sample data in SRAM</text>
+<text x="932" y="288" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">one group result per sample</text>
+</g>
+<g data-node="SI0 interrupt">
+<rect x="912" y="384" width="320" height="112" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<rect x="928" y="396" width="76" height="16" rx="2" fill="#f5f5f5"/>
+<text x="936" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">NOTIFICATION</text>
+<text x="932" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">SI0 interrupt</text>
+<text x="932" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">SCP SMCF driver -&gt; consumer</text>
+</g>
+<g data-node="Current QVP: register behavior">
+<rect x="48" y="384" width="736" height="112" rx="6" fill="#f4e7e3" stroke="#bf4520" stroke-width="2"/>
+<rect x="64" y="396" width="72" height="16" rx="2" fill="#f5f5f5"/>
+<text x="72" y="408" font-family="'Geist Mono', ui-monospace, monospace" font-size="8" font-weight="500" fill="#5a6580" text-anchor="start">IMPLEMENTED</text>
+<text x="68" y="436" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">Current QVP: register behavior</text>
+<text x="68" y="460" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">MON_REQ / MON_STAT, configuration and feature flags</text>
+</g>
+<g data-node="DMA / periodic sampling / SI0 IRQ output are not connected">
+<rect x="48" y="544" width="1184" height="88" rx="6" fill="#ffffff" stroke="#4f5d75" stroke-width="1.2"/>
+<text x="68" y="576" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="16" font-weight="600" fill="#2d3142" text-anchor="start">DMA / periodic sampling / SI0 IRQ output are not connected</text>
+<text x="68" y="600" font-family="'Geist Mono', ui-monospace, monospace" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">Feature capability bits do not establish an end-to-end measurement path.</text>
+</g>
+<line x1="48" y1="656" x2="1232" y2="656" stroke="#bfc0c0" stroke-width="1"/>
+<text x="48" y="688" font-family="'Geist', 'Noto Sans KR', 'Noto Sans CJK KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif" font-size="12" font-weight="400" fill="#4f5d75" text-anchor="start">위: reference data path · 아래: current QVP scope · 원본 topology 그림이 아닌 source 기반 해설도</text>
+</svg>
+</div><p class="footer">Arm design/smcf.rst에는 원본 diagram이 없어 reference 설명과 현재 source를 바탕으로 작성했습니다. Reference의 DMA sampling과 SI0 IRQ 흐름은 위에, 현재 QVP model의 구현 범위는 아래에 표시했습니다. Feature flag 노출만으로 DMA나 IRQ가 동작하지는 않습니다.<br><a href="../07-system-software-core.md">설명과 Source 근거</a> · <a href="../README.md">세미나 목차</a></p></main></body></html>
