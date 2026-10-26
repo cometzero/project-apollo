@@ -29,6 +29,7 @@ cycle accuracy를 제공한다고 해석하지 않는다. standalone SI CL1은 A
 | [Power/thermal model](power-model-guide.md) | Offline energy, SCMI/DVFS, online RC 및 ROI accounting | power/model 개발 담당자 |
 | [v26 stable rebase](stable-rebase-validation.md) | upstream stable 이력, 호환성 수정과 build/boot 검증 | 모델 유지보수 담당자 |
 | [검증 및 유지보수](validation.md) | evidence 수준, 확인 명령, provenance, 변경 시 검증 범위 | 리뷰·회귀 시험 담당자 |
+| [Automotive 활용 조사](automotive/README.md) | AD workload, memory 간섭, architecture 탐색, 실행 절차와 calibration 범위 | Automotive SoC·자율주행 성능 설계 담당자 |
 
 ## 현재 기본 구성
 
