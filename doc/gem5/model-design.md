@@ -125,6 +125,17 @@ native `OpDesc`로 별도 표현하지 않는다. Scalar FP와 다른 SIMD가 �
 위해 해당 extension을 추가한다. 이 설정은 guest가 미구현 instruction을 선택하는
 것을 줄이는 ABI 계약이며 전체 A720AE ISA qualification이 아니다.
 
+2026-10-26 BTI 수정: 현재 model은 `FEAT_BTI`를 구현/광고하지 않으며
+`ID_AA64PFR1_EL1.BT=0`이다. 이 경우 네 BTI encoding은 architectural NOP로
+decode한다. 기존 `WarnUnimplemented`의 `IsNonSpeculative` 처리에 따른
+인위적인 O3 stall을 제거한 것이며, guarded-page/BTYPE 검사나 BTI 보안 기능을
+추가한 것은 아니다. Compiler의 `-mbranch-protection=standard`는 유지한다.
+PAC는 별도 instruction implementation을 사용하며 BTI NOP 처리와 구분한다.
+현재 AP full-system release에는 `FEAT_PAuth`도 포함되지 않는다. Compiler의
+PAC 명령 존재만으로 Linux의 PAC 보호가 활성화됐다고 판단하지 않는다.
+별도 PAuth-enabled fixture의 인증/오류 검증은 AP 기본 설정의 보호 기능 검증과
+분리하여 보고한다.
+
 `cache_id_registers()`는 CLIDR / CCSIDR에 L1 split, L2 unified, L3 unified
 geometry를 설정한다. Cache maintenance와 noncoherent DMA 관련 kernel 판단이
 실제 구성과 어긋나지 않게 하기 위한 것이다. CPU-visible cache ID와 DT cache
