@@ -56,6 +56,8 @@ Linux/provider와 source-root 정의는
 | `tinymembench` | meta-oe recipe + owned runtime-option patch | `tinymembench` |
 | `stream` | pinned upstream STREAM C source, target compiler | 공식 기본조건 `/usr/bin/stream` alternatives |
 | `stream-gem5-cache` | 같은 STREAM source, array size compile flag 변경 | 독립 binary `stream-gem5-cache`, deploy 사본 |
+| `dhrystone` | meta-oe Dhrystone 2.1 recipe | `/usr/bin/dhry` |
+| `stress-ng` | Poky stress-ng 0.18.11 recipe | `/usr/bin/stress-ng`, `stress` alias |
 | `nexios-gem5-initramfs` | package install + CPIO/gzip image 생성 | `do_build`가 `gem5-native:do_build`, `virtual/kernel:do_deploy`에 의존 |
 
 ### Native와 target의 구분
@@ -197,7 +199,7 @@ rg '^(EXTERNALSRC|EXTERNALSRC_BUILD|WORKDIR|B|DEPLOY_DIR_IMAGE|BUILD_SYS|CC|CXX)
 
 [`nexios-gem5-initramfs.bb`](../../hsoc-stack/yocto/meta-hsoc-auto-solutions/recipes-core/images/nexios-gem5-initramfs.bb)의
 `PACKAGE_INSTALL`은 `base-files base-passwd busybox nexios-gem5-init
-gem5-apollo-guest lmbench tinymembench stream stream-gem5-cache`다. 필요한 libc,
+gem5-apollo-guest lmbench tinymembench stream stream-gem5-cache dhrystone stress-ng`다. 필요한 libc,
 libtirpc, Perl 등은 package dependency로 함께 설치된다. Image feature와
 recommendation을 줄이고 dm-verity/overlayfs rootfs 전환을 비활성화한다.
 Product systemd service를 부팅하는 image가 아니다.
@@ -217,6 +219,92 @@ file build/tmp_baremetal/deploy/gem5-native/gem5.opt \
 `.manifest`에는 lmbench `3.0+a9`, tinymembench `0.4.9+git0+a2cf6d7e38`,
 STREAM/stream-gem5-cache `5.10`이 기록돼 있다. 빌드 성공 이후의 guest 실행 검증은
 [validation](validation.md)과 [benchmark guide](benchmark-guide.md)에 분리한다.
+
+### Dhrystone / stress-ng 추가 크기 (2026-10-26)
+
+기존 layer의 `dhrystone` 2.1과 `stress-ng` 0.18.11을 `PACKAGE_INSTALL`에
+추가했다. 실행 파일은 `/usr/bin/dhry`, `/usr/bin/stress-ng`다.
+`stress` symlink와 upstream example job 파일도 기본 package 내용으로 포함한다.
+
+동일 `apollo-qvp` / `auto-ad-nexios` 설정에서 변경 전후 각각 다음 task를
+실행했다. Image 변경만 비교하므로 native simulator와 kernel은 재빌드하지 않았다.
+
+```sh
+APOLLO_BUILD_THREADS=2 APOLLO_PARALLEL_MAKE=-j2 \
+  ./yocto_build.sh --keep-conf -c image_complete nexios-gem5-initramfs
+```
+
+| 항목 | 추가 전 | 추가 후 | 증가 |
+|---|---:|---:|---:|
+| `cpio.gz` | 9,060,686 bytes (8.641 MiB) | 12,229,879 bytes (11.663 MiB) | **3,169,193 bytes (3.022 MiB, 35.0%)** |
+| 압축 해제 CPIO | 23,526,400 bytes (22.437 MiB) | 29,035,008 bytes (27.690 MiB) | **5,508,608 bytes (5.253 MiB)** |
+
+추가 package는 `dhrystone`, `stress-ng`, `libbsd0` 0.12.2, `libmd0` 1.1.0이다.
+압축 전 `dhry`는 67,552 bytes, `stress-ng`는 5,127,272 bytes이며,
+나머지는 library, symlink, example jobs 및 archive metadata다. 개별 파일의
+압축 크기를 합산한 값이 아니라 실제 생성된 전체 이미지의 차이를 측정했다.
+압축 해제 CPIO 크기는 guest의 실제 RAM 사용량과 동일하지 않다.
+
+두 image build 및 package QA가 성공했다. CPIO 안의 두 실행 파일이 AArch64
+ELF임을 확인했고 manifest/package 추가 목록을 비교했다. 기존 파일 삭제는 없고,
+기존 파일 내용 변경은 `/etc/ld.so.cache`뿐이다. gem5 부팅이나 benchmark 성능은
+이번 package-size 검증 범위에 포함하지 않았다.
+
+Evidence: `build/qbox-apollo-qvp/gem5/initramfs-tools-20261026/`의
+`before.cpio.gz`, `after.cpio.gz`, 두 manifest, build log,
+`compare.py`, `size-comparison.json`.
+
+새 initramfs는 기존 snapshot의 image hash와 다르므로, 새 package를 실행하려면
+fresh boot 또는 이 이미지에서 새로 생성한 snapshot을 사용해야 한다.
+
+### Dhrystone compiler baseline (2026-10-26)
+
+Apollo QVP의 `dhrystone_%.bbappend`는 비교용 baseline을 다음과 같이 고정한다.
+사용 빈도로 검증된 단일 표준 옵션이라는 의미는 아니다.
+
+```text
+-O2 -fno-inline -fno-lto
+-mcpu=cortex-a720+crypto
+```
+
+`-O2 -fno-inline`은 owned layer의 append에서 명시하며, `-fno-lto`는 upstream
+recipe의 compile/link 설정을 유지한다. `dhry_1.c`, `dhry_2.c`는 별도 object로
+컴파일한다. `REG`는 지정하지 않으며 libc builtin 정책, dynamic linking,
+Yocto의 branch protection/stack protector/FORTIFY 설정은 유지한다.
+
+Dhrystone 원본의 ground rules는 separate compilation, no procedure merging,
+최적화 옵션 공개와 기본 no-register 선언이다. 참고:
+[원본 배포](https://www.netlib.org/benchmark/),
+[no-inline을 명시하는 riscv-tests 구현](https://github.com/riscv-software-src/riscv-tests/blob/master/benchmarks/dhrystone/dhrystone.c).
+Hardware 비교 시에도 compiler, libc 및 위 보안 옵션을 함께 일치시켜야 한다.
+
+Yocto `image_complete` build 및 package/image QA PASS. 실제 두 compile 명령과
+link 명령을 검사했고, CPIO의 AArch64 `/usr/bin/dhry`가 package binary와
+byte 단위로 일치함을 확인했다. 이 설정에서 최종 `cpio.gz`는 12,229,888 bytes다.
+직전 package 추가 크기 표는 옵션 변경 전 artifact에 대한 기록이다.
+
+Evidence: `build/qbox-apollo-qvp/gem5/dhrystone-build-20261026/`의
+`build.log`, `compile.log`, `verification.json`. gem5 실행 및 DMIPS 측정은
+이 build 단계에서는 수행하지 않았다. 이후 실행은
+[Dhrystone 측정 결과](dhrystone-results.md)에 기록한다.
+이미지 변경에 따라 fresh boot 또는 새 snapshot이 필요하다.
+
+### Dhrystone ROI 비교 variant
+
+같은 package에 `dhry-gem5` (O2)와 `dhry-gem5-o3` (O3)를 설치한다.
+두 variant는 같은 ROI patch, 별도 translation unit, `-fno-inline -fno-lto`,
+libc 및 보안 옵션을 사용한다. O3 variant는 **두 C source 모두** 마지막
+optimization option을 `-O3`로 지정한다. 원본 `dhry`와 O2 baseline은 유지한다.
+
+```sh
+./yocto_build.sh --keep-conf -c image_complete nexios-gem5-initramfs
+./run_gem5_linux.sh --headless --out-dir /tmp/dhry-o3 \
+  --workload command --command 'dhry-gem5-o3 20000 1000'
+python3 scripts/gem5/summarize_dhrystone.py /tmp/dhry-o3
+```
+
+보존한 구 이미지 snapshot에는 해당 이미지와 함께 readfile로 binary를 전달하고
+guest SHA256을 검증하는 방법을 사용한다. 새 initramfs를 구 snapshot과 혼용하지 않는다.
 
 ## 7. Build 문제 진단
 

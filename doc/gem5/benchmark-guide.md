@@ -335,3 +335,35 @@ L2 prefetch `off`/`stride`는 지원되는 별도 profile로 A/B 측정하며 �
 
 구현, 완료한 실행 및 남은 검증 상태는
 [Orin 기반 재측정 보고서](orin-informed-benchmark-results.md)에 기록한다.
+
+## Dhrystone loop ROI (2026-10-26)
+
+`dhry`는 원본 timer 방식으로 유지한다. 별도 `dhry-gem5`는 같은
+`-O2 -fno-inline -fno-lto` 옵션으로 빌드하고, CPU0 pin → O3 switch →
+warmup → benchmark state reset → loop ROI → 최종 변수 검사를 수행한다.
+원본 loop body는 유지하며 입력/초기화/결과 출력은 ROI에서 제외한다.
+marker 경계의 작은 비용과 ROI 안에서 발생하는 interrupt는 포함한다.
+
+새 initramfs로 실행:
+
+```sh
+./run_gem5_linux.sh --headless --out-dir /tmp/dhry-10000 \
+  --workload command --command 'dhry-gem5 10000 1000'
+python3 scripts/gem5/summarize_dhrystone.py /tmp/dhry-10000
+```
+
+첫 인자는 측정 반복 횟수, 둘째는 warmup 반복 횟수이며 각각 1..10,000,000이다.
+`dhry-gem5`는 자체 marker를 사용하므로 **`gem5-control run`으로 감싸지 않는다**.
+새 이미지에 맞는 snapshot을 사용하면 `--resume`을 추가할 수 있다.
+
+Collector는 CPU0 O3와 실제 고정 clock domain, 한 번의 switch/begin/end,
+정확히 일치하는 stats interval, guest 검증 marker와 launcher exit를 확인한다.
+`DMIPS = runs / simulated_seconds / 1757`이며 host wall time은 분모가 아니다.
+원본 `times()`의 user CPU time 점수와 구분해 **instrumented loop ROI**로 보고한다.
+실제 결과와 보존한 snapshot 재현 조건은 [Dhrystone 측정 결과](dhrystone-results.md)를 참조한다.
+
+O3 비교는 같은 인자로 `dhry-gem5-o3`를 실행한다. O2 baseline을 대체하지 않는다.
+[O2/O3·Orin 비교 및 stall 분석](dhrystone-comparison.md)에 hardware와 model의
+차이, branch-protection diagnostic의 범위 및 재현 방법을 기록한다.
+Collector의 `ipc`는 `thread_0.numInsts` 기준으로 NOP를 제외하므로,
+gem5 `commitStats0.ipc`와 직접 혼용하지 않는다.
