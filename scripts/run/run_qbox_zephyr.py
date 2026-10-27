@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Boot the standalone Apollo SI CL1 Zephyr ELF using the Yocto QBox provider."""
+"""Boot the integrated Apollo SI CL1 Zephyr image using the Yocto QBox provider."""
 from __future__ import annotations
 
 import argparse
@@ -10,54 +10,21 @@ import os
 import re
 from pathlib import Path
 import signal
-import struct
 import subprocess
 import sys
 import time
 
 from run_qbox_linux import ROOT, console, provider_environment, required, start_tmux
+from run_qbox_apollo_fvp_full import si_cl1_boot_config
 
-BASE = 0x140000000
-SIZE = 8 * 1024 * 1024
-BOOT_MARKER = b"SI_CL1_BOOT_RESULT status=PASS cpu_mask=f counter_hz=100000000"
+BOOT_MARKER = b"Booting Zephyr OS"
+SHELL_PROMPT = b"uart:~$"
 
 
 def boot_complete(uart: bytes) -> bool:
-    cpus = set(re.findall(rb"SI_CL1_BOOT_CPU cpu=([0-3])(?:\s|$)", uart))
-    return cpus == {b"0", b"1", b"2", b"3"} and BOOT_MARKER in uart
-
-
-def elf_payload(path: Path) -> tuple[int, bytes]:
-    """Extract ELF64 little-endian AArch64 PT_LOAD bytes without a host toolchain."""
-    data = path.read_bytes()
-    if len(data) < 64 or data[:6] != b"\x7fELF\x02\x01":
-        raise ValueError("expected a little-endian ELF64 image")
-    if struct.unpack_from("<H", data, 18)[0] != 183:
-        raise ValueError("expected an AArch64 ELF image")
-    entry, phoff = struct.unpack_from("<QQ", data, 24)
-    entsize, count = struct.unpack_from("<HH", data, 54)
-    if entsize < 56 or phoff + entsize * count > len(data):
-        raise ValueError("invalid ELF program header table")
-    payload = bytearray()
-    executable_entry = False
-    for index in range(count):
-        kind, flags, offset, vaddr, paddr, filesz, memsz, _ = struct.unpack_from(
-            "<IIQQQQQQ", data, phoff + index * entsize)
-        if kind != 1 or memsz == 0:
-            continue
-        if filesz > memsz or offset + filesz > len(data):
-            raise ValueError("invalid ELF segment size")
-        if paddr < BASE or paddr + memsz > BASE + SIZE:
-            raise ValueError("ELF load segment is outside CL1 LLRAM")
-        if flags & 1 and vaddr <= entry < vaddr + memsz:
-            executable_entry = True
-        end = paddr - BASE + filesz
-        if len(payload) < end:
-            payload.extend(b"\0" * (end - len(payload)))
-        payload[paddr - BASE:end] = data[offset:offset + filesz]
-    if not payload or not executable_entry or not BASE <= entry < BASE + SIZE:
-        raise ValueError("ELF entry is not in executable CL1 LLRAM")
-    return entry, bytes(payload)
+    clean = re.sub(rb"\x1b\[[0-?]*[ -/]*[@-~]", b"", uart)
+    cpus = set(re.findall(rb"Out of Reset \(OoR\) completed on CPU: ([0-3])\b", clean))
+    return cpus == {b"0", b"1", b"2", b"3"} and BOOT_MARKER in clean and SHELL_PROMPT in clean
 
 
 def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
@@ -83,6 +50,9 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
                 if interrupted:
                     status, rc = "INTERRUPTED", 130
                     break
+                if re.search(rb"ZEPHYR FATAL ERROR|ASSERTION FAIL|Kernel panic", uart):
+                    status, rc = "FAIL", 1
+                    break
                 if booted and exit_after_pass:
                     status, rc = "PASS", 0
                     break
@@ -102,7 +72,7 @@ def supervise(out: Path, timeout: float, exit_after_pass: bool) -> int:
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait()
     result = {"status": status, "boot_marker_observed": booted,
-              "scope": "Zephyr standalone boot only; not benchmark or hardware qualification",
+              "scope": "Integrated Zephyr four-core boot and shell; synthetic PFDI responder, no AP/RSE/SCP CPUs",
               "qbox_returncode": child.returncode, "elapsed_seconds": time.monotonic() - started}
     (out / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result), flush=True)
@@ -118,21 +88,26 @@ def main() -> int:
     parser.add_argument("--build-dir", type=Path, default=ROOT / "build")
     parser.add_argument("--deploy-dir", type=Path)
     parser.add_argument("--qboxconf", type=Path)
-    parser.add_argument("--elf", type=Path)
+    parser.add_argument("--elf", type=Path, help="matching integrated Zephyr ELF")
+    parser.add_argument("--image", type=Path, help="CRC-patched integrated Zephyr binary")
     parser.add_argument("--out-dir", type=Path)
     parser.add_argument("--session", default="qbox-zephyr")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--no-attach", action="store_true")
-    parser.add_argument("--timeout", type=float, default=120)
-    parser.add_argument("--exit-after-pass", action="store_true", help="stop after all four guest boot CPU markers and final boot result")
+    parser.add_argument("--timeout", type=float, help="host seconds; default 120 headless, 0 interactive")
+    parser.add_argument("--exit-after-pass", action="store_true", help="stop after four-core Zephyr boot and shell prompt")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--platform-param", action="append", default=[])
     args = parser.parse_args()
+    if args.timeout is None:
+        args.timeout = 120 if args.headless else 0
     if not math.isfinite(args.timeout) or args.timeout < 0:
         parser.error("--timeout must be finite and nonnegative (0 disables timeout)")
     deploy = args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp"
-    elf = required(args.elf or deploy / "zephyr-si-cl1-boot.elf", "Zephyr ELF")
-    entry, payload = elf_payload(elf)
+    elf = required(args.elf or deploy / "zephyr-demos-cl1.elf", "integrated Zephyr ELF")
+    image = required(args.image or elf.with_suffix(".bin"), "integrated Zephyr binary")
+    boot = si_cl1_boot_config(args, {"si_cl1_symbols": elf, "si_cl1_image": image})
+    entry = int(boot["entry"], 0)
     default_conf = deploy / "nexios-bsp-initramfs-apollo-qvp.qboxconf"
     if not default_conf.exists():
         default_conf = deploy / "nexios-image-apollo-qvp.qboxconf"
@@ -145,17 +120,20 @@ def main() -> int:
         command.extend(["-p", param])
     launch_env = {"LD_LIBRARY_PATH": env["QBOXCONF_LD_LIBRARY_PATH"],
         "QBOX_ZEPHYR_ENTRY": str(entry),
-        "QBOX_APOLLO_FULL_SI_CL1_IMAGE": str(out / "zephyr.bin"),
+        "QBOX_APOLLO_FULL_SI_CL1_IMAGE": str(image),
         "QBOX_APOLLO_FULL_SI_CL1_LOG": str(out / "zephyr-uart.log"),
         "QBOX_APOLLO_FULL_SI_CL1_UART_READ_FILE": str(out / "zephyr-uart.in")}
     plan = {"command": command, "environment": launch_env, "elf": str(elf),
-            "entry": hex(entry), "qboxconf": str(conf), "pass_marker": BOOT_MARKER.decode()}
+            "image": str(image), "boot": boot,
+            "entry": hex(entry), "qboxconf": str(conf),
+            "services": {"pfdi": "SystemC SCMI responder; no SCP firmware",
+                         "hipc": "local shared RAM; AP peer offline"},
+            "pass_markers": [BOOT_MARKER.decode(), SHELL_PROMPT.decode()]}
     print(json.dumps(plan, indent=2), flush=True)
     if args.dry_run:
         return 0
     out.mkdir(parents=True, exist_ok=False)
     (out / "run.json").write_text(json.dumps(plan, indent=2) + "\n")
-    (out / "zephyr.bin").write_bytes(payload)
     for name in ("zephyr-uart.log", "zephyr-uart.in", "qbox.log"):
         (out / name).touch()
     if args.headless:
