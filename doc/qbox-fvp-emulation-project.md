@@ -13,19 +13,34 @@ accepts a new workload through gem5 readfile. Block-device and O3 snapshots
 are unsupported.
 See [configuration, workloads and validation](apollo-gem5.md).
 
-## Standalone SI CL1 Zephyr
+## SI CL1 Zephyr 이미지 실행 경로
 
-`run_qbox_zephyr.sh` composes the existing CL1 QBox CPU/GIC/PL011/LLRAM
-primitives without AP/RSE/SCP release. Its dedicated non-MPU boot image is
-separate from production HIPC/PFDI firmware and gem5 benchmarks. The existing
-QBox Cortex-R82 backend does not implement AArch64 PMSA; a successful boot
-must not be interpreted as MPU or private TCM qualification.
+2026-10-27부터 `run_qbox_zephyr.sh`는 기존 Apollo QVP build의
+`zephyr-demos-cl1.bin/.elf`를 그대로 사용한다. 별도 standalone boot recipe가
+필요하지 않으며, 통합 runner의 ELF/CRC 검증을 공유한다. Loader가 원본 binary를
+LLRAM에 배치하고 RVBAR를 ELF entry로 설정하므로 별도 assembly boot stub이나
+runtime cross compiler가 필요 없다. Zephyr의 원래 reset voting으로 4 cores를 시작한다.
 
-`run_gem5_zephyr.sh` uses an independent four-PE PMSA64/private-TCM model with
-Zephyr memory and timer/realtime benchmarks. Both standalone profiles use a
-100 MHz counter and CNTP PPI29; production platform timer settings are unchanged.
-The gem5 Minor pipeline and SRAM/TCM latencies are uncalibrated proxies.
-See [build, execution and validation](gem5/si-cl1-zephyr-guide.md).
+전용 profile은 125 MHz counter, CNTP PPI29, CL1 CPU/GIC/PL011/LLRAM, MHU 및
+SCMI shared memory를 제공한다. HIPC window는 local RAM이며 AP peer는 offline이다.
+PFDI 요청에는 SystemC `scmi` / `pfdi-monitor` responder가 응답한다. AP/RSE/SCP CPU의
+실행이나 full-system handoff를 포함하지 않는다. Interactive tmux와 F12 종료를 유지한다.
+
+`build/qbox-apollo-qvp/zephyr-integrated-shell-20261027/`에서 네 CPU의 OoR 완료,
+125 MHz timer 확인, PFDI 초기화 및 UART shell의 `kernel version`/`kernel uptime`
+응답을 확인했다. 현재 QBox Cortex-R82의 EL1 PMSA 한계는 유지되므로 이 boot 결과를
+MPU/private TCM, 실제 SCP의 PFDI 처리 또는 AP RPMsg 통신의 검증으로 해석하지 않는다.
+
+`run_gem5_zephyr.sh`도 동일한 `zephyr-demos-cl1.bin/.elf`를 기본으로 사용한다.
+ELF 적재 후 원본 binary를 overlay하고, 125 MHz counter와 native `SiCl1Mhu`의
+MHUv3/PFDI functional responder로 통합 image를 실행한다. AP/SCP peer는 실행하지 않는다.
+기본 AtomicSimpleCPU는 boot 기능 확인용이다. 기존 `zephyr-si-cl1-bench`는
+`--mode benchmark`로 선택하며 100 MHz counter와 MinorCPU를 유지한다.
+Minor pipeline과 SRAM/TCM latency는 uncalibrated proxy다. 이전 2026-10-24 QBox
+standalone smoke 결과와 현재 통합 image 결과는 구분해 보존한다.
+`build/qbox-apollo-qvp/gem5/si-cl1-integrated-20261027/`에서 원본 image의
+4-core boot/shell, 실제 tmux/F12, Atomic/Minor MHU MMIO 각각 96 checks와 기존
+Minor benchmark 회귀를 확인했다. [Build·실행·검증 가이드](gem5/si-cl1-zephyr-guide.md)를 참조한다.
 
 ## Lua SoC / VP / Board structure
 
