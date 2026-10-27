@@ -49,7 +49,7 @@ with socket.socket() as server:
             fixture = root / "fixture"
             fixture.write_text("fixture")
             argv = [sys.executable, str(Path(run_zephyr.__file__)),
-                    "--gem5", str(fake), "--elf", str(fixture),
+                    "--mode", "benchmark", "--gem5", str(fake), "--elf", str(fixture),
                     "--out-dir", str(out), "--session", session,
                     "--no-attach", "--timeout", "40"]
 

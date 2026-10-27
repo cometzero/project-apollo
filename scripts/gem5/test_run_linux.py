@@ -221,6 +221,23 @@ with socket.socket() as listener:
                 with self.assertRaises(ChildProcessError):
                     os.waitpid(children[0].pid, os.WNOHANG)
 
+    def test_supervisor_callback_stops_child_without_uart_or_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            # No server will connect; the file predicate must still be polled.
+            child_script = "import pathlib,time; pathlib.Path('" + str(out / "ready") + "').touch(); time.sleep(30)"
+            with socket.socket() as listener:
+                listener.bind(("127.0.0.1", 0))
+                port = listener.getsockname()[1]
+            rc, timed_out, elapsed = run_linux.run(
+                [sys.executable, "-c", child_script], os.environ.copy(), out, port,
+                SimpleNamespace(timeout=0, headless=True, workload="zephyr"),
+                stop_when=lambda: (out / "ready").exists(),
+            )
+            self.assertEqual(rc, -15)
+            self.assertFalse(timed_out)
+            self.assertLess(elapsed, 3)
+
     def test_overlay_roundtrip_preserves_base(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

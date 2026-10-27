@@ -229,7 +229,7 @@ def validate_checkpoint(path, contract):
         raise ValueError("checkpoint inputs changed: use the original gem5, kernel, initramfs and configuration")
 
 
-def run(command, env, out, port, args):
+def run(command, env, out, port, args, *, stop_when=None):
     started = time.monotonic()
     connection = None
     timed_out = False
@@ -240,9 +240,11 @@ def run(command, env, out, port, args):
         child = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
         try:
             while child.poll() is None:
+                if stop_when is not None and stop_when():
+                    break
                 if panic_started is not None and time.monotonic() - panic_started >= 2:
                     break
-                if time.monotonic() - started >= args.timeout:
+                if args.timeout and time.monotonic() - started >= args.timeout:
                     timed_out = True
                     break
                 if connection is None:
