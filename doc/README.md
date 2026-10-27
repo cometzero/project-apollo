@@ -10,6 +10,9 @@ separate.
 
 ## Documents
 
+- [AP Domain Hardware Emulation KR](hardware_emulation/ap_domain.md) - Saturn
+  Apollo QVP의 CPU, DSU, Cache, GIC, Timer/Counter, SRAM/DRAM, CMN 및 SMMU를
+  Zena CSS/TRM과 비교한 한국어 문서. 현재 component 연결과 기능·timing 한계를 구분한다.
 - [Current Source Structure KR](source-structure-ko.md) - Korean source
   ownership map for the top repository, `hsoc-stack`, primary compute,
   system management, QBox/QEMU, Yocto layers, scripts, tests, generated build
