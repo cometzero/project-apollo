@@ -156,6 +156,7 @@ EOF
 | `--profile PATH` | model parameter YAML; compatibility contract에도 포함 |
 | `--size-kib N` | 내장 workload size, 1..262144; dram-multicore는 전체 workers 합계이며 1024의 배수 |
 | `--passes N` | 내장 workload pass 수, 1..1024; 기본 2; dram-multicore는 1/2/4/8 |
+| `--warmup-passes 1\|2\|4\|8` | cache/dram/dram-multicore의 실제 O3 warmup; 기본 1, measured passes와 독립 |
 | `--command TEXT`, `--command-file PATH` | `--workload command`에 필수이며 둘은 상호 배타 |
 | `--bootargs TEXT` | Linux command line 교체; 자동 workload/checkpoint에는 필요한 rdinit/checkpoint 인자를 launcher가 추가 |
 | `--timeout SECONDS` | 양의 유한 host deadline; simulator 시작 이후 시간 |
@@ -208,19 +209,27 @@ Restore는 `/init`의 `gem5-control checkpoint` 다음 instruction부터 진행�
 Compatibility 검사는 두 단계다.
 
 - Launcher는 gem5 binary, 원본 kernel, firmware, profile, gzip 해제 후 실행용 CPIO,
-  `configs/zena_cmn/*.py`의 SHA256, CPU/channel 수와 bootargs를 비교한다.
+  `configs/zena_cmn/**/*.py`와 `default.yaml`, platform 구성, native interpreter가 실제
+  import한 FS dependencies(CHI/topology/PyYAML 포함)의 SHA256, CPU/channel/stripe와
+  bootargs를 비교한다. Launcher contract schema는 3이며 schema 1/2 snapshot의 metadata를
+  변환해 우회하지 않는다. `M5_OVERRIDE_PY_SOURCE=true/yes`의 checkpoint/resume는 거부한다.
 - Model은 resolved profile, kernel/firmware/initrd hash와 command line의 boot contract를
   비교하고 COMPLETE/diskless/Atomic checkpoint policy를 확인한다.
 
 Readfile 내용은 snapshot 계약에서 제외되므로 workload를 바꿀 수 있다. 반대로 image
 package를 업데이트하거나 model parameter를 바꾸면 snapshot을 재생성해야 한다.
+Readfile의 실행별 SHA256은 `launch.json`에 남기므로 실행 후 script 변경은 campaign
+input 검증에서 거부한다. `launch.json`에는 `model_sources_schema=1`과 공통 model source
+hash map도 기록한다. Map 없는 과거 측정은 raw validity와 별개로 `HISTORICAL_LIMITED`이며
+새 campaign 비교의 준비 조건을 충족하지 않는다. Native environment는 gem5 child에만 적용한다.
 Current launcher의 `--dry-run`은 input file 존재 확인까지만 하므로 restore 호환성을
 증명하지 않는다.
 
 지원 범위는 **diskless Atomic boot, NPU disabled, ROI 이전**이다. `--checkpoint`와
 `--resume`은 상호 배타이며 `--bsp`, `--rootfs`, `--benchmark` override와 병용할 수
 없다. 저장은 `--workload boot`만 허용한다. O3 실행 중 checkpoint, WIC device 상태
-복원, NPU checkpoint, 16 CPU Linux restore는 현재 검증된 경로에 포함되지 않는다.
+복원과 NPU checkpoint는 지원하지 않는다. AP16 restore/O3 및 새 image의 검증 상태는
+[SoC campaign 기록](automotive/soc-spec/campaign-20261028.md)을 따른다.
 Simulator model 생성과 RAM restore 시간이 있으므로 resume이 0초에 완료되는 것은 아니다.
 
 ## 6. UART와 결과 확인

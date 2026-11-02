@@ -4,15 +4,17 @@
 
 ## 1. 측정 경로 선택
 
-현재 세 가지 경로가 있다. 같은 O3 model을 쓰더라도 **측정 구간과 분모가 다르다**.
+현재 네 가지 경로가 있다. 같은 O3 model을 쓰더라도 **측정 구간과 분모가 다르다**.
 
 | 경로 | 실행 방식 | ROI | 주 용도 |
 |---|---|---|---|
 | 내장 `apollo-bench` | `--workload cache` / `dram` | O3 warmup 후 반복 loop | cache latency, 유효 read bandwidth의 통제된 비교 |
 | Multicore `apollo-memory-bench` | `--workload dram-multicore` | pinned worker 전체의 O3 warmup 후 read/copy/triad loop | CPU/CMN/DRAM 경로의 16-core 비교 |
+| `apollo-image-bench` | `--workload command`에서 직접 실행 | 실제 warmup 후 normalization과 background 완료 barrier | 고정 image kernel의 단독/동시 부하 비교 |
 | 기존 tool | `--workload command --command 'gem5-control run …'` | fork/exec부터 child 종료까지 | 실제 Linux executable의 output과 전체 실행 통계 분석 |
 
-`--workload command`는 command 실행 성공만 판단한다. 임의 command를 자동으로 O3로
+일반 `--workload command`는 command 실행 성공만 판단한다. `APOLLO_IMAGE_RESULT`가
+있으면 image 전용 collector로 output/ROI까지 검사한다. 임의 command를 자동으로 O3로
 전환하거나 그 결과를 benchmark 점수로 검증하지 않는다. O3 측정에는 `gem5-control run`이
 필요하고, 도구별 결과 검증에는 별도의 `summarize_tools.py`가 필요하다.
 
@@ -33,7 +35,8 @@ calibration 및 tool 내부 시험이 모두 whole-command ROI에 포함된다. 
 child가 상속하지만 다른 CPU의 Linux activity까지 중지시키지는 않는다.
 
 반면 [benchmark.c](../../scripts/gem5/benchmark.c)는 buffer 초기화를 Atomic 구간에서
-끝내고, O3 switch 후 실제 workload 1회 warmup을 수행한 뒤 ROI를 시작한다.
+끝내고, O3 switch 후 실제 workload warmup을 수행한 뒤 ROI를 시작한다.
+기본은 1회이며 내장 cache/dram/dram-multicore의 `--warmup-passes 1|2|4|8`로 조절한다.
 marker 안쪽 barrier의 비용도 측정에 포함된다. 두 경로의 hit ratio를 동일한 의미로
 나란히 놓으면 안 된다.
 
@@ -58,6 +61,9 @@ marker 안쪽 barrier의 비용도 측정에 포함된다. 두 경로의 hit rat
 profile, host load에 크게 좌우된다. DRAM 시험은 기본 host timeout 7200초 안에 끝나지
 않을 수 있다. `--timeout`은 host wall-clock deadline, `--max-ticks`는 simulator의
 절대 tick 상한이다. snapshot에서 복원한 tick보다 큰 상한을 사용해야 한다.
+
+Warmup과 measured passes는 서로 독립적이다. 예를 들어 `--warmup-passes 2 --passes 4`는
+O3 warmup 2회 뒤 4회만 측정한다. Warmup 수렴과 측정 길이 수렴은 별도 case로 평가한다.
 
 cache의 한 node는 64 bytes이지만 dependent load는 pointer 8 bytes를 읽는다.
 `useful_bytes`를 cache line 크기나 실제 interconnect traffic으로 바꾸어 해석하지 않는다.
@@ -216,7 +222,7 @@ NUMA/thermal/power 특성은 현재 세 단일-thread 실행에서 검증되지 
 `/usr/bin/apollo-memory-bench`로 빌드한다. Launcher의 `dram-multicore`는 기본적으로 NEON read를
 사용한다. `--size-kib 65536`은 **worker 전체가 나누어 읽는 64 MiB**이며,
 16 workers이면 각 CPU가 disjoint 4 MiB를 읽는다. CPU 0..15에 pin하고 allocation과
-초기화를 Atomic에서 끝낸 뒤 모든 CPU를 O3로 바꾼다. O3에서 한 번 warmup하고,
+초기화를 Atomic에서 끝낸 뒤 모든 CPU를 O3로 바꾼다. O3에서 기본 한 번 warmup하고,
 collective barrier/DSB를 거쳐 ROI를 시작한다. 측정 pass가 끝나면 모든 worker의
 memory completion을 확인한 뒤 ROI를 닫는다. Barrier와 일부 Linux activity는 ROI에
 포함되며 dirty cache flush나 physical DRAM PHY completion을 모델링하는 것은 아니다.
@@ -367,3 +373,38 @@ O3 비교는 같은 인자로 `dhry-gem5-o3`를 실행한다. O2 baseline을 대
 차이, branch-protection diagnostic의 범위 및 재현 방법을 기록한다.
 Collector의 `ipc`는 `thread_0.numInsts` 기준으로 NOP를 제외하므로,
 gem5 `commitStats0.ipc`와 직접 혼용하지 않는다.
+
+## Image kernel과 foreground/background (2026-10-28)
+
+`apollo-image-bench`는 synthetic RGB uint8 HWC를 float CHW로 변환하고
+`(value-128)/128`로 normalization한다. Input은 고정 수식 `rgb_formula_v1`이며 external
+library나 camera device는 필요 없다. `gem5-apollo-guest`를 포함한 새 initramfs로 실행한다.
+
+```sh
+./run_gem5_linux.sh --headless --cpus 16 --resume MATCHING_SNAPSHOT \
+  --workload command --out-dir NEW_RUN --timeout 86400 \
+  --command '/usr/bin/apollo-image-bench --width 640 --height 480 --frames 4 --frame-pool 2 --warmup 1 --cpu 0'
+```
+
+같은 cluster의 memory 부하를 추가하려면 command에
+`--background-cpus 1 --background-mode read --background-kib 16384`를 붙인다.
+다른 cluster는 CPU4를 사용한다. CPU ID는 Linux affinity 기준이며 foreground와 중복할 수 없다.
+Background mode는 `read|copy`, size는 worker당 array 크기다. Copy는 array 2개를 사용한다.
+
+Coordinator 하나가 CPU switch와 ROI를 소유하므로 `gem5-control run`으로 감싸지 않는다.
+초기화는 Atomic, 실제 warmup은 O3에서 수행한다. Foreground 종료 후 background의 마지막
+bounded chunk와 barrier를 완료하고 ROI를 닫는다. Dirty cache 전체 writeback을 강제하는
+DRAM drain은 아니다. Per-frame UART 출력과 final-pool output 검증은 ROI 밖이다.
+
+`APOLLO_IMAGE_FRAME`은 release/start/finish의 CNTVCT timestamp,
+`APOLLO_IMAGE_BACKGROUND`는 완료 chunk/bytes와 foreground overlap,
+`APOLLO_IMAGE_RESULT`는 workload와 output oracle 결과다.
+[image_summary.py](../../scripts/gem5/image_summary.py)는 configured timer frequency,
+active O3 CPU, exact ROI, 모든 configured cache/DRAM counter 및 독립 output hash를 검사한다.
+Cache-resident 실행의 DRAM bytes 0은 허용한다. Generic command exit만으로 이 측정을 승인하지 않는다.
+
+`result.json`의 `measurement.application`에서 frame response median/observed maximum,
+kernel duration, foreground throughput와 background 종료를 포함한 전체 ROI throughput를
+구분한다. 두 buffer를 재사용하는 closed-loop이며 실제 camera arrival, cold-start,
+population p99 또는 WCET 근거가 아니다. 상세 사양 탐색·수렴 절차는
+[SoC campaign](automotive/soc-spec/plan.md)을 따른다.

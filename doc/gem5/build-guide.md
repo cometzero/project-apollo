@@ -50,7 +50,7 @@ Linux/provider와 source-root 정의는
 | Recipe | 수행하는 build | 결과 / dependency |
 |---|---|---|
 | `gem5-native` | host compiler + SCons로 `ARM/gem5.opt` | native simulator, native runtime manifest; `do_build`가 `gem5-apollo-guest:do_deploy`에 의존 |
-| `gem5-apollo-guest` | Yocto target `${CC}`/`${LD}`로 AArch64 firmware와 C program | `zena_css4.elf`, `zena_css16.elf`, `apollo-bench`, `apollo-memory-bench`, `gem5-control` |
+| `gem5-apollo-guest` | Yocto target `${CC}`/`${LD}`로 AArch64 firmware와 C program | `zena_css4.elf`, `zena_css16.elf`, `apollo-bench`, `apollo-memory-bench`, `apollo-image-bench`, `apollo-power-probe`, `gem5-control` |
 | `nexios-gem5-init` | 전용 shell script 설치 | `/init`, `/usr/bin/gem5-workload`; BusyBox와 guest package에 runtime 의존 |
 | `lmbench` | meta-oe recipe + owned `-E` patch | `lat_mem_rd`, `bw_mem` 등 |
 | `tinymembench` | meta-oe recipe + owned runtime-option patch | `tinymembench` |
@@ -78,7 +78,7 @@ Native sysroot의 Python, libpng, zlib, PyYAML 등을 사용한다. SCons가 com
 [`gem5-apollo-guest.bb`](../../hsoc-stack/yocto/meta-hsoc-auto-solutions/recipes-devtools/gem5/gem5-apollo-guest.bb)는
 native recipe가 아닌 target recipe다. 실제 target tune은 Cortex-A720지만, guest
 helper는 명시적으로 `-march=armv8-a -mno-outline-atomics`를 사용한다.
-`apollo-bench`와 `apollo-memory-bench`는 `-static -pthread`, `gem5-control`은 `-static`과 gem5의 공식
+`apollo-bench`, `apollo-memory-bench`, `apollo-image-bench`는 `-static -pthread`, `gem5-control`은 `-static`과 gem5의 공식
 `util/m5/src/abi/arm64/m5op.S`를 함께 link한다. Standalone firmware는 pointer
 authentication 초기화를 하지 않으므로 firmware compile에만
 `-mbranch-protection=none`을 추가한다. 이 firmware는 전체 TF-A/U-Boot boot chain을
