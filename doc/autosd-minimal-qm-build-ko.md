@@ -45,20 +45,26 @@ git submodule update --init --recursive -- autosd/sig-docs autosd/automotive-ima
 현재 지원하는 준비 호스트는 Ubuntu/Debian x86_64이며 다음 시스템 도구가 필요하다.
 
 - Python3: paramiko, PyYAML, jsonschema
-- qemu-img, mtools, dosfstools, kmod
+- qemu-img, mtools, dosfstools, kmod, Podman, qemu-user-static/binfmt-support
 - libguestfs appliance, supermin, qemu-system-x86, 설치된 호스트 커널 모듈
 - Automotive crun 빌드: Docker 접근 권한, AArch64 binfmt, cross GCC,
   autoconf/automake/libtool, pkg-config, make, patch, git
 
-스크립트는 sudo를 실행하거나 호스트 패키지·binfmt 설정을 변경하지 않는다.
+이미지 생성은 rootful Podman의 호스트 native 컨테이너와 AArch64 binfmt를 사용한다.
+Ubuntu x86_64에서는 AIB/OSBuild/bwrap과 빌드 도구 rootfs가 x86_64이고,
+AutoSD/QM 대상 rootfs는 ARM64이다. native/target manifest를 각각 compose한 뒤
+native `build` pipeline과 ARM64 target pipeline을 결합한다. target RPM stage에만
+`ignorearch`를 설정하며 GPG key 설정과 패키지 checksum은 유지한다.
+일반 사용자로 실행하되 `sudo -n podman` 및 생성 파일 소유권 복원용 `sudo -n chown`
+권한이 필요하다. rootless AIB는 기본적으로 VM을 선택하며 privileged disk 조립에
+필요한 호스트 권한이 없으므로 이 경로에서는 거부한다. 전체 스크립트를 sudo로
+실행하지 않는다. 호스트 패키지·binfmt·SELinux 정책은 자동 변경하지 않는다.
 부족한 선행 도구는 오류와 함께 안내한다. guestfish 실행 파일과 읽기 가능한
 appliance 커널은 필요 시 APT에서 다운로드·추출한다.
 
 시작 전 디스크 여유와 도구를 확인한다. 스크립트의 최소 여유 공간 검사는
-32 GiB이며, 여러 실행 디스크를 보관하면 더 많은 공간이 필요하다. 빌더 scratch는
-24 GiB 가상 디스크이고 실제 사용량과 가상 크기는 다를 수 있다.
-빌더도 `run_qbox_autosd.sh`를 사용하며 실행 디스크는 builder/vm 아래에 있다.
-두 번째 디스크 슬롯의 `efi-capsule.img`가 빌더 scratch 사본이다.
+32 GiB이며, 여러 실행 디스크를 보관하면 더 많은 공간이 필요하다.
+빌더 VM/scratch 디스크는 생성하지 않고 AIB 캐시를 작업 디렉터리에 직접 저장한다.
 첫 부팅 전 모듈/PFDI 설치에는 guestfish와 호스트 depmod가 필요하다.
 오프라인 설치는 regular 이미지에만 지원하며 기존 이미지 원본은 수정하지 않는다.
 
@@ -67,10 +73,12 @@ df -h build
 command -v qemu-img mcopy mdir fsck.fat modinfo aarch64-linux-gnu-gcc
 python3 -c 'import paramiko, yaml, jsonschema'
 docker info >/dev/null
+sudo -n podman info
+cat /proc/sys/fs/binfmt_misc/qemu-aarch64
 ```
 
-기본 SSH 포트는 builder `2226`, QBox `2244`이며 loopback에 바인딩한다.
-다른 VM이 사용 중이면 정상 종료하거나 `--builder-port`, `--qbox-port`를 각각 다른 포트로 지정한다. QBox full-system은 공유 리소스 때문에
+기본 SSH 포트는 QBox `2244`이며 loopback에 바인딩한다.
+다른 VM이 사용 중이면 정상 종료하거나 `--qbox-port`를 지정한다. 빌더 SSH는 사용하지 않는다. QBox full-system은 공유 리소스 때문에
 포트만 바꿔 동시에 실행하지 않는다. `--dry-run`은 계획 출력이지 전체 선행 조건
 검사나 부팅 검증이 아니다.
 
@@ -82,7 +90,7 @@ docker info >/dev/null
 ./build_autosd_minimal_qm.sh --prepare-inputs-only
 ```
 
-기본 설정은 최초 다운로드 시 최신 official nightly와 최신 ARM64 AIB를 선택한다.
+기본 설정은 최초 다운로드 시 최신 official nightly와 최신 호스트 native AIB를 선택한다.
 선택된 URL, manifest digest, checksum은 캐시에 기록한다. 같은 캐시에서는 그
 입력을 검증해 재사용한다. 새 캐시에서는 새 버전이 선택될 수 있다.
 
@@ -105,25 +113,54 @@ byte-identical 재현이나 완전한 offline 빌드를 보장하지 않는다.
 ./build_autosd_minimal_qm.sh
 ```
 
-입력 준비 후 격리된 ARM64 builder VM에서 AIB 빌드 → qcow2 회수/SHA 비교 →
+rootless Podman과 AIB 빌드 VM을 시험하려면 `--rootless`를 지정한다.
+현재 Ubuntu 호스트에서는 build-store SELinux xattr 권한이 없어 이 경로는 사전
+검사에서 실패한다. [native 빌더 검증 리포트](autosd-native-builder-20261102-ko.md)의
+지원 범위를 먼저 확인한다.
+이 경로는 빌더에서 sudo/chown을 호출하지 않는다. rootless의 `--privileged`는
+사용자 namespace 범위이며 호스트 root 권한을 부여하지 않는다.
+두 방식은 새 작업 디렉터리를 사용하고 동일한 `--builder-reference` digest를
+지정하여 비교한다. native 컨테이너 내부의 target emulation 및 VM 실행 호환성은
+실제 빌드 결과로 판단해야 하며, 컨테이너 시작 성공만으로 판단하지 않는다.
+
+```bash
+./build_autosd_minimal_qm.sh --rootless \
+  --output build/autosd/rootless-prepared \
+  --work-dir build/autosd/rootless-build
+```
+
+입력 준비 후 native Podman/AIB와 ARM64 target emulation으로 빌드 → qcow2 SHA 기록/검사 →
 private 디스크에 matching 모듈/PFDI 오프라인 설치 →
 QBox full-system 네 도메인 부팅 → SSH 패키지 준비 → Automotive 구성/guest 검사 → 정상 종료를 수행한다.
 
 | 단계 | 확인하는 결과 |
 |---|---|
-| 입력 준비 | nightly checksum, ARM64 AIB digest, guestfish 동작, crun 소스/바이너리 hash |
-| builder/AIB | matching 모듈 배포, 공식 manifest 빌드, qcow2·osbuild manifest 생성 |
-| 결과 회수 | guest/host SHA256 일치, `qemu-img check`, builder 정상 종료 |
+| 입력 준비 | nightly checksum, native AIB digest, guestfish 동작, crun 소스/바이너리 hash |
+| builder/AIB | native arch 확인, namespace/mount/nested Podman 검사, native/ARM64 manifest 결합, qcow2·osbuild manifest 생성 |
+| 결과 검사 | SHA256, `qemu-img check`, 해당 실행 컨테이너 정리 |
 | QBox guest | EFI/UKIBoot, 커널 release, SELinux Enforcing, QM PID namespace |
 | Automotive | BlueChi root/QM online, Safety Monitor HEALTHY, ADAS/QM 서비스 |
 | RT 준비 | root RT 패키지, QM stress-ng, 양쪽 probe 실행/hash 일치, RT 커널 및 timerlat/osnoise tracer |
 | QBox full-system | RSE·SI CL0·SI CL1·AP 부팅 표식, HIPC/PFDI 모듈, guest 정상 상태 |
 | 종료 | guest poweroff 및 QBox 정상 종료 receipt |
 
-빌드는 ARM64 TCG VM에서 수행하므로 오래 걸릴 수 있다. 터미널에는 단계 명령이
-표시되고 상세 출력은 작업 디렉터리에 기록된다. builder의 SELinux는 이미지 라벨
-생성 동안만 일시 Permissive로 전환하고 복원한다. 최종 guest의 Enforcing 상태는
-별도로 검사한다.
+ARM64 target 프로그램은 qemu-user로 실행하므로 native ARM64보다 느릴 수 있다. 터미널에는 단계 명령이
+표시되고 상세 출력은 작업 디렉터리에 기록된다. 빌더는 privileged 컨테이너이며
+호스트 root 권한을 갖는다. 공식 digest를 고정하고 작업 디렉터리, manifest,
+native 빌드 helper를 마운트한다. rootful 모드에서는 새 loop device가 보이도록
+공식 AIB wrapper와 같이 `/dev:/dev`도 제공한다. rootless 모드에는 이 bind를
+추가하지 않는다. 호스트 SELinux를 Permissive로 바꾸지 않는다.
+기본 모드는 native OSBuild로 직접 조립하고, `--rootless`는 `image` pipeline을
+`--in-vm image`로 조립한다. 실패 시 다른 모드로 자동 우회하지 않는다.
+최종 guest의 SELinux Enforcing 상태는 별도로 검사한다.
+
+2026-11-02 이전 ARM64 빌더 실험: sudo 설정 후 rootful 및 rootless 모두 RPM 다운로드까지
+진행했지만 ARM64 `bwrap`의 namespace clone이 `EINVAL`로 실패했다. rootless `--vm`도
+VM 진입 전 컨테이너 측 build pipeline에서 실패했다. 따라서 현재 스크립트는 native
+빌더와 별도의 native build pipeline을 사용하며 다운로드 전에 bwrap 검사를 수행한다.
+상세 근거와 시간은 [Podman 비교 리포트](autosd-podman-comparison-20261102-ko.md)를 참고한다.
+후속 native 빌더에서는 rootful minimal_qm 이미지 생성과 오프라인 검사가 성공했다.
+rootless 제한과 생성 이미지 경로는 [native 빌더 검증 리포트](autosd-native-builder-20261102-ko.md)에 있다.
 
 기본은 Automotive와 RT 도구 포함이다. 기본 minimal QM만 필요하면 `--minimal`을 사용한다.
 Root에는 `realtime-tests`, `rtla`, `trace-cmd`, `stress-ng`, `util-linux`,
@@ -133,7 +170,7 @@ RT bundle에서 Root/QM 양쪽으로 static `latency-probe`를 배치한다. Roo
 `check-automotive.sh`도 설치한다. 설치 절차 원본은
 `autosd/customization/rt/prepare-guest.sh`이며 OSTree guest에서는 거부한다.
 
-`customization-rt-packages/`, `qemu-rt-readiness/`, `qbox-rt-readiness/`에
+`customization-rt-packages/`, `qbox-rt-readiness/`에
 패키지 버전·probe hash·실행 결과를 남긴다. 어느 단계든 실패하면 빌드 PASS로
 처리하지 않는다. RT benchmark 자동 기동이나 watchdog 정책 변경은 없다.
 실제 측정은 정상 종료된 최종 QBox `rootfs.wic`를 Dashboard의 `--rootfs`로
@@ -141,7 +178,7 @@ RT bundle에서 Root/QM 양쪽으로 static `latency-probe`를 배치한다. Roo
 customization이 적용된 최종 실행 디스크와 혼동하지 않는다.
 
 공식 최소 이미지에는 SSH 서버와 tar가 없으므로 콘솔 자동 로그인 후 설치한다.
-root/password SSH와 privileged AIB는 disposable guest에서만 사용하며, host
+root/password SSH는 disposable guest에서만 사용하며, host
 forwarding은 loopback으로 한정한다. 운영 환경의 인증 정책으로 사용하지 않는다.
 
 ```bash
@@ -178,12 +215,11 @@ receipt를 가진 private 디스크를 선택한다. 변환 직후 raw와 custom
 build/autosd/
   downloads/nightly/       # 다운로드 xz/checksum, qcow2, 선택 기록
   host-tools/              # 다운로드 deb, 추출 도구/커널, smoke 결과
-  builder-base/            # nightly를 변환한 빌더 시작 이미지
-  builder/                 # ARM64 AIB OCI archive, digest/checksum
+  builder-amd64/           # native AIB OCI archive, digest/checksum (ARM 호스트는 builder-arm64/)
   crun/                    # 소스 기반 빌드 결과, base image archive, provenance
   inputs.json              # 선택된 입력 기록 (설정 원본 아님)
   demo-minimal-qm-prepared/ # minimal_qm raw/initrd/BLS/manifest
-  minimal-qm-build-*/      # 빌드/프로비저닝 로그, private builder/QEMU 디스크
+  minimal-qm-build-*/      # aib.log, fetch/의 이미지·AIB 캐시, 프로비저닝 로그
 ```
 
 QBox 실행 디스크와 네 도메인 UART는 `build/qbox-apollo-qvp/autosd-*/`에 생성된다.
@@ -202,27 +238,27 @@ AIB 작업 디스크를 자동으로 이어받지 않는다.
 | 호스트 위치 (`CACHE` = `--cache-dir`) | 내용 | 다음 실행에서의 처리 |
 |---|---|---|
 | `CACHE/downloads/nightly/` | 압축 이미지, qcow2, checksum | 요청 build ID 및 hash 일치 시 재사용 |
-| `CACHE/builder/` | AIB OCI archive | 요청 reference 및 archive hash 확인 후 재사용 |
-| `CACHE/builder-base/` | 시작용 raw/initrd | 원본 및 생성물 hash 확인 후 재사용 |
+| `CACHE/builder-amd64/` 또는 `builder-arm64/` | native AIB OCI archive | 요청 reference·아키텍처·archive hash 확인 후 재사용 |
 | `CACHE/host-tools/` | 도구·커널 패키지와 추출 파일 | 준비 절차와 실제 appliance 검사를 다시 수행 |
 | `CACHE/crun/` | 소스, sysroot, 바이너리, base image archive | 소스/패치/빌드 스크립트/hash 일치 시 완성된 바이너리 재사용 |
-| `WORK/builder/` | 빌더 OS와 scratch 디스크 | 실행마다 새로 생성, 자동 resume 없음 |
 | `WORK/fetch/` | 완성된 qcow2 및 osbuild manifest | 명시적 `--image` 입력으로 재사용 가능 |
-| `WORK/builder/vm/efi-capsule.img` | 빌더의 private 24 GiB scratch | 정상 종료 후에만 회수 |
+| `WORK/fetch/cache/` | AIB/osbuild 캐시 | 실행마다 새로 생성, 자동 resume 없음 |
+| `WORK/fetch/containers/` | 빌더 내부 Podman 저장소 | 실행마다 새로 생성 |
 
 `WORK`는 `--work-dir`이며 기본값은 `CACHE/minimal-qm-build-<UTC시간>`이다.
-AIB 중간 결과는 호스트 디렉터리에 직접 펼쳐지지 않고 아래 디스크에 저장된다.
+AIB 중간 결과는 호스트 디렉터리에 직접 저장된다.
 
 ```text
-WORK/builder/scratch.raw       # 24 GiB 가상 디스크
-  guest /srv/aib/work/cache/  # AIB 컨테이너 /work/cache, osbuild 캐시 한도 10GB
-  guest /srv/aib/outer/       # 외부 AIB Podman 저장소
-  guest /srv/aib/nested/      # AIB 내부 컨테이너 저장소
-  guest /srv/aib/work/        # 생성 qcow2 및 osbuild manifest
+WORK/fetch/cache/            # 컨테이너 /work/cache, osbuild 캐시 한도 10GB
+WORK/fetch/containers/       # 내부 Podman 저장소
+WORK/fetch/*.qcow2           # 완성 이미지
+WORK/fetch/*.osbuild.json    # osbuild manifest
 ```
 
-같은 builder VM 안에서 AIB를 재시도하면 남은 캐시를 사용할 수 있지만, 통합
-진입점은 기존 `--work-dir` 재사용을 거부한다. **현재 `--resume` 옵션이나 실행 간
+완성 이미지와 manifest 소유권은 호출 사용자에게 돌려준다. 캐시에는 root 소유
+파일이 남을 수 있어 삭제 시 관리자 권한이 필요하다. 외부 빌더 이미지 자체는
+rootful Podman 저장소에도 캐시된다. 통합 진입점은 기존 `--work-dir` 재사용을
+거부한다. **현재 `--resume` 옵션이나 실행 간
 공유 osbuild 캐시는 없다.** crun도 소스 변경 시 기존 object를 증분 컴파일하는
 방식이 아니라 새 출력 경로에서 빌드한다.
 
@@ -255,7 +291,7 @@ nightly/AIB/crun 입력은 재사용하지만 AIB OS 빌드와 부팅 검증은 
   --work-dir build/autosd/recheck-01
 ```
 
-builder VM/AIB 생성 단계만 생략한다. 이미지 변환, 필수 도구·모듈 설치,
+Podman/AIB 생성 단계만 생략한다. 이미지 변환, 필수 도구·모듈 설치,
 Automotive 구성 및 QBox full-system 검사는 다시 수행한다. 이는 qcow2에서 시작하는
 재검증이지 이전 private VM의 실행 상태 복원이 아니다.
 
@@ -281,14 +317,12 @@ nightly ID, builder reference, crun 소스/패치가 기존 캐시와 다르면 
 
 ```bash
 # AIB 상세 빌드 출력
-tail -f build/autosd/run-01/aib/console.log
-# QEMU 부팅 출력
-tail -f build/qbox-apollo-qvp/autosd-run-01/linux-uart.log
+tail -f build/autosd/run-01/aib.log
 # QBox AP 부팅 출력 (RSE/SI UART도 같은 출력 디렉터리에 존재)
 tail -f build/qbox-apollo-qvp/autosd-run-01/linux-uart.log
 ```
 
-입력 준비 단계는 콘솔 출력과 `CACHE/inputs.json`, `builder/metadata.json`,
+입력 준비 단계는 콘솔 출력과 `CACHE/inputs.json`, `builder-amd64/metadata.json`,
 `host-tools/environment.json`, `crun/provenance.json`으로 확인한다.
 전체 실행의 최종 판정은 다음 파일이다.
 
