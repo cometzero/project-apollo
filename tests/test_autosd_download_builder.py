@@ -36,8 +36,9 @@ def test_conversion_changes_digest_and_preserves_layers():
     assert MODULE.oci_manifest(converted) == converted
 
 
-def test_archive_is_self_contained(monkeypatch, tmp_path):
-    config = MODULE.encode({"architecture": "arm64", "os": "linux"})
+@pytest.mark.parametrize("architecture", ["amd64", "arm64"])
+def test_archive_is_self_contained(monkeypatch, tmp_path, architecture):
+    config = MODULE.encode({"architecture": architecture, "os": "linux"})
     layer = b"example compressed layer"
     descriptor = lambda data, kind: {"mediaType": MODULE.OCI + kind,
         "digest": MODULE.sha(data), "size": len(data)}
@@ -45,7 +46,7 @@ def test_archive_is_self_contained(monkeypatch, tmp_path):
         "config": descriptor(config, "config.v1+json"),
         "layers": [descriptor(layer, "layer.v1.tar+gzip")]})
     index = MODULE.encode({"schemaVersion": 2, "manifests": [{
-        **descriptor(raw, "manifest.v1+json"), "platform": {"architecture": "arm64", "os": "linux"}}]})
+        **descriptor(raw, "manifest.v1+json"), "platform": {"architecture": architecture, "os": "linux"}}]})
     sources = {"latest": index, MODULE.sha(raw): raw,
                MODULE.sha(config): config, MODULE.sha(layer): layer}
 
@@ -59,7 +60,8 @@ def test_archive_is_self_contained(monkeypatch, tmp_path):
         return MODULE.sha(data)
 
     monkeypatch.setattr(MODULE, "download", fake_download)
-    result = MODULE.build_archive(MODULE.REPOSITORY + ":latest", tmp_path)
+    result = MODULE.build_archive(MODULE.REPOSITORY + ":latest", tmp_path, architecture)
+    assert result["architecture"] == architecture
     assert result["builder_reference"] == MODULE.REPOSITORY + "@" + MODULE.sha(raw)
     archive = Path(result["archive"])
     assert hashlib.sha256(archive.read_bytes()).hexdigest() == result["sha256"]

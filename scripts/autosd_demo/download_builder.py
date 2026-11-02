@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download the official ARM64 AIB as a verified, self-contained OCI archive.
+"""Download the host-native AIB as a verified, self-contained OCI archive.
 
 Only the Python standard library is required. A mutable tag is resolved once;
 all subsequent requests use content digests. Nothing is stored in Docker's cache.
@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import io
 import json
+import platform
 from pathlib import Path
 import re
 import tarfile
@@ -22,6 +23,14 @@ OCI = "application/vnd.oci.image."
 ACCEPT = ", ".join((OCI + "index.v1+json", OCI + "manifest.v1+json",
                     "application/vnd.docker.distribution.manifest.list.v2+json",
                     "application/vnd.docker.distribution.manifest.v2+json"))
+
+
+def native_architecture():
+    machine = platform.machine()
+    try:
+        return {"x86_64": "amd64", "aarch64": "arm64"}[machine]
+    except KeyError:
+        raise ValueError(f"Unsupported builder host architecture: {machine}") from None
 
 
 def sha(data):
@@ -91,7 +100,10 @@ def oci_manifest(raw):
     return encode(manifest)
 
 
-def build_archive(reference, output):
+def build_archive(reference, output, architecture=None):
+    architecture = architecture or native_architecture()
+    if architecture not in ("amd64", "arm64"):
+        raise ValueError("Unsupported builder architecture")
     selector = parse_reference(reference)
     output.mkdir(parents=True, exist_ok=True)
     archive = output / "aib-builder.oci.tar"
@@ -107,11 +119,11 @@ def build_archive(reference, output):
         document = json.loads(raw)
         if "manifests" in document:
             candidates = [entry for entry in document["manifests"]
-                          if entry.get("platform", {}).get("architecture") == "arm64"
+                          if entry.get("platform", {}).get("architecture") == architecture
                           and entry["platform"].get("os") == "linux"
-                          and entry["platform"].get("variant", "v8") == "v8"]
+                          and (architecture != "arm64" or entry["platform"].get("variant", "v8") == "v8")]
             if len(candidates) != 1:
-                raise ValueError("Expected exactly one linux/arm64/v8 image")
+                raise ValueError(f"Expected exactly one linux/{architecture} image")
             descriptor = candidates[0]
             digest_path(descriptor["digest"])
             source_digest = download(API + "/manifests/" + descriptor["digest"], first,
@@ -129,8 +141,8 @@ def build_archive(reference, output):
             download(API + "/blobs/" + descriptor["digest"], blob,
                      descriptor["digest"], descriptor["size"])
         config = json.loads((root / digest_path(manifest["config"]["digest"])).read_bytes())
-        if config.get("architecture") != "arm64" or config.get("os") != "linux":
-            raise ValueError("Image config is not linux/arm64")
+        if config.get("architecture") != architecture or config.get("os") != "linux":
+            raise ValueError(f"Image config is not linux/{architecture}")
         index = {"schemaVersion": 2, "manifests": [{
             "mediaType": OCI + "manifest.v1+json", "digest": manifest_digest,
             "size": len(converted), "annotations": {
@@ -153,7 +165,7 @@ def build_archive(reference, output):
                   "source_reference": REPOSITORY + "@" + source_digest,
                   "builder_reference": REPOSITORY + "@" + manifest_digest,
                   "archive": str(archive.resolve()), "sha256": hasher.hexdigest(),
-                  "architecture": "arm64", "os": "linux", "schema_version": 1}
+                  "architecture": architecture, "os": "linux", "schema_version": 1}
         pending.rename(archive)
         metadata.write_text(json.dumps(result, indent=2) + "\n")
         return result

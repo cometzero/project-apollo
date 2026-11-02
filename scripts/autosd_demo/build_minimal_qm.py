@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build official minimal_qm in a private guest, prepare it and verify QBox.
+"""Build ARM64 minimal_qm with native Podman tooling, prepare it and verify QBox.
 
-Requires an existing Apollo BSP/provider build and prepared nightly developer
-manifest. No host package installation, foreign VM shutdown or image overwrite.
+Requires an existing Apollo BSP/provider build and rootful Podman.
+No host package installation, foreign VM shutdown or image overwrite.
 This verifies minimal QM, not the separate Automotive customization scenarios.
 """
 import argparse
@@ -46,10 +46,11 @@ def module_release(archive):
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--manifest", type=Path, help="default: BUILD_DIR/autosd/regular.json")
+    p.add_argument("--manifest", type=Path, help="optional existing manifest for bootstrap guestfish smoke")
     p.add_argument("--aib-manifest", type=Path, default=ROOT / "autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml")
     p.add_argument("--image", type=Path, help="existing AIB qcow2; skip builder")
     p.add_argument("--builder-image", help="override builder container with an immutable image@sha256:digest")
+    p.add_argument("--rootless", action="store_true", help="experimental native rootless/VM build; requires SELinux xattrs on the build store")
     p.add_argument("--builder-archive", type=Path,
                    help="saved Podman OCI archive; requires --builder-image and disables registry fallback")
     p.add_argument("--customize", action="store_true", help="install Automotive services and RT tools; verify readiness after minimal QM")
@@ -64,7 +65,7 @@ def parser():
     p.add_argument("--qbox-out-dir", type=Path, help="new full-system output directory; default is discoverable by run_qbox_autosd.sh")
     p.add_argument("--output", type=Path, help="default: BUILD_DIR/autosd/demo-minimal-qm-prepared")
     p.add_argument("--work-dir", type=Path, help="default: new timestamped directory under BUILD_DIR/autosd")
-    p.add_argument("--builder-port", type=int, default=2226)
+    p.add_argument("--builder-port", type=int, default=2226, help="legacy option; Podman builder uses no SSH")
     p.add_argument("--qbox-port", type=int, default=2244)
     p.add_argument("--boot-timeout", type=int, default=1800)
     p.add_argument("--build-timeout", type=int, default=7200)
@@ -99,9 +100,8 @@ def resolve(args):
         import re
         if not re.fullmatch(r"quay\.io/centos-sig-automotive/automotive-image-builder@sha256:[0-9a-f]{64}", args.builder_image):
             raise ValueError("--builder-image must be an official AIB image pinned to a SHA256 digest")
-    ports = [args.builder_port, args.qbox_port]
-    if len(set(ports)) != len(ports) or any(not 1024 <= port <= 65535 for port in ports):
-        raise ValueError("SSH ports must be distinct unprivileged TCP ports")
+    if not 1024 <= args.qbox_port <= 65535:
+        raise ValueError("QBox SSH port must be an unprivileged TCP port")
     return args
 
 
@@ -112,11 +112,13 @@ def plan(args):
     prepared = args.output / "regular.json"
     commands = {}
     if not args.image:
-        commands["builder"] = [py, str(ROOT / "scripts/autosd_demo/builder_launch.py"),
-            "--manifest", str(args.manifest), "--uki", str(args.uki),
-            "--modules", str(args.modules), "--guestfish", args.guestfish,
-            "--work-dir", str(work / "builder"), "--ssh-port", str(args.builder_port),
-            "--build-dir", str(args.build_dir), "--deploy-dir", str(args.deploy_dir)]
+        commands["builder"] = [py, str(ROOT / "scripts/autosd_demo/builder_podman.py"),
+            "--manifest", str(args.aib_manifest), "--image", str(args.builder_image),
+            "--work-dir", str(work / "fetch"), "--timeout", str(args.build_timeout)]
+        if args.builder_archive:
+            commands["builder"] += ["--archive", str(args.builder_archive)]
+        if args.rootless:
+            commands["builder"] += ["--rootless"]
     commands["prepare"] = [py, str(ROOT / "scripts/prepare_autosd.py"), "--image", str(image),
         "--mode", "regular", "--output", str(args.output), "--guestfish", args.guestfish,
         "--qemu-img", args.qemu_img]
@@ -131,13 +133,14 @@ def plan(args):
             "--out", str(work / "customization-bundle"), "--crun-binary", str(args.crun_binary), "--cc", args.cc,
             "--rt-tools"]
     return {"commands": commands, "image": str(image), "prepared": str(prepared),
-        "builder_image": args.builder_image or "required: bootstrap resolves official ARM64 image",
+        "builder_image": args.builder_image or "required: bootstrap resolves official host-native image",
         "builder_archive": str(args.builder_archive) if args.builder_archive else None,
-        "builder_archive_policy": "SHA256 verified transfer; load and require requested digest; no registry fallback" if args.builder_archive else None,
+        "builder_mode": "rootless-vm" if args.rootless else "rootful-user",
+        "builder_archive_policy": "bootstrap SHA256 check; load and require requested digest; no registry fallback" if args.builder_archive else None,
         "customize": args.customize,
         "rt_tools": args.customize,
-        "stages": ["preflight", "builder boot + matching modules + AIB build + SHA-verified fetch" if not args.image else "validate supplied qcow2",
-            "graceful builder shutdown", "prepare image", "QBox full boot", "UART root login + SSH/iproute bootstrap",
+        "stages": ["preflight", ("rootless native Podman + AIB VM" if args.rootless else "rootful native Podman + ARM64 target emulation") if not args.image else "validate supplied qcow2",
+            "prepare image", "QBox full boot", "UART root login + SSH/iproute bootstrap",
             "matching modules + full-system assets",
             "minimal QM guest verification",
             *(["Automotive + RT bundle and root/QM packages"] if args.customize else []),
@@ -160,7 +163,11 @@ def preflight(args):
         "ukibootaa64.efi", "slot_a.addon.efi", "slot_b.addon.efi",
         "efi-capsule-update-disk-image-apollo-qvp.img",
         "nexios-bsp-initramfs-apollo-qvp.qboxconf")]
-    required.append(args.image if args.image else args.manifest)
+    if args.image:
+        required.append(args.image)
+    else:
+        from builder_podman import preflight as podman_preflight
+        podman_preflight(args.rootless)
     if args.builder_archive:
         required.append(args.builder_archive)
     if args.customize:
@@ -188,7 +195,7 @@ def preflight(args):
         ancestor = ancestor.parent
     if shutil.disk_usage(ancestor).free < 32 * 1024**3:
         raise ValueError("At least 32 GiB free disk space is required")
-    ports = (args.qbox_port,) if args.image else (args.builder_port, args.qbox_port)
+    ports = (args.qbox_port,)
     for port in ports:
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", port))
@@ -228,6 +235,11 @@ class Pipeline:
 
     def start(self, name):
         command = self.plan["commands"][name]
+        if name == "qbox":
+            uart_in = self.args.work_dir / "primary-uart-input.fifo"
+            os.mkfifo(uart_in, 0o600)
+            self.logs.append(os.fdopen(os.open(uart_in, os.O_RDWR | os.O_NONBLOCK), "rb", buffering=0))
+            self.environment["QBOX_RDASPEN_PRIMARY_UART_READ_FILE"] = str(uart_in)
         log = (self.args.work_dir / f"{name}-launcher.log").open("w")
         self.logs.append(log)
         process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
@@ -272,11 +284,20 @@ class Pipeline:
     def bootstrap_qbox_ssh(self, process):
         """Bootstrap official minimal_qm through the launcher's owned UART.
 
-        That image intentionally has no SSH server. Wait for auto-login, then
+        That image intentionally has no SSH server. Log in when required, then
         require a standalone output marker, never the echoed command text.
         """
         uart = self.args.qbox_out_dir / "linux-uart.log"
-        uart_in = self.args.qbox_out_dir / "full-system/primary-uart-input.fifo"
+        uart_in = self.args.work_dir / "primary-uart-input.fifo"
+        def send(text):
+            if not uart_in.exists() or not stat.S_ISFIFO(uart_in.stat().st_mode):
+                raise RuntimeError("QBox UART input endpoint is missing")
+            fd = os.open(uart_in, os.O_WRONLY | os.O_NONBLOCK)
+            try:
+                if os.write(fd, text.encode()) != len(text.encode()):
+                    raise RuntimeError("Incomplete QBox UART command write")
+            finally:
+                os.close(fd)
         stage = "qbox-ssh-bootstrap"
         token = uuid.uuid4().hex
         prefix = "APOLLO_SSH_BOOTSTRAP_" + token
@@ -294,6 +315,7 @@ class Pipeline:
         )
         deadline = time.monotonic() + self.args.boot_timeout
         sent, offset, observed = False, 0, ""
+        login_sent, password_sent = False, False
         result = {"stage": stage, "status": "FAIL", "command": command.strip()}
         print(f"[{stage}] Waiting for root console; install openssh-server and iproute", flush=True)
         try:
@@ -308,18 +330,19 @@ class Pipeline:
                             stream.seek(max(0, uart.stat().st_size - 65536))
                         observed = stream.read().decode(errors="replace")
                     clean = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", observed).replace("\r", "")
-                    if not sent and re.search(r"(?:\[root@[^\n]*\]#|root@[^\n]*#)\s*$", clean):
+                    root_prompt = re.search(r"(?:\[root@[^\n]*\]#|root@[^\n]*#)\s*$", clean)
+                    if not sent and not root_prompt:
+                        if not login_sent and re.search(r"(?:^|\n)[^\n]*login:", clean):
+                            send("root\n")
+                            login_sent = True
+                        elif login_sent and not password_sent and re.search(r"(?:^|\n)Password:", clean):
+                            send("password\n")
+                            password_sent = True
+                    if not sent and root_prompt:
                         # Do not create a missing input endpoint: only the
                         # owned launcher may establish the console channel.
-                        if not uart_in.exists() or not stat.S_ISFIFO(uart_in.stat().st_mode):
-                            raise RuntimeError("QBox UART input endpoint is missing")
                         offset = uart.stat().st_size
-                        fd = os.open(uart_in, os.O_WRONLY | os.O_NONBLOCK)
-                        try:
-                            if os.write(fd, command.encode()) != len(command.encode()):
-                                raise RuntimeError("Incomplete QBox UART command write")
-                        finally:
-                            os.close(fd)
+                        send(command)
                         sent = True
                         deadline = time.monotonic() + 1020
                     elif sent:
@@ -369,7 +392,8 @@ class Pipeline:
     def provenance(self):
         files = [self.args.uki, self.args.modules,
                  self.args.aib_manifest,
-                 ROOT / "scripts/autosd_demo/builder_guest.sh"]
+                 ROOT / "scripts/autosd_demo/builder_podman.py"]
+        files.append(ROOT / "scripts/autosd_demo/native_build.py")
         repositories = [ROOT, ROOT / "autosd/sig-docs", ROOT / "autosd/automotive-image-builder",
                         ROOT / "hsoc-stack/tools/qbox", ROOT / "hsoc-stack/tools/qbox-platform"]
         if self.args.customize:
@@ -382,24 +406,6 @@ class Pipeline:
                     for repo in repositories if repo.is_dir()},
                 "guestfish_environment": {key: value for key, value in self.environment.items()
                     if key in ("LIBGUESTFS_BACKEND", "SUPERMIN_KERNEL", "SUPERMIN_MODULES")}}
-
-    def build_guest_image(self):
-        args = self.args
-        command = "bash /root/builder_guest.sh"
-        uploads = [(ROOT / "scripts/autosd_demo/builder_guest.sh", "/root/builder_guest.sh"),
-                   (args.aib_manifest, "/root/minimal_qm.aib.yml")]
-        if args.builder_image:
-            command += " " + shlex.quote(args.builder_image)
-        if args.builder_archive:
-            remote = "/root/aib-builder.oci.tar"
-            uploads.append((args.builder_archive, remote))
-            digest = sha256(args.builder_archive)
-            # The helper mounts its scratch store, loads this archive there,
-            # and requires image-exists for the exact digest before running.
-            # An archive miss must not become an implicit registry pull.
-            command = ("printf '%s\\n' " + shlex.quote(digest + "  " + remote)
-                       + " | sha256sum -c - && " + command + " " + shlex.quote(remote))
-        self.guest("aib", args.builder_port, command, uploads=uploads, timeout=args.build_timeout)
 
     def customize(self):
         args = self.args
@@ -448,16 +454,7 @@ class Pipeline:
         try:
             (args.work_dir / "provenance.json").write_text(json.dumps(self.provenance(), indent=2) + "\n")
             if not args.image:
-                builder = self.start("builder")
-                self.wait_ssh(builder, args.builder_port)
-                self.install_modules("builder-modules", args.builder_port)
-                self.build_guest_image()
-                self.guest("fetch", args.builder_port,
-                    "sha256sum /srv/aib/work/minimal_qm.aarch64.qcow2 > /root/minimal_qm.sha256",
-                    downloads=[("/srv/aib/work/minimal_qm.aarch64.qcow2", "minimal_qm.aarch64.qcow2"),
-                               ("/srv/aib/work/minimal_qm.osbuild.json", "minimal_qm.osbuild.json"),
-                               ("/root/minimal_qm.sha256", "minimal_qm.sha256")], timeout=1800)
-                self.shutdown("builder", builder, args.builder_port)
+                self.command("aib", self.plan["commands"]["builder"], 4 * args.build_timeout + 120)
             image = Path(self.plan["image"])
             digest = sha256(image)
             if not args.image and digest != (args.work_dir / "fetch/minimal_qm.sha256").read_text().split()[0]:

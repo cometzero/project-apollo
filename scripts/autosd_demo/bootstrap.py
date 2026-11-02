@@ -8,7 +8,7 @@ import sys
 
 import build_minimal_qm as pipeline
 from download_nightly import fetch
-from download_builder import parse_reference
+from download_builder import parse_reference, native_architecture
 
 ROOT = pipeline.ROOT
 
@@ -68,12 +68,15 @@ def run(command, environment=None):
 
 
 def checked_builder(cache, reference):
-    directory = cache / "builder"
+    architecture = native_architecture()
+    directory = cache / ("builder-" + architecture)
     receipt_path = directory / "metadata.json"
     if not receipt_path.exists():
         run([sys.executable, ROOT / "scripts/autosd_demo/download_builder.py",
              "--reference", reference, "--output", directory])
     receipt = json.loads(receipt_path.read_text())
+    if receipt.get("architecture") != architecture:
+        raise ValueError("Builder cache architecture differs from host; use a new --cache-dir")
     if receipt.get("requested_reference") != reference:
         raise ValueError("Builder reference changed; use a new --cache-dir")
     archive = Path(receipt["archive"])
@@ -121,22 +124,6 @@ def prepare(args, cache):
             raise ValueError("Host tool smoke failed")
         args.guestfish = host["guestfish"]
         os.environ.update(host["environment"])
-    if nightly:
-        # Source identity, including the selected nightly URL, remains in download.json.
-        prepared = cache / "builder-base"
-        args.manifest = prepared / "regular.json"
-        if args.manifest.exists():
-            data = json.loads(args.manifest.read_text())
-            if data.get("source_sha256") != nightly["image_sha256"]:
-                raise ValueError("Builder base does not match the downloaded nightly")
-            for key in ("rootfs", "initrd"):
-                path = Path(data[key])
-                if not path.is_file() or pipeline.sha256(path) != data[key + "_sha256"]:
-                    raise ValueError("Builder base missing/corrupt; use a new --cache-dir")
-        else:
-            run([py, ROOT / "scripts/prepare_autosd.py", "--mode", "regular",
-                 "--image", smoke, "--output", prepared, "--guestfish", args.guestfish,
-                 "--qemu-img", args.qemu_img])
     if not args.image and not args.builder_archive:
         args.builder_archive, args.builder_image = checked_builder(
             cache, args.builder_image or args.builder_reference)
@@ -168,10 +155,11 @@ def main(argv=None):
         print(json.dumps({"config": str(args.config), "cache_dir": str(cache),
             "aib_manifest": str(args.aib_manifest), "nightly_build_id": args.nightly_build_id,
             "builder_reference": args.builder_reference, "customize": args.customize,
+            "builder_mode": "rootless-vm" if args.rootless else "rootful-user",
             "stages": ["download nightly + checksum", "host-tools readonly smoke",
-                       "prepare private builder base", "download ARM64 AIB + digest",
+                       "download host-native AIB + digest (target remains ARM64)",
                        "build patched crun if customization enabled",
-                       "AIB build, QEMU and QBox validation unless --prepare-inputs-only"],
+                       "Podman AIB build and QBox full validation unless --prepare-inputs-only"],
             "external_prerequisites": "Apollo BSP/providers, documented host packages; no previous build/autosd inputs"}, indent=2))
         return 0
     # Refuse known output collisions before lengthy downloads/builds.
@@ -179,6 +167,9 @@ def main(argv=None):
         for path in (args.output, args.work_dir, args.qbox_out_dir):
             if path is not None and path.exists():
                 raise ValueError(f"Output exists: {path}; choose new --output/--work-dir")
+    if not args.image and not args.prepare_inputs_only:
+        from builder_podman import preflight
+        preflight(args.rootless)
     receipt = prepare(args, cache)
     if args.prepare_inputs_only:
         print(json.dumps(receipt, indent=2))

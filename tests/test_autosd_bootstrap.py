@@ -48,12 +48,12 @@ def test_conflicting_inputs(module, extra):
 
 
 def test_builder_cache_hash_checked(module, tmp_path, monkeypatch):
-    cache = tmp_path / "builder"
+    cache = tmp_path / ("builder-" + module.native_architecture())
     cache.mkdir()
     archive = cache / "aib-builder.oci.tar"
     archive.write_bytes(b"archive")
     reference = "official:latest"
-    metadata = {"requested_reference": reference, "archive": str(archive),
+    metadata = {"requested_reference": reference, "archive": str(archive), "architecture": module.native_architecture(),
                 "sha256": module.pipeline.sha256(archive), "builder_reference": "pinned"}
     (cache / "metadata.json").write_text(json.dumps(metadata))
     monkeypatch.setattr(module, "run", lambda *_: pytest.fail("unexpected network"))

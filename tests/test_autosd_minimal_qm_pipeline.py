@@ -50,6 +50,14 @@ def test_existing_image_skips_only_builder(module, tmp_path):
     assert plan["image"] == str(tmp_path / "source.qcow2")
 
 
+def test_rootless_reaches_builder_and_preserves_qbox(module, tmp_path):
+    config = args(module, tmp_path, "--rootless")
+    plan = module.plan(config)
+    assert "--rootless" in plan["commands"]["builder"]
+    assert plan["builder_mode"] == "rootless-vm"
+    assert "qbox" in plan["commands"]
+
+
 def test_full_output_discoverable_and_private_disk(module, tmp_path):
     config = args(module, tmp_path)
     assert config.qbox_out_dir.parent == config.build_dir / "qbox-apollo-qvp"
@@ -58,11 +66,13 @@ def test_full_output_discoverable_and_private_disk(module, tmp_path):
     assert "--rootfs" not in command
     assert "qemu" not in commands
     assert "--headless" in command
-    assert commands["builder"][commands["builder"].index("--manifest") + 1] == str(config.manifest)
+    assert commands["builder"][commands["builder"].index("--manifest") + 1] == str(config.aib_manifest)
+    assert commands["builder"][1].endswith("builder_podman.py")
+    assert "--ssh-port" not in commands["builder"]
 
 
 @pytest.mark.parametrize("extra", [["--boot-timeout", "0"], ["--build-timeout", "-1"],
-                                  ["--qbox-port", "2226"], ["--builder-port", "22"]])
+                                  ["--qbox-port", "22"], ["--qbox-port", "65536"]])
 def test_invalid_configuration(module, tmp_path, extra):
     with pytest.raises(ValueError):
         args(module, tmp_path, *extra)
@@ -258,20 +268,15 @@ def test_archive_requires_digest_and_rejects_skipped_builder(module, tmp_path, e
         args(module, tmp_path, *extra)
 
 
-def test_archive_upload_hash_and_exact_digest_command(module, tmp_path, monkeypatch):
+def test_archive_and_exact_digest_passed_to_host_builder(module, tmp_path):
     archive = tmp_path / "builder.oci.tar"
     archive.write_bytes(b"test archive")
     digest_image = "quay.io/centos-sig-automotive/automotive-image-builder@sha256:" + "a" * 64
     config = args(module, tmp_path, "--builder-archive", str(archive), "--builder-image", digest_image)
     pipeline = module.Pipeline(config)
-    seen = []
-    monkeypatch.setattr(pipeline, "guest", lambda *a, **kw: seen.append((a, kw)))
-    pipeline.build_guest_image()
-    command = seen[0][0][2]
-    assert module.sha256(archive) in command
-    assert "sha256sum -c - && bash /root/builder_guest.sh " + digest_image in command
-    assert command.endswith(" /root/aib-builder.oci.tar")
-    assert (archive, "/root/aib-builder.oci.tar") in seen[0][1]["uploads"]
+    command = pipeline.plan["commands"]["builder"]
+    assert command[command.index("--image") + 1] == digest_image
+    assert command[command.index("--archive") + 1] == str(archive)
     assert "pull" not in command
     assert pipeline.plan["builder_archive"] == str(archive)
 
@@ -295,8 +300,7 @@ def test_uart_bootstrap_requires_actual_marker(module, tmp_path, monkeypatch, ou
     directory.mkdir(parents=True)
     uart = directory / "linux-uart.log"
     uart.write_text("[root@autosd ~]# ")
-    uart_in = directory / "full-system/primary-uart-input.fifo"
-    uart_in.parent.mkdir()
+    uart_in = config.work_dir / "primary-uart-input.fifo"
     os.mkfifo(uart_in)
     reader = os.open(uart_in, os.O_RDWR | os.O_NONBLOCK)
     written = []
@@ -336,6 +340,34 @@ def test_uart_bootstrap_rejects_dead_launcher(module, tmp_path):
     with pytest.raises(RuntimeError, match="QBox exited"):
         pipeline.bootstrap_qbox_ssh(SimpleNamespace(poll=lambda: 1))
     assert json.loads((config.work_dir / "qbox-ssh-bootstrap.json").read_text())["status"] == "FAIL"
+
+
+def test_uart_bootstrap_logs_in_before_provisioning(module, tmp_path, monkeypatch):
+    config = args(module, tmp_path)
+    config.work_dir.mkdir()
+    config.qbox_out_dir.mkdir(parents=True)
+    uart = config.qbox_out_dir / "linux-uart.log"
+    uart.write_text("U-Boot\n\x1b[6nHit any key to stop autoboot: 2")
+    fifo = config.work_dir / "primary-uart-input.fifo"
+    os.mkfifo(fifo)
+    reader = os.open(fifo, os.O_RDWR | os.O_NONBLOCK)
+    monkeypatch.setattr(module.uuid, "uuid4", lambda: SimpleNamespace(hex="login_test"))
+    sent = []
+    def advance(_seconds):
+        try:
+            sent.append(os.read(reader, 4096).decode())
+        except BlockingIOError:
+            sent.append("")
+        replies = ["\nlocalhost login: ", "\nPassword: kernel message\n", "\n[root@localhost ~]# ", "\nAPOLLO_SSH_BOOTSTRAP_login_test_PASS\n"]
+        with uart.open("a") as stream:
+            stream.write(replies[len(sent) - 1])
+    monkeypatch.setattr(module.time, "sleep", advance)
+    try:
+        module.Pipeline(config).bootstrap_qbox_ssh(SimpleNamespace(poll=lambda: None))
+    finally:
+        os.close(reader)
+    assert sent[:3] == ["", "root\n", "password\n"]
+    assert "dnf -y install" in sent[3]
 
 
 def test_uart_bootstrap_root_prompt_deadline(module, tmp_path, monkeypatch):
