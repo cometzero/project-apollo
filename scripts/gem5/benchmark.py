@@ -182,7 +182,7 @@ def roi_statistics(outdir, begin, end):
     return totals, indices, True
 
 
-def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, channels, mode="read"):
+def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, channels, mode="read", warmup_passes=1):
     """Validate pinned memory work; size_bytes is the size of each array."""
     if mode not in ("read", "copy", "triad"):
         raise ValueError("unsupported memory mode")
@@ -203,10 +203,10 @@ def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, chan
     expected = dict(benchmark="stream" if mode == "triad" else mode,
                     kernel="neon" if mode == "read" else "scalar", workers=workers, passes=passes,
                     working_set_bytes=size_bytes * arrays, useful_bytes=size_bytes * arrays * passes,
-                    warmup_passes=1, initialization_before_switch=True,
+                    warmup_passes=warmup_passes, initialization_before_switch=True,
                     channel_phase_spread=False, affinity="0..workers-1",
                     checksum=size_bytes * passes // 8 if mode == "read" else 0,
-                    warmup_checksum=size_bytes // 8 if mode == "read" else 0)
+                    warmup_checksum=size_bytes * warmup_passes // 8 if mode == "read" else 0)
     guest = result["guest"]
     for key, value in expected.items():
         if type(guest.get(key)) is not type(value) or guest[key] != value:
@@ -223,6 +223,10 @@ def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, chan
     if any(value is None or value <= 0 for value in instructions.values()):
         raise ValueError("missing O3 committed instructions for a pinned worker")
     traffic = result["dram"]["channels"]
+    if any(type(item.get(direction)) not in (int, float)
+           or not math.isfinite(item[direction]) or item[direction] < 0
+           for item in traffic.values() for direction in ("Read", "Written")):
+        raise ValueError("missing or invalid DRAM byte counter")
     if len(traffic) != channels or any((item.get("Read") or 0) <= 0 for item in traffic.values()):
         raise ValueError("missing read traffic on a configured DRAM channel")
     if mode != "read" and any((item.get("Written") or 0) <= 0 for item in traffic.values()):
@@ -246,7 +250,7 @@ def summarize_multicore(outdir, serial_log, *, workers, size_bytes, passes, chan
     return {key: value for key, value in result.items() if key != "counters"}
 
 
-def summarize(outdir, serial_log, *, mode, size_bytes, passes):
+def summarize(outdir, serial_log, *, mode, size_bytes, passes, warmup_passes=1):
     """Reject incomplete runs; throughput is useful bytes, not bus traffic."""
     outdir = Path(outdir)
     results = [
@@ -268,7 +272,7 @@ def summarize(outdir, serial_log, *, mode, size_bytes, passes):
     loads = size_bytes // 64 * passes if mode == "cache" else 0
     checksum = passes if mode == "cache" else size_bytes // 8 * passes
     expected = dict(mode=mode, working_set_bytes=size_bytes, passes=passes,
-                    warmup_passes=1, dependent_loads=loads,
+                    warmup_passes=warmup_passes, dependent_loads=loads,
                     useful_bytes=loads * 8 if mode == "cache" else size_bytes * passes,
                     checksum=checksum, expected=checksum)
     for key, value in expected.items():

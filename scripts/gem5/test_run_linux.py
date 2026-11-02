@@ -7,13 +7,14 @@ import io
 import json
 import os
 from pathlib import Path
+import runpy
 import socket
 import subprocess
 import sys
 import tempfile
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import run_linux
 
@@ -45,6 +46,50 @@ def entries(data):
 
 
 class LauncherTests(unittest.TestCase):
+    def test_image_command_requires_collector_success(self):
+        for marker, error, expected in ((True, False, "PASS"),
+                                         (True, True, "FAIL"),
+                                         (False, False, "PASS")):
+            with self.subTest(marker=marker, error=error), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                archive = bytearray()
+                run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+                base = root / "initrd"
+                base.write_bytes(archive)
+                inputs = {name: str(base) for name in
+                          ("gem5", "kernel", "bootloader", "profile", "initrd")}
+                inputs.update(benchmark=None, rootfs=None, native_manifest=None)
+                out = root / "run"
+
+                def execute(*args):
+                    (out / "m5out").mkdir()
+                    (out / "m5out/system.platform.terminal").write_text(
+                        ('APOLLO_IMAGE_RESULT {}\n' if marker else '') +
+                        'APOLLO_WORKLOAD_EXIT=0\n')
+                    return 0, False, 1.0
+
+                collector = Mock(return_value={"validated": True},
+                                 side_effect=ValueError("invalid image ROI") if error else None)
+                with patch.object(sys, "argv", ["run_linux.py", "--headless",
+                        "--workload", "command", "--command", "true",
+                        "--out-dir", str(out)]), \
+                        patch("run_linux.resolve", return_value=inputs), \
+                        patch("run_linux.native_model_sources", return_value={str(base): "source-hash"}), \
+                        patch("run_linux.run", side_effect=execute), \
+                        patch.dict(sys.modules, {"image_summary": SimpleNamespace(summarize_image=collector)}), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(run_linux.main(), int(expected == "FAIL"))
+                result = json.loads((out / "result.json").read_text())
+                self.assertEqual(result["status"], expected)
+                self.assertEqual(collector.call_count, int(marker))
+                self.assertEqual("measurement" in result, marker and not error)
+                manifest = json.loads((out / "launch.json").read_text())
+                self.assertEqual(manifest["readfile_sha256"], run_linux.sha256(out / "guest-init.sh"))
+                self.assertEqual(manifest["original_kernel_sha256"], run_linux.sha256(base))
+                self.assertEqual(manifest["profile_sha256"], run_linux.sha256(base))
+                self.assertEqual(manifest["model_sources_schema"], 1)
+                self.assertEqual(manifest["model_sources_sha256"], {str(base): "source-hash"})
+
     def test_power_arguments_reject_incomplete_or_invalid_inputs(self):
         for argv in (["--power-profile", "missing"],
                      ["--power-profile", "a", "--thermal-profile", "b"],
@@ -304,7 +349,8 @@ with socket.socket() as listener:
                 (root / "guest-init.sh").read_bytes(),
             )
 
-    def test_checkpoint_contract_rejects_changed_inputs_and_partial_save(self):
+    @patch("run_linux.native_model_sources", return_value={"custom_dram.py": "original"})
+    def test_checkpoint_contract_rejects_changed_inputs_and_partial_save(self, model_sources):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             inputs = {}
@@ -318,6 +364,24 @@ with socket.socket() as listener:
             (root / "apollo-checkpoint.json").write_text('{"status":"COMPLETE"}')
             (root / "launcher.json").write_text(json.dumps(contract))
             run_linux.validate_checkpoint(root, contract)
+            self.assertEqual(contract["schema"], 3)
+            self.assertIn("configs/zena_cmn/profiles/default.yaml", contract["configuration_sha256"])
+            historical = dict(contract, schema=2)
+            (root / "launcher.json").write_text(json.dumps(historical))
+            with self.assertRaisesRegex(ValueError, "inputs changed"):
+                run_linux.validate_checkpoint(root, contract)
+            (root / "launcher.json").write_text(json.dumps(contract))
+            model_sources.return_value = {"custom_dram.py": "changed"}
+            changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
+            with self.assertRaisesRegex(ValueError, "inputs changed"):
+                run_linux.validate_checkpoint(root, changed)
+            model_sources.return_value = {"custom_dram.py": "original"}
+            original_hash = run_linux.sha256
+            with patch("run_linux.sha256", side_effect=lambda path:
+                       "changed" if str(path).endswith("profiles/default.yaml") else original_hash(path)):
+                changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
+            with self.assertRaisesRegex(ValueError, "inputs changed"):
+                run_linux.validate_checkpoint(root, changed)
             args.interleave_bytes = 512
             changed = run_linux.checkpoint_contract(inputs, root / "initrd", args, "bootargs")
             with self.assertRaisesRegex(ValueError, "inputs changed"):
@@ -330,6 +394,151 @@ with socket.socket() as listener:
             (root / "m5.cpt").unlink()
             with self.assertRaisesRegex(ValueError, "incomplete"):
                 run_linux.validate_checkpoint(root, contract)
+
+    def test_model_sources_bind_shared_files_and_imported_dependencies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = {name: str(root / name) for name in
+                      ("gem5", "kernel", "bootloader", "profile", "initrd")}
+            for filename in inputs.values():
+                Path(filename).write_text("fixture")
+            # A dependency may live outside configs/zena_cmn and the native
+            # Python package may be outside the gem5 checkout entirely.
+            dependencies = [root / name for name in
+                            ("configs/ruby/CHI_config.py",
+                             "configs/topologies/CustomMesh.py",
+                             "native/site-packages/yaml/__init__.py")]
+            for dependency in dependencies:
+                dependency.parent.mkdir(parents=True, exist_ok=True)
+                dependency.write_text("original")
+
+            def oracle(*args, **kwargs):
+                return {"source_hashes": {str(path): run_linux.sha256(path)
+                                          for path in dependencies}}
+
+            args = run_linux.parser().parse_args([])
+            fake_parameters = SimpleNamespace(load_parameters=Mock(return_value={}))
+            with patch.dict(sys.modules, {
+                    "zena_cmn.parameters": fake_parameters,
+                    "verify_config": SimpleNamespace(expected_memory=oracle)}), \
+                    patch.object(sys, "path", list(sys.path)):
+                sources = run_linux.native_model_sources(inputs, args)
+                for relative in ("configs/zena_cmn/run_fs.py",
+                                 "configs/zena_cmn/profiles/default.yaml",
+                                 "configs/example/arm/zena_css.py",
+                                 "configs/example/arm/zena_css_models.py"):
+                    path = (run_linux.SOURCE / relative).resolve()
+                    self.assertEqual(sources[str(path)], run_linux.sha256(path))
+                self.assertNotIn(inputs["profile"], sources)
+                self.assertTrue(all(str(Path(path).resolve()) == path for path in sources))
+                contract = run_linux.checkpoint_contract(inputs, inputs["initrd"], args, "bootargs")
+                (root / "m5.cpt").touch()
+                (root / "apollo-checkpoint.json").write_text('{"status":"COMPLETE"}')
+                (root / "launcher.json").write_text(json.dumps(contract))
+                for dependency in dependencies:
+                    with self.subTest(dependency=dependency):
+                        dependency.write_text("changed")
+                        changed = run_linux.checkpoint_contract(inputs, inputs["initrd"], args, "bootargs")
+                        with self.assertRaisesRegex(ValueError, "inputs changed"):
+                            run_linux.validate_checkpoint(root, changed)
+                        dependency.write_text("original")
+
+    def test_checkpoint_rejects_embedded_python_override_before_resolution(self):
+        for option in ("--checkpoint", "--resume"):
+            for value in ("true", "TRUE", "yes", "YeS"):
+                with self.subTest(option=option, value=value), \
+                        patch.dict(os.environ, {"M5_OVERRIDE_PY_SOURCE": value}), \
+                        patch.object(sys, "argv", ["run_linux.py", option, "/unused"]), \
+                        patch("run_linux.resolve") as resolve, \
+                        contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as caught:
+                        run_linux.main()
+                    self.assertEqual(caught.exception.code, 2)
+                    resolve.assert_not_called()
+                    with self.assertRaisesRegex(ValueError, "M5_OVERRIDE_PY_SOURCE"):
+                        run_linux.checkpoint_contract({}, None, None, "")
+        # These spellings do not enable the native importer's override mode.
+        for value in ("false", "no", "1", " true", "yes ", ""):
+            with self.subTest(value=value), patch.dict(os.environ, {"M5_OVERRIDE_PY_SOURCE": value}):
+                self.assertFalse(run_linux.checkpoint_source_override())
+
+    def test_native_export_captures_oracle_before_passive_fs_import(self):
+        class Value:
+            def __init__(self, value):
+                self.value = value
+
+            def config_value(self):
+                return self.value
+
+        instances = []
+
+        class DRAM:
+            devices_per_rank = Value(1)
+            _params = {"latency": None}
+
+            def __init__(self, **kwargs):
+                self.latency = Value(7)
+                instances.append(self)
+
+        class Controller(DRAM):
+            pass
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            profile, output = root / "profile.json", root / "expected.json"
+            profile.write_text(json.dumps({"memory": {
+                "custom_module": "fixture_dram", "custom_class": "FixtureDRAM",
+                "preserve_device_geometry": True}}))
+            fixture_paths = [root / name for name in ("CHI_config.py", "CustomMesh.py", "yaml.py")]
+            for path in fixture_paths:
+                path.write_text("fixture source")
+            m5 = ModuleType("m5")
+            m5.ticks = SimpleNamespace(setGlobalFrequency=Mock(), fixGlobalFrequency=Mock())
+            m5.instantiate = Mock(side_effect=AssertionError("must not instantiate"))
+            m5.simulate = Mock(side_effect=AssertionError("must not simulate"))
+
+            def imported(name):
+                if name == "fixture_dram":
+                    return SimpleNamespace(FixtureDRAM=DRAM)
+                self.assertEqual(name, "zena_cmn.run_fs")
+                self.assertEqual(len(instances), 2)
+                for instance in instances:
+                    instance.latency.value = 999  # Backend cannot change the captured oracle.
+                for index, path in enumerate(fixture_paths):
+                    sys.modules[f"fixture_fs_dependency_{index}"] = SimpleNamespace(__file__=str(path))
+                return SimpleNamespace()
+
+            exporter = run_linux.SOURCE / "scripts/zena_cmn/export_expected_memory.py"
+            with patch.dict(sys.modules, {
+                    "m5": m5, "m5.objects": SimpleNamespace(DRAMInterface=DRAM, MemCtrl=Controller),
+                    "m5.proxy": SimpleNamespace(isproxy=lambda value: False)}), \
+                    patch("importlib.import_module", side_effect=imported) as imports, \
+                    patch.object(sys, "path", list(sys.path)), \
+                    patch.object(sys, "argv", [str(exporter), str(profile), str(output)]):
+                runpy.run_path(str(exporter), run_name="__m5_main__")
+            exported = json.loads(output.read_text())
+            self.assertEqual(exported["dram"], {"latency": 7})
+            self.assertEqual(exported["controller"], {"latency": 7})
+            self.assertEqual([call.args[0] for call in imports.call_args_list],
+                             ["fixture_dram", "zena_cmn.run_fs"])
+            for path in fixture_paths:
+                self.assertEqual(exported["source_hashes"][str(path)], run_linux.sha256(path))
+            m5.instantiate.assert_not_called()
+            m5.simulate.assert_not_called()
+
+    def test_warmup_options_are_delivered_only_to_supported_workloads(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = bytearray()
+            run_linux.cpio_entry(archive, "TRAILER!!!", mode=0)
+            base = root / "base"
+            base.write_bytes(archive)
+            for mode in ("cache", "dram", "dram-multicore"):
+                args = run_linux.parser().parse_args(["--workload", mode, "--warmup-passes", "2"])
+                run_linux.prepare_initrd(base, root, args)
+                self.assertIn("--warmup-passes 2", (root / "guest-init.sh").read_text())
+        with patch("sys.argv", ["run_linux.py", "--warmup-passes", "2"]), self.assertRaises(SystemExit):
+            run_linux.main()
 
     def test_legacy_bsp_still_overlays_init(self):
         with tempfile.TemporaryDirectory() as directory:

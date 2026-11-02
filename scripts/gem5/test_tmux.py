@@ -24,7 +24,14 @@ class TmuxTests(unittest.TestCase):
             out = root / "output with spaces"
             fake = root / "fake-gem5"
             fake.write_text('''#!/usr/bin/env python3
-import os, pathlib, socket, sys, time
+import hashlib, json, os, pathlib, socket, sys, time
+# The launcher queries native import provenance before starting its UART child.
+# This fixture supplies provenance only; it is not a native-model oracle test.
+if any(pathlib.Path(arg).name == 'export_expected_memory.py' for arg in sys.argv):
+    source = pathlib.Path(__file__).resolve()
+    pathlib.Path(sys.argv[-1]).write_text(json.dumps({'source_hashes': {
+        str(source): hashlib.sha256(source.read_bytes()).hexdigest()}}))
+    sys.exit(0)
 args = dict(a[2:].split('=', 1) for a in sys.argv[1:] if a.startswith('--') and '=' in a)
 out = pathlib.Path(args['outdir']).parent
 (out / 'child.pid').write_text(str(os.getpid()))
@@ -47,9 +54,11 @@ with socket.socket() as server:
             initrd.write_bytes(archive)
             fixture = root / "fixture"
             fixture.write_text("fixture")
+            profile = root / "profile.yaml"
+            profile.write_text("{}\n")
             argv = [sys.executable, str(Path(run_linux.__file__)),
                     "--gem5", str(fake), "--kernel", str(fixture),
-                    "--rootfs", str(fixture), "--profile", str(fixture),
+                    "--rootfs", str(fixture), "--profile", str(profile),
                     "--bootloader", str(fixture), "--initrd", str(initrd),
                     "--out-dir", str(out), "--session", session,
                     "--no-attach", "--timeout", "40"]

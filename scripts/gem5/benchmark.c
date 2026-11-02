@@ -47,7 +47,7 @@ main(int argc, char **argv)
     (void)spawn;
     (void)sync_workers;
     const char *mode = "cache";
-    unsigned size_kib = 0, passes = 2;
+    unsigned size_kib = 0, passes = 2, warmup_passes = 1;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--host")) {
             host = 1;
@@ -57,15 +57,18 @@ main(int argc, char **argv)
             size_kib = number(argv[++i]);
         } else if (!strcmp(argv[i], "--passes") && i + 1 < argc) {
             passes = number(argv[++i]);
+        } else if (!strcmp(argv[i], "--warmup-passes") && i + 1 < argc) {
+            warmup_passes = number(argv[++i]);
         } else {
             fprintf(stderr, "usage: %s [--host] [--mode cache|dram] "
-                    "[--size-kib N] [--passes N]\n", argv[0]);
+                    "[--size-kib N] [--passes N] [--warmup-passes 1|2|4|8]\n", argv[0]);
             return 2;
         }
     }
     int cache = !strcmp(mode, "cache");
     if ((!cache && strcmp(mode, "dram")) || passes > 1024 ||
-        size_kib > 262144) {
+        size_kib > 262144 || (warmup_passes != 1 && warmup_passes != 2 &&
+                             warmup_passes != 4 && warmup_passes != 8)) {
         return 2;
     }
 #if !defined(__aarch64__)
@@ -116,10 +119,12 @@ main(int argc, char **argv)
     puts("APOLLO_BENCH_READY initialization=atomic cpu=0");
     fflush(stdout);
     marker_begin(UINT64_C(0x5a535743));
-    if (cache) {
-        observed = (uintptr_t)chase(buffer, count);
-    } else {
-        observed = read_array(buffer, count);
+    for (unsigned p = 0; p < warmup_passes; ++p) {
+        if (cache) {
+            observed = (uintptr_t)chase(buffer, count);
+        } else {
+            observed = read_array(buffer, count);
+        }
     }
     uint64_t checksum = 0;
     /* Serialize O3 requests around markers; inner barriers count in ROI time. */
@@ -136,11 +141,11 @@ main(int argc, char **argv)
     uint64_t expected = (uint64_t)passes * (cache ? 1 : count);
     int ok = checksum == expected;
     printf("APOLLO_BENCH_RESULT {\"mode\":\"%s\",\"result\":\"%s\","
-           "\"working_set_bytes\":%zu,\"passes\":%u,\"warmup_passes\":1,"
+           "\"working_set_bytes\":%zu,\"passes\":%u,\"warmup_passes\":%u,"
            "\"useful_bytes\":%" PRIu64 ",\"dependent_loads\":%" PRIu64 ","
            "\"checksum\":%" PRIu64 ",\"expected\":%" PRIu64 ","
            "\"host\":%s}\n",
-           mode, ok ? "PASS" : "FAIL", bytes, passes,
+           mode, ok ? "PASS" : "FAIL", bytes, passes, warmup_passes,
            (uint64_t)count * passes * sizeof(uint64_t),
            cache ? (uint64_t)count * passes : 0, checksum, expected,
            host ? "true" : "false");

@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "id": "exploratory-template-not-measured",
+  "purpose": "EXPLORATORY example only. Replace run paths with collected evidence. Product targets are unspecified; decisions remain UNDECIDED.",
+  "required_scenarios": ["memory-16core", "image-alone"],
+  "targets": [],
+  "cases": [
+    {
+      "id": "memory-1pass",
+      "candidate": "baseline",
+      "scenario": "memory-16core",
+      "run": "../../build/qbox-apollo-qvp/gem5/soc-spec-example/runs/memory-1pass",
+      "workload_contract": {"kind": "dram-multicore", "benchmark": "read", "workers": 16, "passes": 1, "warmup_passes": 1}
+    },
+    {
+      "id": "memory-2pass",
+      "candidate": "baseline",
+      "scenario": "memory-16core",
+      "run": "../../build/qbox-apollo-qvp/gem5/soc-spec-example/runs/memory-2pass",
+      "workload_contract": {"kind": "dram-multicore", "benchmark": "read", "workers": 16, "passes": 2, "warmup_passes": 1}
+    },
+    {
+      "id": "image-alone",
+      "candidate": "baseline",
+      "scenario": "image-alone",
+      "run": "../../build/qbox-apollo-qvp/gem5/soc-spec-example/runs/image-alone",
+      "workload_contract": {"kind": "image", "background_cpus": []}
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "exploratory-duration-convergence",
+      "baseline": "memory-1pass",
+      "candidate": "memory-2pass",
+      "kind": "convergence",
+      "metrics": ["useful_GB_s", "dram_GB_s", "dram_to_useful_ratio"],
+      "relative_tolerance": 0.05,
+      "allowed_profile_changes": [],
+      "allowed_config_changes": [],
+      "allowed_inputs_changes": ["readfile"],
+      "allowed_workload_changes": ["passes"]
+    }
+  ]
+}

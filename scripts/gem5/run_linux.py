@@ -57,6 +57,8 @@ def parser():
     p.add_argument("--size-kib", type=int,
                    help="working set in KiB; dram-multicore uses this size per array (read 1, copy 2, triad 3)")
     p.add_argument("--passes", type=int, default=2)
+    p.add_argument("--warmup-passes", type=int, choices=(1, 2, 4, 8), default=1,
+                   help="actual O3 warmup passes for cache/dram/dram-multicore")
     p.add_argument("--bootargs", help="replace Linux command line")
     p.add_argument("--out-dir", type=Path)
     p.add_argument("--timeout", type=float, default=7200, help="host deadline in seconds (default: 7200)")
@@ -138,6 +140,8 @@ def prepare_initrd(base, out, args, benchmark=None):
             command = ["/apollo-bench" if args.bsp else "/usr/bin/apollo-bench", "--mode", args.workload, "--passes", str(args.passes)]
             if args.size_kib:
                 command += ["--size-kib", str(args.size_kib)]
+            if args.warmup_passes != 1:
+                command += ["--warmup-passes", str(args.warmup_passes)]
             command = shlex.join(command)
         elif args.workload == "dram-multicore":
             mode = args.memory_mode or "read"
@@ -147,7 +151,7 @@ def prepare_initrd(base, out, args, benchmark=None):
                 "--workers", str(args.workers or args.cpus), "--passes", str(args.passes),
                 "--array-mib", str((args.size_kib or 65536) // 1024),
                 "--initialize-before-switch",
-            ])
+            ] + (["--warmup-passes", str(args.warmup_passes)] if args.warmup_passes != 1 else []))
         elif args.workload == "smoke":
             command = "echo APOLLO_SMOKE=PASS"
         else:
@@ -209,12 +213,57 @@ def power_contract(args):
     }
 
 
-def checkpoint_contract(inputs, initrd, args, bootargs):
+def native_environment(inputs):
+    env = os.environ.copy()
+    if inputs.get("native_manifest"):
+        metadata = json.loads(Path(inputs["native_manifest"]).read_text())
+        env["LD_LIBRARY_PATH"] = os.pathsep.join(metadata["library_path"])
+        env["PYTHONHOME"] = metadata["python_home"]
+    return env
+
+
+def native_model_sources(inputs, args):
+    """Bind filesystem FS imports and the shared model configuration sources."""
+    sys.path.insert(0, str(SOURCE / "configs"))
+    sys.path.insert(0, str(SOURCE / "scripts/zena_cmn"))
+    from zena_cmn.parameters import load_parameters
+    from verify_config import expected_memory
+    params = load_parameters(inputs["profile"], overrides={
+        "memory.channels": args.channels,
+        "memory.interleave_bytes": args.interleave_bytes,
+    })
+    sources = expected_memory(json.dumps(params), inputs["gem5"],
+                              env=native_environment(inputs))["source_hashes"]
+    sources.update({str((SOURCE / name).resolve()): digest
+                    for name, digest in configuration_sources().items()})
+    return sources
+
+
+def configuration_sources():
+    configurations = list((SOURCE / "configs/zena_cmn").rglob("*.py")) + [
+        SOURCE / "configs/zena_cmn/profiles/default.yaml",
+        SOURCE / "configs/example/arm/zena_css.py",
+        SOURCE / "configs/example/arm/zena_css_models.py",
+    ]
+    return {str(path.relative_to(SOURCE)): sha256(path)
+            for path in sorted(configurations)}
+
+
+def checkpoint_source_override():
+    # Match m5's importer exactly; embedded model code is otherwise binary-bound.
+    return os.environ.get("M5_OVERRIDE_PY_SOURCE", "false").lower() in ("true", "yes")
+
+
+def checkpoint_contract(inputs, initrd, args, bootargs, *, model_sources=None):
+    if checkpoint_source_override():
+        raise ValueError("checkpoint/resume does not support M5_OVERRIDE_PY_SOURCE=true/yes")
     return {
-        "schema": 1,
+        "schema": 3,
         "sha256": {name: sha256(inputs[name]) for name in ("gem5", "kernel", "bootloader", "profile")},
         "initrd_sha256": sha256(initrd),
-        "configuration_sha256": {path.name: sha256(path) for path in sorted((SOURCE / "configs/zena_cmn").glob("*.py"))},
+        "configuration_sha256": configuration_sources(),
+        "native_model_sources": (native_model_sources(inputs, args)
+                                 if model_sources is None else model_sources),
         "cpus": args.cpus, "channels": args.channels,
         "interleave_bytes": args.interleave_bytes, "bootargs": bootargs,
         "power": power_contract(args),
@@ -321,6 +370,8 @@ def main():
         p.error("--workers requires dram-multicore and must not exceed --cpus")
     if args.memory_mode is not None and args.workload != "dram-multicore":
         p.error("--memory-mode requires --workload dram-multicore")
+    if args.warmup_passes != 1 and args.workload not in ("cache", "dram", "dram-multicore"):
+        p.error("--warmup-passes requires cache, dram or dram-multicore")
     if args.workload == "dram-multicore":
         if args.bsp or args.benchmark:
             p.error("dram-multicore requires the gem5 initramfs without a benchmark override")
@@ -332,6 +383,8 @@ def main():
         p.error("--command-file must name an existing file")
     if (args.checkpoint or args.resume) and (args.bsp or args.rootfs or args.benchmark):
         p.error("checkpoint/resume requires the diskless gem5 initramfs without a benchmark override")
+    if (args.checkpoint or args.resume) and checkpoint_source_override():
+        p.error("checkpoint/resume does not support M5_OVERRIDE_PY_SOURCE=true/yes")
     if args.checkpoint and args.workload != "boot":
         p.error("--checkpoint requires --workload boot; select a workload with --resume")
     if args.checkpoint and args.checkpoint.exists():
@@ -397,26 +450,29 @@ def main():
         command.append(f"--disk-image={inputs['rootfs']}")
     if not args.bsp:
         command.append(f"--readfile={out / 'guest-init.sh'}")
+    model_sources = native_model_sources(inputs, args)
     contract = None
     if args.checkpoint or args.resume:
-        contract = checkpoint_contract(inputs, initrd, args, bootargs)
+        contract = checkpoint_contract(inputs, initrd, args, bootargs,
+                                       model_sources=model_sources)
         if args.resume:
             validate_checkpoint(args.resume.resolve(), contract)
             command.append(f"--restore={args.resume.resolve()}")
         else:
             command.append(f"--checkpoint-dir={args.checkpoint.resolve()}")
-    env = os.environ.copy()
-    if inputs["native_manifest"]:
-        metadata = json.loads(Path(inputs["native_manifest"]).read_text())
-        env["LD_LIBRARY_PATH"] = os.pathsep.join(metadata["library_path"])
-        env["PYTHONHOME"] = metadata["python_home"]
+    env = native_environment(inputs)
     manifest = {"inputs": inputs, "command": command, "workload": args.workload,
                 "power": power,
                 "interleave_bytes": args.interleave_bytes,
                 "memory_mode": (args.memory_mode or "read") if args.workload == "dram-multicore" else None,
                 "model": "UNCALIBRATED_PROXY", "rootfs_access": "read-only base with in-memory COW" if inputs["rootfs"] else "none",
+                "model_sources_schema": 1,
+                "model_sources_sha256": model_sources,
                 "gem5_sha256": sha256(inputs["gem5"]),
+                "original_kernel_sha256": sha256(inputs["kernel"]),
+                "profile_sha256": sha256(inputs["profile"]),
                 "guest_initrd_sha256": sha256(initrd),
+                "readfile_sha256": sha256(out / "guest-init.sh"),
                 "bootloader_sha256": sha256(firmware),
                 "benchmark_sha256": sha256(inputs["benchmark"]) if inputs["benchmark"] else None,
                 "gem5_revision": subprocess.check_output(["git", "-C", str(SOURCE), "rev-parse", "HEAD"], text=True).strip(),
@@ -445,7 +501,8 @@ def main():
             result["measurement"] = summarize_multicore(
                 out / "m5out", serial, workers=args.workers or args.cpus,
                 size_bytes=(args.size_kib or 65536) * 1024,
-                passes=args.passes, channels=args.channels, mode=args.memory_mode or "read")
+                passes=args.passes, channels=args.channels, mode=args.memory_mode or "read",
+                warmup_passes=args.warmup_passes)
             result["status"] = "PASS"
         except (ValueError, KeyError, OSError) as exc:
             result["measurement_error"] = str(exc)
@@ -454,12 +511,21 @@ def main():
         try:
             result["measurement"] = summarize(
                 out / "m5out", serial, mode=args.workload, passes=args.passes,
-                size_bytes=(args.size_kib or (32 if args.workload == "cache" else 65536)) * 1024)
+                size_bytes=(args.size_kib or (32 if args.workload == "cache" else 65536)) * 1024,
+                warmup_passes=args.warmup_passes)
             result["status"] = "PASS"
         except (ValueError, KeyError, OSError) as exc:
             result["measurement_error"] = str(exc)
     elif args.workload in ("smoke", "command") and rc == 0 and not timed_out and "APOLLO_WORKLOAD_EXIT=0" in text:
-        result["status"] = "PASS"
+        if args.workload == "command" and "APOLLO_IMAGE_RESULT " in text:
+            from image_summary import summarize_image
+            try:
+                result["measurement"] = summarize_image(out / "m5out", serial)
+                result["status"] = "PASS"
+            except (ValueError, KeyError, OSError) as exc:
+                result["measurement_error"] = str(exc)
+        else:
+            result["status"] = "PASS"
     elif args.workload == "boot" and (rc == 0 or timed_out or (args.headless and rc == -15)) and ("login:" in text or "nexios-bsp#" in text or "nexios-gem5#" in text) and "Kernel panic" not in text:
         result["status"] = "BOOT_OBSERVED"
     if args.power_profile and result["status"] == "PASS":

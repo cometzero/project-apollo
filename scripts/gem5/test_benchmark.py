@@ -58,6 +58,15 @@ class BenchmarkTests(unittest.TestCase):
             self.assertEqual(summary["cache_counters"]["L3"]["hits"], 16)
             self.assertEqual(summary["cache_counters"]["SLC_proxy"]["hits"], 32)
             self.assertTrue((out / "roi-summary.json").is_file())
+            guest.update(warmup_passes=2, warmup_checksum=2 * 8388608)
+            serial.write_text("CMN_RESULT " + json.dumps(guest) + "\n")
+            self.assertEqual(summarize_multicore(
+                out, serial, workers=16, size_bytes=67108864, passes=1,
+                channels=16, warmup_passes=2)["guest"]["warmup_passes"], 2)
+            with self.assertRaisesRegex(ValueError, "workload mismatch"):
+                collect()
+            guest.update(warmup_passes=1, warmup_checksum=8388608)
+            serial.write_text("CMN_RESULT " + json.dumps(guest) + "\n")
             online = [dict(epoch=i, begin_tick=1000 + i * 1000,
                            end_tick=2000 + i * 1000, phase="roi_begin", frequency_hz=1e12)
                       for i in range(2)]
@@ -94,6 +103,9 @@ class BenchmarkTests(unittest.TestCase):
             for broken in (
                 stats.replace("system.roi_cpu15.commitStats0.numInsts 100", "system.roi_cpu15.commitStats0.numInsts 0"),
                 stats.replace("system.mem_ctrls15.dram.dramBytesRead 4194304", "system.mem_ctrls15.dram.dramBytesRead 0"),
+                stats.replace("system.mem_ctrls15.dram.dramBytesWritten 0", "system.mem_ctrls15.dram.dramBytesWritten -1"),
+                stats.replace("system.mem_ctrls15.dram.dramBytesWritten 0", "system.mem_ctrls15.dram.dramBytesWritten nan"),
+                stats.replace("system.mem_ctrls15.dram.dramBytesWritten 0\n", ""),
                 stats.replace("finalTick 3000", "finalTick 4000"),
             ):
                 (out / "stats.txt").write_text(broken)
@@ -160,6 +172,12 @@ class BenchmarkTests(unittest.TestCase):
              str(source), "-o", str(cls.binary)],
             check=True,
         )
+        cls.memory_binary = Path(cls.temp.name) / "memory-benchmark"
+        subprocess.run([
+            "cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-pthread",
+            str(root / "hsoc-stack/tools/gem5/workloads/zena_cmn/memory_bench.c"),
+            "-o", str(cls.memory_binary),
+        ], check=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -186,6 +204,32 @@ class BenchmarkTests(unittest.TestCase):
                 [str(self.binary), "--host", *args],
                 capture_output=True,
             ).returncode, 2)
+
+    def test_warmup_is_independent_of_measured_work(self):
+        for mode in ("cache", "dram"):
+            run = subprocess.run([
+                str(self.binary), "--host", "--mode", mode, "--size-kib", "32",
+                "--passes", "2", "--warmup-passes", "4",
+            ], check=True, capture_output=True, text=True)
+            result = json.loads(run.stdout.split("APOLLO_BENCH_RESULT ", 1)[1])
+            self.assertEqual(result["warmup_passes"], 4)
+            self.assertEqual(result["checksum"], 2 if mode == "cache" else 8192)
+        for mode in ("read", "copy", "stream"):
+            run = subprocess.run([
+                str(self.memory_binary), "--host", "--workers", "1", "--mode", mode,
+                "--array-mib", "1", "--passes", "2", "--warmup-passes", "4",
+                "--initialize-before-switch",
+            ], check=True, capture_output=True, text=True)
+            result = json.loads(run.stdout.split("CMN_RESULT ", 1)[1])
+            self.assertEqual(result["result"], "PASS")
+            self.assertEqual(result["warmup_passes"], 4)
+            self.assertEqual(result["warmup_checksum"], 4 * 131072 if mode == "read" else 0)
+            self.assertEqual(result["useful_bytes"], 2 * 1048576 * {"read": 1, "copy": 2, "stream": 3}[mode])
+        for binary in (self.binary, self.memory_binary):
+            for value in ("0", "3", "9"):
+                self.assertEqual(subprocess.run([
+                    str(binary), "--host", "--warmup-passes", value,
+                ], capture_output=True).returncode, 2)
 
     @unittest.skipUnless(
         shutil.which("aarch64-linux-gnu-gcc") and
@@ -410,6 +454,10 @@ class BenchmarkTests(unittest.TestCase):
             summary = collect()
             self.assertEqual(summary["roi_ticks"], 2000)
             self.assertAlmostEqual(summary["ns_per_dependent_load"], 2 / 1024)
+            serial.write_text("APOLLO_BENCH_RESULT " + json.dumps({**result, "warmup_passes": 2}))
+            self.assertEqual(collect(warmup_passes=2)["warmup_passes"], 2)
+            with self.assertRaisesRegex(ValueError, "workload mismatch"):
+                collect()
             for bad in (float("nan"), -1, True):
                 serial.write_text("APOLLO_BENCH_RESULT " + json.dumps(
                     {**result, "useful_bytes": bad}))
