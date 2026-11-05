@@ -16,6 +16,7 @@ APOLLO_MACHINE="${MACHINE:-${DEFAULT_APOLLO_MACHINE}}"
 DRY_RUN=0
 KEEP_CONF=0
 BSP_ONLY=0
+FIRMWARE_ONLY=0
 GEM5_ONLY=0
 GEM5_ZEPHYR=0
 BITBAKE_TASK=""
@@ -31,6 +32,7 @@ Options:
   --machine apollo-fvp|apollo-qvp
                           Select the Apollo Yocto machine.
   --bsp                   Build only nexios-bsp-initramfs.
+  --firmware-only         Build Apollo firmware and QBox runtime providers.
   --gem5                  Build nexios-gem5-initramfs and gem5 artifacts.
   --gem5-zephyr           Build standalone SI CL1 Zephyr and gem5.
   -c TASK                 Run a BitBake task for the explicit targets.
@@ -77,6 +79,11 @@ while (($#)); do
             DRY_RUN=1
             shift
             ;;
+        --firmware-only)
+            FIRMWARE_ONLY=1
+            KEEP_CONF=1
+            shift
+            ;;
         --bsp)
             BSP_ONLY=1
             shift
@@ -118,6 +125,11 @@ while (($#)); do
 done
 
 APOLLO_MACHINE="$(normalize_machine "${APOLLO_MACHINE}")"
+if [[ "$FIRMWARE_ONLY" == 1 && ( "$BSP_ONLY" == 1 || "$GEM5_ONLY" == 1 || "$GEM5_ZEPHYR" == 1 || ${#REQUESTED_TARGETS[@]} -gt 0 || -n "$BITBAKE_TASK" || "$APOLLO_MACHINE" != apollo-qvp ) ]]; then
+    echo "error: --firmware-only requires apollo-qvp and no other targets/selectors" >&2
+    exit 2
+fi
+
 
 if [[ "${GEM5_ZEPHYR}" == "1" && ( "${GEM5_ONLY}" == "1" || "${BSP_ONLY}" == "1" || ${#REQUESTED_TARGETS[@]} -gt 0 || "${APOLLO_MACHINE}" != "apollo-qvp" ) ]]; then
     echo "error: --gem5-zephyr requires apollo-qvp and cannot be combined with other image selectors or explicit targets" >&2
@@ -226,6 +238,8 @@ BITBAKE_ARGS=()
 BITBAKE_TASK_ARGS=()
 if ((${#REQUESTED_TARGETS[@]})); then
     BITBAKE_TARGETS=("${REQUESTED_TARGETS[@]}")
+elif [[ "$FIRMWARE_ONLY" == 1 ]]; then
+    BITBAKE_TARGETS=("apollo-autosd-platform" "firmware-apollo-qvp" "efi-capsule-update-disk-image-apollo-qvp" "qbox-apollo-qvp-native" "zephyr-vmcu" "qemu-apollo-native" "vmcu-silkit-native")
 elif [[ "${GEM5_ZEPHYR}" == "1" ]]; then
     BITBAKE_TARGETS=("gem5-native" "zephyr-si-cl1-bench" "zephyr-si-cl1-boot" "gem5-si-cl1-probes")
 elif [[ "${GEM5_ONLY}" == "1" ]]; then
