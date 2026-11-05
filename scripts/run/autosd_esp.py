@@ -47,7 +47,7 @@ def _flag_offset(boot, size):
     raise ValueError("Unsupported FAT format/layout (expected FAT16 or FAT32)")
 
 
-def check_private_esp(disk):
+def check_private_esp(disk, *, repair=True):
     """Return a serializable audit receipt, or fail without repairing the disk.
 
     fsck works only on an extracted temporary ESP. A write is allowed only when
@@ -89,6 +89,8 @@ def check_private_esp(disk):
             return receipt
         if code != 1 or not before[flag] & 1:
             raise ValueError(f"ESP check failed (fsck.fat exit {code}); no disk repair performed")
+        if not repair:
+            raise ValueError("Prepared ESP is dirty; perform explicit offline recovery before launch")
         if check("-a") not in (0, 1) or check("-n") != 0:
             raise ValueError("ESP does not verify clean after temporary repair")
         after = image.read_bytes()

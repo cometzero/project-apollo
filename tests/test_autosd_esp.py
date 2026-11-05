@@ -150,3 +150,12 @@ def test_invalid_bpb(disks):
         stream.write(b"\x03")
     with pytest.raises(ValueError, match="BPB"):
         autosd_esp.check_private_esp(private)
+
+
+def test_prepared_disk_dirty_bit_is_never_repaired(disks, monkeypatch):
+    source, private = disks
+    calls = checker(monkeypatch)
+    with pytest.raises(ValueError, match="explicit offline recovery"):
+        autosd_esp.check_private_esp(private, repair=False)
+    assert calls == ["-n"]
+    assert private.read_bytes() == source.read_bytes()

@@ -20,7 +20,7 @@ import threading
 import time
 
 import qbox_load_stats
-from autosd_manifest import autosd_manifest
+from autosd_manifest import autosd_manifest, verify_platform
 from run_qbox_linux import required
 from autosd_uki import inspect_uki, prepare_uki
 from autosd_disk import inspect_disk, prepare_disk
@@ -66,7 +66,7 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__)
     qbox_load_stats.add_arguments(p)
     p.add_argument("--autosd", type=Path,
-                   help="manifest (default: BUILD/autosd/demo-minimal-qm-prepared/regular.json)")
+                   help="manifest (default: BUILD/autosd/automotive/regular.json)")
     p.add_argument("--rootfs", type=Path)
     p.add_argument("--modules-archive", type=Path, help="install matching modules and PFDI offline before first boot (regular images)")
     p.add_argument("--guestfish", default="guestfish", help="libguestfs tool for offline payload installation")
@@ -132,11 +132,13 @@ def make_plan(args):
     if args.timeout <= 0:
         raise ValueError("--timeout must be positive")
     build = args.build_dir.absolute()
-    manifest_path = args.autosd or build / "autosd/demo-minimal-qm-prepared/regular.json"
+    manifest_path = args.autosd or build / "autosd/automotive/regular.json"
     if not manifest_path.is_file():
         raise ValueError(f"AutoSD manifest not found: {manifest_path}; prepare the image or use --autosd PATH")
     manifest = autosd_manifest(manifest_path)
+    prepared = manifest.get("schema_version") == 2
     deploy = (args.deploy_dir or build / "tmp_baremetal/deploy/images/apollo-qvp").absolute()
+    platform = verify_platform(deploy, manifest.get("platform_requirements", {})) if prepared else None
     stamp = time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}"
     out = (args.out_dir or build / "qbox-apollo-qvp" / f"autosd-full-{stamp}").absolute()
     session = args.session or f"autosd-full-{stamp}"
@@ -146,7 +148,7 @@ def make_plan(args):
         raise ValueError("--no-attach is a tmux option; omit it with --headless")
     selected = args.rootfs
     selection = "explicit --rootfs" if selected else "manifest rootfs"
-    if selected is None and args.autosd is None:
+    if not prepared and selected is None and args.autosd is None:
         selected = default_rootfs(build, manifest_path)
         if selected is not None:
             selection = "latest matching full-system PASS and normal poweroff"
@@ -156,25 +158,42 @@ def make_plan(args):
     modules_archive = required(args.modules_archive, "matching modules archive") if args.modules_archive else None
     if out.exists() and any(out.iterdir()):
         raise ValueError("--out-dir must be empty; never overwrite a previous run")
-    initrd = required(Path(manifest["initrd"]), "AutoSD initrd")
-    uki = required(args.uki or deploy / "nexios-bsp-initramfs-a.efi", "Yocto UKI")
+    if prepared and (args.uki or args.modules_archive or args.diagnostic_boot or args.provision_ready_file or args.scratch_disk):
+        raise ValueError("Prepared images cannot be modified at launch; rebuild the image")
+    if prepared:
+        import hashlib
+        for path, expected in ((Path(manifest["rootfs"]), manifest["sha256"]), (Path(manifest["dtb"]), manifest["dtb_sha256"])):
+            with path.open("rb") as stream:
+                if hashlib.file_digest(stream, "sha256").hexdigest() != expected:
+                    raise ValueError(f"Prepared artifact hash mismatch: {path}")
+    if prepared and source.resolve() != Path(manifest["rootfs"]).resolve():
+        previous = source.parent / "launch.json"
+        binding = json.loads(previous.read_text()) if previous.is_file() else {}
+        if (not binding.get("prepared_image")
+                or binding.get("base_image_sha256") != manifest["sha256"]
+                or binding.get("platform") != platform
+                or Path(binding.get("rootfs", "/")).resolve() != source.resolve()):
+            raise ValueError("Private rootfs has no matching prepared-image launch binding")
+    initrd = None if prepared else required(Path(manifest["initrd"]), "AutoSD initrd")
+    uki = None if prepared else required(args.uki or deploy / "nexios-bsp-initramfs-a.efi", "Yocto UKI")
     bootargs = manifest["bootargs"]
-    if not args.diagnostic_boot:
-        # AutoSD's diagnostic defaults disable SLUB fast paths and force
-        # expensive RCU IPIs even after RT boot. Use the kernel's normal RT
-        # defaults; preserve an explicit reproducible diagnostic mode.
-        diagnostic = {"slub_debug=FPZ", "rcupdate.rcu_expedited=1",
-                      "rcupdate.rcu_normal_after_boot=0"}
-        bootargs = " ".join(word for word in bootargs.split() if word not in diagnostic)
-    # Gate guest services which require the real Safety Island firmware.
-    bootargs += " apollo.fullsystem=1"
+    if not prepared:
+        if not args.diagnostic_boot:
+            # AutoSD's diagnostic defaults disable SLUB fast paths and force
+            # expensive RCU IPIs even after RT boot. Use the kernel's normal RT
+            # defaults; preserve an explicit reproducible diagnostic mode.
+            diagnostic = {"slub_debug=FPZ", "rcupdate.rcu_expedited=1",
+                          "rcupdate.rcu_normal_after_boot=0"}
+            bootargs = " ".join(word for word in bootargs.split() if word not in diagnostic)
+        # Gate guest services which require the real Safety Island firmware.
+        bootargs += " apollo.fullsystem=1"
+        if not any(word.startswith("efi=") for word in bootargs.split()):
+            bootargs += " efi=runtime"
+        if not any(word.startswith("systemd.default_device_timeout_sec=") for word in bootargs.split()):
+            bootargs += " systemd.default_device_timeout_sec=180s"
     if any(word.startswith("androidboot.slot_suffix=") for word in bootargs.split()):
         raise ValueError("UKIBoot must select the slot, not bootargs")
-    if not any(word.startswith("efi=") for word in bootargs.split()):
-        bootargs += " efi=runtime"
-    if not any(word.startswith("systemd.default_device_timeout_sec=") for word in bootargs.split()):
-        bootargs += " systemd.default_device_timeout_sec=180s"
-    loader_files = {key: str(required(deploy / name, "UKIBoot artifact"))
+    loader_files = {} if prepared else {key: str(required(deploy / name, "UKIBoot artifact"))
                     for key, name in (("loader", "ukibootaa64.efi"),
                                       ("addon_a", "slot_a.addon.efi"),
                                       ("addon_b", "slot_b.addon.efi"))}
@@ -186,6 +205,8 @@ def make_plan(args):
                "--out-dir", str(out / "full-system"), "--timeout", str(int(args.timeout)),
                *(["--headless"] if args.headless else ["--session", session, "--no-attach"]),
                "--", "--foreground-runtime"]
+    if prepared:
+        command[1:1] = ["--ap-dtb", manifest["dtb"], "--qboxconf", str(deploy / "apollo-autosd-platform-apollo-qvp.qboxconf")]
     stats_interval = qbox_load_stats.interval_from_args(args)
     if stats_interval is not None:
         command[1:1] = ["--stats-interval", str(stats_interval)]
@@ -196,15 +217,15 @@ def make_plan(args):
     monitor_env = monitor_environment(monitor)
     monitor_env["QBOX_APOLLO_RUNTIME_INJECTION"] = "true" if args.runtime_injection else "false"
     return {"backend": "qbox-full", "boot_method": "full-system-ukiboot-efi",
-            "schema_version": 1, "run_id": out.name, "monitor": monitor, "qmp_enabled": args.qmp or stats_enabled,
+            "schema_version": 2 if prepared else 1, "prepared_image": prepared, "base_image_sha256": manifest.get("sha256"), "kernel_release": manifest.get("kernel_release"), "profile": manifest.get("profile"), "run_id": out.name, "monitor": monitor, "qmp_enabled": args.qmp or stats_enabled,
             "autosd": str(manifest_path.absolute()), "mode": manifest["mode"],
             "input_selection": selection,
-            "boot_profile": "diagnostic" if args.diagnostic_boot else "normal-rt",
+            "boot_profile": manifest.get("boot_profile", "unknown") if prepared else ("diagnostic" if args.diagnostic_boot else "normal-rt"),
             "observe_native_reboot": args.observe_native_reboot,
             "source_rootfs": str(source), "rootfs": str(out / "rootfs.wic"),
             "initrd": str(initrd), "uki_source": str(uki), "uki": str(out / "autosd.efi"),
-            "uki_source_metadata": inspect_uki(uki), "source_disk": inspect_disk(source),
-            "loader_files": loader_files, "bootargs": bootargs,
+            "uki_source_metadata": None if prepared else inspect_uki(uki), "source_disk": inspect_disk(source),
+            "loader_files": loader_files, "bootargs": bootargs, "platform": platform,
             "efi_source": str(required(args.scratch_disk or deploy / "efi-capsule-update-disk-image-apollo-qvp.img", "second disk")),
             "provision_ready_file": str(args.provision_ready_file.absolute()) if args.provision_ready_file else None,
             "modules_archive": str(modules_archive) if modules_archive else None, "guestfish": args.guestfish,
@@ -317,8 +338,12 @@ class EpochProvisioner:
             logfile.symlink_to(directory / "modules.log")
             def work():
                 try:
-                    from autosd_fullsystem_modules import provision
-                    result = provision(self.plan["ssh_port"], Path(self.plan["build_dir"]), directory)
+                    if self.plan.get("prepared_image"):
+                        from autosd_readiness import verify
+                        result = verify(self.plan, directory)
+                    else:
+                        from autosd_fullsystem_modules import provision
+                        result = provision(self.plan["ssh_port"], Path(self.plan["build_dir"]), directory)
                 except Exception as error:
                     result = {"status": "FAIL", "error": str(error)}
                 self.completed = (epoch, result, directory)
@@ -406,6 +431,7 @@ def supervise(plan, owned_runtime=None):
         interrupted = True
     previous = {sig: signal.signal(sig, request_stop) for sig in (signal.SIGTERM, signal.SIGINT)}
     status, code, poweroff = "FAIL", 1, False
+    poweroff_at = None
     proc = owned_runtime
     provisioner = EpochProvisioner(plan, out)
     try:
@@ -431,8 +457,14 @@ def supervise(plan, owned_runtime=None):
                 write_json(out / "domains.json", domains)
                 current_text, _ = boot_tail(text, BOOT_STARTS["ap"])
                 if re.search(r"(?:^|\n)(?:\[[^\]\r\n]+\]\s*)?reboot: Power down\r?\n", current_text):
-                    status, code, poweroff = "POWERED_OFF", 0, True
-                    break
+                    poweroff = True
+                    if poweroff_at is None:
+                        poweroff_at = time.monotonic()
+                    # Linux prints this before PSCI/SCMI shutdown completes.
+                    # Drain firmware UARTs before accepting the observation.
+                    if not plan.get("prepared_image") or time.monotonic() - poweroff_at >= 5:
+                        status, code = "POWERED_OFF", 0
+                        break
                 if re.search(r"(?:^|\n)(?:\[[^\]\r\n]+\]\s*)?reboot: Restarting system\r?\n", text):
                     # A request is evidence of intent, not a successful reset.
                     # Keep the same owned QBox process under supervision.
@@ -462,9 +494,16 @@ def supervise(plan, owned_runtime=None):
         finally:
             for sig, handler in previous.items():
                 signal.signal(sig, handler)
+            final_domains = domain_status(out)
+            if plan.get("prepared_image") and poweroff and (final_domains["status"] != "PASS" or provisioner.result.get("status") != "PASS"):
+                status, code = "FAIL", 1
             write_json(out / "result.json", {"backend": "qbox-full", "status": status,
                        "returncode": code, "passed": code == 0, "poweroff_observed": poweroff,
-                       "elapsed_s": time.monotonic() - start, "domains": domain_status(out)})
+                       "poweroff_evidence": {"linux_request_observed": poweroff,
+                           "firmware_domains_status": final_domains["status"],
+                           "hardware_off_state": "NOT_OBSERVED",
+                           "drain_seconds": time.monotonic() - poweroff_at if poweroff_at is not None else 0},
+                       "elapsed_s": time.monotonic() - start, "domains": final_domains})
     return code
 
 
@@ -588,11 +627,12 @@ def main():
         from autosd_offline_modules import prepare
         plan["offline_payload"] = prepare(out / "rootfs.wic", plan["modules_archive"],
                                           Path(plan["build_dir"]), plan["guestfish"])
-    plan["prepared_uki"] = prepare_uki(Path(plan["uki_source"]), Path(plan["initrd"]),
-                                      plan["bootargs"], Path(plan["uki"]))
-    plan["prepared_disk"] = prepare_disk(out / "rootfs.wic", Path(plan["uki"]),
-                                         **{key: Path(value) for key, value in plan["loader_files"].items()})
-    plan["esp_check"] = check_private_esp(out / "rootfs.wic")
+    if not plan.get("prepared_image"):
+        plan["prepared_uki"] = prepare_uki(Path(plan["uki_source"]), Path(plan["initrd"]),
+                                          plan["bootargs"], Path(plan["uki"]))
+        plan["prepared_disk"] = prepare_disk(out / "rootfs.wic", Path(plan["uki"]),
+                                             **{key: Path(value) for key, value in plan["loader_files"].items()})
+    plan["esp_check"] = check_private_esp(out / "rootfs.wic", repair=False) if plan.get("prepared_image") else check_private_esp(out / "rootfs.wic")
     for alias, target in LOGS.values():
         (out / alias).symlink_to(Path("full-system") / target)
     write_json(out / "launch.json", plan)

@@ -29,6 +29,7 @@ def inputs(tmp_path, monkeypatch):
     manifest.write_text(json.dumps({"mode": "regular", "rootfs": str(disk),
                                     "initrd": str(initrd), "bootargs": "console=ttyAMA0 root=LABEL=root"}))
     monkeypatch.setattr(runner, "inspect_uki", lambda path: {"kernel_sha256": "test"})
+    monkeypatch.setattr(runner, "verify_platform", lambda deploy, requirements: {"fixture": True})
     monkeypatch.setattr(runner, "inspect_disk", lambda path: {"bootctl": {"state": "valid"}})
     return runner.parser().parse_args(["--autosd", str(manifest), "--deploy-dir", str(deploy),
                                        "--out-dir", str(tmp_path / "run"), "--ssh-port", "2245", "--headless"])
@@ -66,7 +67,7 @@ def test_monitor_plan_and_injection_are_explicit(inputs, monkeypatch):
 
 def test_no_arguments_use_prepared_manifest(inputs):
     build = inputs.autosd.parent / "build"
-    manifest = build / "autosd/demo-minimal-qm-prepared/regular.json"
+    manifest = build / "autosd/automotive/regular.json"
     manifest.parent.mkdir(parents=True)
     manifest.write_text(inputs.autosd.read_text())
     inputs.build_dir, inputs.autosd = build, None
@@ -561,3 +562,140 @@ def test_provisioner_waits_for_bootstrap_marker(tmp_path):
         "provision_ready_file": str(tmp_path / "ready")}, tmp_path)
     assert provisioner.update(1, True)["status"] == "WAITING"
     assert provisioner.thread is None
+
+
+def test_prepared_plan_needs_no_yocto_kernel(inputs):
+    import hashlib
+    data = json.loads(inputs.autosd.read_text())
+    dtb = inputs.autosd.parent / "apollo.dtb"
+    dtb.write_bytes(b"dtb")
+    data.update(schema_version=2, profile="automotive", kernel_release="test-release", platform_requirements={}, boot_profile="compiled-profile",
+                sha256=hashlib.sha256(Path(data["rootfs"]).read_bytes()).hexdigest(),
+                dtb=str(dtb), dtb_sha256=hashlib.sha256(dtb.read_bytes()).hexdigest())
+    data.pop("initrd")
+    inputs.autosd.write_text(json.dumps(data))
+    for pattern in ("*.efi",):
+        for path in inputs.deploy_dir.glob(pattern):
+            path.unlink()
+    plan = runner.make_plan(inputs)
+    assert plan["prepared_image"]
+    assert plan["boot_profile"] == "compiled-profile"
+    assert plan["loader_files"] == {}
+    assert plan["uki_source_metadata"] is None
+    assert "--ap-dtb" in plan["command"]
+    private = inputs.autosd.parent / "private.raw"
+    private.write_bytes(b"unrelated")
+    inputs.rootfs = private
+    with pytest.raises(ValueError, match="launch binding"):
+        runner.make_plan(inputs)
+    inputs.rootfs = None
+    inputs.scratch_disk = private
+    with pytest.raises(ValueError, match="cannot be modified"):
+        runner.make_plan(inputs)
+    inputs.scratch_disk = None
+    dtb.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="hash mismatch"):
+        runner.make_plan(inputs)
+
+
+def test_prepared_readiness_has_no_installation():
+    from autosd_readiness import command
+    argv = command({"kernel_release": "test", "profile": "automotive"})
+    assert "apollo-pfdi-check" in argv
+    assert "dnf" not in argv and "modprobe" not in argv and "install " not in argv
+
+
+@pytest.mark.parametrize('returncode', [0, 7])
+def test_prepared_readiness_retries_channel_before_command(tmp_path, monkeypatch, returncode):
+    import autosd_readiness as readiness
+    from types import SimpleNamespace
+    attempts, commands, closed = [], [], []
+    channel = SimpleNamespace(set_combine_stderr=lambda value: None,
+                              exec_command=commands.append,
+                              recv_ready=lambda: False,
+                              exit_status_ready=lambda: True,
+                              recv_exit_status=lambda: returncode)
+    def open_session(**kwargs):
+        attempts.append(kwargs)
+        if len(attempts) == 1:
+            raise readiness.paramiko.SSHException('Timeout opening channel.')
+        return channel
+    client = SimpleNamespace(set_missing_host_key_policy=lambda policy: None,
+                             connect=lambda *args, **kwargs: None,
+                             get_transport=lambda: SimpleNamespace(open_session=open_session),
+                             close=lambda: closed.append(True))
+    monkeypatch.setattr(readiness.paramiko, 'SSHClient', lambda: client)
+    monkeypatch.setattr(readiness.time, 'sleep', lambda delay: None)
+    result = readiness.verify({'ssh_port': 2244, 'kernel_release': 'test',
+                               'profile': 'automotive'}, tmp_path)
+    assert result['status'] == ('PASS' if returncode == 0 else 'FAIL')
+    assert len(attempts) == 2 and len(closed) == 2
+    assert len(commands) == 1
+
+
+def test_prepared_main_never_patches_disk(tmp_path, monkeypatch):
+    source, efi = tmp_path / 'source.raw', tmp_path / 'efi.img'
+    source.write_bytes(b'completed image')
+    efi.write_bytes(b'capsule')
+    out = tmp_path / 'run'
+    plan = dict(prepared_image=True, autosd='manifest', source_rootfs=str(source),
+                input_selection='manifest', out_dir=str(out), monitor={},
+                efi_source=str(efi))
+    monkeypatch.setattr(runner, 'make_plan', lambda args: plan)
+    monkeypatch.setattr(sys, 'argv', ['run_qbox_autosd.py', '--headless'])
+    for name in ('runtime_preflight', 'monitor_preflight', 'prepare_qmp'):
+        monkeypatch.setattr(runner, name, lambda *args: None)
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Prepared boot must not patch UKI or ESP')
+    monkeypatch.setattr(runner, 'prepare_uki', forbidden)
+    monkeypatch.setattr(runner, 'prepare_disk', forbidden)
+    def check(path, *, repair):
+        assert repair is False
+        assert path.read_bytes() == source.read_bytes()
+        return {'status': 'clean'}
+    monkeypatch.setattr(runner, 'check_private_esp', check)
+    monkeypatch.setattr(runner, 'supervise', lambda plan: 0)
+    assert runner.main() == 0
+    assert (out / 'rootfs.wic').read_bytes() == source.read_bytes()
+
+
+def test_prepared_epoch_checks_without_provisioning(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    called = []
+    def verify(plan, directory):
+        called.append(plan['prepared_image'])
+        return {'status': 'PASS', 'kind': 'readiness'}
+    monkeypatch.setitem(sys.modules, 'autosd_readiness', SimpleNamespace(verify=verify))
+    def forbidden(*args):
+        raise AssertionError('Unexpected guest installation')
+    monkeypatch.setitem(sys.modules, 'autosd_fullsystem_modules', SimpleNamespace(provision=forbidden))
+    worker = runner.EpochProvisioner({'prepared_image': True, 'ssh_port': 2244}, tmp_path)
+    worker.update(1, True)
+    worker.thread.join(timeout=2)
+    result = worker.update(1, True)
+    assert called == [True] and result['status'] == 'PASS'
+    assert result['boot_epoch'] == 1
+
+
+def test_prepared_shutdown_drains_late_firmware_errors(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    (tmp_path / "linux-uart.log").write_text("reboot: Power down\n")
+    clock = [0.0]
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(runner.time, "sleep", lambda duration: clock.__setitem__(0, clock[0] + duration))
+    def domains(out):
+        return {"status": "FAIL" if clock[0] >= 2 else "PASS", "domains": [
+            {"id": "ap", "boot_epoch": 1, "markers": {"login:": True}}]}
+    monkeypatch.setattr(runner, "domain_status", domains)
+    monkeypatch.setattr(runner, "update_runtime", lambda *args: None)
+    monkeypatch.setattr(runner, "stop_owned", lambda proc: None)
+    monkeypatch.setattr(runner, "EpochProvisioner", lambda *args: SimpleNamespace(
+        update=lambda *args: {"status": "PASS"}, result={"status": "PASS"}))
+    process = SimpleNamespace(pid=12345, poll=lambda: None)
+    plan = {"out_dir": str(tmp_path), "environment": {}, "timeout": 20,
+            "prepared_image": True, "session": "test"}
+    assert runner.supervise(plan, process) == 1
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert result["poweroff_observed"] is True
+    assert result["status"] == "FAIL"
+    assert clock[0] >= 5
