@@ -65,6 +65,18 @@ def build(args):
         'exec python3 /native_build.py '
         + ('--rootless ' if rootless else '')
         + '"$1"', "aib-build", "/manifest/" + manifest.name]
+    if getattr(args, "cache_dir", None):
+        cache = args.cache_dir.absolute()
+        cache.mkdir(parents=True, exist_ok=True)
+        command[command.index("--entrypoint"):command.index("--entrypoint")] = ["-v", f"{cache}:/work/cache"]
+    if getattr(args, "rpm_repo", None):
+        repo = args.rpm_repo.resolve()
+        if not (repo / "repodata/repomd.xml").is_file():
+            raise ValueError("RPM repository metadata missing")
+        aib_source = Path(__file__).resolve().parents[2] / "autosd/automotive-image-builder"
+        command[command.index("--entrypoint"):command.index("--entrypoint")] = [
+            "-v", f"{repo}:/apollo-kernel-repo:ro", "-v", f"{aib_source}:/src:ro",
+            "-v", f"{Path(__file__).with_name('osbuild_apollo_uki.py').resolve()}:/osbuild_apollo_uki.py:ro"]
     if not rootless:
         # loop-control can allocate devices after Podman populated its private /dev.
         command[command.index("--entrypoint"):command.index("--entrypoint")] = ["-v", "/dev:/dev"]
@@ -88,6 +100,8 @@ def main():
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--image", required=True)
     parser.add_argument("--archive", type=Path)
+    parser.add_argument("--cache-dir", type=Path)
+    parser.add_argument("--rpm-repo", type=Path)
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--timeout", type=int, default=7200)
     parser.add_argument("--rootless", action="store_true", help="experimental rootless/VM build; no sudo; requires SELinux xattrs")
