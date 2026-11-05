@@ -1,0 +1,21 @@
+%global debug_package %{nil}
+%global _binary_payload w3.zstdio
+%global __os_install_post %{nil}
+%global _build_id_links none
+%global use_source_date_epoch_as_buildtime 1
+%global clamp_mtime_to_source_date_epoch 1
+Name: @NAME@
+Version: @VERSION@
+Release: @RELEASE@
+Summary: Apollo ARM64 components for AutoSD
+License: @LICENSE@
+@PROVIDES@
+%description
+Apollo components from validated Yocto binary deploys and recorded ARM64 application sources.
+%prep
+%build
+%install
+cp -a @STAGE@/. %{buildroot}/
+%files
+%defattr(-,root,root,0755)
+@FILES@

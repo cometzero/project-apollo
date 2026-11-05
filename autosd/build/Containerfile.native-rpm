@@ -1,0 +1,2 @@
+FROM quay.io/centos-sig-automotive/automotive-image-builder@sha256:6a480eb74693ad65721f8bd68238caebbf01580ab5b383ddc9def90c5cd32436
+RUN dnf -y install rpm-build createrepo_c kmod && dnf clean all

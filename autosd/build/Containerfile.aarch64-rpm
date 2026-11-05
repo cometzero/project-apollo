@@ -1,0 +1,3 @@
+ARG BASE=quay.io/centos/centos@sha256:511d358446140e9c4ba16451affb103a14237cbf40059b18adeaef6e3080a72b
+FROM ${BASE}
+RUN dnf -y --enablerepo=crb install gcc gcc-c++ make rpm-build createrepo_c bc bison flex elfutils-libelf-devel openssl-devel dwarves python3 python3-pyyaml cmake pkgconf-pkg-config rsync git kmod glibc-static findutils diffutils && dnf clean all

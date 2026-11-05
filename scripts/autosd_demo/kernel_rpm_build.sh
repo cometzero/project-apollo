@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
-# Package the deployed Apollo kernel; no host package installation or guest writes.
+# Package Yocto kernel binaries; only small application payloads compile in ARM64.
 set -euo pipefail
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-DEPLOY=${1:-"$ROOT/build/tmp_baremetal/deploy/images/apollo-qvp"}
-ARTIFACTS=${2:-"$ROOT/build/tmp_baremetal/work-shared/apollo-qvp/kernel-build-artifacts"}
-OUTPUT=${3:-"$ROOT/build/autosd/demo-kernel-rpm"}
-BUILDER=quay.io/centos-sig-automotive/automotive-image-builder@sha256:39287bf2bf49f006e7460d31fe705c74b357fe12e6d1c3524b59b90bf05be712
-DEPLOY=$(realpath -- "$DEPLOY")
-ARTIFACTS=$(realpath -- "$ARTIFACTS")
-mkdir -p -- "$(dirname -- "$OUTPUT")"
-mkdir -- "$OUTPUT" # Never reuse or overwrite an earlier build.
-OUTPUT=$(realpath -- "$OUTPUT")
-docker run --rm --platform linux/amd64 --entrypoint /bin/bash \
-    -e TASK_UID="$(id -u)" -e TASK_GID="$(id -g)" -e APOLLO_BUILDER="$BUILDER" \
-    --mount "type=bind,src=$DEPLOY,dst=/inputs/deploy,readonly" \
-    --mount "type=bind,src=$ARTIFACTS,dst=/inputs/artifacts,readonly" \
-    --mount "type=bind,src=$ROOT/scripts/autosd_demo/kernel_rpm_payload.py,dst=/kernel_rpm_payload.py,readonly" \
-    --mount "type=bind,src=$OUTPUT,dst=/output" "$BUILDER" -ec '
-      dnf -y --setopt=timeout=30 --setopt=retries=1 install \
-        rpm-build-4.19.1.1-25.el10.x86_64 createrepo_c-1.1.2-4.el10.x86_64
-      exec setpriv --reuid="$TASK_UID" --regid="$TASK_GID" --clear-groups \
-        python3 /kernel_rpm_payload.py
-    ' 2>&1 | tee "$OUTPUT/build.log"
+root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+deploy=$(realpath -- "${1:-$root/build/tmp_baremetal/deploy/images/apollo-qvp}")
+artifacts=$(realpath -- "${2:-$root/build/tmp_baremetal/work-shared/apollo-qvp/kernel-build-artifacts}")
+output=${3:-$root/build/autosd/rpm-yocto}
+if (( $# > 4 )) || { (( $# == 4 )) && [[ "$4" != --prepare-only ]]; }; then
+ echo 'Usage: kernel_rpm_build.sh DEPLOY ARTIFACTS OUTPUT [--prepare-only]' >&2; exit 2
+fi
+mkdir -p "$output"
+output=$(realpath -- "$output")
+podman build --platform linux/amd64 -t localhost/apollo-native-rpm -f "$root/autosd/build/Containerfile.native-rpm" "$root/autosd/build" > "$output/native-builder.log" 2>&1
+podman build --platform linux/arm64 -t localhost/apollo-arm64-rpm -f "$root/autosd/build/Containerfile.aarch64-rpm" "$root/autosd/build" > "$output/arm64-builder.log" 2>&1
+if [[ "${4:-}" == --prepare-only ]]; then exit 0; fi
+python3 "$root/scripts/autosd_demo/kernel_rpm_inputs.py" "$root" "$deploy" "$artifacts" "$output"
+if [[ -f "$output/result.json" ]]; then
+ podman run --rm --userns=keep-id --user "$(id -u):$(id -g)" -v "$output/repo:/repo" localhost/apollo-native-rpm createrepo_c /repo
+ echo "Validated Yocto RPM cache: $output"; exit 0
+fi
+podman run --rm --platform linux/arm64 --userns=keep-id --user "$(id -u):$(id -g)" \
+ -e JOBS="${JOBS:-2}" -v "$root:/workspace:ro" -v "$output:/output" \
+ localhost/apollo-arm64-rpm bash /workspace/scripts/autosd_demo/arm64_payload_build.sh 2>&1 | tee "$output/arm64-payload.log"
+podman run --rm --platform linux/amd64 --userns=keep-id --user "$(id -u):$(id -g)" \
+ -v "$root:/workspace:ro" -v "$deploy:/inputs/deploy:ro" -v "$artifacts:/inputs/artifacts:ro" -v "$output:/output" \
+ localhost/apollo-native-rpm python3 /workspace/scripts/autosd_demo/kernel_rpm_payload.py 2>&1 | tee "$output/build.log"
