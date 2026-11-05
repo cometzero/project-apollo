@@ -99,6 +99,67 @@ See the [implementation and qualification report](dashboard/qbox-monitor-impleme
 for actual evidence and remaining gaps. Simulation clocks and MCIPS configuration
 are not physical CPU performance, WCET/FTTI, or FVP timing-equivalence evidence.
 
+## Apollo QVP PSCI 종료의 OFF lock
+
+AutoSD 정상 poweroff에서 Linux `Power down`과 RSE `System shutdown complete`
+이후에도 AP core1/core0의 `dynamic-power-off → warm-resume`가 관측되었다.
+cold `power-on-load` 없이 trusted mailbox=0인 BL2로 돌아가면서
+`mmap_add_region_ctx`의 초기화 중복 ASSERT가 발생했다. 원인은 terminal WFI에
+일반 dynamic idle 정책을 사용해 잔여 GIC wake를 차단하지 않은 것이다.
+
+TF-A의 기본 no-op `plat_css_prepare_cpu_shutdown()` hook을 Apollo QVP에서만
+구현한다. primary의 SCMI system-off/reset/reset2 요청 전과 secondary 종료
+SGI 처리에서 core OFF/cluster RUN을 요청한다. 기존 SCP `graceful_core_off`가
+WFI 전 OFF_LOCK을 설정하고, WFI 후 static OFF로 완료한다. CPU idle/CPU_ON과
+QBox reset loader 자체는 변경하지 않는다. RSE 완료 태그만으로 hardware-off를
+판정하지 않으며, AP PPU 상태·재개 로그와 Linux CPU hotplug/reset 회귀를 함께
+검증한다. PMIC rail gating과 FVP/실리콘 종료 타이밍의 동등성은 검증 범위 밖이다.
+
+SCMI core OFF 응답은 비동기 PD event의 완료보다 먼저 반환될 수 있다. 따라서
+SCP의 enqueue 성공 후 `scmi_pd_prepare_async_response()`에서 Apollo secure
+PSCI/AP core/core-only OFF의 PPU 정책을 동기적으로 arm한 뒤 응답한다. 단순히
+TF-A에서 OFF 요청을 보내는 것만으로는 secondary CPU의 WFI/wake 경쟁이 남았다.
+enqueue 실패 시 arming하지 않고, 일반 idle/CPU_ON·다른 agent·상위 domain OFF는
+이 hook의 대상에서 제외한다.
+동기 arming으로 실제 OFF completion IRQ를 사용하자 초기 secondary CPU_OFF
+후 CPU_ON이 막히는 기존 매핑 누락도 확인됐다. live read-only 관측은 core1
+PPU ISR=0x20, IMR=0x1f, PWSR=0x1100으로 interrupt 발생과 OFF lock을 보였지만,
+SCP SI GIC View1 목록에는 AP PPU INTID 260–279가 없었다. 네 cluster와 16개
+core PPU의 소유권을 View1에 추가해 기존 completion ISR을 복구한다. 확장한
+native 매핑 검사는 AP GIC INTID 32–991, SI CL1 View2 및 PPU 20개 소유권의
+중복·누락 여부를 확인한다.
+정적으로 `css_scp_suspend()`를 확인하면 현재 `HW_ASSISTED_COHERENCY=1`의
+core suspend는 SCMI core 요청을 보내지 않는다. 비-HAC 경로도 core SLEEP(2)을
+인코딩하며 OFF(0)가 아니다. system suspend는 별도 SCMI SYSTEM_SUSPEND
+command이고, retention은 platform suspend hook에서 반환한다. 따라서 이
+arming hook은 CPU_SUSPEND와 구분된다. 이번 AutoSD의 `cpuidle.off=1` 설정에서
+깊은 idle의 guest runtime 회귀 검증은 `NOT_RUN`이다.
+
+2026-11-05 최종 firmware manifest `7857c89c81361bcac7996430fd6e3f1bca3f3a9a8550abcf75fa07aea510c1a0`
+및 새 private VM `533c05a690e845eda3e1efb3be0d6ff5`에서 4 CPU 부팅,
+health, CPU1 offline/online과 정상 poweroff가 통과했다. AP0–3의 OFF_LOCK,
+powerdown/reset assert, DYNAMIC_MIN IRQ ack, static OFF readback와 unlock이
+모두 순서대로 관측됐고 이후 warm-resume/reset release는 없었다. AP cluster
+OFF, RSE 종료 완료, BL2 ASSERT 부재 및 launcher `POWERED_OFF`도 확인했다.
+원본 trace 행 번호를 포함한 결과는
+`build/qbox-apollo-qvp/autosd-yocto-rpm-validation/poweroff-final-ppu-review.json`이다.
+firmware-only 빌드, SCP PPU 34개·SCMI 단위 target, Apollo prepare 정책 11개,
+GIC 소유권 매핑 검사와 QBox PPU CTest 3개 그룹이 통과했다.
+
+동일 firmware의 WD04 회귀도 `PASS`다. watchdog job
+`704d6a0da9d441dc86b7dd61c9aed7b1`에서 실제 WS0 → WS1 → reset-clear,
+SI0 IRQ 재활성화 및 AP boot epoch 1 → 2를 확인했다. Linux `boot_id`는
+`cac45a3a-9f67-46b9-a01c-b9e5e469b450`에서
+`d903d91d-c1b9-4a1c-9f4a-cf80679f8bb6`으로 바뀌었고 health와 HIPC 3/3이
+복구됐다. host process와 RSE/SI boot epoch는 유지됐다. reset 중 expiry SSH
+명령은 timeout(124)이었지만, 이후 reset trace·새 boot·복구 검사를 모두
+통과한 결과다. 판정은
+`build/qbox-apollo-qvp/autosd-yocto-rpm-validation-checks/watchdog-wd04-704d6a0da9d441dc86b7dd61c9aed7b1.json`,
+원본 로그는 validation dashboard의 `20261105-194722-67b9f1ac/`
+`d734bfdbacac4490ac44dbc573ab6782/vm/full-system/`에 있다.
+일반 Reboot도 새 boot epoch 3 및 readiness PASS를 확인했다
+(job `4cd92aca15e741538fc6baae0956e038`). 깊은 idle runtime 검증은 `NOT_RUN`이다.
+
 ## External TC397 and SI CL0 safety channel
 
 Interactive `./run_qbox_yocto.sh --bsp` starts the standalone TC397 Zephyr
