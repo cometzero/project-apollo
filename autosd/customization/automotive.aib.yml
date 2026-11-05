@@ -1,0 +1,62 @@
+# Source policy; build binds kernel release and ARM64 payload paths.
+name: apollo-automotive-scenario
+target: apollo-qvp
+kernel:
+  kernel_package: kernel-apollo
+  cmdline:
+  - console=ttyAMA0
+  - earlycon=pl011,0x1a400000
+  - efi=runtime
+  - systemd.show_status=yes
+  - apollo.fullsystem=1
+  - systemd.default_device_timeout_sec=180s
+content:
+  repos:
+  - id: apollo-kernel
+    baseurl: file:///apollo-kernel-repo
+    priority: 1
+  rpms:
+  - kernel-apollo
+  - apollo-pfdi
+  - openssh-server
+  - iproute
+  - podman
+  - crun
+  - python3
+  - bluechi-controller
+  - bluechi-agent
+  - bluechi-selinux
+  - bluechi-ctl
+  - realtime-tests
+  - rtla
+  - trace-cmd
+  - util-linux
+  - procps-ng
+  - stress-ng
+  systemd:
+    enabled_services:
+    - sshd.service
+    - bluechi-controller.service
+    - bluechi-agent.service
+    - apollo-safety-monitor.service
+    - apollo-pfdi.service
+auth:
+  root_password: $6$xoLqEUz0cGGJRx01$H3H/bFm0myJPULNMtbSsOFd/2BnHqHkMD92Sfxd.EKM9hXTWSmELG8cf205l6dktomuTcgKGGtGDgtvHVXSWU.
+  sshd_config:
+    PasswordAuthentication: true
+    PermitRootLogin: true
+qm:
+  cpu_weight: 50
+  memory_limit:
+    high: 768M
+    max: 1G
+  content:
+    rpms:
+    - podman
+    - crun
+    - bluechi-agent
+    - stress-ng
+    systemd:
+      enabled_services:
+      - bluechi-agent.service
+      - apollo-qm-app.service

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kernel_input": "yocto-deploy",
+  "aib_manifest": "autosd/customization/automotive.aib.yml",
+  "nightly_build_id": null,
+  "builder_reference": "quay.io/centos-sig-automotive/automotive-image-builder@sha256:37ce37564e1c76b6db707aa53800a77e112dfdc6167a2da77f93d4ce679f548f",
+  "customize": true
+}

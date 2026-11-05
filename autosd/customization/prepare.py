@@ -14,20 +14,23 @@ LAYER = Path(__file__).resolve().parent
 ROOT = LAYER.parents[1]
 
 
-def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=False):
+def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=False, binaries=None):
     output.mkdir(parents=True, exist_ok=False)
     payload = output / "payload"
     payload.mkdir()
     binary = payload / "workload"
-    subprocess.run([compiler, "-static", "-O2", "-Wall", "-Wextra", "-Werror",
-                    str(LAYER / "apps/workload.c"), "-o", str(binary)], check=True)
+    if binaries is not None:
+        shutil.copy2(Path(binaries) / "workload", binary)
+    else:
+        subprocess.run([compiler, "-static", "-O2", "-Wall", "-Wextra", "-Werror",
+                        str(LAYER / "apps/workload.c"), "-o", str(binary)], check=True)
     # This bundle targets the existing Apollo AArch64 BSP only.
     header = binary.read_bytes()[:20]
     if header[:4] != b"\x7fELF" or int.from_bytes(header[18:20], "little") != 183:
         raise ValueError("Compiler must produce an AArch64 ELF")
     (payload / "Containerfile").write_text(
         "FROM scratch\nCOPY workload /workload\nCMD [\"/workload\", \"run\", \"/run/heartbeat\"]\n")
-    base = yaml.safe_load((ROOT / "scripts/autosd_demo/apollo_kernel_image.aib.yml").read_text())
+    base = yaml.safe_load((LAYER / "automotive.aib.yml").read_text())
     base["name"] = "apollo-automotive-scenario"
     # Authentication is supplied explicitly by the product integrator.
     base.pop("auth", None)
@@ -86,8 +89,11 @@ def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=F
                          "procps-ng", "stress-ng"]
         qm["rpms"] += ["stress-ng"]
         probe = payload / "latency-probe"
-        subprocess.run([compiler, "-static", "-O2", "-Wall", "-Wextra", "-Werror",
-                        str(LAYER / "apps/latency-probe.c"), "-o", str(probe)], check=True)
+        if binaries is not None:
+            shutil.copy2(Path(binaries) / "latency-probe", probe)
+        else:
+            subprocess.run([compiler, "-static", "-O2", "-Wall", "-Wextra", "-Werror",
+                            str(LAYER / "apps/latency-probe.c"), "-o", str(probe)], check=True)
         header = probe.read_bytes()[:20]
         if header[:4] != b"\x7fELF" or int.from_bytes(header[18:20], "little") != 183:
             raise ValueError("Latency probe must be an AArch64 ELF")

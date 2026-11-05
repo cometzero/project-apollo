@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import yaml
 
 import build_minimal_qm as pipeline
 from download_nightly import fetch
@@ -28,10 +29,14 @@ def parser():
     p = pipeline.parser()
     p.description = __doc__
     p.set_defaults(aib_manifest=None, customize=None)
-    p.add_argument("--config", type=Path, default=ROOT / "autosd/config/minimal-qm.json")
+    p.add_argument("--config", type=Path, default=ROOT / "autosd/config/automotive.json")
+    p.add_argument("--rpm-build-dir", type=Path, help="Yocto kernel RPM packaging cache/output directory")
+    p.add_argument("--kernel-artifacts", type=Path, help="matching Yocto kernel-build-artifacts directory")
+    p.add_argument("--aib-cache-dir", type=Path, help="reuse OSBuild/package cache across new work directories")
+    p.add_argument("--build-only", action="store_true", help="produce image without QBox validation")
     p.add_argument("--cache-dir", type=Path, help="disposable inputs; default BUILD_DIR/autosd")
     p.add_argument("--prepare-inputs-only", action="store_true", help="download/build inputs without starting a VM")
-    p.add_argument("--minimal", action="store_false", dest="customize", help="omit Automotive customization")
+    p.add_argument("--minimal", action="store_true", help="select minimal_qm.aib.yml")
     p.add_argument("--nightly-build-id", help="pin an official nightly build instead of latest")
     p.add_argument("--builder-reference", help="official AIB tag/digest to download; recorded as immutable digest")
     return p
@@ -39,12 +44,36 @@ def parser():
 
 def setup(args):
     config = configuration(args.config)
+    if config.get("kernel_input", "yocto-deploy") != "yocto-deploy":
+        raise ValueError("Supported kernel input is yocto-deploy; kernel compilation belongs to Yocto")
     args.build_dir = args.build_dir.absolute()
+    args.deploy_dir = (args.deploy_dir or args.build_dir / "tmp_baremetal/deploy/images/apollo-qvp").absolute()
+    args.kernel_artifacts = (args.kernel_artifacts or args.build_dir / "tmp_baremetal/work-shared/apollo-qvp/kernel-build-artifacts").absolute()
     cache = (args.cache_dir or args.build_dir / "autosd").absolute()
-    args.aib_manifest = args.aib_manifest or ROOT / config["aib_manifest"]
-    if args.customize is None:
-        args.customize = config["customize"]
+    if args.minimal and args.aib_manifest:
+        raise ValueError("--minimal and --aib-manifest cannot be combined")
+    minimal = ROOT / "autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml"
+    args.aib_manifest = minimal if args.minimal else args.aib_manifest or ROOT / config["aib_manifest"]
+    if not args.aib_manifest.is_file():
+        raise ValueError(f"AIB source manifest missing: {args.aib_manifest}")
+    source = yaml.safe_load(args.aib_manifest.read_text())
+    name = source.get("name") if isinstance(source, dict) else None
+    if name not in ("apollo-automotive-scenario", "minimal_qm"):
+        raise ValueError("Supported AIB profiles are apollo-automotive-scenario and minimal_qm")
+    if args.customize is True and name == "minimal_qm":
+        raise ValueError("--customize conflicts with the selected minimal_qm manifest")
+    args.customize = name == "apollo-automotive-scenario"
+    if args.crun_binary and not args.customize:
+        raise ValueError("--crun-binary requires the Automotive profile")
+    if args.crun_binary and not args.crun_binary.is_file() and not args.dry_run:
+        raise ValueError(f"Explicit --crun-binary missing: {args.crun_binary}")
     args.nightly_build_id = args.nightly_build_id or config.get("nightly_build_id")
+    if args.nightly_build_id:
+        raise ValueError("Source builds do not consume nightly images; use the separate nightly import tools")
+    if args.uki or args.modules:
+        raise ValueError("AIB builds its UKI from Yocto kernel RPMs; select inputs with --deploy-dir/--kernel-artifacts, not --uki/--modules")
+    if args.cc != "aarch64-linux-gnu-gcc":
+        raise ValueError("Small application payloads use the AArch64 container GCC; --cc is a legacy option")
     args.builder_reference = args.builder_reference or config["builder_reference"]
     parse_reference(args.builder_reference)
     if not args.aib_manifest.is_file():
@@ -53,9 +82,7 @@ def setup(args):
         raise ValueError("--image cannot be combined with builder inputs")
     if args.builder_archive and not args.builder_image:
         raise ValueError("--builder-archive requires --builder-image")
-    if args.customize and not args.crun_binary:
-        args.crun_binary = cache / "crun/crun"
-    args.output = args.output or cache / "demo-minimal-qm-prepared"
+    args.output = args.output or cache / ("automotive" if args.customize else "minimal-qm")
     args.work_dir = args.work_dir or cache / ("minimal-qm-build-" +
         pipeline.datetime.now(pipeline.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ"))
     return cache
@@ -127,11 +154,8 @@ def prepare(args, cache):
     if not args.image and not args.builder_archive:
         args.builder_archive, args.builder_image = checked_builder(
             cache, args.builder_image or args.builder_reference)
-    if args.customize and not args.crun_binary.is_file():
-        if args.crun_binary != cache / "crun/crun":
-            raise ValueError(f"Explicit --crun-binary missing: {args.crun_binary}")
-        run(["bash", ROOT / "autosd/customization/runtime/build-crun.sh",
-             "--output", cache / "crun"])
+    if args.customize and args.crun_binary and not args.crun_binary.is_file():
+        raise ValueError(f"Explicit --crun-binary missing: {args.crun_binary}")
     if args.customize and args.crun_binary == cache / "crun/crun":
         check_crun(cache / "crun")
     receipt = {"config": str(args.config.absolute()),
@@ -139,7 +163,7 @@ def prepare(args, cache):
                "manifest": str(args.manifest) if args.manifest else None,
                "builder_archive": str(args.builder_archive) if args.builder_archive else None,
                "builder_image": args.builder_image,
-               "crun_binary": str(args.crun_binary) if args.customize else None,
+               "crun_binary": str(args.crun_binary) if args.customize and args.crun_binary else None,
                "guestfish": args.guestfish,
                "environment": {k: os.environ[k] for k in
                    ("SUPERMIN_KERNEL", "SUPERMIN_MODULES", "LIBGUESTFS_BACKEND") if k in os.environ}}
@@ -155,12 +179,14 @@ def main(argv=None):
         print(json.dumps({"config": str(args.config), "cache_dir": str(cache),
             "aib_manifest": str(args.aib_manifest), "nightly_build_id": args.nightly_build_id,
             "builder_reference": args.builder_reference, "customize": args.customize,
+            "crun_binary": str(args.crun_binary) if args.customize and args.crun_binary else None,
             "builder_mode": "rootless-vm" if args.rootless else "rootful-user",
-            "stages": ["download nightly + checksum", "host-tools readonly smoke",
-                       "download host-native AIB + digest (target remains ARM64)",
-                       "build patched crun if customization enabled",
-                       "Podman AIB build and QBox full validation unless --prepare-inputs-only"],
-            "external_prerequisites": "Apollo BSP/providers, documented host packages; no previous build/autosd inputs"}, indent=2))
+            "stages": ["package existing Yocto kernel/modules as RPMs", "AArch64 application/PFDI payloads", "native AIB inputs",
+                       "resolve selected manifest with local RPMs", "native AIB complete image",
+                       "QBox read-only readiness and shutdown validation unless --build-only"],
+            "kernel_input": "yocto-deploy", "deploy_dir": str(args.deploy_dir),
+            "kernel_artifacts": str(args.kernel_artifacts),
+            "external_prerequisites": "matching Yocto kernel/modules/artifacts, Apollo firmware/providers, AArch64 binfmt, documented host packages"}, indent=2))
         return 0
     # Refuse known output collisions before lengthy downloads/builds.
     if not args.prepare_inputs_only:
@@ -170,14 +196,10 @@ def main(argv=None):
     if not args.image and not args.prepare_inputs_only:
         from builder_podman import preflight
         preflight(args.rootless)
-    receipt = prepare(args, cache)
-    if args.prepare_inputs_only:
-        print(json.dumps(receipt, indent=2))
-        return 0
-    args = pipeline.resolve(args)
-    pipeline.Pipeline(args).run()
-    print(f"PASS: {args.work_dir / 'result.json'}")
-    return 0
+    if args.image or args.manifest:
+        raise ValueError("Existing image imports use prepare_autosd.py; source builds require an AIB manifest")
+    from automotive_build import run as build_source_image
+    return build_source_image(args, cache)
 
 
 if __name__ == "__main__":

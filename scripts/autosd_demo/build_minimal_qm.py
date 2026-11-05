@@ -156,7 +156,7 @@ def preflight(args):
         if path.exists():
             raise ValueError(f"Refusing to overwrite existing directory: {path}")
     if not args.image and not args.builder_image:
-        raise ValueError("Use build_autosd_minimal_qm.sh to prepare inputs, or supply --builder-image")
+        raise ValueError("Use build_autosd.sh to prepare inputs, or supply --builder-image")
     required = [args.uki, args.modules,
                 args.aib_manifest]
     required += [args.deploy_dir / name for name in (
