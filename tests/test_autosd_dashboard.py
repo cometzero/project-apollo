@@ -912,3 +912,22 @@ def test_child_missing_prerequisite_is_blocked_not_pass(app, tmp_path, monkeypat
     app.execute(job)
     assert job["status"] == "BLOCKED"
     assert job["returncode"] == 1
+
+
+def test_minimal_image_disables_missing_scenarios(tmp_path, monkeypatch):
+    manifest = tmp_path / 'minimal.json'
+    manifest.write_text(json.dumps({'schema_version': 2, 'profile': 'minimal-qm'}))
+    app = server.Dashboard(tmp_path, manifest, tmp_path / 'disk', allow=True)
+    monkeypatch.setattr(app, 'running', lambda: True)
+    monkeypatch.setattr(app, 'domain_boot', lambda: {'status': 'PASS', 'domains': []})
+    for item in app.state()['catalog']:
+        if item['action'] in ('automotive', 'rt', 'watchdog', 'monitor-qualify'):
+            assert not item['enabled']
+            assert 'UNSUPPORTED' in item['unsupported_reason']
+            for child in item['children']:
+                assert not child['enabled'] and child['unsupported_reason']
+    with pytest.raises(ValueError, match='UNSUPPORTED'):
+        app.start('automotive-s01')
+    args = app.guest_command({'action': 'health', 'id': 'minimal', 'evidence_path': str(tmp_path)})
+    assert '--upload' not in args
+    assert any('MINIMAL_QM_HEALTHY_PASS' in str(arg) for arg in args)

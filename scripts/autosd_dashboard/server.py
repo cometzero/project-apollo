@@ -179,6 +179,10 @@ class Dashboard:
         self.boot_timeout = 900
         self.base = Path(base)
         self.manifest, self.rootfs = manifest, rootfs
+        image = read_json(Path(manifest)) if manifest else None
+        self.image_profile = (image or {}).get("profile", "automotive")
+        if self.image_profile not in ("automotive", "minimal-qm"):
+            raise ValueError("Unsupported image profile")
         self.ssh_port, self.allow = ssh_port, allow
         self.token = secrets.token_urlsafe(32)
         self.lock = threading.RLock()
@@ -312,6 +316,13 @@ class Dashboard:
             snapshot = next((sample for sample in reversed(self.history) if sample.get("cpus")), snapshot)
         self.monitoring = dict(snapshot, status="OFFLINE", historical=True)
 
+    def unsupported_image_action(self, action):
+        if self.image_profile == "minimal-qm" and action_family(action) in (
+                "automotive", "rt", "timerlat", "osnoise", "mixed-criticality",
+                "watchdog", "monitor-mhu", "monitor-qualify"):
+            return "UNSUPPORTED: minimal QM image has no Automotive scenario payload"
+        return None
+
     def state(self):
         with self.lock:
             running = self.running()
@@ -325,18 +336,24 @@ class Dashboard:
                          and not self.auto_health_pending and (domains_ready or action == "shutdown"))}
                        for action, title, desc, disruptive in CATALOG]
             for item in catalog:
+                reason = self.unsupported_image_action(item["action"])
+                item["unsupported_reason"] = reason
+                if reason:
+                    item["enabled"] = False
+                if self.image_profile == "minimal-qm" and item["action"] == "health":
+                    item.update(title="Minimal QM 상태 검사", description="SELinux · QM · PFDI 상태 검사")
                 if item["action"] == "monitor-mhu":
                     reason = ("Requires server --runtime-injection and a fresh opted-in boot"
                               if not self.runtime_injection else None)
                     item["enabled"] = item["enabled"] and reason is None
-                    item["unsupported_reason"] = reason
+                    item["unsupported_reason"] = item["unsupported_reason"] or reason
                 item["description"] = ("전용 복사본으로 Apollo " + BACKENDS[self.backend] + " 실행" if item["action"] == "boot"
                                        else item["description"].replace("TCG", "QBox 기능 관찰용 잠정"))
                 item["children"] = [
                     {"action": item["action"] + "-" + code.lower(), "code": code,
                      "title": title, "description": desc, "disruptive": disruptive,
                      "enabled": item["enabled"],
-                     "unsupported_reason": None}
+                     "unsupported_reason": item["unsupported_reason"]}
                     for code, title, desc, disruptive in SCENARIOS.get(item["action"], [])]
             controls = [{"action": a, "title": t, "description": d, "disruptive": c,
                          "unsupported_reason": self.unsupported_control(a),
@@ -364,7 +381,7 @@ class Dashboard:
                            "log_session": self.log_session,
                            "guest_log_url": "/api/guest/log",
                            "ssh_port": self.ssh_port, "boot_job": self.vm_job},
-                    "capabilities": {"execution_enabled": enabled, "platform": BACKENDS[self.backend],
+                    "capabilities": {"image_profile": self.image_profile, "execution_enabled": enabled, "platform": BACKENDS[self.backend],
                         "qualification": "FUNCTIONAL_ONLY_NOT_HARDWARE_TIMING",
                         "unsupported": (["QBox Pause/Resume"] if (not self.vm_job or self.qbox_pause_run != self.vm_job) else []) + ["RSE/Safety Island physical counters",
                                         "key-only SSH", "remote hosts"],
@@ -377,6 +394,8 @@ class Dashboard:
         with self.lock:
             if action not in ACTION_METADATA:
                 raise ValueError("Unknown action")
+            if self.unsupported_image_action(action):
+                raise ValueError(self.unsupported_image_action(action))
             if action == "monitor-mhu" and not self.runtime_injection:
                 raise ValueError("MHU reset scenario requires QBox full and server --runtime-injection")
             if self.unsupported_control(action):
@@ -450,6 +469,8 @@ class Dashboard:
         action = job["action"]
         if action not in ACTION_METADATA:
             raise ValueError("Unknown action")
+        if self.unsupported_image_action(action):
+            raise ValueError(self.unsupported_image_action(action))
         family = action_family(action)
         case = CHILD_ACTIONS[action][1] if action in CHILD_ACTIONS else None
         remote = "/var/tmp/apollo-dashboard-" + job["id"]
@@ -462,6 +483,13 @@ class Dashboard:
         if action == "health":
             uploads = [(ROOT / "autosd/customization/check-guest.sh", remote + "-check.sh")]
             command = "bash " + remote + "-check.sh"
+            if self.image_profile == "minimal-qm":
+                uploads = []
+                command = "sh -c " + shlex.quote(
+                    'set -eu; test "$(getenforce)" = Enforcing; '
+                    'systemctl is-active qm.service apollo-pfdi.service; '
+                    'podman exec qm systemctl is-active multi-user.target; '
+                    'echo MINIMAL_QM_HEALTHY_PASS')
             if job.get("automatic"):
                 command = ("deadline=$((SECONDS+180)); until " + command + "; do "
                            "if (( SECONDS >= deadline )); then echo '[boot-health] readiness deadline exceeded'; exit 1; fi; "
