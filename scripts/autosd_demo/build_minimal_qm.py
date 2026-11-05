@@ -54,7 +54,7 @@ def parser():
     p.add_argument("--builder-archive", type=Path,
                    help="saved Podman OCI archive; requires --builder-image and disables registry fallback")
     p.add_argument("--customize", action="store_true", help="install Automotive services and RT tools; verify readiness after minimal QM")
-    p.add_argument("--crun-binary", type=Path, help="required with --customize: previously built patched ARM64 crun")
+    p.add_argument("--crun-binary", type=Path, help="optional ARM64 crun override; default: unmodified AutoSD RPM")
     p.add_argument("--cc", default="aarch64-linux-gnu-gcc", help="customization static workload compiler")
     p.add_argument("--build-dir", type=Path, default=ROOT / "build")
     p.add_argument("--deploy-dir", type=Path)
@@ -90,8 +90,6 @@ def resolve(args):
         args.guestfish = str(local)
     if min(args.boot_timeout, args.build_timeout) <= 0:
         raise ValueError("timeouts must be positive")
-    if args.customize and args.crun_binary is None:
-        raise ValueError("--customize requires explicit --crun-binary")
     if args.image and (args.builder_image or args.builder_archive):
         raise ValueError("--image cannot be combined with --builder-image or --builder-archive")
     if args.builder_archive and not args.builder_image:
@@ -130,8 +128,10 @@ def plan(args):
         "--provision-ready-file", str(work / "provision-ready")]
     if args.customize:
         commands["customization-bundle"] = [py, str(ROOT / "autosd/customization/prepare.py"),
-            "--out", str(work / "customization-bundle"), "--crun-binary", str(args.crun_binary), "--cc", args.cc,
+            "--out", str(work / "customization-bundle"), "--cc", args.cc,
             "--rt-tools"]
+        if args.crun_binary:
+            commands["customization-bundle"] += ["--crun-binary", str(args.crun_binary)]
     return {"commands": commands, "image": str(image), "prepared": str(prepared),
         "builder_image": args.builder_image or "required: bootstrap resolves official host-native image",
         "builder_archive": str(args.builder_archive) if args.builder_archive else None,
@@ -171,7 +171,8 @@ def preflight(args):
     if args.builder_archive:
         required.append(args.builder_archive)
     if args.customize:
-        required.append(args.crun_binary)
+        if args.crun_binary:
+            required.append(args.crun_binary)
         if not shutil.which(args.cc):
             raise ValueError(f"Missing customization compiler: {args.cc}")
         import yaml  # noqa: F401
@@ -396,7 +397,7 @@ class Pipeline:
         files.append(ROOT / "scripts/autosd_demo/native_build.py")
         repositories = [ROOT, ROOT / "autosd/sig-docs", ROOT / "autosd/automotive-image-builder",
                         ROOT / "hsoc-stack/tools/qbox", ROOT / "hsoc-stack/tools/qbox-platform"]
-        if self.args.customize:
+        if self.args.customize and self.args.crun_binary:
             files.append(self.args.crun_binary)
         if self.args.builder_archive:
             files.append(self.args.builder_archive)
@@ -415,7 +416,7 @@ class Pipeline:
             for path in sorted((args.work_dir / "customization-bundle").iterdir()):
                 target.add(path, arcname=path.name)
         self.guest("customization-packages", args.qbox_port,
-            "timeout 900 dnf -y install bluechi-controller bluechi-agent bluechi-selinux bluechi-ctl python3 podman; "
+            "timeout 900 dnf -y install bluechi-controller bluechi-agent bluechi-selinux bluechi-ctl python3 podman crun; "
             "test $? = 0 && mkdir -p /root/bluechi-payload", timeout=1000)
         source = ROOT / "autosd/sig-docs/demos/bluechi_root_qm"
         uploads = [(path, "/root/bluechi-payload/" + path.name) for path in sorted((source / "conf").iterdir()) if path.is_file()]

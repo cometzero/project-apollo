@@ -33,7 +33,7 @@ def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=F
     base.pop("auth", None)
     base.pop("image", None)  # Do not inherit the demo's always-success health check.
     root = base["content"]
-    root["rpms"] = ["podman", "python3", "bluechi-controller", "bluechi-agent",
+    root["rpms"] = ["podman", "crun", "python3", "bluechi-controller", "bluechi-agent",
                     "bluechi-selinux", "bluechi-ctl"]
     root["systemd"] = {"enabled_services": ["bluechi-controller.service", "bluechi-agent.service",
                                                "apollo-safety-monitor.service"]}
@@ -41,7 +41,7 @@ def prepare(output, compiler, rt_tools=False, crun_binary=None, watchdog_tools=F
              "name": "localhost/apollo-workload:1", "containers-transport": "containers-storage"}
     root["container_images"] = [image.copy()]
     base["qm"] = {"cpu_weight": 50, "memory_limit": {"high": "768M", "max": "1G"},
-                  "content": {"rpms": ["podman", "bluechi-agent"],
+                  "content": {"rpms": ["podman", "crun", "bluechi-agent"],
                               "container_images": [image.copy()],
                               "systemd": {"enabled_services": ["bluechi-agent.service",
                                                                "apollo-qm-app.service"]}}}

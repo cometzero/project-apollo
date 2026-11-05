@@ -167,11 +167,12 @@ def test_failure_reports_owned_live_process_without_kill(module, tmp_path, monke
     assert report["live_owned_launchers"] == [{"name": "owned", "pid": 123}]
 
 
-def test_customization_is_opt_in_and_requires_runtime(module, tmp_path):
+def test_customization_defaults_to_vendor_runtime(module, tmp_path):
     assert "customization-bundle" not in module.plan(args(module, tmp_path))["commands"]
     assert module.plan(args(module, tmp_path))["rt_tools"] is False
-    with pytest.raises(ValueError, match="crun-binary"):
-        args(module, tmp_path, "--customize")
+    vanilla = module.plan(args(module, tmp_path, "--customize"))
+    assert "--crun-binary" not in vanilla["commands"]["customization-bundle"]
+    assert "--rt-tools" in vanilla["commands"]["customization-bundle"]
     config = args(module, tmp_path, "--customize", "--crun-binary", str(tmp_path / "crun"))
     plan = module.plan(config)
     assert plan["customize"]
@@ -190,7 +191,7 @@ def test_builder_override_requires_digest(module, tmp_path):
 
 
 def test_customize_uses_existing_payloads(module, tmp_path, monkeypatch):
-    config = args(module, tmp_path, "--customize", "--crun-binary", str(tmp_path / "crun"))
+    config = args(module, tmp_path, "--customize")
     config.work_dir.mkdir()
     bundle = config.work_dir / "customization-bundle"
     bundle.mkdir()

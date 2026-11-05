@@ -54,6 +54,8 @@ def test_bundle_is_valid_and_portable(tmp_path):
     network = root_files["/etc/modules-load.d/apollo-container-network.conf"]["text"]
     assert [line for line in network.splitlines() if line and not line.startswith("#")] == ["br_netfilter"]
     for content in (manifest["content"], manifest["qm"]["content"]):
+        assert "crun" in content["rpms"]
+        assert not any(item["path"] == "/usr/bin/crun" for item in content["add_files"])
         for item in content["add_files"]:
             if "source_path" in item:
                 assert (output / item["source_path"]).is_file()
@@ -168,7 +170,7 @@ def test_rt_profile_is_explicit_and_preserves_qm_restrictions(tmp_path):
         (output / "payload/latency-probe").read_bytes()).hexdigest()
     assert "realtime-tests" in manifest["content"]["rpms"]
     assert "rtla" in manifest["content"]["rpms"]
-    assert manifest["qm"]["content"]["rpms"] == ["podman", "bluechi-agent", "stress-ng"]
+    assert manifest["qm"]["content"]["rpms"] == ["podman", "crun", "bluechi-agent", "stress-ng"]
     assert "auth" not in manifest and "image" not in manifest
     assert "rt-experiment" not in str(manifest["content"]["systemd"])
     for content in (manifest["content"], manifest["qm"]["content"]):

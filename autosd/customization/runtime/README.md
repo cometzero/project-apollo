@@ -12,6 +12,10 @@ process label, 다른 filesystem label, cgroup namespace 및 자원 제한은 �
 
 ## 빌드
 
+통합 빌드의 기본값은 AutoSD RPM의 vanilla crun이다. 아래 custom 빌드는 선택 사항이며
+자동 실행되지 않는다. 사용하려면 통합 진입점에 `--crun-binary PATH`를 명시한다.
+기존 custom 이미지가 자동으로 vanilla로 복원되지는 않는다.
+
 ### 처음부터 다시 생성 (권장)
 
 `build/autosd`는 입력 설정을 보관하는 곳이 아니라 삭제 가능한 출력 경로이다.

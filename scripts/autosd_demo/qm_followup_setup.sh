@@ -10,7 +10,7 @@ test "$qm_root" = /usr/lib/qm/rootfs
 systemctl stop qm
 timeout 900 dnf --installroot "$qm_root" --releasever 10 \
     --setopt=reposdir=/etc/yum.repos.d --setopt=install_weak_deps=False \
-    -y install bluechi-agent podman
+    -y install bluechi-agent podman crun
 install -d /etc/bluechi/{controller,agent}.conf.d /etc/containers/systemd/qm.container.d
 install -m 644 "$payload/10-bluechi-controller.conf" /etc/bluechi/controller.conf.d/
 install -m 644 "$payload/10-bluechi-agent-root.conf" /etc/bluechi/agent.conf.d/
