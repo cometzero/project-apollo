@@ -1,351 +1,194 @@
-# AutoSD 전체 빌드 및 실행 가이드
+# AutoSD 전체 빌드 및 실행 Quick Guide
 
-이 문서는 Apollo BSP 준비부터 외부 입력 다운로드, AutoSD 이미지 생성,
-Automotive 설치, QBox full-system 부팅 검증, 캐시 재사용까지의 통합 Quick Guide이다.
-모든 명령은 workspace 최상위에서 실행한다.
+새 진입점은 `./build_autosd.sh`이다. 기본은
+`autosd/customization/automotive.aib.yml`이며 `--minimal`로 공식 minimal QM
+manifest를 선택한다. 명령은 workspace 최상위에서 실행한다.
 
-Dashboard의 실제 데모 검증 결과는
-[빌드 이미지 Dashboard 검증 리포트](autosd-dashboard-image-validation-20260929-ko.md)를
-참고한다. 해당 리포트에서 발견한 RT 준비 누락을 보완하여 기본 Automotive
-빌드에는 이제 RT 패키지·probe·health-check 설치와 QBox full-system 준비 검사가 포함된다.
-준비 검사 PASS와 실제 RT 시나리오/latency 판정 PASS는 구분한다.
-통합 후 실제 빌드·QBox Dashboard RT 측정 결과는
-[RT 빌드 통합 검증 리포트](autosd-rt-build-validation-20260929-ko.md)를 참고한다.
+Yocto 커널 RPM 기반 Automotive/minimal QM 이미지 빌드와 QBox full 부팅을 검증했다.
+실제 실행한 시나리오와 제외 범위는
+[검증 리포트](autosd/automotive-source-build-validation-20261105-ko.md)를 확인한다.
 
-## 원칙
+## 1. 빌드 구조
 
-`build/autosd/`는 전부 삭제 가능한 생성물이다. 필수 설정이나 수동으로 보관해야만
-재빌드할 수 있는 바이너리를 두지 않는다. VM/웹 서버가 사용하는 동안 삭제하면
-안 되며, 삭제하면 실행 이력·다운로드 캐시·검증 결과는 사라진다.
-
-설정의 원본은 다음과 같다.
-
-| 원본 | 역할 |
-|---|---|
-| `autosd/config/minimal-qm.json` | nightly/AIB 선택, AIB manifest 경로, Automotive 기본 활성화 |
-| `autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml` | 기본 AutoSD/QM 이미지 구성 |
-| `autosd/customization/` | Safety Monitor, ADAS, QM app/container, BlueChi 설정 |
-| `autosd/customization/runtime/` | crun 소스 빌드 절차·패치·CentOS 빌더 선택 |
-| `scripts/autosd_demo/` | 다운로드, 빌더 부팅, 이미지 생성·검증 절차 |
-
-`inputs.json`, `regular.json`, `provenance.json` 등 build 아래 JSON은 이 설정으로
-생성한 결과/기록이다. 이를 수정하여 설정 원본으로 사용하지 않는다.
-
-## 1. 최초 환경 준비
-
-기존 Apollo QVP BSP/provider 빌드는 사용 가능해야 한다. `build/autosd` 초기화와
-Yocto의 `build/tmp_baremetal` 초기화는 별개다. BSP가 없다면 순서대로 실행한다.
-
-```bash
-git submodule update --init --recursive -- autosd/sig-docs autosd/automotive-image-builder autosd/crun
-./yocto_build.sh --machine apollo-qvp --bsp
-```
-
-공유 BitBake는 직렬 실행한다. 기존 matching BSP가 있으면 다시 빌드할 필요 없다.
-현재 지원하는 준비 호스트는 Ubuntu/Debian x86_64이며 다음 시스템 도구가 필요하다.
-
-- Python3: paramiko, PyYAML, jsonschema
-- qemu-img, mtools, dosfstools, kmod, Podman, qemu-user-static/binfmt-support
-- libguestfs appliance, supermin, qemu-system-x86, 설치된 호스트 커널 모듈
-- Automotive crun 빌드: Docker 접근 권한, AArch64 binfmt, cross GCC,
-  autoconf/automake/libtool, pkg-config, make, patch, git
-
-이미지 생성은 rootful Podman의 호스트 native 컨테이너와 AArch64 binfmt를 사용한다.
-Ubuntu x86_64에서는 AIB/OSBuild/bwrap과 빌드 도구 rootfs가 x86_64이고,
-AutoSD/QM 대상 rootfs는 ARM64이다. native/target manifest를 각각 compose한 뒤
-native `build` pipeline과 ARM64 target pipeline을 결합한다. target RPM stage에만
-`ignorearch`를 설정하며 GPG key 설정과 패키지 checksum은 유지한다.
-일반 사용자로 실행하되 `sudo -n podman` 및 생성 파일 소유권 복원용 `sudo -n chown`
-권한이 필요하다. rootless AIB는 기본적으로 VM을 선택하며 privileged disk 조립에
-필요한 호스트 권한이 없으므로 이 경로에서는 거부한다. 전체 스크립트를 sudo로
-실행하지 않는다. 호스트 패키지·binfmt·SELinux 정책은 자동 변경하지 않는다.
-부족한 선행 도구는 오류와 함께 안내한다. guestfish 실행 파일과 읽기 가능한
-appliance 커널은 필요 시 APT에서 다운로드·추출한다.
-
-시작 전 디스크 여유와 도구를 확인한다. 스크립트의 최소 여유 공간 검사는
-32 GiB이며, 여러 실행 디스크를 보관하면 더 많은 공간이 필요하다.
-빌더 VM/scratch 디스크는 생성하지 않고 AIB 캐시를 작업 디렉터리에 직접 저장한다.
-첫 부팅 전 모듈/PFDI 설치에는 guestfish와 호스트 depmod가 필요하다.
-오프라인 설치는 regular 이미지에만 지원하며 기존 이미지 원본은 수정하지 않는다.
-
-```bash
-df -h build
-command -v qemu-img mcopy mdir fsck.fat modinfo aarch64-linux-gnu-gcc
-python3 -c 'import paramiko, yaml, jsonschema'
-docker info >/dev/null
-sudo -n podman info
-cat /proc/sys/fs/binfmt_misc/qemu-aarch64
-```
-
-기본 SSH 포트는 QBox `2244`이며 loopback에 바인딩한다.
-다른 VM이 사용 중이면 정상 종료하거나 `--qbox-port`를 지정한다. 빌더 SSH는 사용하지 않는다. QBox full-system은 공유 리소스 때문에
-포트만 바꿔 동시에 실행하지 않는다. `--dry-run`은 계획 출력이지 전체 선행 조건
-검사나 부팅 검증이 아니다.
-
-## 2. 설정 확인과 입력 준비
-
-```bash
-./build_autosd_minimal_qm.sh --dry-run
-# 다운로드/도구/crun 준비만 수행. VM은 시작하지 않는다.
-./build_autosd_minimal_qm.sh --prepare-inputs-only
-```
-
-기본 설정은 최초 다운로드 시 최신 official nightly와 최신 호스트 native AIB를 선택한다.
-선택된 URL, manifest digest, checksum은 캐시에 기록한다. 같은 캐시에서는 그
-입력을 검증해 재사용한다. 새 캐시에서는 새 버전이 선택될 수 있다.
-
-고정 입력을 원하면 `autosd/config/minimal-qm.json`의 `nightly_build_id`와
-`builder_reference`에 build ID와 registry SHA256 digest를 지정하거나 CLI를 사용한다.
-
-```bash
-./build_autosd_minimal_qm.sh --prepare-inputs-only \
-  --nightly-build-id BUILD_ID \
-  --builder-reference quay.io/centos-sig-automotive/automotive-image-builder@sha256:DIGEST
-```
-
-외부 서버가 특정 버전을 삭제하면 그 버전의 재다운로드는 불가능하다. 이 경우
-명시적으로 소스 설정을 갱신한다. RPM 저장소 snapshot까지 고정하지 않으므로
-byte-identical 재현이나 완전한 offline 빌드를 보장하지 않는다.
-
-## 3. 이미지 생성부터 실제 부팅 검증까지
-
-```bash
-./build_autosd_minimal_qm.sh
-```
-
-rootless Podman과 AIB 빌드 VM을 시험하려면 `--rootless`를 지정한다.
-현재 Ubuntu 호스트에서는 build-store SELinux xattr 권한이 없어 이 경로는 사전
-검사에서 실패한다. [native 빌더 검증 리포트](autosd-native-builder-20261102-ko.md)의
-지원 범위를 먼저 확인한다.
-이 경로는 빌더에서 sudo/chown을 호출하지 않는다. rootless의 `--privileged`는
-사용자 namespace 범위이며 호스트 root 권한을 부여하지 않는다.
-두 방식은 새 작업 디렉터리를 사용하고 동일한 `--builder-reference` digest를
-지정하여 비교한다. native 컨테이너 내부의 target emulation 및 VM 실행 호환성은
-실제 빌드 결과로 판단해야 하며, 컨테이너 시작 성공만으로 판단하지 않는다.
-
-```bash
-./build_autosd_minimal_qm.sh --rootless \
-  --output build/autosd/rootless-prepared \
-  --work-dir build/autosd/rootless-build
-```
-
-입력 준비 후 native Podman/AIB와 ARM64 target emulation으로 빌드 → qcow2 SHA 기록/검사 →
-private 디스크에 matching 모듈/PFDI 오프라인 설치 →
-QBox full-system 네 도메인 부팅 → SSH 패키지 준비 → Automotive 구성/guest 검사 → 정상 종료를 수행한다.
-
-| 단계 | 확인하는 결과 |
-|---|---|
-| 입력 준비 | nightly checksum, native AIB digest, guestfish 동작, crun 소스/바이너리 hash |
-| builder/AIB | native arch 확인, namespace/mount/nested Podman 검사, native/ARM64 manifest 결합, qcow2·osbuild manifest 생성 |
-| 결과 검사 | SHA256, `qemu-img check`, 해당 실행 컨테이너 정리 |
-| QBox guest | EFI/UKIBoot, 커널 release, SELinux Enforcing, QM PID namespace |
-| Automotive | BlueChi root/QM online, Safety Monitor HEALTHY, ADAS/QM 서비스 |
-| RT 준비 | root RT 패키지, QM stress-ng, 양쪽 probe 실행/hash 일치, RT 커널 및 timerlat/osnoise tracer |
-| QBox full-system | RSE·SI CL0·SI CL1·AP 부팅 표식, HIPC/PFDI 모듈, guest 정상 상태 |
-| 종료 | guest poweroff 및 QBox 정상 종료 receipt |
-
-ARM64 target 프로그램은 qemu-user로 실행하므로 native ARM64보다 느릴 수 있다. 터미널에는 단계 명령이
-표시되고 상세 출력은 작업 디렉터리에 기록된다. 빌더는 privileged 컨테이너이며
-호스트 root 권한을 갖는다. 공식 digest를 고정하고 작업 디렉터리, manifest,
-native 빌드 helper를 마운트한다. rootful 모드에서는 새 loop device가 보이도록
-공식 AIB wrapper와 같이 `/dev:/dev`도 제공한다. rootless 모드에는 이 bind를
-추가하지 않는다. 호스트 SELinux를 Permissive로 바꾸지 않는다.
-기본 모드는 native OSBuild로 직접 조립하고, `--rootless`는 `image` pipeline을
-`--in-vm image`로 조립한다. 실패 시 다른 모드로 자동 우회하지 않는다.
-최종 guest의 SELinux Enforcing 상태는 별도로 검사한다.
-
-2026-11-02 이전 ARM64 빌더 실험: sudo 설정 후 rootful 및 rootless 모두 RPM 다운로드까지
-진행했지만 ARM64 `bwrap`의 namespace clone이 `EINVAL`로 실패했다. rootless `--vm`도
-VM 진입 전 컨테이너 측 build pipeline에서 실패했다. 따라서 현재 스크립트는 native
-빌더와 별도의 native build pipeline을 사용하며 다운로드 전에 bwrap 검사를 수행한다.
-상세 근거와 시간은 [Podman 비교 리포트](autosd-podman-comparison-20261102-ko.md)를 참고한다.
-후속 native 빌더에서는 rootful minimal_qm 이미지 생성과 오프라인 검사가 성공했다.
-rootless 제한과 생성 이미지 경로는 [native 빌더 검증 리포트](autosd-native-builder-20261102-ko.md)에 있다.
-
-기본은 Automotive와 RT 도구 포함이다. 기본 minimal QM만 필요하면 `--minimal`을 사용한다.
-Root에는 `realtime-tests`, `rtla`, `trace-cmd`, `stress-ng`, `util-linux`,
-`procps-ng`를 설치한다. QM에는 정지된 rootfs를 대상으로 `stress-ng`를 설치하고,
-RT bundle에서 Root/QM 양쪽으로 static `latency-probe`를 배치한다. Root의
-`/usr/libexec/apollo/`에는 `rt-experiment.py`, `rt-trace.py`,
-`check-automotive.sh`도 설치한다. 설치 절차 원본은
-`autosd/customization/rt/prepare-guest.sh`이며 OSTree guest에서는 거부한다.
-
-`customization-rt-packages/`, `qbox-rt-readiness/`에
-패키지 버전·probe hash·실행 결과를 남긴다. 어느 단계든 실패하면 빌드 PASS로
-처리하지 않는다. RT benchmark 자동 기동이나 watchdog 정책 변경은 없다.
-실제 측정은 정상 종료된 최종 QBox `rootfs.wic`를 Dashboard의 `--rootfs`로
-지정하고 Feature 04/05/06에서 실행한다. `regular.raw`는 준비한 기본 이미지이므로
-customization이 적용된 최종 실행 디스크와 혼동하지 않는다.
-
-공식 최소 이미지에는 SSH 서버와 tar가 없으므로 콘솔 자동 로그인 후 설치한다.
-root/password SSH는 disposable guest에서만 사용하며, host
-forwarding은 loopback으로 한정한다. 운영 환경의 인증 정책으로 사용하지 않는다.
-
-```bash
-# 기존 캐시·검증 결과를 보존하고 새 캐시에서 처음부터 재구성
-./build_autosd_minimal_qm.sh --cache-dir build/autosd/new-build
-# 이미 생성한 qcow2에서 부팅 및 customization부터 재검증
-./build_autosd_minimal_qm.sh --image /path/minimal_qm.aarch64.qcow2 \
-  --output build/autosd/recheck-prepared
-```
-
-기존 출력은 덮어쓰지 않는다. 재실행 때 `--output`, `--work-dir`, 필요 시
-`--qbox-out-dir`에 새 경로를 지정한다. 실패한 VM은 진단을 위해 보존되므로 정상
-종료한 뒤 재시도한다. `--prepare-inputs-only`는 완성된 입력 캐시를 검증해 재사용한다.
-
-## 4. 실행
-
-기본 경로로 빌드/검증을 마쳤다면:
-
-```bash
-./run_qbox_autosd.sh --dry-run
-./run_qbox_autosd.sh
-```
-
-별도 `--cache-dir`를 사용했다면 `--autosd CACHE/demo-minimal-qm-prepared/regular.json`
-을 실행기에 전달한다. 실행기는 동일 manifest의 full-system PASS 및 정상 종료
-receipt를 가진 private 디스크를 선택한다. 변환 직후 raw와 customization을 설치한
-실행 디스크는 다르다.
-
-## 5. 생성 디렉터리와 삭제 영향
-
-기본 캐시는 `build/autosd`이고 `--cache-dir`로 바꿀 수 있다.
-
-```text
-build/autosd/
-  downloads/nightly/       # 다운로드 xz/checksum, qcow2, 선택 기록
-  host-tools/              # 다운로드 deb, 추출 도구/커널, smoke 결과
-  builder-amd64/           # native AIB OCI archive, digest/checksum (ARM 호스트는 builder-arm64/)
-  crun/                    # 소스 기반 빌드 결과, base image archive, provenance
-  inputs.json              # 선택된 입력 기록 (설정 원본 아님)
-  demo-minimal-qm-prepared/ # minimal_qm raw/initrd/BLS/manifest
-  minimal-qm-build-*/      # aib.log, fetch/의 이미지·AIB 캐시, 프로비저닝 로그
-```
-
-QBox 실행 디스크와 네 도메인 UART는 `build/qbox-apollo-qvp/autosd-*/`에 생성된다.
-모두 재생성할 수 있지만, 삭제하면 이전 실행 상태/증거도 없어진다. 설정 보존을
-위해 예전 날짜 디렉터리의 archive나 `crun-cgroup-fix/crun`을 남길 필요는 없다.
-
-이전 이미지의 실제 부팅 결과는 [검증 리포트](autosd-minimal-qm-validation-20260929-ko.md)에
-있다. 새 cold-bootstrap 검증은 리포트의 후속 절을 참고한다. ASIL 인증, 전체
-RT/IPC/OTA/watchdog fault-injection suite는 기본 정상 부팅 검사의 범위가 아니다.
-
-## 6. 중간 결과물과 캐시 재사용
-
-**입력 캐시 재사용과 AIB 증분 빌드는 다르다.** 현재 통합 스크립트는 이전 실행의
-AIB 작업 디스크를 자동으로 이어받지 않는다.
-
-| 호스트 위치 (`CACHE` = `--cache-dir`) | 내용 | 다음 실행에서의 처리 |
+| 단계 | 실행 환경 | 결과 |
 |---|---|---|
-| `CACHE/downloads/nightly/` | 압축 이미지, qcow2, checksum | 요청 build ID 및 hash 일치 시 재사용 |
-| `CACHE/builder-amd64/` 또는 `builder-arm64/` | native AIB OCI archive | 요청 reference·아키텍처·archive hash 확인 후 재사용 |
-| `CACHE/host-tools/` | 도구·커널 패키지와 추출 파일 | 준비 절차와 실제 appliance 검사를 다시 수행 |
-| `CACHE/crun/` | 소스, sysroot, 바이너리, base image archive | 소스/패치/빌드 스크립트/hash 일치 시 완성된 바이너리 재사용 |
-| `WORK/fetch/` | 완성된 qcow2 및 osbuild manifest | 명시적 `--image` 입력으로 재사용 가능 |
-| `WORK/fetch/cache/` | AIB/osbuild 캐시 | 실행마다 새로 생성, 자동 resume 없음 |
-| `WORK/fetch/containers/` | 빌더 내부 Podman 저장소 | 실행마다 새로 생성 |
+| 플랫폼 준비 | Yocto | RSE/SI/AP 펌웨어, QBox/provider, 플랫폼 manifest |
+| 커널·모듈 준비 | Yocto | matching Image, modules, 외부 모듈, DTB |
+| 커널 RPM 패키징 | 호스트 native Podman | Yocto 바이너리를 보존한 kernel-apollo RPM |
+| PFDI·workload·probe | AArch64 Podman + qemu-user | 작은 사용자 공간 바이너리·RPM |
+| 이미지 조립 | 호스트 native AIB/OSBuild | Automotive 또는 minimal QM 완성 디스크 |
+| 실행 검증 | QBox full-system | 네 도메인 부팅, guest readiness, 정상 poweroff |
 
-`WORK`는 `--work-dir`이며 기본값은 `CACHE/minimal-qm-build-<UTC시간>`이다.
-AIB 중간 결과는 호스트 디렉터리에 직접 저장된다.
+커널은 Yocto toolchain으로 빌드하고 완성 바이너리를 RPM으로 패키징한다.
+커널 qemu-user 컴파일은 사용하지 않는다. 작은 사용자 공간 바이너리에만 ARM64
+GCC/qemu-user를 사용하며, namespace와 OSBuild 조립은 호스트 native 도구가 담당한다.
+제품 Yocto 이미지와 기존 `--bsp` 기능은 별도로 유지한다.
 
-```text
-WORK/fetch/cache/            # 컨테이너 /work/cache, osbuild 캐시 한도 10GB
-WORK/fetch/containers/       # 내부 Podman 저장소
-WORK/fetch/*.qcow2           # 완성 이미지
-WORK/fetch/*.osbuild.json    # osbuild manifest
-```
-
-완성 이미지와 manifest 소유권은 호출 사용자에게 돌려준다. 캐시에는 root 소유
-파일이 남을 수 있어 삭제 시 관리자 권한이 필요하다. 외부 빌더 이미지 자체는
-rootful Podman 저장소에도 캐시된다. 통합 진입점은 기존 `--work-dir` 재사용을
-거부한다. **현재 `--resume` 옵션이나 실행 간
-공유 osbuild 캐시는 없다.** crun도 소스 변경 시 기존 object를 증분 컴파일하는
-방식이 아니라 새 출력 경로에서 빌드한다.
-
-### 6.1 같은 입력 캐시로 새 이미지 빌드
-
-아래 예제의 출력 경로는 존재하지 않아야 한다. 이후 반복 시 `run-02`처럼 바꾼다.
+## 2. 최초 준비
 
 ```bash
-./build_autosd_minimal_qm.sh \
-  --cache-dir build/autosd \
-  --output build/autosd/prepared-run-01 \
-  --work-dir build/autosd/run-01 \
-  --qbox-out-dir build/qbox-apollo-qvp/autosd-run-01
+git submodule update --init --recursive -- \
+  autosd/automotive-image-builder autosd/sig-docs autosd/pfdi
+command -v podman qemu-img mdir mcopy modinfo
+python3 -c 'import paramiko, yaml, jsonschema'
+cat /proc/sys/fs/binfmt_misc/qemu-aarch64
+podman info --format '{{.Host.Security.Rootless}}'
+sudo -n podman info --format '{{.Host.Security.Rootless}}'
+df -h build
 ```
 
-nightly/AIB/crun 입력은 재사용하지만 AIB OS 빌드와 부팅 검증은 새로 수행한다.
-완료 후 실행:
+호스트에는 Podman, qemu-user/binfmt, qemu-img, mtools, kmod와 Python 의존성이 필요하다.
+호스트 패키지 설치와 binfmt 등록에는 관리자 권한이 필요하다. 기존 준비를 재사용하며
+스크립트가 호스트 SELinux 정책을 변경하지 않는다.
+
+RPM compiler 컨테이너는 rootless Podman, Native AIB는 rootful Podman을 사용한다.
+전체 build script에 sudo를 붙이지 않는다. `sudo -n podman`이 허용되어 있어야 한다.
+rootless AIB는 이 호스트에서 SELinux xattr 권한 문제로 검증되지 않았으며 기본 경로가 아니다.
+
+ARM64 도구 환경은 `autosd/build/Containerfile.aarch64-rpm`에 정의된다.
+CentOS CRB의 glibc-static을 사용해 scratch workload 컨테이너용 정적 바이너리를 만든다.
+커널 모듈은 Yocto가 생성한 서명을 보존한다. RPM 패키징 단계에서 strip하거나
+다른 키로 다시 서명하지 않는다.
+
+## 3. 펌웨어·커널·모듈 준비
 
 ```bash
-./run_qbox_autosd.sh --autosd build/autosd/prepared-run-01/regular.json
+./yocto_build.sh --machine apollo-qvp --firmware-only
+./yocto_build.sh --machine apollo-qvp virtual/kernel arm-si-rproc-mod rpmsg-net-mod pfdi-misc-mod
 ```
 
-### 6.2 완성된 qcow2로 AIB 빌드 생략
+첫 명령은 펌웨어·플랫폼만 준비한다. 두 번째 명령은 커널·외부 모듈을 준비하며
+변경 없는 입력은 Yocto 캐시를 재사용한다. AutoSD rootfs는 AIB가 생성한다. 입력은
+`build/tmp_baremetal/deploy/images/apollo-qvp/`에 생성한다.
+`apollo-autosd-platform-apollo-qvp.qboxconf`와
+`apollo-autosd-platform.json`이 provider 경로와 펌웨어 hash/구성을 전달한다.
+공유 BitBake는 직렬 실행한다.
+
+## 4. 기본 Automotive 이미지
 
 ```bash
-./build_autosd_minimal_qm.sh \
-  --image build/autosd/run-01/fetch/minimal_qm.aarch64.qcow2 \
-  --cache-dir build/autosd \
-  --output build/autosd/prepared-recheck-01 \
-  --work-dir build/autosd/recheck-01
+./build_autosd.sh --dry-run
+./build_autosd.sh --prepare-inputs-only
+./build_autosd.sh
 ```
 
-Podman/AIB 생성 단계만 생략한다. 이미지 변환, 필수 도구·모듈 설치,
-Automotive 구성 및 QBox full-system 검사는 다시 수행한다. 이는 qcow2에서 시작하는
-재검증이지 이전 private VM의 실행 상태 복원이 아니다.
+기본 명령은 Yocto 커널 RPM 패키징, 사용자 공간 payload 준비, AIB 이미지 생성, QBox readiness 확인과 정상
+종료까지 수행한다. Runtime readiness는 전체 데모 시나리오 PASS와 구분한다.
 
-### 6.3 설정·소스 변경 또는 완전 재생성
-
-nightly ID, builder reference, crun 소스/패치가 기존 캐시와 다르면 불일치 오류가
-발생한다. 자동 덮어쓰기 대신 새 캐시를 지정한다.
+이미지만 만들고 VM 실행은 나중에 하려면:
 
 ```bash
-./build_autosd_minimal_qm.sh --cache-dir build/autosd/fresh-run-01
+./build_autosd.sh --build-only
+./run_qbox_autosd.sh --autosd build/autosd/automotive/regular.json
 ```
 
-`build/autosd` 전체를 삭제한 경우에도 기본 명령으로 재생성할 수 있다. 다만
-관련 VM/웹 서버를 정상 종료하고 필요한 결과를 보관한 뒤 정리해야 한다.
-원본 설정은 `autosd/`·`scripts/`에 남아 있어야 하며, Apollo BSP와 호스트 도구는
-앞 절의 선행 조건이다. 기존 캐시를 없애면 최초 선택 시점의 upstream 버전이
-달라질 수 있다.
+기본 이미지에는 Root의 Safety Monitor/Podman/BlueChi, ADAS 실행 영역,
+QM 앱·nested container, HIPC/PFDI, RT 도구와 진단 프로그램이 포함된다.
+장애 주입, RT benchmark, watchdog owner는 기본 부팅에서 자동 실행하지 않는다.
+Root/QM은 vanilla AutoSD crun을 사용한다.
+공통 부팅 정책은 `ethsi1`의 자동 DHCP만 막아 명시적인 HIPC/VLAN 연결은 허용한다.
+ESP는 `boot-efi.mount` drop-in의 `umask=0077`로 마운트한다.
 
-## 7. 진행 로그, 완료 판정, 실패 후 재시도
+## 5. minimal QM 선택
 
-위 `run-01` 예제로 실행했다면 별도 터미널에서 확인한다. 해당 단계가 시작되기
-전에는 로그 파일이 아직 없을 수 있다.
+다음 두 방법은 같은 manifest를 선택한다. 둘 중 하나를 실행한다.
 
 ```bash
-# AIB 상세 빌드 출력
-tail -f build/autosd/run-01/aib.log
-# QBox AP 부팅 출력 (RSE/SI UART도 같은 출력 디렉터리에 존재)
-tail -f build/qbox-apollo-qvp/autosd-run-01/linux-uart.log
+./build_autosd.sh --minimal
+# 또는
+./build_autosd.sh --aib-manifest autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml
 ```
 
-입력 준비 단계는 콘솔 출력과 `CACHE/inputs.json`, `builder-amd64/metadata.json`,
-`host-tools/environment.json`, `crun/provenance.json`으로 확인한다.
-전체 실행의 최종 판정은 다음 파일이다.
+`--minimal`과 `--aib-manifest`는 동시에 지정할 수 없다. minimal QM에는 공통 Apollo
+부팅 지원을 넣되 Automotive 앱·RT 도구는 자동 추가하지 않는다. 기본 결과는
+`build/autosd/minimal-qm/regular.json`이며 Automotive 결과와 분리한다.
 
 ```bash
-python3 -m json.tool build/autosd/run-01/result.json
-python3 -m json.tool build/qbox-apollo-qvp/autosd-run-01/result.json
+./run_qbox_autosd.sh --autosd build/autosd/minimal-qm/regular.json
 ```
 
-`WORK/result.json`의 `status=PASS`, `live_owned_launchers=[]`를 확인한다.
-QBox receipt는 `status=POWERED_OFF`, `passed=true`, `poweroff_observed=true`,
-`domains.status=PASS`여야 한다. 개별 guest 로그의 QM/Automotive PASS도 함께
-확인한다. 전체 PASS가 모든 warning이 없다는 뜻은 아니다.
+## 6. 입력 고정과 캐시 재사용
 
-| 증상 | 확인 및 대응 |
+```bash
+./build_autosd.sh --build-only \
+  --builder-reference quay.io/centos-sig-automotive/automotive-image-builder@sha256:DIGEST \
+  --rpm-build-dir build/autosd/rpm-yocto \
+  --work-dir build/autosd/automotive-build-new \
+  --output build/autosd/automotive-new
+```
+
+`DIGEST`는 사용할 호스트 native AIB의 실제 digest로 바꾼다. 기본 AIB 참조는 검증한 amd64 digest로 고정돼 있다. 다른 digest를 쓰면 기존 cache receipt와 충돌할 수 있으므로
+새 `--cache-dir`를 사용한다. 다른 Yocto 배포 경로는 `--deploy-dir`,
+matching kernel build artifacts는 `--kernel-artifacts`로 지정한다.
+
+| 위치 | 내용 |
 |---|---|
-| 출력 경로가 이미 존재 | 기존 결과를 보존하고 새 output/work 경로 지정 |
-| checksum/hash 불일치 | 로그를 보존하고 새 캐시에서 재다운로드; 검증 우회 금지 |
-| registry digest가 사라짐 | 명시한 버전의 가용성 확인 후 소스 설정을 갱신 |
-| host 도구/BSP 누락 | 1절의 선행 조건 준비; build/autosd만으로 BSP를 대체할 수 없음 |
-| guest 패키지 다운로드 실패 | 네트워크·RPM repository 상태 확인, 해당 단계 로그 보존 |
-| VM 단계 실패 | `live_owned_launchers`와 UART 확인, 해당 VM 정상 종료 후 새 작업 경로로 재시도 |
+| `autosd/config/automotive.json` | 기본 source manifest와 AIB 입력 설정 |
+| `autosd/customization/automotive.aib.yml` | 패키지·서비스 정책 원본 |
+| `build/autosd/rpm-yocto/` | Yocto 입력 hash, RPM/repo, 사용자 공간 payload, inputs/result receipt |
+| 지정한 `--work-dir` | resolved manifest, AIB fetch/cache/export, 실행 로그 |
+| `build/autosd/automotive/` | 기본 완성 raw 이미지, DTB, regular.json |
+| `build/qbox-apollo-qvp/autosd-*/` | 실행용 복사본, 네 도메인 로그, readiness/result |
 
-실패한 VM은 자동 강제 종료하지 않는다. 접속 가능하면 해당 VM의 SSH 포트로
-로그인하여 `systemctl poweroff`를 실행하고 프로세스 종료를 확인한다. 접속이
-안 되면 UART와 launcher 로그로 먼저 원인을 확인한다. 실행 중인 디스크를 삭제하거나
-동일 포트·공유 리소스로 중복 부팅하지 않는다.
+RPM 캐시는 Yocto Image·모듈·설정·도구·산출물 hash가 일치할 때만 재사용한다. 입력이
+변하면 새 RPM 작업 디렉토리를 선택한다. 같은 NEVRA의 다른 바이너리를 임의로
+덮어쓰거나 result.json을 수동으로 고쳐 검사를 우회하지 않는다.
+
+OSBuild cache와 실행 간 자동 resume은 다른 기능이다. 실패한 생성 디렉토리를
+무조건 성공한 입력으로 채택하지 않으며, 오류 원인과 receipt를 먼저 확인한다.
+`--aib-cache-dir PATH`로 기존 AIB의 `fetch/cache`를 지정하면 패키지 다운로드와
+OSBuild store를 재사용할 수 있다. `--cache-dir`는 입력·기본 출력의 루트이고
+`--aib-cache-dir`와 역할이 다르다. 재시도 시 새 `--work-dir`와 존재하지 않는
+`--output`을 사용하며 같은 AIB 캐시를 사용하는 빌드는 직렬 실행한다.
+입력 기록은 재현성을 돕지만 RPM 저장소 snapshot까지 고정하지 않으면 완전히 같은
+바이트의 이미지를 보장하지 않는다.
+
+## 7. 부팅과 Dashboard 검증
+
+완성 이미지 런처는 base 이미지 hash와 DTB/플랫폼 입력을 검증한 뒤 실행 복사본을
+만든다. 준비된 이미지의 UKI/ESP를 교체하거나 guest에 모듈·패키지를 설치하지 않는다.
+Native AIB는 target rootfs의 ARM64 EFI stub로 UKI를 생성한다. 이미지 게시 전
+EFI loader·채워진 UKI·내장 커널의 ARM64 여부를 검사한다.
+Reboot는 해당 실행 디스크를 사용한다. 이전 실행 디스크를 자동으로 최신 이미지 대신
+선택하지 않는다. QBox full-system VM은 하나씩 실행한다.
+펌웨어를 다시 빌드하면 이전 실행 디스크의 platform hash와 달라 재사용이 거부될 수 있다.
+VM을 정상 종료하고 Dashboard를 재시작해 원본 이미지에서 새 실행 복사본을 만든다.
+이때 이전 실행 디스크의 변경 내용은 새 복사본으로 자동 이관되지 않는다.
+Watchdog reset 후 ESP dirty 검사로 private 디스크 재사용이 거부되면 실패 디스크를
+보존하고 base 이미지의 새 복사본으로 부팅한다. 자동 파일시스템 수리는 수행하지 않는다.
+
+```bash
+python3 scripts/autosd_dashboard/server.py \
+  --manifest build/autosd/automotive/regular.json \
+  --rootfs build/autosd/automotive/rootfs.img \
+  --allow-private-guest --backend qbox-full \
+  --listen 127.0.0.1 --listen 192.168.0.13 --allow-unauthenticated-lan
+```
+
+LAN IP는 현재 호스트 인터페이스에 존재하는 주소로 지정한다.
+브라우저에서 `http://127.0.0.1:8765/` 또는 `http://192.168.0.13:8765/`를 연다.
+이미 tmux VM이 실행 중이면 정상 종료한 후 Dashboard Power on을 실행한다.
+
+검증 순서는 부팅/readiness, Automotive 정상·장애·복구, RT, mixed-criticality,
+watchdog, Pause/Resume, Reboot, Power off이다. 각 시나리오의 host/guest 로그와
+결과를 확인한다. monitor fault injection을 사용할 때만 서버에 `--runtime-injection`을
+추가한다. 상세 UI 설명은 [Dashboard 가이드](autosd-dashboard-guide-ko.md)를 참조한다.
+
+## 8. 실패와 증거
+
+- `builder.log`: ARM64 컨테이너 패키지 준비. architecture/CRB/binfmt를 확인한다.
+- RPM `build.log`: Yocto 입력의 release/설정/서명 일치, PFDI 및 패키징 오류를 확인한다.
+- AIB 로그: manifest schema, repository resolve, native namespace와 대상 scriptlet을 구분한다.
+- QBox 로그: RSE, SI CL0, SI CL1, AP 중 가장 먼저 실패한 도메인을 확인한다.
+- `domains.json`, `modules.json`: 현재 boot epoch의 실제 readiness 결과를 확인한다.
+- `result.json`: Linux powerdown과 secure firmware assertion을 함께 확인한다.
+
+`bootctl partition is invalid`, 커널/모듈 불일치, module signature 실패,
+SELinux Enforcing 실패, TF-A assertion을 무시하고 PASS로 처리하지 않는다.
+RT 측정 결과는 QBox 기능·시뮬레이션 결과이며 실제 하드웨어 latency 보증이 아니다.
+
+`build/autosd/`는 삭제 가능한 생성물이지만 실행 중인 VM/서버의 디스크를 삭제하면
+안 된다. 정리는 기존 `scripts/cleanup_run_images.py`의 dry-run으로 대상과 보호 경로를
+먼저 확인한다. 과거 native builder 실험은
+[기존 빌더 보고서](autosd-native-builder-20261102-ko.md)와
+[기존 부팅 보고서](autosd-native-boot-20261102-ko.md)에 보존되어 있다.

@@ -1,5 +1,12 @@
 # Apollo AutoSD Automotive Customization Layer
 
+현재 통합 빌드 진입점은 `./build_autosd.sh`이며 source policy는
+`automotive.aib.yml`이다. Yocto 커널 바이너리 RPM과 Native AIB를 사용하는
+[전체 Quick Guide](../../doc/autosd-minimal-qm-build-ko.md)를 실행 기준으로 삼는다.
+[현재 검증 상태](../../doc/autosd/automotive-source-build-validation-20261105-ko.md)는
+별도 리포트에 기록한다. 아래 독립 bundle/기존 private guest 설치 절차는 이전
+실험 경로 설명이며 새 기본 빌드의 필수 단계가 아니다.
+
 기존 Apollo BSP kernel과 AutoSD AIB의 `content`/`qm.content` 구조에
 automotive scenario를 추가하는 제품 구성 layer다. Yocto layer가 아니라
 AutoSD manifest, Quadlet, systemd 및 애플리케이션 bundle이며 root 저장소가 관리한다.

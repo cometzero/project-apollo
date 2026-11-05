@@ -1,30 +1,39 @@
 # AutoSD source configuration
 
-See the [Korean full build and execution guide](../../doc/autosd-minimal-qm-build-ko.md)
-for prerequisites, clean builds, cache reuse, intermediate artifacts and logs.
+`build_autosd.sh` reads `automotive.json` by default and builds
+`autosd/customization/automotive.aib.yml`. `--minimal` selects the official
+`autosd/sig-docs/demos/minimal_qm/minimal_qm.aib.yml`; the same file can be selected
+with `--aib-manifest PATH`. Do not combine these two selection options.
 
-`minimal-qm.json` is the root build entrypoint's source configuration. Paths in
-this file are relative to the repository root, not `build/autosd`.
+Paths in configuration are relative to the repository root. Generated files
+under `build/autosd/` are disposable outputs, not configuration sources.
 
-- `aib_manifest`: source-controlled AIB YAML.
-- `nightly_build_id`: `null` selects latest on first use; set an official ID to pin.
-- `builder_reference`: official AIB tag or SHA256 registry digest. Tags resolve
-  once to host-native content digests before downloading layers. Target remains ARM64.
-- `customize`: enable Automotive private-guest services and RT tools by default.
-  Root gets realtime-tests, rtla, trace-cmd and stress-ng; QM gets stress-ng.
-  Both get the static latency probe. QBox readiness checks do not imply
-  that all RT experiments or latency thresholds have passed.
+- `aib_manifest`: source-controlled product policy.
+- `builder_reference`: host-native AIB image tag or immutable registry digest.
+  Record the resolved digest; use a digest for repeatable input selection.
+- `minimal-qm.json`: retained legacy configuration. The new default is Automotive.
+- `nightly_build_id`: legacy import input; the source-build path does not need a
+  nightly disk image.
 
-Generated cache receipts are not configuration sources. Removing `build/autosd`
-requires downloading/building inputs again, but no settings are lost. Upstream
-availability and documented host/BSP prerequisites remain necessary.
+Kernel and modules are built by Yocto and repackaged as an ARM64 RPM using
+host-native tools. `kernel_input` is `yocto-deploy`; `--deploy-dir` and
+`--kernel-artifacts` select matching deployed inputs. Kernel configuration remains
+the Linux submodule's `apollo_qvp_defconfig`. PFDI, workload and latency-probe
+use AArch64 GCC in a rootless Podman container through qemu-user. The image assembler is the separate host-native
+AIB/OSBuild container and still requires the documented rootful Podman access.
 
-The build entrypoint uses host-native Podman/AIB/OSBuild with target qemu-user binfmt and
-separate native build and ARM64 target pipelines. It requires noninteractive sudo for Podman and output
-ownership restoration. Nightly is retained only for the read-only guestfish
-appliance smoke test; no builder VM or builder-base image is created.
-QBox full-system remains the final customization and boot validation target.
-`--rootless` uses rootless Podman and OSBuild `--in-vm image` instead, without sudo.
-Builder archives are cached in `builder-amd64/` or `builder-arm64/`; old ARM64
-archives are not reused on an x86_64 build host. A target-specific ARM64 digest
-must be replaced by a native image digest or a multiarch index reference.
+Use `--prepare-inputs-only` to prepare containers and downloads, `--build-only`
+to build a disk without launching QBox, and the default command for image build
+plus QBox readiness and poweroff checks. Full scenario qualification is separate
+from readiness. `--rpm-build-dir PATH` selects a Yocto RPM packaging work/cache directory;
+reuse requires matching inputs and artifact hashes.
+
+Root and QM use AutoSD's unmodified crun RPM. The regular image contains the
+selected kernel, modules, services, RT tools (Automotive profile), and workload
+OCI before first boot. The prepared-image launcher validates and copies the
+artifact; it does not install packages or replace its UKI/ESP.
+
+See the [full build guide](../../doc/autosd-minimal-qm-build-ko.md),
+[migration plan](../../doc/autosd/automotive-rpm-aib-migration-plan-ko.md), and
+[current verification report](../../doc/autosd/automotive-source-build-validation-20261105-ko.md).
+The report distinguishes implementation/tests from actual image and runtime results.

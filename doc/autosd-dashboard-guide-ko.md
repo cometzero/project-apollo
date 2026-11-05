@@ -80,15 +80,15 @@ python3 scripts/autosd_dashboard/server.py
 브라우저에서 `http://127.0.0.1:8765`를 연다.
 빌드 호스트가 원격이면 로컬 PC에서 `ssh -N -L 8765:127.0.0.1:8765 user@build-host`로
 같은 포트를 전달한 뒤 접속한다. HTTP Host 검사 때문에 전달 포트 번호도 동일하게 쓴다.
-실제 실행은 RT Quick Guide로 준비하고 정상 종료한 regular customization disk를 지정한다.
-아래 경로는 이 workspace에서 검증에 사용한 산출물이다. 원본 디스크가 사용 중이면
+실제 실행은 [전체 빌드 Quick Guide](autosd-minimal-qm-build-ko.md)로 생성한 완성 Automotive 이미지를 지정한다.
+현재 전환 검증 상태는 [리포트](autosd/automotive-source-build-validation-20261105-ko.md)를 확인한다. 원본 디스크가 사용 중이면
 먼저 해당 VM을 정상 종료한다. 서버는 launcher가 만든 새 복사본을 사용한다.
 
 ```sh
 python3 scripts/autosd_dashboard/server.py \
   --allow-private-guest \
-  --manifest build/autosd/demo-minimal-qm-prepared/regular.json \
-  --rootfs build/autosd/automotive-rt-measure/rootfs.wic
+  --manifest build/autosd/automotive/regular.json \
+  --rootfs build/autosd/automotive/rootfs.img
 ```
 
 1. 부팅 작업을 실행하고 UART 로그와 guest telemetry가 ONLINE이 되는지 확인한다.
@@ -178,8 +178,8 @@ TCG의 관찰 latency는 실제 하드웨어 timing, ASIL-B, FFI, FTTI 또는 WC
 python3 scripts/autosd_dashboard/server.py \
   --listen 127.0.0.1 --listen 192.168.0.13 \
   --allow-unauthenticated-lan --allow-private-guest \
-  --manifest build/autosd/demo-minimal-qm-prepared/regular.json \
-  --rootfs build/autosd/automotive-rt-measure/rootfs.wic
+  --manifest build/autosd/automotive/regular.json \
+  --rootfs build/autosd/automotive/rootfs.img
 ```
 
 `http://127.0.0.1:8765`와 `http://192.168.0.13:8765`에서 로그인 없이 접속한다.
@@ -193,8 +193,8 @@ python3 scripts/autosd_dashboard/server.py \
   --listen 127.0.0.1 --listen 192.168.0.13 \
   --password-file build/autosd/dashboard-access.password \
   --allow-private-guest \
-  --manifest build/autosd/demo-minimal-qm-prepared/regular.json \
-  --rootfs build/autosd/automotive-rt-measure/rootfs.wic
+  --manifest build/autosd/automotive/regular.json \
+  --rootfs build/autosd/automotive/rootfs.img
 ```
 
 두 주소 모두 포트 8765에서 접속할 수 있다. 로그인 사용자 이름은 `autosd`,
