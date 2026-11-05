@@ -140,3 +140,6 @@
 	path = hsoc-stack/tools/gem5
 	url = git@github.com:cometzero/gem5.git
 	branch = apollo-qvp
+[submodule "autosd/pfdi"]
+	path = autosd/pfdi
+	url = https://git.gitlab.arm.com/automotive-and-industrial/pfdi-platform-fault-detection-interface-reference-implementation.git
